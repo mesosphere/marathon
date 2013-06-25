@@ -1,0 +1,5 @@
+{
+"id":"Rails",
+"cmd":"cd /Users/tobi/code/test_app && rails s",
+"instances":1
+}

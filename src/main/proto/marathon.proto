@@ -1,0 +1,14 @@
+package mesosphere.marathon;
+
+option java_package = "mesosphere.marathon";
+option java_outer_classname = "Protos";
+
+import "mesos.proto";
+
+message ServiceDefinition {
+  required string id = 1;
+  required mesos.CommandInfo cmd = 2;
+  required uint32 instances = 3;
+  repeated mesos.Resource resources = 4;
+  optional string description = 5;
+}
