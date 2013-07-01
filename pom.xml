@@ -4,14 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.mesosphere</groupId>
+  <groupId>mesosphere</groupId>
   <artifactId>marathon</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.2-SNAPSHOT</version>
 
   <properties>
     <scala.version>2.10.0</scala.version>
     <mesos.version>0.13.0</mesos.version>
-    <dropwizard.version>0.6.2</dropwizard.version>
+    <chaos.version>0.2-SNAPSHOT</chaos.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
@@ -25,22 +25,10 @@
     </dependency>
 
     <dependency>
-      <groupId>com.yammer.dropwizard</groupId>
-      <artifactId>dropwizard-core</artifactId>
-      <version>${dropwizard.version}</version>
+      <groupId>mesosphere</groupId>
+      <artifactId>chaos</artifactId>
+      <version>${chaos.version}</version>
     </dependency>
-
-    <dependency>
-      <groupId>com.massrelevance</groupId>
-      <artifactId>dropwizard-scala_2.10</artifactId>
-      <version>${dropwizard.version}-1</version>
-    </dependency>
-
-    <!--<dependency>-->
-      <!--<groupId>com.hubspot.dropwizard</groupId>-->
-      <!--<artifactId>dropwizard-guice</artifactId>-->
-      <!--<version>${dropwizard.version}</version>-->
-    <!--</dependency>-->
 
     <dependency>
       <groupId>org.apache.mesos</groupId>
@@ -54,11 +42,6 @@
       <version>2.4.1</version>
     </dependency>
 
-    <dependency>
-      <groupId>com.google.inject</groupId>
-      <artifactId>guice</artifactId>
-      <version>3.0</version>
-    </dependency>
   </dependencies>
 
   <build>

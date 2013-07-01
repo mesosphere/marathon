@@ -1,19 +1,18 @@
 package mesosphere.marathon.api.v1
 
 import javax.ws.rs.{POST, Produces, Path}
-import mesosphere.marathon.{MarathonSchedulerManager}
+import mesosphere.marathon.MarathonSchedulerService
 import javax.ws.rs.core.{Response, MediaType}
-import com.yammer.metrics.annotation.Timed
 import javax.inject.Inject
-import javax.ws.rs.core.Response.Status
 import javax.validation.Valid
+import com.codahale.metrics.annotation.Timed
 
 /**
  * @author Tobi Knaup
  */
-@Path("/v1/service")
+@Path("v1/service")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class ServiceResource @Inject() (manager: MarathonSchedulerManager) {
+class ServiceResource @Inject() (manager: MarathonSchedulerService) {
 
   @POST
   @Path("start")

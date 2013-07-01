@@ -1,16 +1,16 @@
 package mesosphere.marathon
 
-import com.yammer.dropwizard.config.Configuration
-import com.fasterxml.jackson.annotation.JsonProperty
+import org.rogach.scallop.ScallopConf
 
 /**
  * @author Tobi Knaup
  */
 
-class MarathonConfiguration extends Configuration {
-  @JsonProperty
-  val mesosMaster = "zk://localhost:2181/mesos"
+trait MarathonConfiguration extends ScallopConf {
 
-  @JsonProperty
-  val version = "0.0.1"
+  lazy val mesosMaster = opt[String]("master",
+    descr = "The URL of the Mesos master",
+    required = true,
+    noshort = true)
+
 }
