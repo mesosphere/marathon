@@ -21,4 +21,4 @@ source $build_env
 popd
 
 # Start Marathon
-java -cp "$FRAMEWORK_HOME"/target/marathon-*.jar mesosphere.marathon.Main server config/marathon.yml
+java -cp "$FRAMEWORK_HOME"/target/marathon-*.jar mesosphere.marathon.Main --http_port 8080 --master zk://localhost:2181/mesos
