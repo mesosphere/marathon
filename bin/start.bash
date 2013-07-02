@@ -9,7 +9,6 @@ FRAMEWORK_HOME=`dirname $0`/..
 # TODO(FL): ensure this script runs on *nix as well.
 # TODO(FL): clean-up!
 echo "This script is setup to run on MacOSX right now. Modify it to run on other systems."
-MESOS_HOME=/Users/tobi/code/mesos/build
 echo "MESOS_HOME is set to: $MESOS_HOME"
 pushd $MESOS_HOME
 libmesos_file=$(find . -name libmesos.dylib -or -name libmesos.so | head -n1)
