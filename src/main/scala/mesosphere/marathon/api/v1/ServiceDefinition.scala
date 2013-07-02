@@ -1,6 +1,5 @@
 package mesosphere.marathon.api.v1
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import mesosphere.mesos.MesosUtils
 import mesosphere.marathon.Protos
 import scala.collection.mutable
@@ -13,18 +12,12 @@ import org.hibernate.validator.constraints.NotEmpty
  */
 class ServiceDefinition {
   @NotEmpty
-  @JsonProperty
   var id: String = ""
   @NotEmpty
-  @JsonProperty
   var cmd: String = ""
-  @JsonProperty
   var env: Map[String, String] = Map.empty
-  @JsonProperty
   var instances: Int = 0
-  @JsonProperty
   var cpus: Int = 1
-  @JsonProperty
   var mem: Int = 128
 
   def toProto: Protos.ServiceDefinition = {
