@@ -1,8 +1,16 @@
 #!/bin/bash
-#
 
 # This setup assumes you started with the mesos source and installed the binaries into
 # the ./build directory of the mesos source. Modify this as needed.
+
+MASTER='zk://localhost:2181/mesos'
+while getopts m: opt; do
+  case $opt in
+    m)
+      MASTER="$OPTARG"
+      ;;
+  esac
+done
 
 FRAMEWORK_HOME=`dirname $0`/..
 
@@ -20,4 +28,4 @@ source $build_env
 popd
 
 # Start Marathon
-java -cp "$FRAMEWORK_HOME"/target/marathon-*.jar mesosphere.marathon.Main --http_port 8080 --master zk://localhost:2181/mesos
+java -cp "$FRAMEWORK_HOME"/target/marathon-*.jar mesosphere.marathon.Main --http_port 8080 --master $MASTER
