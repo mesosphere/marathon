@@ -7,13 +7,16 @@ import scala.collection.mutable
 import mesosphere.marathon.api.v1.ServiceDefinition
 import mesosphere.marathon.state.MarathonStore
 import com.google.common.util.concurrent.AbstractIdleService
+import org.apache.mesos.state.State
+import javax.inject.Inject
 
 /**
  * Wrapper class for the scheduler
  *
  * @author Tobi Knaup
  */
-class MarathonSchedulerService(config: MarathonConfiguration) extends AbstractIdleService {
+class MarathonSchedulerService @Inject()(config: MarathonConfiguration,
+                                         mesosState: State) extends AbstractIdleService {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -31,7 +34,7 @@ class MarathonSchedulerService(config: MarathonConfiguration) extends AbstractId
 
   log.info("Starting scheduler " + frameworkName)
 
-  val store = MarathonStore("localhost:2181")
+  val store = new MarathonStore(mesosState, () => new ServiceDefinition)
   val scheduler = new MarathonScheduler(store)
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo, config.mesosMaster.get.get)
 

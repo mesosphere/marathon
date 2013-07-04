@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext
 /**
  * @author Tobi Knaup
  */
-class MarathonScheduler(store: MarathonStore) extends Scheduler {
+class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Scheduler {
 
   val log = Logger.getLogger(getClass.getName)
 

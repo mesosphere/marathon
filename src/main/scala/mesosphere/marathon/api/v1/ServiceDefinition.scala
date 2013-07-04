@@ -3,22 +3,23 @@ package mesosphere.marathon.api.v1
 import mesosphere.mesos.MesosUtils
 import mesosphere.marathon.Protos
 import scala.collection.mutable
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import org.hibernate.validator.constraints.NotEmpty
+import mesosphere.marathon.state.MarathonState
 
 
 /**
  * @author Tobi Knaup
  */
-class ServiceDefinition {
+class ServiceDefinition extends MarathonState[Protos.ServiceDefinition] {
   @NotEmpty
   var id: String = ""
   @NotEmpty
   var cmd: String = ""
   var env: Map[String, String] = Map.empty
   var instances: Int = 0
-  var cpus: Int = 1
-  var mem: Int = 128
+  var cpus: Double = 1.0
+  var mem: Double = 128.0
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = MesosUtils.commandInfo(this)
@@ -34,41 +35,38 @@ class ServiceDefinition {
       .build
   }
 
-  def toProtoByteArray: Array[Byte] = {
-    toProto.toByteArray
+  def mergeFromProto(proto: Protos.ServiceDefinition) {
+    val envMap = mutable.HashMap.empty[String, String]
+
+    id = proto.getId
+    cmd = proto.getCmd.getValue
+    instances = proto.getInstances
+
+    // Add command environment
+    for (variable <- proto.getCmd.getEnvironment.getVariablesList.asScala) {
+      envMap(variable.getName) = variable.getValue
+    }
+    env = envMap.toMap
+
+    // Add resources
+    for (resource <- proto.getResourcesList.asScala) {
+      val value = resource.getScalar.getValue
+      resource.getName match {
+        case ServiceDefinition.CPUS =>
+          cpus = value
+        case ServiceDefinition.MEM =>
+          mem = value
+      }
+    }
+  }
+
+  def mergeFromProto(bytes: Array[Byte]) {
+    val proto = Protos.ServiceDefinition.parseFrom(bytes)
+    mergeFromProto(proto)
   }
 }
 
 object ServiceDefinition {
-
   val CPUS = "cpus"
   val MEM = "mem"
-
-  def apply(proto: Protos.ServiceDefinition): ServiceDefinition = {
-    val sd = new ServiceDefinition
-    val env = mutable.HashMap.empty[String, String]
-
-    sd.id = proto.getId
-    sd.cmd = proto.getCmd.getValue
-    sd.instances = proto.getInstances
-
-    // Add command environment
-    for (variable <- proto.getCmd.getEnvironment.getVariablesList) {
-      env(variable.getName) = variable.getValue
-    }
-    sd.env = env.toMap
-
-    // Add resources
-    for (resource <- proto.getResourcesList) {
-      if (resource.getName.eq(CPUS)) {
-        sd.cpus = resource.getScalar.getValue.toInt
-      } else if (resource.getName.eq(MEM)) {
-        sd.mem = resource.getScalar.getValue.toInt
-      }
-    }
-
-    sd
-  }
-
-  def parseFromProto(bytes: Array[Byte]) = apply(Protos.ServiceDefinition.parseFrom(bytes))
 }

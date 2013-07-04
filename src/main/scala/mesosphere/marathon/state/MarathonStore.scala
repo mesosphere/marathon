@@ -1,66 +1,67 @@
 package mesosphere.marathon.state
 
 import scala.concurrent._
-import org.apache.mesos.state.ZooKeeperState
-import java.util.concurrent.TimeUnit
-import mesosphere.marathon.api.v1.ServiceDefinition
+import org.apache.mesos.state.State
 
 /**
  * @author Tobi Knaup
  */
 
-class MarathonStore(zkHost: String, timeoutSeconds: Long, path: String) extends PersistenceStore[ServiceDefinition] {
-
-  val state = new ZooKeeperState(zkHost, timeoutSeconds, TimeUnit.SECONDS, path)
+class MarathonStore[S <: MarathonState[_]](state: State,
+                       newState: () => S) extends PersistenceStore[S] {
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
 
-  def fetch(key: String): Future[Option[ServiceDefinition]] = {
+  implicit def FutureToFutureOption[T](f: java.util.concurrent.Future[T]): Future[Option[T]] = {
     future {
-      val bytes = state.fetch(key).get.value
-      if (bytes.isEmpty) {
+      val t = f.get
+      if (t == null) {
         None
       } else {
-        val sd = ServiceDefinition.parseFromProto(bytes)
-        Some(sd)
+        Some(t)
       }
     }
   }
 
-  def store(key: String, value: ServiceDefinition): Future[Option[ServiceDefinition]] = {
+  implicit def ValueToFutureOption[T](value: T): Future[T] = {
     future {
-      val oldVar = state.fetch(key).get
-      val newVar = oldVar.mutate(value.toProtoByteArray)
-      val bytes = state.store(newVar).get.value
-      if (bytes.isEmpty) {
-        None
-      } else {
-        Some(ServiceDefinition.parseFromProto(bytes))
-      }
+      value
+    }
+  }
+
+  def fetch(key: String): Future[Option[S]] = {
+    state.fetch(key) map {
+      case Some(variable) =>
+        val state = newState()
+        state.mergeFromProto(variable.value)
+        Some(state)
+      case None => None
+    }
+  }
+
+  def store(key: String, value: S): Future[Option[S]] = {
+    state.fetch(key) flatMap {
+      case Some(variable) =>
+        state.store(variable.mutate(value.toProtoByteArray)) map {
+          case Some(newVar) =>
+            val state = newState()
+            state.mergeFromProto(newVar.value)
+            Some(state)
+          case None => None
+        }
+      case None => None
     }
   }
 
   def expunge(key: String): Future[Boolean] = {
-    future {
-      val variable = state.fetch(key).get
-      state.expunge(variable).get
+    state.fetch(key) flatMap {
+      case Some(variable) =>
+        state.expunge(variable) map {
+          case Some(b) => b
+          case None => false
+        }
+      case None => false
     }
   }
-}
-
-object MarathonStore {
-
-  val defaultHost = "localhost:2181"
-  val defaultTimeout = 10
-  val defaultPath = "/marathon-state"
-
-  def apply() = new MarathonStore(defaultHost, defaultTimeout, defaultPath)
-
-  def apply(zkHost: String) = new MarathonStore(zkHost, defaultTimeout, defaultPath)
-
-  def apply(zkHost: String, path: String) = new MarathonStore(zkHost, defaultTimeout, path)
-
-  def apply(zkHost: String, timeoutSeconds: Long, path: String) = new MarathonStore(zkHost, timeoutSeconds, path)
-
 }

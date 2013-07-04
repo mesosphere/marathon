@@ -4,6 +4,7 @@ import mesosphere.Application
 import org.rogach.scallop.ScallopConf
 import mesosphere.chaos.http.{HttpService, HttpModule, HttpConf}
 import mesosphere.chaos.metrics.MetricsModule
+import mesosphere.marathon.api.MarathonRestModule
 
 /**
  * @author Tobi Knaup
@@ -16,7 +17,8 @@ object Main extends Application {
     Seq(
       new HttpModule(getConfiguration),
       new MetricsModule,
-      new MarathonModule(getConfiguration)
+      new MarathonModule(getConfiguration),
+      new MarathonRestModule
     )
   }
 

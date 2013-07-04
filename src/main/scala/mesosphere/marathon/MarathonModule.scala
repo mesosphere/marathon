@@ -1,22 +1,27 @@
 package mesosphere.marathon
 
-import mesosphere.chaos.http.RestModule
-import mesosphere.marathon.api.v1.ServiceResource
-import com.google.inject.Scopes
+import com.google.inject.{Singleton, Provides, Scopes, AbstractModule}
+import org.apache.mesos.state.{ZooKeeperState, State}
+import java.util.concurrent.TimeUnit
 
 /**
  * @author Tobi Knaup
  */
 
-class MarathonModule(config: MarathonConfiguration) extends RestModule {
+class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
+  def configure() {
+    bind(classOf[MarathonConfiguration]).toInstance(conf)
+    bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
+  }
 
-  protected override def configureServlets() {
-    super.configureServlets()
-
-    bind(classOf[ServiceResource]).in(Scopes.SINGLETON)
-
-    bind(classOf[MarathonSchedulerService]).toInstance(
-      new MarathonSchedulerService(config)
+  @Provides
+  @Singleton
+  def provideMesosState(): State = {
+    new ZooKeeperState(
+      conf.zooKeeperHosts.get.get,
+      conf.zooKeeperTimeout.get.get,
+      TimeUnit.SECONDS,
+      conf.zooKeeperPath.get.get
     )
   }
 }
