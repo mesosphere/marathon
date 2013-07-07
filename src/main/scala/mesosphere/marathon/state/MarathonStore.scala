@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import scala.concurrent._
 import org.apache.mesos.state.State
+import scala.collection.JavaConverters._
 
 /**
  * @author Tobi Knaup
@@ -62,6 +63,13 @@ class MarathonStore[S <: MarathonState[_]](state: State,
           case None => false
         }
       case None => false
+    }
+  }
+
+  def names(): Future[Iterator[String]] = {
+    // TODO use implicit conversion after it has been merged
+    future {
+      state.names().get().asScala
     }
   }
 }

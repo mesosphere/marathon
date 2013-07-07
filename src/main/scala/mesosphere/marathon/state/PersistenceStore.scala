@@ -14,4 +14,6 @@ trait PersistenceStore[T] {
 
   def expunge(key: String): Future[Boolean]
 
+  def names(): Future[Iterator[String]]
+
 }

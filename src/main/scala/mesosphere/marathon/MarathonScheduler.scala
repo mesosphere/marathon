@@ -3,8 +3,7 @@ package mesosphere.marathon
 import java.util
 import org.apache.mesos.Protos._
 import org.apache.mesos.{SchedulerDriver, Scheduler}
-import java.util.logging.Logger
-import scala.collection._
+import java.util.logging.{Level, Logger}
 import scala.collection.JavaConversions._
 import java.util.concurrent.LinkedBlockingQueue
 import mesosphere.mesos.MesosUtils
@@ -21,8 +20,7 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
 
   val log = Logger.getLogger(getClass.getName)
 
-  // TODO better way to keep this state?
-  val tasks = mutable.Map.empty[String, mutable.ArrayBuffer[TaskID]]
+  val taskTracker = new TaskTracker
 
   val taskQueue = new LinkedBlockingQueue[TaskInfo.Builder]()
 
@@ -39,21 +37,23 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
 
   def resourceOffers(driver: SchedulerDriver, offers: util.List[Offer]) {
     for (offer <- offers) {
-      log.info("Received offer %s".format(offer.getId.getValue))
+      log.finer("Received offer %s".format(offer.getId.getValue))
 
       val taskBuilder = taskQueue.poll()
 
       if (taskBuilder == null) {
-        log.info("Task queue is empty. Declining offer.")
+        log.fine("Task queue is empty. Declining offer.")
         driver.declineOffer(offer.getId)
       }
       else if (MesosUtils.offerMatches(offer.getResourcesList.toList, taskBuilder.getResourcesList.toList)) {
         val taskInfos = List(taskBuilder.setSlaveId(offer.getSlaveId).build())
-        log.info("Launching tasks: " + taskInfos)
+        log.fine("Launching tasks: " + taskInfos)
         driver.launchTasks(offer.getId, taskInfos)
       }
       else {
-        log.info("Offer doesn't match request. Declining.")
+        log.fine("Offer doesn't match request. Declining.")
+        // Add it back into the queue so the we can try again
+        taskQueue.add(taskBuilder)
         driver.declineOffer(offer.getId)
       }
     }
@@ -67,24 +67,18 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
+    val appName = TaskIDUtil.appName(status.getTaskId)
+
     if (status.getState.eq(TaskState.TASK_FAILED)
       || status.getState.eq(TaskState.TASK_FINISHED)
       || status.getState.eq(TaskState.TASK_KILLED)
       || status.getState.eq(TaskState.TASK_LOST)) {
 
       // Remove from our internal list
-      // Horrible
-      val taskIdString = status.getTaskId.getValue
-      for ((appName, taskIds) <- tasks) {
-        if (taskIdString.startsWith(appName)) {
-          val idx = taskIds.indexOf(status.getTaskId)
-          if (idx >= 0)
-            taskIds.remove(idx)
-          scale(driver, appName)
-        }
-      }
+      taskTracker.remove(appName, status.getTaskId)
+      scale(driver, appName)
     } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
-      // TODO implement, for reconnect
+      taskTracker.add(appName, status.getTaskId)
     }
   }
 
@@ -116,7 +110,6 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
     store.fetch(service.id).onComplete {
       case Success(option) => if (option.isEmpty) {
         store.store(service.id, service)
-        tasks(service.id) = new mutable.ArrayBuffer[TaskID]
         log.info("Starting service " + service.id)
         scale(driver, service)
       } else {
@@ -131,12 +124,14 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
     store.expunge(service.id).onComplete {
       case Success(_) =>
         log.info("Stopping service " + service.id)
-        val taskIds = tasks.remove(service.id).get
+        val taskIds = taskTracker.get(service.id)
 
         for (taskId <- taskIds) {
           log.info("Killing task " + taskId.getValue)
           driver.killTask(taskId)
         }
+
+        // TODO after all tasks have been killed we should remove the app from taskTracker
       case Failure(t) =>
         log.warning("Error stopping service %s: %s".format(service.id, t.getMessage))
     }
@@ -157,13 +152,31 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
     }
   }
 
+  /**
+   * Make sure all apps are running the configured amount of tasks.
+   *
+   * Should be called some time after the framework re-registers,
+   * to give Mesos enough time to deliver task updates.
+   * @param driver scheduler driver
+   */
+  def balanceTasks(driver: SchedulerDriver) {
+    store.names().onComplete {
+      case Success(iterator) => {
+        log.info("Syncing tasks for all apps")
+        for (appName <- iterator) {
+          scale(driver, appName)
+        }
+      }
+      case Failure(t) => {
+        log.log(Level.WARNING, "Failed to get task names", t)
+      }
+    }
+  }
+
   private
 
   def newTask(service: ServiceDefinition) = {
-    val serviceTasks = tasks(service.id)
-    val taskId = TaskID.newBuilder()
-      .setValue("%s-%d-%d".format(service.id, serviceTasks.size, System.currentTimeMillis()))
-      .build
+    val taskId = taskTracker.newTaskId(service.id)
 
     TaskInfo.newBuilder
       .setName(taskId.getValue)
@@ -178,25 +191,22 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
    * @param service
    */
   def scale(driver: SchedulerDriver, service: ServiceDefinition) {
-    val serviceTasks = tasks(service.id)
-    val currentSize = serviceTasks.size
+    val currentSize = taskTracker.count(service.id)
     val targetSize = service.instances
 
     if (targetSize > currentSize) {
       log.info("Scaling %s from %d up to %d instances".format(service.id, currentSize, targetSize))
 
-      while (serviceTasks.size < targetSize) {
+      for (i <- currentSize until targetSize) {
         val task = newTask(service)
         log.info("Queueing task " + task.getTaskId.getValue)
-        serviceTasks += task.getTaskId
         taskQueue.add(task)
       }
     }
     else if (targetSize < currentSize) {
       log.info("Scaling %s from %d down to %d instances".format(service.id, currentSize, targetSize))
 
-      val kill = serviceTasks.drop(targetSize)
-      tasks(service.id) = serviceTasks.take(targetSize)
+      val kill = taskTracker.drop(service.id, targetSize)
       for (taskId <- kill) {
         log.info("Killing task " + taskId.getValue)
         driver.killTask(taskId)
@@ -207,9 +217,10 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
     }
   }
 
-  def scale(driver: SchedulerDriver, serviceName: String) {
-    store.fetch(serviceName).onSuccess {
-      case service => scale(driver, service.get)
+  def scale(driver: SchedulerDriver, appName: String) {
+    store.fetch(appName).onSuccess {
+      case Some(service) => scale(driver, service)
+      case None => log.warning("App %s does not exist. Not scaling.".format(appName))
     }
   }
 

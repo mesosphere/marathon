@@ -3,12 +3,13 @@ package mesosphere.marathon
 import org.apache.mesos.Protos.{FrameworkInfo, FrameworkID}
 import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
-import scala.collection.mutable
 import mesosphere.marathon.api.v1.ServiceDefinition
 import mesosphere.marathon.state.MarathonStore
 import com.google.common.util.concurrent.AbstractIdleService
 import org.apache.mesos.state.State
 import javax.inject.Inject
+import java.util.{TimerTask, Timer}
+import java.util.concurrent.TimeUnit
 
 /**
  * Wrapper class for the scheduler
@@ -18,9 +19,10 @@ import javax.inject.Inject
 class MarathonSchedulerService @Inject()(config: MarathonConfiguration,
                                          mesosState: State) extends AbstractIdleService {
 
-  val log = Logger.getLogger(getClass.getName)
+  // Time to wait before trying to balance app tasks after driver starts
+  val balanceWait = TimeUnit.SECONDS.toMillis(10)
 
-  val services = new mutable.HashMap[String, ServiceDefinition]
+  val log = Logger.getLogger(getClass.getName)
 
   val frameworkName = "marathon-" + Main.VERSION
 
@@ -38,8 +40,6 @@ class MarathonSchedulerService @Inject()(config: MarathonConfiguration,
   val scheduler = new MarathonScheduler(store)
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo, config.mesosMaster.get.get)
 
-  // TODO: on startup, make sure correct number of processes are running
-
   def startService(service: ServiceDefinition) {
     scheduler.startService(driver, service)
   }
@@ -54,12 +54,25 @@ class MarathonSchedulerService @Inject()(config: MarathonConfiguration,
 
   def startUp() {
     log.info("Starting driver")
+    scheduleTaskBalancing()
     driver.run()
   }
 
   def shutDown() {
     log.info("Stopping driver")
     driver.stop()
+  }
+
+  private
+
+  def scheduleTaskBalancing() {
+    val timer = new Timer()
+    val task = new TimerTask {
+      def run() {
+        scheduler.balanceTasks(driver)
+      }
+    }
+    timer.schedule(task, balanceWait)
   }
 
 }
