@@ -116,7 +116,7 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
         log.warning("Already started service " + service.id)
       }
       case Failure(t) =>
-        log.warning("Error starting service %s: %s".format(service.id, t.getMessage))
+        log.log(Level.WARNING, "Failed to start service %s".format(service.id), t)
     }
   }
 

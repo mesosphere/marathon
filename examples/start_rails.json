@@ -1,5 +1,11 @@
 {
-"id":"Rails",
-"cmd":"cd /Users/tobi/code/test_app && rails s",
-"instances":1
+  "id":"Rails",
+  "cmd":"cd test_app && bundle exec rails s",
+  "instances":1,
+  "env":{
+    "FOO":"BAR"
+  },
+  "uris":[
+    "http://localhost:8888/test_app.tgz"
+  ]
 }

@@ -20,6 +20,7 @@ class ServiceDefinition extends MarathonState[Protos.ServiceDefinition] {
   var instances: Int = 0
   var cpus: Double = 1.0
   var mem: Double = 128.0
+  var uris: Seq[String] = Seq()
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = MesosUtils.commandInfo(this)
@@ -47,6 +48,9 @@ class ServiceDefinition extends MarathonState[Protos.ServiceDefinition] {
       envMap(variable.getName) = variable.getValue
     }
     env = envMap.toMap
+
+    // Add URIs
+    uris = proto.getCmd.getUrisList.asScala.map(_.getValue)
 
     // Add resources
     for (resource <- proto.getResourcesList.asScala) {

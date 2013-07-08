@@ -3,6 +3,7 @@ package mesosphere.mesos
 import org.apache.mesos.Protos.{Value, Resource, CommandInfo, Environment}
 import org.apache.mesos.Protos.Environment.Variable
 import scala.collection._
+import scala.collection.JavaConverters._
 import mesosphere.marathon.api.v1.ServiceDefinition
 
 
@@ -24,9 +25,16 @@ object MesosUtils {
   }
 
   def commandInfo(service: ServiceDefinition) = {
+    val uriProtos = service.uris.map(uri => {
+      CommandInfo.URI.newBuilder()
+        .setValue(uri)
+        .build()
+    })
+
     CommandInfo.newBuilder()
       .setValue(service.cmd)
       .setEnvironment(environment(service.env))
+      .addAllUris(uriProtos.asJava)
       .build()
   }
 

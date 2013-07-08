@@ -3,6 +3,8 @@ package mesosphere.marathon.state
 import scala.concurrent._
 import org.apache.mesos.state.State
 import scala.collection.JavaConverters._
+import java.util.concurrent.ExecutionException
+import com.google.protobuf.InvalidProtocolBufferException
 
 /**
  * @author Tobi Knaup
@@ -33,10 +35,7 @@ class MarathonStore[S <: MarathonState[_]](state: State,
 
   def fetch(key: String): Future[Option[S]] = {
     state.fetch(key) map {
-      case Some(variable) =>
-        val state = newState()
-        state.mergeFromProto(variable.value)
-        Some(state)
+      case Some(variable) => stateFromBytes(variable.value)
       case None => None
     }
   }
@@ -45,10 +44,7 @@ class MarathonStore[S <: MarathonState[_]](state: State,
     state.fetch(key) flatMap {
       case Some(variable) =>
         state.store(variable.mutate(value.toProtoByteArray)) map {
-          case Some(newVar) =>
-            val state = newState()
-            state.mergeFromProto(newVar.value)
-            Some(state)
+          case Some(newVar) => stateFromBytes(newVar.value)
           case None => None
         }
       case None => None
@@ -69,7 +65,22 @@ class MarathonStore[S <: MarathonState[_]](state: State,
   def names(): Future[Iterator[String]] = {
     // TODO use implicit conversion after it has been merged
     future {
-      state.names().get().asScala
+      try {
+        state.names().get().asScala
+      } catch {
+        // Thrown when node doesn't exist
+        case e: ExecutionException => Seq().iterator
+      }
+    }
+  }
+
+  private def stateFromBytes(bytes: Array[Byte]): Option[S] = {
+    try {
+      val state = newState()
+      state.mergeFromProto(bytes)
+      Some(state)
+    } catch {
+      case e: InvalidProtocolBufferException => None
     }
   }
 }
