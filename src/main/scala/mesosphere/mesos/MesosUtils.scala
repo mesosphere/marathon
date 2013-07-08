@@ -1,10 +1,11 @@
 package mesosphere.mesos
 
-import org.apache.mesos.Protos.{Value, Resource, CommandInfo, Environment}
+import org.apache.mesos.Protos._
 import org.apache.mesos.Protos.Environment.Variable
 import scala.collection._
 import scala.collection.JavaConverters._
 import mesosphere.marathon.api.v1.ServiceDefinition
+import com.google.common.collect.Lists
 
 
 /**
@@ -38,8 +39,8 @@ object MesosUtils {
       .build()
   }
 
-  def resources(service: ServiceDefinition) = {
-    List(
+  def resources(service: ServiceDefinition): java.lang.Iterable[Resource] = {
+    Lists.newArrayList(
       scalarResource("cpus", service.cpus),
       scalarResource("mem", service.mem)
     )
@@ -53,16 +54,16 @@ object MesosUtils {
       .build
   }
 
-  def offerMatches(offered: List[Resource], requested: List[Resource]): Boolean = {
+  def offerMatches(offer: Offer, requested: TaskInfoOrBuilder): Boolean = {
     val requestedMap = mutable.Map.empty[String, Double]
-    for (resource <- requested) {
+    for (resource <- requested.getResourcesList.asScala) {
       // TODO handle other resources
       if (resource.getType.eq(Value.Type.SCALAR)) {
         requestedMap(resource.getName) = resource.getScalar.getValue
       }
     }
 
-    for (resource <- offered) {
+    for (resource <- offer.getResourcesList.asScala) {
       // TODO handle other resources
       if (resource.getType.eq(Value.Type.SCALAR)) {
         val requestedValue = requestedMap.getOrElse(resource.getName, Double.NegativeInfinity)

@@ -1,16 +1,16 @@
 package mesosphere.marathon
 
-import java.util
 import org.apache.mesos.Protos._
 import org.apache.mesos.{SchedulerDriver, Scheduler}
 import java.util.logging.{Level, Logger}
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import java.util.concurrent.LinkedBlockingQueue
 import mesosphere.mesos.MesosUtils
 import mesosphere.marathon.api.v1.ServiceDefinition
 import mesosphere.marathon.state.MarathonStore
 import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext
+import com.google.common.collect.Lists
 
 
 /**
@@ -35,8 +35,8 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
     log.info("Re-registered to %s".format(master))
   }
 
-  def resourceOffers(driver: SchedulerDriver, offers: util.List[Offer]) {
-    for (offer <- offers) {
+  def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
+    for (offer <- offers.asScala) {
       log.finer("Received offer %s".format(offer.getId.getValue))
 
       val taskBuilder = taskQueue.poll()
@@ -45,8 +45,10 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
         log.fine("Task queue is empty. Declining offer.")
         driver.declineOffer(offer.getId)
       }
-      else if (MesosUtils.offerMatches(offer.getResourcesList.toList, taskBuilder.getResourcesList.toList)) {
-        val taskInfos = List(taskBuilder.setSlaveId(offer.getSlaveId).build())
+      else if (MesosUtils.offerMatches(offer, taskBuilder)) {
+        val taskInfos = Lists.newArrayList(
+          taskBuilder.setSlaveId(offer.getSlaveId).build()
+        )
         log.fine("Launching tasks: " + taskInfos)
         driver.launchTasks(offer.getId, taskInfos)
       }
