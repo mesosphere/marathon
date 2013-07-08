@@ -1,7 +1,7 @@
 package mesosphere.marathon.api
 
 import mesosphere.chaos.http.RestModule
-import mesosphere.marathon.api.v1.ServiceResource
+import mesosphere.marathon.api.v1.{ServicesResource, ServiceResource}
 import com.google.inject.Scopes
 
 /**
@@ -14,5 +14,6 @@ class MarathonRestModule extends RestModule {
     super.configureServlets()
 
     bind(classOf[ServiceResource]).in(Scopes.SINGLETON)
+    bind(classOf[ServicesResource]).in(Scopes.SINGLETON)
   }
 }

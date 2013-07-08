@@ -9,7 +9,8 @@ import com.google.common.util.concurrent.AbstractIdleService
 import org.apache.mesos.state.State
 import javax.inject.Inject
 import java.util.{TimerTask, Timer}
-import java.util.concurrent.TimeUnit
+import scala.concurrent.{Future, ExecutionContext, Await}
+import scala.concurrent.duration.Duration
 
 /**
  * Wrapper class for the scheduler
@@ -19,8 +20,11 @@ import java.util.concurrent.TimeUnit
 class MarathonSchedulerService @Inject()(config: MarathonConfiguration,
                                          mesosState: State) extends AbstractIdleService {
 
+  // TODO use a thread pool here
+  import ExecutionContext.Implicits.global
+
   // Time to wait before trying to balance app tasks after driver starts
-  val balanceWait = TimeUnit.SECONDS.toMillis(10)
+  val balanceWait = Duration(10, "seconds").toMillis
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -50,6 +54,13 @@ class MarathonSchedulerService @Inject()(config: MarathonConfiguration,
 
   def scaleService(service: ServiceDefinition) {
     scheduler.scaleService(driver, service)
+  }
+
+  def listServices(): Seq[ServiceDefinition] = {
+    val names = Await.result(store.names(), store.defaultWait)
+    val futures = names.map(name => store.fetch(name))
+    val futureServices = Future.sequence(futures)
+    Await.result(futureServices, store.defaultWait).map(_.get).toSeq
   }
 
   def startUp() {

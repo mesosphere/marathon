@@ -5,6 +5,7 @@ import org.apache.mesos.state.State
 import scala.collection.JavaConverters._
 import java.util.concurrent.ExecutionException
 import com.google.protobuf.InvalidProtocolBufferException
+import scala.concurrent.duration.Duration
 
 /**
  * @author Tobi Knaup
@@ -12,6 +13,8 @@ import com.google.protobuf.InvalidProtocolBufferException
 
 class MarathonStore[S <: MarathonState[_]](state: State,
                        newState: () => S) extends PersistenceStore[S] {
+
+  val defaultWait = Duration(3, "seconds")
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
