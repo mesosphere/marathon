@@ -74,9 +74,7 @@ class MarathonSchedulerService @Inject()(config: MarathonConfiguration,
     driver.stop()
   }
 
-  private
-
-  def scheduleTaskBalancing() {
+  private def scheduleTaskBalancing() {
     val timer = new Timer()
     val task = new TimerTask {
       def run() {

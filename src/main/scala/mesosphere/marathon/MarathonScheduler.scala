@@ -175,9 +175,7 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
     }
   }
 
-  private
-
-  def newTask(service: ServiceDefinition) = {
+  private def newTask(service: ServiceDefinition) = {
     val taskId = taskTracker.newTaskId(service.id)
 
     TaskInfo.newBuilder
@@ -192,7 +190,7 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
    * @param driver
    * @param service
    */
-  def scale(driver: SchedulerDriver, service: ServiceDefinition) {
+  private def scale(driver: SchedulerDriver, service: ServiceDefinition) {
     val currentSize = taskTracker.count(service.id)
     val targetSize = service.instances
 
@@ -219,7 +217,7 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
     }
   }
 
-  def scale(driver: SchedulerDriver, appName: String) {
+  private def scale(driver: SchedulerDriver, appName: String) {
     store.fetch(appName).onSuccess {
       case Some(service) => scale(driver, service)
       case None => log.warning("App %s does not exist. Not scaling.".format(appName))
