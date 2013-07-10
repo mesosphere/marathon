@@ -12,7 +12,7 @@ import com.codahale.metrics.annotation.Timed
  */
 @Path("v1/service")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class ServiceResource @Inject() (manager: MarathonSchedulerService) {
+class ServiceResource @Inject()(manager: MarathonSchedulerService) {
 
   @POST
   @Path("start")

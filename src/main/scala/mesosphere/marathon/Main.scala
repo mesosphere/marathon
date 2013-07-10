@@ -5,6 +5,7 @@ import org.rogach.scallop.ScallopConf
 import mesosphere.chaos.http.{HttpService, HttpModule, HttpConf}
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
+import mesosphere.chaos.AppConfiguration
 
 /**
  * @author Tobi Knaup
@@ -22,7 +23,8 @@ object Main extends Application {
     )
   }
 
-  lazy val getConfiguration = new ScallopConf(args) with HttpConf with MarathonConfiguration
+  lazy val getConfiguration = new ScallopConf(args)
+    with HttpConf with MarathonConfiguration with AppConfiguration
 
   run(List(
     classOf[HttpService],

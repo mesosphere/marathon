@@ -1,27 +1,82 @@
 package mesosphere.marathon
 
-import com.google.inject.{Singleton, Provides, Scopes, AbstractModule}
+import com.google.inject._
 import org.apache.mesos.state.{ZooKeeperState, State}
 import java.util.concurrent.TimeUnit
+import com.twitter.common.zookeeper.{Group, CandidateImpl, Candidate, ZooKeeperClient}
+import org.apache.zookeeper.ZooDefs
+import com.twitter.common.base.Supplier
+import java.util.logging.Logger
+import javax.inject.Named
+import scala.collection.JavaConverters._
+import com.twitter.common.quantity.{Time, Amount}
+import java.util.concurrent.atomic.AtomicBoolean
+import com.google.inject.name.Names
 
 /**
  * @author Tobi Knaup
  */
+object ModuleNames {
+  final val NAMED_CANDIDATE = "CANDIDATE"
+  final val NAMED_LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
+}
 
 class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
+
+  val log = Logger.getLogger(getClass.getName)
+
   def configure() {
     bind(classOf[MarathonConfiguration]).toInstance(conf)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
+
+    //If running in single scheduler mode, this node is the leader.
+    val leader = new AtomicBoolean(!conf.highlyAvailable())
+    bind(classOf[AtomicBoolean])
+      .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
+      .toInstance(leader)
   }
 
   @Provides
   @Singleton
   def provideMesosState(): State = {
     new ZooKeeperState(
-      conf.zooKeeperHosts.get.get,
+      conf.zooKeeperHostString(),
       conf.zooKeeperTimeout.get.get,
-      TimeUnit.SECONDS,
-      conf.zooKeeperPath.get.get
+      TimeUnit.MILLISECONDS,
+      conf.zooKeeperStatePath
     )
+  }
+
+  @Named(ModuleNames.NAMED_CANDIDATE)
+  @Provides
+  @Singleton
+  def provideCandidate(zk: ZooKeeperClient): Option[Candidate] = {
+    if (Main.getConfiguration.highlyAvailable()) {
+      log.info("Registering in Zookeeper with hostname:"
+        + Main.getConfiguration.hostname())
+      val candidate = new CandidateImpl(new Group(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+        Main.getConfiguration.zooKeeperLeaderPath),
+        new Supplier[Array[Byte]] {
+          def get() = {
+            //host:port
+            "%s:%d".format(Main.getConfiguration.hostname(),
+              Main.getConfiguration.port()).getBytes
+          }
+        })
+      return Some(candidate)
+    }
+    None
+  }
+
+
+  @Provides
+  @Singleton
+  def provideZookeeperClient(): ZooKeeperClient = {
+    require(Main.getConfiguration.zooKeeperTimeout() < Integer.MAX_VALUE,
+      "ZooKeeper timeout too large!")
+
+    new ZooKeeperClient(Amount.of(
+      Main.getConfiguration.zooKeeperTimeout().toInt, Time.MILLISECONDS),
+      Main.getConfiguration.zooKeeperHostAddresses.asJavaCollection)
   }
 }

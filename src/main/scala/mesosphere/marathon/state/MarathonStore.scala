@@ -1,10 +1,9 @@
 package mesosphere.marathon.state
 
-import scala.concurrent._
+import com.google.protobuf.InvalidProtocolBufferException
 import org.apache.mesos.state.State
 import scala.collection.JavaConverters._
-import java.util.concurrent.ExecutionException
-import com.google.protobuf.InvalidProtocolBufferException
+import scala.concurrent._
 import scala.concurrent.duration.Duration
 
 /**
