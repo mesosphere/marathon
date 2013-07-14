@@ -4,7 +4,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.Protos.Environment.Variable
 import scala.collection._
 import scala.collection.JavaConverters._
-import mesosphere.marathon.api.v1.ServiceDefinition
+import mesosphere.marathon.api.v1.AppDefinition
 import com.google.common.collect.Lists
 
 
@@ -25,24 +25,24 @@ object MesosUtils {
     builder.build()
   }
 
-  def commandInfo(service: ServiceDefinition) = {
-    val uriProtos = service.uris.map(uri => {
+  def commandInfo(app: AppDefinition) = {
+    val uriProtos = app.uris.map(uri => {
       CommandInfo.URI.newBuilder()
         .setValue(uri)
         .build()
     })
 
     CommandInfo.newBuilder()
-      .setValue(service.cmd)
-      .setEnvironment(environment(service.env))
+      .setValue(app.cmd)
+      .setEnvironment(environment(app.env))
       .addAllUris(uriProtos.asJava)
       .build()
   }
 
-  def resources(service: ServiceDefinition): java.lang.Iterable[Resource] = {
+  def resources(app: AppDefinition): java.lang.Iterable[Resource] = {
     Lists.newArrayList(
-      scalarResource("cpus", service.cpus),
-      scalarResource("mem", service.mem)
+      scalarResource("cpus", app.cpus),
+      scalarResource("mem", app.mem)
     )
   }
 

@@ -3,7 +3,7 @@ package mesosphere.marathon
 import org.apache.mesos.Protos.{FrameworkInfo, FrameworkID}
 import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
-import mesosphere.marathon.api.v1.ServiceDefinition
+import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.MarathonStore
 import com.google.common.util.concurrent.AbstractIdleService
 import org.apache.mesos.state.State
@@ -53,24 +53,24 @@ class MarathonSchedulerService @Inject()(
 
   log.info("Starting scheduler " + frameworkName)
 
-  val store = new MarathonStore(mesosState, () => new ServiceDefinition)
+  val store = new MarathonStore(mesosState, () => new AppDefinition)
   val scheduler = new MarathonScheduler(store)
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo, config.mesosMaster.get.get)
 
 
-  def startService(service: ServiceDefinition) {
-    scheduler.startService(driver, service)
+  def startApp(app: AppDefinition) {
+    scheduler.startApp(driver, app)
   }
 
-  def stopService(service: ServiceDefinition) {
-    scheduler.stopService(driver, service)
+  def stopApp(app: AppDefinition) {
+    scheduler.stopApp(driver, app)
   }
 
-  def scaleService(service: ServiceDefinition) {
-    scheduler.scaleService(driver, service)
+  def scaleApp(app: AppDefinition) {
+    scheduler.scaleApp(driver, app)
   }
 
-  def listServices(): Seq[ServiceDefinition] = {
+  def listServices(): Seq[AppDefinition] = {
     val names = Await.result(store.names(), store.defaultWait)
     val futures = names.map(name => store.fetch(name))
     val futureServices = Future.sequence(futures)

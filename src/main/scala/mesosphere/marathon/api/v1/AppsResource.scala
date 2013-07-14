@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.v1
 
-import javax.ws.rs.{POST, Produces, Path}
+import javax.ws.rs.{GET, POST, Produces, Path}
 import mesosphere.marathon.MarathonSchedulerService
 import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
@@ -10,31 +10,37 @@ import com.codahale.metrics.annotation.Timed
 /**
  * @author Tobi Knaup
  */
-@Path("v1/service")
+@Path("v1/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class ServiceResource @Inject()(manager: MarathonSchedulerService) {
+class AppsResource @Inject()(service: MarathonSchedulerService) {
+
+  @GET
+  @Timed
+  def index() = {
+    service.listServices()
+  }
 
   @POST
   @Path("start")
   @Timed
-  def start(@Valid service: ServiceDefinition): Response = {
-    manager.startService(service)
+  def start(@Valid app: AppDefinition): Response = {
+    service.startApp(app)
     Response.noContent.build
   }
 
   @POST
   @Path("stop")
   @Timed
-  def stop(service: ServiceDefinition): Response = {
-    manager.stopService(service)
+  def stop(app: AppDefinition): Response = {
+    service.stopApp(app)
     Response.noContent.build
   }
 
   @POST
   @Path("scale")
   @Timed
-  def scale(service: ServiceDefinition): Response = {
-    manager.scaleService(service)
+  def scale(app: AppDefinition): Response = {
+    service.scaleApp(app)
     Response.noContent.build
   }
 

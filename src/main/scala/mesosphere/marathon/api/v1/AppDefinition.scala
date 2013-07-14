@@ -11,7 +11,7 @@ import mesosphere.marathon.state.MarathonState
 /**
  * @author Tobi Knaup
  */
-class ServiceDefinition extends MarathonState[Protos.ServiceDefinition] {
+class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   @NotEmpty
   var id: String = ""
   @NotEmpty
@@ -24,8 +24,8 @@ class ServiceDefinition extends MarathonState[Protos.ServiceDefinition] {
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = MesosUtils.commandInfo(this)
-    val cpusResource = MesosUtils.scalarResource(ServiceDefinition.CPUS, cpus)
-    val memResource = MesosUtils.scalarResource(ServiceDefinition.MEM, mem)
+    val cpusResource = MesosUtils.scalarResource(AppDefinition.CPUS, cpus)
+    val memResource = MesosUtils.scalarResource(AppDefinition.MEM, mem)
 
     Protos.ServiceDefinition.newBuilder
       .setId(id)
@@ -56,9 +56,9 @@ class ServiceDefinition extends MarathonState[Protos.ServiceDefinition] {
     for (resource <- proto.getResourcesList.asScala) {
       val value = resource.getScalar.getValue
       resource.getName match {
-        case ServiceDefinition.CPUS =>
+        case AppDefinition.CPUS =>
           cpus = value
-        case ServiceDefinition.MEM =>
+        case AppDefinition.MEM =>
           mem = value
       }
     }
@@ -70,7 +70,7 @@ class ServiceDefinition extends MarathonState[Protos.ServiceDefinition] {
   }
 }
 
-object ServiceDefinition {
+object AppDefinition {
   val CPUS = "cpus"
   val MEM = "mem"
 }

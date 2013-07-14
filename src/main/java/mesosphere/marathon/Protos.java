@@ -41,7 +41,7 @@ public final class Protos {
   public static final class ServiceDefinition extends
       com.google.protobuf.GeneratedMessage
       implements ServiceDefinitionOrBuilder {
-    // Use ServiceDefinition.newBuilder() to construct.
+    // Use AppDefinition.newBuilder() to construct.
     private ServiceDefinition(Builder builder) {
       super(builder);
     }
@@ -365,7 +365,7 @@ public final class Protos {
         return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable;
       }
       
-      // Construct using mesosphere.marathon.Protos.ServiceDefinition.newBuilder()
+      // Construct using mesosphere.marathon.Protos.AppDefinition.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -983,7 +983,7 @@ public final class Protos {
         onChanged();
       }
       
-      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.api.v1.ServiceDefinition)
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.api.v1.AppDefinition)
     }
     
     static {
@@ -991,7 +991,7 @@ public final class Protos {
       defaultInstance.initFields();
     }
     
-    // @@protoc_insertion_point(class_scope:mesosphere.marathon.api.v1.ServiceDefinition)
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.api.v1.AppDefinition)
   }
   
   private static com.google.protobuf.Descriptors.Descriptor

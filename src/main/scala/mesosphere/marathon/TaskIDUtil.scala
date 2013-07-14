@@ -1,7 +1,7 @@
 package mesosphere.marathon
 
 import org.apache.mesos.Protos.TaskID
-import mesosphere.marathon.api.v1.ServiceDefinition
+import mesosphere.marathon.api.v1.AppDefinition
 
 /**
  * Utility functions for dealing with TaskIDs

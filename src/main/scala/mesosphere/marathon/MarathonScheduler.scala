@@ -6,7 +6,7 @@ import java.util.logging.{Level, Logger}
 import scala.collection.JavaConverters._
 import java.util.concurrent.LinkedBlockingQueue
 import mesosphere.mesos.MesosUtils
-import mesosphere.marathon.api.v1.ServiceDefinition
+import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.MarathonStore
 import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext
@@ -16,7 +16,7 @@ import com.google.common.collect.Lists
 /**
  * @author Tobi Knaup
  */
-class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Scheduler {
+class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -108,25 +108,25 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
 
   // TODO move stuff below out of the scheduler
 
-  def startService(driver: SchedulerDriver, service: ServiceDefinition) {
-    store.fetch(service.id).onComplete {
+  def startApp(driver: SchedulerDriver, app: AppDefinition) {
+    store.fetch(app.id).onComplete {
       case Success(option) => if (option.isEmpty) {
-        store.store(service.id, service)
-        log.info("Starting service " + service.id)
-        scale(driver, service)
+        store.store(app.id, app)
+        log.info("Starting app " + app.id)
+        scale(driver, app)
       } else {
-        log.warning("Already started service " + service.id)
+        log.warning("Already started app " + app.id)
       }
       case Failure(t) =>
-        log.log(Level.WARNING, "Failed to start service %s".format(service.id), t)
+        log.log(Level.WARNING, "Failed to start app %s".format(app.id), t)
     }
   }
 
-  def stopService(driver: SchedulerDriver, service: ServiceDefinition) {
-    store.expunge(service.id).onComplete {
+  def stopApp(driver: SchedulerDriver, app: AppDefinition) {
+    store.expunge(app.id).onComplete {
       case Success(_) =>
-        log.info("Stopping service " + service.id)
-        val taskIds = taskTracker.get(service.id)
+        log.info("Stopping app " + app.id)
+        val taskIds = taskTracker.get(app.id)
 
         for (taskId <- taskIds) {
           log.info("Killing task " + taskId.getValue)
@@ -135,22 +135,22 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
 
         // TODO after all tasks have been killed we should remove the app from taskTracker
       case Failure(t) =>
-        log.warning("Error stopping service %s: %s".format(service.id, t.getMessage))
+        log.warning("Error stopping app %s: %s".format(app.id, t.getMessage))
     }
   }
 
-  def scaleService(driver: SchedulerDriver, service: ServiceDefinition) {
-    store.fetch(service.id).onComplete {
+  def scaleApp(driver: SchedulerDriver, app: AppDefinition) {
+    store.fetch(app.id).onComplete {
       case Success(option) => if (option.isDefined) {
         val storedService = option.get
 
         scale(driver, storedService)
       } else {
-        val msg = "Service unknown: " + service.id
+        val msg = "Service unknown: " + app.id
         log.warning(msg)
       }
       case Failure(t) =>
-        log.warning("Error scaling service %s: %s".format(service.id, t.getMessage))
+        log.warning("Error scaling app %s: %s".format(app.id, t.getMessage))
     }
   }
 
@@ -175,51 +175,51 @@ class MarathonScheduler(store: MarathonStore[ServiceDefinition]) extends Schedul
     }
   }
 
-  private def newTask(service: ServiceDefinition) = {
-    val taskId = taskTracker.newTaskId(service.id)
+  private def newTask(app: AppDefinition) = {
+    val taskId = taskTracker.newTaskId(app.id)
 
     TaskInfo.newBuilder
       .setName(taskId.getValue)
       .setTaskId(taskId)
-      .setCommand(MesosUtils.commandInfo(service))
-      .addAllResources(MesosUtils.resources(service))
+      .setCommand(MesosUtils.commandInfo(app))
+      .addAllResources(MesosUtils.resources(app))
   }
 
   /**
-   * Make sure the service is running the correct number of instances
+   * Make sure the app is running the correct number of instances
    * @param driver
-   * @param service
+   * @param app
    */
-  private def scale(driver: SchedulerDriver, service: ServiceDefinition) {
-    val currentSize = taskTracker.count(service.id)
-    val targetSize = service.instances
+  private def scale(driver: SchedulerDriver, app: AppDefinition) {
+    val currentSize = taskTracker.count(app.id)
+    val targetSize = app.instances
 
     if (targetSize > currentSize) {
-      log.info("Scaling %s from %d up to %d instances".format(service.id, currentSize, targetSize))
+      log.info("Scaling %s from %d up to %d instances".format(app.id, currentSize, targetSize))
 
       for (i <- currentSize until targetSize) {
-        val task = newTask(service)
+        val task = newTask(app)
         log.info("Queueing task " + task.getTaskId.getValue)
         taskQueue.add(task)
       }
     }
     else if (targetSize < currentSize) {
-      log.info("Scaling %s from %d down to %d instances".format(service.id, currentSize, targetSize))
+      log.info("Scaling %s from %d down to %d instances".format(app.id, currentSize, targetSize))
 
-      val kill = taskTracker.drop(service.id, targetSize)
+      val kill = taskTracker.drop(app.id, targetSize)
       for (taskId <- kill) {
         log.info("Killing task " + taskId.getValue)
         driver.killTask(taskId)
       }
     }
     else {
-      log.info("Already running %d instances. Not scaling.".format(service.instances))
+      log.info("Already running %d instances. Not scaling.".format(app.instances))
     }
   }
 
   private def scale(driver: SchedulerDriver, appName: String) {
     store.fetch(appName).onSuccess {
-      case Some(service) => scale(driver, service)
+      case Some(app) => scale(driver, app)
       case None => log.warning("App %s does not exist. Not scaling.".format(appName))
     }
   }

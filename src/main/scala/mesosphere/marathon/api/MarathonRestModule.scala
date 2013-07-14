@@ -1,8 +1,8 @@
 package mesosphere.marathon.api
 
 import mesosphere.chaos.http.RestModule
-import mesosphere.marathon.api.v1.{DebugResource, ServicesResource, ServiceResource}
-import com.google.inject.{Guice, Scopes}
+import mesosphere.marathon.api.v1.{DebugResource, AppsResource}
+import com.google.inject.Scopes
 
 /**
  * @author Tobi Knaup
@@ -13,8 +13,7 @@ class MarathonRestModule extends RestModule {
   protected override def configureServlets() {
     super.configureServlets()
 
-    bind(classOf[ServiceResource]).in(Scopes.SINGLETON)
-    bind(classOf[ServicesResource]).in(Scopes.SINGLETON)
+    bind(classOf[AppsResource]).in(Scopes.SINGLETON)
     bind(classOf[DebugResource]).in(Scopes.SINGLETON)
     bind(classOf[RedirectFilter]).asEagerSingleton()
 
