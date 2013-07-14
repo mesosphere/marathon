@@ -141,13 +141,16 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
 
   def scaleApp(driver: SchedulerDriver, app: AppDefinition) {
     store.fetch(app.id).onComplete {
-      case Success(option) => if (option.isDefined) {
-        val storedService = option.get
-
-        scale(driver, storedService)
-      } else {
-        val msg = "Service unknown: " + app.id
-        log.warning(msg)
+      case Success(appOption) => {
+        appOption match {
+          case Some(storedApp) => {
+            storedApp.instances = app.instances
+            store.store(app.id, storedApp)
+            scale(driver, storedApp)
+          }
+          case None =>
+            log.warning("Service unknown: %s".format(app.id))
+        }
       }
       case Failure(t) =>
         log.warning("Error scaling app %s: %s".format(app.id, t.getMessage))
