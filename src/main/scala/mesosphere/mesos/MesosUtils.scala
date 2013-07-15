@@ -26,17 +26,20 @@ object MesosUtils {
   }
 
   def commandInfo(app: AppDefinition) = {
-    val uriProtos = app.uris.map(uri => {
-      CommandInfo.URI.newBuilder()
-        .setValue(uri)
-        .build()
-    })
-
-    CommandInfo.newBuilder()
+    val builder = CommandInfo.newBuilder()
       .setValue(app.cmd)
       .setEnvironment(environment(app.env))
-      .addAllUris(uriProtos.asJava)
-      .build()
+
+    if (app.uris != null) {
+      val uriProtos = app.uris.map(uri => {
+        CommandInfo.URI.newBuilder()
+          .setValue(uri)
+          .build()
+      })
+      builder.addAllUris(uriProtos.asJava)
+    }
+
+    builder.build
   }
 
   def resources(app: AppDefinition): java.lang.Iterable[Resource] = {
