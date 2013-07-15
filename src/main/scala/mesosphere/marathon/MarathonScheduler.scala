@@ -4,7 +4,6 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{SchedulerDriver, Scheduler}
 import java.util.logging.{Level, Logger}
 import scala.collection.JavaConverters._
-import java.util.concurrent.LinkedBlockingQueue
 import mesosphere.mesos.MesosUtils
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.MarathonStore
@@ -22,7 +21,7 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
 
   val taskTracker = new TaskTracker
 
-  val taskQueue = new LinkedBlockingQueue[TaskInfo.Builder]()
+  val taskQueue = new TaskQueue
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
@@ -194,29 +193,37 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
    * @param app
    */
   private def scale(driver: SchedulerDriver, app: AppDefinition) {
-    val currentSize = taskTracker.count(app.id)
-    val targetSize = app.instances
+    taskTracker.get(app.id).synchronized {
+      val currentCount = taskTracker.count(app.id)
+      val targetCount = app.instances
 
-    if (targetSize > currentSize) {
-      log.info("Scaling %s from %d up to %d instances".format(app.id, currentSize, targetSize))
+      if (targetCount > currentCount) {
+        log.info("Need to scale %s from %d up to %d instances".format(app.id, currentCount, targetCount))
 
-      for (i <- currentSize until targetSize) {
-        val task = newTask(app)
-        log.info("Queueing task " + task.getTaskId.getValue)
-        taskQueue.add(task)
+        val queuedCount = taskQueue.count(app)
+
+        if ((currentCount + queuedCount) < targetCount) {
+          for (i <- (currentCount + queuedCount) until targetCount) {
+            val task = newTask(app)
+            log.info("Queueing task " + task.getTaskId.getValue)
+            taskQueue.add(task)
+          }
+        } else {
+          log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
+        }
       }
-    }
-    else if (targetSize < currentSize) {
-      log.info("Scaling %s from %d down to %d instances".format(app.id, currentSize, targetSize))
+      else if (targetCount < currentCount) {
+        log.info("Scaling %s from %d down to %d instances".format(app.id, currentCount, targetCount))
 
-      val kill = taskTracker.drop(app.id, targetSize)
-      for (taskId <- kill) {
-        log.info("Killing task " + taskId.getValue)
-        driver.killTask(taskId)
+        val kill = taskTracker.drop(app.id, targetCount)
+        for (taskId <- kill) {
+          log.info("Killing task " + taskId.getValue)
+          driver.killTask(taskId)
+        }
       }
-    }
-    else {
-      log.info("Already running %d instances. Not scaling.".format(app.instances))
+      else {
+        log.info("Already running %d instances. Not scaling.".format(app.instances))
+      }
     }
   }
 
