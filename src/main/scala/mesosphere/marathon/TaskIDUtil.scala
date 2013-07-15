@@ -17,7 +17,7 @@ object TaskIDUtil {
 
   def appName(taskId: TaskID) = {
     val taskIdString = taskId.getValue
-    taskIdString.substring(0, taskIdString.indexOf("-"))
+    taskIdString.substring(0, taskIdString.lastIndexOf("-"))
   }
 
 }
