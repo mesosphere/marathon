@@ -12,6 +12,8 @@ import scala.collection.JavaConverters._
 import com.twitter.common.quantity.{Time, Amount}
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
+import mesosphere.marathon.state.MarathonStore
+import mesosphere.marathon.api.v1.AppDefinition
 
 /**
  * @author Tobi Knaup
@@ -19,6 +21,7 @@ import com.google.inject.name.Names
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
   final val NAMED_LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
+  final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
 }
 
 class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
@@ -28,6 +31,12 @@ class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
   def configure() {
     bind(classOf[MarathonConfiguration]).toInstance(conf)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
+    bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
+    bind(classOf[AppRegistry]).in(Scopes.SINGLETON)
+
+    bind(classOf[String])
+      .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))
+      .toInstance(conf.zooKeeperServerSetPath)
 
     //If running in single scheduler mode, this node is the leader.
     val leader = new AtomicBoolean(!conf.highlyAvailable())
@@ -78,5 +87,11 @@ class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
     new ZooKeeperClient(Amount.of(
       Main.getConfiguration.zooKeeperTimeout().toInt, Time.MILLISECONDS),
       Main.getConfiguration.zooKeeperHostAddresses.asJavaCollection)
+  }
+
+  @Provides
+  @Singleton
+  def provideMarathonStore(state: State): MarathonStore[AppDefinition] = {
+    new MarathonStore[AppDefinition](state, () => new AppDefinition)
   }
 }

@@ -41,6 +41,8 @@ trait MarathonConfiguration extends ScallopConf {
 
   def zooKeeperLeaderPath = "%s/leader".format(zooKeeperPath())
 
+  def zooKeeperServerSetPath = "%s/apps".format(zooKeeperPath())
+
   lazy val hostname = opt[String]("hostname",
     descr = "The advertised hostname stored in ZooKeeper so another standby" +
       "host can redirect to this elected leader",

@@ -15,7 +15,7 @@ object TaskIDUtil {
     "%s-%d".format(appName, sequence)
   }
 
-  def appName(taskId: TaskID) = {
+  def appID(taskId: TaskID) = {
     val taskIdString = taskId.getValue
     taskIdString.substring(0, taskIdString.lastIndexOf("-"))
   }

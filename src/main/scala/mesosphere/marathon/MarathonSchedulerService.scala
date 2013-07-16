@@ -29,7 +29,8 @@ class MarathonSchedulerService @Inject()(
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConfiguration,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
-    mesosState: State)
+    store: MarathonStore[AppDefinition],
+    scheduler: MarathonScheduler)
   extends AbstractIdleService with Leader {
 
   // TODO use a thread pool here
@@ -53,8 +54,6 @@ class MarathonSchedulerService @Inject()(
 
   log.info("Starting scheduler " + frameworkName)
 
-  val store = new MarathonStore(mesosState, () => new AppDefinition)
-  val scheduler = new MarathonScheduler(store)
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo, config.mesosMaster.get.get)
 
 

@@ -10,18 +10,20 @@ import mesosphere.marathon.state.MarathonStore
 import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext
 import com.google.common.collect.Lists
+import javax.inject.Inject
 
 
 /**
  * @author Tobi Knaup
  */
-class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
+class MarathonScheduler @Inject()(
+    store: MarathonStore[AppDefinition],
+    taskTracker: TaskTracker,
+    taskQueue: TaskQueue,
+    appRegistry: AppRegistry)
+  extends Scheduler {
 
   val log = Logger.getLogger(getClass.getName)
-
-  val taskTracker = new TaskTracker
-
-  val taskQueue = new TaskQueue
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
@@ -47,6 +49,7 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
             val taskInfos = Lists.newArrayList(task)
             log.fine("Launching tasks: " + taskInfos)
             driver.launchTasks(offer.getId, taskInfos)
+            appRegistry.starting(app.id, offer.getHostname, task)
           }
           case None => {
             log.fine("Offer doesn't match request. Declining.")
@@ -70,7 +73,8 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
-    val appName = TaskIDUtil.appName(status.getTaskId)
+    val appID = TaskIDUtil.appID(status.getTaskId)
+    appRegistry.statusUpdate(appID, status)
 
     if (status.getState.eq(TaskState.TASK_FAILED)
       || status.getState.eq(TaskState.TASK_FINISHED)
@@ -78,10 +82,10 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
       || status.getState.eq(TaskState.TASK_LOST)) {
 
       // Remove from our internal list
-      taskTracker.remove(appName, status.getTaskId)
-      scale(driver, appName)
+      taskTracker.remove(appID, status.getTaskId)
+      scale(driver, appID)
     } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
-      taskTracker.add(appName, status.getTaskId)
+      taskTracker.add(appID, status.getTaskId)
     }
   }
 
@@ -138,6 +142,7 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
       case Failure(t) =>
         log.warning("Error stopping app %s: %s".format(app.id, t.getMessage))
     }
+    appRegistry.appShutdown(app.id)
   }
 
   def scaleApp(driver: SchedulerDriver, app: AppDefinition) {
