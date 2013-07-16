@@ -9,13 +9,17 @@
     <version>0.0.2-SNAPSHOT</version>
 
     <properties>
+        <encoding>UTF-8</encoding>
+
         <scala.version>2.10.0</scala.version>
         <mesos.version>0.14.0</mesos.version>
         <protobuf.version>2.4.1</protobuf.version>
         <chaos.version>0.3.1</chaos.version>
         <twitter-commons.version>0.0.43</twitter-commons.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- test deps versions -->
+        <junit.version>4.11</junit.version>
+        <mockito.version>1.9.5</mockito.version>
     </properties>
 
     <distributionManagement>
@@ -36,9 +40,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/mesosphere/${artifactId}.git</connection>
-        <developerConnection>scm:git:git@github.com:mesosphere/${artifactId}.git</developerConnection>
-        <url>http://github.com/mesosphere/${artifactId}/tree/master</url>
+        <connection>scm:git:git://github.com/mesosphere/${project.artifactId}.git</connection>
+        <developerConnection>scm:git:git@github.com:mesosphere/${project.artifactId}.git</developerConnection>
+        <url>http://github.com/mesosphere/${project.artifactId}/tree/master</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -90,6 +94,20 @@
             <groupId>com.twitter.common.zookeeper</groupId>
             <artifactId>client</artifactId>
             <version>0.0.36</version>
+        </dependency>
+
+        <!-- Test scope -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
