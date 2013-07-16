@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.v1
 
-import mesosphere.mesos.MesosUtils
+import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.Protos
 import scala.collection.mutable
 import scala.collection.JavaConverters._
@@ -23,9 +23,9 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   var uris: Seq[String] = Seq()
 
   def toProto: Protos.ServiceDefinition = {
-    val commandInfo = MesosUtils.commandInfo(this)
-    val cpusResource = MesosUtils.scalarResource(AppDefinition.CPUS, cpus)
-    val memResource = MesosUtils.scalarResource(AppDefinition.MEM, mem)
+    val commandInfo = TaskBuilder.commandInfo(this, None)
+    val cpusResource = TaskBuilder.scalarResource(AppDefinition.CPUS, cpus)
+    val memResource = TaskBuilder.scalarResource(AppDefinition.MEM, mem)
 
     Protos.ServiceDefinition.newBuilder
       .setId(id)

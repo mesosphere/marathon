@@ -1,6 +1,5 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.TaskInfo
 import java.util.concurrent.LinkedBlockingQueue
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.collection.JavaConverters._
@@ -13,13 +12,13 @@ import scala.collection.JavaConverters._
 
 class TaskQueue {
 
-  val queue = new LinkedBlockingQueue[TaskInfo.Builder]()
+  val queue = new LinkedBlockingQueue[AppDefinition]()
 
   def poll() =
     queue.poll()
 
-  def add(taskBuilder: TaskInfo.Builder) =
-    queue.add(taskBuilder)
+  def add(app: AppDefinition) =
+    queue.add(app)
 
   /**
    * Number of tasks in the queue for the given app
@@ -28,7 +27,6 @@ class TaskQueue {
    * @return count
    */
   def count(app: AppDefinition): Int = {
-    queue.asScala.count(_.getTaskId.getValue.startsWith(app.id))
+    queue.asScala.count(_.id == app.id)
   }
-
 }

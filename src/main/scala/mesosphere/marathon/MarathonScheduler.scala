@@ -4,7 +4,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{SchedulerDriver, Scheduler}
 import java.util.logging.{Level, Logger}
 import scala.collection.JavaConverters._
-import mesosphere.mesos.MesosUtils
+import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.MarathonStore
 import scala.util.{Failure, Success}
@@ -36,25 +36,27 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
 
   def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
     for (offer <- offers.asScala) {
-      log.finer("Received offer %s".format(offer.getId.getValue))
+      log.finer("Received offer %s".format(offer))
 
-      val taskBuilder = taskQueue.poll()
+      // TODO launch multiple tasks if the offer is big enough
+      val app = taskQueue.poll()
 
-      if (taskBuilder == null) {
+      if (app != null) {
+        newTask(app, offer) match {
+          case Some(task) => {
+            val taskInfos = Lists.newArrayList(task)
+            log.fine("Launching tasks: " + taskInfos)
+            driver.launchTasks(offer.getId, taskInfos)
+          }
+          case None => {
+            log.fine("Offer doesn't match request. Declining.")
+            // Add it back into the queue so the we can try again
+            taskQueue.add(app)
+            driver.declineOffer(offer.getId)
+          }
+        }
+      } else {
         log.fine("Task queue is empty. Declining offer.")
-        driver.declineOffer(offer.getId)
-      }
-      else if (MesosUtils.offerMatches(offer, taskBuilder)) {
-        val taskInfos = Lists.newArrayList(
-          taskBuilder.setSlaveId(offer.getSlaveId).build()
-        )
-        log.fine("Launching tasks: " + taskInfos)
-        driver.launchTasks(offer.getId, taskInfos)
-      }
-      else {
-        log.fine("Offer doesn't match request. Declining.")
-        // Add it back into the queue so the we can try again
-        taskQueue.add(taskBuilder)
         driver.declineOffer(offer.getId)
       }
     }
@@ -177,14 +179,8 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
     }
   }
 
-  private def newTask(app: AppDefinition) = {
-    val taskId = taskTracker.newTaskId(app.id)
-
-    TaskInfo.newBuilder
-      .setName(taskId.getValue)
-      .setTaskId(taskId)
-      .setCommand(MesosUtils.commandInfo(app))
-      .addAllResources(MesosUtils.resources(app))
+  private def newTask(app: AppDefinition, offer: Offer): Option[TaskInfo] = {
+    new TaskBuilder(app, taskTracker.newTaskId).buildIfMatches(offer)
   }
 
   /**
@@ -204,9 +200,8 @@ class MarathonScheduler(store: MarathonStore[AppDefinition]) extends Scheduler {
 
         if ((currentCount + queuedCount) < targetCount) {
           for (i <- (currentCount + queuedCount) until targetCount) {
-            val task = newTask(app)
-            log.info("Queueing task " + task.getTaskId.getValue)
-            taskQueue.add(task)
+            log.info("Queueing task for %s".format(app.id))
+            taskQueue.add(app)
           }
         } else {
           log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
