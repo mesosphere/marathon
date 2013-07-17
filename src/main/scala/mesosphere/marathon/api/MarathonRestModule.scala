@@ -1,7 +1,7 @@
 package mesosphere.marathon.api
 
 import mesosphere.chaos.http.RestModule
-import mesosphere.marathon.api.v1.{DebugResource, AppsResource}
+import mesosphere.marathon.api.v1.{EndpointsResource, DebugResource, AppsResource}
 import com.google.inject.Scopes
 
 /**
@@ -15,6 +15,7 @@ class MarathonRestModule extends RestModule {
 
     bind(classOf[AppsResource]).in(Scopes.SINGLETON)
     bind(classOf[DebugResource]).in(Scopes.SINGLETON)
+    bind(classOf[EndpointsResource]).in(Scopes.SINGLETON)
     bind(classOf[RedirectFilter]).asEagerSingleton()
 
     //This filter will redirect to the master if running in HA mode.

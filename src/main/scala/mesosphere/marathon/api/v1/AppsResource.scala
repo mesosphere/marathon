@@ -17,7 +17,7 @@ class AppsResource @Inject()(service: MarathonSchedulerService) {
   @GET
   @Timed
   def index() = {
-    service.listServices()
+    service.listApps()
   }
 
   @POST

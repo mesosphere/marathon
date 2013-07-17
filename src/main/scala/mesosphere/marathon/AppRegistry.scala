@@ -7,9 +7,11 @@ import scala.collection._
 import mesosphere.mesos.TaskBuilder
 import javax.inject.{Named, Inject}
 import com.twitter.common.zookeeper.{ServerSetImpl, ServerSet, ZooKeeperClient}
-import com.google.common.collect.Maps
+import com.google.common.collect.{ImmutableSet, Maps}
 import java.util.logging.Logger
 import com.twitter.common.zookeeper.ServerSet.EndpointStatus
+import com.twitter.common.net.pool.DynamicHostSet
+import com.twitter.thrift.ServiceInstance
 
 /**
  * Registers apps in Zookeeper via ServerSet
@@ -27,6 +29,8 @@ class AppRegistry @Inject()(
   val serverSets = mutable.Map.empty[String, ServerSet]
   val addresses = mutable.Map.empty[TaskID, InetSocketAddress]
   val endpointStatuses = mutable.Map.empty[TaskID, EndpointStatus]
+  val appInstanceMap = new mutable.HashMap[String, Set[ServiceInstance]] with
+    mutable.SynchronizedMap[String, Set[ServiceInstance]]
 
   // Get server sets on startup
   zkClient.get().getChildren(zkPath, false).asScala.foreach(startUp)
@@ -72,11 +76,21 @@ class AppRegistry @Inject()(
   }
 
   def startUp(appName: String) {
-    serverSets(appName) = new ServerSetImpl(zkClient, s"$zkPath/$appName")
+    val serverSet = new ServerSetImpl(zkClient, s"$zkPath/$appName")
+    serverSets(appName) = serverSet
+    watchServerSet(appName, serverSet)
   }
 
   def shutDown(appName: String) {
     serverSets.remove(appName)
   }
 
+  private def watchServerSet(appName: String, serverSet: ServerSet) {
+    serverSet.watch(new DynamicHostSet.HostChangeMonitor[ServiceInstance] {
+      def onChange(hostSet: ImmutableSet[ServiceInstance]) {
+        appInstanceMap(appName) = hostSet.asScala
+        log.fine(s"Host set for app $appName changed")
+      }
+    })
+  }
 }

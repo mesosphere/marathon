@@ -21,6 +21,8 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   var cpus: Double = 1.0
   var mem: Double = 128.0
   var uris: Seq[String] = Seq()
+  // Port gets assigned by Marathon
+  var port: Int = 0
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, None)
@@ -31,6 +33,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
       .setId(id)
       .setCmd(commandInfo)
       .setInstances(instances)
+      .setPort(port)
       .addResources(cpusResource)
       .addResources(memResource)
       .build
@@ -42,6 +45,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     id = proto.getId
     cmd = proto.getCmd.getValue
     instances = proto.getInstances
+    port = proto.getPort
 
     // Add command environment
     for (variable <- proto.getCmd.getEnvironment.getVariablesList.asScala) {

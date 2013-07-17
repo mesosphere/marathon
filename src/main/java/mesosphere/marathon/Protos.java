@@ -37,11 +37,15 @@ public final class Protos {
     // optional string description = 5;
     boolean hasDescription();
     String getDescription();
+    
+    // optional uint32 port = 6;
+    boolean hasPort();
+    int getPort();
   }
   public static final class ServiceDefinition extends
       com.google.protobuf.GeneratedMessage
       implements ServiceDefinitionOrBuilder {
-    // Use AppDefinition.newBuilder() to construct.
+    // Use ServiceDefinition.newBuilder() to construct.
     private ServiceDefinition(Builder builder) {
       super(builder);
     }
@@ -175,12 +179,23 @@ public final class Protos {
       }
     }
     
+    // optional uint32 port = 6;
+    public static final int PORT_FIELD_NUMBER = 6;
+    private int port_;
+    public boolean hasPort() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    public int getPort() {
+      return port_;
+    }
+    
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
       instances_ = 0;
       resources_ = java.util.Collections.emptyList();
       description_ = "";
+      port_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -231,6 +246,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeBytes(5, getDescriptionBytes());
       }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt32(6, port_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -259,6 +277,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(5, getDescriptionBytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(6, port_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -365,7 +387,7 @@ public final class Protos {
         return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable;
       }
       
-      // Construct using mesosphere.marathon.Protos.AppDefinition.newBuilder()
+      // Construct using mesosphere.marathon.Protos.ServiceDefinition.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -404,6 +426,8 @@ public final class Protos {
         }
         description_ = "";
         bitField0_ = (bitField0_ & ~0x00000010);
+        port_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       
@@ -471,6 +495,10 @@ public final class Protos {
           to_bitField0_ |= 0x00000008;
         }
         result.description_ = description_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.port_ = port_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -524,6 +552,9 @@ public final class Protos {
         }
         if (other.hasDescription()) {
           setDescription(other.getDescription());
+        }
+        if (other.hasPort()) {
+          setPort(other.getPort());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -606,6 +637,11 @@ public final class Protos {
             case 42: {
               bitField0_ |= 0x00000010;
               description_ = input.readBytes();
+              break;
+            }
+            case 48: {
+              bitField0_ |= 0x00000020;
+              port_ = input.readUInt32();
               break;
             }
           }
@@ -983,7 +1019,28 @@ public final class Protos {
         onChanged();
       }
       
-      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.api.v1.AppDefinition)
+      // optional uint32 port = 6;
+      private int port_ ;
+      public boolean hasPort() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      public int getPort() {
+        return port_;
+      }
+      public Builder setPort(int value) {
+        bitField0_ |= 0x00000020;
+        port_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearPort() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        port_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
     }
     
     static {
@@ -991,7 +1048,7 @@ public final class Protos {
       defaultInstance.initFields();
     }
     
-    // @@protoc_insertion_point(class_scope:mesosphere.marathon.api.v1.AppDefinition)
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.ServiceDefinition)
   }
   
   private static com.google.protobuf.Descriptors.Descriptor
@@ -1009,11 +1066,11 @@ public final class Protos {
   static {
     java.lang.String[] descriptorData = {
       "\n\016marathon.proto\022\023mesosphere.marathon\032\013m" +
-      "esos.proto\"\214\001\n\021ServiceDefinition\022\n\n\002id\030\001" +
+      "esos.proto\"\232\001\n\021ServiceDefinition\022\n\n\002id\030\001" +
       " \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n" +
       "\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.me" +
-      "sos.Resource\022\023\n\013description\030\005 \001(\tB\035\n\023mes" +
-      "osphere.marathonB\006Protos"
+      "sos.Resource\022\023\n\013description\030\005 \001(\t\022\014\n\004por" +
+      "t\030\006 \001(\rB\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1025,7 +1082,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", },
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Port", },
               mesosphere.marathon.Protos.ServiceDefinition.class,
               mesosphere.marathon.Protos.ServiceDefinition.Builder.class);
           return null;

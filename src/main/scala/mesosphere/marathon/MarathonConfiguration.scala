@@ -16,8 +16,8 @@ trait MarathonConfiguration extends ScallopConf {
   noshort = true)
 
   lazy val mesosFailoverTimeout = opt[Long]("failover_timeout",
-  descr = "The failover_timeout for mesos in milliseconds",
-  default = Some(3600000L))
+  descr = "The failover_timeout for mesos in seconds",
+  default = Some(3600L))
 
   lazy val highlyAvailable = opt[Boolean]("ha",
   descr = "Runs Marathon in HA mode with leader election." +
@@ -36,6 +36,14 @@ trait MarathonConfiguration extends ScallopConf {
   lazy val zooKeeperPath = opt[String]("zk_state",
   descr = "Path in ZooKeeper for storing state",
   default = Some("/marathon"))
+
+  lazy val localPortMin = opt[Int]("local_port_min",
+    descr = "Min port number to use when assigning ports to apps",
+    default = Some(10000))
+
+  lazy val localPortMax = opt[Int]("local_port_max",
+    descr = "Max port number to use when assigning ports to apps",
+    default = Some(20000))
 
   def zooKeeperStatePath = "%s/state".format(zooKeeperPath())
 

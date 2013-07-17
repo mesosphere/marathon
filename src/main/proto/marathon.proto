@@ -1,3 +1,7 @@
+//
+// protoc --java_out=src/main/java/ --proto_path=/path/to/mesos/include/mesos/ --proto_path=src/main/proto/ \
+//   src/main/proto/marathon.proto
+//
 package mesosphere.marathon;
 
 option java_package = "mesosphere.marathon";
@@ -11,4 +15,5 @@ message ServiceDefinition {
   required uint32 instances = 3;
   repeated mesos.Resource resources = 4;
   optional string description = 5;
+  optional uint32 port = 6;
 }

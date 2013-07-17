@@ -19,6 +19,7 @@ import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
 import java.lang.String
 import scala.Predef.String
+import scala.util.Random
 
 /**
  * Wrapper class for the scheduler
@@ -37,7 +38,7 @@ class MarathonSchedulerService @Inject()(
   import ExecutionContext.Implicits.global
 
   // Time to wait before trying to balance app tasks after driver starts
-  val balanceWait = Duration(10, "seconds").toMillis
+  val balanceWait = Duration(30, "seconds")
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -58,6 +59,8 @@ class MarathonSchedulerService @Inject()(
 
 
   def startApp(app: AppDefinition) {
+    app.port = newAppPort(app)
+    log.info(s"Assigned port ${app.port} to app '${app.id}'")
     scheduler.startApp(driver, app)
   }
 
@@ -69,7 +72,8 @@ class MarathonSchedulerService @Inject()(
     scheduler.scaleApp(driver, app)
   }
 
-  def listServices(): Seq[AppDefinition] = {
+  def listApps(): Seq[AppDefinition] = {
+    // TODO method is expensive, it's n+1 trips to ZK. Cache this?
     val names = Await.result(store.names(), store.defaultWait)
     val futures = names.map(name => store.fetch(name))
     val futureServices = Future.sequence(futures)
@@ -124,7 +128,7 @@ class MarathonSchedulerService @Inject()(
         scheduler.balanceTasks(driver)
       }
     }
-    timer.schedule(task, balanceWait)
+    timer.schedule(task, balanceWait.toMillis)
   }
 
   private def offerLeaderShip() {
@@ -132,5 +136,15 @@ class MarathonSchedulerService @Inject()(
       log.info("Offering leadership.")
       candidate.get.offerLeadership(this)
     }
+  }
+
+  private def newAppPort(app: AppDefinition): Int = {
+    // TODO this is pretty expensive, find a better way
+    val assignedPorts = listApps().map(_.port)
+    var port = 0
+    do {
+      port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
+    } while (assignedPorts.contains(port))
+    port
   }
 }
