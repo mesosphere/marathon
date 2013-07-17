@@ -118,6 +118,7 @@ class MarathonScheduler @Inject()(
       case Success(option) => if (option.isEmpty) {
         store.store(app.id, app)
         log.info("Starting app " + app.id)
+        appRegistry.startUp(app.id)
         scale(driver, app)
       } else {
         log.warning("Already started app " + app.id)
@@ -137,12 +138,11 @@ class MarathonScheduler @Inject()(
           log.info("Killing task " + taskId.getValue)
           driver.killTask(taskId)
         }
-
+        appRegistry.shutDown(app.id)
         // TODO after all tasks have been killed we should remove the app from taskTracker
       case Failure(t) =>
         log.warning("Error stopping app %s: %s".format(app.id, t.getMessage))
     }
-    appRegistry.appShutdown(app.id)
   }
 
   def scaleApp(driver: SchedulerDriver, app: AppDefinition) {

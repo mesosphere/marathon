@@ -28,6 +28,10 @@ class AppRegistry @Inject()(
   val addresses = mutable.Map.empty[TaskID, InetSocketAddress]
   val endpointStatuses = mutable.Map.empty[TaskID, EndpointStatus]
 
+  // Get server sets on startup
+  zkClient.get().getChildren(zkPath, false).asScala.foreach(startUp)
+
+
   def starting(appName: String, hostname: String, task: TaskInfo) {
     // TODO wrap TaskInfo into something that gives us access to the port
     val port = task.getResourcesList.asScala
@@ -41,12 +45,16 @@ class AppRegistry @Inject()(
   }
 
   def statusUpdate(appName: String, status: TaskStatus) {
-    val serverSet = serverSets.getOrElseUpdate(appName, new ServerSetImpl(zkClient, s"$zkPath/$appName"))
+    if (!serverSets.contains(appName)) {
+      log.warning(s"No server set for $appName")
+      return
+    }
 
     if (status.getState == TaskState.TASK_RUNNING) {
       addresses.remove(status.getTaskId) match {
         case Some(address) => {
-          val endpointStatus = serverSet.join(address, Maps.newHashMap[String, InetSocketAddress](), defaultShardId)
+          val endpointStatus = serverSets(appName)
+            .join(address, Maps.newHashMap[String, InetSocketAddress](), defaultShardId)
           endpointStatuses(status.getTaskId) = endpointStatus
         }
         case None => log.warning("No address for task %s".format(status.getTaskId))
@@ -63,8 +71,12 @@ class AppRegistry @Inject()(
     }
   }
 
-  def appShutdown(appName: String) {
-    // TODO implement
+  def startUp(appName: String) {
+    serverSets(appName) = new ServerSetImpl(zkClient, s"$zkPath/$appName")
+  }
+
+  def shutDown(appName: String) {
+    serverSets.remove(appName)
   }
 
 }
