@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v1
 import javax.ws.rs.{GET, Produces, Path}
 import javax.ws.rs.core.MediaType
 import javax.inject.Inject
-import mesosphere.marathon.{MarathonSchedulerService, AppRegistry}
+import mesosphere.marathon.{TaskTracker, MarathonSchedulerService}
 
 /**
  * @author Tobi Knaup
@@ -13,7 +13,7 @@ import mesosphere.marathon.{MarathonSchedulerService, AppRegistry}
 @Produces(Array(MediaType.TEXT_PLAIN))
 class EndpointsResource @Inject()(
     schedulerService: MarathonSchedulerService,
-    appRegistry: AppRegistry) {
+    taskTracker: TaskTracker) {
 
   @GET
   def endpoints() = {
@@ -21,9 +21,8 @@ class EndpointsResource @Inject()(
     for (app <- schedulerService.listApps()) {
       sb.append(app.id).append(" ").append(app.port).append(" ")
 
-      for (instance <- appRegistry.appInstanceMap(app.id)) {
-        val endpoint = instance.getServiceEndpoint
-        sb.append(endpoint.getHost).append(":").append(endpoint.getPort).append(" ")
+      for (task <- taskTracker.get(app.id)) {
+        sb.append(task.host).append(":").append(task.port).append(" ")
       }
       sb.append("\n")
     }

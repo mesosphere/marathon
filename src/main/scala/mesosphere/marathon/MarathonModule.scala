@@ -32,7 +32,7 @@ class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
     bind(classOf[MarathonConfiguration]).toInstance(conf)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
-    bind(classOf[AppRegistry]).in(Scopes.SINGLETON)
+    bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))

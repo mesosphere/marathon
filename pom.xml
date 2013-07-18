@@ -95,11 +95,6 @@
             <artifactId>client</artifactId>
             <version>0.0.36</version>
         </dependency>
-        <dependency>
-            <groupId>com.twitter.common.zookeeper</groupId>
-            <artifactId>server-set</artifactId>
-            <version>1.0.44</version>
-        </dependency>
 
         <!-- Test scope -->
         <dependency>

@@ -14,6 +14,7 @@ class MarathonStore[S <: MarathonState[_]](state: State,
                        newState: () => S) extends PersistenceStore[S] {
 
   val defaultWait = Duration(3, "seconds")
+  val prefix = "app:"
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
@@ -36,14 +37,14 @@ class MarathonStore[S <: MarathonState[_]](state: State,
   }
 
   def fetch(key: String): Future[Option[S]] = {
-    state.fetch(key) map {
+    state.fetch(prefix + key) map {
       case Some(variable) => stateFromBytes(variable.value)
       case None => None
     }
   }
 
   def store(key: String, value: S): Future[Option[S]] = {
-    state.fetch(key) flatMap {
+    state.fetch(prefix + key) flatMap {
       case Some(variable) =>
         state.store(variable.mutate(value.toProtoByteArray)) map {
           case Some(newVar) => stateFromBytes(newVar.value)
@@ -54,7 +55,7 @@ class MarathonStore[S <: MarathonState[_]](state: State,
   }
 
   def expunge(key: String): Future[Boolean] = {
-    state.fetch(key) flatMap {
+    state.fetch(prefix + key) flatMap {
       case Some(variable) =>
         state.expunge(variable) map {
           case Some(b) => b
@@ -69,6 +70,8 @@ class MarathonStore[S <: MarathonState[_]](state: State,
     future {
       try {
         state.names().get().asScala
+          .filter(_.startsWith(prefix))
+          .map(_.replaceFirst(prefix, ""))
       } catch {
         // Thrown when node doesn't exist
         case e: ExecutionException => Seq().iterator

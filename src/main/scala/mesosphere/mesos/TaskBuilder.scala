@@ -19,7 +19,7 @@ class TaskBuilder(app: AppDefinition, newTaskId: String => TaskID) {
       return None
     }
 
-    getPort(offer).map(port => {
+    TaskBuilder.getPort(offer).map(port => {
       val taskId = newTaskId(app.id)
 
       TaskInfo.newBuilder
@@ -47,20 +47,6 @@ class TaskBuilder(app: AppDefinition, newTaskId: String => TaskID) {
       .setType(Value.Type.RANGES)
       .setRanges(ranges)
       .build
-  }
-
-  private def getPort(offeredResource: Resource): Option[Int] = {
-    if (offeredResource.getRanges.getRangeCount > 0) {
-      Some(offeredResource.getRanges.getRange(0).getBegin.toInt)
-    } else {
-      None
-    }
-  }
-
-  private def getPort(offer: Offer): Option[Int] = {
-    offer.getResourcesList.asScala
-      .find(_.getName == TaskBuilder.portsResourceName)
-      .flatMap(getPort)
   }
 
   private def offerMatches(offer: Offer): Boolean = {
@@ -123,5 +109,19 @@ object TaskBuilder {
     }
 
     builder.build()
+  }
+
+  def getPort(offer: Offer): Option[Int] = {
+    offer.getResourcesList.asScala
+      .find(_.getName == portsResourceName)
+      .flatMap(getPort)
+  }
+
+  def getPort(resource: Resource): Option[Int] = {
+    if (resource.getRanges.getRangeCount > 0) {
+      Some(resource.getRanges.getRange(0).getBegin.toInt)
+    } else {
+      None
+    }
   }
 }

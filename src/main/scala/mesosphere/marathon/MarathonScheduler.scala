@@ -19,8 +19,7 @@ import javax.inject.Inject
 class MarathonScheduler @Inject()(
     store: MarathonStore[AppDefinition],
     taskTracker: TaskTracker,
-    taskQueue: TaskQueue,
-    appRegistry: AppRegistry)
+    taskQueue: TaskQueue)
   extends Scheduler {
 
   val log = Logger.getLogger(getClass.getName)
@@ -48,8 +47,11 @@ class MarathonScheduler @Inject()(
           case Some(task) => {
             val taskInfos = Lists.newArrayList(task)
             log.fine("Launching tasks: " + taskInfos)
+
+            val port = TaskBuilder.getPort(offer).get
+            val marathonTask = MarathonTask(task.getTaskId.getValue, offer.getHostname, port)
+            taskTracker.starting(app.id, marathonTask)
             driver.launchTasks(offer.getId, taskInfos)
-            appRegistry.starting(app.id, offer.getHostname, task)
           }
           case None => {
             log.fine("Offer doesn't match request. Declining.")
@@ -74,7 +76,6 @@ class MarathonScheduler @Inject()(
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
     val appID = TaskIDUtil.appID(status.getTaskId)
-    appRegistry.statusUpdate(appID, status)
 
     if (status.getState.eq(TaskState.TASK_FAILED)
       || status.getState.eq(TaskState.TASK_FINISHED)
@@ -82,10 +83,10 @@ class MarathonScheduler @Inject()(
       || status.getState.eq(TaskState.TASK_LOST)) {
 
       // Remove from our internal list
-      taskTracker.remove(appID, status.getTaskId)
+      taskTracker.terminated(appID, status.getTaskId)
       scale(driver, appID)
     } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
-      taskTracker.add(appID, status.getTaskId)
+      taskTracker.running(appID, status.getTaskId)
     }
   }
 
@@ -118,7 +119,7 @@ class MarathonScheduler @Inject()(
       case Success(option) => if (option.isEmpty) {
         store.store(app.id, app)
         log.info("Starting app " + app.id)
-        appRegistry.startUp(app.id)
+        taskTracker.startUp(app.id)
         scale(driver, app)
       } else {
         log.warning("Already started app " + app.id)
@@ -132,13 +133,13 @@ class MarathonScheduler @Inject()(
     store.expunge(app.id).onComplete {
       case Success(_) =>
         log.info("Stopping app " + app.id)
-        val taskIds = taskTracker.get(app.id)
+        val tasks = taskTracker.get(app.id)
 
-        for (taskId <- taskIds) {
-          log.info("Killing task " + taskId.getValue)
-          driver.killTask(taskId)
+        for (task <- tasks) {
+          log.info("Killing task " + task.id)
+          driver.killTask(TaskID.newBuilder.setValue(task.id).build)
         }
-        appRegistry.shutDown(app.id)
+        taskTracker.shutDown(app.id)
         // TODO after all tasks have been killed we should remove the app from taskTracker
       case Failure(t) =>
         log.warning("Error stopping app %s: %s".format(app.id, t.getMessage))
@@ -185,6 +186,7 @@ class MarathonScheduler @Inject()(
   }
 
   private def newTask(app: AppDefinition, offer: Offer): Option[TaskInfo] = {
+    // TODO this should return a MarathonTask
     new TaskBuilder(app, taskTracker.newTaskId).buildIfMatches(offer)
   }
 
@@ -216,9 +218,9 @@ class MarathonScheduler @Inject()(
         log.info("Scaling %s from %d down to %d instances".format(app.id, currentCount, targetCount))
 
         val kill = taskTracker.drop(app.id, targetCount)
-        for (taskId <- kill) {
-          log.info("Killing task " + taskId.getValue)
-          driver.killTask(taskId)
+        for (task <- kill) {
+          log.info("Killing task " + task.id)
+          driver.killTask(TaskID.newBuilder.setValue(task.id).build)
         }
       }
       else {
