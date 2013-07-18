@@ -26,9 +26,13 @@ class AppRegistry @Inject()(
 
   val defaultShardId = 0
   val log = Logger.getLogger(getClass.getName)
-  val serverSets = mutable.Map.empty[String, ServerSet]
-  val addresses = mutable.Map.empty[TaskID, InetSocketAddress]
-  val endpointStatuses = mutable.Map.empty[TaskID, EndpointStatus]
+
+  val serverSets = new mutable.HashMap[String, ServerSet] with
+    mutable.SynchronizedMap[String, ServerSet]
+  val addresses = new mutable.HashMap[TaskID, InetSocketAddress] with
+    mutable.SynchronizedMap[TaskID, InetSocketAddress]
+  val endpointStatuses = new mutable.HashMap[TaskID, EndpointStatus] with
+    mutable.SynchronizedMap[TaskID, EndpointStatus]
   val appInstanceMap = new mutable.HashMap[String, Set[ServiceInstance]] with
     mutable.SynchronizedMap[String, Set[ServiceInstance]]
 

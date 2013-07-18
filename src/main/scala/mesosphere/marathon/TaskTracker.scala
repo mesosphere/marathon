@@ -1,7 +1,6 @@
 package mesosphere.marathon
 
-import scala.collection.concurrent.TrieMap
-import scala.collection.Set
+import scala.collection._
 import org.apache.mesos.Protos.TaskID
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -11,8 +10,10 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class TaskTracker {
 
-  val tasks = new TrieMap[String, Set[TaskID]]
-  val counters = new TrieMap[String, AtomicInteger]
+  val tasks = new mutable.HashMap[String, Set[TaskID]]
+    with mutable.SynchronizedMap[String, Set[TaskID]]
+  val counters = new mutable.HashMap[String, AtomicInteger]
+    with mutable.SynchronizedMap[String, AtomicInteger]
 
   def get(appName: String) = {
     tasks.getOrElseUpdate(appName, Set())
