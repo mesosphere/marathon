@@ -17,6 +17,7 @@ export LC_ALL=en_US.UTF-8
 function header {
   cat <<EOF
 global
+  daemon
   log 127.0.0.1 local0
   log 127.0.0.1 local1 notice
   maxconn 4096
@@ -29,7 +30,8 @@ defaults
   clitimeout  50000
   srvtimeout  50000
 
-listen stats :9090
+listen stats
+  bind 127.0.0.1:9090
   balance
   mode http
   stats enable
@@ -46,7 +48,8 @@ function apps {
     shift 2
     cat <<EOF
 
-listen $app_name :$app_port
+listen $app_name
+  bind 127.0.0.1:$app_port
   mode http
   option tcplog
   option httpchk GET /
