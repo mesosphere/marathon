@@ -86,7 +86,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.mesos</groupId>
-            <artifactId>mesos</artifactId>
+            <artifactId>mesos_jdk6</artifactId>
             <version>${mesos.version}</version>
         </dependency>
         <dependency>
