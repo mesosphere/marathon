@@ -62,14 +62,9 @@
             <url>s3://maven-private/snapshot</url>
         </repository>
         <repository>
-            <id>mesosphere-public-release-repo</id>
-            <name>Mesosphere Public Release Repo</name>
-            <url>http://s3.amazonaws.com/mesosphere-maven-public/release/</url>
-        </repository>
-        <repository>
-            <id>mesosphere-public-snapshot-repo</id>
-            <name>Mesosphere Public Snapshot Repo</name>
-            <url>http://s3.amazonaws.com/mesosphere-maven-public/snapshot/</url>
+            <id>mesosphere-public-repo</id>
+            <name>Mesosphere Public Repo</name>
+            <url>http://s3.amazonaws.com/mesosphere-maven-public/</url>
         </repository>
         <repository>
             <id>twitter-repo</id>
@@ -91,7 +86,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.mesos</groupId>
-            <artifactId>mesos_jdk6</artifactId>
+            <artifactId>mesos</artifactId>
             <version>${mesos.version}</version>
         </dependency>
         <dependency>
