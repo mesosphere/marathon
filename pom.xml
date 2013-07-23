@@ -64,7 +64,7 @@
         <repository>
             <id>mesosphere-public-repo</id>
             <name>Mesosphere Public Repo</name>
-            <url>http://s3.amazonaws.com/mesosphere-maven-public/</url>
+            <url>s3://mesosphere-maven-public/</url>
         </repository>
         <repository>
             <id>twitter-repo</id>
@@ -86,7 +86,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.mesos</groupId>
-            <artifactId>mesos</artifactId>
+            <artifactId>mesos_jdk6</artifactId>
             <version>${mesos.version}</version>
         </dependency>
         <dependency>
