@@ -62,6 +62,16 @@
             <url>s3://maven-private/snapshot</url>
         </repository>
         <repository>
+            <id>mesosphere-public-release-repo</id>
+            <name>Mesosphere Public Release Repo</name>
+            <url>http://s3.amazonaws.com/mesosphere-maven-public/release/</url>
+        </repository>
+        <repository>
+            <id>mesosphere-public-snapshot-repo</id>
+            <name>Mesosphere Public Snapshot Repo</name>
+            <url>http://s3.amazonaws.com/mesosphere-maven-public/snapshot/</url>
+        </repository>
+        <repository>
             <id>twitter-repo</id>
             <name>Twitter Maven2 Repository</name>
             <url>http://maven.twttr.com/</url>
