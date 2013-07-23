@@ -18,8 +18,8 @@
         <!-- runtime deps versions -->
         <mesos.version>0.14.0-SNAPSHOT</mesos.version>
         <protobuf.version>2.4.1</protobuf.version>
-        <chaos.version>0.3.1</chaos.version>
-        <twitter-commons.version>0.0.43</twitter-commons.version>
+        <chaos.version>0.3.2-SNAPSHOT</chaos.version>
+        <twitter-commons.version>0.0.44</twitter-commons.version>
 
         <!-- test deps versions -->
         <junit.version>4.11</junit.version>
@@ -97,7 +97,7 @@
         <dependency>
             <groupId>com.twitter.common.zookeeper</groupId>
             <artifactId>client</artifactId>
-            <version>0.0.36</version>
+            <version>0.0.37</version>
         </dependency>
 
         <!-- Test scope -->
