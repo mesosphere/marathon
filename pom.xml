@@ -16,7 +16,7 @@
         <scala.version>2.10.2</scala.version>
 
         <!-- runtime deps versions -->
-        <mesos.version>0.14.0</mesos.version>
+        <mesos.version>0.0.14</mesos.version>
         <protobuf.version>2.4.1</protobuf.version>
         <chaos.version>0.3.4</chaos.version>
         <twitter-commons.version>0.0.44</twitter-commons.version>
