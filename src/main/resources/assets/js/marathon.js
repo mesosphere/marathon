@@ -320,8 +320,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
         mem: 10.0,
         cpus: 0.1,
         instances: 1,
-        port: 3000,
-        cmd: ''
+        uris: []
       };
     },
 
@@ -456,6 +455,9 @@ jQuery.fn.fastLiveFilter = function(list, options) {
         "<div class='info-wrapper'>" +
           "<h1>{{ id }}</h1>" +
           "CMD: <span class='val'>{{ cmd }}</span><br/>" +
+          "<div class='uri-wrapper'>URIs: <span class='val'>{{ uriCount }}</span>" +
+            "<ul class='uris'>{{uris}}</ul>" +
+          "</div>" +
           "Memory: <span class='val'>{{ mem }}</span><br/>" +
           "CPU: <span class='val'>{{ cpus }}<br/></span>" +
           "Instances: <span class='val'>{{ instances }}</span><br/>" +
@@ -486,7 +488,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     scale: function() {
-      console.log(this.model.id, this.model.get('instances'));
       var instances = prompt('How many instances?', this.model.get('instances'));
       if (instances) {
         this.model.scale(instances);
@@ -506,9 +507,14 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
     data: function() {
       var attr = this.model.toJSON(),
-          total = (attr.cpus * attr.instances);
-          console.log(total);
-      attr = _.extend(attr, {total: total});
+          total = (attr.cpus * attr.instances),
+          uriCount = attr.uris.length,
+          uris = (attr.uris.join('<li>'));
+      attr = _.extend(attr, {
+        total: total,
+        uris: uris,
+        uriCount: uriCount
+      });
       return attr;
     }
   });
@@ -573,7 +579,16 @@ jQuery.fn.fastLiveFilter = function(list, options) {
             var $el = $(el),
                 name = $el.attr('name'),
                 val = $el.val();
-                data[name] =val;
+
+                if (name === 'uris') {
+                  val = val.split(',');
+                  // strip whitespace
+                  val = _.map(val, function(s){return s.replace(/ /g,''); });
+                  // reject empty
+                  val = _.reject(val, function(s){return s===''});
+                }
+
+                data[name] = val;
           });
 
           collection.create(data);

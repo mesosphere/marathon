@@ -39,22 +39,22 @@
       <form id='add-app-form'>
         <h1>New Application</h1>
         <div class='input-row'>
-          <label>Id</label> <input id='id-field' name='id' value=''/>
-        </div>
-        <div class='input-row'>
-          <label>Memory</label> <input name='mem' value='' />
-        </div>
-        <div class='input-row'>
-          <label>CPUS</label> <input name='cpus' value='' />
-        </div>
-        <div class='input-row'>
-          <label>Instances</label> <input name='instances' value=''/>
-        </div>
-        <div class='input-row'>
-          <label>Port</label> <input name='port' value='' />
+          <label>Id</label> <input id='id-field' name='id' value='{{id}}'/>
         </div>
         <div class='input-row'>
           <label>Command</label> <input name='cmd' value='' />
+        </div>
+        <div class='input-row'>
+          <label>Memory</label> <input name='mem' value='{{mem}}' />
+        </div>
+        <div class='input-row'>
+          <label>CPUS</label> <input name='cpus' value='{{cpus}}' />
+        </div>
+        <div class='input-row'>
+          <label>Instances</label> <input name='instances' value='{{instances}}'/>
+        </div>
+        <div class='input-row'>
+          <label>URIs</label> <input name='uris' value=''/>
         </div>
         <div class='button-wrapper'>
           <a href="#" class='b cancel' data-lightbox-close='true'>Cancel</a>
