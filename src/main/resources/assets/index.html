@@ -36,60 +36,35 @@
       <div class='start-view'></div>
     </div>
 
-<!--       <header>
-        <div class='logo'>
-          <h1 class='orbitron'>Marathon</h1>
-        </div>
-      </header> -->
-
-
-<!--       <div class='navigator'>
-        <div class='window'>
-          <div class='title'>Applications</div>
-          <div class='apps-wrapper orbitron'></div>
-        </div>
-      </div> -->
-
-<!--       <div class='app'>
-        <div class='app-inner left'>
-          <div class='app-content'>
-            <div class='window'>
-              <div class='title'>Applications</div>
-              <div class='apps-wrapper orbitron'></div>
-            </div>
-          </div>
-        </div>
-
-        <div class='app-inner right'>
-          <div class='app-content'>
-            <div class='window'>
-              <div class='details-pane'></div>
-            </div>
-          </div>
-        </div>
-      </div> -->
-
-    </div>
-
-<!--     <div class='fullscreen'>
-      <div class='app'>
-        <div class='app-inner'>
-          <div class='app-content outer-border'></div>
-        </div>
-      </div>
-    </div>
-
-    <div class='fullscreen'>
-      <div class='app'>
-        <div class='app-inner'>
-          <div class='app-content inner-border'></div>
-        </div>
-      </div>
-    </div> -->
-
-    <!-- <div class='fullscreen texture-overlay'></div> -->
 
     <!-- javascript -->
+    <script type='text/template' id='add-app-template'>
+      <form id='add-app-form'>
+        <h1>New Application</h1>
+        <div class='input-row'>
+          <label>Id</label> <input id='id-field' name='id' value=''/>
+        </div>
+        <div class='input-row'>
+          <label>Memory</label> <input name='mem' value='' />
+        </div>
+        <div class='input-row'>
+          <label>CPUS</label> <input name='cpus' value='' />
+        </div>
+        <div class='input-row'>
+          <label>Instances</label> <input name='instances' value=''/>
+        </div>
+        <div class='input-row'>
+          <label>Port</label> <input name='port' value='' />
+        </div>
+        <div class='input-row'>
+          <label>Command</label> <input name='cmd' value='' />
+        </div>
+        <div class='button-wrapper'>
+          <a href="#" class='b cancel' data-lightbox-close='true'>Cancel</a>
+          <a href='#' id='save' class='b'>Start</a>
+        </div>
+      </form>
+    </script>
     <script type="text/javascript" src='js/libs/jquery-min.js'></script>
     <script type="text/javascript" src='js/libs/underscore-min.js'></script>
     <script type="text/javascript" src='js/libs/backbone-min.js'></script>
