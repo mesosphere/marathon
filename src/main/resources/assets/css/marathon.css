@@ -353,10 +353,14 @@ h1 {
   border-bottom: 2px solid rgba(184,232,239,1);
 }
 
+.system-caret.focus {
+  border-bottom: 2px solid #428bca;
+}
+
 .input {
   font-size: 56px;
   font-family: 'Lato';
-  text-transform: uppercase;
+  font-weight: 300;
 }
 
 #system-text {
