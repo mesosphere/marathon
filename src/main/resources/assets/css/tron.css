@@ -1,0 +1,176 @@
+/* ==============
+ * Base
+ * ==============
+ */
+body {
+  background: #111113;
+  margin: 0;
+  padding: 0;
+  color: #B8E8EF;
+  font-family: 'VT323', sans-serif;
+}
+
+header {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  text-align: center;
+}
+
+
+/* ==============
+ * Typography
+ * ==============
+ */
+.orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.logo {
+  margin-top: 20px;
+}
+
+.logo .orbitron {
+  /*letter-spacing: 0.3em;*/
+  font-size: 18px;
+  /*text-shadow: 0 2px 6px rgba(255,255,255,0.8);*/
+  /*text-transform: uppercase;*/
+}
+
+/* ==============
+ * Helpers
+ * ==============
+ */
+.fullscreen {
+  position: absolute;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.app {
+  overflow: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  display: table;
+  table-layout: fixed;
+  z-index: 999;
+}
+
+.app-inner {
+  display: table-cell;
+  text-align: center;
+  vertical-align: middle;
+  width: 100%;
+}
+
+.app-content {
+  display: inline-block;
+  outline: none;
+  text-align: left;
+}
+
+.window {
+  padding: 5px;
+  background: #111113;
+  border: 2px solid #C9F0FB;
+/*  box-shadow: 0 5px 50px #284051,
+              0 2px 20px rgba(255,255,255,0.4);*/
+}
+
+.system-folder {
+  font-size: 64px;
+  font-weight: 100;
+  font-family: 'Lato', sans-serif;
+  text-transform: uppercase;
+}
+
+.navigator {
+  width: 600px;
+}
+
+.path {
+  font-weight: 300;
+  font-size: 86px;
+  padding-top: 20px;
+}
+
+.title {
+  text-transform: uppercase;
+  padding: 8px 10px 5px;
+  border: 1px solid #3C729D;
+}
+
+.apps-wrapper .items {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  font-size: 36px;
+  overflow-y: scroll;
+}
+
+.items li {
+  padding: 18px 10px 14px;
+  border: 1px solid #3C729D;
+  border-top-color: transparent;
+  color: #E6E6E6;
+}
+
+.app-inner.left.open {
+  text-align: right;
+  opacity: 0.4;
+}
+.app-inner.right {
+  display:none;
+  text-align: left;
+}
+.app-inner.right.open {
+  display: table-cell;
+}
+
+.right .app-content {
+  margin-left: 25px;
+}
+
+.left .app-content {
+  margin-right: 25px;
+}
+
+
+.details-pane {
+  width: 0px;
+  height: 900px;
+}
+
+/* ==============
+ * Textures
+ * ==============
+ */
+.texture-background {
+  background: linear-gradient(to bottom,rgba(28,54,69,0.8) 0%,rgba(0,0,0,0) 100%);
+  box-shadow: inset 0 0 180px rgba(158,194,237,0.3);
+}
+
+.outer-border {
+  border: 2px solid #C9F0FB;
+  border-radius: 3px;
+  height: 96%;
+  width: 98%;
+}
+
+.inner-border {
+  border: 1px solid #3C729D;
+  border-radius: 3px;
+  height: 93%;
+  width: 95%;
+}
+
+.texture-overlay {
+
+}
