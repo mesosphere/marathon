@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v1
 
-import javax.ws.rs.{GET, POST, Produces, Path}
-import mesosphere.marathon.MarathonSchedulerService
+import javax.ws.rs._
+import mesosphere.marathon.{TaskTracker, MarathonSchedulerService}
 import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
 import javax.validation.Valid
@@ -12,7 +12,9 @@ import com.codahale.metrics.annotation.Timed
  */
 @Path("v1/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class AppsResource @Inject()(service: MarathonSchedulerService) {
+class AppsResource @Inject()(
+    service: MarathonSchedulerService,
+    taskTracker: TaskTracker) {
 
   @GET
   @Timed
@@ -42,6 +44,13 @@ class AppsResource @Inject()(service: MarathonSchedulerService) {
   def scale(app: AppDefinition): Response = {
     service.scaleApp(app)
     Response.noContent.build
+  }
+
+  @GET
+  @Path("{id}/status")
+  @Timed
+  def status(@PathParam("id") id: String) = {
+    Map("id" -> id, "instances" -> taskTracker.get(id))
   }
 
 }
