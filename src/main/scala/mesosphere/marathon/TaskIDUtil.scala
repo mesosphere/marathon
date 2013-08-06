@@ -11,12 +11,14 @@ import mesosphere.marathon.api.v1.AppDefinition
 
 object TaskIDUtil {
 
+  val taskDelimiter = "_"
+
   def taskId(appName: String, sequence: Int) = {
-    "%s:%d-%d".format(appName, sequence, System.currentTimeMillis())
+    "%s%s%d-%d".format(appName, taskDelimiter, sequence, System.currentTimeMillis())
   }
 
   def appID(taskId: TaskID) = {
     val taskIdString = taskId.getValue
-    taskIdString.substring(0, taskIdString.lastIndexOf(":"))
+    taskIdString.substring(0, taskIdString.lastIndexOf(taskDelimiter))
   }
 }
