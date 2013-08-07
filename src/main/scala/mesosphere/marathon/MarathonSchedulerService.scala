@@ -6,7 +6,6 @@ import java.util.logging.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.MarathonStore
 import com.google.common.util.concurrent.AbstractIdleService
-import org.apache.mesos.state.State
 import javax.inject.{Named, Inject}
 import java.util.{TimerTask, Timer}
 import scala.concurrent.{Future, ExecutionContext, Await}
@@ -17,8 +16,6 @@ import com.twitter.common.zookeeper.Group.JoinException
 import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
-import java.lang.String
-import scala.Predef.String
 import scala.util.Random
 
 /**
@@ -53,8 +50,6 @@ class MarathonSchedulerService @Inject()(
     .setUser("") // Let Mesos assign the user
     .build()
 
-  log.info("Starting scheduler " + frameworkName)
-
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo, config.mesosMaster.get.get)
 
 
@@ -82,21 +77,31 @@ class MarathonSchedulerService @Inject()(
 
   //Begin Service interface
   def startUp() {
-    log.info("Starting driver")
-    if (! leader.get) {
+    log.info("Starting up")
+    if (leader.get) {
+      runDriver()
+    } else {
       offerLeaderShip()
     }
+  }
 
+  def shutDown() {
+    log.info("Shutting down")
+    stopDriver()
+  }
+
+  def runDriver() {
+    log.info("Running driver")
     scheduleTaskBalancing()
     driver.run()
   }
 
-  def shutDown() {
+  def stopDriver() {
     log.info("Stopping driver")
     driver.stop()
   }
 
-  def isLeader() = {
+  def isLeader = {
     leader.get() || getLeader.isEmpty
   }
 
@@ -110,14 +115,20 @@ class MarathonSchedulerService @Inject()(
 
   //Begin Leader interface, which is required for CandidateImpl.
   def onDefeated() {
+    log.info("Defeated")
     leader.set(false)
-    shutDown()
-    offerLeaderShip()
+    stopDriver()
+
+    // Don't offer leadership if we're shutting down
+    if (isRunning) {
+      offerLeaderShip()
+    }
   }
 
-  def onElected(cmd: ExceptionalCommand[JoinException]) {
+  def onElected(abdicate: ExceptionalCommand[JoinException]) {
+    log.info("Elected")
     leader.set(true)
-    startUp()
+    runDriver()
   }
   //End Leader interface
 
