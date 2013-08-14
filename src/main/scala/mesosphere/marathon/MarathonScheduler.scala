@@ -96,7 +96,7 @@ class MarathonScheduler @Inject()(
 
   def disconnected(driver: SchedulerDriver) {
     log.warning("Disconnected")
-    driver.stop
+    suicide()
   }
 
   def slaveLost(driver: SchedulerDriver, slave: SlaveID) {
@@ -109,7 +109,7 @@ class MarathonScheduler @Inject()(
 
   def error(driver: SchedulerDriver, message: String) {
     log.warning("Error: %s".format(message))
-    driver.stop
+    suicide()
   }
 
   // TODO move stuff below out of the scheduler
@@ -236,4 +236,8 @@ class MarathonScheduler @Inject()(
     }
   }
 
+  private def suicide() {
+    log.severe("Committing suicide")
+    sys.exit(9)
+  }
 }
