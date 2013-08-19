@@ -14,6 +14,8 @@ class TaskQueue {
 
   val queue = new LinkedBlockingQueue[AppDefinition]()
 
+  def isEmpty() = queue.isEmpty()
+
   def poll() =
     queue.poll()
 
