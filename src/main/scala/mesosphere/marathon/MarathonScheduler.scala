@@ -188,27 +188,37 @@ class MarathonScheduler @Inject()(
     def _newTasks(tQueue: TaskQueue, remainedResource: AppResource): List[(AppDefinition, TaskInfo)] = {
       if(taskQueue.isEmpty){
         List.empty
-      }else{
+      } else {
+        import AppResource._
         val app = taskQueue.poll()
-        new TaskBuilder(app, taskTracker.newTaskId).buildIfMatches(offer) match {
-          case Some(task) => {
-            (app, task) :: _newTasks(taskQueue, remainedResource.sub(app))
+        if (app.asAppResource.matches(remainedResource)) {
+          new TaskBuilder(app, taskTracker.newTaskId).buildIfMatches(offer) match {
+            case Some(task) => {
+              (app, task) :: _newTasks(taskQueue, remainedResource.sub(app))
+            }
+            case None => {
+              // resource was sufficient but port wasn't offered.
+              // Add it back into the queue so the we can try again later.
+              // TODO(shingo) can we put this app back to the head of the queue?
+              taskQueue.add(app)
+              List.empty
+            }
           }
-          case None => {
-            // port wasn't offered or offered resource was exhausted.
-            // Add it back into the queue so the we can try again later.
-            // TODO(shingo) can we put this app back to the head of the queue?
-            taskQueue.add(app)
-            List.empty
-          }
+        } else {
+          // resource offered was exhausted.
+          // Add it back into the queue so the we can try again later.
+          // TODO(shingo) can we put this app back to the head of the queue?
+          taskQueue.add(app)
+          List.empty
         }
       }
     }
+
     import AppResource._
     _newTasks(taskQueue, offer.asAppResource).reverse
   }
 
-  /**
+/**
    * Make sure the app is running the correct number of instances
    * @param driver
    * @param app
