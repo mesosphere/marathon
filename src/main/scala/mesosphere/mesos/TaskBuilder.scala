@@ -50,17 +50,8 @@ class TaskBuilder(app: AppDefinition, newTaskId: String => TaskID) {
   }
 
   private def offerMatches(offer: Offer): Boolean = {
-    for (resource <- offer.getResourcesList.asScala) {
-      if (resource.getName.eq(TaskBuilder.cpusResourceName) && resource.getScalar.getValue < app.cpus) {
-        return false
-      }
-      if (resource.getName.eq(TaskBuilder.memResourceName) && resource.getScalar.getValue < app.mem) {
-        return false
-      }
-      // TODO handle other resources
-    }
-
-    true
+    import mesosphere.marathon.AppResource._
+    app.asAppResource.matches(offer.asAppResource)
   }
 }
 
