@@ -55,7 +55,7 @@ class MarathonScheduler @Inject()(
             acc.add(task)
             acc
         }
-        if (taskInfos.size() <= 0) {
+        if (taskInfos.isEmpty) {
           log.fine("Offer doesn't match request. Declining.")
           driver.declineOffer(offer.getId)
         } else {
@@ -184,39 +184,8 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  private def newTasks(taskQueue: TaskQueue, offer: Offer): List[(AppDefinition, TaskInfo)] = {
-    def _newTasks(tQueue: TaskQueue, remainedResource: AppResource): List[(AppDefinition, TaskInfo)] = {
-      if(taskQueue.isEmpty){
-        List.empty
-      } else {
-        import AppResource._
-        val app = taskQueue.poll()
-        if (app.asAppResource.matches(remainedResource)) {
-          new TaskBuilder(app, taskTracker.newTaskId).buildIfMatches(offer) match {
-            case Some(task) => {
-              (app, task) :: _newTasks(taskQueue, remainedResource.sub(app))
-            }
-            case None => {
-              // resource was sufficient but port wasn't offered.
-              // Add it back into the queue so the we can try again later.
-              // TODO(shingo) can we put this app back to the head of the queue?
-              taskQueue.add(app)
-              List.empty
-            }
-          }
-        } else {
-          // resource offered was exhausted.
-          // Add it back into the queue so the we can try again later.
-          // TODO(shingo) can we put this app back to the head of the queue?
-          taskQueue.add(app)
-          List.empty
-        }
-      }
-    }
-
-    import AppResource._
-    _newTasks(taskQueue, offer.asAppResource).reverse
-  }
+  private def newTasks(taskQueue: TaskQueue, offer: Offer): List[(AppDefinition, TaskInfo)]
+  = new TaskBuilder(taskQueue,taskTracker.newTaskId).buildUtmostTasksFor(offer)
 
 /**
    * Make sure the app is running the correct number of instances
