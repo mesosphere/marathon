@@ -6,20 +6,26 @@ import scala.collection.mutable
 import scala.collection.JavaConverters._
 import org.hibernate.validator.constraints.NotEmpty
 import mesosphere.marathon.state.MarathonState
+import com.fasterxml.jackson.annotation.JsonProperty
 
 
 /**
  * @author Tobi Knaup
  */
 class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
+  @JsonProperty
   @NotEmpty
   var id: String = ""
   @NotEmpty
+  @JsonProperty
   var cmd: String = ""
   var env: Map[String, String] = Map.empty
   var instances: Int = 0
   var cpus: Double = 1.0
   var mem: Double = 128.0
+  var rackAffinity = -1.0
+  var nodeAffinity = -1.0
+
   var uris: Seq[String] = Seq()
   // Port gets assigned by Marathon
   var port: Int = 0

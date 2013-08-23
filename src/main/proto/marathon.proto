@@ -16,4 +16,6 @@ message ServiceDefinition {
   repeated mesos.Resource resources = 4;
   optional string description = 5;
   optional uint32 port = 6;
+  optional double rackAffinity = 7;
+  optional double nodeAffinity = 8;
 }

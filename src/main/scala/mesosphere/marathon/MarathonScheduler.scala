@@ -10,13 +10,16 @@ import mesosphere.marathon.state.MarathonStore
 import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext
 import com.google.common.collect.Lists
-import javax.inject.Inject
+import javax.inject.{Named, Inject}
+import com.google.common.eventbus.EventBus
+import mesosphere.marathon.event.{EventModule, MesosStatusUpdateEvent}
 
 
 /**
  * @author Tobi Knaup
  */
 class MarathonScheduler @Inject()(
+    @Named(EventModule.busName) eventBus: Option[EventBus],
     store: MarathonStore[AppDefinition],
     taskTracker: TaskTracker,
     taskQueue: TaskQueue)
@@ -37,7 +40,7 @@ class MarathonScheduler @Inject()(
 
   def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
     for (offer <- offers.asScala) {
-      log.finer("Received offer %s".format(offer))
+      log.info("Received offer %s".format(offer))
 
       // TODO launch multiple tasks if the offer is big enough
       val app = taskQueue.poll()
@@ -76,6 +79,12 @@ class MarathonScheduler @Inject()(
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
     val appID = TaskIDUtil.appID(status.getTaskId)
+
+    if (eventBus.nonEmpty) {
+      log.info("Sending event notification.")
+      eventBus.get.post(new MesosStatusUpdateEvent(status.getTaskId.getValue,
+        status.getState.getNumber))
+    }
 
     if (status.getState.eq(TaskState.TASK_FAILED)
       || status.getState.eq(TaskState.TASK_FINISHED)

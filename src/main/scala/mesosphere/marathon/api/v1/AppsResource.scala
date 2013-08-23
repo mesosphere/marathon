@@ -2,10 +2,14 @@ package mesosphere.marathon.api.v1
 
 import javax.ws.rs._
 import mesosphere.marathon.{TaskTracker, MarathonSchedulerService}
-import javax.ws.rs.core.{Response, MediaType}
-import javax.inject.Inject
+import javax.ws.rs.core.{Context, Response, MediaType}
+import javax.inject.{Named, Inject}
 import javax.validation.Valid
 import com.codahale.metrics.annotation.Timed
+import com.google.common.eventbus.EventBus
+import mesosphere.marathon.event.{EventModule, ApiPostEvent}
+import javax.servlet.http.HttpServletRequest
+import mesosphere.marathon.event.http.HttpCallbackEventSubscriber
 
 /**
  * @author Tobi Knaup
@@ -13,6 +17,7 @@ import com.codahale.metrics.annotation.Timed
 @Path("v1/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject()(
+    @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
     taskTracker: TaskTracker) {
 
@@ -25,7 +30,8 @@ class AppsResource @Inject()(
   @POST
   @Path("start")
   @Timed
-  def start(@Valid app: AppDefinition): Response = {
+  def start(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
+    maybePostEvent(req, app)
     service.startApp(app)
     Response.noContent.build
   }
@@ -33,7 +39,8 @@ class AppsResource @Inject()(
   @POST
   @Path("stop")
   @Timed
-  def stop(app: AppDefinition): Response = {
+  def stop(@Context req: HttpServletRequest, app: AppDefinition): Response = {
+    maybePostEvent(req, app)
     service.stopApp(app)
     Response.noContent.build
   }
@@ -41,7 +48,8 @@ class AppsResource @Inject()(
   @POST
   @Path("scale")
   @Timed
-  def scale(app: AppDefinition): Response = {
+  def scale(@Context req: HttpServletRequest, app: AppDefinition): Response = {
+    maybePostEvent(req, app)
     service.scaleApp(app)
     Response.noContent.build
   }
@@ -53,4 +61,11 @@ class AppsResource @Inject()(
     Map("id" -> id, "instances" -> taskTracker.get(id))
   }
 
+  private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) {
+    if (eventBus.nonEmpty) {
+      val ip = req.getRemoteAddr
+      val path = req.getRequestURI
+      eventBus.get.post(new ApiPostEvent(ip, path, app))
+    }
+  }
 }

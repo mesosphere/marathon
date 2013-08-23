@@ -4,7 +4,7 @@
 
     <groupId>mesosphere</groupId>
     <artifactId>marathon</artifactId>
-    <version>0.0.3-SNAPSHOT</version>
+    <version>0.0.4-SNAPSHOT</version>
 
     <properties>
         <encoding>UTF-8</encoding>
@@ -14,9 +14,12 @@
         <scala.version>2.10.2</scala.version>
 
         <!-- runtime deps versions -->
+        <chaos.version>0.3.5</chaos.version>
         <mesos.version>0.14.0</mesos.version>
         <protobuf.version>2.4.1</protobuf.version>
-        <chaos.version>0.3.5</chaos.version>
+        <akka.version>2.2.0</akka.version>
+        <spray.version>1.2-20130801</spray.version>
+        <json4s.version>3.2.5</json4s.version>
         <twitter-commons.version>0.0.44</twitter-commons.version>
 
         <!-- test deps versions -->
@@ -69,13 +72,56 @@
             <name>Twitter Maven2 Repository</name>
             <url>http://maven.twttr.com/</url>
         </repository>
+        <repository>
+            <id>spray-repo</id>
+            <name>Spray Maven Repository</name>
+            <url>http://repo.spray.io/</url>
+        </repository>
+        <repository>
+            <id>spray-nightlies-repo</id>
+            <name>Spray Nightlies Maven Repository</name>
+            <url>http://nightlies.spray.io/</url>
+        </repository>
     </repositories>
 
     <dependencies>
+
+        <dependency>
+            <groupId>com.googlecode.protobuf-java-format</groupId>
+            <artifactId>protobuf-java-format</artifactId>
+            <version>1.2</version>
+        </dependency>
+
+
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-actor_2.10</artifactId>
+            <version>${akka.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-slf4j_2.10</artifactId>
+            <version>${akka.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.spray</groupId>
+            <artifactId>spray-client</artifactId>
+            <version>${spray.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.spray</groupId>
+            <artifactId>spray-httpx</artifactId>
+            <version>${spray.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-jackson_2.10</artifactId>
+            <version>${json4s.version}</version>
         </dependency>
         <dependency>
             <groupId>mesosphere</groupId>

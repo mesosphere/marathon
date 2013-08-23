@@ -41,6 +41,14 @@ public final class Protos {
     // optional uint32 port = 6;
     boolean hasPort();
     int getPort();
+    
+    // optional double rackAffinity = 7;
+    boolean hasRackAffinity();
+    double getRackAffinity();
+    
+    // optional double nodeAffinity = 8;
+    boolean hasNodeAffinity();
+    double getNodeAffinity();
   }
   public static final class ServiceDefinition extends
       com.google.protobuf.GeneratedMessage
@@ -189,6 +197,26 @@ public final class Protos {
       return port_;
     }
     
+    // optional double rackAffinity = 7;
+    public static final int RACKAFFINITY_FIELD_NUMBER = 7;
+    private double rackAffinity_;
+    public boolean hasRackAffinity() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public double getRackAffinity() {
+      return rackAffinity_;
+    }
+    
+    // optional double nodeAffinity = 8;
+    public static final int NODEAFFINITY_FIELD_NUMBER = 8;
+    private double nodeAffinity_;
+    public boolean hasNodeAffinity() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    public double getNodeAffinity() {
+      return nodeAffinity_;
+    }
+    
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -196,6 +224,8 @@ public final class Protos {
       resources_ = java.util.Collections.emptyList();
       description_ = "";
       port_ = 0;
+      rackAffinity_ = 0D;
+      nodeAffinity_ = 0D;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -249,6 +279,12 @@ public final class Protos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeUInt32(6, port_);
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeDouble(7, rackAffinity_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeDouble(8, nodeAffinity_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -281,6 +317,14 @@ public final class Protos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(6, port_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeDoubleSize(7, rackAffinity_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeDoubleSize(8, nodeAffinity_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -428,6 +472,10 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000010);
         port_ = 0;
         bitField0_ = (bitField0_ & ~0x00000020);
+        rackAffinity_ = 0D;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        nodeAffinity_ = 0D;
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
       
@@ -499,6 +547,14 @@ public final class Protos {
           to_bitField0_ |= 0x00000010;
         }
         result.port_ = port_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.rackAffinity_ = rackAffinity_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.nodeAffinity_ = nodeAffinity_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -555,6 +611,12 @@ public final class Protos {
         }
         if (other.hasPort()) {
           setPort(other.getPort());
+        }
+        if (other.hasRackAffinity()) {
+          setRackAffinity(other.getRackAffinity());
+        }
+        if (other.hasNodeAffinity()) {
+          setNodeAffinity(other.getNodeAffinity());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -642,6 +704,16 @@ public final class Protos {
             case 48: {
               bitField0_ |= 0x00000020;
               port_ = input.readUInt32();
+              break;
+            }
+            case 57: {
+              bitField0_ |= 0x00000040;
+              rackAffinity_ = input.readDouble();
+              break;
+            }
+            case 65: {
+              bitField0_ |= 0x00000080;
+              nodeAffinity_ = input.readDouble();
               break;
             }
           }
@@ -1040,6 +1112,48 @@ public final class Protos {
         return this;
       }
       
+      // optional double rackAffinity = 7;
+      private double rackAffinity_ ;
+      public boolean hasRackAffinity() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      public double getRackAffinity() {
+        return rackAffinity_;
+      }
+      public Builder setRackAffinity(double value) {
+        bitField0_ |= 0x00000040;
+        rackAffinity_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearRackAffinity() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        rackAffinity_ = 0D;
+        onChanged();
+        return this;
+      }
+      
+      // optional double nodeAffinity = 8;
+      private double nodeAffinity_ ;
+      public boolean hasNodeAffinity() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      public double getNodeAffinity() {
+        return nodeAffinity_;
+      }
+      public Builder setNodeAffinity(double value) {
+        bitField0_ |= 0x00000080;
+        nodeAffinity_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearNodeAffinity() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        nodeAffinity_ = 0D;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
     }
     
@@ -1066,11 +1180,13 @@ public final class Protos {
   static {
     java.lang.String[] descriptorData = {
       "\n\016marathon.proto\022\023mesosphere.marathon\032\013m" +
-      "esos.proto\"\232\001\n\021ServiceDefinition\022\n\n\002id\030\001" +
+      "esos.proto\"\306\001\n\021ServiceDefinition\022\n\n\002id\030\001" +
       " \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n" +
       "\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.me" +
       "sos.Resource\022\023\n\013description\030\005 \001(\t\022\014\n\004por" +
-      "t\030\006 \001(\rB\035\n\023mesosphere.marathonB\006Protos"
+      "t\030\006 \001(\r\022\024\n\014rackAffinity\030\007 \001(\001\022\024\n\014nodeAff" +
+      "inity\030\010 \001(\001B\035\n\023mesosphere.marathonB\006Prot" +
+      "os"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1082,7 +1198,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Port", },
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Port", "RackAffinity", "NodeAffinity", },
               mesosphere.marathon.Protos.ServiceDefinition.class,
               mesosphere.marathon.Protos.ServiceDefinition.Builder.class);
           return null;
