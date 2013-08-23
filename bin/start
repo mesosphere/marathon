@@ -1,14 +1,6 @@
 #!/bin/bash
 set -o errexit -o nounset -o pipefail
 
-MASTER='zk://localhost:2181/mesos'
-while getopts m: opt; do
-  case $opt in
-    m)
-      MASTER="$OPTARG"
-      ;;
-  esac
-done
 
 FRAMEWORK_HOME=`dirname $0`/..
 
@@ -24,4 +16,4 @@ export MESOS_NATIVE_LIBRARY=$(find "$MESOS_HOME" -name libmesos.dylib -or -name 
 echo "MESOS_NATIVE_LIBRARY set to $MESOS_NATIVE_LIBRARY"
 
 # Start Marathon
-java -cp "$FRAMEWORK_HOME"/target/marathon-*.jar mesosphere.marathon.Main --master "$MASTER" "$@"
+java -jar "$FRAMEWORK_HOME"/target/marathon-*-jar-with-dependencies.jar "$@"
