@@ -6,35 +6,58 @@ import scala.collection._
 import scala.collection.JavaConverters._
 import mesosphere.marathon.api.v1.AppDefinition
 import org.apache.mesos.Protos.Value.Ranges
-
+import mesosphere.marathon.{TaskQueue, AppResource}
+import mesosphere.marathon.AppResource._
 
 /**
  * @author Tobi Knaup
+ * @author Shingo Omura
  */
 
-class TaskBuilder(app: AppDefinition, newTaskId: String => TaskID) {
+class TaskBuilder(taskQueue:TaskQueue, newTaskId: String => TaskID) {
 
-  def buildIfMatches(offer: Offer): Option[TaskInfo] = {
-    if (!offerMatches(offer)) {
-      return None
-    }
-
+  def buildUtmostTasksFor(offer:Offer): List[(AppDefinition,TaskInfo)] = {
     TaskBuilder.getPort(offer).map(port => {
-      val taskId = newTaskId(app.id)
-
-      TaskInfo.newBuilder
-        .setName(taskId.getValue)
-        .setTaskId(taskId)
-        .setSlaveId(offer.getSlaveId)
-        .setCommand(TaskBuilder.commandInfo(app, Some(port)))
-        .addResources(TaskBuilder.scalarResource(TaskBuilder.cpusResourceName, app.cpus))
-        .addResources(TaskBuilder.scalarResource(TaskBuilder.memResourceName, app.mem))
-        .addResources(portsResource(port, port))
-        .build
-    })
+      fetchUtmostTasksFor(offer.asAppResource).map(app => {
+        val taskId = newTaskId(app.id)
+        app -> TaskInfo.newBuilder
+          .setName(taskId.getValue)
+          .setTaskId(taskId)
+          .setSlaveId(offer.getSlaveId)
+          .setCommand(TaskBuilder.commandInfo(app, Some(port)))
+          .addResources(TaskBuilder.scalarResource(TaskBuilder.cpusResourceName, app.cpus))
+          .addResources(TaskBuilder.scalarResource(TaskBuilder.memResourceName, app.mem))
+          .addResources(TaskBuilder.portsResource(port, port))
+          .build
+      })
+    }).getOrElse(List.empty)
   }
 
-  private def portsResource(start: Long, end: Long): Resource = {
+  private def fetchUtmostTasksFor(remainedResource: AppResource): List[AppDefinition] = {
+    if (taskQueue.isEmpty()) {
+      List.empty
+    } else {
+      val app = taskQueue.poll()
+      if (app.asAppResource.matches(remainedResource)) {
+        app :: fetchUtmostTasksFor(remainedResource.sub(app))
+      } else {
+        // resource offered was exhausted.
+        // Add it back into the queue so the we can try again later.
+        // TODO(shingo) can we put this app back to the head of the queue?
+        taskQueue.add(app)
+        List.empty
+      }
+    }
+  }
+}
+
+object TaskBuilder {
+
+  final val cpusResourceName = "cpus"
+  final val memResourceName = "mem"
+  final val portsResourceName = "ports"
+
+  def portsResource(start: Long, end: Long): Resource = {
     val range = Value.Range.newBuilder
       .setBegin(start)
       .setEnd(end)
@@ -48,27 +71,6 @@ class TaskBuilder(app: AppDefinition, newTaskId: String => TaskID) {
       .setRanges(ranges)
       .build
   }
-
-  private def offerMatches(offer: Offer): Boolean = {
-    for (resource <- offer.getResourcesList.asScala) {
-      if (resource.getName.eq(TaskBuilder.cpusResourceName) && resource.getScalar.getValue < app.cpus) {
-        return false
-      }
-      if (resource.getName.eq(TaskBuilder.memResourceName) && resource.getScalar.getValue < app.mem) {
-        return false
-      }
-      // TODO handle other resources
-    }
-
-    true
-  }
-}
-
-object TaskBuilder {
-
-  final val cpusResourceName = "cpus"
-  final val memResourceName = "mem"
-  final val portsResourceName = "ports"
 
   def scalarResource(name: String, value: Double) = {
     Resource.newBuilder
