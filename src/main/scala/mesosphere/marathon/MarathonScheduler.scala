@@ -13,6 +13,7 @@ import com.google.common.collect.Lists
 import javax.inject.{Named, Inject}
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event.{EventModule, MesosStatusUpdateEvent}
+import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks}
 
 
 /**
@@ -52,7 +53,7 @@ class MarathonScheduler @Inject()(
             log.fine("Launching tasks: " + taskInfos)
 
             val port = TaskBuilder.getPort(offer).get
-            val marathonTask = MarathonTask(task.getTaskId.getValue, offer.getHostname, port)
+            val marathonTask = MarathonTasks.makeTask(task.getTaskId.getValue, offer.getHostname, port, offer.getAttributesList.asScala.toList)
             taskTracker.starting(app.id, marathonTask)
             driver.launchTasks(offer.getId, taskInfos)
           }
@@ -81,9 +82,17 @@ class MarathonScheduler @Inject()(
     val appID = TaskIDUtil.appID(status.getTaskId)
 
     if (eventBus.nonEmpty) {
-      log.info("Sending event notification.")
-      eventBus.get.post(new MesosStatusUpdateEvent(status.getTaskId.getValue,
-        status.getState.getNumber))
+      val app = taskTracker.get(appID)
+        .filter(_.getId == status.getTaskId).headOption
+
+      if (app.nonEmpty) {
+        log.info("Sending event notification.")
+        eventBus.get.post(new MesosStatusUpdateEvent(status.getTaskId.getValue,
+          status.getState.getNumber, appID, app.get.getHost, app.get.getPort))
+      } else {
+        log.warning(f"Couldn't find task with id: ${status.getTaskId}." +
+          f"Not sending event notification.")
+      }
     }
 
     if (status.getState.eq(TaskState.TASK_FAILED)
@@ -145,8 +154,8 @@ class MarathonScheduler @Inject()(
         val tasks = taskTracker.get(app.id)
 
         for (task <- tasks) {
-          log.info("Killing task " + task.id)
-          driver.killTask(TaskID.newBuilder.setValue(task.id).build)
+          log.info("Killing task " + task.getId)
+          driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
         }
         taskTracker.shutDown(app.id)
         // TODO after all tasks have been killed we should remove the app from taskTracker
@@ -196,7 +205,7 @@ class MarathonScheduler @Inject()(
 
   private def newTask(app: AppDefinition, offer: Offer): Option[TaskInfo] = {
     // TODO this should return a MarathonTask
-    new TaskBuilder(app, taskTracker.newTaskId).buildIfMatches(offer)
+    new TaskBuilder(app, taskTracker.newTaskId, taskTracker).buildIfMatches(offer)
   }
 
   /**
@@ -228,8 +237,8 @@ class MarathonScheduler @Inject()(
 
         val kill = taskTracker.drop(app.id, targetCount)
         for (task <- kill) {
-          log.info("Killing task " + task.id)
-          driver.killTask(TaskID.newBuilder.setValue(task.id).build)
+          log.info("Killing task " + task.getId)
+          driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
         }
       }
       else {

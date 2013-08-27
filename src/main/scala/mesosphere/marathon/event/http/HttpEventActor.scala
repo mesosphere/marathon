@@ -1,29 +1,19 @@
 package mesosphere.marathon.event.http
 
 import akka.actor._
-import spray.http._
-import spray.client.pipelining._
 
 import spray.client.pipelining.sendReceive
 import scala.concurrent.Future
-import spray.httpx.{ Json4sJacksonSupport}
-import org.json4s.{DefaultFormats, FieldSerializer, NoTypeHints}
+import spray.httpx.Json4sJacksonSupport
+import org.json4s.{DefaultFormats, FieldSerializer}
 import spray.client.pipelining._
-import spray.http.HttpRequest
-import spray.http.HttpResponse
-import scala.util.Success
-import scala.util.Failure
-import mesosphere.marathon.event.{ApiPostEvent, MesosStatusUpdateEvent, MarathonEvent}
+import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.api.v1.AppDefinition
-import org.apache.mesos.Protos.{TaskID, TaskStatus, TaskState}
 import mesosphere.marathon.Main
-import com.google.inject.Provides
-import com.google.inject.name.Named
 import spray.http.HttpRequest
 import spray.http.HttpResponse
 import scala.util.Success
 import scala.util.Failure
-import java.util.logging.Level
 
 class HttpEventActor extends Actor with ActorLogging with Json4sJacksonSupport {
 
@@ -70,7 +60,6 @@ class HttpEventActor extends Actor with ActorLogging with Json4sJacksonSupport {
 
   implicit def json4sJacksonFormats = DefaultFormats + FieldSerializer
     [AppDefinition]()
-
 }
 
 

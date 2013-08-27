@@ -9,6 +9,18 @@ option java_outer_classname = "Protos";
 
 import "mesos.proto";
 
+
+message Constraint {
+  required string field = 1;
+  enum Operator {
+      UNIQUE = 0;
+      LIKE = 1;
+      CLUSTER = 2;
+  }
+  required Operator operator = 2;
+  optional string value = 3;
+}
+
 message ServiceDefinition {
   required string id = 1;
   required mesos.CommandInfo cmd = 2;
@@ -16,6 +28,12 @@ message ServiceDefinition {
   repeated mesos.Resource resources = 4;
   optional string description = 5;
   optional uint32 port = 6;
-  optional double rackAffinity = 7;
-  optional double nodeAffinity = 8;
+  repeated Constraint constraints = 7;
+}
+
+message MarathonTask {
+  required string id = 1;
+  required string host = 2;
+  required uint32 port = 3;
+  repeated mesos.Attribute attributes = 4;
 }

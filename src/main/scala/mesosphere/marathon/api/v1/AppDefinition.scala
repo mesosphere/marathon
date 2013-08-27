@@ -7,6 +7,7 @@ import scala.collection.JavaConverters._
 import org.hibernate.validator.constraints.NotEmpty
 import mesosphere.marathon.state.MarathonState
 import com.fasterxml.jackson.annotation.JsonProperty
+import mesosphere.marathon.Protos.Constraint
 
 
 /**
@@ -23,8 +24,9 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   var instances: Int = 0
   var cpus: Double = 1.0
   var mem: Double = 128.0
-  var rackAffinity = -1.0
-  var nodeAffinity = -1.0
+
+  //TODO
+  var constraints: Set[(String, Int, Option[String])] = Set()
 
   var uris: Seq[String] = Seq()
   // Port gets assigned by Marathon
@@ -34,12 +36,21 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     val commandInfo = TaskBuilder.commandInfo(this, None)
     val cpusResource = TaskBuilder.scalarResource(AppDefinition.CPUS, cpus)
     val memResource = TaskBuilder.scalarResource(AppDefinition.MEM, mem)
+    val cons = constraints.map(x => {
+      val b = Constraint.newBuilder()
+        b.setField(x._1)
+        b.setOperator(Constraint.Operator.valueOf(x._2))
+        if (x._3.nonEmpty) b.setValue(x._3.get)
+        b.build()
+      }
+    )
 
     Protos.ServiceDefinition.newBuilder
       .setId(id)
       .setCmd(commandInfo)
       .setInstances(instances)
       .setPort(port)
+      .addAllConstraints(cons.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
       .build
@@ -52,6 +63,11 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     cmd = proto.getCmd.getValue
     instances = proto.getInstances
     port = proto.getPort
+    constraints = proto.getConstraintsList.asScala.map(
+      x => (x.getField,
+            x.getOperator.getNumber,
+            if (x.getValue != null) Some(x.getValue) else None)
+    ).toSet
 
     // Add command environment
     for (variable <- proto.getCmd.getEnvironment.getVariablesList.asScala) {

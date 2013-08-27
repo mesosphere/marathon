@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
 import mesosphere.marathon.state.MarathonStore
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.tasks.TaskTracker
 
 /**
  * @author Tobi Knaup

@@ -60,6 +60,9 @@ case class ApiPostEvent(
 case class MesosStatusUpdateEvent(
     val taskId: String,
     val taskStatus: Int,
+    val appID: String,
+    val host: String,
+    val port: Int,
     override val eventType: String = "status_update_event")
   extends MarathonEvent
 

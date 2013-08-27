@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v1
 
 import javax.ws.rs._
-import mesosphere.marathon.{TaskTracker, MarathonSchedulerService}
+import mesosphere.marathon.{MarathonSchedulerService}
 import javax.ws.rs.core.{Context, Response, MediaType}
 import javax.inject.{Named, Inject}
 import javax.validation.Valid
@@ -10,6 +10,7 @@ import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event.{EventModule, ApiPostEvent}
 import javax.servlet.http.HttpServletRequest
 import mesosphere.marathon.event.http.HttpCallbackEventSubscriber
+import mesosphere.marathon.tasks.TaskTracker
 
 /**
  * @author Tobi Knaup

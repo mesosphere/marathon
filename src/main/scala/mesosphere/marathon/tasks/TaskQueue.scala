@@ -1,4 +1,4 @@
-package mesosphere.marathon
+package mesosphere.marathon.tasks
 
 import java.util.concurrent.LinkedBlockingQueue
 import mesosphere.marathon.api.v1.AppDefinition

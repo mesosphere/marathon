@@ -6,13 +6,21 @@ import scala.collection._
 import scala.collection.JavaConverters._
 import mesosphere.marathon.api.v1.AppDefinition
 import org.apache.mesos.Protos.Value.Ranges
+import org.apache.mesos.Protos
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.tasks.TaskTracker
+import java.util.logging.Logger
 
 
 /**
  * @author Tobi Knaup
  */
 
-class TaskBuilder(app: AppDefinition, newTaskId: String => TaskID) {
+class TaskBuilder(app: AppDefinition,
+                  newTaskId: String => TaskID,
+                  taskTracker: TaskTracker) {
+
+  val log = Logger.getLogger(getClass.getName)
 
   def buildIfMatches(offer: Offer): Option[TaskInfo] = {
     if (!offerMatches(offer)) {
@@ -60,6 +68,22 @@ class TaskBuilder(app: AppDefinition, newTaskId: String => TaskID) {
       // TODO handle other resources
     }
 
+    if (app.constraints.nonEmpty) {
+      val currentlyRunningTasks = taskTracker.get(app.id)
+      if (app.constraints.filterNot(x =>
+          Constraints
+            .meetsConstraint(
+              currentlyRunningTasks.toSet,
+              offer.getAttributesList.asScala.toSet,
+              x._1,
+              x._2,
+              x._3))
+        .nonEmpty) {
+        log.warning("Did not meet a constraint in an offer." )
+        return false
+      }
+      log.info("Met all constraints.")
+    }
     true
   }
 }

@@ -25,6 +25,7 @@
         <!-- test deps versions -->
         <junit.version>4.11</junit.version>
         <mockito.version>1.9.5</mockito.version>
+        <scalatest.version>1.9.1</scalatest.version>
     </properties>
 
     <distributionManagement>
@@ -150,6 +151,11 @@
         </dependency>
 
         <!-- Test scope -->
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_2.10</artifactId>
+            <version>${scalatest.version}</version>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

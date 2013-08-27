@@ -3,7 +3,8 @@ package mesosphere.marathon.api.v1
 import javax.ws.rs.{GET, Produces, Path}
 import javax.ws.rs.core.MediaType
 import javax.inject.Inject
-import mesosphere.marathon.{TaskTracker, MarathonSchedulerService}
+import mesosphere.marathon.{MarathonSchedulerService}
+import mesosphere.marathon.tasks.TaskTracker
 
 /**
  * @author Tobi Knaup
@@ -22,7 +23,7 @@ class EndpointsResource @Inject()(
       sb.append(app.id).append(" ").append(app.port).append(" ")
 
       for (task <- taskTracker.get(app.id)) {
-        sb.append(task.host).append(":").append(task.port).append(" ")
+        sb.append(task.getHost).append(":").append(task.getPort).append(" ")
       }
       sb.append("\n")
     }
