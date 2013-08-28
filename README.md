@@ -2,6 +2,10 @@
 
 Marathon is a Mesos framework for long running services. It provides a REST API for starting, stopping, and scaling services.
 
+<p align="center">
+  <img src="http://www.jeremyscottadidas-wings.co.uk/images/Adidas-Jeremy-Scott-Wing-Shoes-2-0-Gold-Sneakers.jpg">
+</p>
+
 ## API
 
 Using [HTTPie](http://httpie.org):
