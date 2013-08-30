@@ -9,21 +9,21 @@ Marathon is written in Scala and runs HA. The state of tasks is stored in the Me
 </p>
 
 Marathon is a meta framework - you can start other [Mesos][Mesos] frameworks such as [Chronos][Chronos] or Storm via Marathon. In fact, you can even
-start other Marathon instances via Marathon. Marathon was written by the team that also wrote [Chronos][Chronos].
+start other Marathon instances via Marathon. Marathon was written by the team that also developped [Chronos][Chronos].
 
 Marathon can launch anything that can be launched in a standard shell.
-
-## Authors
-
-* Tobias "Tobi" Knaup
-* Florian "Flo" Leibert
-* Harry Shoff
-* Jason Dusek
 
 ## Help
 
 If you have questions please use [Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework).
 You can find mesos support in #mesos on freenode (irc). The team at [Mesosphere](https://mesosphe.re) is also happy to answer any qustions.
+
+## Authors
+
+* [Tobias Knaup](https://github.com/guenter)
+* [Florian Leibert](https://github.com/florianleibert)
+* [Harry Shoff](https://github.com/hshoff)
+* [Jason Dusek](https://github.com/solidsnack)
 
 ## Requirements
 
