@@ -29,6 +29,36 @@ You can find mesos support in #mesos on freenode (irc). The team at [Mesosphere]
 
 * Mesos
 * Zookeeper
+* JDK 1.6+
+* Scala 2.10+
+* Maven 3.0+
+
+## Overview
+
+The following graphic depicts how Marathon can run on top of Mesos together with the Chronos framework.
+In this use case, Marathon was the first framework and runs alongside Mesos, meaning the Marathon scheduler does not run
+on a Mesos slave. Marathon then starts and runs two instances of the Chronos scheduler (another Mesos framework) as a Marathon task.
+Thus, should one of the two Chronos tasks die because the underlying slave crashes or someone unplugs power to the node it's running on,
+Marathon would re-start an instance of Chronos on another slave ensuring that always two Chronos processes would run.
+Since Chronos itself is a framwork and receives Mesos resource offers once it's launched, it can start tasks on Mesos.
+In our use case, Chronos is currently running two tasks, one that dumps the production MySQL database to S3 and another task
+that sends the email newsletter to all customers (via Rake). In the meantime, Marathon also runs every service required for our web application.
+
+![architecture](https://raw.github.com/mesosphere/marathon/master/docs/architecture.png "Marathon on mesos")
+
+The next graphic shows a more application centric view of Marathon running three tasks: Search, Jetty and Rails.
+
+![Marathon1](https://raw.github.com/mesosphere/marathon/master/docs/marathon1.png "Initial Marathon")
+
+After the website gets a lot of traction and our user base grows, we decide to scale-up the search and rails services.
+
+![Marathon2](https://raw.github.com/mesosphere/marathon/master/docs/marathon2.png "Scaled Marathon")
+
+Unfortunately, one of the datacenter workers tripped over a power cord and one machine was unplugged. No problem for Marathon,
+it moves the affected search service and rails instance to a node that has spare capacity. The engineer is embarrased
+but Marathon saved him.
+
+![Marathon3](https://raw.github.com/mesosphere/marathon/master/docs/marathon3.png "Marathon Recovering a service")
 
 ## Features
 
