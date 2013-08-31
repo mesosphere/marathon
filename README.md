@@ -70,6 +70,20 @@ but Marathon saved him.
 * Event subscription (e.g. if you need to notify an external service of task updates or state changes you can supply a HTTP endpoint which will receive these notifications. This is especially useful if you have 
 * Web UI
 
+## Setup & Run
+
+* mvn package
+
+### This starts marathon on mesos in local-mode - it's not how you would run it on your cluster
+
+* bin/start --master local
+
+Point your web browser to port 8080 and you should be able to see the marathon UI.
+
+### To launch it in production mode, you'll need a zookeeper & mesos running
+ 
+* bin/start --master zk://zk1.foo.bar,zk2.foo.bar/mesos
+
 ## API
 
 Using [HTTPie](http://httpie.org):
