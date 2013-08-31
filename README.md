@@ -2,7 +2,7 @@
 
 Marathon is a Mesos framework for long running services. If Mesos is the kernel for your datacenter, Marathon is the init.d or upstart.
 It provides a REST API for starting, stopping, and scaling services. There is also a ruby [command line client](https://github.com/mesosphere/marathon_client).
-Marathon is written in Scala and runs HA. The state of tasks is stored in the Mesos state abstraction. Features are listed below.
+Marathon is written in Scala and can run in highly available mode by running multiple Marathon instances. The state of tasks is stored in the Mesos state abstraction. Features are listed below.
 
 <p align="center">
   <img src="http://www.jeremyscottadidas-wings.co.uk/images/Adidas-Jeremy-Scott-Wing-Shoes-2-0-Gold-Sneakers.jpg" width="30%" height="30%">
