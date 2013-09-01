@@ -35,7 +35,7 @@ The team at [Mesosphere](https://mesosphe.re) is also happy to answer any questi
 
 ## Requirements
 
-* [Mesos][Mesos]
+* [Mesos][Mesos] 0.14+ (see `pom.xml`)
 * [Zookeeper][Zookeeper]
 * JDK 1.6+
 * Scala 2.10+
@@ -79,8 +79,9 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 * *Basic Auth* and *SSL*
 * *REST API*
 * *Web UI*
-* *Service Constraints* -- e.g., only one instance of a service per rack, node, etc.
 * *Metrics* -- via Coda Hale's [metrics library](http://metrics.codahale.com/)
+* *Service Constraints* -- e.g., only one instance of a service per rack, node, etc.
+* *Service Discovery* and *Monitoring*
 * *Event Subscription* -- e.g., if you need to notify an external service about task updates or state changes, you can supply an HTTP endpoint to receive these notifications. This is especially useful if you have 
 
 
