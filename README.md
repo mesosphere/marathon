@@ -45,7 +45,7 @@ The team at [Mesosphere](https://mesosphe.re) is also happy to answer any questi
 
 The graphic shown below depicts how Marathon runs on top of [Mesos][Mesos] together with the [Chronos][Chronos] framework.
 In this case, Marathon is the first framework to be launched and it runs alongside [Mesos][Mesos].
-In other words, the Marathon scheduler does not run on a [Mesos][Mesos] slave -- it runs on a Master, orthogonally to [Mesos][Mesos].
+In other words, the Marathon scheduler processes were started outside of [Mesos][Mesos] using `init`, `upstart`, or a similar tool.
 Marathon launches two instances of the [Chronos][Chronos] scheduler as a Marathon task.
 If either of the two [Chronos][Chronos] tasks dies -- due to underlying slave crashes, power loss in the cluster, etc. --
 Marathon will re-start an [Chronos][Chronos] instance on another slave.
@@ -86,7 +86,11 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 ## Set-up and Running
 
-First, use Maven to build the package:
+First, install [Mesos][Mesos] -- see the [Getting Started](http://mesos.apache.org/gettingstarted/) page,
+or the [Mesosphere tutorial](http://mesosphe.re/tutorials/building-a-distributed-fault-tolerant-framework)
+for details.
+
+Then use Maven to build the package:
 
     mvn package
 
@@ -103,7 +107,7 @@ To launch Marathon in *production mode*, you need to have both [Zookeeper][Zooke
  
     bin/start --master zk://zk1.foo.bar,zk2.foo.bar/mesos
 
-## API
+## Example API Usage
 
 Using [HTTPie][HTTPie]:
 
@@ -111,11 +115,9 @@ Using [HTTPie][HTTPie]:
     http localhost:8080/v1/apps/scale id=sleep instances=2
     http localhost:8080/v1/apps/stop id=sleep
 
-Using [Marthon Client](https://github.com/mesosphere/marathon_client):
+Using [Marthon Client](https://github.com/mesosphere/marathon_client), the following runs [Chronos][Chronos]:
 
     marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz -C "./chronos/bin/demo ./chronos/config/nomail.yml ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
-
-See more example API uses in the `examples` directory.
 
 
 [Chronos]: https://raw.github.com/airbnb/chronos "Airbnb's Chronos"
