@@ -43,11 +43,10 @@ The team at [Mesosphere](https://mesosphe.re) is also happy to answer any questi
 
 ## Overview
 
-The following graphic depicts how Marathon runs on top of [Mesos][Mesos] together with the [Chronos][Chronos] framework.
+The graphic shown below depicts how Marathon runs on top of [Mesos][Mesos] together with the [Chronos][Chronos] framework.
 In this case, Marathon is the first framework to be launched and it runs alongside [Mesos][Mesos].
-In other words, the Marathon scheduler does not run on a [Mesos][Mesos] slave.
-Marathon then starts up and runs two instances of the [Chronos][Chronos] scheduler as a Marathon task.
-
+In other words, the Marathon scheduler does not run on a [Mesos][Mesos] slave -- it runs on a Master, orthogonally to [Mesos][Mesos].
+Marathon launches two instances of the [Chronos][Chronos] scheduler as a Marathon task.
 If either of the two [Chronos][Chronos] tasks dies -- due to underlying slave crashes, power loss in the cluster, etc. --
 Marathon will re-start an [Chronos][Chronos] instance on another slave.
 This approach ensures that two [Chronos][Chronos] processes are always running.
@@ -75,14 +74,14 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 ## Features
 
-* *HA* -- run any number of Marathon schedulers and only one is elected as leader; if you access a non-leader, you get an HTTP redirect to the current leader
+* *HA* -- run any number of Marathon schedulers, but only one gets elected as leader; if you access a non-leader, you get an HTTP redirect to the current leader
 * *Basic Auth* and *SSL*
 * *REST API*
 * *Web UI*
 * *Metrics* -- via Coda Hale's [metrics library](http://metrics.codahale.com/)
 * *Service Constraints* -- e.g., only one instance of a service per rack, node, etc.
 * *Service Discovery* and *Monitoring*
-* *Event Subscription* -- e.g., if you need to notify an external service about task updates or state changes, you can supply an HTTP endpoint to receive these notifications. This is especially useful if you have 
+* *Event Subscription* -- e.g., if you need to notify an external service about task updates or state changes, you can supply an HTTP endpoint to receive notifications
 
 
 ## Set-up and Running
