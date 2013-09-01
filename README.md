@@ -2,7 +2,7 @@
 
 Marathon is a [Mesos][Mesos] framework for long-running services.
 Given that you have [Mesos][Mesos] running as the kernel for your datacenter, 
-Marathon is the `init.d` or [upstart][upstart] daemon.
+Marathon is the `init` or [upstart][upstart] daemon.
 It was written by the team that also developed [Chronos][Chronos].
 
 Marathon provides a REST API for starting, stopping, and scaling services.
@@ -83,13 +83,22 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 ![Marathon3](https://raw.github.com/mesosphere/marathon/master/docs/marathon3.png "Marathon recovering a service")
 
-## Set-up and Running
+## Setting Up And Running Marathon
 
-First, install [Mesos][Mesos] -- see the [Getting Started](http://mesos.apache.org/gettingstarted/) page,
+First, install [Mesos][Mesos]. One easy way is via your system's package manager.
+
+* [Ubuntu 12.04, AMD64](https://s3.amazonaws.com/mesos-pkg/master/ubuntu/12.04/mesos_0.14.0_amd64.deb)
+* [Ubuntu 12.10, AMD64](https://s3.amazonaws.com/mesos-pkg/master/ubuntu/12.10/mesos_0.14.0_amd64.deb)
+* [Debian Wheezy, AMD64](https://s3.amazonaws.com/mesos-pkg/master/debian/7.0/mesos_0.14.0_amd64.deb)
+* [CentOS 6.4, AMD64](https://s3.amazonaws.com/mesos-pkg/master/centos/6.4/mesos_0.14.0_x86_64.rpm)
+* [RedHat 6.4, AMD64](https://s3.amazonaws.com/mesos-pkg/master/redhat/6.4/mesos_0.14.0_x86_64.rpm)
+* [OS X, 10.7 & 10.8](https://s3.amazonaws.com/mesos-pkg/master/osx/mesos-0.14.0.pkg)
+
+If building from source,see the [Getting Started](http://mesos.apache.org/gettingstarted/) page,
 or the [Mesosphere tutorial](http://mesosphe.re/tutorials/building-a-distributed-fault-tolerant-framework)
-for details.
+for details. Using `make install` will install Mesos in `/usr/local` in the same way as these packages do.
 
-Then checkout the Marathon repo and use Maven to build it:
+To create a Jar for Marathon, checkout the sources and use Maven to build it:
 
     mvn package
 
