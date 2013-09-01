@@ -16,7 +16,7 @@ Features are listed below.
 </p>
 
 Marathon is a *meta framework*:
-you can start other [Mesos][Mesos] frameworks such as [Chronos][Chronos] or [Storm][Storm]..
+you can start other [Mesos][Mesos] frameworks such as [Chronos][Chronos] or [Storm][Storm].
 It can launch anything that can be launched in a standard shell.
 In fact, you can even start other Marathon instances via Marathon.
 
