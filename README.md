@@ -16,8 +16,8 @@ Features are listed below.
 </p>
 
 Marathon is a *meta framework*:
-you can start other [Mesos][Mesos] frameworks such as [Chronos][Chronos] or [Storm][Storm] via Marathon.
-Marathon can launch anything that can be launched in a standard shell.
+you can start other [Mesos][Mesos] frameworks such as [Chronos][Chronos] or [Storm][Storm]..
+It can launch anything that can be launched in a standard shell.
 In fact, you can even start other Marathon instances via Marathon.
 
 ## Help
@@ -40,6 +40,17 @@ The team at [Mesosphere](https://mesosphe.re) is also happy to answer any questi
 * JDK 1.6+
 * Scala 2.10+
 * Maven 3.0+
+
+## Features
+
+* *HA* -- run any number of Marathon schedulers, but only one gets elected as leader; if you access a non-leader, you get an HTTP redirect to the current leader
+* *Basic Auth* and *SSL*
+* *REST API*
+* *Web UI*
+* *Metrics* -- via Coda Hale's [metrics library](http://metrics.codahale.com/)
+* *Service Constraints* -- e.g., only one instance of a service per rack, node, etc.
+* *Service Discovery* and *Monitoring*
+* *Event Subscription* -- e.g., if you need to notify an external service about task updates or state changes, you can supply an HTTP endpoint to receive notifications
 
 ## Overview
 
@@ -72,25 +83,13 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 ![Marathon3](https://raw.github.com/mesosphere/marathon/master/docs/marathon3.png "Marathon recovering a service")
 
-## Features
-
-* *HA* -- run any number of Marathon schedulers, but only one gets elected as leader; if you access a non-leader, you get an HTTP redirect to the current leader
-* *Basic Auth* and *SSL*
-* *REST API*
-* *Web UI*
-* *Metrics* -- via Coda Hale's [metrics library](http://metrics.codahale.com/)
-* *Service Constraints* -- e.g., only one instance of a service per rack, node, etc.
-* *Service Discovery* and *Monitoring*
-* *Event Subscription* -- e.g., if you need to notify an external service about task updates or state changes, you can supply an HTTP endpoint to receive notifications
-
-
 ## Set-up and Running
 
 First, install [Mesos][Mesos] -- see the [Getting Started](http://mesos.apache.org/gettingstarted/) page,
 or the [Mesosphere tutorial](http://mesosphe.re/tutorials/building-a-distributed-fault-tolerant-framework)
 for details.
 
-Then use Maven to build the package:
+Then checkout the Marathon repo and use Maven to build it:
 
     mvn package
 
