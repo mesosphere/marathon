@@ -62,7 +62,7 @@ If either of the two [Chronos][Chronos] tasks dies -- due to underlying slave cr
 Marathon will re-start an [Chronos][Chronos] instance on another slave.
 This approach ensures that two [Chronos][Chronos] processes are always running.
 
-Since [Chronos][Chronos] itself is a framwork and receives [Mesos][Mesos] resource offers, it can start tasks on [Mesos][Mesos].
+Since [Chronos][Chronos] itself is a framework and receives [Mesos][Mesos] resource offers, it can start tasks on [Mesos][Mesos].
 In the use case shown below, [Chronos][Chronos] is currently running two tasks.
 One dumps a production MySQL database to S3, while another sends an email newsletter to all customers via Rake.
 Meanwhile, Marathon also runs the services required for the web app, in general.
