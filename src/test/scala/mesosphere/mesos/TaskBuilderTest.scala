@@ -61,6 +61,7 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
     app.id = "testApp"
     app.cpus = 1
     app.mem = 64
+    app.executor = "//cmd"
 
     val builder = new TaskBuilder(app,
       s => TaskID.newBuilder.setValue(s).build, null)
@@ -102,6 +103,7 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
     app.id = "testApp"
     app.cpus = 1
     app.mem = 64
+    app.executor = "//cmd"
     app.constraints = Set(("rackid", Constraint.Operator.UNIQUE_VALUE, None))
 
     val t1 = makeSampleTask(app.id, "rackid", "2")

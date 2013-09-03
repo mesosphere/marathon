@@ -24,6 +24,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   var instances: Int = 0
   var cpus: Double = 1.0
   var mem: Double = 128.0
+  var executor: String = ""
 
   //TODO
   var constraints: Set[(String, Int, Option[String])] = Set()

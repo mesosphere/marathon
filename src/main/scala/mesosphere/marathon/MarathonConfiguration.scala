@@ -9,7 +9,6 @@ import java.net.InetSocketAddress
 
 trait MarathonConfiguration extends ScallopConf {
 
-
   lazy val mesosMaster = opt[String]("master",
     descr = "The URL of the Mesos master",
     required = true,
@@ -45,6 +44,10 @@ trait MarathonConfiguration extends ScallopConf {
     descr = "Max port number to use when assigning ports to apps",
     default = Some(20000))
 
+  lazy val defaultExecutor = opt[String]("executor",
+    descr = "Executor to use when none is specified",
+    default = Some("//cmd"))
+
   def zooKeeperStatePath = "%s/state".format(zooKeeperPath())
 
   def zooKeeperLeaderPath = "%s/leader".format(zooKeeperPath())
@@ -62,4 +65,6 @@ trait MarathonConfiguration extends ScallopConf {
       require(splits.length == 2, "expected host:port for zk servers")
       new InetSocketAddress(splits(0), splits(1).toInt)
     }
+
+  def executor: Executor = Executor.dispatch(defaultExecutor())
 }

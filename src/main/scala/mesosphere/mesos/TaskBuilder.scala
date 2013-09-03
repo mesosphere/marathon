@@ -10,15 +10,20 @@ import org.apache.mesos.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.tasks.TaskTracker
 import java.util.logging.Logger
+import mesosphere.marathon.{PathExecutor, CommandExecutor, Executor, Main}
+import com.fasterxml.jackson.databind.ObjectMapper
+import java.io.ByteArrayOutputStream
+import com.google.protobuf.ByteString
 
 
 /**
  * @author Tobi Knaup
  */
 
-class TaskBuilder(app: AppDefinition,
-                  newTaskId: String => TaskID,
-                  taskTracker: TaskTracker) {
+class TaskBuilder (app: AppDefinition,
+                   newTaskId: String => TaskID,
+                   taskTracker: TaskTracker,
+                   mapper: ObjectMapper = new ObjectMapper()) {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -27,18 +32,45 @@ class TaskBuilder(app: AppDefinition,
       return None
     }
 
-    TaskBuilder.getPort(offer).map(port => {
-      val taskId = newTaskId(app.id)
+    val executor: Executor = if (app.executor == "") {
+      Main.getConfiguration.executor
+    } else {
+      Executor.dispatch(app.executor)
+    }
 
-      TaskInfo.newBuilder
+    TaskBuilder.getPort(offer).map(f = port => {
+      app.port = port
+
+      val taskId = newTaskId(app.id)
+      val builder = TaskInfo.newBuilder
         .setName(taskId.getValue)
         .setTaskId(taskId)
         .setSlaveId(offer.getSlaveId)
-        .setCommand(TaskBuilder.commandInfo(app, Some(port)))
-        .addResources(TaskBuilder.scalarResource(TaskBuilder.cpusResourceName, app.cpus))
-        .addResources(TaskBuilder.scalarResource(TaskBuilder.memResourceName, app.mem))
+        .addResources(TaskBuilder.
+          scalarResource(TaskBuilder.cpusResourceName, app.cpus))
+        .addResources(TaskBuilder.
+          scalarResource(TaskBuilder.memResourceName, app.mem))
         .addResources(portsResource(port, port))
-        .build
+
+      executor match {
+        case CommandExecutor() =>
+          builder.setCommand(TaskBuilder.commandInfo(app, Some(port)))
+
+        case PathExecutor(path) => {
+          val executorId = f"marathon-${taskId.getValue}" // Fresh executor
+          val escaped = "'" + path + "'" // TODO: Really escape this.
+          val cmd = f"chmod ug+rx $escaped && exec $escaped ${app.cmd}"
+          val binary = new ByteArrayOutputStream()
+          mapper.writeValue(binary, app)
+          val info = ExecutorInfo.newBuilder()
+            .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
+            .setCommand(CommandInfo.newBuilder().setValue(cmd))
+          builder.setExecutor(info)
+          builder.setData(ByteString.copyFrom(binary.toByteArray))
+        }
+      }
+
+      builder.build
     })
   }
 

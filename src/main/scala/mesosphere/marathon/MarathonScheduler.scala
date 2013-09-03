@@ -14,6 +14,7 @@ import javax.inject.{Named, Inject}
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event.{EventModule, MesosStatusUpdateEvent}
 import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks}
+import com.fasterxml.jackson.databind.ObjectMapper
 
 
 /**
@@ -21,6 +22,7 @@ import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTa
  */
 class MarathonScheduler @Inject()(
     @Named(EventModule.busName) eventBus: Option[EventBus],
+    @Named("restMapper") mapper: ObjectMapper,
     store: MarathonStore[AppDefinition],
     taskTracker: TaskTracker,
     taskQueue: TaskQueue)
@@ -205,7 +207,7 @@ class MarathonScheduler @Inject()(
 
   private def newTask(app: AppDefinition, offer: Offer): Option[TaskInfo] = {
     // TODO this should return a MarathonTask
-    new TaskBuilder(app, taskTracker.newTaskId, taskTracker).buildIfMatches(offer)
+    new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
   }
 
   /**
