@@ -1,0 +1,73 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
+function -h {
+cat <<USAGE
+ USAGE: marathon-framework (--jar <marathon.jar>)? <option>*
+
+  Run the Marathon scheduler, collecting options from the configuration
+  directory and appending the options supplied on the command line.
+
+    $conf_dir
+
+  If you would like to pass the Jar to be run, do so with --jar. If the Jar is
+  not supplied, the script assumes the Jar has been concatenated to it and
+  will supply its own path to Java.
+
+USAGE
+}; function --help { -h ;}
+export LC_ALL=en_US.UTF-8
+
+self="$(cd "$(dirname "$0")" && pwd -P)"/"$(basename "$0")"
+marathon_jar="$self"
+conf_dir=/etc/marathon/conf
+
+function main {
+  if [[ ${1:-} = --jar ]]
+  then marathon_jar="$2" ; shift 2
+  fi
+  load_options_and_log "$@"
+}
+
+function load_options_and_log {
+  # Load Marathon options from Mesos and Marathon conf files that are present.
+  # Launch main program with Syslog enabled.
+  local marathon_options=( )
+  if [[ -s /etc/mesos/zk ]]
+  then
+    marathon_options+=( --zk_hosts "$(cut -d / -f 3 /etc/mesos/zk)"
+                        --master "$(cat /etc/mesos/zk)" )
+  fi
+  while read -u 9 -r -d '' path
+  do
+    local name="${path#./}"
+    marathon_options+=( "--$name" "$(cat "$conf_dir/$name")" )
+  done 9< <(cd "$conf_dir" && find . -type f -not -name '.*' -print0)
+  logged marathon run_jar "${marathon_options[@]}" "$@"
+}
+
+function run_jar {
+  local log_format='%2$s %5$s%6$s%n' # Class name, message, exception
+  ulimit -n 8192
+  export PATH=/usr/local/bin:"$PATH"
+  local vm_opts=( -Xmx512m
+                  -Djava.library.path=/usr/local/lib
+                  -Djava.util.logging.SimpleFormatter.format="$log_format" )
+  # TODO: Set main class in pom.xml and use -jar
+  exec java "${vm_opts[@]}" -cp "$marathon_jar" mesosphere.marathon.Main "$@"
+}
+
+function logged {
+  local token="$1[$$]" ; shift
+  exec 1> >(exec logger -p user.info   -t "$token")
+  exec 2> >(exec logger -p user.notice -t "$token")
+  "$@"
+}
+
+function msg { out "$*" >&2 ;}
+function err { local x=$? ; msg "$*" ; return $(( $x == 0 ? 1 : $x )) ;}
+function out { printf '%s\n' "$*" ;}
+
+if [[ ${1:-} ]] && declare -F | cut -d' ' -f3 | fgrep -qx -- "${1:-}"
+then "$@"
+else main "$@"
+fi
