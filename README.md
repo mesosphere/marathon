@@ -1,14 +1,14 @@
 # Marathon
 
 Marathon is a [Mesos][Mesos] framework for long-running services.
-Given that you have [Mesos][Mesos] running as the kernel for your datacenter, 
+Given that you have Mesos running as the kernel for your datacenter, 
 Marathon is the `init` or [upstart][upstart] daemon.
 It was written by the team that also developed [Chronos][Chronos].
 
 Marathon provides a REST API for starting, stopping, and scaling services.
 There is also a Ruby [command line client](https://github.com/mesosphere/marathon_client).
 Marathon is written in Scala and can run in highly-available mode by running multiple Marathon instances.
-The state of running tasks gets stored in the [Mesos][Mesos] state abstraction.
+The state of running tasks gets stored in the Mesos state abstraction.
 Features are listed below.
 
 <p align="center">
@@ -16,14 +16,14 @@ Features are listed below.
 </p>
 
 Marathon is a *meta framework*:
-you can start other [Mesos][Mesos] frameworks such as [Chronos][Chronos] or [Storm][Storm].
+you can start other Mesos frameworks such as Chronos or [Storm][Storm].
 It can launch anything that can be launched in a standard shell.
 In fact, you can even start other Marathon instances via Marathon.
 
 ## Help
 
 If you have questions, please post on the [Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework) email list.
-You can find [Mesos][Mesos] support in the `#mesos` channel on [freenode][freenode] (IRC).
+You can find Mesos support in the `#mesos` channel on [freenode][freenode] (IRC).
 The team at [Mesosphere](https://mesosphe.re) is also happy to answer any questions.
 
 ## Authors
@@ -54,16 +54,16 @@ The team at [Mesosphere](https://mesosphe.re) is also happy to answer any questi
 
 ## Overview
 
-The graphic shown below depicts how Marathon runs on top of [Mesos][Mesos] together with the [Chronos][Chronos] framework.
-In this case, Marathon is the first framework to be launched and it runs alongside [Mesos][Mesos].
-In other words, the Marathon scheduler processes were started outside of [Mesos][Mesos] using `init`, `upstart`, or a similar tool.
-Marathon launches two instances of the [Chronos][Chronos] scheduler as a Marathon task.
-If either of the two [Chronos][Chronos] tasks dies -- due to underlying slave crashes, power loss in the cluster, etc. --
-Marathon will re-start an [Chronos][Chronos] instance on another slave.
-This approach ensures that two [Chronos][Chronos] processes are always running.
+The graphic shown below depicts how Marathon runs on top of Mesos together with the Chronos framework.
+In this case, Marathon is the first framework to be launched and it runs alongside Mesos.
+In other words, the Marathon scheduler processes were started outside of Mesos using `init`, `upstart`, or a similar tool.
+Marathon launches two instances of the Chronos scheduler as a Marathon task.
+If either of the two Chronos tasks dies -- due to underlying slave crashes, power loss in the cluster, etc. --
+Marathon will re-start an Chronos instance on another slave.
+This approach ensures that two Chronos processes are always running.
 
-Since [Chronos][Chronos] itself is a framework and receives [Mesos][Mesos] resource offers, it can start tasks on [Mesos][Mesos].
-In the use case shown below, [Chronos][Chronos] is currently running two tasks.
+Since Chronos itself is a framework and receives Mesos resource offers, it can start tasks on Mesos.
+In the use case shown below, Chronos is currently running two tasks.
 One dumps a production MySQL database to S3, while another sends an email newsletter to all customers via Rake.
 Meanwhile, Marathon also runs the services required for the web app, in general.
 
@@ -104,14 +104,14 @@ To create a Jar for Marathon, checkout the sources and use Maven to build it:
 
 ### Local Mode
 
-The following command launches Marathon on [Mesos][Mesos] in *local mode*, which is not how you would run it on your cluster.
+The following command launches Marathon on Mesos in *local mode*, which is not how you would run it on your cluster.
 Point your web browser to `localhost:8080` and you should see the Marathon UI.
 
     bin/start --master local
 
 ### Production Mode
 
-To launch Marathon in *production mode*, you need to have both [Zookeeper][Zookeeper] and [Mesos][Mesos] running:
+To launch Marathon in *production mode*, you need to have both [Zookeeper][Zookeeper] and Mesos running:
  
     bin/start --master zk://zk1.foo.bar,zk2.foo.bar/mesos
 
@@ -123,7 +123,7 @@ Using [HTTPie][HTTPie]:
     http localhost:8080/v1/apps/scale id=sleep instances=2
     http localhost:8080/v1/apps/stop id=sleep
 
-Using [Marthon Client](https://github.com/mesosphere/marathon_client), the following runs [Chronos][Chronos]:
+Using [Marathon Client](https://github.com/mesosphere/marathon_client), the following runs Chronos:
 
     marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz -C "./chronos/bin/demo ./chronos/config/nomail.yml ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
 
