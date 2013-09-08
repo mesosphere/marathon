@@ -11,12 +11,12 @@ import mesosphere.marathon.tasks.TaskTracker
  */
 
 @Path("v1/endpoints")
-@Produces(Array(MediaType.TEXT_PLAIN))
 class EndpointsResource @Inject()(
     schedulerService: MarathonSchedulerService,
     taskTracker: TaskTracker) {
 
   @GET
+  @Produces(Array(MediaType.TEXT_PLAIN))
   def endpoints() = {
     val sb = new StringBuilder
     for (app <- schedulerService.listApps()) {
@@ -28,5 +28,14 @@ class EndpointsResource @Inject()(
       sb.append("\n")
     }
     sb.toString()
+  }
+
+  @GET
+  @Produces(Array(MediaType.APPLICATION_JSON))
+  def endpointsJson() = {
+    (for (app <- schedulerService.listApps) yield {
+      var upstreams = for (task <- taskTracker.get(app.id)) yield "%s:%d".format(task.getHost, task.getPort)
+      app.id -> Map("port" -> app.port, "upstreams" -> upstreams)
+    }) toMap
   }
 }
