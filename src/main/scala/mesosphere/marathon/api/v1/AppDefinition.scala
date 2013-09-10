@@ -53,6 +53,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
       .setCmd(commandInfo)
       .setInstances(instances)
       .setPort(port)
+      .setExecutor(executor)
       .addAllConstraints(cons.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
@@ -64,6 +65,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
 
     id = proto.getId
     cmd = proto.getCmd.getValue
+    executor = proto.getExecutor
     instances = proto.getInstances
     port = proto.getPort
     constraints = proto.getConstraintsList.asScala.map(
@@ -91,6 +93,8 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
           mem = value
       }
     }
+
+    // Restore
   }
 
   def mergeFromProto(bytes: Array[Byte]) {

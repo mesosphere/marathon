@@ -674,6 +674,10 @@ public final class Protos {
         getConstraintsOrBuilderList();
     mesosphere.marathon.Protos.ConstraintOrBuilder getConstraintsOrBuilder(
         int index);
+    
+    // required string executor = 8 [default = ""];
+    boolean hasExecutor();
+    String getExecutor();
   }
   public static final class ServiceDefinition extends
       com.google.protobuf.GeneratedMessage
@@ -843,6 +847,38 @@ public final class Protos {
       return constraints_.get(index);
     }
     
+    // required string executor = 8 [default = ""];
+    public static final int EXECUTOR_FIELD_NUMBER = 8;
+    private java.lang.Object executor_;
+    public boolean hasExecutor() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public String getExecutor() {
+      java.lang.Object ref = executor_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          executor_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getExecutorBytes() {
+      java.lang.Object ref = executor_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        executor_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -851,6 +887,7 @@ public final class Protos {
       description_ = "";
       port_ = 0;
       constraints_ = java.util.Collections.emptyList();
+      executor_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -866,6 +903,10 @@ public final class Protos {
         return false;
       }
       if (!hasInstances()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasExecutor()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -913,6 +954,9 @@ public final class Protos {
       for (int i = 0; i < constraints_.size(); i++) {
         output.writeMessage(7, constraints_.get(i));
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(8, getExecutorBytes());
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -949,6 +993,10 @@ public final class Protos {
       for (int i = 0; i < constraints_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(7, constraints_.get(i));
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(8, getExecutorBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1103,6 +1151,8 @@ public final class Protos {
         } else {
           constraintsBuilder_.clear();
         }
+        executor_ = "";
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
       
@@ -1183,6 +1233,10 @@ public final class Protos {
         } else {
           result.constraints_ = constraintsBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.executor_ = executor_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1266,6 +1320,9 @@ public final class Protos {
             }
           }
         }
+        if (other.hasExecutor()) {
+          setExecutor(other.getExecutor());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -1280,6 +1337,10 @@ public final class Protos {
           return false;
         }
         if (!hasInstances()) {
+          
+          return false;
+        }
+        if (!hasExecutor()) {
           
           return false;
         }
@@ -1364,6 +1425,11 @@ public final class Protos {
               mesosphere.marathon.Protos.Constraint.Builder subBuilder = mesosphere.marathon.Protos.Constraint.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addConstraints(subBuilder.buildPartial());
+              break;
+            }
+            case 66: {
+              bitField0_ |= 0x00000080;
+              executor_ = input.readBytes();
               break;
             }
           }
@@ -1946,6 +2012,42 @@ public final class Protos {
           constraints_ = null;
         }
         return constraintsBuilder_;
+      }
+      
+      // required string executor = 8 [default = ""];
+      private java.lang.Object executor_ = "";
+      public boolean hasExecutor() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      public String getExecutor() {
+        java.lang.Object ref = executor_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          executor_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setExecutor(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
+        executor_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearExecutor() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        executor_ = getDefaultInstance().getExecutor();
+        onChanged();
+        return this;
+      }
+      void setExecutor(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000080;
+        executor_ = value;
+        onChanged();
       }
       
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
@@ -2823,15 +2925,15 @@ public final class Protos {
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\"-\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\"\320\001\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003" +
+      "\020\002\"\344\001\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003" +
       "cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n\tinstanc" +
       "es\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Reso" +
       "urce\022\023\n\013description\030\005 \001(\t\022\014\n\004port\030\006 \001(\r\022" +
       "4\n\013constraints\030\007 \003(\0132\037.mesosphere.marath",
-      "on.Constraint\"\\\n\014MarathonTask\022\n\n\002id\030\001 \002(" +
-      "\t\022\014\n\004host\030\002 \002(\t\022\014\n\004port\030\003 \002(\r\022$\n\nattribu" +
-      "tes\030\004 \003(\0132\020.mesos.AttributeB\035\n\023mesospher" +
-      "e.marathonB\006Protos"
+      "on.Constraint\022\022\n\010executor\030\010 \002(\t:\000\"\\\n\014Mar" +
+      "athonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\014\n\004p" +
+      "ort\030\003 \002(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos.At" +
+      "tributeB\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -2851,7 +2953,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Port", "Constraints", },
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Port", "Constraints", "Executor", },
               mesosphere.marathon.Protos.ServiceDefinition.class,
               mesosphere.marathon.Protos.ServiceDefinition.Builder.class);
           internal_static_mesosphere_marathon_MarathonTask_descriptor =
