@@ -1,0 +1,47 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
+function -h {
+cat <<USAGE
+ USAGE: build-distribution
+
+  Create a runnable Jar for Marathon.
+
+USAGE
+}; function --help { -h ;}
+export LC_ALL=en_US.UTF-8
+
+target=target/marathon-runnable.jar
+
+function main {
+  runnable_jar
+}
+
+function runnable_jar {
+  local script=bin/marathon-framework
+  local jars=( target/marathon-*-jar-with-dependencies.jar )
+  case ${#jars[@]} in
+    0) err 'No jars to concatenate.' ;;
+    1) printf 'Concatenating\n  %s\n  %s\nto form\n  %s\n' \
+              "$script" "${jars[0]}" "$target" >&2 ;;
+    *) msg 'Not able to choose among:'
+       printf ' %s\n' "${jars[@]}" >&2
+       exit 2 ;;
+  esac
+  cat bin/marathon-framework "${jars[0]}" > "$target"
+}
+
+# Only works for me with these paths but can be modified for others.
+function proto {
+  protoc -I ~/sandbox/mesos/include/mesos/:src/main/proto/ \
+         --java_out src/main/java src/main/proto/marathon.proto
+
+}
+
+function msg { out "$*" >&2 ;}
+function err { local x=$? ; msg "$*" ; return $(( $x == 0 ? 1 : $x )) ;}
+function out { printf '%s\n' "$*" ;}
+
+if [[ ${1:-} ]] && declare -F | cut -d' ' -f3 | fgrep -qx -- "${1:-}"
+then "$@"
+else main "$@"
+fi
