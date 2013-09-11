@@ -35,7 +35,7 @@ The team at [Mesosphere](https://mesosphe.re) is also happy to answer any questi
 
 ## Requirements
 
-* [Mesos][Mesos] 0.14+ (see `pom.xml`)
+* [Mesos][Mesos] 0.15+ (the current version of marathon requires Mesos 0.15+. If you are still running 0.14, you can change the version in the `pom.xml`)
 * [Zookeeper][Zookeeper]
 * JDK 1.6+
 * Scala 2.10+
