@@ -15,7 +15,7 @@
 
         <!-- runtime deps versions -->
         <chaos.version>0.4.1</chaos.version>
-        <mesos.version>0.14.0</mesos.version>
+        <mesos.version>0.15.0-20130910-2</mesos.version>
         <protobuf.version>2.4.1</protobuf.version>
         <akka.version>2.2.0</akka.version>
         <spray.version>1.2-20130801</spray.version>
@@ -131,7 +131,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.mesos</groupId>
-            <artifactId>mesos_jdk6</artifactId>
+            <artifactId>mesos</artifactId>
             <version>${mesos.version}</version>
         </dependency>
         <dependency>
