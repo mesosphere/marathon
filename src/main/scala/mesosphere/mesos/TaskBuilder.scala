@@ -125,6 +125,7 @@ object TaskBuilder {
   final val cpusResourceName = "cpus"
   final val memResourceName = "mem"
   final val portsResourceName = "ports"
+  final val portBlockSize = 5
 
   def scalarResource(name: String, value: Double) = {
     Resource.newBuilder
@@ -174,8 +175,15 @@ object TaskBuilder {
   }
 
   def getPort(resource: Resource): Option[Int] = {
-    if (resource.getRanges.getRangeCount > 0) {
-      Some(resource.getRanges.getRange(0).getBegin.toInt)
+    val ranges = resource.getRanges.getRangeList.asScala.map ( range => {
+      val portRangeBegin = range.getBegin.toInt + (range.getBegin.toInt % portBlockSize)
+      val blocksAvailable = (range.getEnd.toInt - portRangeBegin + 1) / portBlockSize
+      (portRangeBegin, blocksAvailable)
+    }).filter(range => (range._2 > 0))
+
+    if (ranges.size > 0) {
+      val range = util.Random.shuffle(ranges).head
+      Some((util.Random.nextInt(range._2) * 5) + range._1)
     } else {
       None
     }
