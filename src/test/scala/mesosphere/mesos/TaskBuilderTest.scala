@@ -134,4 +134,90 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
         .build())
       .build()
   }
+
+  @Test
+  def testGetPortSingleRange() = {
+    val maxPort = 32000L
+    val minPort = 31000L
+
+    val range = Value.Range.newBuilder
+      .setBegin(minPort)
+      .setEnd(maxPort)
+      .build
+    val ranges = Ranges.newBuilder
+      .addRange(range)
+      .build
+    val portResource = Resource.newBuilder
+      .setName(TaskBuilder.portsResourceName)
+      .setType(Value.Type.RANGES)
+      .setRanges(ranges)
+      .build
+
+    val port = TaskBuilder.getPort(portResource)
+
+    assertTrue(port.get > minPort && port.get < maxPort)
+    assertEquals(port.get % TaskBuilder.portBlockSize,0)
+  }
+
+  @Test
+  def testGetPortMultipleRanges() = {
+    val maxPort1 = 31009L
+    val minPort1 = 31000L
+
+    val maxPort2 = 30003L
+    val minPort2 = 30000L
+
+    val range1 = Value.Range.newBuilder
+      .setBegin(minPort1)
+      .setEnd(maxPort1)
+      .build
+    val range2 = Value.Range.newBuilder
+      .setBegin(minPort2)
+      .setEnd(maxPort2)
+      .build
+    val ranges = Ranges.newBuilder
+      .addRange(range1)
+      .addRange(range2)
+      .build
+    val portResource = Resource.newBuilder
+      .setName(TaskBuilder.portsResourceName)
+      .setType(Value.Type.RANGES)
+      .setRanges(ranges)
+      .build
+
+    val port = TaskBuilder.getPort(portResource)
+
+    assertTrue(port.get == 31000 || port.get == 31005)
+  }
+
+  @Test
+  def testGetPortNotEnoughBlocksInRange() = {
+    val maxPort1 = 31003L
+    val minPort1 = 31000L
+
+    val maxPort2 = 30003L
+    val minPort2 = 30000L
+
+    val range1 = Value.Range.newBuilder
+      .setBegin(minPort1)
+      .setEnd(maxPort1)
+      .build
+    val range2 = Value.Range.newBuilder
+      .setBegin(minPort2)
+      .setEnd(maxPort2)
+      .build
+    val ranges = Ranges.newBuilder
+      .addRange(range1)
+      .addRange(range2)
+      .build
+    val portResource = Resource.newBuilder
+      .setName(TaskBuilder.portsResourceName)
+      .setType(Value.Type.RANGES)
+      .setRanges(ranges)
+      .build
+
+    val port = TaskBuilder.getPort(portResource)
+
+    assertTrue(port.isEmpty)
+  }
 }
