@@ -31,12 +31,13 @@ object AppResource {
   }
 
   // AppDefinition can be viewed as AppResource
-  implicit def AppDefinition2AppResource(app: AppDefinition)
-  = if(app == null)
+  implicit def AppDefinition2AppResource(app: AppDefinition) = {
+    if(app == null){
       AppResource.zero
-     else
-      AppResource(Option(app.cpus).getOrElse(0.0d),
-                  Option(app.mem).getOrElse(0.0d))
+    }else{
+      AppResource(Option(app.cpus).getOrElse(0.0d), Option(app.mem).getOrElse(0.0d))
+    }
+  }
 
   // for all R s.t. can be viewed as AppResource,
   // it supports explicit conversion method "asAppResource"

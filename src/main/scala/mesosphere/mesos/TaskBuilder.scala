@@ -14,11 +14,11 @@ import mesosphere.marathon.AppResource._
  * @author Shingo Omura
  */
 
-class TaskBuilder(taskQueue:TaskQueue, newTaskId: String => TaskID) {
+class TaskBuilder(taskQueue: TaskQueue, newTaskId: String => TaskID) {
 
-  def buildUtmostTasksFor(offer:Offer): List[(AppDefinition,TaskInfo)] = {
+  def buildTasks(offer:Offer): List[(AppDefinition,TaskInfo)] = {
     TaskBuilder.getPort(offer).map(port => {
-      fetchUtmostTasksFor(offer.asAppResource).map(app => {
+      takeTaskIfMatches(offer.asAppResource).map(app => {
         val taskId = newTaskId(app.id)
         app -> TaskInfo.newBuilder
           .setName(taskId.getValue)
@@ -33,13 +33,13 @@ class TaskBuilder(taskQueue:TaskQueue, newTaskId: String => TaskID) {
     }).getOrElse(List.empty)
   }
 
-  private def fetchUtmostTasksFor(remainedResource: AppResource): List[AppDefinition] = {
+  private def takeTaskIfMatches(remainingResource: AppResource): List[AppDefinition] = {
     if (taskQueue.isEmpty()) {
       List.empty
     } else {
       val app = taskQueue.poll()
-      if (app.asAppResource.matches(remainedResource)) {
-        app :: fetchUtmostTasksFor(remainedResource.sub(app))
+      if (app.asAppResource.matches(remainingResource)) {
+        app :: takeTaskIfMatches(remainingResource.sub(app))
       } else {
         // resource offered was exhausted.
         // Add it back into the queue so the we can try again later.

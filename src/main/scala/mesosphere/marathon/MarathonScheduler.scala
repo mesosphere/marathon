@@ -47,7 +47,7 @@ class MarathonScheduler @Inject()(
         log.fine("Task queue is empty. Declining offer.")
         driver.declineOffer(offer.getId)
       } else {
-        val taskInfos = (Lists.newArrayList[TaskInfo]() /: newTasks(taskQueue, offer)) {
+        val taskInfos = newTasks(taskQueue, offer).foldLeft(Lists.newArrayList[TaskInfo]()){
           case (acc, (app, task)) =>
             val port = TaskBuilder.getPort(offer).get
             val marathonTask = MarathonTask(task.getTaskId.getValue, offer.getHostname, port)
@@ -184,8 +184,9 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  private def newTasks(taskQueue: TaskQueue, offer: Offer): List[(AppDefinition, TaskInfo)]
-  = new TaskBuilder(taskQueue,taskTracker.newTaskId).buildUtmostTasksFor(offer)
+  private def newTasks(taskQueue: TaskQueue, offer: Offer): List[(AppDefinition, TaskInfo)] = {
+    new TaskBuilder(taskQueue, taskTracker.newTaskId).buildTasks(offer)
+  }
 
 /**
    * Make sure the app is running the correct number of instances
