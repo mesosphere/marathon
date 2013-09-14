@@ -33,9 +33,8 @@ class EndpointsResource @Inject()(
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def endpointsJson() = {
-    (for (app <- schedulerService.listApps) yield {
-      var upstreams = for (task <- taskTracker.get(app.id)) yield "%s:%d".format(task.getHost, task.getPort)
-      app.id -> Map("port" -> app.port, "upstreams" -> upstreams)
-    }) toMap
+    for (app <- schedulerService.listApps) yield {
+      Map("id" -> app.id, "instances" -> taskTracker.get(app.id))
+    }
   }
 }
