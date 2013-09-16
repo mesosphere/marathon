@@ -25,7 +25,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   var instances: Int = 0
   var cpus: Double = 1.0
   var mem: Double = 128.0
-  @Pattern(regexp="(^//cmd$)|(^/[^/].*$)")
+  @Pattern(regexp="(^//cmd$)|(^/[^/].*$)|")
   var executor: String = ""
 
   //TODO
