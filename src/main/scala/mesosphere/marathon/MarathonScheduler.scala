@@ -42,33 +42,29 @@ class MarathonScheduler @Inject()(
   }
 
   def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
+    // TODO(shingo) some tasks might suffer from starvation.
+    // There may exists some executions such that some tasks will never be launched.
+    // need to more sophisticated scheduling which guarantees no starvation.
+
     for (offer <- offers.asScala) {
       log.info("Received offer %s".format(offer))
 
-      // TODO launch multiple tasks if the offer is big enough
-      val app = taskQueue.poll()
-
-      if (app != null) {
-        newTask(app, offer) match {
-          case Some(task) => {
-            val taskInfos = Lists.newArrayList(task)
-            log.fine("Launching tasks: " + taskInfos)
-
-            val port = TaskBuilder.getPort(offer).get
-            val marathonTask = MarathonTasks.makeTask(task.getTaskId.getValue, offer.getHostname, port, offer.getAttributesList.asScala.toList)
-            taskTracker.starting(app.id, marathonTask)
-            driver.launchTasks(offer.getId, taskInfos)
-          }
-          case None => {
-            log.fine("Offer doesn't match request. Declining.")
-            // Add it back into the queue so the we can try again
-            taskQueue.add(app)
-            driver.declineOffer(offer.getId)
-          }
-        }
-      } else {
+      if (taskQueue.isEmpty()) {
         log.fine("Task queue is empty. Declining offer.")
         driver.declineOffer(offer.getId)
+      } else {
+        val taskInfos = newTasks(taskQueue, offer).foldLeft(Lists.newArrayList[TaskInfo]()){
+          case (acc, (app, task)) =>
+            acc.add(task)
+            acc
+        }
+        if (taskInfos.isEmpty) {
+          log.fine("Offer doesn't match request. Declining.")
+          driver.declineOffer(offer.getId)
+        } else {
+          log.fine("Launching tasks: " + taskInfos)
+          driver.launchTasks(offer.getId, taskInfos)
+        }
       }
     }
   }
@@ -205,9 +201,8 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  private def newTask(app: AppDefinition, offer: Offer): Option[TaskInfo] = {
-    // TODO this should return a MarathonTask
-    new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
+  private def newTasks(taskQueue: TaskQueue, offer: Offer): List[(AppDefinition, TaskInfo)] = {
+    new TaskBuilder(taskQueue, taskTracker).buildTasks(offer)
   }
 
   /**

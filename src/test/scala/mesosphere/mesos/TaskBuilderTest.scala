@@ -5,6 +5,7 @@ import org.junit.Assert._
 import org.apache.mesos.Protos._
 import org.apache.mesos.Protos.Value.{Text, Ranges}
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.tasks.TaskQueue
 
 import org.junit.Assert._
 import org.junit._
@@ -19,6 +20,7 @@ import scala.collection.mutable
 
 /**
  * @author Tobi Knaup
+ * @author Shingo Omura
  */
 
 class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
@@ -34,7 +36,7 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
 
 
   @Test
-  def testBuildIfMatches() {
+  def testBuildTasks() {
     val range = Value.Range.newBuilder
       .setBegin(31000L)
       .setEnd(32000L)
@@ -52,22 +54,40 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
       .setFrameworkId(FrameworkID.newBuilder.setValue("marathon"))
       .setSlaveId(SlaveID.newBuilder.setValue("slave0"))
       .setHostname("localhost")
-      .addResources(TaskBuilder.scalarResource("cpus", 1))
-      .addResources(TaskBuilder.scalarResource("mem", 128))
+      .addResources(TaskBuilder.scalarResource("cpus", 4))
+      .addResources(TaskBuilder.scalarResource("mem", 128*4))
       .addResources(portResource)
       .build
 
-    val app = new AppDefinition
-    app.id = "testApp"
-    app.cpus = 1
-    app.mem = 64
-    app.executor = "//cmd"
+    val queue = new TaskQueue
+    (0 until 5).map(i => {
+      val app = new AppDefinition
+      app.id = "testApp"+i
+      app.cpus = 1
+      app.mem = 128
+      app.executor = "//cmd"
+      queue.add(app)
+    })
 
-    val builder = new TaskBuilder(app,
-      s => TaskID.newBuilder.setValue(s).build, null)
-    val task = builder.buildIfMatches(offer)
+    val tracker = mock[TaskTracker]
+    when(tracker.newTaskId("testApp0"))
+      .thenReturn(TaskID.newBuilder.setValue("testApp0").build)
+    when(tracker.newTaskId("testApp1"))
+      .thenReturn(TaskID.newBuilder.setValue("testApp1").build)
+    when(tracker.newTaskId("testApp2"))
+      .thenReturn(TaskID.newBuilder.setValue("testApp2").build)
+    when(tracker.newTaskId("testApp3"))
+      .thenReturn(TaskID.newBuilder.setValue("testApp3").build)
 
-    assertTrue(task.isDefined)
+    val builder = new TaskBuilder(queue, tracker, null)
+    val tasks = builder.buildTasks(offer)
+
+
+    assertTrue(tasks.size == 4)
+    (0 until 4).foreach(i => {
+      assertTrue(tasks(i)._1.id == "testApp"+i)
+      assertTrue(tasks(i)._2.getName == "testApp"+i)
+    })
     // TODO test for resources etc.
   }
 
@@ -111,12 +131,16 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
     val s = mutable.Set(t1, t2)
 
     when(taskTracker.get(app.id)).thenReturn(s)
+    when(taskTracker.newTaskId(app.id))
+      .thenReturn(TaskID.newBuilder.setValue(app.id).build)
 
-    val builder = new TaskBuilder(app,
-      s => TaskID.newBuilder.setValue(s).build, taskTracker)
-    val task = builder.buildIfMatches(offer)
+    val queue = new TaskQueue
+    queue.add(app)
+    val builder = new TaskBuilder(queue, taskTracker)
+    val tasks = builder.buildTasks(offer)
 
-    assertTrue(task.isDefined)
+    assertTrue(tasks.size == 1)
+    assertTrue(tasks(0)._1 == app)
     // TODO test for resources etc.
   }
 

@@ -8,7 +8,10 @@ import mesosphere.marathon.api.v1.AppDefinition
 import org.apache.mesos.Protos.Value.Ranges
 import org.apache.mesos.Protos
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{MarathonTasks, TaskQueue, TaskTracker}
+import mesosphere.marathon.AppResource
+import mesosphere.marathon.AppResource._
+
 import java.util.logging.Logger
 import mesosphere.marathon.{PathExecutor, CommandExecutor, Executor, Main}
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -18,60 +21,62 @@ import com.google.protobuf.ByteString
 
 /**
  * @author Tobi Knaup
+ * @author Shingo Omura
  */
 
-class TaskBuilder (app: AppDefinition,
-                   newTaskId: String => TaskID,
-                   taskTracker: TaskTracker,
-                   mapper: ObjectMapper = new ObjectMapper()) {
+class TaskBuilder(taskQueue: TaskQueue,
+                  taskTracker: TaskTracker,
+                  mapper: ObjectMapper = new ObjectMapper()) {
 
   val log = Logger.getLogger(getClass.getName)
 
-  def buildIfMatches(offer: Offer): Option[TaskInfo] = {
-    if (!offerMatches(offer)) {
-      return None
-    }
-
-    val executor: Executor = if (app.executor == "") {
-      Main.getConfiguration.executor
-    } else {
-      Executor.dispatch(app.executor)
-    }
-
+  def buildTasks(offer: Offer): List[(AppDefinition, TaskInfo)] = {
     TaskBuilder.getPort(offer).map(f = port => {
-      app.port = port
+      takeTaskIfMatches(offer.asAppResource, offer).map(app => {
 
-      val taskId = newTaskId(app.id)
-      val builder = TaskInfo.newBuilder
-        .setName(taskId.getValue)
-        .setTaskId(taskId)
-        .setSlaveId(offer.getSlaveId)
-        .addResources(TaskBuilder.
-          scalarResource(TaskBuilder.cpusResourceName, app.cpus))
-        .addResources(TaskBuilder.
-          scalarResource(TaskBuilder.memResourceName, app.mem))
-        .addResources(portsResource(port, port))
-
-      executor match {
-        case CommandExecutor() =>
-          builder.setCommand(TaskBuilder.commandInfo(app, Some(port)))
-
-        case PathExecutor(path) => {
-          val executorId = f"marathon-${taskId.getValue}" // Fresh executor
-          val escaped = "'" + path + "'" // TODO: Really escape this.
-          val cmd = f"chmod ug+rx $escaped && exec $escaped ${app.cmd}"
-          val binary = new ByteArrayOutputStream()
-          mapper.writeValue(binary, app)
-          val info = ExecutorInfo.newBuilder()
-            .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
-            .setCommand(CommandInfo.newBuilder().setValue(cmd))
-          builder.setExecutor(info)
-          builder.setData(ByteString.copyFrom(binary.toByteArray))
+        val executor: Executor = if (app.executor == "") {
+          Main.getConfiguration.executor
+        } else {
+         Executor.dispatch(app.executor)
         }
-      }
 
-      builder.build
-    })
+        val taskId = taskTracker.newTaskId(app.id)
+
+        val marathonTask = MarathonTasks.makeTask(taskId.getValue,
+          offer.getHostname, port, offer.getAttributesList.asScala.toList)
+        taskTracker.starting(app.id, marathonTask)
+
+        val builder = TaskInfo.newBuilder
+          .setName(taskId.getValue)
+          .setTaskId(taskId)
+          .setSlaveId(offer.getSlaveId)
+          .addResources(TaskBuilder.
+            scalarResource(TaskBuilder.cpusResourceName, app.cpus))
+          .addResources(TaskBuilder.
+            scalarResource(TaskBuilder.memResourceName, app.mem))
+          .addResources(portsResource(port, port))
+
+        executor match {
+          case CommandExecutor() =>
+            builder.setCommand(TaskBuilder.commandInfo(app, Some(port)))
+
+          case PathExecutor(path) => {
+            val executorId = f"marathon-${taskId.getValue}" // Fresh executor
+            val escaped = "'" + path + "'" // TODO: Really escape this.
+            val cmd = f"chmod ug+rx $escaped && exec $escaped ${app.cmd}"
+            val binary = new ByteArrayOutputStream()
+            mapper.writeValue(binary, app)
+            val info = ExecutorInfo.newBuilder()
+              .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
+              .setCommand(CommandInfo.newBuilder().setValue(cmd))
+            builder.setExecutor(info)
+            builder.setData(ByteString.copyFrom(binary.toByteArray))
+          }
+        }
+
+        app -> builder.build
+      })
+    }).getOrElse(List.empty)
   }
 
   private def portsResource(start: Long, end: Long): Resource = {
@@ -89,27 +94,34 @@ class TaskBuilder (app: AppDefinition,
       .build
   }
 
-  private def offerMatches(offer: Offer): Boolean = {
-    for (resource <- offer.getResourcesList.asScala) {
-      if (resource.getName.eq(TaskBuilder.cpusResourceName) && resource.getScalar.getValue < app.cpus) {
-        return false
+  private def takeTaskIfMatches(remainingResource: AppResource, offer: Offer): List[AppDefinition] = {
+    if (taskQueue.isEmpty()) {
+      List.empty
+    } else {
+      val app = taskQueue.poll()
+      if (app.asAppResource.matches(remainingResource) && meetsConstraints(app, offer)) {
+        app :: takeTaskIfMatches(remainingResource.sub(app), offer)
+      } else {
+        // resource offered was exhausted.
+        // Add it back into the queue so the we can try again later.
+        // TODO(shingo) can we put this app back to the head of the queue?
+        taskQueue.add(app)
+        List.empty
       }
-      if (resource.getName.eq(TaskBuilder.memResourceName) && resource.getScalar.getValue < app.mem) {
-        return false
-      }
-      // TODO handle other resources
     }
+  }
 
+  private def meetsConstraints(app: AppDefinition, offer: Offer): Boolean = {
     if (app.constraints.nonEmpty) {
       val currentlyRunningTasks = taskTracker.get(app.id)
       if (app.constraints.filterNot(x =>
-          Constraints
-            .meetsConstraint(
-              currentlyRunningTasks.toSet,
-              offer.getAttributesList.asScala.toSet,
-              x._1,
-              x._2,
-              x._3))
+        Constraints
+          .meetsConstraint(
+          currentlyRunningTasks.toSet,
+          offer.getAttributesList.asScala.toSet,
+          x._1,
+          x._2,
+          x._3))
         .nonEmpty) {
         log.warning("Did not meet a constraint in an offer." )
         return false
