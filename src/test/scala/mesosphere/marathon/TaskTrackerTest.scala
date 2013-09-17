@@ -10,7 +10,7 @@ import org.apache.mesos.Protos.{TaskID, Attribute}
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
 
 import org.junit.Assert._
-import mesosphere.marathon.tasks.{TaskTracker, TaskIDUtil}
+import mesosphere.marathon.tasks.{MarathonTasks, TaskTracker, TaskIDUtil}
 
 class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
 
@@ -92,5 +92,24 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
     assertTrue("Task1 is not properly serialized", tasks.contains(task1))
     assertTrue("Task2 is not properly serialized", tasks.contains(task2))
     assertTrue("Task3 is not properly serialized", tasks.contains(task2))
+  }
+
+  @Test
+  def testNewTaskId() {
+    val state = new InMemoryState
+    val tracker = new TaskTracker(state)
+
+    val foo0 = tracker.newTaskId("foo")
+    assertTrue(foo0.getValue.startsWith("foo_0"))
+
+    // It should increment the sequence number for each staged task
+    tracker.starting("foo", MarathonTasks.makeTask(foo0.getValue, "", 0, List()))
+    val foo1 = tracker.newTaskId("foo")
+    assertTrue(foo1.getValue.startsWith("foo_1"))
+
+    // It should increment the sequence number for each running task
+    tracker.running("foo", foo0)
+    tracker.running("foo", foo1)
+    assertTrue(tracker.newTaskId("foo").getValue.startsWith("foo_2"))
   }
 }

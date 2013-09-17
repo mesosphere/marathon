@@ -55,9 +55,6 @@ class MarathonScheduler @Inject()(
       } else {
         val taskInfos = newTasks(taskQueue, offer).foldLeft(Lists.newArrayList[TaskInfo]()){
           case (acc, (app, task)) =>
-            val port = TaskBuilder.getPort(offer).get
-            val marathonTask = MarathonTasks.makeTask(task.getTaskId.getValue, offer.getHostname, port, offer.getAttributesList.asScala.toList)
-            taskTracker.starting(app.id, marathonTask)
             acc.add(task)
             acc
         }
@@ -205,7 +202,7 @@ class MarathonScheduler @Inject()(
   }
 
   private def newTasks(taskQueue: TaskQueue, offer: Offer): List[(AppDefinition, TaskInfo)] = {
-    new TaskBuilder(taskQueue, taskTracker.newTaskId, taskTracker).buildTasks(offer)
+    new TaskBuilder(taskQueue, taskTracker).buildTasks(offer)
   }
 
   /**

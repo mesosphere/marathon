@@ -17,8 +17,11 @@ object TaskIDUtil {
     "%s%s%d-%d".format(appName, taskDelimiter, sequence, System.currentTimeMillis())
   }
 
-  def appID(taskId: TaskID) = {
-    val taskIdString = taskId.getValue
+  def appID(taskId: TaskID): String = {
+    appID(taskId.getValue)
+  }
+
+  def appID(taskIdString: String): String = {
     taskIdString.substring(0, taskIdString.lastIndexOf(taskDelimiter))
   }
 }

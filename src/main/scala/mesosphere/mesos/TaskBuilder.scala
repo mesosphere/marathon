@@ -8,7 +8,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import org.apache.mesos.Protos.Value.Ranges
 import org.apache.mesos.Protos
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{MarathonTasks, TaskQueue, TaskTracker}
 import mesosphere.marathon.AppResource
 import mesosphere.marathon.AppResource._
 
@@ -24,14 +24,13 @@ import com.google.protobuf.ByteString
  * @author Shingo Omura
  */
 
-class TaskBuilder (taskQueue: TaskQueue,
-                   newTaskId: String => TaskID,
-                   taskTracker: TaskTracker,
-                   mapper: ObjectMapper = new ObjectMapper()) {
+class TaskBuilder(taskQueue: TaskQueue,
+                  taskTracker: TaskTracker,
+                  mapper: ObjectMapper = new ObjectMapper()) {
 
   val log = Logger.getLogger(getClass.getName)
 
-  def buildTasks(offer:Offer): List[(AppDefinition,TaskInfo)] = {
+  def buildTasks(offer: Offer): List[(AppDefinition, TaskInfo)] = {
     TaskBuilder.getPort(offer).map(f = port => {
       takeTaskIfMatches(offer.asAppResource, offer).map(app => {
 
@@ -41,9 +40,12 @@ class TaskBuilder (taskQueue: TaskQueue,
          Executor.dispatch(app.executor)
         }
 
-        app.port = port
+        val taskId = taskTracker.newTaskId(app.id)
 
-        val taskId = newTaskId(app.id)
+        val marathonTask = MarathonTasks.makeTask(taskId.getValue,
+          offer.getHostname, port, offer.getAttributesList.asScala.toList)
+        taskTracker.starting(app.id, marathonTask)
+
         val builder = TaskInfo.newBuilder
           .setName(taskId.getValue)
           .setTaskId(taskId)
@@ -72,7 +74,7 @@ class TaskBuilder (taskQueue: TaskQueue,
           }
         }
 
-      app -> builder.build
+        app -> builder.build
       })
     }).getOrElse(List.empty)
   }

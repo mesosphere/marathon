@@ -74,9 +74,10 @@ class TaskTracker @Inject()(state: State) {
   }
 
   def newTaskId(appName: String) = {
-    val taskCount = count(appName)
+    val running = count(appName)
+    val staged = stagedTasks.keys.count(TaskIDUtil.appID(_) == appName)
     TaskID.newBuilder()
-      .setValue(TaskIDUtil.taskId(appName, taskCount))
+      .setValue(TaskIDUtil.taskId(appName, running + staged))
       .build
   }
 

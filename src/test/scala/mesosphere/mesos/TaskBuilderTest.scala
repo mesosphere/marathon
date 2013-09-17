@@ -69,8 +69,17 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
       queue.add(app)
     })
 
-    val builder = new TaskBuilder(queue,
-      s => TaskID.newBuilder.setValue(s).build, null)
+    val tracker = mock[TaskTracker]
+    when(tracker.newTaskId("testApp0"))
+      .thenReturn(TaskID.newBuilder.setValue("testApp0").build)
+    when(tracker.newTaskId("testApp1"))
+      .thenReturn(TaskID.newBuilder.setValue("testApp1").build)
+    when(tracker.newTaskId("testApp2"))
+      .thenReturn(TaskID.newBuilder.setValue("testApp2").build)
+    when(tracker.newTaskId("testApp3"))
+      .thenReturn(TaskID.newBuilder.setValue("testApp3").build)
+
+    val builder = new TaskBuilder(queue, tracker, null)
     val tasks = builder.buildTasks(offer)
 
 
@@ -122,11 +131,12 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
     val s = mutable.Set(t1, t2)
 
     when(taskTracker.get(app.id)).thenReturn(s)
+    when(taskTracker.newTaskId(app.id))
+      .thenReturn(TaskID.newBuilder.setValue(app.id).build)
 
     val queue = new TaskQueue
     queue.add(app)
-    val builder = new TaskBuilder(queue,
-      s => TaskID.newBuilder.setValue(s).build, taskTracker)
+    val builder = new TaskBuilder(queue, taskTracker)
     val tasks = builder.buildTasks(offer)
 
     assertTrue(tasks.size == 1)
