@@ -27,7 +27,7 @@ class TaskBuilder (app: AppDefinition,
 
   val log = Logger.getLogger(getClass.getName)
 
-  def buildIfMatches(offer: Offer): Option[TaskInfo] = {
+  def buildIfMatches(offer: Offer): Option[(TaskInfo, Int)] = {
     if (!offerMatches(offer)) {
       return None
     }
@@ -39,8 +39,6 @@ class TaskBuilder (app: AppDefinition,
     }
 
     TaskBuilder.getPort(offer).map(f = port => {
-      app.port = port
-
       val taskId = newTaskId(app.id)
       val builder = TaskInfo.newBuilder
         .setName(taskId.getValue)
@@ -70,7 +68,7 @@ class TaskBuilder (app: AppDefinition,
         }
       }
 
-      builder.build
+      builder.build -> port
     })
   }
 

@@ -50,11 +50,10 @@ class MarathonScheduler @Inject()(
 
       if (app != null) {
         newTask(app, offer) match {
-          case Some(task) => {
+          case Some((task, port)) => {
             val taskInfos = Lists.newArrayList(task)
             log.fine("Launching tasks: " + taskInfos)
 
-            val port = TaskBuilder.getPort(offer).get
             val marathonTask = MarathonTasks.makeTask(task.getTaskId.getValue, offer.getHostname, port, offer.getAttributesList.asScala.toList)
             taskTracker.starting(app.id, marathonTask)
             driver.launchTasks(offer.getId, taskInfos)
@@ -205,7 +204,8 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  private def newTask(app: AppDefinition, offer: Offer): Option[TaskInfo] = {
+  private def newTask(app: AppDefinition,
+                      offer: Offer): Option[(TaskInfo, Int)] = {
     // TODO this should return a MarathonTask
     new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
   }
