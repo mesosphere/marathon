@@ -1,16 +1,16 @@
 package mesosphere.mesos
 
-import org.apache.mesos.Protos._
-import org.apache.mesos.Protos.Environment.Variable
+import java.util.logging.Logger
+import java.io.ByteArrayOutputStream
 import scala.collection._
 import scala.collection.JavaConverters._
-import mesosphere.marathon.api.v1.AppDefinition
+import org.apache.mesos.Protos._
+import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.Value.Ranges
+import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
-import java.util.logging.Logger
 import mesosphere.marathon.{PathExecutor, CommandExecutor, Executor, Main}
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.io.ByteArrayOutputStream
 import com.google.protobuf.ByteString
 import org.apache.mesos.Protos
 
@@ -27,8 +27,16 @@ class TaskBuilder (app: AppDefinition,
   val log = Logger.getLogger(getClass.getName)
 
   def buildIfMatches(offer: Offer): Option[(TaskInfo, Seq[Int])] = {
-    if (!offerMatches(offer)) {
-      return None
+    var cpuRole = ""
+    var memRole = ""
+
+    offerMatches(offer) match {
+      case Some((cpu, mem)) =>
+        cpuRole = cpu
+        memRole = mem
+      case _ =>
+        log.info(s"No matching offer (need ${app.cpus} CPUs, ${app.mem} mem, ${app.ports.size} ports) : " + offer)
+        return None
     }
 
     val executor: Executor = if (app.executor == "") {
@@ -48,12 +56,14 @@ class TaskBuilder (app: AppDefinition,
         .setTaskId(taskId)
         .setSlaveId(offer.getSlaveId)
         .addResources(TaskBuilder.
-          scalarResource(TaskBuilder.cpusResourceName, app.cpus))
+          scalarResource(TaskBuilder.cpusResourceName, app.cpus, cpuRole))
         .addResources(TaskBuilder.
-          scalarResource(TaskBuilder.memResourceName, app.mem))
+          scalarResource(TaskBuilder.memResourceName, app.mem, memRole))
 
       if (portRanges.nonEmpty) {
-        builder.addResources(portsResource(portRanges))
+        portRanges.map(r => {
+          builder.addResources(portsResource(r))
+        })
       }
 
       executor match {
@@ -78,33 +88,43 @@ class TaskBuilder (app: AppDefinition,
     })
   }
 
-  private def portsResource(ranges: Seq[(Int, Int)]): Resource = {
-    val rangeProtos = ranges.map(r => {
-      Value.Range.newBuilder
-        .setBegin(r._1)
-        .setEnd(r._2)
-        .build
-    })
+  private def portsResource(range: (Int, Int, String)): Resource = {
+    val rangeProtos = Value.Range.newBuilder
+      .setBegin(range._1)
+      .setEnd(range._2)
+      .build
 
     val rangesProto = Ranges.newBuilder
-      .addAllRange(rangeProtos.asJava)
+      .addRange(rangeProtos)
       .build
     Resource.newBuilder
       .setName(TaskBuilder.portsResourceName)
       .setType(Value.Type.RANGES)
       .setRanges(rangesProto)
+      .setRole(range._3)
       .build
   }
 
-  private def offerMatches(offer: Offer): Boolean = {
+  private def offerMatches(offer: Offer): Option[(String, String)] = {
+    var cpuRole = ""
+    var memRole = ""
+
     for (resource <- offer.getResourcesList.asScala) {
-      if (resource.getName.eq(TaskBuilder.cpusResourceName) && resource.getScalar.getValue < app.cpus) {
-        return false
+      if (cpuRole.isEmpty &&
+        resource.getName == TaskBuilder.cpusResourceName &&
+        resource.getScalar.getValue >= app.cpus) {
+        cpuRole = resource.getRole
       }
-      if (resource.getName.eq(TaskBuilder.memResourceName) && resource.getScalar.getValue < app.mem) {
-        return false
+      if (memRole.isEmpty &&
+        resource.getName == TaskBuilder.memResourceName &&
+        resource.getScalar.getValue >= app.mem) {
+        memRole = resource.getRole
       }
       // TODO handle other resources
+    }
+
+    if (cpuRole.isEmpty || memRole.isEmpty) {
+      return None
     }
 
     if (app.constraints.nonEmpty) {
@@ -119,11 +139,11 @@ class TaskBuilder (app: AppDefinition,
               x._3))
         .nonEmpty) {
         log.warning("Did not meet a constraint in an offer." )
-        return false
+        return None
       }
       log.info("Met all constraints.")
     }
-    true
+    Some((cpuRole, memRole))
   }
 }
 
@@ -133,12 +153,18 @@ object TaskBuilder {
   final val memResourceName = "mem"
   final val portsResourceName = "ports"
 
-  def scalarResource(name: String, value: Double) = {
+  def scalarResource(name: String, value: Double, role: String) = {
     Resource.newBuilder
       .setName(name)
       .setType(Value.Type.SCALAR)
       .setScalar(Value.Scalar.newBuilder.setValue(value))
+      .setRole(role)
       .build
+  }
+
+  def scalarResource(name: String, value: Double): Resource = {
+    // Added for convenience.  Uses default catch-all role.
+    scalarResource(name, value, "*")
   }
 
   def commandInfo(app: AppDefinition, ports: Seq[Int]) = {
@@ -171,13 +197,13 @@ object TaskBuilder {
     builder.build()
   }
 
-  def getPorts(offer: Offer, numPorts: Int): Option[Seq[(Int, Int)]] = {
+  def getPorts(offer: Offer, numPorts: Int): Option[Seq[(Int, Int, String)]] = {
     offer.getResourcesList.asScala
       .find(_.getName == portsResourceName)
       .flatMap(getPorts(_, numPorts))
   }
 
-  def getPorts(resource: Resource, numPorts: Int): Option[Seq[(Int, Int)]] = {
+  def getPorts(resource: Resource, numPorts: Int): Option[Seq[(Int, Int, String)]] = {
     if (numPorts == 0) {
       return Some(Seq())
     }
@@ -188,7 +214,7 @@ object TaskBuilder {
       if (range.getEnd - range.getBegin + 1 >= numPorts) {
         val maxOffset = (range.getEnd - range.getBegin - numPorts + 2).toInt
         val firstPort = range.getBegin.toInt + util.Random.nextInt(maxOffset)
-        return Some(Seq((firstPort, firstPort + numPorts - 1)))
+        return Some(Seq((firstPort, firstPort + numPorts - 1, resource.getRole)))
       }
     }
     None
