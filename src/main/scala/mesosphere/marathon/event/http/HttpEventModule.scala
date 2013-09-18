@@ -5,11 +5,8 @@ import akka.actor.{Props, ActorRef, ActorSystem}
 import com.google.inject.name.Named
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
-import com.google.common.eventbus.{AsyncEventBus, EventBus}
 import org.rogach.scallop.ScallopConf
 import java.util.logging.Logger
-import mesosphere.marathon.event.EventModule
-import mesosphere.marathon.event.http.HttpCallbackEventSubscriber
 
 trait HttpEventConfiguration extends ScallopConf {
 

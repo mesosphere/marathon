@@ -3,7 +3,6 @@ package mesosphere.mesos
 
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.Constraint
-import org.apache.mesos.Protos.Attribute
 
 object Constraints {
 

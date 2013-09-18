@@ -6,8 +6,6 @@ import scala.collection._
 import scala.collection.JavaConverters._
 import mesosphere.marathon.api.v1.AppDefinition
 import org.apache.mesos.Protos.Value.Ranges
-import org.apache.mesos.Protos
-import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.tasks.TaskTracker
 import java.util.logging.Logger
 import mesosphere.marathon.{PathExecutor, CommandExecutor, Executor, Main}

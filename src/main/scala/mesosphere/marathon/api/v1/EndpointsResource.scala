@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v1
 import javax.ws.rs.{GET, Produces, Path}
 import javax.ws.rs.core.MediaType
 import javax.inject.Inject
-import mesosphere.marathon.{MarathonSchedulerService}
+import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 
 /**

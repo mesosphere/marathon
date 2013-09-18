@@ -6,8 +6,8 @@ import mesosphere.chaos.http.{HttpService, HttpModule, HttpConf}
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.chaos.AppConfiguration
-import mesosphere.marathon.event.{EventModule, EventSubscriber, EventConfiguration}
-import mesosphere.marathon.event.http.{HttpCallbackEventSubscriber, HttpEventModule, HttpEventConfiguration}
+import mesosphere.marathon.event.{EventModule, EventConfiguration}
+import mesosphere.marathon.event.http.{HttpEventModule, HttpEventConfiguration}
 import com.google.inject.AbstractModule
 import java.util.logging.Logger
 
