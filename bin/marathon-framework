@@ -31,18 +31,21 @@ function main {
 function load_options_and_log {
   # Load Marathon options from Mesos and Marathon conf files that are present.
   # Launch main program with Syslog enabled.
-  local marathon_options=( )
+  local cmd=( run_jar )
   if [[ -s /etc/mesos/zk ]]
   then
-    marathon_options+=( --zk_hosts "$(cut -d / -f 3 /etc/mesos/zk)"
-                        --master "$(cat /etc/mesos/zk)" )
+    cmd+=( --zk_hosts "$(cut -d / -f 3 /etc/mesos/zk)"
+           --master "$(cat /etc/mesos/zk)" )
   fi
-  while read -u 9 -r -d '' path
-  do
-    local name="${path#./}"
-    marathon_options+=( "--$name" "$(cat "$conf_dir/$name")" )
-  done 9< <(cd "$conf_dir" && find . -type f -not -name '.*' -print0)
-  logged marathon run_jar "${marathon_options[@]}" "$@"
+  if [[ -d $conf_dir ]]
+  then
+    while read -u 9 -r -d '' path
+    do
+      local name="${path#./}"
+      cmd+=( "--$name" "$(cat "$conf_dir/$name")" )
+    done 9< <(cd "$conf_dir" && find . -type f -not -name '.*' -print0)
+  fi
+  logged marathon "${cmd[@]}" "$@"
 }
 
 function run_jar {
