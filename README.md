@@ -24,7 +24,7 @@ In fact, you can even start other Marathon instances via Marathon.
 
 If you have questions, please post on the [Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework) email list.
 You can find Mesos support in the `#mesos` channel on [freenode][freenode] (IRC).
-The team at [Mesosphere](https://mesosphe.re) is also happy to answer any questions.
+The team at [Mesosphere](http://mesosphere.io) is also happy to answer any questions.
 
 ## Authors
 
