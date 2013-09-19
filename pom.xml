@@ -31,13 +31,13 @@
     <distributionManagement>
         <repository>
             <id>aws-release</id>
-            <name>Mesosphere Private Release Repository</name>
-            <url>s3://maven-private/release</url>
+            <name>Mesosphere Release Repository</name>
+            <url>s3://downloads.mesosphere.io/maven</url>
         </repository>
         <snapshotRepository>
             <id>aws-snapshot</id>
-            <name>Mesosphere Private Snapshot Repository</name>
-            <url>s3://maven-private/snapshot</url>
+            <name>Mesosphere Snapshot Repository</name>
+            <url>s3://downloads.mesosphere.io/maven-snapshot</url>
         </snapshotRepository>
     </distributionManagement>
 
@@ -54,19 +54,9 @@
 
     <repositories>
         <repository>
-            <id>aws-release</id>
-            <name>Private AWS release repo</name>
-            <url>s3://maven-private/release</url>
-        </repository>
-        <repository>
-            <id>aws-snapshot</id>
-            <name>Private AWS snapshot repo</name>
-            <url>s3://maven-private/snapshot</url>
-        </repository>
-        <repository>
             <id>mesosphere-public-repo</id>
             <name>Mesosphere Public Repo</name>
-            <url>http://s3.amazonaws.com/mesosphere-maven-public/</url>
+            <url>http://downloads.mesosphere.io/maven/</url>
         </repository>
         <repository>
             <id>twitter-repo</id>
@@ -219,6 +209,7 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
+                <version>3.1.5</version>
                 <executions>
                     <execution>
                         <id>scala-compile-first</id>
