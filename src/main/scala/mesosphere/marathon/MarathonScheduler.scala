@@ -43,7 +43,7 @@ class MarathonScheduler @Inject()(
 
   def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
     for (offer <- offers.asScala) {
-      log.info("Received offer %s".format(offer))
+      log.fine("Received offer %s".format(offer))
 
       // TODO launch multiple tasks if the offer is big enough
       val app = taskQueue.poll()
