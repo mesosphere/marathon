@@ -41,7 +41,7 @@ class TaskTracker @Inject()(state: State) {
     stagedTasks(task.getId) = task
   }
 
-  def running(appName: String, taskId: TaskID) {
+  def running(appName: String, taskId: TaskID) = {
     stagedTasks.remove(taskId.getValue) match {
       case Some(task) => {
         get(appName) += task
@@ -115,7 +115,7 @@ class TaskTracker @Inject()(state: State) {
     state.fetch(prefix + appName).get()
   }
 
-  def store(appName: String) {
+  def store(appName: String) = {
     val oldVar = fetchVariable(appName)
     val bytes = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(bytes)

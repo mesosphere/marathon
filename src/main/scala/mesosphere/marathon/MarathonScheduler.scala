@@ -15,6 +15,7 @@ import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event.{EventModule, MesosStatusUpdateEvent}
 import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks}
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.util.concurrent.{TimeoutException, TimeUnit}
 
 
 /**
@@ -82,9 +83,40 @@ class MarathonScheduler @Inject()(
 
     val appID = TaskIDUtil.appID(status.getTaskId)
 
+    if (status.getState.eq(TaskState.TASK_FAILED)
+      || status.getState.eq(TaskState.TASK_FINISHED)
+      || status.getState.eq(TaskState.TASK_KILLED)
+      || status.getState.eq(TaskState.TASK_LOST)) {
+
+      // Send mesos update event while it's still tracked in marathon
+      sendMesosStatusUpdateEvent(status)
+
+      // Remove from our internal list
+      taskTracker.terminated(appID, status.getTaskId)
+      scale(driver, appID)
+    } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
+      // Add to our internal list
+      val runningFuture = taskTracker.running(appID, status.getTaskId)
+
+      // Send mesos update event if task is persisted in time
+      try {
+        runningFuture.get(5, TimeUnit.SECONDS)
+        sendMesosStatusUpdateEvent(status)
+      } catch {
+        case te: TimeoutException =>
+          log.warning("Failed to persist running status in time, not sending event notification")
+        case e: Exception =>
+          log.log(Level.WARNING, "Got exception while trying to send mesos status update", e)
+      }
+    }
+  }
+
+  private def sendMesosStatusUpdateEvent(status: TaskStatus) {
+    val appID = TaskIDUtil.appID(status.getTaskId)
+
     if (eventBus.nonEmpty) {
       val app = taskTracker.get(appID)
-        .filter(_.getId == status.getTaskId).headOption
+        .filter(_.getId == status.getTaskId.getValue).headOption
 
       if (app.nonEmpty) {
         log.info("Sending event notification.")
@@ -94,18 +126,6 @@ class MarathonScheduler @Inject()(
         log.warning(f"Couldn't find task with id: ${status.getTaskId}." +
           f"Not sending event notification.")
       }
-    }
-
-    if (status.getState.eq(TaskState.TASK_FAILED)
-      || status.getState.eq(TaskState.TASK_FINISHED)
-      || status.getState.eq(TaskState.TASK_KILLED)
-      || status.getState.eq(TaskState.TASK_LOST)) {
-
-      // Remove from our internal list
-      taskTracker.terminated(appID, status.getTaskId)
-      scale(driver, appID)
-    } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
-      taskTracker.running(appID, status.getTaskId)
     }
   }
 
