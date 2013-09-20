@@ -661,9 +661,10 @@ public final class Protos {
     boolean hasDescription();
     String getDescription();
     
-    // optional uint32 port = 6;
-    boolean hasPort();
-    int getPort();
+    // repeated uint32 ports = 6;
+    java.util.List<java.lang.Integer> getPortsList();
+    int getPortsCount();
+    int getPorts(int index);
     
     // repeated .mesosphere.marathon.Constraint constraints = 7;
     java.util.List<mesosphere.marathon.Protos.Constraint> 
@@ -816,14 +817,18 @@ public final class Protos {
       }
     }
     
-    // optional uint32 port = 6;
-    public static final int PORT_FIELD_NUMBER = 6;
-    private int port_;
-    public boolean hasPort() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+    // repeated uint32 ports = 6;
+    public static final int PORTS_FIELD_NUMBER = 6;
+    private java.util.List<java.lang.Integer> ports_;
+    public java.util.List<java.lang.Integer>
+        getPortsList() {
+      return ports_;
     }
-    public int getPort() {
-      return port_;
+    public int getPortsCount() {
+      return ports_.size();
+    }
+    public int getPorts(int index) {
+      return ports_.get(index);
     }
     
     // repeated .mesosphere.marathon.Constraint constraints = 7;
@@ -851,7 +856,7 @@ public final class Protos {
     public static final int EXECUTOR_FIELD_NUMBER = 8;
     private java.lang.Object executor_;
     public boolean hasExecutor() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     public String getExecutor() {
       java.lang.Object ref = executor_;
@@ -885,7 +890,7 @@ public final class Protos {
       instances_ = 0;
       resources_ = java.util.Collections.emptyList();
       description_ = "";
-      port_ = 0;
+      ports_ = java.util.Collections.emptyList();;
       constraints_ = java.util.Collections.emptyList();
       executor_ = "";
     }
@@ -948,13 +953,13 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeBytes(5, getDescriptionBytes());
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeUInt32(6, port_);
+      for (int i = 0; i < ports_.size(); i++) {
+        output.writeUInt32(6, ports_.get(i));
       }
       for (int i = 0; i < constraints_.size(); i++) {
         output.writeMessage(7, constraints_.get(i));
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeBytes(8, getExecutorBytes());
       }
       getUnknownFields().writeTo(output);
@@ -986,15 +991,20 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(5, getDescriptionBytes());
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(6, port_);
+      {
+        int dataSize = 0;
+        for (int i = 0; i < ports_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeUInt32SizeNoTag(ports_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getPortsList().size();
       }
       for (int i = 0; i < constraints_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(7, constraints_.get(i));
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(8, getExecutorBytes());
       }
@@ -1143,7 +1153,7 @@ public final class Protos {
         }
         description_ = "";
         bitField0_ = (bitField0_ & ~0x00000010);
-        port_ = 0;
+        ports_ = java.util.Collections.emptyList();;
         bitField0_ = (bitField0_ & ~0x00000020);
         if (constraintsBuilder_ == null) {
           constraints_ = java.util.Collections.emptyList();
@@ -1220,10 +1230,11 @@ public final class Protos {
           to_bitField0_ |= 0x00000008;
         }
         result.description_ = description_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000010;
+        if (((bitField0_ & 0x00000020) == 0x00000020)) {
+          ports_ = java.util.Collections.unmodifiableList(ports_);
+          bitField0_ = (bitField0_ & ~0x00000020);
         }
-        result.port_ = port_;
+        result.ports_ = ports_;
         if (constraintsBuilder_ == null) {
           if (((bitField0_ & 0x00000040) == 0x00000040)) {
             constraints_ = java.util.Collections.unmodifiableList(constraints_);
@@ -1234,7 +1245,7 @@ public final class Protos {
           result.constraints_ = constraintsBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
-          to_bitField0_ |= 0x00000020;
+          to_bitField0_ |= 0x00000010;
         }
         result.executor_ = executor_;
         result.bitField0_ = to_bitField0_;
@@ -1291,8 +1302,15 @@ public final class Protos {
         if (other.hasDescription()) {
           setDescription(other.getDescription());
         }
-        if (other.hasPort()) {
-          setPort(other.getPort());
+        if (!other.ports_.isEmpty()) {
+          if (ports_.isEmpty()) {
+            ports_ = other.ports_;
+            bitField0_ = (bitField0_ & ~0x00000020);
+          } else {
+            ensurePortsIsMutable();
+            ports_.addAll(other.ports_);
+          }
+          onChanged();
         }
         if (constraintsBuilder_ == null) {
           if (!other.constraints_.isEmpty()) {
@@ -1417,8 +1435,17 @@ public final class Protos {
               break;
             }
             case 48: {
-              bitField0_ |= 0x00000020;
-              port_ = input.readUInt32();
+              ensurePortsIsMutable();
+              ports_.add(input.readUInt32());
+              break;
+            }
+            case 50: {
+              int length = input.readRawVarint32();
+              int limit = input.pushLimit(length);
+              while (input.getBytesUntilLimit() > 0) {
+                addPorts(input.readUInt32());
+              }
+              input.popLimit(limit);
               break;
             }
             case 58: {
@@ -1807,23 +1834,47 @@ public final class Protos {
         onChanged();
       }
       
-      // optional uint32 port = 6;
-      private int port_ ;
-      public boolean hasPort() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+      // repeated uint32 ports = 6;
+      private java.util.List<java.lang.Integer> ports_ = java.util.Collections.emptyList();;
+      private void ensurePortsIsMutable() {
+        if (!((bitField0_ & 0x00000020) == 0x00000020)) {
+          ports_ = new java.util.ArrayList<java.lang.Integer>(ports_);
+          bitField0_ |= 0x00000020;
+         }
       }
-      public int getPort() {
-        return port_;
+      public java.util.List<java.lang.Integer>
+          getPortsList() {
+        return java.util.Collections.unmodifiableList(ports_);
       }
-      public Builder setPort(int value) {
-        bitField0_ |= 0x00000020;
-        port_ = value;
+      public int getPortsCount() {
+        return ports_.size();
+      }
+      public int getPorts(int index) {
+        return ports_.get(index);
+      }
+      public Builder setPorts(
+          int index, int value) {
+        ensurePortsIsMutable();
+        ports_.set(index, value);
         onChanged();
         return this;
       }
-      public Builder clearPort() {
+      public Builder addPorts(int value) {
+        ensurePortsIsMutable();
+        ports_.add(value);
+        onChanged();
+        return this;
+      }
+      public Builder addAllPorts(
+          java.lang.Iterable<? extends java.lang.Integer> values) {
+        ensurePortsIsMutable();
+        super.addAll(values, ports_);
+        onChanged();
+        return this;
+      }
+      public Builder clearPorts() {
+        ports_ = java.util.Collections.emptyList();;
         bitField0_ = (bitField0_ & ~0x00000020);
-        port_ = 0;
         onChanged();
         return this;
       }
@@ -2072,9 +2123,10 @@ public final class Protos {
     boolean hasHost();
     String getHost();
     
-    // required uint32 port = 3;
-    boolean hasPort();
-    int getPort();
+    // repeated uint32 ports = 3;
+    java.util.List<java.lang.Integer> getPortsList();
+    int getPortsCount();
+    int getPorts(int index);
     
     // repeated .mesos.Attribute attributes = 4;
     java.util.List<org.apache.mesos.Protos.Attribute> 
@@ -2179,14 +2231,18 @@ public final class Protos {
       }
     }
     
-    // required uint32 port = 3;
-    public static final int PORT_FIELD_NUMBER = 3;
-    private int port_;
-    public boolean hasPort() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+    // repeated uint32 ports = 3;
+    public static final int PORTS_FIELD_NUMBER = 3;
+    private java.util.List<java.lang.Integer> ports_;
+    public java.util.List<java.lang.Integer>
+        getPortsList() {
+      return ports_;
     }
-    public int getPort() {
-      return port_;
+    public int getPortsCount() {
+      return ports_.size();
+    }
+    public int getPorts(int index) {
+      return ports_.get(index);
     }
     
     // repeated .mesos.Attribute attributes = 4;
@@ -2213,7 +2269,7 @@ public final class Protos {
     private void initFields() {
       id_ = "";
       host_ = "";
-      port_ = 0;
+      ports_ = java.util.Collections.emptyList();;
       attributes_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
@@ -2226,10 +2282,6 @@ public final class Protos {
         return false;
       }
       if (!hasHost()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasPort()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -2252,8 +2304,8 @@ public final class Protos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBytes(2, getHostBytes());
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeUInt32(3, port_);
+      for (int i = 0; i < ports_.size(); i++) {
+        output.writeUInt32(3, ports_.get(i));
       }
       for (int i = 0; i < attributes_.size(); i++) {
         output.writeMessage(4, attributes_.get(i));
@@ -2275,9 +2327,14 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(2, getHostBytes());
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(3, port_);
+      {
+        int dataSize = 0;
+        for (int i = 0; i < ports_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeUInt32SizeNoTag(ports_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getPortsList().size();
       }
       for (int i = 0; i < attributes_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -2412,7 +2469,7 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000001);
         host_ = "";
         bitField0_ = (bitField0_ & ~0x00000002);
-        port_ = 0;
+        ports_ = java.util.Collections.emptyList();;
         bitField0_ = (bitField0_ & ~0x00000004);
         if (attributesBuilder_ == null) {
           attributes_ = java.util.Collections.emptyList();
@@ -2466,10 +2523,11 @@ public final class Protos {
           to_bitField0_ |= 0x00000002;
         }
         result.host_ = host_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          ports_ = java.util.Collections.unmodifiableList(ports_);
+          bitField0_ = (bitField0_ & ~0x00000004);
         }
-        result.port_ = port_;
+        result.ports_ = ports_;
         if (attributesBuilder_ == null) {
           if (((bitField0_ & 0x00000008) == 0x00000008)) {
             attributes_ = java.util.Collections.unmodifiableList(attributes_);
@@ -2501,8 +2559,15 @@ public final class Protos {
         if (other.hasHost()) {
           setHost(other.getHost());
         }
-        if (other.hasPort()) {
-          setPort(other.getPort());
+        if (!other.ports_.isEmpty()) {
+          if (ports_.isEmpty()) {
+            ports_ = other.ports_;
+            bitField0_ = (bitField0_ & ~0x00000004);
+          } else {
+            ensurePortsIsMutable();
+            ports_.addAll(other.ports_);
+          }
+          onChanged();
         }
         if (attributesBuilder_ == null) {
           if (!other.attributes_.isEmpty()) {
@@ -2540,10 +2605,6 @@ public final class Protos {
           return false;
         }
         if (!hasHost()) {
-          
-          return false;
-        }
-        if (!hasPort()) {
           
           return false;
         }
@@ -2590,8 +2651,17 @@ public final class Protos {
               break;
             }
             case 24: {
-              bitField0_ |= 0x00000004;
-              port_ = input.readUInt32();
+              ensurePortsIsMutable();
+              ports_.add(input.readUInt32());
+              break;
+            }
+            case 26: {
+              int length = input.readRawVarint32();
+              int limit = input.pushLimit(length);
+              while (input.getBytesUntilLimit() > 0) {
+                addPorts(input.readUInt32());
+              }
+              input.popLimit(limit);
               break;
             }
             case 34: {
@@ -2678,23 +2748,47 @@ public final class Protos {
         onChanged();
       }
       
-      // required uint32 port = 3;
-      private int port_ ;
-      public boolean hasPort() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+      // repeated uint32 ports = 3;
+      private java.util.List<java.lang.Integer> ports_ = java.util.Collections.emptyList();;
+      private void ensurePortsIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          ports_ = new java.util.ArrayList<java.lang.Integer>(ports_);
+          bitField0_ |= 0x00000004;
+         }
       }
-      public int getPort() {
-        return port_;
+      public java.util.List<java.lang.Integer>
+          getPortsList() {
+        return java.util.Collections.unmodifiableList(ports_);
       }
-      public Builder setPort(int value) {
-        bitField0_ |= 0x00000004;
-        port_ = value;
+      public int getPortsCount() {
+        return ports_.size();
+      }
+      public int getPorts(int index) {
+        return ports_.get(index);
+      }
+      public Builder setPorts(
+          int index, int value) {
+        ensurePortsIsMutable();
+        ports_.set(index, value);
         onChanged();
         return this;
       }
-      public Builder clearPort() {
+      public Builder addPorts(int value) {
+        ensurePortsIsMutable();
+        ports_.add(value);
+        onChanged();
+        return this;
+      }
+      public Builder addAllPorts(
+          java.lang.Iterable<? extends java.lang.Integer> values) {
+        ensurePortsIsMutable();
+        super.addAll(values, ports_);
+        onChanged();
+        return this;
+      }
+      public Builder clearPorts() {
+        ports_ = java.util.Collections.emptyList();;
         bitField0_ = (bitField0_ & ~0x00000004);
-        port_ = 0;
         onChanged();
         return this;
       }
@@ -2925,15 +3019,15 @@ public final class Protos {
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\"-\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\"\344\001\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003" +
+      "\020\002\"\345\001\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003" +
       "cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n\tinstanc" +
       "es\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Reso" +
-      "urce\022\023\n\013description\030\005 \001(\t\022\014\n\004port\030\006 \001(\r\022" +
-      "4\n\013constraints\030\007 \003(\0132\037.mesosphere.marath",
-      "on.Constraint\022\022\n\010executor\030\010 \002(\t:\000\"\\\n\014Mar" +
-      "athonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\014\n\004p" +
-      "ort\030\003 \002(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos.At" +
-      "tributeB\035\n\023mesosphere.marathonB\006Protos"
+      "urce\022\023\n\013description\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r" +
+      "\0224\n\013constraints\030\007 \003(\0132\037.mesosphere.marat",
+      "hon.Constraint\022\022\n\010executor\030\010 \002(\t:\000\"]\n\014Ma" +
+      "rathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\r\n\005" +
+      "ports\030\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos." +
+      "AttributeB\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -2953,7 +3047,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Port", "Constraints", "Executor", },
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", },
               mesosphere.marathon.Protos.ServiceDefinition.class,
               mesosphere.marathon.Protos.ServiceDefinition.Builder.class);
           internal_static_mesosphere_marathon_MarathonTask_descriptor =
@@ -2961,7 +3055,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
-              new java.lang.String[] { "Id", "Host", "Port", "Attributes", },
+              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", },
               mesosphere.marathon.Protos.MarathonTask.class,
               mesosphere.marathon.Protos.MarathonTask.Builder.class);
           return null;

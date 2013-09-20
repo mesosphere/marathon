@@ -50,11 +50,13 @@ class MarathonScheduler @Inject()(
 
       if (app != null) {
         newTask(app, offer) match {
-          case Some((task, port)) => {
+          case Some((task, ports)) => {
             val taskInfos = Lists.newArrayList(task)
             log.fine("Launching tasks: " + taskInfos)
 
-            val marathonTask = MarathonTasks.makeTask(task.getTaskId.getValue, offer.getHostname, port, offer.getAttributesList.asScala.toList)
+            val marathonTask = MarathonTasks.makeTask(
+              task.getTaskId.getValue, offer.getHostname, ports,
+              offer.getAttributesList.asScala.toList)
             taskTracker.starting(app.id, marathonTask)
             driver.launchTasks(offer.getId, taskInfos)
           }
@@ -88,8 +90,10 @@ class MarathonScheduler @Inject()(
 
       if (app.nonEmpty) {
         log.info("Sending event notification.")
-        eventBus.get.post(new MesosStatusUpdateEvent(status.getTaskId.getValue,
-          status.getState.getNumber, appID, app.get.getHost, app.get.getPort))
+        val event = new MesosStatusUpdateEvent(status.getTaskId.getValue,
+          status.getState.getNumber, appID, app.get.getHost,
+          app.get.getPortsList.asScala)
+        eventBus.get.post(event)
       } else {
         log.warning(f"Couldn't find task with id: ${status.getTaskId}." +
           f"Not sending event notification.")
@@ -205,7 +209,7 @@ class MarathonScheduler @Inject()(
   }
 
   private def newTask(app: AppDefinition,
-                      offer: Offer): Option[(TaskInfo, Int)] = {
+                      offer: Offer): Option[(TaskInfo, Seq[Int])] = {
     // TODO this should return a MarathonTask
     new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
   }

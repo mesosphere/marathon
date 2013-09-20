@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos.{Constraint, MarathonTask}
 import org.apache.mesos.Protos.Attribute
 import org.apache.mesos.Protos.Value.Text
 import org.junit.Assert._
+import com.google.common.collect.Lists
 
 /**
  * @author Florian Leibert (flo@leibert.de)
@@ -14,7 +15,7 @@ class ConstraintsTest {
   def makeSampleTask(id: String, attr: String, attrVal: String) = {
     MarathonTask.newBuilder()
       .setHost("host")
-      .setPort(999)
+      .addAllPorts(Lists.newArrayList(999))
       .setId(id)
       .addAttributes(
       Attribute.newBuilder()

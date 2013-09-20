@@ -62,7 +62,7 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     val taskInfoPortVar = taskInfos.getValue.get(0).getCommand.getEnvironment
       .getVariablesList.asScala.find(v => v.getName == "PORT")
     assertTrue(taskInfoPortVar.isDefined)
-    val marathonTaskPort = marathonTask.getValue.getPort
+    val marathonTaskPort = marathonTask.getValue.getPorts(0)
     assertEquals(taskInfoPortVar.get.getValue, marathonTaskPort.toString)
   }
 }

@@ -54,8 +54,13 @@ class MarathonSchedulerService @Inject()(
 
 
   def startApp(app: AppDefinition) {
-    app.port = newAppPort(app)
-    log.info(s"Assigned port ${app.port} to app '${app.id}'")
+    // Backwards compatibility
+    if (app.ports == Nil) {
+      val port = newAppPort(app)
+      app.ports = Seq(port)
+      log.info(s"Assigned port $port to app '${app.id}'")
+    }
+
     scheduler.startApp(driver, app)
   }
 
@@ -151,7 +156,7 @@ class MarathonSchedulerService @Inject()(
 
   private def newAppPort(app: AppDefinition): Int = {
     // TODO this is pretty expensive, find a better way
-    val assignedPorts = listApps().map(_.port)
+    val assignedPorts = listApps().map(_.ports).flatten
     var port = 0
     do {
       port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
