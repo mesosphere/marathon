@@ -14,42 +14,32 @@ object Constraints {
 
     //TODO(*): Implement LIKE (use value for this)
 
-    //TODO(*)  This is a bit suboptimal as we're just accepting the first slot
-    //         that fulfills, e.g. a cluster constraint. However, for cluster
-    //         to ensure placing N instances, we should select the largest offer
-    //         first. (This is a optimization).
     if (tasks.isEmpty) {
-      return true
-    }
-
-    val attr = attributes.filter(_.getName == field).headOption
-
-    if (attr.nonEmpty) {
-      op match {
-        case Constraint.Operator.UNIQUE_VALUE => {
-          if (matchTasks(tasks, field, attr.get.getText.getValue).nonEmpty) {
-            return false
-          }
-        }
-        case Constraint.Operator.CLUSTER_VALUE => {
-          if (matchTasks(tasks, field, attr.get.getText.getValue)
-            .size != tasks.size) {
-            return false
-          }
-        }
-      }
+      //TODO(*)  This is a bit suboptimal as we're just accepting the first slot
+      //         that fulfills, e.g. a cluster constraint. However, for cluster
+      //         to ensure placing N instances, we should select the largest offer
+      //         first. (This is a optimization).
+      true
     } else {
-      // This will be reached in case we want to schedule for a rack_id but it
-      // is never supplied.
-      return false
-    }
+      val attr = attributes.filter(_.getName == field).headOption
 
-    true
+      if (attr.nonEmpty) {
+        val matches = matchTasks(tasks, field, attr.get.getText.getValue)
+        op match {
+          case Constraint.Operator.UNIQUE_VALUE => matches.isEmpty
+          case Constraint.Operator.CLUSTER_VALUE => matches.size == tasks.size
+        }
+      } else {
+        // This will be reached in case we want to schedule for a rack_id but it
+        // is never supplied.
+        false
+      }
+    }
   }
 
   def matchLike(attr: Set[org.apache.mesos.Protos.Attribute],
                 field: String,
-                regex : String): Boolean = {
+                regex: String): Boolean = {
 
     attr
       .filter(x =>
@@ -65,9 +55,8 @@ object Constraints {
    * @return
    */
   private def matchTasks(tasks: Iterable[mesosphere.marathon.Protos.MarathonTask],
-                 field: String,
-                 value : String) = {
-
+                         field: String,
+                         value: String) = {
     tasks
       .filter(x =>
       (x.getAttributesList.asScala)
