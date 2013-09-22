@@ -179,7 +179,7 @@ object TaskBuilder {
 
   def getPorts(resource: Resource, numPorts: Int): Option[Seq[(Int, Int)]] = {
     if (numPorts == 0) {
-      return None
+      return Some(Seq())
     }
 
     val ranges = util.Random.shuffle(resource.getRanges.getRangeList.asScala)

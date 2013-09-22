@@ -59,8 +59,6 @@ class TaskBuilderTest extends AssertionsForJUnit
     val taskTracker =  mock[TaskTracker]
 
     val offer = makeBasicOffer(1.0, 128.0, 31000, 32000)
-      .addResources(TaskBuilder.scalarResource("cpus", 1))
-      .addResources(TaskBuilder.scalarResource("mem", 128))
       .addAttributes(makeAttribute("rackid", "1"))
       .build
 
@@ -102,7 +100,7 @@ class TaskBuilderTest extends AssertionsForJUnit
   @Test
   def testGetNoPorts() {
     val portsResource = makePortsResource(Seq((31000, 32000)))
-    assertEquals(None, TaskBuilder.getPorts(portsResource, 0))
+    assertEquals(Some(Seq()), TaskBuilder.getPorts(portsResource, 0))
   }
 
   @Test

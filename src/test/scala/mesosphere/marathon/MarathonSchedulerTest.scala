@@ -45,6 +45,7 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     val app = new AppDefinition
     app.id = "testOffers"
     app.executor = "//cmd"
+    app.ports = Seq(8080)
 
     when(tracker.newTaskId("testOffers"))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
