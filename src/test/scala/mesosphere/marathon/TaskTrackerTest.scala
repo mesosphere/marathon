@@ -11,13 +11,14 @@ import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, 
 
 import org.junit.Assert._
 import mesosphere.marathon.tasks.{TaskTracker, TaskIDUtil}
+import com.google.common.collect.Lists
 
 class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
 
   def makeSampleTask(id: String) = {
     MarathonTask.newBuilder()
       .setHost("host")
-      .setPort(999)
+      .addAllPorts(Lists.newArrayList(999))
       .setId(id)
       .addAttributes(
         Attribute.newBuilder()
@@ -32,7 +33,7 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
   def makeTask(id: String, host: String, port: Int) = {
     MarathonTask.newBuilder()
       .setHost(host)
-      .setPort(port)
+      .addAllPorts(Lists.newArrayList(port))
       .setId(id)
       .addAttributes(
       Attribute.newBuilder()

@@ -1,7 +1,5 @@
 package mesosphere.mesos
 
-import org.junit.Test
-import org.junit.Assert._
 import org.apache.mesos.Protos._
 import org.apache.mesos.Protos.Value.{Text, Ranges}
 import mesosphere.marathon.api.v1.AppDefinition
@@ -10,51 +8,27 @@ import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito._
 
-import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.tasks.TaskTracker
 import org.scalatest.junit.AssertionsForJUnit
 import org.scalatest.mock.MockitoSugar
 import scala.collection.mutable
+import scala.collection.JavaConverters._
+import com.google.common.collect.Lists
+import mesosphere.marathon.MarathonTestHelper
 
 /**
  * @author Tobi Knaup
  */
 
-class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
-
-  def makeAttribute(attr: String, attrVal: String) = {
-    Attribute.newBuilder()
-      .setName(attr)
-      .setText(Text.newBuilder()
-      .setValue(attrVal))
-      .setType(org.apache.mesos.Protos.Value.Type.TEXT)
-      .build()
-  }
-
+class TaskBuilderTest extends AssertionsForJUnit
+  with MockitoSugar with MarathonTestHelper {
 
   @Test
   def testBuildIfMatches() {
-    val range = Value.Range.newBuilder
-      .setBegin(31000L)
-      .setEnd(32000L)
-      .build
-    val ranges = Ranges.newBuilder
-      .addRange(range)
-      .build
-    val portResource = Resource.newBuilder
-      .setName(TaskBuilder.portsResourceName)
-      .setType(Value.Type.RANGES)
-      .setRanges(ranges)
-      .build
-    val offer = Offer.newBuilder
-      .setId(OfferID.newBuilder.setValue("1"))
-      .setFrameworkId(FrameworkID.newBuilder.setValue("marathon"))
-      .setSlaveId(SlaveID.newBuilder.setValue("slave0"))
-      .setHostname("localhost")
+    val offer = makeBasicOffer(1.0, 128.0, 31000, 32000)
       .addResources(TaskBuilder.scalarResource("cpus", 1))
       .addResources(TaskBuilder.scalarResource("mem", 128))
-      .addResources(portResource)
       .build
 
     val app = new AppDefinition
@@ -62,12 +36,21 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
     app.cpus = 1
     app.mem = 64
     app.executor = "//cmd"
+    app.ports = Seq(8080, 8081)
 
-    val builder = new TaskBuilder(app,
-      s => TaskID.newBuilder.setValue(s).build, null)
-    val task = builder.buildIfMatches(offer)
-
+    val task = buildIfMatches(offer, app)
     assertTrue(task.isDefined)
+
+    val taskInfo = task.get._1
+    val range = taskInfo.getResourcesList.asScala
+      .find(r => r.getName == TaskBuilder.portsResourceName)
+      .map(r => r.getRanges.getRange(0))
+    val ports = task.get._2
+    assertTrue(range.isDefined)
+    assertEquals(2, ports.size)
+    assertEquals(ports(0), range.get.getBegin.toInt)
+    assertEquals(ports(1), range.get.getEnd.toInt)
+
     // TODO test for resources etc.
   }
 
@@ -75,35 +58,11 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
   def testBuildIfMatchesWithConstraint() {
     val taskTracker =  mock[TaskTracker]
 
-
-    val range = Value.Range.newBuilder
-      .setBegin(31000L)
-      .setEnd(32000L)
-      .build
-    val ranges = Ranges.newBuilder
-      .addRange(range)
-      .build
-    val portResource = Resource.newBuilder
-      .setName(TaskBuilder.portsResourceName)
-      .setType(Value.Type.RANGES)
-      .setRanges(ranges)
-      .build
-    val offer = Offer.newBuilder
-      .setId(OfferID.newBuilder.setValue("1"))
-      .setFrameworkId(FrameworkID.newBuilder.setValue("marathon"))
-      .setSlaveId(SlaveID.newBuilder.setValue("slave0"))
-      .setHostname("localhost")
-      .addResources(TaskBuilder.scalarResource("cpus", 1))
-      .addResources(TaskBuilder.scalarResource("mem", 128))
-      .addResources(portResource)
+    val offer = makeBasicOffer(1.0, 128.0, 31000, 32000)
       .addAttributes(makeAttribute("rackid", "1"))
       .build
 
-    val app = new AppDefinition
-    app.id = "testApp"
-    app.cpus = 1
-    app.mem = 64
-    app.executor = "//cmd"
+    val app = makeBasicApp()
     app.constraints = Set(("rackid", Constraint.Operator.UNIQUE_VALUE, None))
 
     val t1 = makeSampleTask(app.id, "rackid", "2")
@@ -120,10 +79,61 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
     // TODO test for resources etc.
   }
 
+  @Test
+  def testGetPortsSingleRange() = {
+    val portsResource = makePortsResource(Seq((31000, 32000)))
+    val portRanges = TaskBuilder.getPorts(portsResource, 2).get
+
+    assertEquals(1, portRanges.size)
+    assertEquals(1, portRanges.head._2 - portRanges.head._1)
+  }
+
+  @Test
+  def testGetPortsMultipleRanges() = {
+    val portsResource = makePortsResource(Seq((30000, 30003), (31000, 31009)))
+    val portRanges = TaskBuilder.getPorts(portsResource, 5).get
+
+    assertEquals(1, portRanges.size)
+    assertEquals(4, portRanges.head._2 - portRanges.head._1)
+  }
+
+  @Test
+  def testGetNoPorts() {
+    val portsResource = makePortsResource(Seq((31000, 32000)))
+    assertEquals(Some(Seq()), TaskBuilder.getPorts(portsResource, 0))
+  }
+
+  @Test
+  def testGetTooManyPorts() {
+    val portsResource = makePortsResource(Seq((31000, 32000)))
+    assertEquals(None, TaskBuilder.getPorts(portsResource, 10002))
+  }
+
+  @Test
+  def testPortsEnv() {
+    val env = TaskBuilder.portsEnv(Seq(1001, 1002))
+    assertEquals("1001", env("PORT"))
+    assertEquals("1001", env("PORT0"))
+    assertEquals("1002", env("PORT1"))
+  }
+
+  @Test
+  def testPortsEnvEmpty() {
+    val env = TaskBuilder.portsEnv(Seq())
+    assertEquals(Map.empty, env)
+  }
+
+  def buildIfMatches(offer: Offer, app: AppDefinition) = {
+    val taskTracker =  mock[TaskTracker]
+    val builder = new TaskBuilder(app,
+      s => TaskID.newBuilder.setValue(s).build, taskTracker)
+    builder.buildIfMatches(offer)
+  }
+
   def makeSampleTask(id: String, attr: String, attrVal: String) = {
     MarathonTask.newBuilder()
       .setHost("host")
-      .setPort(999)
+      .addAllPorts(Lists.newArrayList(999))
       .setId(id)
       .addAttributes(
       Attribute.newBuilder()
@@ -133,91 +143,5 @@ class TaskBuilderTest  extends AssertionsForJUnit with MockitoSugar {
         .setType(org.apache.mesos.Protos.Value.Type.TEXT)
         .build())
       .build()
-  }
-
-  @Test
-  def testGetPortSingleRange() = {
-    val maxPort = 32000L
-    val minPort = 31000L
-
-    val range = Value.Range.newBuilder
-      .setBegin(minPort)
-      .setEnd(maxPort)
-      .build
-    val ranges = Ranges.newBuilder
-      .addRange(range)
-      .build
-    val portResource = Resource.newBuilder
-      .setName(TaskBuilder.portsResourceName)
-      .setType(Value.Type.RANGES)
-      .setRanges(ranges)
-      .build
-
-    val port = TaskBuilder.getPort(portResource)
-
-    assertTrue(port.get > minPort && port.get < maxPort)
-    assertEquals(port.get % TaskBuilder.portBlockSize,0)
-  }
-
-  @Test
-  def testGetPortMultipleRanges() = {
-    val maxPort1 = 31009L
-    val minPort1 = 31000L
-
-    val maxPort2 = 30003L
-    val minPort2 = 30000L
-
-    val range1 = Value.Range.newBuilder
-      .setBegin(minPort1)
-      .setEnd(maxPort1)
-      .build
-    val range2 = Value.Range.newBuilder
-      .setBegin(minPort2)
-      .setEnd(maxPort2)
-      .build
-    val ranges = Ranges.newBuilder
-      .addRange(range1)
-      .addRange(range2)
-      .build
-    val portResource = Resource.newBuilder
-      .setName(TaskBuilder.portsResourceName)
-      .setType(Value.Type.RANGES)
-      .setRanges(ranges)
-      .build
-
-    val port = TaskBuilder.getPort(portResource)
-
-    assertTrue(port.get == 31000 || port.get == 31005)
-  }
-
-  @Test
-  def testGetPortNotEnoughBlocksInRange() = {
-    val maxPort1 = 31003L
-    val minPort1 = 31000L
-
-    val maxPort2 = 30003L
-    val minPort2 = 30000L
-
-    val range1 = Value.Range.newBuilder
-      .setBegin(minPort1)
-      .setEnd(maxPort1)
-      .build
-    val range2 = Value.Range.newBuilder
-      .setBegin(minPort2)
-      .setEnd(maxPort2)
-      .build
-    val ranges = Ranges.newBuilder
-      .addRange(range1)
-      .addRange(range2)
-      .build
-    val portResource = Resource.newBuilder
-      .setName(TaskBuilder.portsResourceName)
-      .setType(Value.Type.RANGES)
-      .setRanges(ranges)
-      .build
-
-    val port = TaskBuilder.getPort(portResource)
-
-    assertTrue(port.isEmpty)
   }
 }

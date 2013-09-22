@@ -51,18 +51,18 @@ trait MarathonEvent {
 }
 
 case class ApiPostEvent(
-    val clientIp: String,
-    val uri: String,
-    val appDefinition: AppDefinition,
+    clientIp: String,
+    uri: String,
+    appDefinition: AppDefinition,
     override val eventType: String = "api_post_event")
   extends MarathonEvent
 
 case class MesosStatusUpdateEvent(
-    val taskId: String,
-    val taskStatus: Int,
-    val appID: String,
-    val host: String,
-    val port: Int,
+    taskId: String,
+    taskStatus: Int,
+    appID: String,
+    host: String,
+    ports: Iterable[Integer],
     override val eventType: String = "status_update_event")
   extends MarathonEvent
 

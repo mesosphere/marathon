@@ -51,7 +51,7 @@ class TaskTracker @Inject()(state: State) {
         val exists = get(appName).exists(_.getId == taskId.getValue)
         if (!exists) {
           // We lost track of the host and port of this task, but still need to keep track of it
-          val task = MarathonTasks.makeTask(taskId.getValue, "", 0, List())
+          val task = MarathonTasks.makeTask(taskId.getValue, "", List(), List())
           get(appName) += task
         }
       }

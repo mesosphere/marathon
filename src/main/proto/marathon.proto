@@ -27,7 +27,7 @@ message ServiceDefinition {
   required uint32 instances = 3;
   repeated mesos.Resource resources = 4;
   optional string description = 5;
-  optional uint32 port = 6;
+  repeated uint32 ports = 6;
   repeated Constraint constraints = 7;
   required string executor = 8 [default = ""];
 }
@@ -35,6 +35,6 @@ message ServiceDefinition {
 message MarathonTask {
   required string id = 1;
   required string host = 2;
-  required uint32 port = 3;
+  repeated uint32 ports = 3;
   repeated mesos.Attribute attributes = 4;
 }

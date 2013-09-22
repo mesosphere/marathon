@@ -20,12 +20,16 @@ class EndpointsResource @Inject()(
   def endpoints() = {
     val sb = new StringBuilder
     for (app <- schedulerService.listApps()) {
-      sb.append(app.id).append(" ").append(app.port).append(" ")
+      val tasks = taskTracker.get(app.id)
 
-      for (task <- taskTracker.get(app.id)) {
-        sb.append(task.getHost).append(":").append(task.getPort).append(" ")
+      for ((port, i) <- app.ports.zipWithIndex) {
+        sb.append(s"${app.id}_$port $port ")
+
+        for (task <- tasks) {
+          sb.append(s"${task.getHost}:${task.getPorts(i)} ")
+        }
+        sb.append("\n")
       }
-      sb.append("\n")
     }
     sb.toString()
   }
@@ -34,7 +38,10 @@ class EndpointsResource @Inject()(
   @Produces(Array(MediaType.APPLICATION_JSON))
   def endpointsJson() = {
     for (app <- schedulerService.listApps) yield {
-      Map("id" -> app.id, "instances" -> taskTracker.get(app.id))
+      val instances = taskTracker.get(app.id).map(t => {
+        Map("host" -> t.getHost, "ports" -> t.getPortsList)
+      })
+      Map("id" -> app.id, "ports" -> app.ports, "instances" -> instances)
     }
   }
 }
