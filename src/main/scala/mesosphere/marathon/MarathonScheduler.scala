@@ -15,6 +15,7 @@ import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event.{EventModule, MesosStatusUpdateEvent}
 import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks}
 import com.fasterxml.jackson.databind.ObjectMapper
+import mesosphere.marathon.Protos.MarathonTask
 
 
 /**
@@ -84,32 +85,26 @@ class MarathonScheduler @Inject()(
 
     val appID = TaskIDUtil.appID(status.getTaskId)
 
-    if (eventBus.nonEmpty) {
-      val app = taskTracker.get(appID)
-        .filter(_.getId == status.getTaskId).headOption
-
-      if (app.nonEmpty) {
-        log.info("Sending event notification.")
-        val event = new MesosStatusUpdateEvent(status.getTaskId.getValue,
-          status.getState.getNumber, appID, app.get.getHost,
-          app.get.getPortsList.asScala)
-        eventBus.get.post(event)
-      } else {
-        log.warning(f"Couldn't find task with id: ${status.getTaskId}." +
-          f"Not sending event notification.")
-      }
-    }
-
     if (status.getState.eq(TaskState.TASK_FAILED)
       || status.getState.eq(TaskState.TASK_FINISHED)
       || status.getState.eq(TaskState.TASK_KILLED)
       || status.getState.eq(TaskState.TASK_LOST)) {
 
       // Remove from our internal list
-      taskTracker.terminated(appID, status.getTaskId)
-      scale(driver, appID)
+      taskTracker.terminated(appID, status.getTaskId).map(taskOption => {
+        taskOption match {
+          case Some(task) => postEvent(status, task)
+          case None => log.warning(s"Couldn't post event for ${status.getTaskId}")
+        }
+        scale(driver, appID)
+      })
     } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
-      taskTracker.running(appID, status.getTaskId)
+      taskTracker.running(appID, status.getTaskId).map(taskOption => {
+        taskOption match {
+          case Some(task) => postEvent(status, task)
+          case None => log.warning(s"Couldn't post event for ${status.getTaskId}")
+        }
+      })
     }
   }
 
@@ -263,5 +258,20 @@ class MarathonScheduler @Inject()(
   private def suicide() {
     log.severe("Committing suicide")
     sys.exit(9)
+  }
+
+  private def postEvent(status: TaskStatus, task: MarathonTask) {
+    if (eventBus.isEmpty) {
+      return
+    }
+
+    log.info("Sending event notification.")
+    val event = new MesosStatusUpdateEvent(
+      status.getTaskId.getValue,
+      status.getState.getNumber,
+      TaskIDUtil.appID(status.getTaskId),
+      task.getHost,
+      task.getPortsList.asScala)
+    eventBus.get.post(event)
   }
 }
