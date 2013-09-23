@@ -32,11 +32,10 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   var constraints: Set[(String, Int, Option[String])] = Set()
 
   var uris: Seq[String] = Seq()
-  // Port gets assigned by Marathon
-  var port: Int = 0
+  var ports: Seq[Int] = Nil
 
   def toProto: Protos.ServiceDefinition = {
-    val commandInfo = TaskBuilder.commandInfo(this, None)
+    val commandInfo = TaskBuilder.commandInfo(this, Seq())
     val cpusResource = TaskBuilder.scalarResource(AppDefinition.CPUS, cpus)
     val memResource = TaskBuilder.scalarResource(AppDefinition.MEM, mem)
     val cons = constraints.map(x => {
@@ -52,7 +51,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
       .setId(id)
       .setCmd(commandInfo)
       .setInstances(instances)
-      .setPort(port)
+      .addAllPorts(ports.map(_.asInstanceOf[Integer]).asJava)
       .setExecutor(executor)
       .addAllConstraints(cons.asJava)
       .addResources(cpusResource)
@@ -67,7 +66,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     cmd = proto.getCmd.getValue
     executor = proto.getExecutor
     instances = proto.getInstances
-    port = proto.getPort
+    ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]]
     constraints = proto.getConstraintsList.asScala.map(
       x => (x.getField,
             x.getOperator.getNumber,

@@ -45,6 +45,7 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     val app = new AppDefinition
     app.id = "testOffers"
     app.executor = "//cmd"
+    app.ports = Seq(8080)
 
     when(tracker.newTaskId("testOffers"))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
@@ -62,7 +63,7 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     val taskInfoPortVar = taskInfos.getValue.get(0).getCommand.getEnvironment
       .getVariablesList.asScala.find(v => v.getName == "PORT")
     assertTrue(taskInfoPortVar.isDefined)
-    val marathonTaskPort = marathonTask.getValue.getPort
+    val marathonTaskPort = marathonTask.getValue.getPorts(0)
     assertEquals(taskInfoPortVar.get.getValue, marathonTaskPort.toString)
   }
 }

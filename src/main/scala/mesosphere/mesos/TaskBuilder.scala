@@ -12,6 +12,7 @@ import mesosphere.marathon.{PathExecutor, CommandExecutor, Executor, Main}
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.io.ByteArrayOutputStream
 import com.google.protobuf.ByteString
+import org.apache.mesos.Protos
 
 
 /**
@@ -25,7 +26,7 @@ class TaskBuilder (app: AppDefinition,
 
   val log = Logger.getLogger(getClass.getName)
 
-  def buildIfMatches(offer: Offer): Option[(TaskInfo, Int)] = {
+  def buildIfMatches(offer: Offer): Option[(TaskInfo, Seq[Int])] = {
     if (!offerMatches(offer)) {
       return None
     }
@@ -36,7 +37,11 @@ class TaskBuilder (app: AppDefinition,
       Executor.dispatch(app.executor)
     }
 
-    TaskBuilder.getPort(offer).map(f = port => {
+    TaskBuilder.getPorts(offer, app.ports.size).map(f = portRanges => {
+      val ports = portRanges.map(r => {
+        Seq.range(r._1, r._2 + 1)
+      }).flatten
+
       val taskId = newTaskId(app.id)
       val builder = TaskInfo.newBuilder
         .setName(taskId.getValue)
@@ -46,11 +51,14 @@ class TaskBuilder (app: AppDefinition,
           scalarResource(TaskBuilder.cpusResourceName, app.cpus))
         .addResources(TaskBuilder.
           scalarResource(TaskBuilder.memResourceName, app.mem))
-        .addResources(portsResource(port, port))
+
+      if (portRanges.nonEmpty) {
+        builder.addResources(portsResource(portRanges))
+      }
 
       executor match {
         case CommandExecutor() =>
-          builder.setCommand(TaskBuilder.commandInfo(app, Some(port)))
+          builder.setCommand(TaskBuilder.commandInfo(app, ports))
 
         case PathExecutor(path) => {
           val executorId = f"marathon-${taskId.getValue}" // Fresh executor
@@ -66,22 +74,25 @@ class TaskBuilder (app: AppDefinition,
         }
       }
 
-      builder.build -> port
+      builder.build -> ports
     })
   }
 
-  private def portsResource(start: Long, end: Long): Resource = {
-    val range = Value.Range.newBuilder
-      .setBegin(start)
-      .setEnd(end)
-      .build
-    val ranges = Ranges.newBuilder
-      .addRange(range)
+  private def portsResource(ranges: Seq[(Int, Int)]): Resource = {
+    val rangeProtos = ranges.map(r => {
+      Value.Range.newBuilder
+        .setBegin(r._1)
+        .setEnd(r._2)
+        .build
+    })
+
+    val rangesProto = Ranges.newBuilder
+      .addAllRange(rangeProtos.asJava)
       .build
     Resource.newBuilder
       .setName(TaskBuilder.portsResourceName)
       .setType(Value.Type.RANGES)
-      .setRanges(ranges)
+      .setRanges(rangesProto)
       .build
   }
 
@@ -121,7 +132,6 @@ object TaskBuilder {
   final val cpusResourceName = "cpus"
   final val memResourceName = "mem"
   final val portsResourceName = "ports"
-  final val portBlockSize = 5
 
   def scalarResource(name: String, value: Double) = {
     Resource.newBuilder
@@ -131,11 +141,8 @@ object TaskBuilder {
       .build
   }
 
-  def commandInfo(app: AppDefinition, portOption: Option[Int]) = {
-    val envMap = portOption match {
-      case Some(port) => app.env + ("PORT" -> port.toString)
-      case None => app.env
-    }
+  def commandInfo(app: AppDefinition, ports: Seq[Int]) = {
+    val envMap = app.env ++ portsEnv(ports)
 
     val builder = CommandInfo.newBuilder()
       .setValue(app.cmd)
@@ -164,24 +171,41 @@ object TaskBuilder {
     builder.build()
   }
 
-  def getPort(offer: Offer): Option[Int] = {
+  def getPorts(offer: Offer, numPorts: Int): Option[Seq[(Int, Int)]] = {
     offer.getResourcesList.asScala
       .find(_.getName == portsResourceName)
-      .flatMap(getPort)
+      .flatMap(getPorts(_, numPorts))
   }
 
-  def getPort(resource: Resource): Option[Int] = {
-    val ranges = resource.getRanges.getRangeList.asScala.map ( range => {
-      val portRangeBegin = range.getBegin.toInt + (range.getBegin.toInt % portBlockSize)
-      val blocksAvailable = (range.getEnd.toInt - portRangeBegin + 1) / portBlockSize
-      (portRangeBegin, blocksAvailable)
-    }).filter(range => (range._2 > 0))
-
-    if (ranges.size > 0) {
-      val range = util.Random.shuffle(ranges).head
-      Some((util.Random.nextInt(range._2) * 5) + range._1)
-    } else {
-      None
+  def getPorts(resource: Resource, numPorts: Int): Option[Seq[(Int, Int)]] = {
+    if (numPorts == 0) {
+      return Some(Seq())
     }
+
+    val ranges = util.Random.shuffle(resource.getRanges.getRangeList.asScala)
+    for (range <- ranges) {
+      // TODO use multiple ranges if one is not enough
+      if (range.getEnd - range.getBegin + 1 >= numPorts) {
+        val maxOffset = (range.getEnd - range.getBegin - numPorts + 2).toInt
+        val firstPort = range.getBegin.toInt + util.Random.nextInt(maxOffset)
+        return Some(Seq((firstPort, firstPort + numPorts - 1)))
+      }
+    }
+    None
+  }
+
+  def portsEnv(ports: Seq[Int]): Map[String, String] = {
+    if (ports.isEmpty) {
+      return Map.empty
+    }
+
+    val env = mutable.HashMap.empty[String, String]
+
+    ports.zipWithIndex.foreach(p => {
+      env += (s"PORT${p._2}" -> p._1.toString)
+    })
+
+    env += ("PORT" -> ports.head.toString)
+    env
   }
 }
