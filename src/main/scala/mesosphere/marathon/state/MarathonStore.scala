@@ -16,25 +16,8 @@ class MarathonStore[S <: MarathonState[_]](state: State,
   val defaultWait = Duration(3, "seconds")
   val prefix = "app:"
 
-  // TODO use a thread pool here
   import ExecutionContext.Implicits.global
-
-  implicit def FutureToFutureOption[T](f: java.util.concurrent.Future[T]): Future[Option[T]] = {
-    future {
-      val t = f.get
-      if (t == null) {
-        None
-      } else {
-        Some(t)
-      }
-    }
-  }
-
-  implicit def ValueToFutureOption[T](value: T): Future[T] = {
-    future {
-      value
-    }
-  }
+  import mesosphere.util.BackToTheFuture._
 
   def fetch(key: String): Future[Option[S]] = {
     state.fetch(prefix + key) map {

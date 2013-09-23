@@ -8,12 +8,16 @@ import java.util.logging.Logger
 import mesosphere.marathon.Protos.MarathonTask
 import java.io._
 import scala.Some
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * @author Tobi Knaup
  */
 
 class TaskTracker @Inject()(state: State) {
+
+  import ExecutionContext.Implicits.global
+  import mesosphere.util.BackToTheFuture._
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
@@ -41,27 +45,35 @@ class TaskTracker @Inject()(state: State) {
     stagedTasks(task.getId) = task
   }
 
-  def running(appName: String, taskId: TaskID) {
-    stagedTasks.remove(taskId.getValue) match {
+  def running(appName: String, taskId: TaskID): Future[Option[MarathonTask]] = {
+    val task = stagedTasks.remove(taskId.getValue) match {
       case Some(task) => {
         get(appName) += task
+        task
       }
       case None => {
         log.warning(s"No staged task for ID ${taskId.getValue}")
-        val exists = get(appName).exists(_.getId == taskId.getValue)
-        if (!exists) {
+        get(appName).find(_.getId == taskId.getValue).getOrElse {
           // We lost track of the host and port of this task, but still need to keep track of it
           val task = MarathonTasks.makeTask(taskId.getValue, "", List(), List())
           get(appName) += task
+          task
         }
       }
     }
-    store(appName)
+    store(appName).map(_ => Some(task))
   }
 
-  def terminated(appName: String, taskId: TaskID) {
-    tasks(appName) = get(appName).filterNot(_.getId == taskId.getValue)
-    store(appName)
+  def terminated(appName: String,
+                 taskId: TaskID): Future[Option[MarathonTask]] = {
+    val appTasks = get(appName)
+    appTasks.find(_.getId == taskId.getValue) match {
+      case Some(task) => {
+        tasks(appName) = appTasks - task
+        store(appName).map(_ => Some(task))
+      }
+      case None => None
+    }
   }
 
   def startUp(appName: String) {
