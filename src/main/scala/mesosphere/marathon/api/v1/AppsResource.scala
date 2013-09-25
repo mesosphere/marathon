@@ -54,13 +54,6 @@ class AppsResource @Inject()(
     Response.noContent.build
   }
 
-  @GET
-  @Path("{id}/status")
-  @Timed
-  def status(@PathParam("id") id: String) = {
-    Map("id" -> id, "instances" -> taskTracker.get(id))
-  }
-
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) {
     if (eventBus.nonEmpty) {
       val ip = req.getRemoteAddr
