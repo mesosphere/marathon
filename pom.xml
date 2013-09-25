@@ -56,7 +56,7 @@
         <repository>
             <id>mesosphere-public-repo</id>
             <name>Mesosphere Public Repo</name>
-            <url>http://downloads.mesosphere.io/maven/</url>
+            <url>http://downloads.mesosphere.io/maven</url>
         </repository>
         <repository>
             <id>twitter-repo</id>
