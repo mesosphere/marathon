@@ -44,33 +44,41 @@ class MarathonScheduler @Inject()(
 
   def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
     for (offer <- offers.asScala) {
-      log.fine("Received offer %s".format(offer))
+      try {
+        log.fine("Received offer %s".format(offer))
 
-      // TODO launch multiple tasks if the offer is big enough
-      val app = taskQueue.poll()
+        // TODO launch multiple tasks if the offer is big enough
+        val app = taskQueue.poll()
 
-      if (app != null) {
-        newTask(app, offer) match {
-          case Some((task, ports)) => {
-            val taskInfos = Lists.newArrayList(task)
-            log.fine("Launching tasks: " + taskInfos)
+        if (app != null) {
+          newTask(app, offer) match {
+            case Some((task, ports)) => {
+              val taskInfos = Lists.newArrayList(task)
+              log.fine("Launching tasks: " + taskInfos)
 
-            val marathonTask = MarathonTasks.makeTask(
-              task.getTaskId.getValue, offer.getHostname, ports,
-              offer.getAttributesList.asScala.toList)
-            taskTracker.starting(app.id, marathonTask)
-            driver.launchTasks(offer.getId, taskInfos)
+              val marathonTask = MarathonTasks.makeTask(
+                task.getTaskId.getValue, offer.getHostname, ports,
+                offer.getAttributesList.asScala.toList)
+              taskTracker.starting(app.id, marathonTask)
+              driver.launchTasks(offer.getId, taskInfos)
+            }
+            case None => {
+              log.fine("Offer doesn't match request. Declining.")
+              // Add it back into the queue so the we can try again
+              taskQueue.add(app)
+              driver.declineOffer(offer.getId)
+            }
           }
-          case None => {
-            log.fine("Offer doesn't match request. Declining.")
-            // Add it back into the queue so the we can try again
-            taskQueue.add(app)
-            driver.declineOffer(offer.getId)
-          }
+        } else {
+          log.fine("Task queue is empty. Declining offer.")
+          driver.declineOffer(offer.getId)
         }
-      } else {
-        log.fine("Task queue is empty. Declining offer.")
-        driver.declineOffer(offer.getId)
+      } catch {
+        case t: Throwable => {
+          log.log(Level.SEVERE, "Caught an exception. Declining offer.", t)
+          // Ensure that we always respond
+          driver.declineOffer(offer.getId)
+        }
       }
     }
   }
