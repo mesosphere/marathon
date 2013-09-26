@@ -48,9 +48,13 @@ class MarathonSchedulerService @Inject()(
     .setId(frameworkId)
     .setFailoverTimeout(Main.getConfiguration.mesosFailoverTimeout())
     .setUser("") // Let Mesos assign the user
-    .build()
 
-  val driver = new MesosSchedulerDriver(scheduler, frameworkInfo, config.mesosMaster.get.get)
+  // Set the role, if provided.
+  if (!Main.getConfiguration.mesosRole().isEmpty()) {
+    frameworkInfo.setRole(Main.getConfiguration.mesosRole())
+  }
+
+  val driver = new MesosSchedulerDriver(scheduler, frameworkInfo.build(), config.mesosMaster.get.get)
 
 
   def startApp(app: AppDefinition) {
