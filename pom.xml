@@ -37,7 +37,7 @@
         <snapshotRepository>
             <id>aws-snapshot</id>
             <name>Mesosphere Snapshot Repository</name>
-            <url>s3://downloads.mesosphere.io/maven-snapshot</url>
+            <url>s3://downloads.mesosphere.io/maven</url>
         </snapshotRepository>
     </distributionManagement>
 
