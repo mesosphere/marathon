@@ -24,6 +24,12 @@ trait MarathonConfiguration extends ScallopConf {
       "to be started in HA mode. This mode requires a running ZooKeeper",
     noshort = true, default = Some(true))
 
+  lazy val checkpoint = opt[Boolean]("checkpoint",
+    descr = "Enable checkpointing of tasks. " +
+      "Requires checkpointing enabled on slaves. Allows tasks to continue " +
+      "running during mesos-slave restarts and upgrades",
+    noshort = true)
+
   lazy val zooKeeperHostString = opt[String]("zk_hosts",
     descr = "The list of ZooKeeper servers for storing state",
     default = Some("localhost:2181"))
