@@ -32,7 +32,8 @@ class EndpointsResource @Inject()(
       val tasks = taskTracker.get(app.id)
 
       for ((port, i) <- app.ports.zipWithIndex) {
-        sb.append(s"${app.id}_$port $port ")
+        val cleanId = app.id.replaceAll("\\s+", "_")
+        sb.append(s"${cleanId}_$port $port ")
 
         for (task <- tasks) {
           sb.append(s"${task.getHost}:${task.getPorts(i)} ")
