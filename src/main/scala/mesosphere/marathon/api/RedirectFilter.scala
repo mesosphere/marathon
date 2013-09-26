@@ -25,18 +25,20 @@ class RedirectFilter @Inject()
     if (rawRequest.isInstanceOf[HttpServletRequest]) {
       val request = rawRequest.asInstanceOf[HttpServletRequest]
       val leaderData = schedulerService.getLeader
+      val response = rawResponse.asInstanceOf[HttpServletResponse]
+
+      response.setHeader("Access-Control-Allow-Origin", "*")
+      response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+
       if (schedulerService.isLeader) {
-        chain.doFilter(request, rawResponse)
+        chain.doFilter(request, response)
       } else {
         log.info("Redirecting request.")
-        val response = rawResponse.asInstanceOf[HttpServletResponse]
-
-        val newUrl = "http://%s%s".format(leaderData.get,
-          request.getRequestURI)
+        val newUrl = "http://%s%s".format(leaderData.get, request.getRequestURI)
 
         log.info("Redirect header sent to point to: " + newUrl)
 
-        response.setHeader("Location", newUrl )
+        response.setHeader("Location", newUrl)
         response.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT)
       }
     }
