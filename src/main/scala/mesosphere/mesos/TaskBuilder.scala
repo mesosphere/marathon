@@ -206,6 +206,7 @@ object TaskBuilder {
     })
 
     env += ("PORT" -> ports.head.toString)
+    env += ("PORTS" -> ports.mkString(","))
     env
   }
 }
