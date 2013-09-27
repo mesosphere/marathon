@@ -98,8 +98,6 @@
 
 body {
   background: #111113;
-  margin: 0;
-  padding: 0;
   color: #B8E8EF;
   font-family: 'VT323', sans-serif;
 }
@@ -111,15 +109,9 @@ header {
   text-align: center;
 }
 
-ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
 h1 {
   font-family: 'lato';
-  font-family: 300;
+  font-weight: 300;
   color: rgba(255,255,255,0.9);
 }
 
