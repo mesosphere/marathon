@@ -51,6 +51,85 @@ class TaskBuilderTest extends AssertionsForJUnit
     assertEquals(ports(0), range.get.getBegin.toInt)
     assertEquals(ports(1), range.get.getEnd.toInt)
 
+    for (r <- taskInfo.getResourcesList.asScala) {
+      assertEquals("*", r.getRole)
+    }
+
+    // TODO test for resources etc.
+  }
+
+  @Test
+  def testBuildIfMatchesWithRole() {
+    val offer = makeBasicOfferWithRole(1.0, 128.0, 31000, 32000, "marathon")
+      .addResources(TaskBuilder.scalarResource("cpus", 1, "*"))
+      .addResources(TaskBuilder.scalarResource("mem", 128, "*"))
+      .addResources(TaskBuilder.scalarResource("cpus", 2, "marathon"))
+      .addResources(TaskBuilder.scalarResource("mem", 256, "marathon"))
+      .addResources(makePortsResource(Seq((33000, 34000)), "marathon"))
+      .build
+
+    val app = new AppDefinition
+    app.id = "testApp"
+    app.cpus = 2
+    app.mem = 200
+    app.executor = "//cmd"
+    app.ports = Seq(8080, 8081)
+
+    val task = buildIfMatches(offer, app)
+    assertTrue(task.isDefined)
+
+    val taskInfo = task.get._1
+    val range = taskInfo.getResourcesList.asScala
+      .find(r => r.getName == TaskBuilder.portsResourceName)
+      .map(r => r.getRanges.getRange(0))
+    val ports = task.get._2
+    assertTrue(range.isDefined)
+    assertEquals(2, ports.size)
+    assertEquals(ports(0), range.get.getBegin.toInt)
+    assertEquals(ports(1), range.get.getEnd.toInt)
+
+    for (r <- taskInfo.getResourcesList.asScala) {
+      assertEquals("marathon", r.getRole)
+    }
+
+    // TODO test for resources etc.
+  }
+
+  @Test
+  def testBuildIfMatchesWithRole2() {
+    val offer = makeBasicOfferWithRole(1.0, 128.0, 31000, 32000, "*")
+      .addResources(TaskBuilder.scalarResource("cpus", 1, "*"))
+      .addResources(TaskBuilder.scalarResource("mem", 128, "*"))
+      .addResources(TaskBuilder.scalarResource("cpus", 2, "marathon"))
+      .addResources(TaskBuilder.scalarResource("mem", 256, "marathon"))
+      .addResources(makePortsResource(Seq((33000, 34000)), "marathon"))
+      .build
+
+    val app = new AppDefinition
+    app.id = "testApp"
+    app.cpus = 1
+    app.mem = 64
+    app.executor = "//cmd"
+    app.ports = Seq(8080, 8081)
+
+    val task = buildIfMatches(offer, app)
+    assertTrue(task.isDefined)
+
+    val taskInfo = task.get._1
+    val range = taskInfo.getResourcesList.asScala
+      .find(r => r.getName == TaskBuilder.portsResourceName)
+      .map(r => r.getRanges.getRange(0))
+    val ports = task.get._2
+    assertTrue(range.isDefined)
+    assertEquals(2, ports.size)
+    assertEquals(ports(0), range.get.getBegin.toInt)
+    assertEquals(ports(1), range.get.getEnd.toInt)
+
+    // In this case, the first roles are sufficient so we'll use those first.
+    for (r <- taskInfo.getResourcesList.asScala) {
+      assertEquals("*", r.getRole)
+    }
+
     // TODO test for resources etc.
   }
 
