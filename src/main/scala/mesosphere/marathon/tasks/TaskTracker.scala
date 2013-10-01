@@ -1,11 +1,12 @@
 package mesosphere.marathon.tasks
 
 import scala.collection._
+import scala.collection.JavaConverters._
 import org.apache.mesos.Protos.TaskID
 import javax.inject.Inject
 import org.apache.mesos.state.State
 import java.util.logging.Logger
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.Protos._
 import mesosphere.marathon.Main
 import java.io._
 import scala.Some
@@ -24,23 +25,29 @@ class TaskTracker @Inject()(state: State) {
 
   val prefix = "tasks:"
 
-  class StagedTask(val marathonTask: MarathonTask, val startedAt: Long)
+  class StagedTask(
+    val marathonTask: MarathonTask,
+    val appName: String,
+    val startedAt: Long
+  )
 
   private val tasks = new mutable.HashMap[String, mutable.Set[MarathonTask]] with
     mutable.SynchronizedMap[String, mutable.Set[MarathonTask]]
   private val stagedTasks = new mutable.HashMap[String, StagedTask] with
     mutable.SynchronizedMap[String, StagedTask]
+  private val stagedCount = new mutable.HashMap[String, Int] with
+    mutable.SynchronizedMap[String, Int].withDefaultValue(0)
 
   def get(appName: String) = {
     tasks.getOrElseUpdate(appName, fetch(appName))
   }
 
-  def list() = {
-    tasks
+  def list = {
+    apps
   }
 
   def count(appName: String) = {
-    get(appName).size
+    get(appName).size + stagedCount(appName)
   }
 
   def drop(appName: String, n: Int) = {
@@ -49,20 +56,22 @@ class TaskTracker @Inject()(state: State) {
 
   def starting(appName: String, task: MarathonTask) {
     // Keep this here so running() can pick it up
-    stagedTasks(task.getId) = new StagedTask(task, System.currentTimeMillis)
+    stagedTasks(task.getId) = new StagedTask(task, appName, System.currentTimeMillis)
+    stagedCount(appName) += 1
   }
 
-  def running(appName: String, taskId: TaskID): Future[Option[MarathonTask]] = {
-    val task = stagedTasks.remove(taskId.getValue) match {
+  def running(appName: String, taskId: String): Future[Option[MarathonTask]] = {
+    val task = stagedTasks.remove(taskId) match {
       case Some(task) => {
         get(appName) += task.marathonTask
+        stagedCount(appName) -= 1
         task.marathonTask
       }
       case None => {
-        log.warning(s"No staged task for ID ${taskId.getValue}")
-        get(appName).find(_.getId == taskId.getValue).getOrElse {
+        log.warning(s"No staged task for ID ${taskId}")
+        get(appName).find(_.getId == taskId).getOrElse {
           // We lost track of the host and port of this task, but still need to keep track of it
-          val task = MarathonTasks.makeTask(taskId.getValue, "", List(), List())
+          val task = MarathonTasks.makeTask(taskId, "", List(), List())
           get(appName) += task
           task
         }
@@ -72,9 +81,14 @@ class TaskTracker @Inject()(state: State) {
   }
 
   def terminated(appName: String,
-                 taskId: TaskID): Future[Option[MarathonTask]] = {
+                 taskId: String): Future[Option[MarathonTask]] = {
     val appTasks = get(appName)
-    appTasks.find(_.getId == taskId.getValue) match {
+    // Also remove from staged tasks, if it exists.
+    if (stagedTasks.contains(taskId)) {
+      stagedTasks.remove(taskId)
+      stagedCount(appName) -= 1
+    }
+    appTasks.find(_.getId == taskId) match {
       case Some(task) => {
         tasks(appName) = appTasks - task
         store(appName).map(_ => Some(task))
@@ -104,29 +118,70 @@ class TaskTracker @Inject()(state: State) {
     if (bytes.length > 0) {
       val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
       deserialize(source)
+    }
+
+    if (tasks.contains(appName)) {
+      tasks(appName)
       //set.map(map => MarathonTask(map("id"), map("host"), map("port").asInstanceOf[Int], map("attributes"))
     } else {
       new mutable.HashSet[MarathonTask]()
     }
   }
 
-  def deserialize(source: ObjectInputStream): mutable.HashSet[MarathonTask] = {
-    var results = mutable.HashSet[MarathonTask]()
-    while (source.available() > 0) {
+  def deserialize(source: ObjectInputStream) = {
+    if (source.available() > 0) {
       val size = source.readInt
       val bytes = new Array[Byte](size)
       source.readFully(bytes)
-      results += MarathonTask.parseFrom(bytes)
+      var taskState = TaskState.newBuilder.build
+      try {
+        taskState = TaskState.parseFrom(bytes)
+      } catch {
+        case e: com.google.protobuf.InvalidProtocolBufferException =>
+          log.warning("Unable to parse state")
+      }
+      for (task <- taskState.getRunningList.asScala) {
+        if (!tasks.contains(task.getId)) {
+          tasks(task.getId) =
+            new mutable.HashSet[MarathonTask]()
+        }
+        tasks(task.getId) += task.getTask
+      }
+      /*stagedCount.clear
+      for (task <- taskState.getStagedList.asScala) {
+        stagedTasks(task.getId) =
+          new StagedTask(task.getTask, task.getAppName, task.getStarted)
+        stagedCount(task.getAppName) += 1
+      }*/
     }
-    results
   }
 
-  def serialize(tasks: Set[MarathonTask], sink: ObjectOutputStream) = {
-    for (task <- tasks) {
-      val size = task.getSerializedSize
-      sink.writeInt(size)
-      sink.write(task.toByteArray)
+  def serialize(sink: ObjectOutputStream) = {
+    var taskStateBuilder =
+      TaskState.newBuilder()
+    for (key <- tasks.keySet) {
+      for (task <- tasks(key)) {
+        taskStateBuilder.addRunning(
+          RunningTask.newBuilder()
+          .setId(key)
+          .setTask(task)
+        )
+      }
     }
+    for (key <- stagedTasks.keySet) {
+      val task = stagedTasks(key)
+      taskStateBuilder.addStaged(
+        StagedTask.newBuilder()
+        .setId(key)
+        .setTask(task.marathonTask)
+        .setStarted(task.startedAt)
+        .setAppName(task.appName)
+      )
+    }
+    val taskState = taskStateBuilder.build
+    val size = taskState.getSerializedSize
+    sink.writeInt(size)
+    sink.write(taskState.toByteArray)
     sink.flush()
   }
 
@@ -138,7 +193,7 @@ class TaskTracker @Inject()(state: State) {
     val oldVar = fetchVariable(appName)
     val bytes = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(bytes)
-    serialize(tasks(appName), output)
+    serialize(output)
     val newVar = oldVar.mutate(bytes.toByteArray)
     state.store(newVar)
   }
@@ -152,7 +207,13 @@ class TaskTracker @Inject()(state: State) {
       if (task.startedAt < expired) {
         log.warning(s"Task '${key}' was started ${(now - task.startedAt)/1000}s ago and has not yet started")
         toKill += key
-        stagedTasks.remove(key)
+      }
+    }
+    for (task <- toKill) {
+      // Remove each from staged tasks, if it exists.
+      if (stagedTasks.contains(task)) {
+        stagedCount(stagedTasks(task).appName) -= 1
+        stagedTasks.remove(task)
       }
     }
     toKill.toList

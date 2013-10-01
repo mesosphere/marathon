@@ -59,13 +59,13 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
     val task3 = makeTask(taskId3, "foo.bar.bam", 300)
 
     taskTracker.starting(app, task1)
-    taskTracker.running(app, TaskID.newBuilder().setValue(taskId1).build)
+    taskTracker.running(app, taskId1)
 
     taskTracker.starting(app, task2)
-    taskTracker.running(app, TaskID.newBuilder().setValue(taskId2).build)
+    taskTracker.running(app, taskId2)
 
     taskTracker.starting(app, task3)
-    taskTracker.running(app, TaskID.newBuilder().setValue(taskId3).build)
+    taskTracker.running(app, taskId3)
 
     val results = taskTracker.fetch(app)
 
@@ -83,15 +83,34 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
     val task2 = makeSampleTask("task2")
     val task3 = makeSampleTask("task3")
 
-    val baos = new ByteArrayOutputStream()
-    baos.flush()
-    val oos = new ObjectOutputStream(baos)
-    taskTracker.serialize(Set(task1, task2, task3), oos)
+    taskTracker.starting("app1", task1)
+    taskTracker.starting("app1", task2)
+    taskTracker.starting("app1", task3)
 
-    val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
-    val tasks = taskTracker.deserialize(ois)
-    assertTrue("Task1 is not properly serialized", tasks.contains(task1))
-    assertTrue("Task2 is not properly serialized", tasks.contains(task2))
-    assertTrue("Task3 is not properly serialized", tasks.contains(task2))
+    {
+      val baos = new ByteArrayOutputStream()
+      baos.flush()
+      val oos = new ObjectOutputStream(baos)
+      taskTracker.serialize(oos)
+
+      val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
+      taskTracker.deserialize(ois)
+      assertTrue("Tasks are not properly serialized", taskTracker.count("app1") == 3)
+    }
+
+    taskTracker.running("app1", "task1")
+    taskTracker.running("app1", "task2")
+    taskTracker.running("app1", "task3")
+
+    {
+      val baos = new ByteArrayOutputStream()
+      baos.flush()
+      val oos = new ObjectOutputStream(baos)
+      taskTracker.serialize(oos)
+
+      val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
+      taskTracker.deserialize(ois)
+      assertTrue("Tasks are not properly serialized", taskTracker.count("app1") == 3)
+    }
   }
 }
