@@ -464,13 +464,15 @@ jQuery.fn.fastLiveFilter = function(list, options) {
         "</div>" +
         "<div class='action-bar'>" +
           "<a class='scale' href='#'>SCALE</a>  | " +
-          "<a class='stop' href='#'>STOP</a>" +
+          "<a class='suspend' href='#'>SUSPEND</a>  | " +
+          "<a class='destroy' href='#'>DESTROY</a>" +
         "</div>" +
       "</div>"
     ),
 
     events: {
-      'click .stop': 'stop',
+      'click .suspend': 'suspend',
+      'click .destroy': 'destroy',
       'click .scale': 'scale'
     },
 
@@ -480,18 +482,30 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       this.$el.addClass(this.model.get('id'));
     },
 
-    stop: function() {
-      var ok = confirm("are you sure you want to stop "+this.model.id+"?");
+    suspend: function(e) {
+      if (confirm("Suspend " + this.model.id + "?\n\nThe application will be scaled to 0 instances.")) {
+        this.model.scale(0);
+      }
+
+      e.preventDefault();
+    },
+
+    destroy: function(e) {
+      var ok = confirm("Destroy application " + this.model.id + "?\n\nThis is irreversible.");
       if (ok) {
         this.model.destroy();
       }
+
+      e.preventDefault();
     },
 
-    scale: function() {
+    scale: function(e) {
       var instances = prompt('How many instances?', this.model.get('instances'));
       if (instances) {
         this.model.scale(instances);
       }
+
+      e.preventDefault();
     },
 
     remove: function() {
