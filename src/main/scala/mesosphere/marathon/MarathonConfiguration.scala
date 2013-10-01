@@ -76,6 +76,6 @@ trait MarathonConfiguration extends ScallopConf {
 
   lazy val mesosRole = opt[String]("mesos_role",
     descr = "Mesos role for this framework",
-    default = None
+    default = None)
 
 }
