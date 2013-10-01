@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang='en'>
   <head>
-    <meta charset='utf-8'/>
-    <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'/>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
     <title>Marathon</title>
-    <meta name='description' content=''/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel='stylesheet' type='text/css' href='css/bootstrap.min.css' />
-    <link rel='stylesheet' type='text/css' href='css/marathon.css' />
+    <link rel='stylesheet' type='text/css' href='css/bootstrap.min.css'>
+    <link rel='stylesheet' type='text/css' href='css/marathon.css'>
   </head>
 
   <body class='fullscreen marathon'>
@@ -30,28 +29,26 @@
       <div class='start-view'></div>
     </div>
 
-
-    <!-- javascript -->
     <script type='text/template' id='add-app-template'>
       <form id='add-app-form'>
         <h1>New Application</h1>
         <div class='input-row'>
-          <label>Id</label> <input id='id-field' name='id' value='{{id}}'/>
+          <label>Id</label> <input id='id-field' name='id' value='{{id}}'>
         </div>
         <div class='input-row'>
-          <label>Command</label> <input name='cmd' value='' />
+          <label>Command</label> <input name='cmd'>
         </div>
         <div class='input-row'>
-          <label>Memory</label> <input name='mem' value='{{mem}}' />
+          <label>Memory</label> <input name='mem' value='{{mem}}'>
         </div>
         <div class='input-row'>
-          <label>CPUS</label> <input name='cpus' value='{{cpus}}' />
+          <label>CPUS</label> <input name='cpus' value='{{cpus}}'>
         </div>
         <div class='input-row'>
-          <label>Instances</label> <input name='instances' value='{{instances}}'/>
+          <label>Instances</label> <input name='instances' value='{{instances}}'>
         </div>
         <div class='input-row'>
-          <label>URIs</label> <input name='uris' value=''/>
+          <label>URIs</label> <input name='uris'>
         </div>
         <div class='button-wrapper'>
           <a href="#" class='b cancel' data-lightbox-close='true'>Cancel</a>
@@ -59,10 +56,9 @@
         </div>
       </form>
     </script>
-    <script type="text/javascript" src='js/libs/jquery-min.js'></script>
-    <script type="text/javascript" src='js/libs/underscore-min.js'></script>
-    <script type="text/javascript" src='js/libs/backbone-min.js'></script>
-    <script type='text/javascript' src='js/marathon.js'></script>
+    <script src='js/libs/jquery-min.js'></script>
+    <script src='js/libs/underscore-min.js'></script>
+    <script src='js/libs/backbone-min.js'></script>
+    <script src='js/marathon.js'></script>
   </body>
 </html>
-
