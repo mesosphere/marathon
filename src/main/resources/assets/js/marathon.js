@@ -521,7 +521,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
   window.HomeView = Backbone.View.extend({
     tagName: 'ul',
-    className: 'start-view-list',
+    className: 'start-view-list list-unstyled',
 
     events: {
       'click .add-button': 'addNew',
