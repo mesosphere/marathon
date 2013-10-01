@@ -27,7 +27,25 @@ trait MarathonTestHelper {
       .addResources(portsResource)
   }
 
-  def makePortsResource(ranges: Seq[(Int, Int)]) = {
+  def makeBasicOfferWithRole(cpus: Double, mem: Double,
+                     beginPort: Int, endPort: Int, role: String) = {
+    val portsResource = makePortsResource(Seq((beginPort, endPort)), role)
+    val cpusResource = TaskBuilder.scalarResource("cpus", cpus, role)
+    val memResource = TaskBuilder.scalarResource("mem", mem, role)
+    Offer.newBuilder
+      .setId(OfferID.newBuilder.setValue("1"))
+      .setFrameworkId(FrameworkID.newBuilder.setValue("marathon"))
+      .setSlaveId(SlaveID.newBuilder.setValue("slave0"))
+      .setHostname("localhost")
+      .addResources(cpusResource)
+      .addResources(memResource)
+      .addResources(portsResource)
+  }
+
+  def makePortsResource(ranges: Seq[(Int, Int)]): Resource = {
+    makePortsResource(ranges, "*")
+  }
+  def makePortsResource(ranges: Seq[(Int, Int)], role: String) = {
     val rangeProtos = ranges.map(r => {
       Value.Range.newBuilder
         .setBegin(r._1)
@@ -42,6 +60,7 @@ trait MarathonTestHelper {
       .setName(TaskBuilder.portsResourceName)
       .setType(Value.Type.RANGES)
       .setRanges(rangesProto)
+      .setRole(role)
       .build
   }
 

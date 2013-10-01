@@ -49,10 +49,13 @@ class MarathonSchedulerService @Inject()(
     .setFailoverTimeout(Main.getConfiguration.mesosFailoverTimeout())
     .setUser("") // Let Mesos assign the user
     .setCheckpoint(config.checkpoint())
-    .build()
 
-  val driver = new MesosSchedulerDriver(scheduler, frameworkInfo, config.mesosMaster())
+  // Set the role, if provided.
+  if (!Main.getConfiguration.mesosRole().isEmpty()) {
+    frameworkInfo.setRole(Main.getConfiguration.mesosRole())
+  }
 
+  val driver = new MesosSchedulerDriver(scheduler, frameworkInfo.build, config.mesosMaster())
 
   def startApp(app: AppDefinition) {
     // Backwards compatibility

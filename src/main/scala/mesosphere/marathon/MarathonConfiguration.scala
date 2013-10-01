@@ -73,4 +73,9 @@ trait MarathonConfiguration extends ScallopConf {
     }
 
   def executor: Executor = Executor.dispatch(defaultExecutor())
+
+  lazy val mesosRole = opt[String]("mesos_role",
+    descr = "Mesos role for this framework",
+    default = None
+
 }
