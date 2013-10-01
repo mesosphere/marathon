@@ -124,6 +124,16 @@ class MarathonScheduler @Inject()(
         }
       })
     }
+
+    // Check for any tasks which were started but never entered TASK_RUNNING
+    val toKill = taskTracker.checkStagedTasks
+    if (!toKill.isEmpty) {
+      log.warning(s"There are ${toKill.size} tasks stuck in staging which will be killed")
+      log.info(s"About to kill these tasks: ${toKill}")
+    }
+    for (task <- toKill) {
+      driver.killTask(TaskID.newBuilder.setValue(task).build)
+    }
   }
 
   def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]) {

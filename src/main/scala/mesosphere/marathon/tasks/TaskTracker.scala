@@ -6,6 +6,7 @@ import javax.inject.Inject
 import org.apache.mesos.state.State
 import java.util.logging.Logger
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.Main
 import java.io._
 import scala.Some
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,10 +24,12 @@ class TaskTracker @Inject()(state: State) {
 
   val prefix = "tasks:"
 
+  class StagedTask(val marathonTask: MarathonTask, val startedAt: Long)
+
   private val tasks = new mutable.HashMap[String, mutable.Set[MarathonTask]] with
     mutable.SynchronizedMap[String, mutable.Set[MarathonTask]]
-  private val stagedTasks = new mutable.HashMap[String, MarathonTask] with
-    mutable.SynchronizedMap[String, MarathonTask]
+  private val stagedTasks = new mutable.HashMap[String, StagedTask] with
+    mutable.SynchronizedMap[String, StagedTask]
 
   def get(appName: String) = {
     tasks.getOrElseUpdate(appName, fetch(appName))
@@ -46,14 +49,14 @@ class TaskTracker @Inject()(state: State) {
 
   def starting(appName: String, task: MarathonTask) {
     // Keep this here so running() can pick it up
-    stagedTasks(task.getId) = task
+    stagedTasks(task.getId) = new StagedTask(task, System.currentTimeMillis)
   }
 
   def running(appName: String, taskId: TaskID): Future[Option[MarathonTask]] = {
     val task = stagedTasks.remove(taskId.getValue) match {
       case Some(task) => {
-        get(appName) += task
-        task
+        get(appName) += task.marathonTask
+        task.marathonTask
       }
       case None => {
         log.warning(s"No staged task for ID ${taskId.getValue}")
@@ -138,5 +141,20 @@ class TaskTracker @Inject()(state: State) {
     serialize(tasks(appName), output)
     val newVar = oldVar.mutate(bytes.toByteArray)
     state.store(newVar)
+  }
+
+  def checkStagedTasks = {
+    val now = System.currentTimeMillis
+    val expired = now - Main.getConfiguration.taskLaunchTimeout()
+    var toKill = new mutable.HashSet[String]
+    for (key <- stagedTasks.keySet) {
+      val task = stagedTasks(key)
+      if (task.startedAt < expired) {
+        log.warning(s"Task '${key}' was started ${(now - task.startedAt)/1000}s ago and has not yet started")
+        toKill += key
+        stagedTasks.remove(key)
+      }
+    }
+    toKill.toList
   }
 }
