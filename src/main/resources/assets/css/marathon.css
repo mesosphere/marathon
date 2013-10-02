@@ -20,13 +20,13 @@
 }
 
 @-webkit-keyframes blink {
-  0% { opacity:0.8; }
+  0% { opacity: 1; }
   50% { opacity: 0; }
   100% { opacity: 1; }
 }
 
 @keyframes blink {
-  0% { opacity:0.8; }
+  0% { opacity: 1; }
   50% { opacity: 0; }
   100% { opacity: 1; }
 }
@@ -242,13 +242,15 @@ h1 {
   font-size: 74px;
   font-weight: normal;
 
-  -webkit-animation-duration: 1s;
+  -webkit-animation-duration: 1.2s;
   -webkit-animation-iteration-count: infinite;
   -webkit-animation-name: blink;
+  -webkit-animation-timing-function: steps(1, start);
 
-  animation-duration: 1s;
+  animation-duration: 1.2s;
   animation-iteration-count: infinite;
   animation-name: blink;
+  animation-timing-function: steps(1, start);
 }
 
 .system-select {
