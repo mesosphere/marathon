@@ -14,7 +14,7 @@
         <scala.version>2.10.2</scala.version>
 
         <!-- runtime deps versions -->
-        <chaos.version>0.4.1</chaos.version>
+        <chaos.version>0.4.2</chaos.version>
         <mesos.version>0.15.0-20130910-2</mesos.version>
         <protobuf.version>2.4.1</protobuf.version>
         <akka.version>2.2.0</akka.version>
