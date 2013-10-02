@@ -51,9 +51,7 @@ class MarathonSchedulerService @Inject()(
     .setCheckpoint(config.checkpoint())
 
   // Set the role, if provided.
-  if (!Main.getConfiguration.mesosRole().isEmpty()) {
-    frameworkInfo.setRole(Main.getConfiguration.mesosRole())
-  }
+  Main.getConfiguration.mesosRole.get.map(frameworkInfo.setRole)
 
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo.build, config.mesosMaster())
 
