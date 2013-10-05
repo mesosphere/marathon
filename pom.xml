@@ -11,14 +11,14 @@
 
         <!-- language versions -->
         <java.abi>1.6</java.abi>
-        <scala.version>2.10.2</scala.version>
+        <scala.version>2.10.3</scala.version>
 
         <!-- runtime deps versions -->
         <chaos.version>0.4.7</chaos.version>
         <mesos.version>0.14.0-rc4</mesos.version>
         <protobuf.version>2.4.1</protobuf.version>
-        <akka.version>2.2.0</akka.version>
-        <spray.version>1.2-20130801</spray.version>
+        <akka.version>2.2.3</akka.version>
+        <spray.version>1.2-20131011</spray.version>
         <json4s.version>3.2.5</json4s.version>
         <twitter-commons.version>0.0.44</twitter-commons.version>
 
