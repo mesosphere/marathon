@@ -1,11 +1,4 @@
 @font-face {
-  font-family: 'VT323';
-  font-style: normal;
-  font-weight: 400;
-  src: local('VT323'), local('VT323-Regular'), url(https://themes.googleusercontent.com/static/fonts/vt323/v4/SSPdB6sO_7a9ZMMiCroIGqCWcynf_cDxXwCLxiixG1c.woff) format('woff');
-}
-
-@font-face {
   font-family: 'Lato';
   font-style: normal;
   font-weight: 100;
@@ -99,7 +92,7 @@
 body {
   background: #111113;
   color: #B8E8EF;
-  font-family: 'VT323', sans-serif;
+  font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
 }
 
 header {
