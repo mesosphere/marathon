@@ -47,8 +47,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       }
     }
     callback(numShown, show);
-    // var endTime = new Date().getTime();
-    // console.log('Search for ' + filter + ' took: ' + (endTime - startTime) + ' (' + numShown + ' results)');
     return false;
   }).keydown(function() {
     // TODO: one point of improvement could be in here: currently the change event is
@@ -385,7 +383,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     select: function() {
-      console.log(this.model.get('id'));
       this.model.set('selected', true);
     }
   });
@@ -569,46 +566,47 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     addNew: function() {
       var model = new Item(),
           collection = this.collection;
+
       var FormView = Backbone.View.extend({
         className: 'window',
         template: _.template($('#add-app-template').html()),
 
         events: {
-          'click #save': 'save'
+          'submit form': 'save'
         },
 
         render: function() {
-          console.log(model.toJSON());
           this.$el.html(this.template(model.toJSON()));
           return this;
         },
 
         save: function(e) {
           e.preventDefault();
-          e.stopPropagation();
+
           var $inputs = $('#add-app-form').find('input');
           var data = {};
 
-          $inputs.each(function(index, el){
+          $inputs.each(function(index, el) {
             var $el = $(el),
                 name = $el.attr('name'),
                 val = $el.val();
 
-                if (name === 'uris') {
-                  val = val.split(',');
-                  // strip whitespace
-                  val = _.map(val, function(s){return s.replace(/ /g,''); });
-                  // reject empty
-                  val = _.reject(val, function(s){return s===''});
-                }
+            if (name === 'uris') {
+              val = val.split(',');
+              // strip whitespace
+              val = _.map(val, function(s){return s.replace(/ /g,''); });
+              // reject empty
+              val = _.reject(val, function(s){return s===''});
+            }
 
-                data[name] = val;
+            data[name] = val;
           });
 
           collection.create(data);
           window.lightbox.close();
         }
       });
+
       formView = new FormView();
       window.lightbox.content(formView);
       window.lightbox.open();
@@ -618,10 +616,8 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     dismiss: function() {
       var model = formView.model;
       if (model.isNew()) {
-        console.log('is new');
         model.destroy();
       } else {
-        console.log('adding to collection')
         this.collection.add(model);
       }
     },
@@ -671,9 +667,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       });
     },
 
-    home: function() {
-      console.log('home');
-    }
+    home: function() {}
 
   });
 
