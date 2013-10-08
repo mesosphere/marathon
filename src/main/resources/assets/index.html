@@ -33,26 +33,32 @@
       <form id='add-app-form'>
         <h1>New Application</h1>
         <div class='input-row'>
-          <label>Id</label> <input id='id-field' name='id' value='{{id}}'>
+          <label for='id-field'>ID</label>
+          <input id='id-field' name='id' value='{{id}}' tabindex='1'>
         </div>
         <div class='input-row'>
-          <label>Command</label> <input name='cmd'>
+          <label for='cmd-field'>Command</label>
+          <input id='cmd-field' name='cmd' tabindex='2'>
         </div>
         <div class='input-row'>
-          <label>Memory</label> <input name='mem' value='{{mem}}'>
+          <label for='mem-field'>Memory</label>
+          <input id='mem-field' name='mem' value='{{mem}}' tabindex='3'>
         </div>
         <div class='input-row'>
-          <label>CPUS</label> <input name='cpus' value='{{cpus}}'>
+          <label for='cpus-field'>CPUs</label>
+          <input id='cpus-field' name='cpus' value='{{cpus}}' tabindex='4'>
         </div>
         <div class='input-row'>
-          <label>Instances</label> <input name='instances' value='{{instances}}'>
+          <label for='instances-field'>Instances</label>
+          <input id='instances-field' name='instances' value='{{instances}}' tabindex='5'>
         </div>
         <div class='input-row'>
-          <label>URIs</label> <input name='uris'>
+          <label for='uris-field'>URIs</label>
+          <input id='uris-field' name='uris' tabindex='6'>
         </div>
-        <div class='button-wrapper'>
-          <a href="#" class='b cancel' data-lightbox-close='true'>Cancel</a>
-          <a href='#' id='save' class='b'>Start</a>
+        <div class='text-right' style='margin-top: 40px;'>
+          <a href="#" class='btn btn-link' data-lightbox-close='true' tabindex='8'>Cancel</a>
+          <button type='submit' id='save' class='btn btn-primary' tabindex='7'>Start</button>
         </div>
       </form>
     </script>
