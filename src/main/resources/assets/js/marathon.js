@@ -47,8 +47,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       }
     }
     callback(numShown, show);
-    // var endTime = new Date().getTime();
-    // console.log('Search for ' + filter + ' took: ' + (endTime - startTime) + ' (' + numShown + ' results)');
     return false;
   }).keydown(function() {
     // TODO: one point of improvement could be in here: currently the change event is
@@ -385,7 +383,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     select: function() {
-      console.log(this.model.get('id'));
       this.model.set('selected', true);
     }
   });
@@ -578,7 +575,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
         },
 
         render: function() {
-          console.log(model.toJSON());
           this.$el.html(this.template(model.toJSON()));
           return this;
         },
@@ -618,10 +614,8 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     dismiss: function() {
       var model = formView.model;
       if (model.isNew()) {
-        console.log('is new');
         model.destroy();
       } else {
-        console.log('adding to collection')
         this.collection.add(model);
       }
     },
@@ -671,9 +665,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       });
     },
 
-    home: function() {
-      console.log('home');
-    }
+    home: function() {}
 
   });
 
