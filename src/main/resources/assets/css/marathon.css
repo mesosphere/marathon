@@ -171,7 +171,7 @@ h1 {
   font-size: 24px;
   text-align: right;
   margin-right: 10px;
-  color: rgba(60,114,157,0.8);
+  color: #3C729D;
 }
 
 .input-row input {
@@ -196,25 +196,28 @@ h1 {
   color: rgba(255,255,255,0.3);
 }
 
-.button-wrapper {
-  text-align: right;
-  margin-top: 40px;
-}
-
-.button-wrapper .b {
-  display: inline-block;
-  font-family: 'lato';
+.btn {
+  border-radius: 0;
+  font-family: Lato;
   font-size: 24px;
-  text-transform: uppercase;
-  border: 1px solid;
-  text-align: center;
   padding: 7px 35px;
+  text-transform: uppercase;
 }
 
-.b.cancel {
-  border: none;
-  color: rgba(255,255,255,0.2);
-  font-size: 16px;
+.btn-link {
+  color: #999;
+}
+
+.btn-primary {
+  background-color: transparent;
+  border-color: #3C729D;
+  color: #3C729D;
+}
+
+.btn-primary:active,
+.btn-primary:hover {
+  background-color: #3C729D;
+  color: #fff;
 }
 
 .system-folder,

@@ -566,12 +566,13 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     addNew: function() {
       var model = new Item(),
           collection = this.collection;
+
       var FormView = Backbone.View.extend({
         className: 'window',
         template: _.template($('#add-app-template').html()),
 
         events: {
-          'click #save': 'save'
+          'submit form': 'save'
         },
 
         render: function() {
@@ -581,30 +582,31 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
         save: function(e) {
           e.preventDefault();
-          e.stopPropagation();
+
           var $inputs = $('#add-app-form').find('input');
           var data = {};
 
-          $inputs.each(function(index, el){
+          $inputs.each(function(index, el) {
             var $el = $(el),
                 name = $el.attr('name'),
                 val = $el.val();
 
-                if (name === 'uris') {
-                  val = val.split(',');
-                  // strip whitespace
-                  val = _.map(val, function(s){return s.replace(/ /g,''); });
-                  // reject empty
-                  val = _.reject(val, function(s){return s===''});
-                }
+            if (name === 'uris') {
+              val = val.split(',');
+              // strip whitespace
+              val = _.map(val, function(s){return s.replace(/ /g,''); });
+              // reject empty
+              val = _.reject(val, function(s){return s===''});
+            }
 
-                data[name] = val;
+            data[name] = val;
           });
 
           collection.create(data);
           window.lightbox.close();
         }
       });
+
       formView = new FormView();
       window.lightbox.content(formView);
       window.lightbox.open();
