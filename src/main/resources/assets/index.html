@@ -33,22 +33,28 @@
       <form id='add-app-form'>
         <h1>New Application</h1>
         <div class='input-row'>
-          <label>Id</label> <input id='id-field' name='id' value='{{id}}'>
+          <label for='id-field'>ID</label>
+          <input id='id-field' name='id' value='{{id}}'>
         </div>
         <div class='input-row'>
-          <label>Command</label> <input name='cmd'>
+          <label for='cmd-field'>Command</label>
+          <input id='cmd-field' name='cmd'>
         </div>
         <div class='input-row'>
-          <label>Memory</label> <input name='mem' value='{{mem}}'>
+          <label for='mem-field'>Memory</label>
+          <input id='mem-field' name='mem' value='{{mem}}'>
         </div>
         <div class='input-row'>
-          <label>CPUS</label> <input name='cpus' value='{{cpus}}'>
+          <label for='cpus-field'>CPUs</label>
+          <input id='cpus-field' name='cpus' value='{{cpus}}'>
         </div>
         <div class='input-row'>
-          <label>Instances</label> <input name='instances' value='{{instances}}'>
+          <label for='instances-field'>Instances</label>
+          <input id='instances-field' name='instances' value='{{instances}}'>
         </div>
         <div class='input-row'>
-          <label>URIs</label> <input name='uris'>
+          <label for='uris-field'>URIs</label>
+          <input id='uris-field' name='uris'>
         </div>
         <div class='button-wrapper'>
           <a href="#" class='b cancel' data-lightbox-close='true'>Cancel</a>
