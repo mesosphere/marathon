@@ -12,8 +12,8 @@ else
   echo "MESOS_HOME is set to: $MESOS_HOME"
 fi
 
-export MESOS_NATIVE_LIBRARY=$(find "$MESOS_HOME" -name libmesos.dylib -or -name libmesos.so | head -n1)
+export MESOS_NATIVE_LIBRARY=$(find -L "$MESOS_HOME" -name libmesos.dylib -or -name libmesos.so | head -n1)
 echo "MESOS_NATIVE_LIBRARY set to $MESOS_NATIVE_LIBRARY"
 
 # Start Marathon
-java -jar "$FRAMEWORK_HOME"/target/marathon-*-jar-with-dependencies.jar "$@"
+nohup java -jar "$FRAMEWORK_HOME"/target/marathon-*-jar-with-dependencies.jar "$@" < /dev/null &
