@@ -95,7 +95,7 @@ First, install [Mesos][Mesos]. One easy way is via your system's package manager
 * [OS X, 10.7 & 10.8](https://s3.amazonaws.com/mesos-pkg/master/osx/mesos-0.14.0.pkg)
 
 If building from source,see the [Getting Started](http://mesos.apache.org/gettingstarted/) page,
-or the [Mesosphere tutorial](https://github.com/mesosphere/marathon.git)
+or the [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
 for details. Using `make install` will install Mesos in `/usr/local` in the same way as these packages do.
 
 To create a Jar for Marathon, checkout the sources and use Maven to build it:
