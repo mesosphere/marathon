@@ -16,4 +16,4 @@ export MESOS_NATIVE_LIBRARY=$(find -L "$MESOS_HOME" -name libmesos.dylib -or -na
 echo "MESOS_NATIVE_LIBRARY set to $MESOS_NATIVE_LIBRARY"
 
 # Start Marathon
-java -jar "$FRAMEWORK_HOME"/target/marathon-*-jar-with-dependencies.jar "$@" < /dev/null &
+java -jar "$FRAMEWORK_HOME"/target/marathon-*-jar-with-dependencies.jar "$@"
