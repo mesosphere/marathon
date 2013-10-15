@@ -12,7 +12,7 @@ import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{PathExecutor, CommandExecutor, Executor, Main}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
-import org.apache.mesos.Protos
+import scala.util.Random
 
 
 /**
@@ -208,12 +208,12 @@ object TaskBuilder {
       return Some(Seq())
     }
 
-    val ranges = util.Random.shuffle(resource.getRanges.getRangeList.asScala)
+    val ranges = Random.shuffle(resource.getRanges.getRangeList.asScala)
     for (range <- ranges) {
       // TODO use multiple ranges if one is not enough
       if (range.getEnd - range.getBegin + 1 >= numPorts) {
         val maxOffset = (range.getEnd - range.getBegin - numPorts + 2).toInt
-        val firstPort = range.getBegin.toInt + util.Random.nextInt(maxOffset)
+        val firstPort = range.getBegin.toInt + Random.nextInt(maxOffset)
         return Some(Seq((firstPort, firstPort + numPorts - 1, resource.getRole)))
       }
     }

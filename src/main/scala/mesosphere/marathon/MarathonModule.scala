@@ -15,6 +15,7 @@ import com.google.inject.name.Names
 import mesosphere.marathon.state.MarathonStore
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.mesos.util.FrameworkIdUtil
 
 /**
  * @author Tobi Knaup
@@ -94,5 +95,11 @@ class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
   @Singleton
   def provideMarathonStore(state: State): MarathonStore[AppDefinition] = {
     new MarathonStore[AppDefinition](state, () => new AppDefinition)
+  }
+
+  @Provides
+  @Singleton
+  def provideFrameworkIdUtil(state: State): FrameworkIdUtil = {
+    new FrameworkIdUtil(state)
   }
 }
