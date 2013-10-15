@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.{FrameworkInfo, FrameworkID}
+import org.apache.mesos.Protos.FrameworkInfo
 import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
 import mesosphere.marathon.api.v1.AppDefinition
@@ -17,6 +17,7 @@ import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
 import scala.util.Random
+import mesosphere.mesos.util.FrameworkIdUtil
 
 /**
  * Wrapper class for the scheduler
@@ -28,6 +29,7 @@ class MarathonSchedulerService @Inject()(
     config: MarathonConfiguration,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
     store: MarathonStore[AppDefinition],
+    frameworkIdUtil: FrameworkIdUtil,
     scheduler: MarathonScheduler)
   extends AbstractIdleService with Leader {
 
@@ -41,15 +43,22 @@ class MarathonSchedulerService @Inject()(
 
   val frameworkName = "marathon-" + Main.VERSION
 
-  val frameworkId = FrameworkID.newBuilder.setValue(frameworkName).build
-
   val frameworkInfo = FrameworkInfo.newBuilder()
     .setName(frameworkName)
-    .setId(frameworkId)
     .setFailoverTimeout(Main.conf.mesosFailoverTimeout())
     .setUser("") // Let Mesos assign the user
     .setCheckpoint(config.checkpoint())
 
+  // Set the framework ID
+  frameworkIdUtil.fetch() match {
+    case Some(id) => {
+      log.info(s"Setting framework ID to ${id.getValue}")
+      frameworkInfo.setId(id)
+    }
+    case None => {
+      log.info("No previous framework ID found")
+    }
+  }
   // Set the role, if provided.
   Main.conf.mesosRole.get.map(frameworkInfo.setRole)
 
