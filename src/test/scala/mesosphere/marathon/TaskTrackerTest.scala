@@ -67,7 +67,7 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
     taskTracker.starting(app, task3)
     taskTracker.running(app, taskId3)
 
-    val results = taskTracker.fetch(app)
+    val results = taskTracker.fetch(app).tasks
 
     assertTrue(results.contains(task1))
     assertTrue(results.contains(task2))

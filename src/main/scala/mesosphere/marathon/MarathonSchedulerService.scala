@@ -37,7 +37,7 @@ class MarathonSchedulerService @Inject()(
   import ExecutionContext.Implicits.global
 
   // Time to wait before trying to balance app tasks after driver starts
-  val balanceWait = Duration(10, "seconds")
+  val balanceWait = Duration(30, "seconds")
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -153,6 +153,7 @@ class MarathonSchedulerService @Inject()(
     val task = new TimerTask {
       def run() {
         scheduler.balanceTasks(driver)
+        scheduleTaskBalancing
       }
     }
     timer.schedule(task, balanceWait.toMillis)
