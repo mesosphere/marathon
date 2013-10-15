@@ -61,16 +61,16 @@ class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
   @Provides
   @Singleton
   def provideCandidate(zk: ZooKeeperClient): Option[Candidate] = {
-    if (Main.getConfiguration.highlyAvailable()) {
+    if (Main.conf.highlyAvailable()) {
       log.info("Registering in Zookeeper with hostname:"
-        + Main.getConfiguration.hostname())
+        + Main.conf.hostname())
       val candidate = new CandidateImpl(new Group(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE,
-        Main.getConfiguration.zooKeeperLeaderPath),
+        Main.conf.zooKeeperLeaderPath),
         new Supplier[Array[Byte]] {
           def get() = {
             //host:port
-            "%s:%d".format(Main.getConfiguration.hostname(),
-              Main.getConfiguration.port()).getBytes
+            "%s:%d".format(Main.conf.hostname(),
+              Main.conf.port()).getBytes
           }
         })
       return Some(candidate)
@@ -82,12 +82,12 @@ class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
   @Provides
   @Singleton
   def provideZookeeperClient(): ZooKeeperClient = {
-    require(Main.getConfiguration.zooKeeperTimeout() < Integer.MAX_VALUE,
+    require(Main.conf.zooKeeperTimeout() < Integer.MAX_VALUE,
       "ZooKeeper timeout too large!")
 
     new ZooKeeperClient(Amount.of(
-      Main.getConfiguration.zooKeeperTimeout().toInt, Time.MILLISECONDS),
-      Main.getConfiguration.zooKeeperHostAddresses.asJavaCollection)
+      Main.conf.zooKeeperTimeout().toInt, Time.MILLISECONDS),
+      Main.conf.zooKeeperHostAddresses.asJavaCollection)
   }
 
   @Provides

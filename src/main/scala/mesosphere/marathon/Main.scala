@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import mesosphere.Application
+import mesosphere.chaos.App
 import org.rogach.scallop.ScallopConf
 import mesosphere.chaos.http.{HttpService, HttpModule, HttpConf}
 import mesosphere.chaos.metrics.MetricsModule
@@ -14,26 +14,26 @@ import java.util.logging.Logger
 /**
  * @author Tobi Knaup
  */
-object Main extends Application {
+object Main extends App {
 
   val VERSION = "0.0.6"
 
   val log = Logger.getLogger(getClass.getName)
 
-  def getModules() = {
+  def modules() = {
     Seq(
-      new HttpModule(getConfiguration),
+      new HttpModule(conf),
       new MetricsModule,
-      new MarathonModule(getConfiguration),
+      new MarathonModule(conf),
       new MarathonRestModule,
-      new EventModule(getConfiguration)
+      new EventModule(conf)
     ) ++ getEventsModule()
   }
 
   //TODO(*): Rethink how this could be done.
   def getEventsModule(): Option[AbstractModule] = {
-    if (getConfiguration.eventSubscriber.isSupplied) {
-      getConfiguration.eventSubscriber() match {
+    if (conf.eventSubscriber.isSupplied) {
+      conf.eventSubscriber() match {
         case "http_callback" => {
           log.warning("Using HttpCallbackEventSubscriber for event" +
             "notification")
@@ -49,7 +49,7 @@ object Main extends Application {
   }
 
   //TOOD(FL): Make Events optional / wire up.
-  lazy val getConfiguration = new ScallopConf(args)
+  lazy val conf = new ScallopConf(args)
     with HttpConf with MarathonConfiguration with AppConfiguration
       with EventConfiguration with HttpEventConfiguration
 

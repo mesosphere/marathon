@@ -19,7 +19,7 @@ class HttpEventActor extends Actor with ActorLogging with Json4sJacksonSupport {
 
   implicit val ec = HttpEventModule.executionContext
 
-  val urls = Main.getConfiguration.httpEventEndpoints()
+  val urls = Main.conf.httpEventEndpoints()
 
   val pipeline: HttpRequest => Future[HttpResponse] = (
     addHeader("Accept", "application/json")

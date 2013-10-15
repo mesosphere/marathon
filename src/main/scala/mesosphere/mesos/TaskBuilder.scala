@@ -40,7 +40,7 @@ class TaskBuilder (app: AppDefinition,
     }
 
     val executor: Executor = if (app.executor == "") {
-      Main.getConfiguration.executor
+      Main.conf.executor
     } else {
       Executor.dispatch(app.executor)
     }
