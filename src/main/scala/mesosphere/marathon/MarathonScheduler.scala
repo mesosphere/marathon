@@ -16,6 +16,7 @@ import mesosphere.marathon.event.{EventModule, MesosStatusUpdateEvent}
 import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks}
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.mesos.util.FrameworkIdUtil
 
 
 /**
@@ -26,7 +27,8 @@ class MarathonScheduler @Inject()(
     @Named("restMapper") mapper: ObjectMapper,
     store: MarathonStore[AppDefinition],
     taskTracker: TaskTracker,
-    taskQueue: TaskQueue)
+    taskQueue: TaskQueue,
+    frameworkIdUtil: FrameworkIdUtil)
   extends Scheduler {
 
   val log = Logger.getLogger(getClass.getName)
@@ -36,6 +38,7 @@ class MarathonScheduler @Inject()(
 
   def registered(driver: SchedulerDriver, frameworkId: FrameworkID, master: MasterInfo) {
     log.info("Registered as %s to master '%s'".format(frameworkId.getValue, master.getId))
+    frameworkIdUtil.store(frameworkId)
   }
 
   def reregistered(driver: SchedulerDriver, master: MasterInfo) {

@@ -16,6 +16,7 @@ import org.apache.mesos.Protos.{TaskID, TaskInfo}
 import org.mockito.ArgumentCaptor
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
+import mesosphere.mesos.util.FrameworkIdUtil
 
 /**
  * @author Tobi Knaup
@@ -27,14 +28,16 @@ class MarathonSchedulerTest extends AssertionsForJUnit
   var tracker: TaskTracker = null
   var queue: TaskQueue = null
   var scheduler: MarathonScheduler = null
+  var frameworkIdUtil: FrameworkIdUtil = null
 
   @Before
   def setupScheduler() = {
     store = mock[MarathonStore[AppDefinition]]
     tracker = mock[TaskTracker]
     queue = mock[TaskQueue]
+    frameworkIdUtil = mock[FrameworkIdUtil]
     scheduler = new MarathonScheduler(
-      None, new ObjectMapper, store, tracker, queue)
+      None, new ObjectMapper, store, tracker, queue, frameworkIdUtil)
   }
 
   @Test
