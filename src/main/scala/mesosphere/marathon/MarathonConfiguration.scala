@@ -15,8 +15,8 @@ trait MarathonConfiguration extends ScallopConf {
     noshort = true)
 
   lazy val mesosFailoverTimeout = opt[Long]("failover_timeout",
-    descr = "The failover_timeout for mesos in seconds",
-    default = Some(3600L))
+    descr = "The failover_timeout for mesos in seconds (default: 1 week)",
+    default = Some(604800L))
 
   lazy val highlyAvailable = opt[Boolean]("ha",
     descr = "Runs Marathon in HA mode with leader election. " +
