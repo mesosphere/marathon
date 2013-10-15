@@ -16,7 +16,7 @@ import java.util.logging.Logger
  */
 object Main extends App {
 
-  val VERSION = "0.0.6"
+  val VERSION = "0.1.1-SNAPSHOT"
 
   val log = Logger.getLogger(getClass.getName)
 
