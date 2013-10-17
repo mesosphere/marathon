@@ -225,15 +225,6 @@ h1 {
   width: 600px;
 }
 
-.system-path {
-  padding-top: 10px;
-  font-family: 'arial', sans-serif;
-  font-weight: 300;
-  font-size: 86px;
-  position: relative;
-  top: 8px;
-}
-
 .system-caret {
   font-size: 74px;
   font-weight: normal;
@@ -343,7 +334,7 @@ h1 {
 }
 
 .content {
-  padding: 20px 50px;
+  padding: 20px 30px;
   opacity: 0;
 
   -webkit-animation-duration: 300ms;
