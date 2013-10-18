@@ -1,5 +1,6 @@
 package mesosphere.marathon.api.v1
 
+import scala.collection.JavaConverters._
 import javax.ws.rs._
 import mesosphere.marathon.MarathonSchedulerService
 import javax.ws.rs.core.{Context, Response, MediaType}
@@ -23,8 +24,8 @@ class AppsResource @Inject()(
 
   @GET
   @Timed
-  def index() = {
-    service.listApps()
+  def index = {
+    service.listApps
   }
 
   @POST
@@ -59,6 +60,25 @@ class AppsResource @Inject()(
       val ip = req.getRemoteAddr
       val path = req.getRequestURI
       eventBus.get.post(new ApiPostEvent(ip, path, app))
+    }
+  }
+
+  @GET
+  @Path("search")
+  @Timed
+  def search(@QueryParam("id") id: String,
+             @QueryParam("cmd") cmd: String) = {
+    service.listApps.filter {
+      x =>
+        var valid = true
+        if (id != null && !id.isEmpty && !x.id.toLowerCase.contains(id.toLowerCase)) {
+          valid = false
+        }
+        if (cmd != null && !cmd.isEmpty && !x.cmd.toLowerCase.contains(cmd.toLowerCase)) {
+          valid = false
+        }
+        // Maybe add some other query parameters?
+        valid
     }
   }
 }
