@@ -29,6 +29,7 @@ message ServiceDefinition {
   repeated uint32 ports = 6;
   repeated Constraint constraints = 7;
   required string executor = 8 [default = ""];
+  optional double taskRateLimit = 9;
 }
 
 message MarathonTask {

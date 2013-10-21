@@ -16,6 +16,7 @@ import mesosphere.marathon.state.MarathonStore
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.RateLimiters
 
 /**
  * @author Tobi Knaup
@@ -46,6 +47,9 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf)
     bind(classOf[AtomicBoolean])
       .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
+
+    val rateLimiters = new RateLimiters()
+    bind(classOf[RateLimiters]).toInstance(rateLimiters)
   }
 
   @Provides

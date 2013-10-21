@@ -17,6 +17,7 @@ import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTa
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.RateLimiters
 
 
 /**
@@ -28,10 +29,11 @@ class MarathonScheduler @Inject()(
     store: MarathonStore[AppDefinition],
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
-    frameworkIdUtil: FrameworkIdUtil)
+    frameworkIdUtil: FrameworkIdUtil,
+    rateLimiters: RateLimiters)
   extends Scheduler {
 
-  val log = Logger.getLogger(getClass.getName)
+  private val log = Logger.getLogger(getClass.getName)
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
@@ -107,7 +109,12 @@ class MarathonScheduler @Inject()(
           case Some(task) => postEvent(status, task)
           case None => log.warning(s"Couldn't post event for ${status.getTaskId}")
         }
-        scale(driver, appID)
+
+        if (rateLimiters.tryAcquire(appID)) {
+          scale(driver, appID)
+        } else {
+          log.warning(s"Rate limit reached for $appID")
+        }
       })
     } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
       taskTracker.running(appID, status.getTaskId).map(taskOption => {
@@ -149,6 +156,7 @@ class MarathonScheduler @Inject()(
         store.store(app.id, app)
         log.info("Starting app " + app.id)
         taskTracker.startUp(app.id)
+        rateLimiters.setPermits(app.id, app.taskRateLimit)
         scale(driver, app)
       } else {
         log.warning("Already started app " + app.id)
@@ -237,7 +245,7 @@ class MarathonScheduler @Inject()(
 
         if ((currentCount + queuedCount) < targetCount) {
           for (i <- (currentCount + queuedCount) until targetCount) {
-            log.info("Queueing task for %s".format(app.id))
+            log.info(s"Queueing new task for ${app.id} ($queuedCount queued)")
             taskQueue.add(app)
           }
         } else {
