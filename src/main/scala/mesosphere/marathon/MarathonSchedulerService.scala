@@ -26,7 +26,7 @@ import mesosphere.mesos.util.FrameworkIdUtil
  */
 class MarathonSchedulerService @Inject()(
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
-    config: MarathonConfiguration,
+    config: MarathonConf,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
     store: MarathonStore[AppDefinition],
     frameworkIdUtil: FrameworkIdUtil,

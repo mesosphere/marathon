@@ -26,12 +26,13 @@ object ModuleNames {
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
 }
 
-class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
+class MarathonModule(conf: MarathonConf with ZookeeperConf)
+  extends AbstractModule {
 
   val log = Logger.getLogger(getClass.getName)
 
   def configure() {
-    bind(classOf[MarathonConfiguration]).toInstance(conf)
+    bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
