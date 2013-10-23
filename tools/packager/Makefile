@@ -7,6 +7,12 @@ rpm: version with-upstart
 	fpm -t rpm -s dir \
 	    -n marathon -v `cat ../version` -p ../marathon.rpm .
 
+.PHONY: deb
+deb: version with-upstart
+	cd toor && \
+	fpm -t deb -s dir \
+	    -n marathon -v `cat ../version` -p ../marathon.deb .
+
 .PHONY: osx
 osx: version just-jar
 	cd toor && \
@@ -23,7 +29,7 @@ just-jar: marathon-runnable.jar
 	cp marathon-runnable.jar toor/$(prefix)/bin/marathon
 	chmod 755 toor/$(prefix)/bin/marathon
 
-version: plugin := org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate 
+version: plugin := org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate
 version: marathon-runnable.jar
 	( cd marathon && \
 	  mvn $(plugin) -Dexpression=project.version | sed '/^\[/d' ) | \
