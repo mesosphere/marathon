@@ -35,7 +35,7 @@ The team at [Mesosphere](http://mesosphere.io) is also happy to answer any quest
 
 ## Requirements
 
-* [Mesos][Mesos] 0.15+ (the current version of marathon requires Mesos 0.15+. If you are still running 0.14, you can change the version in the `pom.xml`)
+* [Mesos][Mesos] 0.14.0+
 * [Zookeeper][Zookeeper]
 * JDK 1.6+
 * Scala 2.10+
@@ -86,13 +86,7 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 ## Setting Up And Running Marathon
 
 First, install [Mesos][Mesos]. One easy way is via your system's package manager.
-
-* [Ubuntu 12.04, AMD64](https://s3.amazonaws.com/mesos-pkg/master/ubuntu/12.04/mesos_0.14.0_amd64.deb)
-* [Ubuntu 12.10, AMD64](https://s3.amazonaws.com/mesos-pkg/master/ubuntu/12.10/mesos_0.14.0_amd64.deb)
-* [Debian Wheezy, AMD64](https://s3.amazonaws.com/mesos-pkg/master/debian/7.0/mesos_0.14.0_amd64.deb)
-* [CentOS 6.4, AMD64](https://s3.amazonaws.com/mesos-pkg/master/centos/6.4/mesos_0.14.0_x86_64.rpm)
-* [RedHat 6.4, AMD64](https://s3.amazonaws.com/mesos-pkg/master/redhat/6.4/mesos_0.14.0_x86_64.rpm)
-* [OS X, 10.7 & 10.8](https://s3.amazonaws.com/mesos-pkg/master/osx/mesos-0.14.0.pkg)
+Current builds for major Linux distributions and Mac OS X are available from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
 
 If building from source,see the [Getting Started](http://mesos.apache.org/gettingstarted/) page,
 or the [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
@@ -102,18 +96,28 @@ To create a Jar for Marathon, checkout the sources and use Maven to build it:
 
     mvn package
 
-### Local Mode
-
-The following command launches Marathon on Mesos in *local mode*, which is not how you would run it on your cluster.
-Point your web browser to `localhost:8080` and you should see the Marathon UI.
-
-    bin/start --master local
-
 ### Production Mode
 
-To launch Marathon in *production mode*, you need to have both [Zookeeper][Zookeeper] and Mesos running:
- 
-    bin/start --master zk://zk1.foo.bar,zk2.foo.bar/mesos
+To launch Marathon in *production mode*, you need to have both [Zookeeper][Zookeeper] and [Mesos][Mesos] running.
+The following command launches Marathon on Mesos in *production mode*.
+Point your web browser to `localhost:8080` and you should see the Marathon UI.
+
+    ./bin/start --master zk://zk1.foo.bar/mesos,zk2.foo.bar/mesos --zk_hosts zk1.foo.bar,zk2.foo.bar
+
+Note the different format of the `--master` and `--zk_hosts` options. Marathon uses `--master` to find the Mesos masters, and `--zk_hosts` to find Zookeepers for storing state. They are separate options because Mesos masters can be discovered in other ways as well.
+
+### Local Mode
+
+Mesos local mode allows you to run Marathon without launching a full Mesos cluster.
+It is meant for experimentation and not recommended for production use. Note that you still need to run Zookeeper for storing state.
+The following command launches Marathon on Mesos in *local mode*.
+Point your web browser to `localhost:8080` and you should see the Marathon UI.
+
+    ./bin/start --master local --zk_hosts localhost:2181
+
+### Configuration Options
+
+Run `./bin/start --help` for a full list of configuration options.
 
 ## Example API Usage
 
