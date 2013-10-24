@@ -63,7 +63,7 @@ trait MarathonConfiguration extends ScallopConf {
   lazy val hostname = opt[String]("hostname",
     descr = "The advertised hostname stored in ZooKeeper so another standby " +
       "host can redirect to this elected leader",
-    default = Some("localhost"))
+    default = Some(java.net.InetAddress.getLocalHost().getHostName()))
 
   def zooKeeperHostAddresses: Seq[InetSocketAddress] =
     for (s <- zooKeeperHostString().split(",")) yield {

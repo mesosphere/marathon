@@ -32,6 +32,10 @@ class TaskTracker @Inject()(state: State) {
     tasks.getOrElseUpdate(appName, fetch(appName))
   }
 
+  def list() = {
+    tasks
+  }
+
   def count(appName: String) = {
     get(appName).size
   }
