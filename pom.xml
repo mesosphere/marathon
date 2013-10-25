@@ -4,7 +4,7 @@
 
     <groupId>mesosphere</groupId>
     <artifactId>marathon</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2-SNAPSHOT</version>
 
     <properties>
         <encoding>UTF-8</encoding>
@@ -49,7 +49,7 @@
         <connection>scm:git:git://github.com/mesosphere/${project.artifactId}.git</connection>
         <developerConnection>scm:git:git@github.com:mesosphere/${project.artifactId}.git</developerConnection>
         <url>http://github.com/mesosphere/${project.artifactId}/tree/master</url>
-        <tag>marathon-0.1.1</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <repositories>
