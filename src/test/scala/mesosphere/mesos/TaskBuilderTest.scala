@@ -142,7 +142,7 @@ class TaskBuilderTest extends AssertionsForJUnit
       .build
 
     val app = makeBasicApp()
-    app.constraints = Set(("rackid", Constraint.Operator.UNIQUE_VALUE, None))
+    app.constraints = Set(("rackid", Constraint.Operator.UNIQUE.toString, None))
 
     val t1 = makeSampleTask(app.id, "rackid", "2")
     val t2 = makeSampleTask(app.id, "rackid", "3")

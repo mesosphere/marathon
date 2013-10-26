@@ -28,8 +28,8 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   @Pattern(regexp="(^//cmd$)|(^/[^/].*$)|")
   var executor: String = ""
 
-  //TODO
-  var constraints: Set[(String, Int, Option[String])] = Set()
+
+  var constraints: Set[(String, String, Option[String])] = Set()
 
   var uris: Seq[String] = Seq()
   var ports: Seq[Int] = Nil
@@ -41,7 +41,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     val cons = constraints.map(x => {
       val b = Constraint.newBuilder()
         b.setField(x._1)
-        b.setOperator(Constraint.Operator.valueOf(x._2))
+        b.setOperator(Constraint.Operator.valueOf(x._2.toUpperCase))
         if (x._3.nonEmpty) b.setValue(x._3.get)
         b.build()
       }
@@ -67,9 +67,11 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     executor = proto.getExecutor
     instances = proto.getInstances
     ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]]
-    constraints = proto.getConstraintsList.asScala.map(
+    constraints = //proto.getConstraintsList.asScala.
+
+      proto.getConstraintsList.asScala.map(
       x => (x.getField,
-            x.getOperator.getNumber,
+            x.getOperator.toString,
             if (x.getValue != null) Some(x.getValue) else None)
     ).toSet
 
