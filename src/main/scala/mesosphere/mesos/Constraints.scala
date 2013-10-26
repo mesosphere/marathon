@@ -4,8 +4,11 @@ package mesosphere.mesos
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
+import java.util.logging.Logger
 
 object Constraints {
+
+  private[this] val log = Logger.getLogger(getClass.getName)
 
   def meetsConstraint(tasks: Set[mesosphere.marathon.Protos.MarathonTask],
                       attributes: Set[org.apache.mesos.Protos.Attribute],
@@ -13,6 +16,8 @@ object Constraints {
                       field: String,
                       op: Operator,
                       value : Option[String]): Boolean = {
+
+
 
     //TODO(*): Implement LIKE (use value for this)
     var meetsConstraints = true
@@ -40,6 +45,14 @@ object Constraints {
         op match {
           case Operator.UNIQUE => matches.isEmpty
           case Operator.CLUSTER => matches.size == tasks.size
+          case Operator.LIKE => {
+            if (field == "hostname" && value.nonEmpty) {
+              hostname.matches(value.get)
+            } else {
+              log.warning("Error, LIKE is only implemented for hostname")
+              true
+            }
+          }
         }
       } else {
         // This will be reached in case we want to schedule for an attribute
@@ -48,6 +61,16 @@ object Constraints {
       }
     }
     meetsConstraints
+  }
+
+  private def matchLike(attributes: Set[org.apache.mesos.Protos.Attribute],
+    hostname: String,
+    field: String,
+    op: Operator,
+    value : String): Boolean = {
+
+    (attributes.filter(_.getName == field).filter(_.getText == value).nonEmpty
+      || (field == "hostname" && hostname.matches(value)))
   }
 
   /**
@@ -66,15 +89,6 @@ object Constraints {
         .filter(y => {
           y.getName == field &&
           y.getText.getValue == value})
-        .nonEmpty)
-  }
-
-  private def runningTaskHostnames(
-                            tasks: Iterable[mesosphere.marathon.Protos.MarathonTask],
-                            value: String) = {
-    tasks
-      .filter(x =>
-      (x.getHost).filter(_ == value)
         .nonEmpty)
   }
 }
