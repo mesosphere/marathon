@@ -45,7 +45,6 @@ class ConstraintsTest {
       .build()
   }
 
-
   @Test
   def testUniqueHostConstraint() {
     val task1_host1 = makeTaskWithHost("task1", "host1")

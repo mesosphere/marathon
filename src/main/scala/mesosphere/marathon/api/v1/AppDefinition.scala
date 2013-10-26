@@ -67,9 +67,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     executor = proto.getExecutor
     instances = proto.getInstances
     ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]]
-    constraints = //proto.getConstraintsList.asScala.
-
-      proto.getConstraintsList.asScala.map(
+    constraints = proto.getConstraintsList.asScala.map(
       x => (x.getField,
             x.getOperator.toString,
             if (x.getValue != null) Some(x.getValue) else None)
