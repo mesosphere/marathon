@@ -13,6 +13,7 @@ import mesosphere.marathon.{PathExecutor, CommandExecutor, Executor, Main}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
 import scala.util.Random
+import mesosphere.marathon.Protos.Constraint.Operator
 
 
 /**
@@ -134,8 +135,9 @@ class TaskBuilder (app: AppDefinition,
             .meetsConstraint(
               currentlyRunningTasks.toSet,
               offer.getAttributesList.asScala.toSet,
+              offer.getHostname,
               x._1,
-              x._2,
+              Operator.valueOf(x._2.toUpperCase),
               x._3))
         .nonEmpty) {
         log.warning("Did not meet a constraint in an offer." )
