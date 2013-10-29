@@ -134,7 +134,7 @@ Using [Marathon Client](https://github.com/mesosphere/marathon_client), the foll
 
 [Chronos]: https://raw.github.com/airbnb/chronos "Airbnb's Chronos"
 [HTTPie]: http://httpie.org "a CLI, cURL-like tool for humans"
-[Mesos]: http://incubator.apache.org/mesos/ "Apache Mesos"
+[Mesos]: https://mesos.apache.org/ "Apache Mesos"
 [Zookeeper]: http://zookeeper.apache.org/ "Apache Zookeeper"
 [Storm]: http://storm-project.net/ "distributed realtime computation"
 [freenode]: http://freenode.net/ "IRC channels"
