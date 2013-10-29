@@ -132,10 +132,10 @@ Using [Marathon Client](https://github.com/mesosphere/marathon_client), the foll
     marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz -C "./chronos/bin/demo ./chronos/config/nomail.yml ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
 
 
-[Chronos]: https://raw.github.com/airbnb/chronos "Airbnb's Chronos"
-[HTTPie]: http://httpie.org "a CLI, cURL-like tool for humans"
+[Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
+[HTTPie]: https://github.com/jkbr/httpie "a CLI, cURL-like tool for humans"
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
-[Zookeeper]: http://zookeeper.apache.org/ "Apache Zookeeper"
+[Zookeeper]: https://zookeeper.apache.org/ "Apache Zookeeper"
 [Storm]: http://storm-project.net/ "distributed realtime computation"
-[freenode]: http://freenode.net/ "IRC channels"
+[freenode]: https://freenode.net/ "IRC channels"
 [upstart]: http://upstart.ubuntu.com/ "Ubuntu's event-based daemons"
