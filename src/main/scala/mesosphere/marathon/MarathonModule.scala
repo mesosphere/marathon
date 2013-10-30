@@ -71,7 +71,7 @@ class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
           def get() = {
             //host:port
             "%s:%d".format(Main.conf.hostname(),
-              Main.conf.port()).getBytes
+              Main.conf.httpPort()).getBytes
           }
         })
       return Some(candidate)
