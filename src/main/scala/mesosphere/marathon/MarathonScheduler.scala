@@ -129,7 +129,10 @@ class MarathonScheduler @Inject()(
       taskTracker.running(appID, status.getTaskId.getValue).map(taskOption => {
         taskOption match {
           case Some(task) => postEvent(status, task)
-          case None => log.warning(s"Couldn't post event for ${status.getTaskId}")
+          case None =>
+            log.warning(s"Couldn't post event for ${status.getTaskId}")
+            log.warning(s"Killing task ${status.getTaskId}")
+            driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
         }
       })
     }
@@ -262,11 +265,12 @@ class MarathonScheduler @Inject()(
           log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
         }
       }
-      else if (targetCount < currentCount) {
+      else if (targetCount < currentCount &&
+        taskTracker.recentlyCompletedCount(app.id) < currentCount - targetCount) {
         log.info("Scaling %s from %d down to %d instances".format(app.id, currentCount, targetCount))
 
-        val kill = taskTracker.drop(app.id, targetCount)
-        for (task <- kill) {
+        val toKill = taskTracker.take(app.id, currentCount - targetCount)
+        for (task <- toKill) {
           log.info("Killing task " + task.getId)
           driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
         }

@@ -27,7 +27,8 @@ class TaskTracker @Inject()(state: State) {
 
   class App(
     val appName: String,
-    var tasks: mutable.Set[MarathonTask]
+    var tasks: mutable.Set[MarathonTask],
+    var shutdown: Boolean
   )
 
   class StagedTask(
@@ -62,8 +63,12 @@ class TaskTracker @Inject()(state: State) {
       recentCompletedTasks.count { t => t.appName == appName }
   }
 
-  def drop(appName: String, n: Int) = {
-    get(appName).drop(n)
+  def recentlyCompletedCount(appName: String) = {
+    recentCompletedTasks.count { t => t.appName == appName }
+  }
+
+  def take(appName: String, n: Int) = {
+    get(appName).take(n)
   }
 
   def starting(appName: String, task: MarathonTask) {
@@ -113,9 +118,23 @@ class TaskTracker @Inject()(state: State) {
         // Handle completed tasks
         recentCompletedTasks += new CompletedTask(task, appName, now)
 
-        store(appName).map(_ => Some(task))
+        val ret = store(appName).map(_ => Some(task))
+
+        log.info(s"Task ${taskId} removed from TaskTracker")
+
+        if (apps(appName).shutdown && apps(appName).tasks.isEmpty) {
+          // Are we shutting down this app? If so, expunge
+          expunge(appName)
+        }
+
+        ret
       }
-      case None => None
+      case None =>
+        if (apps(appName).shutdown && apps(appName).tasks.isEmpty) {
+          // Are we shutting down this app? If so, expunge
+          expunge(appName)
+        }
+        None
     }
   }
 
@@ -123,9 +142,15 @@ class TaskTracker @Inject()(state: State) {
     // NO-OP
   }
 
-  def shutDown(appName: String) {
+  def expunge(appName: String) {
     val variable = fetchVariable(appName)
     state.expunge(variable)
+    apps.remove(appName)
+    log.warning(s"Expunged app ${appName}")
+  }
+
+  def shutDown(appName: String) {
+    apps.getOrElseUpdate(appName, fetch(appName)).shutdown = true
   }
 
   def newTaskId(appName: String) = {
@@ -147,7 +172,7 @@ class TaskTracker @Inject()(state: State) {
       //set.map(map => MarathonTask(map("id"), map("host"), map("port").asInstanceOf[Int], map("attributes"))
     } else {
       new App(appName,
-        new mutable.HashSet[MarathonTask]())
+        new mutable.HashSet[MarathonTask](), false)
     }
   }
 
@@ -167,7 +192,7 @@ class TaskTracker @Inject()(state: State) {
         if (!apps.contains(task.getAppName)) {
           apps(task.getAppName) =
             new App(task.getAppName,
-              new mutable.HashSet[MarathonTask]())
+              new mutable.HashSet[MarathonTask](), false)
         }
         apps(task.getAppName).tasks += task
       }
