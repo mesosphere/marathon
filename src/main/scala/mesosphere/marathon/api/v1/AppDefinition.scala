@@ -6,7 +6,6 @@ import scala.collection.mutable
 import scala.collection.JavaConverters._
 import org.hibernate.validator.constraints.NotEmpty
 import mesosphere.marathon.state.MarathonState
-import com.fasterxml.jackson.annotation.JsonProperty
 import mesosphere.marathon.Protos.Constraint
 import javax.validation.constraints.Pattern
 
@@ -15,11 +14,10 @@ import javax.validation.constraints.Pattern
  * @author Tobi Knaup
  */
 class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
-  @JsonProperty
   @NotEmpty
+  @Pattern(regexp = "^[A-Za-z0-9_.-]+$")
   var id: String = ""
   @NotEmpty
-  @JsonProperty
   var cmd: String = ""
   var env: Map[String, String] = Map.empty
   var instances: Int = 0

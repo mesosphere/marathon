@@ -6,6 +6,7 @@ import com.google.common.collect.Lists
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.ServiceDefinition
 import org.apache.mesos.Protos.CommandInfo
+import javax.validation.Validation
 
 /**
  * @author Tobi Knaup
@@ -52,6 +53,31 @@ class AppDefinitionTest {
     assertEquals(3, app.instances)
     assertEquals("//cmd", app.executor)
     assertEquals("bash foo-*/start -Dhttp.port=$PORT", app.cmd)
+  }
+
+  @Test
+  def testValidation() {
+    val validator = Validation.buildDefaultValidatorFactory().getValidator
+
+    def shouldViolate(app: AppDefinition, path: String, message: String) {
+      val violations = validator.validate(app).asScala
+      assertTrue(violations.exists(v =>
+        v.getPropertyPath.toString == path && v.getMessage == message))
+    }
+
+    def shouldNotViolate(app: AppDefinition, path: String, message: String) {
+      val violations = validator.validate(app).asScala
+      assertFalse(violations.exists(v =>
+        v.getPropertyPath.toString == path && v.getMessage == message))
+    }
+
+    val app = new AppDefinition
+    app.id = "a b"
+    shouldViolate(app, "id", "must match \"^[A-Za-z0-9_.-]+$\"")
+    app.id = "a#$%^&*b"
+    shouldViolate(app, "id", "must match \"^[A-Za-z0-9_.-]+$\"")
+    app.id = "ab"
+    shouldNotViolate(app, "id", "must match \"^[A-Za-z0-9_.-]+$\"")
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
