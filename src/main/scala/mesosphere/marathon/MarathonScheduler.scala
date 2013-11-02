@@ -49,12 +49,13 @@ class MarathonScheduler @Inject()(
 
   def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
     // Check for any tasks which were started but never entered TASK_RUNNING
+    // TODO resourceOffers() doesn't feel like the right place to run this
     val toKill = taskTracker.checkStagedTasks
-    if (toKill != null && !toKill.isEmpty) {
+    if (toKill.nonEmpty) {
       log.warning(s"There are ${toKill.size} tasks stuck in staging which will be killed")
       log.info(s"About to kill these tasks: ${toKill}")
       for (task <- toKill) {
-        driver.killTask(TaskID.newBuilder.setValue(task).build)
+        driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
       }
     }
     for (offer <- offers.asScala) {
@@ -72,7 +73,7 @@ class MarathonScheduler @Inject()(
 
               val marathonTask = MarathonTasks.makeTask(
                 task.getTaskId.getValue, offer.getHostname, ports,
-                offer.getAttributesList.asScala.toList, app.id)
+                offer.getAttributesList.asScala.toList)
               taskTracker.starting(app.id, marathonTask)
               driver.launchTasks(offer.getId, taskInfos)
             }
@@ -126,15 +127,14 @@ class MarathonScheduler @Inject()(
         }
       })
     } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
-      taskTracker.running(appID, status.getTaskId.getValue).map(taskOption => {
-        taskOption match {
-          case Some(task) => postEvent(status, task)
-          case None =>
-            log.warning(s"Couldn't post event for ${status.getTaskId}")
-            log.warning(s"Killing task ${status.getTaskId}")
-            driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
+      taskTracker.running(appID, status.getTaskId.getValue).onComplete {
+        case Success(task) => postEvent(status, task)
+        case Failure(t) => {
+          log.log(Level.WARNING, s"Couldn't post event for ${status.getTaskId}", t)
+          log.warning(s"Killing task ${status.getTaskId}")
+          driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
         }
-      })
+      }
     }
   }
 
@@ -221,7 +221,6 @@ class MarathonScheduler @Inject()(
    * @param driver scheduler driver
    */
   def balanceTasks(driver: SchedulerDriver) {
-    taskTracker.checkRecentlyCompleted
     store.names().onComplete {
       case Success(iterator) => {
         log.info("Syncing tasks for all apps")
@@ -265,8 +264,7 @@ class MarathonScheduler @Inject()(
           log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
         }
       }
-      else if (targetCount < currentCount &&
-        taskTracker.recentlyCompletedCount(app.id) < currentCount - targetCount) {
+      else if (targetCount < currentCount) {
         log.info("Scaling %s from %d down to %d instances".format(app.id, currentCount, targetCount))
 
         val toKill = taskTracker.take(app.id, currentCount - targetCount)

@@ -47,6 +47,15 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
 
   @Test
   def testStartingPersistsTasks() {
+    def shouldContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) {
+      assertTrue(
+        s"Should contain task ${task.getId}",
+        tasks.exists(t => t.getId == task.getId
+          && t.getHost == task.getHost
+          && t.getPortsList == task.getPortsList)
+      )
+    }
+
     val state = new InMemoryState
     val taskTracker = new TaskTracker(state)
     val app = "foo"
@@ -69,9 +78,9 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
 
     val results = taskTracker.fetch(app).tasks
 
-    assertTrue(results.contains(task1))
-    assertTrue(results.contains(task2))
-    assertTrue(results.contains(task3))
+    shouldContainTask(results, task1)
+    shouldContainTask(results, task2)
+    shouldContainTask(results, task3)
   }
 
   @Test
@@ -91,7 +100,7 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       val baos = new ByteArrayOutputStream()
       baos.flush()
       val oos = new ObjectOutputStream(baos)
-      taskTracker.serialize(oos)
+      taskTracker.serialize(taskTracker.get("app1"), oos)
 
       val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
       taskTracker.deserialize(ois)
@@ -106,7 +115,7 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       val baos = new ByteArrayOutputStream()
       baos.flush()
       val oos = new ObjectOutputStream(baos)
-      taskTracker.serialize(oos)
+      taskTracker.serialize(taskTracker.get("app1"), oos)
 
       val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
       taskTracker.deserialize(ois)

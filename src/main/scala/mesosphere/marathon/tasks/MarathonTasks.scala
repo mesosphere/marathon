@@ -9,15 +9,13 @@ object MarathonTasks {
   def makeTask(id: String,
                host: String,
                ports: Iterable[Int],
-               attributes: List[Attribute],
-               appName: String) = {
+               attributes: List[Attribute]) = {
     MarathonTask.newBuilder()
       .setId(id)
       .setHost(host)
       .addAllPorts(ports.map(i => i: java.lang.Integer).asJava)
       .addAllAttributes(attributes.asJava)
-      .setAppName(appName)
-      .setStarted(System.currentTimeMillis)
+      .setStagedAt(System.currentTimeMillis)
       .build
   }
 }

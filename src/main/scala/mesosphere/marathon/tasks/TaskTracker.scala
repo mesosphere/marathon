@@ -31,24 +31,8 @@ class TaskTracker @Inject()(state: State) {
     var shutdown: Boolean
   )
 
-  class StagedTask(
-    val marathonTask: MarathonTask,
-    val appName: String
-  )
-
-  class CompletedTask(
-    val marathonTask: MarathonTask,
-    val appName: String,
-    val finished: Long
-  )
-
   private val apps = new mutable.HashMap[String, App] with
     mutable.SynchronizedMap[String, App]
-  private val stagedTasks = new mutable.HashMap[String, StagedTask] with
-    mutable.SynchronizedMap[String, StagedTask]
-  private val stagedCount = new mutable.HashMap[String, Int] with
-    mutable.SynchronizedMap[String, Int].withDefaultValue(0)
-  private val recentCompletedTasks = new mutable.SynchronizedQueue[CompletedTask]
 
   def get(appName: String) = {
     apps.getOrElseUpdate(appName, fetch(appName)).tasks
@@ -59,12 +43,7 @@ class TaskTracker @Inject()(state: State) {
   }
 
   def count(appName: String) = {
-    get(appName).size + stagedCount(appName) +
-      recentCompletedTasks.count { t => t.appName == appName }
-  }
-
-  def recentlyCompletedCount(appName: String) = {
-    recentCompletedTasks.count { t => t.appName == appName }
+    get(appName).size
   }
 
   def take(appName: String, n: Int) = {
@@ -73,50 +52,39 @@ class TaskTracker @Inject()(state: State) {
 
   def starting(appName: String, task: MarathonTask) {
     // Keep this here so running() can pick it up
-    stagedTasks(task.getId) = new StagedTask(task, appName)
-    stagedCount(appName) += 1
+    get(appName) += task
   }
 
-  def running(appName: String, taskId: String): Future[Option[MarathonTask]] = {
-    val task = stagedTasks.remove(taskId) match {
-      case Some(task) => {
-        get(appName) += task.marathonTask
-        stagedCount(appName) -= 1
-        task.marathonTask
+  def running(appName: String, taskId: String): Future[MarathonTask] = {
+    val task = get(appName).find(_.getId == taskId) match {
+      case Some(stagedTask) => {
+        get(appName).remove(stagedTask)
+        stagedTask.toBuilder
+          .setStartedAt(System.currentTimeMillis)
+          .build
       }
-      case None => {
+      case _ => {
         log.warning(s"No staged task for ID ${taskId}")
-        get(appName).find(_.getId == taskId).getOrElse {
-          // We lost track of the host and port of this task, but still need to keep track of it
-          val task = MarathonTasks.makeTask(taskId, "", List(), List(), appName)
-          get(appName) += task
-          task
-        }
+        // We lost track of the host and port of this task, but still need to keep track of it
+        MarathonTask.newBuilder
+          .setId(taskId)
+          .setStagedAt(System.currentTimeMillis)
+          .setStartedAt(System.currentTimeMillis)
+          .build
       }
     }
-    store(appName).map(_ => Some(task))
-  }
-
-  def checkRecentlyCompleted = {
-    val expires = System.currentTimeMillis - Main.conf.taskRateLimit()
-    recentCompletedTasks.dequeueAll { t => t.finished < expires }
+    get(appName) += task
+    store(appName).map(_ => task)
   }
 
   def terminated(appName: String,
                  taskId: String): Future[Option[MarathonTask]] = {
     val now = System.currentTimeMillis
     val appTasks = get(appName)
-    // Also remove from staged tasks, if it exists.
-    if (stagedTasks.contains(taskId)) {
-      stagedTasks.remove(taskId)
-      stagedCount(appName) -= 1
-    }
+
     appTasks.find(_.getId == taskId) match {
       case Some(task) => {
         apps(appName).tasks = appTasks - task
-
-        // Handle completed tasks
-        recentCompletedTasks += new CompletedTask(task, appName, now)
 
         val ret = store(appName).map(_ => Some(task))
 
@@ -176,57 +144,23 @@ class TaskTracker @Inject()(state: State) {
     }
   }
 
-  def deserialize(source: ObjectInputStream) = {
-    if (source.available() > 0) {
+  def deserialize(source: ObjectInputStream): mutable.HashSet[MarathonTask] = {
+    var results = mutable.HashSet[MarathonTask]()
+    while (source.available() > 0) {
       val size = source.readInt
       val bytes = new Array[Byte](size)
       source.readFully(bytes)
-      var taskState = TaskState.newBuilder.build
-      try {
-        taskState = TaskState.parseFrom(bytes)
-      } catch {
-        case e: com.google.protobuf.InvalidProtocolBufferException =>
-          log.warning("Unable to parse state")
-      }
-      for (task <- taskState.getRunningList.asScala) {
-        if (!apps.contains(task.getAppName)) {
-          apps(task.getAppName) =
-            new App(task.getAppName,
-              new mutable.HashSet[MarathonTask](), false)
-        }
-        apps(task.getAppName).tasks += task
-      }
-      /*stagedCount.clear
-      for (task <- taskState.getStagedList.asScala) {
-        stagedTasks(task.getId) =
-          new StagedTask(task.getTask, task.getAppName, task.getStarted)
-        stagedCount(task.getAppName) += 1
-      }*/
+      results += MarathonTask.parseFrom(bytes)
     }
+    results
   }
 
-  def serialize(sink: ObjectOutputStream) = {
-    var taskStateBuilder =
-      TaskState.newBuilder()
-    for (appName <- apps.keySet) {
-      for (task <- apps(appName).tasks) {
-        taskStateBuilder.addRunning(
-          MarathonTask.newBuilder()
-          .mergeFrom(task)
-        )
-      }
+  def serialize(tasks: Set[MarathonTask], sink: ObjectOutputStream) {
+    for (task <- tasks) {
+      val size = task.getSerializedSize
+      sink.writeInt(size)
+      sink.write(task.toByteArray)
     }
-    for (key <- stagedTasks.keySet) {
-      val task = stagedTasks(key)
-      taskStateBuilder.addStaged(
-        MarathonTask.newBuilder()
-        .mergeFrom(task.marathonTask)
-      )
-    }
-    val taskState = taskStateBuilder.build
-    val size = taskState.getSerializedSize
-    sink.writeInt(size)
-    sink.write(taskState.toByteArray)
     sink.flush()
   }
 
@@ -238,29 +172,21 @@ class TaskTracker @Inject()(state: State) {
     val oldVar = fetchVariable(appName)
     val bytes = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(bytes)
-    serialize(output)
+    serialize(get(appName), output)
     val newVar = oldVar.mutate(bytes.toByteArray)
     state.store(newVar)
   }
 
-  def checkStagedTasks = {
+  def checkStagedTasks: Iterable[MarathonTask] = {
     val now = System.currentTimeMillis
     val expires = now - Main.conf.taskLaunchTimeout()
-    var toKill = new mutable.HashSet[String]
-    for (taskId <- stagedTasks.keySet) {
-      val task = stagedTasks(taskId)
-      if (task.marathonTask.getStarted < expires) {
-        log.warning(s"Task '${taskId}' was started ${(now - task.marathonTask.getStarted)/1000}s ago and has not yet started")
-        toKill += taskId
-      }
-    }
-    for (taskId <- toKill) {
-      // Remove each from staged tasks, if it exists.
-      if (stagedTasks.contains(taskId)) {
-        stagedCount(stagedTasks(taskId).appName) -= 1
-        stagedTasks.remove(taskId)
-      }
-    }
-    toKill.toList
+    val toKill = apps.values.map { app =>
+      app.tasks.filter(t => t.getStartedAt == null && t.getStagedAt < expires)
+    }.flatten
+
+    toKill.foreach(t => {
+      log.warning(s"Task '${t.getId}' was staged ${(now - t.getStagedAt)/1000}s ago and has not yet started")
+    })
+    toKill
   }
 }
