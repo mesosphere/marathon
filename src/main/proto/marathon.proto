@@ -15,6 +15,7 @@ message Constraint {
       UNIQUE = 0;
       LIKE = 1;
       CLUSTER = 2;
+      GROUP_BY = 3;
   }
   required Operator operator = 2;
   optional string value = 3;

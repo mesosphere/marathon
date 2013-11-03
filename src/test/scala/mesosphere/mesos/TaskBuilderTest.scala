@@ -165,7 +165,7 @@ class TaskBuilderTest extends AssertionsForJUnit
     val app = makeBasicApp()
     app.instances = 10
     app.constraints = Set(
-      ("rackid", Constraint.Operator.CLUSTER.toString, None),
+      ("rackid", Constraint.Operator.GROUP_BY.toString, Some("3")),
       ("hostname", Constraint.Operator.UNIQUE.toString, None)
     )
 

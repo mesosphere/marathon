@@ -56,11 +56,13 @@ public final class Protos {
       UNIQUE(0, 0),
       LIKE(1, 1),
       CLUSTER(2, 2),
+      GROUP_BY(3, 3),
       ;
       
       public static final int UNIQUE_VALUE = 0;
       public static final int LIKE_VALUE = 1;
       public static final int CLUSTER_VALUE = 2;
+      public static final int GROUP_BY_VALUE = 3;
       
       
       public final int getNumber() { return value; }
@@ -70,6 +72,7 @@ public final class Protos {
           case 0: return UNIQUE;
           case 1: return LIKE;
           case 2: return CLUSTER;
+          case 3: return GROUP_BY;
           default: return null;
         }
       }
@@ -100,7 +103,7 @@ public final class Protos {
       }
       
       private static final Operator[] VALUES = {
-        UNIQUE, LIKE, CLUSTER, 
+        UNIQUE, LIKE, CLUSTER, GROUP_BY, 
       };
       
       public static Operator valueOf(
@@ -3186,21 +3189,21 @@ public final class Protos {
   static {
     java.lang.String[] descriptorData = {
       "\n\016marathon.proto\022\023mesosphere.marathon\032\013m" +
-      "esos.proto\"\225\001\n\nConstraint\022\r\n\005field\030\001 \002(\t" +
+      "esos.proto\"\243\001\n\nConstraint\022\r\n\005field\030\001 \002(\t" +
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
-      ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\"-\n\010O" +
+      ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\";\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\"\377\001\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003" +
-      "cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n\tinstanc" +
-      "es\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Reso" +
-      "urce\022\023\n\013description\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r" +
-      "\0224\n\013constraints\030\007 \003(\0132\037.mesosphere.marat",
-      "hon.Constraint\022\022\n\010executor\030\010 \002(\t:\000\022\030\n\rta" +
-      "skRateLimit\030\t \001(\001:\0011\"\204\001\n\014MarathonTask\022\n\n" +
-      "\002id\030\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\r\n\005ports\030\003 \003(\r\022$" +
-      "\n\nattributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\t" +
-      "staged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003B\035\n\023m" +
-      "esosphere.marathonB\006Protos"
+      "\020\002\022\014\n\010GROUP_BY\020\003\"\377\001\n\021ServiceDefinition\022\n" +
+      "\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandI" +
+      "nfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(" +
+      "\0132\017.mesos.Resource\022\023\n\013description\030\005 \001(\t\022" +
+      "\r\n\005ports\030\006 \003(\r\0224\n\013constraints\030\007 \003(\0132\037.me",
+      "sosphere.marathon.Constraint\022\022\n\010executor" +
+      "\030\010 \002(\t:\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011\"\204\001\n\014M" +
+      "arathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\r\n" +
+      "\005ports\030\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos" +
+      ".Attribute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted" +
+      "_at\030\006 \001(\003B\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
