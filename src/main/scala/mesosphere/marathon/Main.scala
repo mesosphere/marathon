@@ -10,13 +10,15 @@ import mesosphere.marathon.event.{EventModule, EventConfiguration}
 import mesosphere.marathon.event.http.{HttpEventModule, HttpEventConfiguration}
 import com.google.inject.AbstractModule
 import java.util.logging.Logger
+import java.util.Properties
 
 /**
  * @author Tobi Knaup
  */
 object Main extends App {
 
-  val VERSION = "0.1.1-SNAPSHOT"
+  val properties: Properties = new Properties
+  properties.load(this.getClass.getClassLoader.getResourceAsStream("marathon.properties"))
 
   val log = Logger.getLogger(getClass.getName)
 

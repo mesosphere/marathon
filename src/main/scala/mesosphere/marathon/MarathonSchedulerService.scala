@@ -41,7 +41,7 @@ class MarathonSchedulerService @Inject()(
 
   val log = Logger.getLogger(getClass.getName)
 
-  val frameworkName = "marathon-" + Main.VERSION
+  val frameworkName = "marathon-" + Main.properties.getProperty("marathon.version")
 
   val frameworkInfo = FrameworkInfo.newBuilder()
     .setName(frameworkName)
