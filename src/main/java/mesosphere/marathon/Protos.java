@@ -680,7 +680,7 @@ public final class Protos {
     boolean hasExecutor();
     String getExecutor();
     
-    // optional double taskRateLimit = 9;
+    // optional double taskRateLimit = 9 [default = 1];
     boolean hasTaskRateLimit();
     double getTaskRateLimit();
   }
@@ -888,7 +888,7 @@ public final class Protos {
       }
     }
     
-    // optional double taskRateLimit = 9;
+    // optional double taskRateLimit = 9 [default = 1];
     public static final int TASKRATELIMIT_FIELD_NUMBER = 9;
     private double taskRateLimit_;
     public boolean hasTaskRateLimit() {
@@ -907,7 +907,7 @@ public final class Protos {
       ports_ = java.util.Collections.emptyList();;
       constraints_ = java.util.Collections.emptyList();
       executor_ = "";
-      taskRateLimit_ = 0D;
+      taskRateLimit_ = 1D;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1185,7 +1185,7 @@ public final class Protos {
         }
         executor_ = "";
         bitField0_ = (bitField0_ & ~0x00000080);
-        taskRateLimit_ = 0D;
+        taskRateLimit_ = 1D;
         bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
@@ -2137,8 +2137,8 @@ public final class Protos {
         onChanged();
       }
       
-      // optional double taskRateLimit = 9;
-      private double taskRateLimit_ ;
+      // optional double taskRateLimit = 9 [default = 1];
+      private double taskRateLimit_ = 1D;
       public boolean hasTaskRateLimit() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
@@ -2153,7 +2153,7 @@ public final class Protos {
       }
       public Builder clearTaskRateLimit() {
         bitField0_ = (bitField0_ & ~0x00000100);
-        taskRateLimit_ = 0D;
+        taskRateLimit_ = 1D;
         onChanged();
         return this;
       }
@@ -3190,17 +3190,17 @@ public final class Protos {
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\"-\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\"\374\001\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003" +
+      "\020\002\"\377\001\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003" +
       "cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n\tinstanc" +
       "es\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Reso" +
       "urce\022\023\n\013description\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r" +
       "\0224\n\013constraints\030\007 \003(\0132\037.mesosphere.marat",
-      "hon.Constraint\022\022\n\010executor\030\010 \002(\t:\000\022\025\n\rta" +
-      "skRateLimit\030\t \001(\001\"\204\001\n\014MarathonTask\022\n\n\002id" +
-      "\030\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\r\n\005ports\030\003 \003(\r\022$\n\na" +
-      "ttributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tsta" +
-      "ged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003B\035\n\023meso" +
-      "sphere.marathonB\006Protos"
+      "hon.Constraint\022\022\n\010executor\030\010 \002(\t:\000\022\030\n\rta" +
+      "skRateLimit\030\t \001(\001:\0011\"\204\001\n\014MarathonTask\022\n\n" +
+      "\002id\030\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\r\n\005ports\030\003 \003(\r\022$" +
+      "\n\nattributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\t" +
+      "staged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003B\035\n\023m" +
+      "esosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
