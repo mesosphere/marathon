@@ -17,9 +17,9 @@ class MarathonRestModule extends RestModule {
     bind(classOf[DebugResource]).in(Scopes.SINGLETON)
     bind(classOf[EndpointsResource]).in(Scopes.SINGLETON)
     bind(classOf[TasksResource]).in(Scopes.SINGLETON)
-    bind(classOf[RedirectFilter]).asEagerSingleton()
+    bind(classOf[LeaderProxyFilter]).asEagerSingleton()
 
     //This filter will redirect to the master if running in HA mode.
-    filter("/*").through(classOf[RedirectFilter])
+    filter("/*").through(classOf[LeaderProxyFilter])
   }
 }

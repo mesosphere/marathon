@@ -5,14 +5,20 @@ import com.google.inject.Inject
 import java.net.{HttpURLConnection, URL}
 import java.io.{OutputStream, InputStream}
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.logging.Logger
+import java.util.logging.{Level, Logger}
 import javax.inject.Named
 import javax.servlet._
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import mesosphere.marathon.{MarathonSchedulerService, ModuleNames}
 
 
-class RedirectFilter @Inject()
+/**
+ * Servlet filter that proxies requests to the leader if we are not the leader.
+ *
+ * @param schedulerService
+ * @param leader
+ */
+class LeaderProxyFilter @Inject()
     (schedulerService: MarathonSchedulerService,
      @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean)
   extends Filter  {
@@ -30,6 +36,7 @@ class RedirectFilter @Inject()
   }
 
   def buildUrl(leaderData: String, request: HttpServletRequest) = {
+    // TODO handle https
     if (request.getQueryString != null) {
       new URL("http://%s%s?%s".format(leaderData, request.getRequestURI, request.getQueryString))
     } else {
@@ -49,7 +56,7 @@ class RedirectFilter @Inject()
         if (schedulerService.isLeader) {
           chain.doFilter(request, response)
         } else {
-          log.info("Proxying request.")
+          log.info(s"Proxying request to leader at ${leaderData.get}")
 
           val method = request.getMethod
 
@@ -88,12 +95,10 @@ class RedirectFilter @Inject()
           // getHeaderNames() and getHeaders() are known to return null, see:
           // http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
           if (fields != null) {
-            for (field <- fields.asScala) {
-              if (field._1 != null) {
-                for (value <- field._2.asScala) {
-                  if (value != null) {
-                    response.setHeader(field._1, value)
-                  }
+            for ((name, values) <- fields.asScala) {
+              if (name != null && values != null) {
+                for (value <- values.asScala) {
+                  response.setHeader(name, value)
                 }
               }
             }
@@ -106,7 +111,8 @@ class RedirectFilter @Inject()
         }
       }
     } catch {
-      case t: Throwable => log.warning("Exception while proxying: " + t)
+      case e: Exception =>
+        log.log(Level.WARNING, "Exception while proxying", e)
     }
   }
 
