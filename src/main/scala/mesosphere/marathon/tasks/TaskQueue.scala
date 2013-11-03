@@ -29,4 +29,11 @@ class TaskQueue {
   def count(app: AppDefinition): Int = {
     queue.asScala.count(_.id == app.id)
   }
+
+  def purge(app: AppDefinition) {
+    val toRemove = queue.asScala.filter(_.id == app.id)
+    for (app <- toRemove) {
+      queue.remove(app)
+    }
+  }
 }

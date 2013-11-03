@@ -188,6 +188,7 @@ class MarathonScheduler @Inject()(
           log.info("Killing task " + task.getId)
           driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
         }
+        taskQueue.purge(app)
         taskTracker.shutDown(app.id)
         // TODO after all tasks have been killed we should remove the app from taskTracker
       case Failure(t) =>
