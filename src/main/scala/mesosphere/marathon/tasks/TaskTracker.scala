@@ -5,7 +5,7 @@ import scala.collection.JavaConverters._
 import org.apache.mesos.Protos.TaskID
 import javax.inject.Inject
 import org.apache.mesos.state.State
-import java.util.logging.Logger
+import java.util.logging.{Level, Logger}
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.Main
 import java.io._
@@ -146,11 +146,16 @@ class TaskTracker @Inject()(state: State) {
 
   def deserialize(source: ObjectInputStream): mutable.HashSet[MarathonTask] = {
     var results = mutable.HashSet[MarathonTask]()
-    while (source.available() > 0) {
-      val size = source.readInt
-      val bytes = new Array[Byte](size)
-      source.readFully(bytes)
-      results += MarathonTask.parseFrom(bytes)
+    try {
+      while (source.available() > 0) {
+        val size = source.readInt
+        val bytes = new Array[Byte](size)
+        source.readFully(bytes)
+        results += MarathonTask.parseFrom(bytes)
+      }
+    } catch {
+      case e: com.google.protobuf.InvalidProtocolBufferException =>
+        log.log(Level.WARNING, "Unable to deserialize task state", e)
     }
     results
   }
