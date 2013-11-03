@@ -7,24 +7,25 @@ import org.apache.mesos.Protos.Value.Text
 import org.junit.Assert._
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.Constraint.Operator
+import scala.collection.JavaConverters._
 
 /**
  * @author Florian Leibert (flo@leibert.de)
  */
 class ConstraintsTest {
 
-  def makeSampleTask(id: String, attr: String, attrVal: String) = {
+  def makeSampleTask(id: String, attrs: Map[String, String]) = {
+    val attrProtos = for {
+      (name, value) <- attrs
+    } yield {
+      makeAttribute(name, value)
+    }
+
     MarathonTask.newBuilder()
       .setHost("host")
       .addAllPorts(Lists.newArrayList(999))
       .setId(id)
-      .addAttributes(
-      Attribute.newBuilder()
-        .setName(attr)
-        .setText(Text.newBuilder()
-        .setValue(attrVal))
-        .setType(org.apache.mesos.Protos.Value.Type.TEXT)
-        .build())
+      .addAllAttributes(attrProtos.asJava)
       .build()
   }
 
@@ -98,9 +99,9 @@ class ConstraintsTest {
 
   @Test
   def testRackConstraints() {
-    val task1_rack1 = makeSampleTask("task1", "rackid", "1")
-    val task2_rack1 = makeSampleTask("task2", "rackid", "1")
-    val task3_rack2 = makeSampleTask("task3", "rackid", "2")
+    val task1_rack1 = makeSampleTask("task1", Map("rackid" -> "1"))
+    val task2_rack1 = makeSampleTask("task2", Map("rackid" -> "1"))
+    val task3_rack2 = makeSampleTask("task3", Map("rackid" -> "2"))
 
     val freshRack = Set()
     val sameRack = Set(task1_rack1, task2_rack1)

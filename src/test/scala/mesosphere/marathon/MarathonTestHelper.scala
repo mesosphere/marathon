@@ -12,8 +12,8 @@ import scala.collection.JavaConverters._
 
 trait MarathonTestHelper {
 
-  def makeBasicOffer(cpus: Double, mem: Double,
-                     beginPort: Int, endPort: Int) = {
+  def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000,
+                     beginPort: Int = 31000, endPort: Int = 32000) = {
     val portsResource = makePortsResource(Seq((beginPort, endPort)))
     val cpusResource = TaskBuilder.scalarResource("cpus", cpus)
     val memResource = TaskBuilder.scalarResource("mem", mem)
