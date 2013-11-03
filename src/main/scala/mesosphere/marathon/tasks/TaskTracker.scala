@@ -1,11 +1,13 @@
 package mesosphere.marathon.tasks
 
 import scala.collection._
+import scala.collection.JavaConverters._
 import org.apache.mesos.Protos.TaskID
 import javax.inject.Inject
 import org.apache.mesos.state.State
 import java.util.logging.Logger
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.Protos._
+import mesosphere.marathon.Main
 import java.io._
 import scala.Some
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,60 +25,84 @@ class TaskTracker @Inject()(state: State) {
 
   val prefix = "tasks:"
 
-  private val tasks = new mutable.HashMap[String, mutable.Set[MarathonTask]] with
-    mutable.SynchronizedMap[String, mutable.Set[MarathonTask]]
-  private val stagedTasks = new mutable.HashMap[String, MarathonTask] with
-    mutable.SynchronizedMap[String, MarathonTask]
+  class App(
+    val appName: String,
+    var tasks: mutable.Set[MarathonTask],
+    var shutdown: Boolean
+  )
+
+  private val apps = new mutable.HashMap[String, App] with
+    mutable.SynchronizedMap[String, App]
 
   def get(appName: String) = {
-    tasks.getOrElseUpdate(appName, fetch(appName))
+    apps.getOrElseUpdate(appName, fetch(appName)).tasks
   }
 
-  def list() = {
-    tasks
+  def list = {
+    apps
   }
 
   def count(appName: String) = {
     get(appName).size
   }
 
-  def drop(appName: String, n: Int) = {
-    get(appName).drop(n)
+  def take(appName: String, n: Int) = {
+    get(appName).take(n)
   }
 
   def starting(appName: String, task: MarathonTask) {
     // Keep this here so running() can pick it up
-    stagedTasks(task.getId) = task
+    get(appName) += task
   }
 
-  def running(appName: String, taskId: TaskID): Future[Option[MarathonTask]] = {
-    val task = stagedTasks.remove(taskId.getValue) match {
-      case Some(task) => {
-        get(appName) += task
-        task
+  def running(appName: String, taskId: String): Future[MarathonTask] = {
+    val task = get(appName).find(_.getId == taskId) match {
+      case Some(stagedTask) => {
+        get(appName).remove(stagedTask)
+        stagedTask.toBuilder
+          .setStartedAt(System.currentTimeMillis)
+          .build
       }
-      case None => {
-        log.warning(s"No staged task for ID ${taskId.getValue}")
-        get(appName).find(_.getId == taskId.getValue).getOrElse {
-          // We lost track of the host and port of this task, but still need to keep track of it
-          val task = MarathonTasks.makeTask(taskId.getValue, "", List(), List())
-          get(appName) += task
-          task
-        }
+      case _ => {
+        log.warning(s"No staged task for ID ${taskId}")
+        // We lost track of the host and port of this task, but still need to keep track of it
+        MarathonTask.newBuilder
+          .setId(taskId)
+          .setStagedAt(System.currentTimeMillis)
+          .setStartedAt(System.currentTimeMillis)
+          .build
       }
     }
-    store(appName).map(_ => Some(task))
+    get(appName) += task
+    store(appName).map(_ => task)
   }
 
   def terminated(appName: String,
-                 taskId: TaskID): Future[Option[MarathonTask]] = {
+                 taskId: String): Future[Option[MarathonTask]] = {
+    val now = System.currentTimeMillis
     val appTasks = get(appName)
-    appTasks.find(_.getId == taskId.getValue) match {
+
+    appTasks.find(_.getId == taskId) match {
       case Some(task) => {
-        tasks(appName) = appTasks - task
-        store(appName).map(_ => Some(task))
+        apps(appName).tasks = appTasks - task
+
+        val ret = store(appName).map(_ => Some(task))
+
+        log.info(s"Task ${taskId} removed from TaskTracker")
+
+        if (apps(appName).shutdown && apps(appName).tasks.isEmpty) {
+          // Are we shutting down this app? If so, expunge
+          expunge(appName)
+        }
+
+        ret
       }
-      case None => None
+      case None =>
+        if (apps(appName).shutdown && apps(appName).tasks.isEmpty) {
+          // Are we shutting down this app? If so, expunge
+          expunge(appName)
+        }
+        None
     }
   }
 
@@ -84,9 +110,15 @@ class TaskTracker @Inject()(state: State) {
     // NO-OP
   }
 
-  def shutDown(appName: String) {
+  def expunge(appName: String) {
     val variable = fetchVariable(appName)
     state.expunge(variable)
+    apps.remove(appName)
+    log.warning(s"Expunged app ${appName}")
+  }
+
+  def shutDown(appName: String) {
+    apps.getOrElseUpdate(appName, fetch(appName)).shutdown = true
   }
 
   def newTaskId(appName: String) = {
@@ -96,14 +128,19 @@ class TaskTracker @Inject()(state: State) {
       .build
   }
 
-  def fetch(appName: String): mutable.Set[MarathonTask] = {
+  def fetch(appName: String): App = {
     val bytes = fetchVariable(appName).value()
     if (bytes.length > 0) {
       val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
       deserialize(source)
+    }
+
+    if (apps.contains(appName)) {
+      apps(appName)
       //set.map(map => MarathonTask(map("id"), map("host"), map("port").asInstanceOf[Int], map("attributes"))
     } else {
-      new mutable.HashSet[MarathonTask]()
+      new App(appName,
+        new mutable.HashSet[MarathonTask](), false)
     }
   }
 
@@ -118,7 +155,7 @@ class TaskTracker @Inject()(state: State) {
     results
   }
 
-  def serialize(tasks: Set[MarathonTask], sink: ObjectOutputStream) = {
+  def serialize(tasks: Set[MarathonTask], sink: ObjectOutputStream) {
     for (task <- tasks) {
       val size = task.getSerializedSize
       sink.writeInt(size)
@@ -135,8 +172,21 @@ class TaskTracker @Inject()(state: State) {
     val oldVar = fetchVariable(appName)
     val bytes = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(bytes)
-    serialize(tasks(appName), output)
+    serialize(get(appName), output)
     val newVar = oldVar.mutate(bytes.toByteArray)
     state.store(newVar)
+  }
+
+  def checkStagedTasks: Iterable[MarathonTask] = {
+    val now = System.currentTimeMillis
+    val expires = now - Main.conf.taskLaunchTimeout()
+    val toKill = apps.values.map { app =>
+      app.tasks.filter(t => t.getStartedAt == null && t.getStagedAt < expires)
+    }.flatten
+
+    toKill.foreach(t => {
+      log.warning(s"Task '${t.getId}' was staged ${(now - t.getStagedAt)/1000}s ago and has not yet started")
+    })
+    toKill
   }
 }

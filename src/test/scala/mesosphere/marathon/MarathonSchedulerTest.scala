@@ -56,6 +56,7 @@ class MarathonSchedulerTest extends AssertionsForJUnit
 
     when(tracker.newTaskId("testOffers"))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
+    when(tracker.checkStagedTasks).thenReturn(Seq())
     when(queue.poll()).thenReturn(app)
 
     scheduler.resourceOffers(driver, offers)

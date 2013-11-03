@@ -37,4 +37,6 @@ message MarathonTask {
   required string host = 2;
   repeated uint32 ports = 3;
   repeated mesos.Attribute attributes = 4;
+  optional int64 staged_at = 5;
+  optional int64 started_at = 6;
 }

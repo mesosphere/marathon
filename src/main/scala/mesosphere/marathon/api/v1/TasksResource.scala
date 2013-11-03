@@ -23,9 +23,9 @@ class TasksResource @Inject()(
   @GET
   @Timed
   def list = {
-    taskTracker.list().map { case ((key, setOfTasks)) =>
+    taskTracker.list.map { case ((key, setOfTasks)) =>
       // TODO teach Jackson how to serialize a MarathonTask instead
-      (key, setOfTasks.map(s => s: Map[String, Object]))
+      (key, setOfTasks.tasks.map(s => s: Map[String, Object]))
     }
   }
 

@@ -2194,6 +2194,14 @@ public final class Protos {
         getAttributesOrBuilderList();
     org.apache.mesos.Protos.AttributeOrBuilder getAttributesOrBuilder(
         int index);
+    
+    // optional int64 staged_at = 5;
+    boolean hasStagedAt();
+    long getStagedAt();
+    
+    // optional int64 started_at = 6;
+    boolean hasStartedAt();
+    long getStartedAt();
   }
   public static final class MarathonTask extends
       com.google.protobuf.GeneratedMessage
@@ -2323,11 +2331,33 @@ public final class Protos {
       return attributes_.get(index);
     }
     
+    // optional int64 staged_at = 5;
+    public static final int STAGED_AT_FIELD_NUMBER = 5;
+    private long stagedAt_;
+    public boolean hasStagedAt() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public long getStagedAt() {
+      return stagedAt_;
+    }
+    
+    // optional int64 started_at = 6;
+    public static final int STARTED_AT_FIELD_NUMBER = 6;
+    private long startedAt_;
+    public boolean hasStartedAt() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public long getStartedAt() {
+      return startedAt_;
+    }
+    
     private void initFields() {
       id_ = "";
       host_ = "";
       ports_ = java.util.Collections.emptyList();;
       attributes_ = java.util.Collections.emptyList();
+      stagedAt_ = 0L;
+      startedAt_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2367,6 +2397,12 @@ public final class Protos {
       for (int i = 0; i < attributes_.size(); i++) {
         output.writeMessage(4, attributes_.get(i));
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt64(5, stagedAt_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeInt64(6, startedAt_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -2396,6 +2432,14 @@ public final class Protos {
       for (int i = 0; i < attributes_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(4, attributes_.get(i));
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(5, stagedAt_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(6, startedAt_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2534,6 +2578,10 @@ public final class Protos {
         } else {
           attributesBuilder_.clear();
         }
+        stagedAt_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        startedAt_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       
@@ -2594,6 +2642,14 @@ public final class Protos {
         } else {
           result.attributes_ = attributesBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.stagedAt_ = stagedAt_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.startedAt_ = startedAt_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2651,6 +2707,12 @@ public final class Protos {
               attributesBuilder_.addAllMessages(other.attributes_);
             }
           }
+        }
+        if (other.hasStagedAt()) {
+          setStagedAt(other.getStagedAt());
+        }
+        if (other.hasStartedAt()) {
+          setStartedAt(other.getStartedAt());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -2725,6 +2787,16 @@ public final class Protos {
               org.apache.mesos.Protos.Attribute.Builder subBuilder = org.apache.mesos.Protos.Attribute.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addAttributes(subBuilder.buildPartial());
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              stagedAt_ = input.readInt64();
+              break;
+            }
+            case 48: {
+              bitField0_ |= 0x00000020;
+              startedAt_ = input.readInt64();
               break;
             }
           }
@@ -3036,6 +3108,48 @@ public final class Protos {
         return attributesBuilder_;
       }
       
+      // optional int64 staged_at = 5;
+      private long stagedAt_ ;
+      public boolean hasStagedAt() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      public long getStagedAt() {
+        return stagedAt_;
+      }
+      public Builder setStagedAt(long value) {
+        bitField0_ |= 0x00000010;
+        stagedAt_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearStagedAt() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        stagedAt_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional int64 started_at = 6;
+      private long startedAt_ ;
+      public boolean hasStartedAt() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      public long getStartedAt() {
+        return startedAt_;
+      }
+      public Builder setStartedAt(long value) {
+        bitField0_ |= 0x00000020;
+        startedAt_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearStartedAt() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        startedAt_ = 0L;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.MarathonTask)
     }
     
@@ -3082,9 +3196,10 @@ public final class Protos {
       "urce\022\023\n\013description\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r" +
       "\0224\n\013constraints\030\007 \003(\0132\037.mesosphere.marat",
       "hon.Constraint\022\022\n\010executor\030\010 \002(\t:\000\022\025\n\rta" +
-      "skRateLimit\030\t \001(\001\"]\n\014MarathonTask\022\n\n\002id\030" +
-      "\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nat" +
-      "tributes\030\004 \003(\0132\020.mesos.AttributeB\035\n\023meso" +
+      "skRateLimit\030\t \001(\001\"\204\001\n\014MarathonTask\022\n\n\002id" +
+      "\030\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\r\n\005ports\030\003 \003(\r\022$\n\na" +
+      "ttributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tsta" +
+      "ged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003B\035\n\023meso" +
       "sphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
@@ -3113,7 +3228,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
-              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", },
+              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", },
               mesosphere.marathon.Protos.MarathonTask.class,
               mesosphere.marathon.Protos.MarathonTask.Builder.class);
           return null;
