@@ -679,6 +679,10 @@ public final class Protos {
     // required string executor = 8 [default = ""];
     boolean hasExecutor();
     String getExecutor();
+    
+    // optional double taskRateLimit = 9;
+    boolean hasTaskRateLimit();
+    double getTaskRateLimit();
   }
   public static final class ServiceDefinition extends
       com.google.protobuf.GeneratedMessage
@@ -884,6 +888,16 @@ public final class Protos {
       }
     }
     
+    // optional double taskRateLimit = 9;
+    public static final int TASKRATELIMIT_FIELD_NUMBER = 9;
+    private double taskRateLimit_;
+    public boolean hasTaskRateLimit() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public double getTaskRateLimit() {
+      return taskRateLimit_;
+    }
+    
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -893,6 +907,7 @@ public final class Protos {
       ports_ = java.util.Collections.emptyList();;
       constraints_ = java.util.Collections.emptyList();
       executor_ = "";
+      taskRateLimit_ = 0D;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -962,6 +977,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeBytes(8, getExecutorBytes());
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeDouble(9, taskRateLimit_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -1007,6 +1025,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(8, getExecutorBytes());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeDoubleSize(9, taskRateLimit_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1163,6 +1185,8 @@ public final class Protos {
         }
         executor_ = "";
         bitField0_ = (bitField0_ & ~0x00000080);
+        taskRateLimit_ = 0D;
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
       
@@ -1248,6 +1272,10 @@ public final class Protos {
           to_bitField0_ |= 0x00000010;
         }
         result.executor_ = executor_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.taskRateLimit_ = taskRateLimit_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1340,6 +1368,9 @@ public final class Protos {
         }
         if (other.hasExecutor()) {
           setExecutor(other.getExecutor());
+        }
+        if (other.hasTaskRateLimit()) {
+          setTaskRateLimit(other.getTaskRateLimit());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1457,6 +1488,11 @@ public final class Protos {
             case 66: {
               bitField0_ |= 0x00000080;
               executor_ = input.readBytes();
+              break;
+            }
+            case 73: {
+              bitField0_ |= 0x00000100;
+              taskRateLimit_ = input.readDouble();
               break;
             }
           }
@@ -2099,6 +2135,27 @@ public final class Protos {
         bitField0_ |= 0x00000080;
         executor_ = value;
         onChanged();
+      }
+      
+      // optional double taskRateLimit = 9;
+      private double taskRateLimit_ ;
+      public boolean hasTaskRateLimit() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public double getTaskRateLimit() {
+        return taskRateLimit_;
+      }
+      public Builder setTaskRateLimit(double value) {
+        bitField0_ |= 0x00000100;
+        taskRateLimit_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearTaskRateLimit() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        taskRateLimit_ = 0D;
+        onChanged();
+        return this;
       }
       
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
@@ -3019,15 +3076,16 @@ public final class Protos {
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\"-\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\"\345\001\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003" +
+      "\020\002\"\374\001\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003" +
       "cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n\tinstanc" +
       "es\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Reso" +
       "urce\022\023\n\013description\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r" +
       "\0224\n\013constraints\030\007 \003(\0132\037.mesosphere.marat",
-      "hon.Constraint\022\022\n\010executor\030\010 \002(\t:\000\"]\n\014Ma" +
-      "rathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\r\n\005" +
-      "ports\030\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos." +
-      "AttributeB\035\n\023mesosphere.marathonB\006Protos"
+      "hon.Constraint\022\022\n\010executor\030\010 \002(\t:\000\022\025\n\rta" +
+      "skRateLimit\030\t \001(\001\"]\n\014MarathonTask\022\n\n\002id\030" +
+      "\001 \002(\t\022\014\n\004host\030\002 \002(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nat" +
+      "tributes\030\004 \003(\0132\020.mesos.AttributeB\035\n\023meso" +
+      "sphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -3047,7 +3105,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", },
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "TaskRateLimit", },
               mesosphere.marathon.Protos.ServiceDefinition.class,
               mesosphere.marathon.Protos.ServiceDefinition.Builder.class);
           internal_static_mesosphere_marathon_MarathonTask_descriptor =

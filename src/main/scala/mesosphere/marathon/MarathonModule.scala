@@ -16,6 +16,7 @@ import mesosphere.marathon.state.MarathonStore
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.RateLimiters
 
 /**
  * @author Tobi Knaup
@@ -26,12 +27,13 @@ object ModuleNames {
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
 }
 
-class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
+class MarathonModule(conf: MarathonConf with ZookeeperConf)
+  extends AbstractModule {
 
   val log = Logger.getLogger(getClass.getName)
 
   def configure() {
-    bind(classOf[MarathonConfiguration]).toInstance(conf)
+    bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
@@ -45,6 +47,9 @@ class MarathonModule(conf: MarathonConfiguration) extends AbstractModule {
     bind(classOf[AtomicBoolean])
       .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
+
+    val rateLimiters = new RateLimiters()
+    bind(classOf[RateLimiters]).toInstance(rateLimiters)
   }
 
   @Provides

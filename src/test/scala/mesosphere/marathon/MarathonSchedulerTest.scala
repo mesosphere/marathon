@@ -17,6 +17,7 @@ import org.mockito.ArgumentCaptor
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.RateLimiters
 
 /**
  * @author Tobi Knaup
@@ -29,6 +30,7 @@ class MarathonSchedulerTest extends AssertionsForJUnit
   var queue: TaskQueue = null
   var scheduler: MarathonScheduler = null
   var frameworkIdUtil: FrameworkIdUtil = null
+  var rateLimiters: RateLimiters = null
 
   @Before
   def setupScheduler() = {
@@ -36,8 +38,10 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     tracker = mock[TaskTracker]
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
+    rateLimiters = mock[RateLimiters]
     scheduler = new MarathonScheduler(
-      None, new ObjectMapper, store, tracker, queue, frameworkIdUtil)
+      None, new ObjectMapper, store, tracker, queue, frameworkIdUtil,
+      rateLimiters)
   }
 
   @Test
