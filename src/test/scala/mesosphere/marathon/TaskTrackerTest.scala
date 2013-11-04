@@ -100,10 +100,10 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       val baos = new ByteArrayOutputStream()
       baos.flush()
       val oos = new ObjectOutputStream(baos)
-      taskTracker.serialize(taskTracker.get("app1"), oos)
+      taskTracker.serialize("app1", taskTracker.get("app1"), oos)
 
       val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
-      taskTracker.deserialize(ois)
+      taskTracker.deserialize("app1", ois)
       assertTrue("Tasks are not properly serialized", taskTracker.count("app1") == 3)
     }
 
@@ -115,10 +115,10 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       val baos = new ByteArrayOutputStream()
       baos.flush()
       val oos = new ObjectOutputStream(baos)
-      taskTracker.serialize(taskTracker.get("app1"), oos)
+      taskTracker.serialize("app1", taskTracker.get("app1"), oos)
 
       val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
-      taskTracker.deserialize(ois)
+      taskTracker.deserialize("app1", ois)
       assertTrue("Tasks are not properly serialized", taskTracker.count("app1") == 3)
     }
   }

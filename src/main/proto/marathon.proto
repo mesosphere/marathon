@@ -35,9 +35,14 @@ message ServiceDefinition {
 
 message MarathonTask {
   required string id = 1;
-  required string host = 2;
+  optional string host = 2;
   repeated uint32 ports = 3;
   repeated mesos.Attribute attributes = 4;
   optional int64 staged_at = 5;
   optional int64 started_at = 6;
+}
+
+message MarathonApp {
+  optional string name = 1;
+  repeated MarathonTask tasks = 2;
 }

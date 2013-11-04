@@ -132,7 +132,7 @@ class TaskTracker @Inject()(state: State) {
     val bytes = fetchVariable(appName).value()
     if (bytes.length > 0) {
       val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
-      deserialize(source)
+      deserialize(appName, source)
     }
 
     if (apps.contains(appName)) {
@@ -144,29 +144,42 @@ class TaskTracker @Inject()(state: State) {
     }
   }
 
-  def deserialize(source: ObjectInputStream): mutable.HashSet[MarathonTask] = {
+  def deserialize(appName: String, source: ObjectInputStream)
+    : mutable.HashSet[MarathonTask] = {
     var results = mutable.HashSet[MarathonTask]()
     try {
-      while (source.available() > 0) {
+      if (source.available > 0) {
         val size = source.readInt
         val bytes = new Array[Byte](size)
         source.readFully(bytes)
-        results += MarathonTask.parseFrom(bytes)
+        val app = MarathonApp.parseFrom(bytes)
+        if (app.getName != appName) {
+          log.warning(s"App name from task state for ${appName} is wrong!  Got '${app.getName}' Continuing anyway...")
+        }
+        for (task <- app.getTasksList.asScala) {
+          results += task
+        }
+      } else {
+        log.warning(s"Unable to deserialize task state for ${appName}")
       }
     } catch {
       case e: com.google.protobuf.InvalidProtocolBufferException =>
-        log.log(Level.WARNING, "Unable to deserialize task state", e)
+        log.log(Level.WARNING, "Unable to deserialize task state for ${appName}", e)
     }
     results
   }
 
-  def serialize(tasks: Set[MarathonTask], sink: ObjectOutputStream) {
+  def serialize(appName: String, tasks: Set[MarathonTask], sink: ObjectOutputStream) {
+    var builder = MarathonApp.newBuilder
+    builder.setName(appName)
     for (task <- tasks) {
-      val size = task.getSerializedSize
-      sink.writeInt(size)
-      sink.write(task.toByteArray)
+      builder.addTasks(task)
     }
-    sink.flush()
+    val app = builder.build
+    val size = app.getSerializedSize
+    sink.writeInt(size)
+    sink.write(app.toByteArray)
+    sink.flush
   }
 
   def fetchVariable(appName: String) = {
@@ -177,7 +190,7 @@ class TaskTracker @Inject()(state: State) {
     val oldVar = fetchVariable(appName)
     val bytes = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(bytes)
-    serialize(get(appName), output)
+    serialize(appName, get(appName), output)
     val newVar = oldVar.mutate(bytes.toByteArray)
     state.store(newVar)
   }
