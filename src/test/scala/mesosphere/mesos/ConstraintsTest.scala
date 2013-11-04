@@ -169,7 +169,6 @@ class ConstraintsTest {
 
   @Test
   def testRackGroupedByConstraints() {
-    println("STARTderp")
     val task1_rack1 = makeSampleTask("task1", Map("rackid" -> "1"))
     val task2_rack1 = makeSampleTask("task2", Map("rackid" -> "1"))
     val task3_rack2 = makeSampleTask("task3", Map("rackid" -> "2"))
@@ -266,8 +265,6 @@ class ConstraintsTest {
 
     assertFalse(f"Should not meet unique constraint for rack. ${sameRack}",
       uniqueRackNotMet)
-
-    println("derpend")
   }
 
 }

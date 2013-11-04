@@ -161,9 +161,7 @@ class TaskTracker @Inject()(state: State) {
         if (app.getName != appName) {
           log.warning(s"App name from task state for ${appName} is wrong!  Got '${app.getName}' Continuing anyway...")
         }
-        for (task <- app.getTasksList.asScala) {
-          results += task
-        }
+        results ++= app.getTasksList.asScala.toSet
       } else {
         log.warning(s"Unable to deserialize task state for ${appName}")
       }
@@ -175,12 +173,11 @@ class TaskTracker @Inject()(state: State) {
   }
 
   def serialize(appName: String, tasks: Set[MarathonTask], sink: ObjectOutputStream) {
-    var builder = MarathonApp.newBuilder
-    builder.setName(appName)
-    for (task <- tasks) {
-      builder.addTasks(task)
-    }
-    val app = builder.build
+    val app = MarathonApp.newBuilder
+      .setName(appName)
+      .addAllTasks(tasks.toList.asJava)
+      .build
+
     val size = app.getSerializedSize
     sink.writeInt(size)
     sink.write(app.toByteArray)
