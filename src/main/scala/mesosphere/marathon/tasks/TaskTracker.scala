@@ -35,7 +35,7 @@ class TaskTracker @Inject()(state: State) {
     mutable.SynchronizedMap[String, App]
 
   def get(appName: String) = {
-    apps.getOrElseUpdate(appName, fetch(appName)).tasks
+    apps.getOrElseUpdate(appName, fetchApp(appName)).tasks
   }
 
   def list = {
@@ -111,14 +111,14 @@ class TaskTracker @Inject()(state: State) {
   }
 
   def expunge(appName: String) {
-    val variable = fetchVariable(appName)
+    val variable = fetchFromState(appName)
     state.expunge(variable)
     apps.remove(appName)
     log.warning(s"Expunged app ${appName}")
   }
 
   def shutDown(appName: String) {
-    apps.getOrElseUpdate(appName, fetch(appName)).shutdown = true
+    apps.getOrElseUpdate(appName, fetchApp(appName)).shutdown = true
   }
 
   def newTaskId(appName: String) = {
@@ -128,11 +128,16 @@ class TaskTracker @Inject()(state: State) {
       .build
   }
 
-  def fetch(appName: String): App = {
-    val bytes = fetchVariable(appName).value()
+  def fetchApp(appName: String): App = {
+    val bytes = fetchFromState(appName).value
     if (bytes.length > 0) {
       val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
-      deserialize(appName, source)
+      val fetchedTasks = deserialize(appName, source)
+      if (fetchedTasks.size > 0) {
+        apps(appName) =
+          new App(appName,
+            fetchedTasks, false)
+      }
     }
 
     if (apps.contains(appName)) {
@@ -182,12 +187,12 @@ class TaskTracker @Inject()(state: State) {
     sink.flush
   }
 
-  def fetchVariable(appName: String) = {
+  def fetchFromState(appName: String) = {
     state.fetch(prefix + appName).get()
   }
 
   def store(appName: String) {
-    val oldVar = fetchVariable(appName)
+    val oldVar = fetchFromState(appName)
     val bytes = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(bytes)
     serialize(appName, get(appName), output)
