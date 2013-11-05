@@ -33,8 +33,12 @@ class AppsResource @Inject()(
   @Timed
   def start(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    service.startApp(app)
-    Response.noContent.build
+    service.startApp(app) match {
+      case Some(_) =>
+        Response.noContent.build
+      case _ =>
+        Response.serverError.build
+    }
   }
 
   @POST
@@ -42,8 +46,12 @@ class AppsResource @Inject()(
   @Timed
   def stop(@Context req: HttpServletRequest, app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    service.stopApp(app)
-    Response.noContent.build
+    service.stopApp(app) match {
+      case Some(_) =>
+        Response.noContent.build
+      case _ =>
+        Response.serverError.build
+    }
   }
 
   @POST

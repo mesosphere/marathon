@@ -12,7 +12,7 @@ trait PersistenceStore[T] {
 
   def store(key: String, value: T): Future[Option[T]]
 
-  def expunge(key: String): Future[Boolean]
+  def expunge(key: String): Future[Option[Boolean]]
 
   def names(): Future[Iterator[String]]
 
