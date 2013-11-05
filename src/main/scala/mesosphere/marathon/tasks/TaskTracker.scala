@@ -35,7 +35,7 @@ class TaskTracker @Inject()(state: State) {
     mutable.SynchronizedMap[String, App]
 
   def get(appName: String) = {
-    apps.getOrElseUpdate(appName, fetch(appName)).tasks
+    apps.getOrElseUpdate(appName, fetchApp(appName)).tasks
   }
 
   def list = {
@@ -111,14 +111,14 @@ class TaskTracker @Inject()(state: State) {
   }
 
   def expunge(appName: String) {
-    val variable = fetchVariable(appName)
+    val variable = fetchFromState(appName)
     state.expunge(variable)
     apps.remove(appName)
     log.warning(s"Expunged app ${appName}")
   }
 
   def shutDown(appName: String) {
-    apps.getOrElseUpdate(appName, fetch(appName)).shutdown = true
+    apps.getOrElseUpdate(appName, fetchApp(appName)).shutdown = true
   }
 
   def newTaskId(appName: String) = {
@@ -128,11 +128,16 @@ class TaskTracker @Inject()(state: State) {
       .build
   }
 
-  def fetch(appName: String): App = {
-    val bytes = fetchVariable(appName).value()
+  def fetchApp(appName: String): App = {
+    val bytes = fetchFromState(appName).value
     if (bytes.length > 0) {
       val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
-      deserialize(source)
+      val fetchedTasks = deserialize(appName, source)
+      if (fetchedTasks.size > 0) {
+        apps(appName) =
+          new App(appName,
+            fetchedTasks, false)
+      }
     }
 
     if (apps.contains(appName)) {
@@ -144,40 +149,50 @@ class TaskTracker @Inject()(state: State) {
     }
   }
 
-  def deserialize(source: ObjectInputStream): mutable.HashSet[MarathonTask] = {
+  def deserialize(appName: String, source: ObjectInputStream)
+    : mutable.HashSet[MarathonTask] = {
     var results = mutable.HashSet[MarathonTask]()
     try {
-      while (source.available() > 0) {
+      if (source.available > 0) {
         val size = source.readInt
         val bytes = new Array[Byte](size)
         source.readFully(bytes)
-        results += MarathonTask.parseFrom(bytes)
+        val app = MarathonApp.parseFrom(bytes)
+        if (app.getName != appName) {
+          log.warning(s"App name from task state for ${appName} is wrong!  Got '${app.getName}' Continuing anyway...")
+        }
+        results ++= app.getTasksList.asScala.toSet
+      } else {
+        log.warning(s"Unable to deserialize task state for ${appName}")
       }
     } catch {
       case e: com.google.protobuf.InvalidProtocolBufferException =>
-        log.log(Level.WARNING, "Unable to deserialize task state", e)
+        log.log(Level.WARNING, "Unable to deserialize task state for ${appName}", e)
     }
     results
   }
 
-  def serialize(tasks: Set[MarathonTask], sink: ObjectOutputStream) {
-    for (task <- tasks) {
-      val size = task.getSerializedSize
-      sink.writeInt(size)
-      sink.write(task.toByteArray)
-    }
-    sink.flush()
+  def serialize(appName: String, tasks: Set[MarathonTask], sink: ObjectOutputStream) {
+    val app = MarathonApp.newBuilder
+      .setName(appName)
+      .addAllTasks(tasks.toList.asJava)
+      .build
+
+    val size = app.getSerializedSize
+    sink.writeInt(size)
+    sink.write(app.toByteArray)
+    sink.flush
   }
 
-  def fetchVariable(appName: String) = {
+  def fetchFromState(appName: String) = {
     state.fetch(prefix + appName).get()
   }
 
   def store(appName: String) {
-    val oldVar = fetchVariable(appName)
+    val oldVar = fetchFromState(appName)
     val bytes = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(bytes)
-    serialize(get(appName), output)
+    serialize(appName, get(appName), output)
     val newVar = oldVar.mutate(bytes.toByteArray)
     state.store(newVar)
   }

@@ -41,11 +41,11 @@ class MarathonSchedulerService @Inject()(
 
   val log = Logger.getLogger(getClass.getName)
 
-  val frameworkName = "marathon-" + Main.VERSION
+  val frameworkName = "marathon-" + Main.properties.getProperty("marathon.version")
 
   val frameworkInfo = FrameworkInfo.newBuilder()
     .setName(frameworkName)
-    .setFailoverTimeout(Main.conf.mesosFailoverTimeout())
+    .setFailoverTimeout(config.mesosFailoverTimeout())
     .setUser("") // Let Mesos assign the user
     .setCheckpoint(config.checkpoint())
 
@@ -60,7 +60,7 @@ class MarathonSchedulerService @Inject()(
     }
   }
   // Set the role, if provided.
-  Main.conf.mesosRole.get.map(frameworkInfo.setRole)
+  config.mesosRole.get.map(frameworkInfo.setRole)
 
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo.build, config.mesosMaster())
 

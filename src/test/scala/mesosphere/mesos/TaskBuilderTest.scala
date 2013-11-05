@@ -9,7 +9,7 @@ import org.junit._
 import org.mockito.Mockito._
 
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{MarathonTasks, TaskTracker}
 import org.scalatest.junit.AssertionsForJUnit
 import org.scalatest.mock.MockitoSugar
 import scala.collection.mutable
@@ -134,7 +134,7 @@ class TaskBuilderTest extends AssertionsForJUnit
   }
 
   @Test
-  def testBuildIfMatchesWithConstraint() {
+  def testBuildIfMatchesWithRackIdConstraint() {
     val taskTracker =  mock[TaskTracker]
 
     val offer = makeBasicOffer(1.0, 128.0, 31000, 32000)
@@ -156,6 +156,66 @@ class TaskBuilderTest extends AssertionsForJUnit
 
     assertTrue(task.isDefined)
     // TODO test for resources etc.
+  }
+
+  @Test
+  def testRackAndHostConstraints() {
+    // Test the case where we want tasks to be balanced across racks/AZs
+    // and run only one per machine
+    val app = makeBasicApp()
+    app.instances = 10
+    app.constraints = Set(
+      ("rackid", Constraint.Operator.GROUP_BY.toString, Some("3")),
+      ("hostname", Constraint.Operator.UNIQUE.toString, None)
+    )
+
+    val runningTasks = new mutable.HashSet[MarathonTask]()
+    val taskTracker = mock[TaskTracker]
+    when(taskTracker.get(app.id)).thenReturn(runningTasks)
+
+    val builder = new TaskBuilder(app,
+      s => TaskID.newBuilder.setValue(s).build, taskTracker)
+
+    def shouldBuildTask(message: String, offer: Offer) {
+      val tupleOption = builder.buildIfMatches(offer)
+      assertTrue(message, tupleOption.isDefined)
+      val marathonTask = MarathonTasks.makeTask(
+        tupleOption.get._1.getTaskId.getValue,
+        offer.getHostname,
+        tupleOption.get._2,
+        offer.getAttributesList.asScala.toList)
+      runningTasks.add(marathonTask)
+    }
+
+    def shouldNotBuildTask(message: String, offer: Offer) {
+      val tupleOption = builder.buildIfMatches(offer)
+      assertFalse(message, tupleOption.isDefined)
+    }
+
+    val offerRack1HostA = makeBasicOffer()
+      .setHostname("alpha")
+      .addAttributes(makeAttribute("rackid", "1"))
+      .build
+    shouldBuildTask("Should take first offer", offerRack1HostA)
+
+    val offerRack1HostB = makeBasicOffer()
+      .setHostname("beta")
+      .addAttributes(makeAttribute("rackid", "1"))
+      .build
+    shouldNotBuildTask("Should not take offer for the same rack", offerRack1HostB)
+
+    val offerRack2HostC = makeBasicOffer()
+      .setHostname("gamma")
+      .addAttributes(makeAttribute("rackid", "2"))
+      .build
+    shouldBuildTask("Should take offer for different rack", offerRack2HostC)
+
+    // Nothing prevents having two hosts with the same name in different racks
+    val offerRack3HostA = makeBasicOffer()
+      .setHostname("alpha")
+      .addAttributes(makeAttribute("rackid", "3"))
+      .build
+    shouldNotBuildTask("Should not take offer in different rack with non-unique hostname", offerRack3HostA)
   }
 
   @Test

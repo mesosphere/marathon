@@ -76,7 +76,46 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
     taskTracker.starting(app, task3)
     taskTracker.running(app, taskId3)
 
-    val results = taskTracker.fetch(app).tasks
+    val results = taskTracker.fetchApp(app).tasks
+
+    shouldContainTask(results, task1)
+    shouldContainTask(results, task2)
+    shouldContainTask(results, task3)
+  }
+
+  @Test
+  def testStoreFetchTasks() {
+    def shouldContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) {
+      assertTrue(
+        s"Should contain task ${task.getId}",
+        tasks.exists(t => t.getId == task.getId
+          && t.getHost == task.getHost
+          && t.getPortsList == task.getPortsList)
+      )
+    }
+
+    val state = new InMemoryState
+    val taskTracker1 = new TaskTracker(state)
+    val app = "foo"
+    val taskId1 = TaskIDUtil.taskId(app, 1)
+    val taskId2 = TaskIDUtil.taskId(app, 2)
+    val taskId3 = TaskIDUtil.taskId(app, 3)
+
+    val task1 = makeTask(taskId1, "foo.bar.bam", 100)
+    val task2 = makeTask(taskId2, "foo.bar.bam", 200)
+    val task3 = makeTask(taskId3, "foo.bar.bam", 300)
+
+    taskTracker1.starting(app, task1)
+    taskTracker1.running(app, taskId1)
+
+    taskTracker1.starting(app, task2)
+    taskTracker1.running(app, taskId2)
+
+    taskTracker1.starting(app, task3)
+    taskTracker1.running(app, taskId3)
+
+    val taskTracker2 = new TaskTracker(state)
+    val results = taskTracker2.fetchApp(app).tasks
 
     shouldContainTask(results, task1)
     shouldContainTask(results, task2)
@@ -100,10 +139,10 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       val baos = new ByteArrayOutputStream()
       baos.flush()
       val oos = new ObjectOutputStream(baos)
-      taskTracker.serialize(taskTracker.get("app1"), oos)
+      taskTracker.serialize("app1", taskTracker.get("app1"), oos)
 
       val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
-      taskTracker.deserialize(ois)
+      taskTracker.deserialize("app1", ois)
       assertTrue("Tasks are not properly serialized", taskTracker.count("app1") == 3)
     }
 
@@ -115,10 +154,10 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       val baos = new ByteArrayOutputStream()
       baos.flush()
       val oos = new ObjectOutputStream(baos)
-      taskTracker.serialize(taskTracker.get("app1"), oos)
+      taskTracker.serialize("app1", taskTracker.get("app1"), oos)
 
       val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
-      taskTracker.deserialize(ois)
+      taskTracker.deserialize("app1", ois)
       assertTrue("Tasks are not properly serialized", taskTracker.count("app1") == 3)
     }
   }
