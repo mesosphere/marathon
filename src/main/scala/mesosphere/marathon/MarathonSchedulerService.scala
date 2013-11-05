@@ -64,7 +64,7 @@ class MarathonSchedulerService @Inject()(
 
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo.build, config.mesosMaster())
 
-  def startApp(app: AppDefinition) {
+  def startApp(app: AppDefinition): Option[AppDefinition] = {
     // Backwards compatibility
     if (app.ports == Nil) {
       val port = newAppPort(app)
@@ -75,7 +75,7 @@ class MarathonSchedulerService @Inject()(
     scheduler.startApp(driver, app)
   }
 
-  def stopApp(app: AppDefinition) {
+  def stopApp(app: AppDefinition): Option[AppDefinition] = {
     scheduler.stopApp(driver, app)
   }
 

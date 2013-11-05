@@ -37,14 +37,14 @@ class MarathonStore[S <: MarathonState[_]](state: State,
     }
   }
 
-  def expunge(key: String): Future[Boolean] = {
+  def expunge(key: String): Future[Option[Boolean]] = {
     state.fetch(prefix + key) flatMap {
       case Some(variable) =>
         state.expunge(variable) map {
-          case Some(b) => b
-          case None => false
+          case Some(b) => Some(Boolean.unbox(b))
+          case None => None
         }
-      case None => false
+      case None => None
     }
   }
 

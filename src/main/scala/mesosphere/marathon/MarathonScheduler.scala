@@ -8,7 +8,7 @@ import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.MarathonStore
 import scala.util.{Failure, Success}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Await}
 import com.google.common.collect.Lists
 import javax.inject.{Named, Inject}
 import com.google.common.eventbus.EventBus
@@ -162,25 +162,29 @@ class MarathonScheduler @Inject()(
 
   // TODO move stuff below out of the scheduler
 
-  def startApp(driver: SchedulerDriver, app: AppDefinition) {
-    store.fetch(app.id).onComplete {
-      case Success(option) => if (option.isEmpty) {
-        store.store(app.id, app)
-        log.info("Starting app " + app.id)
-        taskTracker.startUp(app.id)
-        rateLimiters.setPermits(app.id, app.taskRateLimit)
-        scale(driver, app)
-      } else {
+  def startApp(driver: SchedulerDriver, app: AppDefinition): Option[AppDefinition] = {
+    Await.result(store.fetch(app.id), store.defaultWait) match {
+      case None =>
+        Await.result(store.store(app.id, app), store.defaultWait) match {
+          case Some(_) =>
+            log.info("Starting app " + app.id)
+            taskTracker.startUp(app.id)
+            rateLimiters.setPermits(app.id, app.taskRateLimit)
+            scale(driver, app)
+            Some(app)
+          case None =>
+            log.warning("Error starting app %s: couldn't store state".format(app.id))
+            None
+        }
+      case Some(someApp) =>
         log.warning("Already started app " + app.id)
-      }
-      case Failure(t) =>
-        log.log(Level.WARNING, "Failed to start app %s".format(app.id), t)
+        None
     }
   }
 
-  def stopApp(driver: SchedulerDriver, app: AppDefinition) {
-    store.expunge(app.id).onComplete {
-      case Success(_) =>
+  def stopApp(driver: SchedulerDriver, app: AppDefinition): Option[AppDefinition] = {
+    Await.result(store.expunge(app.id), store.defaultWait) match {
+      case Some(success) =>
         log.info("Stopping app " + app.id)
         val tasks = taskTracker.get(app.id)
 
@@ -190,9 +194,16 @@ class MarathonScheduler @Inject()(
         }
         taskQueue.purge(app)
         taskTracker.shutDown(app.id)
+        if (success) {
+          Some(app)
+        } else {
+          log.warning("Error stopping app %s: couldn't expunge state.  Attempted to stop app anyway.".format(app.id))
+          None
+        }
         // TODO after all tasks have been killed we should remove the app from taskTracker
-      case Failure(t) =>
-        log.warning("Error stopping app %s: %s".format(app.id, t.getMessage))
+      case None =>
+        log.warning("Error stopping app %s: couldn't expunge state".format(app.id))
+        None
     }
   }
 
@@ -202,8 +213,12 @@ class MarathonScheduler @Inject()(
         appOption match {
           case Some(storedApp) => {
             storedApp.instances = app.instances
-            store.store(app.id, storedApp)
-            scale(driver, storedApp)
+            store.store(app.id, storedApp).onComplete {
+              case Success(_) =>
+                scale(driver, storedApp)
+              case Failure(t) =>
+                log.warning("Error scaling app %s: %s".format(app.id, t.getMessage))
+            }
           }
           case None =>
             log.warning("Service unknown: %s".format(app.id))
