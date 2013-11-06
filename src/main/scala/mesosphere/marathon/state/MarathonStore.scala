@@ -5,6 +5,7 @@ import org.apache.mesos.state.State
 import scala.collection.JavaConverters._
 import scala.concurrent._
 import scala.concurrent.duration.Duration
+import mesosphere.marathon.StorageException
 
 /**
  * @author Tobi Knaup
@@ -22,7 +23,7 @@ class MarathonStore[S <: MarathonState[_]](state: State,
   def fetch(key: String): Future[Option[S]] = {
     state.fetch(prefix + key) map {
       case Some(variable) => stateFromBytes(variable.value)
-      case None => None
+      case None => throw new StorageException(s"Failed to read $key")
     }
   }
 
@@ -31,9 +32,9 @@ class MarathonStore[S <: MarathonState[_]](state: State,
       case Some(variable) =>
         state.store(variable.mutate(value.toProtoByteArray)) map {
           case Some(newVar) => stateFromBytes(newVar.value)
-          case None => None
+          case None => throw new StorageException(s"Failed to store $key")
         }
-      case None => None
+      case None => throw new StorageException(s"Failed to read $key")
     }
   }
 
@@ -42,9 +43,9 @@ class MarathonStore[S <: MarathonState[_]](state: State,
       case Some(variable) =>
         state.expunge(variable) map {
           case Some(b) => b
-          case None => false
+          case None => throw new StorageException(s"Failed to expunge $key")
         }
-      case None => false
+      case None => throw new StorageException(s"Failed to read $key")
     }
   }
 

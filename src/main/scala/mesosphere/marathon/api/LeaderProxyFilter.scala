@@ -47,15 +47,17 @@ class LeaderProxyFilter @Inject()
   def doFilter(rawRequest: ServletRequest,
                rawResponse: ServletResponse,
                chain: FilterChain) {
-    try {
-      if (rawRequest.isInstanceOf[HttpServletRequest]) {
-        val request = rawRequest.asInstanceOf[HttpServletRequest]
-        val leaderData = schedulerService.getLeader
-        val response = rawResponse.asInstanceOf[HttpServletResponse]
 
-        if (schedulerService.isLeader) {
-          chain.doFilter(request, response)
-        } else {
+    if (rawRequest.isInstanceOf[HttpServletRequest]) {
+      val request = rawRequest.asInstanceOf[HttpServletRequest]
+      val response = rawResponse.asInstanceOf[HttpServletResponse]
+
+      if (schedulerService.isLeader) {
+        chain.doFilter(request, response)
+      } else {
+        try {
+          val leaderData = schedulerService.getLeader
+
           log.info(s"Proxying request to leader at ${leaderData.get}")
 
           val method = request.getMethod
@@ -108,11 +110,11 @@ class LeaderProxyFilter @Inject()
           copy(proxy.getInputStream, response.getOutputStream)
           proxy.getInputStream.close
           responseOutputStream.close
+        } catch {
+          case e: Exception =>
+            log.log(Level.WARNING, "Exception while proxying", e)
         }
       }
-    } catch {
-      case e: Exception =>
-        log.log(Level.WARNING, "Exception while proxying", e)
     }
   }
 

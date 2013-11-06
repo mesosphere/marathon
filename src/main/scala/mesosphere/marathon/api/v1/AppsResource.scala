@@ -11,6 +11,8 @@ import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event.{EventModule, ApiPostEvent}
 import javax.servlet.http.HttpServletRequest
 import mesosphere.marathon.tasks.TaskTracker
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
  * @author Tobi Knaup
@@ -21,6 +23,8 @@ class AppsResource @Inject()(
     @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
     taskTracker: TaskTracker) {
+
+  val defaultWait = Duration(5, "seconds")
 
   @GET
   @Timed
@@ -33,7 +37,7 @@ class AppsResource @Inject()(
   @Timed
   def start(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    service.startApp(app)
+    Await.result(service.startApp(app), defaultWait)
     Response.noContent.build
   }
 
@@ -42,7 +46,7 @@ class AppsResource @Inject()(
   @Timed
   def stop(@Context req: HttpServletRequest, app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    service.stopApp(app)
+    Await.result(service.stopApp(app), defaultWait)
     Response.noContent.build
   }
 
@@ -51,7 +55,7 @@ class AppsResource @Inject()(
   @Timed
   def scale(@Context req: HttpServletRequest, app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    service.scaleApp(app)
+    Await.result(service.scaleApp(app), defaultWait)
     Response.noContent.build
   }
 
