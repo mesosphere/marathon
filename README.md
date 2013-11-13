@@ -11,8 +11,10 @@ Marathon is written in Scala and can run in highly-available mode by running mul
 The state of running tasks gets stored in the Mesos state abstraction.
 Features are listed below.
 
-* Try Marathon now on [Elastic Mesos](http://elastic.mesosphere.io).
-* Go to the [interactive Marathon tutorial](http://mesosphere.io/learn/run-services-with-marathon/) that can be personalized for your cluster.
+Try Marathon now on [Elastic Mesos](http://elastic.mesosphere.io).
+
+Go to the [interactive Marathon tutorial](http://mesosphere.io/learn/run-services-with-marathon/) that can be personalized for your cluster.
+
 
 <p align="center">
   <img src="http://www.jeremyscottadidas-wings.co.uk/images/Adidas-Jeremy-Scott-Wing-Shoes-2-0-Gold-Sneakers.jpg" width="30%" height="30%">
