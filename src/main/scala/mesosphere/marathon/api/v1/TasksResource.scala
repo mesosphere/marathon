@@ -8,6 +8,7 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.tasks.TaskTracker
 import java.util.logging.Logger
 import org.apache.mesos.Protos.TaskID
+import scala.concurrent.Await
 
 @Path("v1/tasks")
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -18,7 +19,6 @@ class TasksResource @Inject()(
   import Implicits._
 
   val log = Logger.getLogger(getClass.getName)
-
 
   @GET
   @Timed
@@ -33,13 +33,26 @@ class TasksResource @Inject()(
   @Path("kill")
   @Timed
   def killTasks(@QueryParam("appId") appId: String,
-                @QueryParam("host") host: String) = {
-    taskTracker.get(appId)
-      .filter(_.getHost == host || host == "*")
-      .map(task => {
-        log.info(f"Killing task ${task.getId} on host ${task.getHost}")
-        service.driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
-        task: Map[String, Object]
-      })
+                @QueryParam("host") host: String,
+                @QueryParam("id") id: String = "*",
+                @QueryParam("scale") scale: Boolean = false) = {
+    val tasks = taskTracker.get(appId)
+    val toKill = tasks.filter(x =>
+        x.getHost == host || x.getId == id || host == "*"
+    )
+
+    service.getApp(appId) match {
+      case Some(appDef) =>
+        appDef.instances = appDef.instances - toKill.size
+
+        Await.result(service.scaleApp(appDef, false), service.defaultWait)
+      case None =>
+    }
+
+    toKill.map({task =>
+      log.info(f"Killing task ${task.getId} on host ${task.getHost}")
+      service.driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+      task: Map[String, Object]
+    })
   }
 }

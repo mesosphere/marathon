@@ -64,6 +64,10 @@ class MarathonSchedulerService @Inject()(
 
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo.build, config.mesosMaster())
 
+  def defaultWait = {
+    store.defaultWait
+  }
+
   def startApp(app: AppDefinition): Future[_] = {
     // Backwards compatibility
     if (app.ports == Nil) {
@@ -79,16 +83,21 @@ class MarathonSchedulerService @Inject()(
     scheduler.stopApp(driver, app)
   }
 
-  def scaleApp(app: AppDefinition): Future[_] = {
-    scheduler.scaleApp(driver, app)
+  def scaleApp(app: AppDefinition, applyNow: Boolean = true): Future[_] = {
+    scheduler.scaleApp(driver, app, applyNow)
   }
 
   def listApps(): Seq[AppDefinition] = {
     // TODO method is expensive, it's n+1 trips to ZK. Cache this?
-    val names = Await.result(store.names(), store.defaultWait)
+    val names = Await.result(store.names(), defaultWait)
     val futures = names.map(name => store.fetch(name))
     val futureServices = Future.sequence(futures)
-    Await.result(futureServices, store.defaultWait).map(_.get).toSeq
+    Await.result(futureServices, defaultWait).map(_.get).toSeq
+  }
+
+  def getApp(appName: String): Option[AppDefinition] = {
+    val future = store.fetch(appName)
+    Await.result(future, defaultWait)
   }
 
   //Begin Service interface

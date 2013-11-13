@@ -194,12 +194,16 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  def scaleApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
+  def scaleApp(driver: SchedulerDriver,
+               app: AppDefinition,
+               applyNow: Boolean): Future[_] = {
     store.fetch(app.id).flatMap {
       case Some(storedApp) => {
         storedApp.instances = app.instances
         store.store(app.id, storedApp).map { _ =>
-          scale(driver, storedApp)
+          if (applyNow) {
+            scale(driver, storedApp)
+          }
         }
       }
       case None => throw new UnknownAppException(app.id)
