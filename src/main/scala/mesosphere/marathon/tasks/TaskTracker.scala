@@ -201,7 +201,7 @@ class TaskTracker @Inject()(state: State) {
     val now = System.currentTimeMillis
     val expires = now - Main.conf.taskLaunchTimeout()
     val toKill = apps.values.map { app =>
-      app.tasks.filter(t => t.getStartedAt == null && t.getStagedAt < expires)
+      app.tasks.filter(t => Option(t.getStartedAt).isEmpty && t.getStagedAt < expires)
     }.flatten
 
     toKill.foreach(t => {
