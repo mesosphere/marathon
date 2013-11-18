@@ -116,9 +116,17 @@ Note the different format of the `--master` and `--zk_hosts` options. Marathon u
 Mesos local mode allows you to run Marathon without launching a full Mesos cluster.
 It is meant for experimentation and not recommended for production use. Note that you still need to run Zookeeper for storing state.
 The following command launches Marathon on Mesos in *local mode*.
-Point your web browser to `localhost:8080` and you should see the Marathon UI.
+Point your web browser to `http://localhost:8080`, and you should see the Marathon UI.
 
     ./bin/start --master local --zk_hosts localhost:2181
+    
+#### Working on assets
+
+When editing assets like CSS and JavaScript locally, they are loaded from the packaged
+JAR by default and are not editable. To load them from a directory for easy editing,
+set the `assets_path` flag when running Marathon:
+
+    ./bin/start --master local --zk_hosts localhost:2181 --assets_path ./path/to/assets
 
 ### Configuration Options
 
