@@ -136,13 +136,20 @@ Run `./bin/start --help` for a full list of configuration options.
 
 Using [HTTPie][HTTPie]:
 
-    http localhost:8080/v1/apps/start id=sleep cmd='sleep 600' instances=1 mem=128 cpus=1
-    http localhost:8080/v1/apps/scale id=sleep instances=2
-    http localhost:8080/v1/apps/stop id=sleep
+    http POST localhost:8080/v1/apps/start id=sleep cmd='sleep 600' instances=1 mem=128 cpus=1
+    http POST localhost:8080/v1/apps/scale id=sleep instances=2
+    http POST localhost:8080/v1/apps/stop id=sleep
+
+Using [HTTPie][HTTPie] with constraints:
+
+    http POST localhost:8080/v1/apps/start id=constraints cmd='hostname && sleep 600' \
+        instances=100 mem=64 cpus=0.1 constraints:='[["hostname", "UNIQUE", ""]]'
 
 Using [Marathon Client](https://github.com/mesosphere/marathon_client), the following runs Chronos:
 
-    marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz -C "./chronos/bin/demo ./chronos/config/nomail.yml ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
+    marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
+        -C "./chronos/bin/demo ./chronos/config/nomail.yml \
+        ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
 
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
