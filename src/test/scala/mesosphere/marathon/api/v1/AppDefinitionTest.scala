@@ -78,6 +78,13 @@ class AppDefinitionTest {
     shouldViolate(app, "id", "must match \"^[A-Za-z0-9_.-]+$\"")
     app.id = "ab"
     shouldNotViolate(app, "id", "must match \"^[A-Za-z0-9_.-]+$\"")
+
+    app.executor = "//cmd"
+    shouldNotViolate(app, "executor", "must accept \"//cmd\"")
+    app.executor = "http://abc.123/example?url"
+    shouldNotViolate(app, "executor", "must accept URLs")
+    app.executor = "/a#/%$^/cube"
+    shouldNotViolate(app, "executor", "must accept absolute paths")
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
