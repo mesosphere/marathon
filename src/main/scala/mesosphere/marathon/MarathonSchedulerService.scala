@@ -103,7 +103,6 @@ class MarathonSchedulerService @Inject()(
 
   def shutDown() {
     log.info("Shutting down")
-    stopDriver()
   }
 
   def runDriver() {
