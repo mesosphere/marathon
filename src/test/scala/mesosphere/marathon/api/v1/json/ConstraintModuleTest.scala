@@ -1,0 +1,44 @@
+package mesosphere.marathon.api.v1.json
+
+import org.junit.Test
+import org.junit.Assert._
+import com.fasterxml.jackson.databind.ObjectMapper
+import mesosphere.marathon.Protos.Constraint
+;
+
+/**
+ * @author Tobi Knaup
+ */
+class ConstraintModuleTest {
+  @Test
+  def testDeserialize() {
+    val mapper = new ObjectMapper
+    mapper.registerModule(new ConstraintModule)
+
+    def shouldMatch(json: String, field: String, operator: Constraint.Operator, value: String = "") {
+      val constraint = mapper.readValue(json, classOf[Constraint])
+      assertEquals(field, constraint.getField)
+      assertEquals(operator, constraint.getOperator)
+      assertEquals(value, constraint.getValue)
+    }
+
+    shouldMatch("""["hostname","UNIQUE"]""", "hostname", Constraint.Operator.UNIQUE)
+    shouldMatch("""["rackid","GROUP_BY","1"]""", "rackid", Constraint.Operator.GROUP_BY, "1")
+  }
+
+  @Test
+  def testSerialize() {
+    val mapper = new ObjectMapper
+    mapper.registerModule(new ConstraintModule)
+
+    def shouldMatch(expected: String, constraint: Constraint) {
+      val actual = mapper.writeValueAsString(constraint)
+      assertEquals(expected, actual)
+    }
+
+    shouldMatch("""["hostname","UNIQUE"]""", Constraint.newBuilder.setField("hostname")
+      .setOperator(Constraint.Operator.UNIQUE).build)
+    shouldMatch("""["rackid","GROUP_BY","1"]""", Constraint.newBuilder.setField("rackid")
+      .setOperator(Constraint.Operator.GROUP_BY).setValue("1").build)
+  }
+}

@@ -142,7 +142,7 @@ class TaskBuilderTest extends AssertionsForJUnit
       .build
 
     val app = makeBasicApp()
-    app.constraints = Set(("rackid", Constraint.Operator.UNIQUE.toString, None))
+    app.constraints = Set(Constraint.newBuilder.setField("rackid").setOperator(Constraint.Operator.UNIQUE).build())
 
     val t1 = makeSampleTask(app.id, "rackid", "2")
     val t2 = makeSampleTask(app.id, "rackid", "3")
@@ -165,8 +165,8 @@ class TaskBuilderTest extends AssertionsForJUnit
     val app = makeBasicApp()
     app.instances = 10
     app.constraints = Set(
-      ("rackid", Constraint.Operator.GROUP_BY.toString, Some("3")),
-      ("hostname", Constraint.Operator.UNIQUE.toString, None)
+      Constraint.newBuilder.setField("rackid").setOperator(Constraint.Operator.GROUP_BY).setValue("3").build,
+      Constraint.newBuilder.setField("hostname").setOperator(Constraint.Operator.UNIQUE).build
     )
 
     val runningTasks = new mutable.HashSet[MarathonTask]()
