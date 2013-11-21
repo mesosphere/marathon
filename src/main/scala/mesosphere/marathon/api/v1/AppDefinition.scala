@@ -28,8 +28,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   @Pattern(regexp="(^//cmd$)|(^/[^/].*$)|")
   var executor: String = ""
 
-
-  var constraints: Set[(String, String, Option[String])] = Set()
+  var constraints: Set[Constraint] = Set()
 
   var uris: Seq[String] = Seq()
   var ports: Seq[Int] = Nil
@@ -43,14 +42,6 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
     val cpusResource = TaskBuilder.scalarResource(AppDefinition.CPUS, cpus)
     val memResource = TaskBuilder.scalarResource(AppDefinition.MEM, mem)
-    val cons = constraints.map(x => {
-      val b = Constraint.newBuilder()
-        b.setField(x._1)
-        b.setOperator(Constraint.Operator.valueOf(x._2.toUpperCase))
-        if (x._3.nonEmpty) b.setValue(x._3.get)
-        b.build()
-      }
-    )
 
     Protos.ServiceDefinition.newBuilder
       .setId(id)
@@ -59,7 +50,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
       .addAllPorts(ports.map(_.asInstanceOf[Integer]).asJava)
       .setExecutor(executor)
       .setTaskRateLimit(taskRateLimit)
-      .addAllConstraints(cons.asJava)
+      .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
       .build
@@ -74,11 +65,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     taskRateLimit = proto.getTaskRateLimit
     instances = proto.getInstances
     ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]]
-    constraints = proto.getConstraintsList.asScala.map(
-      x => (x.getField,
-            x.getOperator.toString,
-            if (x.getValue != null) Some(x.getValue) else None)
-    ).toSet
+    constraints = proto.getConstraintsList.asScala.toSet
 
     // Add command environment
     for (variable <- proto.getCmd.getEnvironment.getVariablesList.asScala) {

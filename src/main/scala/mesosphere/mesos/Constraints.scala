@@ -25,6 +25,15 @@ object Constraints {
     case _ => default
   }
 
+
+  def meetsConstraint(tasks: Set[mesosphere.marathon.Protos.MarathonTask],
+                      attributes: Set[org.apache.mesos.Protos.Attribute],
+                      hostname: String,
+                      constraint: Constraint): Boolean = {
+    meetsConstraint(tasks, attributes, hostname, constraint.getField, constraint.getOperator,
+      Option(constraint.getValue))
+  }
+
   def meetsConstraint(tasks: Set[mesosphere.marathon.Protos.MarathonTask],
                       attributes: Set[org.apache.mesos.Protos.Attribute],
                       hostname: String,
