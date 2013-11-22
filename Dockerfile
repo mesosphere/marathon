@@ -1,5 +1,5 @@
 # Marathon Dockerfile
-FROM ubuntu
+FROM ubuntu:precise
 MAINTAINER TODO
 
 ## DEPENDENCIES ##
