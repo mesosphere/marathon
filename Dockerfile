@@ -13,9 +13,10 @@ RUN apt-get update && apt-get install --assume-yes maven3
 RUN curl http://downloads.mesosphere.io/master/ubuntu/12.04/mesos_0.14.2_amd64.deb > mesos.deb && dpkg --install mesos.deb && rm mesos.deb
 
 ## MARATHON ##
-ADD . /etc/marathon
-RUN cd /etc/marathon && mvn3 package
+ADD . /opt/marathon
+RUN cd /opt/marathon && mvn3 package
 
 EXPOSE 8080
+WORKDIR /opt/marathon
 CMD ["--help"]
-ENTRYPOINT ["/etc/marathon/bin/start"]
+ENTRYPOINT ["/opt/marathon/bin/start"]
