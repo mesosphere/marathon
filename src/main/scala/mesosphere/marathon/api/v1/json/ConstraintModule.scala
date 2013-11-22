@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.deser.Deserializers
 
 class ConstraintModule extends Module {
 
+  private val contraintClass = classOf[Constraint]
+
   def getModuleName: String = "ConstraintModule"
 
   def version(): Version = new Version(0, 0, 1, null , null , null)
@@ -21,7 +23,7 @@ class ConstraintModule extends Module {
     context.addSerializers(new Serializers.Base {
       override def findSerializer(config: SerializationConfig, javaType: JavaType,
                                   beanDesc: BeanDescription): JsonSerializer[_] = {
-        if (javaType.getRawClass.isAssignableFrom(classOf[Constraint])) {
+        if (contraintClass.isAssignableFrom(javaType.getRawClass)) {
           new ConstraintSerializer
         } else {
           null
@@ -32,7 +34,7 @@ class ConstraintModule extends Module {
     context.addDeserializers(new Deserializers.Base {
       override def findBeanDeserializer(javaType: JavaType, config: DeserializationConfig,
                                         beanDesc: BeanDescription): JsonDeserializer[_] = {
-        if (javaType.getRawClass.isAssignableFrom(classOf[Constraint])) {
+        if (contraintClass.isAssignableFrom(javaType.getRawClass)) {
           new ConstraintDeserializer
         } else {
           null
