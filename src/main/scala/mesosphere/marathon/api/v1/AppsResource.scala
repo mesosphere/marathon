@@ -13,6 +13,8 @@ import javax.servlet.http.HttpServletRequest
 import mesosphere.marathon.tasks.TaskTracker
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import java.util.logging.Logger
+import org.apache.mesos.Protos.TaskID
 
 /**
  * @author Tobi Knaup
@@ -24,7 +26,7 @@ class AppsResource @Inject()(
     service: MarathonSchedulerService,
     taskTracker: TaskTracker) {
 
-  val defaultWait = Duration(5, "seconds")
+  val log = Logger.getLogger(getClass.getName)
 
   @GET
   @Timed
@@ -37,7 +39,7 @@ class AppsResource @Inject()(
   @Timed
   def start(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    Await.result(service.startApp(app), defaultWait)
+    Await.result(service.startApp(app), service.defaultWait)
     Response.noContent.build
   }
 
@@ -46,7 +48,7 @@ class AppsResource @Inject()(
   @Timed
   def stop(@Context req: HttpServletRequest, app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    Await.result(service.stopApp(app), defaultWait)
+    Await.result(service.stopApp(app), service.defaultWait)
     Response.noContent.build
   }
 
@@ -55,7 +57,7 @@ class AppsResource @Inject()(
   @Timed
   def scale(@Context req: HttpServletRequest, app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    Await.result(service.scaleApp(app), defaultWait)
+    Await.result(service.scaleApp(app), service.defaultWait)
     Response.noContent.build
   }
 
@@ -85,4 +87,20 @@ class AppsResource @Inject()(
         valid
     }
   }
+
+  import Implicits._
+
+  @GET
+  @Path("{appId}/tasks")
+  @Timed
+  def app(@PathParam("appId") appId: String): Response = {
+    if (taskTracker.contains(appId)) {
+      val tasks = taskTracker.get(appId)
+      val result = Map(appId -> tasks.map(s => s: Map[String, Object]))
+      Response.ok(result).build
+    } else {
+      Response.noContent.status(404).build
+    }
+  }
+
 }

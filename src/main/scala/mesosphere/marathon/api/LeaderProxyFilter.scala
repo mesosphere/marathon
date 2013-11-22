@@ -91,7 +91,8 @@ class LeaderProxyFilter @Inject()
               proxyOutputStream.close
           }
 
-          response.setStatus(proxy.getResponseCode())
+          val status = proxy.getResponseCode
+          response.setStatus(status)
 
           val fields = proxy.getHeaderFields
           // getHeaderNames() and getHeaders() are known to return null, see:
