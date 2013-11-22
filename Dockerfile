@@ -1,6 +1,6 @@
 # Marathon Dockerfile
 FROM ubuntu:precise
-MAINTAINER TODO
+MAINTAINER Mesosphere <support@mesosphere.io>
 
 ## DEPENDENCIES ##
 RUN apt-get update && apt-get install --assume-yes python-software-properties curl default-jdk
