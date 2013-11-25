@@ -5,7 +5,7 @@ import org.apache.mesos.{SchedulerDriver, Scheduler}
 import java.util.logging.{Level, Logger}
 import scala.collection.JavaConverters._
 import mesosphere.mesos.TaskBuilder
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v1.{AppDefinition, AppUpdate}
 import mesosphere.marathon.state.MarathonStore
 import scala.util.{Failure, Success}
 import scala.concurrent.{Future, ExecutionContext}
@@ -194,6 +194,21 @@ class MarathonScheduler @Inject()(
     }
   }
 
+  def updateApp(driver: SchedulerDriver,
+                appUpdate: AppUpdate): Future[_] = {
+    store.fetch(appUpdate.id).flatMap {
+      case Some(storedApp) => {
+        val updatedApp = appUpdate.apply(storedApp)
+        store.store(updatedApp.id, app).map { _ =>
+          scale(driver, updatedApp) // unconditionally
+          update(driver, updatedApp, appUpdate)
+        }
+      }
+      case None => throw new UnknownAppException(appUpdate.id)
+    }
+  }
+
+  //  TODO: Optionally deprecate `scale` once `update` has been implemented and tested.
   def scaleApp(driver: SchedulerDriver,
                app: AppDefinition,
                applyNow: Boolean): Future[_] = {
@@ -235,6 +250,26 @@ class MarathonScheduler @Inject()(
                       offer: Offer): Option[(TaskInfo, Seq[Int])] = {
     // TODO this should return a MarathonTask
     new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
+  }
+
+  /**
+   * Ensures current application parameters (resource requirements, URLs,
+   * command, and constraints) are applied consistently across running
+   * application instances.
+   * @param driver
+   * @param app
+   */
+  private def update(driver: SchedulerDriver, app: AppDefinition, appUpdate: AppUpdate) {
+    // TODO: implement app instance restart logic
+    /*
+    appUpdate.restartStrategy match {
+      case Lazy = ()
+      case Now => {
+      }
+      case Rolling(maxBatchSize, interval) => {  
+      }
+    }
+    */
   }
 
   /**
