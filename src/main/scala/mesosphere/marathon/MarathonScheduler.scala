@@ -199,8 +199,8 @@ class MarathonScheduler @Inject()(
     store.fetch(appUpdate.id).flatMap {
       case Some(storedApp) => {
         val updatedApp = appUpdate.apply(storedApp)
-        store.store(updatedApp.id, app).map { _ =>
-          scale(driver, updatedApp) // unconditionally
+        store.store(updatedApp.id, updatedApp).map { _ =>
+          scale(driver, updatedApp)
           update(driver, updatedApp, appUpdate)
         }
       }
@@ -208,7 +208,7 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  //  TODO: Optionally deprecate `scale` once `update` has been implemented and tested.
+  //  TODO: Optionally deprecate `scaleApp` once `updateApp` has been implemented and tested.
   def scaleApp(driver: SchedulerDriver,
                app: AppDefinition,
                applyNow: Boolean): Future[_] = {
@@ -256,10 +256,12 @@ class MarathonScheduler @Inject()(
    * Ensures current application parameters (resource requirements, URLs,
    * command, and constraints) are applied consistently across running
    * application instances.
+   *
    * @param driver
-   * @param app
+   * @param updatedApp
+   * @param appUpdate
    */
-  private def update(driver: SchedulerDriver, app: AppDefinition, appUpdate: AppUpdate) {
+  private def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate) {
     // TODO: implement app instance restart logic
     /*
     appUpdate.restartStrategy match {
