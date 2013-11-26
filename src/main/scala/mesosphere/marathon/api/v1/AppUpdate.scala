@@ -11,17 +11,17 @@ import scala.collection.mutable
 //       used in MarathonScheduler.
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-class AppUpdate(
+class AppUpdate {
+
   @NotEmpty
   @Pattern(regexp = "^[A-Za-z0-9_.-]+$")
-  var id: String = "",
-  var cmd: Option[String],
-  var instances: Option[Int],
-  var cpus: Option[Double],
-  var mem: Option[Double],
-  var uris: Option[Seq[String]],
-  var constraints: Option[Set[Constraint]]
-) {
+  var id: String = ""
+  var cmd: Option[String] = None
+  var instances: Option[Int] = None
+  var cpus: Option[Double] = None
+  var mem: Option[Double] = None
+  var uris: Option[Seq[String]] = None
+  var constraints: Option[Set[Constraint]] = None
 
   /**
    * Returns the supplied [[AppDefinition]] after updating its members
