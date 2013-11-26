@@ -139,6 +139,7 @@ Using [HTTPie][HTTPie]:
     http POST localhost:8080/v1/apps/start id=sleep cmd='sleep 600' instances=1 mem=128 cpus=1
     http POST localhost:8080/v1/apps/scale id=sleep instances=2
     http POST localhost:8080/v1/apps/stop id=sleep
+    http POST localhost:8080/v1/apps/update id=sleep cmd='sleep 30' cpus=0.2 mem=16 instances=3
 
 Using [HTTPie][HTTPie] with constraints:
 
