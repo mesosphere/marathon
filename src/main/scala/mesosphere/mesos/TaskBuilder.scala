@@ -79,7 +79,7 @@ class TaskBuilder (app: AppDefinition,
           mapper.writeValue(binary, app)
           val info = ExecutorInfo.newBuilder()
             .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
-            .setCommand(CommandInfo.newBuilder().setValue(cmd))
+            .setCommand(TaskBuilder.commandInfo(app, ports).toBuilder.setValue(cmd).build)
           builder.setExecutor(info)
           builder.setData(ByteString.copyFrom(binary.toByteArray))
         }
