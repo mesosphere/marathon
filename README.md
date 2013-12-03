@@ -15,11 +15,6 @@ Try Marathon now on [Elastic Mesos](http://elastic.mesosphere.io).
 
 Go to the [interactive Marathon tutorial](http://mesosphere.io/learn/run-services-with-marathon/) that can be personalized for your cluster.
 
-
-<p align="center">
-  <img src="http://www.jeremyscottadidas-wings.co.uk/images/Adidas-Jeremy-Scott-Wing-Shoes-2-0-Gold-Sneakers.jpg" width="30%" height="30%">
-</p>
-
 Marathon is a *meta framework*:
 you can start other Mesos frameworks such as Chronos or [Storm][Storm].
 It can launch anything that can be launched in a standard shell.
