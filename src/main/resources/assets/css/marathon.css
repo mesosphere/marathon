@@ -436,6 +436,10 @@ h3 {
   background: rgba(60,114,157,0.8);
 }
 
+.start-view-list {
+  overflow: hidden;
+}
+
 .marathon.add {
   -webkit-transform: rotateX(-2deg);
   -webkit-transform-origin-x: 50%;
