@@ -3,13 +3,11 @@
 Marathon is a [Mesos][Mesos] framework for long-running services.
 Given that you have Mesos running as the kernel for your datacenter, 
 Marathon is the `init` or [upstart][upstart] daemon.
-It was written by the team that also developed [Chronos][Chronos].
 
 Marathon provides a REST API for starting, stopping, and scaling services.
-There is also a Ruby [command line client](https://github.com/mesosphere/marathon_client).
+There is also a [Ruby command line client](https://github.com/mesosphere/marathon_client).
 Marathon is written in Scala and can run in highly-available mode by running multiple Marathon instances.
 The state of running tasks gets stored in the Mesos state abstraction.
-Features are listed below.
 
 Try Marathon now on [Elastic Mesos](http://elastic.mesosphere.io).
 
@@ -27,6 +25,8 @@ You can find Mesos support in the `#mesos` channel on [freenode][freenode] (IRC)
 The team at [Mesosphere](http://mesosphere.io) is also happy to answer any questions.
 
 ## Authors
+
+Marathon was written by the team that also developed [Chronos][Chronos].
 
 * [Tobias Knaup](https://github.com/guenter)
 * [Florian Leibert](https://github.com/florianleibert)
@@ -88,9 +88,9 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 First, install [Mesos][Mesos]. One easy way is via your system's package manager.
 Current builds for major Linux distributions and Mac OS X are available from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
 
-If building from source,see the [Getting Started](http://mesos.apache.org/gettingstarted/) page,
+If building from source, see the [Getting Started](http://mesos.apache.org/gettingstarted/) page
 or the [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
-for details. Using `make install` will install Mesos in `/usr/local` in the same way as these packages do.
+for details. Running `make install` will install Mesos in `/usr/local` in the same way as these packages do.
 
 To create a Jar for Marathon, checkout the sources and use Maven to build it:
 
@@ -98,7 +98,7 @@ To create a Jar for Marathon, checkout the sources and use Maven to build it:
 
 ### Production Mode
 
-To launch Marathon in *production mode*, you need to have both [Zookeeper][Zookeeper] and [Mesos][Mesos] running.
+To launch Marathon in *production mode*, you need to have both [Zookeeper][Zookeeper] and Mesos running.
 The following command launches Marathon on Mesos in *production mode*.
 Point your web browser to `localhost:8080` and you should see the Marathon UI.
 
@@ -135,12 +135,12 @@ Using [HTTPie][HTTPie]:
     http POST localhost:8080/v1/apps/scale id=sleep instances=2
     http POST localhost:8080/v1/apps/stop id=sleep
 
-Using [HTTPie][HTTPie] with constraints:
+Using HTTPie with constraints:
 
     http POST localhost:8080/v1/apps/start id=constraints cmd='hostname && sleep 600' \
         instances=100 mem=64 cpus=0.1 constraints:='[["hostname", "UNIQUE", ""]]'
 
-Using [Marathon Client](https://github.com/mesosphere/marathon_client), the following runs Chronos:
+Running Chronos with the [Marathon Client](https://github.com/mesosphere/marathon_client):
 
     marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
         -C "./chronos/bin/demo ./chronos/config/nomail.yml \
