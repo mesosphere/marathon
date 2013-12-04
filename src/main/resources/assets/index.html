@@ -30,26 +30,29 @@
 
     <script type='text/template' id='add-app-template'>
       <form id='add-app-form'>
-        <h1>New Application</h1>
+        <h2 class='window-header'>New Application</h2>
         <div class='input-row'>
           <label for='id-field'>ID</label>
-          <input id='id-field' name='id' value='{{id}}' tabindex='1'>
+          <input id='id-field' name='id' value='{{id}}' tabindex='1' required>
         </div>
         <div class='input-row'>
           <label for='cmd-field'>Command</label>
-          <input id='cmd-field' name='cmd' tabindex='2'>
+          <input id='cmd-field' name='cmd' tabindex='2' required>
         </div>
         <div class='input-row'>
           <label for='mem-field'>Memory (MB)</label>
-          <input id='mem-field' name='mem' value='{{mem}}' tabindex='3'>
+          <input id='mem-field' name='mem' min='0'
+            value='{{mem}}' tabindex='3' required type='number' step='10'>
         </div>
         <div class='input-row'>
           <label for='cpus-field'>CPUs</label>
-          <input id='cpus-field' name='cpus' value='{{cpus}}' tabindex='4'>
+          <input id='cpus-field' name='cpus' min='0'
+            value='{{cpus}}' tabindex='4' required type='number' step='0.1'>
         </div>
         <div class='input-row'>
           <label for='instances-field'>Instances</label>
-          <input id='instances-field' name='instances' value='{{instances}}' tabindex='5'>
+          <input id='instances-field' name='instances' min='1'
+            value='{{instances}}' tabindex='5' required type='number' step='1'>
         </div>
         <div class='input-row'>
           <label for='uris-field'>URIs</label>

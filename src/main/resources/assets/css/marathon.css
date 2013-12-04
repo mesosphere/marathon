@@ -68,7 +68,6 @@
 
 .lightbox-inner > .lb-content {
   display: inline-block;
-  outline: none;
   text-align: left;
   min-width: 550px;
   max-width: 660px;
@@ -76,12 +75,6 @@
 
 .lb-content {
   background-color: white;
-}
-
-#add-app-form {
-  font-size: 18px;
-  font-family: arial;
-  font-color: black;
 }
 
 /* ==============
@@ -102,10 +95,12 @@ header {
   text-align: center;
 }
 
-h1 {
-  font-family: 'lato';
+h1,
+h2,
+h3 {
+  font-family: Lato;
   font-weight: 300;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* ==============
@@ -142,14 +137,18 @@ h1 {
 
 .app-content {
   display: inline-block;
-  outline: none;
   text-align: left;
 }
 
 .window {
   background: #111113;;
-  padding: 40px;
-  border-bottom: 7px solid rgba(60,114,157,1);
+  padding: 30px;
+  border-bottom: 7px solid rgb(60, 114, 157);
+}
+
+.window-header {
+  margin-bottom: 40px;
+  margin-top: 0;
 }
 
 .input-row {
@@ -157,9 +156,8 @@ h1 {
 }
 
 .input-row label {
-  width: 170px;
-  font-weight: 300;
-  font-family: 'lato';
+  width: 175px;
+  font-family: Lato;
   text-transform: uppercase;
   font-size: 24px;
   text-align: right;
@@ -173,20 +171,10 @@ h1 {
   border-bottom: 1px solid rgba(133,133,133,0.1);
   width: 350px;
   padding: 5px;
-  font-size: 34px;
-  font-family: 'lato';
-  font-weight: 300;
+  font-size: 30px;
+  font-family: Lato;
   color: white;
   box-shadow: inset 0 4px 4px rgba(0,0,0,0.3);
-}
-
-#add-app-form h1 {
-  margin-top: 0;
-  font-family: 'lato';
-  font-weight: 100;
-  font-size: 58px;
-  margin-bottom: 40px;
-  color: rgba(255,255,255,0.3);
 }
 
 .btn {
@@ -215,9 +203,9 @@ h1 {
 
 .system-folder,
 .system-caret {
-  font-size: 64px;
+  font-size: 50px;
   font-weight: 100;
-  font-family: 'Lato', sans-serif;
+  font-family: Lato, sans-serif;
   text-transform: uppercase;
 }
 
@@ -418,7 +406,6 @@ h1 {
 .texture-background {
   background: -webkit-linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
   background: linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
-  box-shadow: inset 0 0 180px rgba(158,194,237,0.1);
 
   -webkit-animation-duration: 1s;
   -webkit-animation-name: power-on;
@@ -487,12 +474,11 @@ h1 {
 
 .add-button {
   text-align: center;
-  color: #111113;
   font-weight: bold;
   background: transparent;
   color: #3C729D;
   border: 1px solid #3C729D;
-  font-size: 64px;
+  font-size: 60px;
   font-family: arial-black;
   height: auto;
   line-height: 3.4em;

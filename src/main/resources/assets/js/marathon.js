@@ -25,23 +25,22 @@ jQuery.fn.fastLiveFilter = function(list, options) {
   callback(len); // do a one-time callback on initialization to make sure everything's in sync
 
   input.change(function() {
-    // var startTime = new Date().getTime();
     var filter = input.val().toLowerCase();
-    var li;
+    var li, oli;
     var numShown = 0;
 
     var show = [];
     for (var i = 0; i < len; i++) {
       oli = lis[i];
-      li = $(oli).find('h1')[0];
+      li = $(oli).find('h3')[0];
       if ((li.textContent || li.innerText || "").toLowerCase().indexOf(filter) >= 0) {
-        if (oli.style.display == "none") {
+        if (oli.style.display === "none") {
           oli.style.display = oldDisplay;
         }
         show.push(window.all.get(oli.classList[1]));
         numShown++;
       } else {
-        if (oli.style.display != "none") {
+        if (oli.style.display !== "none") {
           oli.style.display = "none";
         }
       }
@@ -65,7 +64,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     exports.Backpack = exports.Backpack || {};
     exports.Backpack.Models = exports.Backpack.Models || {};
 
-    LightboxModel = Backbone.Model.extend({
+    var LightboxModel = Backbone.Model.extend({
 
       defaults: {
         'open': false,
@@ -136,7 +135,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       },
 
       initialize: function(){
-        this.model = new Backpack.Models.Lightbox;
+        this.model = new Backpack.Models.Lightbox();
         this.bindings();
         this.toggle();
         this.append();
@@ -265,46 +264,46 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
   var data = [
     {
-        "cmd": "cd sinatra_test && /usr/bin/ruby hi.rb",
-        "cpus": 0.1,
-        "env": {},
-        "id": "sinatra",
-        "instances": 5,
-        "mem": 10.0,
-        "port": 13195,
-        "uris": [
-            "http://localhost:8888/sinatra_test.tgz"
-        ]
+      "cmd": "cd sinatra_test && /usr/bin/ruby hi.rb",
+      "cpus": 0.1,
+      "env": {},
+      "id": "sinatra",
+      "instances": 5,
+      "mem": 10.0,
+      "port": 13195,
+      "uris": [
+        "http://localhost:8888/sinatra_test.tgz"
+      ]
     },
     {
-        "cmd": "cd rails_test && bundle exec rails server --port $PORT",
-        "cpus": 1.0,
-        "env": {
-            "RAILS_ENV": "production"
-        },
-        "id": "Monorail",
-        "instances": 20,
-        "mem": 400.0,
-        "port": 13196,
-        "uris": [
-            "http://datacentercomputer.s3.amazonaws.com/rails_test_app_1.9.tgz"
-        ]
+      "cmd": "cd rails_test && bundle exec rails server --port $PORT",
+      "cpus": 1.0,
+      "env": {
+        "RAILS_ENV": "production"
+      },
+      "id": "Monorail",
+      "instances": 20,
+      "mem": 400.0,
+      "port": 13196,
+      "uris": [
+        "http://datacentercomputer.s3.amazonaws.com/rails_test_app_1.9.tgz"
+      ]
     },
     {
-        "cmd": "cd rails_test && bundle exec rake resque:work",
-        "cpus": 1.0,
-        "env": {
-            "RAILS_ENV": "production",
-            "QUEUES": "*",
-            "VERBOSE": "1"
-        },
-        "id": "Resque",
-        "instances": 8,
-        "mem": 400.0,
-        "port": 14497,
-        "uris": [
-            "http://datacentercomputer.s3.amazonaws.com/rails_test_app_1.9.tgz"
-        ]
+      "cmd": "cd rails_test && bundle exec rake resque:work",
+      "cpus": 1.0,
+      "env": {
+        "RAILS_ENV": "production",
+        "QUEUES": "*",
+        "VERBOSE": "1"
+      },
+      "id": "Resque",
+      "instances": 8,
+      "mem": 400.0,
+      "port": 14497,
+      "uris": [
+        "http://datacentercomputer.s3.amazonaws.com/rails_test_app_1.9.tgz"
+      ]
     }
   ];
 
@@ -372,7 +371,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     render: function() {
-      var data = this.data()
+      var data = this.data(),
           html = this.template(data);
       this.$el.append(html);
       return this.$el;
@@ -402,7 +401,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
     render: function() {
       this.$add = $("<li class='add'>+</li>");
-      this.$el.append(this.$add)
+      this.$el.append(this.$add);
       return this.$el;
     },
 
@@ -417,10 +416,8 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     addNew: function() {
-      // var model = new Item();
-      // this.collection.add(model);
-      $('.details').addClass('open')
-      this.$el.slideUp(400, function(){
+      $('.details').addClass('open');
+      this.$el.slideUp(400, function() {
         $promptText.html('New');
         $promptText.addClass('open');
         caret.hide();
@@ -428,14 +425,14 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     append: function(model) {
-      model.set('id', model.cid)
+      model.set('id', model.cid);
       var view = new ItemView({model:model});
       this.$add.before(view.render());
     },
 
     details: function(model) {
-      $('.details').addClass('open')
-      this.$el.slideUp(200, function(){
+      $('.details').addClass('open');
+      this.$el.slideUp(200, function() {
         $promptText.html('New');
         $promptText.show();
         caret.hide();
@@ -450,13 +447,13 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     template: _.template(
       "<div class='app-item'>" +
         "<div class='info-wrapper'>" +
-          "<h1>{{ id }}</h1>" +
+          "<h3>{{ id }}</h3>" +
           "CMD: <span class='val'>{{ cmd }}</span><br/>" +
           "<div class='uri-wrapper'>URIs: <span class='val'>{{ uriCount }}</span>" +
             "<ul class='uris'>{{uris}}</ul>" +
           "</div>" +
-          "Memory: <span class='val'>{{ mem }}</span><br/>" +
-          "CPU: <span class='val'>{{ cpus }}<br/></span>" +
+          "Memory (MB): <span class='val'>{{ mem }}</span><br/>" +
+          "CPUs: <span class='val'>{{ cpus }}<br/></span>" +
           "Instances: <span class='val'>{{ instances }}</span><br/>" +
         "</div>" +
         "<div class='action-bar'>" +
@@ -596,7 +593,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
               // strip whitespace
               val = _.map(val, function(s){return s.replace(/ /g,''); });
               // reject empty
-              val = _.reject(val, function(s){return s===''});
+              val = _.reject(val, function(s){return (s === '');});
             }
 
             data[name] = val;
@@ -630,26 +627,21 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     initialize: function() {
-      window.apps = new Items;
+      window.apps = new Items();
       window.lightbox = new Backpack.Lightbox();
       window.start = new window.HomeView({
         collection: apps
       });
 
       $('.content').append(start.render().el);
-      // window.appsView = new ItemsView({
-      //   collection: apps
-      // });
-
-      // $('.list').html(window.appsView.render());
       var All = Backbone.Collection.extend({});
 
       apps
         .fetch({reset: true})
-        .done(function(){
+        .done(function() {
           window.all = new All(apps.models);
-          $input = $('#setter');
-          $caret = $('.system-caret');
+          var $input = $('#setter');
+          var $caret = $('.system-caret');
 
           $input.fastLiveFilter('.start-view-list' , {
             callback: function(total, results) {
@@ -664,7 +656,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
           $input.focusout(function(){
             $caret.removeClass('focus');
           });
-      });
+        });
     },
 
     home: function() {}
