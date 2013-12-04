@@ -41,12 +41,14 @@ class TasksResource @Inject()(
         x.getHost == host || x.getId == id || host == "*"
     )
 
-    service.getApp(appId) match {
-      case Some(appDef) =>
-        appDef.instances = appDef.instances - toKill.size
+    if (scale) {
+      service.getApp(appId) match {
+        case Some(appDef) =>
+          appDef.instances = appDef.instances - toKill.size
 
-        Await.result(service.scaleApp(appDef, false), service.defaultWait)
-      case None =>
+          Await.result(service.scaleApp(appDef, false), service.defaultWait)
+        case None =>
+      }
     }
 
     toKill.map({task =>
