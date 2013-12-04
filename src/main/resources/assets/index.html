@@ -14,15 +14,15 @@
     <div class='fullscreen texture-background'></div>
 
     <div class='fullscreen content'>
-      <div class='system-input'>
+      <h1>
         <span class='system-folder'>Marathon /</span>
         <div id='terminal'>
-          <input type='text' id='setter' />
-          <span class='input' id='system-text'></span>
-          <span class='input' id='prompt-text'></span>
+          <input type='text' id='setter'>
+          <span id='system-text'></span>
+          <span id='prompt-text'></span>
           <span id='caret' class='system-caret'></span>
         </div>
-      </div>
+      </h1>
 
       <div class='list'></div>
       <div class='start-view'></div>
@@ -59,7 +59,7 @@
           <input id='uris-field' name='uris' tabindex='6'>
         </div>
         <div class='text-right' style='margin-top: 40px;'>
-          <a href="#" class='btn btn-link' data-lightbox-close='true' tabindex='8'>Cancel</a>
+          <button class='btn btn-link' data-lightbox-close='true' tabindex='8'>Cancel</button>
           <button type='submit' id='save' class='btn btn-primary' tabindex='7'>Start</button>
         </div>
       </form>

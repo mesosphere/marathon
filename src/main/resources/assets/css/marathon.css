@@ -103,6 +103,11 @@ h3 {
   color: rgba(255, 255, 255, 0.9);
 }
 
+h1 {
+  font-size: 50px;
+  margin-top: 0;
+}
+
 /* ==============
  * Helpers
  * ==============
@@ -203,9 +208,7 @@ h3 {
 
 .system-folder,
 .system-caret {
-  font-size: 50px;
   font-weight: 100;
-  font-family: Lato, sans-serif;
   text-transform: uppercase;
 }
 
@@ -214,9 +217,6 @@ h3 {
 }
 
 .system-caret {
-  font-size: 74px;
-  font-weight: normal;
-
   -webkit-animation-duration: 1.2s;
   -webkit-animation-iteration-count: infinite;
   -webkit-animation-name: blink;
@@ -345,10 +345,6 @@ h3 {
 #setter {
   left: -1000px;
   position: absolute;
-}
-
-.system-input {
-  margin-bottom: 20px;
 }
 
 .system-caret {
