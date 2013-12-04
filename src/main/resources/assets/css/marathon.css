@@ -100,12 +100,27 @@ h2,
 h3 {
   font-family: Lato;
   font-weight: 300;
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
 }
 
 h1 {
   font-size: 50px;
   margin-top: 0;
+}
+
+.dl-horizontal {
+  /* Contain the floats */
+  overflow: hidden;
+}
+
+.dl-horizontal dt {
+  width: auto;
+}
+
+.dl-horizontal dd {
+  color: #ffffff;
+  float: left;
+  margin-left: 0.5em;
 }
 
 /* ==============
@@ -322,7 +337,7 @@ h1 {
 }
 
 .content {
-  padding: 20px 30px;
+  padding: 20px;
   opacity: 0;
 
   -webkit-animation-duration: 300ms;
@@ -447,13 +462,13 @@ h1 {
 .app-item {
   float: left;
   min-width: 400px;
-  padding: 0 20px 20px;
+  padding: 20px;
   margin: 0 20px 20px 0;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
 }
 
-.app-item .val {
-  color: #fff;
+.app-item-header {
+  margin-top: 0;
 }
 
 .app-item .uris {
@@ -466,10 +481,6 @@ h1 {
 
 .uri-wrapper:hover .uris {
   display: block;
-}
-
-.action-bar {
-  margin-top: 10px;
 }
 
 .add-button {

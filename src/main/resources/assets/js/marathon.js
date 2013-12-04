@@ -1,3 +1,5 @@
+/*globals $, _, Backbone */
+
 /**
  * fastLiveFilter jQuery plugin 1.0.3
  *
@@ -20,9 +22,10 @@ jQuery.fn.fastLiveFilter = function(list, options) {
   // if they modify the list in the DOM later.  This doesn't give us that much speed
   // boost, so perhaps it's not worth putting it here.
   var lis = $('.app-list-item');
-  var len = lis.length;
-  var oldDisplay = len > 0 ? lis[0].style.display : "block";
-  callback(len); // do a one-time callback on initialization to make sure everything's in sync
+  var oldDisplay = lis.length > 0 ? lis[0].style.display : "block";
+
+  // do a one-time callback on initialization to make sure everything's in sync
+  callback(lis.length);
 
   input.change(function() {
     var filter = input.val().toLowerCase();
@@ -30,7 +33,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     var numShown = 0;
 
     var show = [];
-    for (var i = 0; i < len; i++) {
+    for (var i = 0; i < lis.length; i++) {
       oli = lis[i];
       li = $(oli).find('h3')[0];
       if ((li.textContent || li.innerText || "").toLowerCase().indexOf(filter) >= 0) {
@@ -217,7 +220,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
   })(window, jQuery, _, Backbone);
 
 
-
   // Mustache style templats {{ }}
   _.templateSettings = {
     interpolate : /\{\{(.+?)\}\}/g
@@ -262,58 +264,13 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
   $setter.focus();
 
-  var data = [
-    {
-      "cmd": "cd sinatra_test && /usr/bin/ruby hi.rb",
-      "cpus": 0.1,
-      "env": {},
-      "id": "sinatra",
-      "instances": 5,
-      "mem": 10.0,
-      "port": 13195,
-      "uris": [
-        "http://localhost:8888/sinatra_test.tgz"
-      ]
-    },
-    {
-      "cmd": "cd rails_test && bundle exec rails server --port $PORT",
-      "cpus": 1.0,
-      "env": {
-        "RAILS_ENV": "production"
-      },
-      "id": "Monorail",
-      "instances": 20,
-      "mem": 400.0,
-      "port": 13196,
-      "uris": [
-        "http://datacentercomputer.s3.amazonaws.com/rails_test_app_1.9.tgz"
-      ]
-    },
-    {
-      "cmd": "cd rails_test && bundle exec rake resque:work",
-      "cpus": 1.0,
-      "env": {
-        "RAILS_ENV": "production",
-        "QUEUES": "*",
-        "VERBOSE": "1"
-      },
-      "id": "Resque",
-      "instances": 8,
-      "mem": 400.0,
-      "port": 14497,
-      "uris": [
-        "http://datacentercomputer.s3.amazonaws.com/rails_test_app_1.9.tgz"
-      ]
-    }
-  ];
-
   var Item = Backbone.Model.extend({
     url: 'v1/apps/start',
 
     defaults: function() {
       return {
         id: _.uniqueId('app_'),
-        cmd: 'sleep 10',
+        cmd: null,
         mem: 10.0,
         cpus: 0.1,
         instances: 1,
@@ -352,94 +309,8 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
   var Items = Backbone.Collection.extend({
     url: 'v1/apps/',
-    model: Item,
+    model: Item
   });
-
-  window.ItemView = Backbone.View.extend({
-    tagName: 'li',
-
-    template: _.template(
-        "{{ id }}"
-    ),
-
-    events: {
-      'click': 'select'
-    },
-
-    initialize: function() {
-
-    },
-
-    render: function() {
-      var data = this.data(),
-          html = this.template(data);
-      this.$el.append(html);
-      return this.$el;
-    },
-
-    data: function() {
-      return this.model.toJSON();
-    },
-
-    select: function() {
-      this.model.set('selected', true);
-    }
-  });
-
-  var ItemsView = Backbone.View.extend({
-    tagName: 'ul',
-
-    events: {
-      'click .add': 'addNew',
-      'change:selected': 'details'
-    },
-
-    initialize: function() {
-      this.collection.on('reset', this.renderAll, this);
-      this.collection.on('add', this.append, this);
-    },
-
-    render: function() {
-      this.$add = $("<li class='add'>+</li>");
-      this.$el.append(this.$add);
-      return this.$el;
-    },
-
-    renderAll: function() {
-      var html = '',
-          view;
-
-      this.collection.each(function(a){
-        view = new ItemView({model: a});
-        this.$el.prepend(view.render());
-      }, this);
-    },
-
-    addNew: function() {
-      $('.details').addClass('open');
-      this.$el.slideUp(400, function() {
-        $promptText.html('New');
-        $promptText.addClass('open');
-        caret.hide();
-      });
-    },
-
-    append: function(model) {
-      model.set('id', model.cid);
-      var view = new ItemView({model:model});
-      this.$add.before(view.render());
-    },
-
-    details: function(model) {
-      $('.details').addClass('open');
-      this.$el.slideUp(200, function() {
-        $promptText.html('New');
-        $promptText.show();
-        caret.hide();
-      });
-    }
-  });
-
 
   var AppItemView = Backbone.View.extend({
     tagName: 'li',
@@ -447,18 +318,18 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     template: _.template(
       "<div class='app-item'>" +
         "<div class='info-wrapper'>" +
-          "<h3>{{ id }}</h3>" +
-          "CMD: <span class='val'>{{ cmd }}</span><br/>" +
-          "<div class='uri-wrapper'>URIs: <span class='val'>{{ uriCount }}</span>" +
-            "<ul class='uris'>{{uris}}</ul>" +
-          "</div>" +
-          "Memory (MB): <span class='val'>{{ mem }}</span><br/>" +
-          "CPUs: <span class='val'>{{ cpus }}<br/></span>" +
-          "Instances: <span class='val'>{{ instances }}</span><br/>" +
+          "<h3 class='app-item-header'>{{ id }}</h3>" +
+          "<dl class='dl-horizontal'>" +
+            "<dt>CMD:</dt><dd>{{ cmd }}</dd>" +
+            "<dt class='uri-wrapper'>URIs:<ul class='uris'>{{uris}}</ul></dt><dd>{{ uriCount }}</dd>" +
+            "<dt>Memory (MB):</dt><dd>{{ mem }}</dd>" +
+            "<dt>CPUs:</dt><dd>{{ cpus }}</dd>" +
+            "<dt>Instances:</dt><dd>{{ instances }}</dd>" +
+          "</dl>" +
         "</div>" +
         "<div class='action-bar'>" +
-          "<a class='scale' href='#'>SCALE</a>  | " +
-          "<a class='suspend' href='#'>SUSPEND</a>  | " +
+          "<a class='scale' href='#'>SCALE</a> | " +
+          "<a class='suspend' href='#'>SUSPEND</a> | " +
           "<a class='destroy' href='#'>DESTROY</a>" +
         "</div>" +
       "</div>"
@@ -471,8 +342,11 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     initialize: function() {
-      this.model.on('destroy', this.remove, this);
-      this.model.on('change:instances', this.render, this);
+      this.listenTo(this.model, {
+        'change:instances': this.render,
+        destroy: this.remove
+      });
+
       this.$el.addClass(this.model.get('id'));
     },
 
@@ -527,36 +401,34 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     }
   });
 
-  window.HomeView = Backbone.View.extend({
-    tagName: 'ul',
-    className: 'start-view-list list-unstyled',
+  var HomeView = Backbone.View.extend({
+    el: '.start-view-list',
 
     events: {
       'click .add-button': 'addNew',
     },
 
-    addButton: function() {
-      return $("<li><div class='app-item add-button'>+</div></li>");
+    initialize: function() {
+      this.$addButton = this.$('.add-button');
+
+      this.listenTo(this.collection, {
+        add: this.add,
+        reset: this.render
+      });
     },
 
-    initialize: function(){
-      this.$addButton = this.addButton();
-      this.$el.append(this.$addButton);
-      this.collection.on('add', this.add, this);
-      this.collection.on('reset', this.render, this);
-      // TODO: fix the clean up
-      // window.lightbox.model.on('close', this.dismiss, this);
-    },
+    render: function() {
+      var docFrag = document.createDocumentFragment();
+      this.collection.each(function(model) {
+        docFrag.appendChild((new AppItemView({model: model})).render().el);
+      });
 
-    render: function(){
-      this.collection.each(function(model){
-        this.add(model);
-      }, this);
+      this.$addButton.before(docFrag.childNodes);
       return this;
     },
 
     add: function(model, collection, options) {
-      var view = new AppItemView({ model: model });
+      var view = new AppItemView({model: model});
       this.$addButton.before(view.render().el);
     },
 
@@ -623,31 +495,27 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
   var Router = Backbone.Router.extend({
     routes: {
-      'home': 'home'
+      '': 'index'
     },
 
-    initialize: function() {
-      window.apps = new Items();
+    index: function() {
       window.lightbox = new Backpack.Lightbox();
-      window.start = new window.HomeView({
+
+      var apps = new Items();
+      var start = new HomeView({
         collection: apps
       });
 
       $('.content').append(start.render().el);
-      var All = Backbone.Collection.extend({});
 
       apps
         .fetch({reset: true})
         .done(function() {
-          window.all = new All(apps.models);
+          window.all = apps;
           var $input = $('#setter');
           var $caret = $('.system-caret');
 
-          $input.fastLiveFilter('.start-view-list' , {
-            callback: function(total, results) {
-              // do something if you like
-            }
-          });
+          $input.fastLiveFilter('.start-view-list');
 
           $input.focusin(function(){
             $caret.addClass('focus');
@@ -657,9 +525,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
             $caret.removeClass('focus');
           });
         });
-    },
-
-    home: function() {}
+    }
 
   });
 

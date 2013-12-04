@@ -25,7 +25,9 @@
       </h1>
 
       <div class='list'></div>
-      <div class='start-view'></div>
+      <ul class='start-view-list list-unstyled'>
+        <li><div class='app-item add-button'>+</div></li>
+      </ul>
     </div>
 
     <script type='text/template' id='add-app-template'>
@@ -46,7 +48,7 @@
         </div>
         <div class='input-row'>
           <label for='cpus-field'>CPUs</label>
-          <input id='cpus-field' name='cpus' min='0'
+          <input id='cpus-field' name='cpus' min='0' step='any'
             value='{{cpus}}' tabindex='4' required type='number'>
         </div>
         <div class='input-row'>
