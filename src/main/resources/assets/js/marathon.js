@@ -306,10 +306,10 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     }
   });
 
-
-  var Items = Backbone.Collection.extend({
-    url: 'v1/apps/',
-    model: Item
+  var ItemList = Backbone.Collection.extend({
+    comparator: 'id',
+    model: Item,
+    url: 'v1/apps/'
   });
 
   var AppItemView = Backbone.View.extend({
@@ -401,6 +401,80 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     }
   });
 
+  var FormView = Backbone.View.extend({
+    className: 'window',
+    template: _.template(
+      "<form id='add-app-form'>" +
+        "<h2 class='window-header'>New Application</h2>" +
+        "<div class='input-row'>" +
+          "<label for='id-field'>ID</label>" +
+          "<input id='id-field' name='id' value='{{id}}' tabindex='1' autofocus required>" +
+        "</div>" +
+        "<div class='input-row'>" +
+          "<label for='cmd-field'>Command</label>" +
+          "<input id='cmd-field' name='cmd' tabindex='2' required>" +
+        "</div>" +
+        "<div class='input-row'>" +
+          "<label for='mem-field'>Memory (MB)</label>" +
+          "<input id='mem-field' name='mem' min='0'" +
+            "value='{{mem}}' tabindex='3' required type='number'>" +
+        "</div>" +
+        "<div class='input-row'>" +
+          "<label for='cpus-field'>CPUs</label>" +
+          "<input id='cpus-field' name='cpus' min='0' step='any'" +
+            "value='{{cpus}}' tabindex='4' required type='number'>" +
+        "</div>" +
+        "<div class='input-row'>" +
+          "<label for='instances-field'>Instances</label>" +
+          "<input id='instances-field' name='instances' min='1'" +
+            "value='{{instances}}' tabindex='5' required type='number' step='1'>" +
+        "</div>" +
+        "<div class='input-row'>" +
+          "<label for='uris-field'>URIs</label>" +
+          "<input id='uris-field' name='uris' tabindex='6'>" +
+        "</div>" +
+        "<div class='text-right' style='margin-top: 40px;'>" +
+          "<button class='btn btn-link' data-lightbox-close='true' tabindex='8'>Cancel</button>" +
+          "<button type='submit' id='save' class='btn btn-primary' tabindex='7'>Start</button>" +
+        "</div>" +
+      "</form>"
+    ),
+
+    events: {
+      'submit form': 'save'
+    },
+
+    render: function() {
+      this.$el.html(this.template(this.model.toJSON()));
+      return this;
+    },
+
+    save: function(e) {
+      e.preventDefault();
+
+      var $inputs = this.$('input');
+      var data = {};
+
+      $inputs.each(function(index, el) {
+        var $el = $(el),
+            name = $el.attr('name'),
+            val = $el.val();
+
+        if (name === 'uris') {
+          val = val.split(',');
+          // strip whitespace
+          val = _.map(val, function(s){return s.replace(/ /g,''); });
+          // reject empty
+          val = _.reject(val, function(s){return (s === '');});
+        }
+
+        data[name] = val;
+      });
+
+      this.trigger('save', data);
+    }
+  });
+
   var HomeView = Backbone.View.extend({
     el: '.start-view-list',
 
@@ -433,63 +507,15 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     addNew: function() {
-      var model = new Item(),
-          collection = this.collection;
+      this.formView = new FormView({model: new Item()});
+      this.formView.once('save', function(data) {
+        this.collection.create(data);
+        window.lightbox.close();
+      }, this);
 
-      var FormView = Backbone.View.extend({
-        className: 'window',
-        template: _.template($('#add-app-template').html()),
-
-        events: {
-          'submit form': 'save'
-        },
-
-        render: function() {
-          this.$el.html(this.template(model.toJSON()));
-          return this;
-        },
-
-        save: function(e) {
-          e.preventDefault();
-
-          var $inputs = $('#add-app-form').find('input');
-          var data = {};
-
-          $inputs.each(function(index, el) {
-            var $el = $(el),
-                name = $el.attr('name'),
-                val = $el.val();
-
-            if (name === 'uris') {
-              val = val.split(',');
-              // strip whitespace
-              val = _.map(val, function(s){return s.replace(/ /g,''); });
-              // reject empty
-              val = _.reject(val, function(s){return (s === '');});
-            }
-
-            data[name] = val;
-          });
-
-          collection.create(data);
-          window.lightbox.close();
-        }
-      });
-
-      formView = new FormView();
-      window.lightbox.content(formView);
+      window.lightbox.content(this.formView);
       window.lightbox.open();
-      $('#id-field').focus();
-    },
-
-    dismiss: function() {
-      var model = formView.model;
-      if (model.isNew()) {
-        model.destroy();
-      } else {
-        this.collection.add(model);
-      }
-    },
+    }
   });
 
 
@@ -501,7 +527,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     index: function() {
       window.lightbox = new Backpack.Lightbox();
 
-      var apps = new Items();
+      var apps = new ItemList();
       var start = new HomeView({
         collection: apps
       });
