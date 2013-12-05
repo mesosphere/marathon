@@ -306,51 +306,8 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     url: 'v1/apps/'
   });
 
-  var AppItemView = Backbone.View.extend({
-    tagName: 'li',
-    className: 'app-list-item',
-    template: _.template($("#app-item-view").text()),
-
-    events: {
-      'click .suspend': 'suspend',
-      'click .destroy': 'destroy',
-      'click .scale': 'scale'
-    },
-
-    initialize: function() {
-      this.listenTo(this.model, {
-        'change:instances': this.render,
-        destroy: this.remove
-      });
-
-      this.$el.addClass(this.model.get('id'));
-    },
-
-    suspend: function(e) {
-      if (confirm("Suspend " + this.model.id + "?\n\nThe application will be scaled to 0 instances.")) {
-        this.model.scale(0);
-      }
-
-      e.preventDefault();
-    },
-
-    destroy: function(e) {
-      var ok = confirm("Destroy application " + this.model.id + "?\n\nThis is irreversible.");
-      if (ok) {
-        this.model.destroy();
-      }
-
-      e.preventDefault();
-    },
-
-    scale: function(e) {
-      var instances = prompt('How many instances?', this.model.get('instances'));
-      if (instances) {
-        this.model.scale(instances);
-      }
-
-      e.preventDefault();
-    },
+  // Simple base view to keep the render logic similar.
+  var MarathonView = Backbone.View.extend({
 
     remove: function() {
       this.$el.remove();
@@ -361,6 +318,24 @@ jQuery.fn.fastLiveFilter = function(list, options) {
           html = this.template(data);
       this.$el.html(html);
       return this;
+    }
+  });
+
+  var AppItemView = MarathonView.extend({
+    tagName: 'tr',
+    template: _.template($("#app-item").text()),
+
+    events: {
+      'click': 'showDetails'
+    },
+
+    initialize: function() {
+      this.listenTo(this.model, {
+        'change:instances': this.render,
+        destroy: this.remove
+      });
+
+      this.$el.addClass(this.model.get('id'));
     },
 
     data: function() {
@@ -374,10 +349,123 @@ jQuery.fn.fastLiveFilter = function(list, options) {
         uriCount: uriCount
       });
       return attr;
+    },
+
+    showDetails: function() {
+      this.lightbox.content(this.formView);
+      this.lightbox.open();
     }
   });
 
-  var FormView = Backbone.View.extend({
+  var AppItemDetail = MarathonView.extend({
+    className: 'window',
+    template: _.template($("#app-item-detail").text()),
+
+    events: {  },
+
+    render: function() {
+      this.$el.html(this.template(this.model.toJSON()));
+      return this;
+    },
+
+    save: function(e) {
+      e.preventDefault();
+
+      var $inputs = this.$('input');
+      var data = {};
+
+      $inputs.each(function(index, el) {
+        var $el = $(el),
+            name = $el.attr('name'),
+            val = $el.val();
+
+        if (name === 'uris') {
+          val = val.split(',');
+          // strip whitespace
+          val = _.map(val, function(s){return s.replace(/ /g,''); });
+          // reject empty
+          val = _.reject(val, function(s){return (s === '');});
+        }
+
+        data[name] = val;
+      });
+
+      this.trigger('save', data);
+    }
+  });
+
+  // var AppItemView = Backbone.View.extend({
+  //   tagName: 'li',
+  //   className: 'app-list-item',
+  //   template: _.template($("#app-item-view").text()),
+
+  //   events: {
+  //     'click .suspend': 'suspend',
+  //     'click .destroy': 'destroy',
+  //     'click .scale': 'scale'
+  //   },
+
+  //   initialize: function() {
+  //     this.listenTo(this.model, {
+  //       'change:instances': this.render,
+  //       destroy: this.remove
+  //     });
+
+  //     this.$el.addClass(this.model.get('id'));
+  //   },
+
+  //   suspend: function(e) {
+  //     if (confirm("Suspend " + this.model.id + "?\n\nThe application will be scaled to 0 instances.")) {
+  //       this.model.scale(0);
+  //     }
+
+  //     e.preventDefault();
+  //   },
+
+  //   destroy: function(e) {
+  //     var ok = confirm("Destroy application " + this.model.id + "?\n\nThis is irreversible.");
+  //     if (ok) {
+  //       this.model.destroy();
+  //     }
+
+  //     e.preventDefault();
+  //   },
+
+  //   scale: function(e) {
+  //     var instances = prompt('How many instances?', this.model.get('instances'));
+  //     if (instances) {
+  //       this.model.scale(instances);
+  //     }
+
+  //     e.preventDefault();
+  //   },
+
+  //   remove: function() {
+  //     this.$el.remove();
+  //   },
+
+  //   render: function() {
+  //     var data = this.data(),
+  //         html = this.template(data);
+  //     this.$el.html(html);
+  //     return this;
+  //   },
+
+  //   data: function() {
+  //     var attr = this.model.toJSON(),
+  //         total = (attr.cpus * attr.instances),
+  //         uriCount = attr.uris.length,
+  //         uris = (attr.uris.join('<li>'));
+  //     attr = _.extend(attr, {
+  //       total: total,
+  //       uris: uris,
+  //       uriCount: uriCount
+  //     });
+  //     return attr;
+  //   }
+  // });
+
+  var FormView = MarathonView.extend({
     className: 'window',
     template: _.template($("#form-view").text()),
 
@@ -416,7 +504,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     }
   });
 
-  var HomeView = Backbone.View.extend({
+  var HomeView = MarathonView.extend({
     el: '.start-view-list',
 
     events: {
@@ -425,6 +513,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
     initialize: function() {
       this.$addButton = this.$('.add-button');
+      this.$table = this.$(".item-table > tbody");
       this.lightbox = new Backpack.Lightbox();
 
       this.listenTo(this.collection, {
@@ -434,18 +523,17 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     render: function() {
-      var docFrag = document.createDocumentFragment();
+      var self = this;
       this.collection.each(function(model) {
-        docFrag.appendChild((new AppItemView({model: model})).render().el);
+        var view = new AppItemView({model: model});
+        self.$table.append(view.render().el);
       });
-
-      this.$addButton.before(docFrag.childNodes);
       return this;
     },
 
     add: function(model, collection, options) {
       var view = new AppItemView({model: model});
-      this.$addButton.before(view.render().el);
+      this.$table.append(view.render().el);
     },
 
     addNew: function() {

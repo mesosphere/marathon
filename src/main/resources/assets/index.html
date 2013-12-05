@@ -10,8 +10,48 @@
     <link rel='stylesheet' type='text/css' href='css/marathon.css'>
   </head>
 
-  <body class='fullscreen marathon'>
-    <div class='fullscreen texture-background'></div>
+  <body>
+    <div class="container">
+      <h1>
+        <span class='system-folder'>Marathon /</span>
+        <div id='terminal'>
+          <input type='text' id='setter'>
+          <span id='system-text'></span>
+          <span id='prompt-text'></span>
+          <span id='caret' class='system-caret'></span>
+        </div>
+      </h1>
+      <div class="start-view-list">
+        <table class="table table-hover item-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>CMD</th>
+              <th>URIs</th>
+              <th>Memory</th>
+              <th>CPUs</th>
+              <th>Instances</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+        <div class="text-center">
+          <button type="button" class="btn btn-small add-button">New</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="text/template" id="app-item">
+      <td>{{ id }}</td>
+      <td>{{ cmd }}</td>
+      <td>{{ uriCount }}</td>
+      <td>{{ mem }}</td>
+      <td>{{ cpus }}</td>
+      <td>{{ instances }}</td>
+    </script>
+
+<!--     <div class='fullscreen texture-background'></div>
 
     <div class='fullscreen content'>
       <h1>
@@ -28,14 +68,14 @@
       <ul class='start-view-list list-unstyled'>
         <li><div class='app-item add-button'>+</div></li>
       </ul>
-    </div>
+    </div> -->
 
     <script type="text/template" id="app-item-view">
       <div class='app-item'>
         <div class='info-wrapper'>
           <h3 class='app-item-header'>{{ id }}</h3>
           <dl class='dl-horizontal'>
-            <dt>CMT:</dt><dd>{{ cmd }}</dd>
+            <dt>CMD:</dt><dd>{{ cmd }}</dd>
             <dt class='uri-wrapper'>URIs:
               <ul class='uris'>{{uris}}</ul></dt><dd>{{ uriCount }}</dd>
             <dt>Memory (MB):</dt><dd>{{ mem }}</dd>
