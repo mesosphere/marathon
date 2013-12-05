@@ -30,7 +30,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     var show = [];
     for (var i = 0; i < lis.length; i++) {
       oli = lis[i];
-      li = $(oli).find('h3')[0];
+      li = $(oli).find('td:first')[0];
       if ((li.textContent || li.innerText || "").toLowerCase().indexOf(filter) >= 0) {
         if (oli.style.display === "none") {
           oli.style.display = oldDisplay;
@@ -327,6 +327,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
   var AppItemView = MarathonView.extend({
     tagName: 'tr',
+    className: 'app-list-item',
     template: _.template($("#app-item").text()),
 
     events: {
