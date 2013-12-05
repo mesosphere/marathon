@@ -309,6 +309,11 @@ jQuery.fn.fastLiveFilter = function(list, options) {
   // Simple base view to keep the render logic similar.
   var MarathonView = Backbone.View.extend({
 
+    data: function() {
+      console.log(this.model);
+      return this.model.toJSON()
+    },
+
     remove: function() {
       this.$el.remove();
     },
@@ -352,8 +357,13 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     showDetails: function() {
-      this.lightbox.content(this.formView);
-      this.lightbox.open();
+      var lightbox = new Backpack.Lightbox();
+      var detail_view = new AppItemDetail({
+        model: this.model,
+        lightbox: lightbox
+      });
+      lightbox.content(detail_view);
+      lightbox.open();
     }
   });
 
@@ -361,109 +371,44 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     className: 'window',
     template: _.template($("#app-item-detail").text()),
 
-    events: {  },
-
-    render: function() {
-      this.$el.html(this.template(this.model.toJSON()));
-      return this;
+    events: {
+      'click .suspend': 'suspend',
+      'click .destroy': 'destroy',
+      'click .scale': 'scale'
     },
 
-    save: function(e) {
+    initialize: function(opts) {
+      this.lightbox = opts.lightbox;
+    },
+
+    suspend: function(e) {
+      if (confirm("Suspend " + this.model.id + "?\n\nThe application will be scaled to 0 instances.")) {
+        this.model.scale(0);
+      }
+
       e.preventDefault();
+    },
 
-      var $inputs = this.$('input');
-      var data = {};
+    destroy: function(e) {
+      var ok = confirm("Destroy application " + this.model.id + "?\n\nThis is irreversible.");
+      if (ok) {
+        this.model.destroy();
+        this.lightbox.close();
+      }
 
-      $inputs.each(function(index, el) {
-        var $el = $(el),
-            name = $el.attr('name'),
-            val = $el.val();
+      e.preventDefault();
+    },
 
-        if (name === 'uris') {
-          val = val.split(',');
-          // strip whitespace
-          val = _.map(val, function(s){return s.replace(/ /g,''); });
-          // reject empty
-          val = _.reject(val, function(s){return (s === '');});
-        }
+    scale: function(e) {
+      var instances = prompt('How many instances?', this.model.get('instances'));
+      if (instances) {
+        this.model.scale(instances);
+      }
 
-        data[name] = val;
-      });
-
-      this.trigger('save', data);
+      e.preventDefault();
     }
+
   });
-
-  // var AppItemView = Backbone.View.extend({
-  //   tagName: 'li',
-  //   className: 'app-list-item',
-  //   template: _.template($("#app-item-view").text()),
-
-  //   events: {
-  //     'click .suspend': 'suspend',
-  //     'click .destroy': 'destroy',
-  //     'click .scale': 'scale'
-  //   },
-
-  //   initialize: function() {
-  //     this.listenTo(this.model, {
-  //       'change:instances': this.render,
-  //       destroy: this.remove
-  //     });
-
-  //     this.$el.addClass(this.model.get('id'));
-  //   },
-
-  //   suspend: function(e) {
-  //     if (confirm("Suspend " + this.model.id + "?\n\nThe application will be scaled to 0 instances.")) {
-  //       this.model.scale(0);
-  //     }
-
-  //     e.preventDefault();
-  //   },
-
-  //   destroy: function(e) {
-  //     var ok = confirm("Destroy application " + this.model.id + "?\n\nThis is irreversible.");
-  //     if (ok) {
-  //       this.model.destroy();
-  //     }
-
-  //     e.preventDefault();
-  //   },
-
-  //   scale: function(e) {
-  //     var instances = prompt('How many instances?', this.model.get('instances'));
-  //     if (instances) {
-  //       this.model.scale(instances);
-  //     }
-
-  //     e.preventDefault();
-  //   },
-
-  //   remove: function() {
-  //     this.$el.remove();
-  //   },
-
-  //   render: function() {
-  //     var data = this.data(),
-  //         html = this.template(data);
-  //     this.$el.html(html);
-  //     return this;
-  //   },
-
-  //   data: function() {
-  //     var attr = this.model.toJSON(),
-  //         total = (attr.cpus * attr.instances),
-  //         uriCount = attr.uris.length,
-  //         uris = (attr.uris.join('<li>'));
-  //     attr = _.extend(attr, {
-  //       total: total,
-  //       uris: uris,
-  //       uriCount: uriCount
-  //     });
-  //     return attr;
-  //   }
-  // });
 
   var FormView = MarathonView.extend({
     className: 'window',

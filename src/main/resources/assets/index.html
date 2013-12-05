@@ -51,6 +51,29 @@
       <td>{{ instances }}</td>
     </script>
 
+
+
+    <script type="text/template" id="app-item-detail">
+      <div class='app-item'>
+        <div class='info-wrapper'>
+          <h3 class='app-item-header'>{{ id }}</h3>
+          <dl class='dl-horizontal'>
+            <dt>CMD:</dt><dd>{{ cmd }}</dd>
+            <dt class='uri-wrapper'>URIs:
+              <ul class='uris'>{{uris}}</ul></dt><dd>{{ uris.length }}</dd>
+            <dt>Memory (MB):</dt><dd>{{ mem }}</dd>
+            <dt>CPUs:</dt><dd>{{ cpus }}</dd>
+            <dt>Instances:</dt><dd>{{ instances }}</dd>
+          </dl>
+        </div>
+        <div class='action-bar'>
+          <a class='scale' href='#'>SCALE</a> |
+          <a class='suspend' href='#'>SUSPEND</a> |
+          <a class='destroy' href='#'>DESTROY</a>
+        </div>
+      </div>
+    </script>
+
 <!--     <div class='fullscreen texture-background'></div>
 
     <div class='fullscreen content'>
