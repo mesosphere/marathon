@@ -449,7 +449,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
   });
 
   var HomeView = MarathonView.extend({
-    el: '.start-view-list',
+    el: '.container',
 
     events: {
       'click .add-button': 'addNew',

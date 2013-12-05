@@ -13,15 +13,23 @@
   <body>
 
     <div class="container">
-      <h1>
-        <span class='system-folder'>Marathon /</span>
-        <div id='terminal'>
-          <input type='text' id='setter'>
-          <span id='system-text'></span>
-          <span id='prompt-text'></span>
-          <span id='caret' class='system-caret'></span>
+      <div class="row">
+        <div class="col-md-6">
+          <h1>
+            <span class='system-folder'>Marathon /</span>
+            <div id='terminal'>
+              <input type='text' id='setter'>
+              <span id='system-text'></span>
+              <span id='prompt-text'></span>
+              <span id='caret' class='system-caret'></span>
+            </div>
+          </h1>
         </div>
-      </h1>
+        <div class="col-md-6 text-right">
+          <button type="button" class="btn btn-small add-button h1">New</button>
+        </div>
+      </div>
+
       <div class="start-view-list">
         <table class="table table-hover item-table">
           <thead>
@@ -37,9 +45,7 @@
           <tbody>
           </tbody>
         </table>
-        <div class="text-center">
-          <button type="button" class="btn btn-small add-button">New</button>
-        </div>
+
       </div>
     </div>
 

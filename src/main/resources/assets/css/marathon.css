@@ -471,15 +471,15 @@ h1 {
 }
 
 .add-button {
+  margin-top: 20px;
   text-align: center;
   font-weight: bold;
   background: transparent;
   color: #3C729D;
   border: 1px solid #3C729D;
-  font-size: 25px;
+  line-height: 50px;
   font-family: arial-black;
   height: auto;
-  line-height: 3.4em;
   padding-bottom: 0;
   cursor: pointer;
 }
