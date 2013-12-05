@@ -310,7 +310,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
   var MarathonView = Backbone.View.extend({
 
     data: function() {
-      console.log(this.model);
       return this.model.toJSON()
     },
 
