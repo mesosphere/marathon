@@ -117,10 +117,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
     Lightbox = Backbone.View.extend({
 
-      template:  _.template(
-        "<div class='lightbox-inner'>" +
-          "<div class='lb-content'></div>" +
-        "</div>"),
+      template:  _.template($("#lightbox").text()),
       className: 'lightbox',
       events: {
         'click': 'dismiss',
@@ -312,25 +309,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
   var AppItemView = Backbone.View.extend({
     tagName: 'li',
     className: 'app-list-item',
-    template: _.template(
-      "<div class='app-item'>" +
-        "<div class='info-wrapper'>" +
-          "<h3 class='app-item-header'>{{ id }}</h3>" +
-          "<dl class='dl-horizontal'>" +
-            "<dt>CMD:</dt><dd>{{ cmd }}</dd>" +
-            "<dt class='uri-wrapper'>URIs:<ul class='uris'>{{uris}}</ul></dt><dd>{{ uriCount }}</dd>" +
-            "<dt>Memory (MB):</dt><dd>{{ mem }}</dd>" +
-            "<dt>CPUs:</dt><dd>{{ cpus }}</dd>" +
-            "<dt>Instances:</dt><dd>{{ instances }}</dd>" +
-          "</dl>" +
-        "</div>" +
-        "<div class='action-bar'>" +
-          "<a class='scale' href='#'>SCALE</a> | " +
-          "<a class='suspend' href='#'>SUSPEND</a> | " +
-          "<a class='destroy' href='#'>DESTROY</a>" +
-        "</div>" +
-      "</div>"
-    ),
+    template: _.template($("#app-item-view").text()),
 
     events: {
       'click .suspend': 'suspend',
@@ -400,42 +379,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
   var FormView = Backbone.View.extend({
     className: 'window',
-    template: _.template(
-      "<form id='add-app-form'>" +
-        "<h2 class='window-header'>New Application</h2>" +
-        "<div class='input-row'>" +
-          "<label for='id-field'>ID</label>" +
-          "<input id='id-field' name='id' value='{{id}}' tabindex='1' autofocus required>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='cmd-field'>Command</label>" +
-          "<input id='cmd-field' name='cmd' tabindex='2' required>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='mem-field'>Memory (MB)</label>" +
-          "<input id='mem-field' name='mem' min='0'" +
-            "value='{{mem}}' tabindex='3' required type='number'>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='cpus-field'>CPUs</label>" +
-          "<input id='cpus-field' name='cpus' min='0' step='any'" +
-            "value='{{cpus}}' tabindex='4' required type='number'>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='instances-field'>Instances</label>" +
-          "<input id='instances-field' name='instances' min='1'" +
-            "value='{{instances}}' tabindex='5' required type='number' step='1'>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='uris-field'>URIs</label>" +
-          "<input id='uris-field' name='uris' tabindex='6'>" +
-        "</div>" +
-        "<div class='text-right' style='margin-top: 40px;'>" +
-          "<button class='btn btn-link' data-lightbox-close='true' tabindex='8'>Cancel</button>" +
-          "<button type='submit' id='save' class='btn btn-primary' tabindex='7'>Start</button>" +
-        "</div>" +
-      "</form>"
-    ),
+    template: _.template($("#form-view").text()),
 
     events: {
       'submit form': 'save'
