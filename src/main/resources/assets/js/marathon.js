@@ -30,7 +30,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     var show = [];
     for (var i = 0; i < lis.length; i++) {
       oli = lis[i];
-      li = $(oli).find('h3')[0];
+      li = $(oli).find('td:first')[0];
       if ((li.textContent || li.innerText || "").toLowerCase().indexOf(filter) >= 0) {
         if (oli.style.display === "none") {
           oli.style.display = oldDisplay;
@@ -117,10 +117,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
     Lightbox = Backbone.View.extend({
 
-      template:  _.template(
-        "<div class='lightbox-inner'>" +
-          "<div class='lb-content'></div>" +
-        "</div>"),
+      template:  _.template($("#lightbox").text()),
       className: 'lightbox',
       events: {
         'click': 'dismiss',
@@ -309,33 +306,32 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     url: 'v1/apps/'
   });
 
-  var AppItemView = Backbone.View.extend({
-    tagName: 'li',
+  // Simple base view to keep the render logic similar.
+  var MarathonView = Backbone.View.extend({
+
+    data: function() {
+      return this.model.toJSON()
+    },
+
+    remove: function() {
+      this.$el.remove();
+    },
+
+    render: function() {
+      var data = this.data(),
+          html = this.template(data);
+      this.$el.html(html);
+      return this;
+    }
+  });
+
+  var AppItemView = MarathonView.extend({
+    tagName: 'tr',
     className: 'app-list-item',
-    template: _.template(
-      "<div class='app-item'>" +
-        "<div class='info-wrapper'>" +
-          "<h3 class='app-item-header'>{{ id }}</h3>" +
-          "<dl class='dl-horizontal'>" +
-            "<dt>CMD:</dt><dd>{{ cmd }}</dd>" +
-            "<dt class='uri-wrapper'>URIs:<ul class='uris'>{{uris}}</ul></dt><dd>{{ uriCount }}</dd>" +
-            "<dt>Memory (MB):</dt><dd>{{ mem }}</dd>" +
-            "<dt>CPUs:</dt><dd>{{ cpus }}</dd>" +
-            "<dt>Instances:</dt><dd>{{ instances }}</dd>" +
-          "</dl>" +
-        "</div>" +
-        "<div class='action-bar'>" +
-          "<a class='scale' href='#'>SCALE</a> | " +
-          "<a class='suspend' href='#'>SUSPEND</a> | " +
-          "<a class='destroy' href='#'>DESTROY</a>" +
-        "</div>" +
-      "</div>"
-    ),
+    template: _.template($("#app-item").text()),
 
     events: {
-      'click .suspend': 'suspend',
-      'click .destroy': 'destroy',
-      'click .scale': 'scale'
+      'click': 'showDetails'
     },
 
     initialize: function() {
@@ -345,6 +341,44 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       });
 
       this.$el.addClass(this.model.get('id'));
+    },
+
+    data: function() {
+      var attr = this.model.toJSON(),
+          total = (attr.cpus * attr.instances),
+          uriCount = attr.uris.length,
+          uris = (attr.uris.join('<li>'));
+      attr = _.extend(attr, {
+        total: total,
+        uris: uris,
+        uriCount: uriCount
+      });
+      return attr;
+    },
+
+    showDetails: function() {
+      var lightbox = new Backpack.Lightbox();
+      var detail_view = new AppItemDetail({
+        model: this.model,
+        lightbox: lightbox
+      });
+      lightbox.content(detail_view);
+      lightbox.open();
+    }
+  });
+
+  var AppItemDetail = MarathonView.extend({
+    className: 'window',
+    template: _.template($("#app-item-detail").text()),
+
+    events: {
+      'click .suspend': 'suspend',
+      'click .destroy': 'destroy',
+      'click .scale': 'scale'
+    },
+
+    initialize: function(opts) {
+      this.lightbox = opts.lightbox;
     },
 
     suspend: function(e) {
@@ -359,6 +393,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       var ok = confirm("Destroy application " + this.model.id + "?\n\nThis is irreversible.");
       if (ok) {
         this.model.destroy();
+        this.lightbox.close();
       }
 
       e.preventDefault();
@@ -371,71 +406,13 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       }
 
       e.preventDefault();
-    },
-
-    remove: function() {
-      this.$el.remove();
-    },
-
-    render: function() {
-      var data = this.data(),
-          html = this.template(data);
-      this.$el.html(html);
-      return this;
-    },
-
-    data: function() {
-      var attr = this.model.toJSON(),
-          total = (attr.cpus * attr.instances),
-          uriCount = attr.uris.length,
-          uris = (attr.uris.join('<li>'));
-      attr = _.extend(attr, {
-        total: total,
-        uris: uris,
-        uriCount: uriCount
-      });
-      return attr;
     }
+
   });
 
-  var FormView = Backbone.View.extend({
+  var FormView = MarathonView.extend({
     className: 'window',
-    template: _.template(
-      "<form id='add-app-form'>" +
-        "<h2 class='window-header'>New Application</h2>" +
-        "<div class='input-row'>" +
-          "<label for='id-field'>ID</label>" +
-          "<input id='id-field' name='id' value='{{id}}' tabindex='1' autofocus required>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='cmd-field'>Command</label>" +
-          "<input id='cmd-field' name='cmd' tabindex='2' required>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='mem-field'>Memory (MB)</label>" +
-          "<input id='mem-field' name='mem' min='0'" +
-            "value='{{mem}}' tabindex='3' required type='number'>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='cpus-field'>CPUs</label>" +
-          "<input id='cpus-field' name='cpus' min='0' step='any'" +
-            "value='{{cpus}}' tabindex='4' required type='number'>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='instances-field'>Instances</label>" +
-          "<input id='instances-field' name='instances' min='1'" +
-            "value='{{instances}}' tabindex='5' required type='number' step='1'>" +
-        "</div>" +
-        "<div class='input-row'>" +
-          "<label for='uris-field'>URIs</label>" +
-          "<input id='uris-field' name='uris' tabindex='6'>" +
-        "</div>" +
-        "<div class='text-right' style='margin-top: 40px;'>" +
-          "<button class='btn btn-link' data-lightbox-close='true' tabindex='8'>Cancel</button>" +
-          "<button type='submit' id='save' class='btn btn-primary' tabindex='7'>Start</button>" +
-        "</div>" +
-      "</form>"
-    ),
+    template: _.template($("#form-view").text()),
 
     events: {
       'submit form': 'save'
@@ -472,8 +449,8 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     }
   });
 
-  var HomeView = Backbone.View.extend({
-    el: '.start-view-list',
+  var HomeView = MarathonView.extend({
+    el: '.container',
 
     events: {
       'click .add-button': 'addNew',
@@ -481,6 +458,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
     initialize: function() {
       this.$addButton = this.$('.add-button');
+      this.$table = this.$(".item-table > tbody");
       this.lightbox = new Backpack.Lightbox();
 
       this.listenTo(this.collection, {
@@ -490,18 +468,17 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     render: function() {
-      var docFrag = document.createDocumentFragment();
+      var self = this;
       this.collection.each(function(model) {
-        docFrag.appendChild((new AppItemView({model: model})).render().el);
+        var view = new AppItemView({model: model});
+        self.$table.append(view.render().el);
       });
-
-      this.$addButton.before(docFrag.childNodes);
       return this;
     },
 
     add: function(model, collection, options) {
       var view = new AppItemView({model: model});
-      this.$addButton.before(view.render().el);
+      this.$table.append(view.render().el);
     },
 
     addNew: function() {
