@@ -11,6 +11,7 @@
   </head>
 
   <body>
+
     <div class="container">
       <h1>
         <span class='system-folder'>Marathon /</span>
@@ -25,7 +26,7 @@
         <table class="table table-hover item-table">
           <thead>
             <tr>
-              <th></th>
+              <th>ID</th>
               <th>CMD</th>
               <th>URIs</th>
               <th>Memory</th>
@@ -75,23 +76,19 @@
     </script>
 
     <script type="text/template" id="app-item-view">
-      <div class='app-item'>
-        <div class='info-wrapper'>
-          <h3 class='app-item-header'>{{ id }}</h3>
-          <dl class='dl-horizontal'>
-            <dt>CMD:</dt><dd>{{ cmd }}</dd>
-            <dt class='uri-wrapper'>URIs:
-              <ul class='uris'>{{uris}}</ul></dt><dd>{{ uriCount }}</dd>
-            <dt>Memory (MB):</dt><dd>{{ mem }}</dd>
-            <dt>CPUs:</dt><dd>{{ cpus }}</dd>
-            <dt>Instances:</dt><dd>{{ instances }}</dd>
-          </dl>
-        </div>
-        <div class='action-bar'>
-          <a class='scale' href='#'>SCALE</a> |
-          <a class='suspend' href='#'>SUSPEND</a> |
-          <a class='destroy' href='#'>DESTROY</a>
-        </div>
+      <h3 class="app-item-header">{{ id }}</h3>
+      <dl class='dl-horizontal'>
+        <dt>CMD:</dt><dd>{{ cmd }}</dd>
+        <dt class='uri-wrapper'>URIs:
+          <ul class='uris'>{{uris}}</ul></dt><dd>{{ uriCount }}</dd>
+        <dt>Memory (MB):</dt><dd>{{ mem }}</dd>
+        <dt>CPUs:</dt><dd>{{ cpus }}</dd>
+        <dt>Instances:</dt><dd>{{ instances }}</dd>
+      </dl>
+      <div class='action-bar'>
+        <a class='scale' href='#'>SCALE</a> |
+        <a class='suspend' href='#'>SUSPEND</a> |
+        <a class='destroy' href='#'>DESTROY</a>
       </div>
     </script>
 
