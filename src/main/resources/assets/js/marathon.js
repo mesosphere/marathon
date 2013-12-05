@@ -7,7 +7,6 @@
  * License: <http://www.opensource.org/licenses/bsd-license.php>
  * Project Website: http://anthonybush.com/projects/jquery_fast_live_filter/
  **/
-
 jQuery.fn.fastLiveFilter = function(list, options) {
   // Options: input, list, timeout, callback
   options = options || {};
@@ -17,10 +16,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
   var callback = options.callback || function() {};
 
   var keyTimeout;
-
-  // NOTE: because we cache lis & len here, users would need to re-init the plugin
-  // if they modify the list in the DOM later.  This doesn't give us that much speed
-  // boost, so perhaps it's not worth putting it here.
   var lis = $('.app-list-item');
   var oldDisplay = lis.length > 0 ? lis[0].style.display : "block";
 
@@ -57,7 +52,9 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     clearTimeout(keyTimeout);
     keyTimeout = setTimeout(function() { input.change(); }, timeout);
   });
-  return this; // maintain jQuery chainability
+
+  // Maintain jQuery chainability
+  return this;
 };
 
 (function(){
@@ -484,6 +481,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
     initialize: function() {
       this.$addButton = this.$('.add-button');
+      this.lightbox = new Backpack.Lightbox();
 
       this.listenTo(this.collection, {
         add: this.add,
@@ -510,11 +508,11 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       this.formView = new FormView({model: new Item()});
       this.formView.once('save', function(data) {
         this.collection.create(data);
-        window.lightbox.close();
+        this.lightbox.close();
       }, this);
 
-      window.lightbox.content(this.formView);
-      window.lightbox.open();
+      this.lightbox.content(this.formView);
+      this.lightbox.open();
     }
   });
 
@@ -525,29 +523,24 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     index: function() {
-      window.lightbox = new Backpack.Lightbox();
-
-      var apps = new ItemList();
-      var start = new HomeView({
+      var apps = window.all = new ItemList();
+      new HomeView({
         collection: apps
-      });
-
-      $('.content').append(start.render().el);
+      }).render();
 
       apps
         .fetch({reset: true})
         .done(function() {
-          window.all = apps;
           var $input = $('#setter');
           var $caret = $('.system-caret');
 
           $input.fastLiveFilter('.start-view-list');
 
-          $input.focusin(function(){
+          $input.focusin(function() {
             $caret.addClass('focus');
           });
 
-          $input.focusout(function(){
+          $input.focusout(function() {
             $caret.removeClass('focus');
           });
         });
