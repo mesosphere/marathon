@@ -5,7 +5,7 @@ import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.MarathonStore
-import com.google.common.util.concurrent.AbstractIdleService
+import com.google.common.util.concurrent.AbstractExecutionThreadService
 import javax.inject.{Named, Inject}
 import java.util.{TimerTask, Timer}
 import scala.concurrent.{Future, ExecutionContext, Await}
@@ -31,7 +31,7 @@ class MarathonSchedulerService @Inject()(
     store: MarathonStore[AppDefinition],
     frameworkIdUtil: FrameworkIdUtil,
     scheduler: MarathonScheduler)
-  extends AbstractIdleService with Leader {
+  extends AbstractExecutionThreadService with Leader {
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
@@ -63,6 +63,8 @@ class MarathonSchedulerService @Inject()(
   config.mesosRole.get.map(frameworkInfo.setRole)
 
   val driver = new MesosSchedulerDriver(scheduler, frameworkInfo.build, config.mesosMaster())
+
+  var abdicateCmd: Option[ExceptionalCommand[JoinException]] = None
 
   def defaultWait = {
     store.defaultWait
@@ -101,7 +103,7 @@ class MarathonSchedulerService @Inject()(
   }
 
   //Begin Service interface
-  def startUp() {
+  def run() {
     log.info("Starting up")
     if (leader.get) {
       runDriver()
@@ -110,8 +112,10 @@ class MarathonSchedulerService @Inject()(
     }
   }
 
-  def shutDown() {
+  override def triggerShutdown() {
     log.info("Shutting down")
+    abdicateCmd.map(_.execute)
+    stopDriver()
   }
 
   def runDriver() {
@@ -122,7 +126,7 @@ class MarathonSchedulerService @Inject()(
 
   def stopDriver() {
     log.info("Stopping driver")
-    driver.stop()
+    driver.stop(true) // failover = true
   }
 
   def isLeader = {
@@ -151,6 +155,7 @@ class MarathonSchedulerService @Inject()(
 
   def onElected(abdicate: ExceptionalCommand[JoinException]) {
     log.info("Elected")
+    abdicateCmd = Some(abdicate)
     leader.set(true)
     runDriver()
   }
