@@ -63,7 +63,16 @@
     <script type="text/template" id="app-item-detail">
       <div class='app-item'>
         <div class='info-wrapper'>
-          <h3 class='app-item-header'>{{ id }}</h3>
+          <div class="row">
+            <div class="col-md-3">
+              <h3 class='app-item-header'>{{ id }}</h3>
+            </div>
+            <div class="col-md-9 text-right">
+              <button class="btn btn-xs btn-default app-item-btn scale">SCALE</button>
+              <button class="btn btn-xs btn-default app-item-btn suspend">SUSPEND</button>
+              <button class="btn btn-xs btn-danger app-item-btn destroy">DESTROY</button>
+            </div>
+          </div>
           <dl class='dl-horizontal'>
             <dt>CMD:</dt><dd>{{ cmd }}</dd>
             <dt class='uri-wrapper'>URIs:
@@ -73,29 +82,24 @@
             <dt>Instances:</dt><dd>{{ instances }}</dd>
           </dl>
         </div>
-        <div class='action-bar'>
-          <a class='scale' href='#'>SCALE</a> |
-          <a class='suspend' href='#'>SUSPEND</a> |
-          <a class='destroy' href='#'>DESTROY</a>
-        </div>
+        <table class="table task-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Host</th>
+              <th>Ports</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
       </div>
     </script>
 
-    <script type="text/template" id="app-item-view">
-      <h3 class="app-item-header">{{ id }}</h3>
-      <dl class='dl-horizontal'>
-        <dt>CMD:</dt><dd>{{ cmd }}</dd>
-        <dt class='uri-wrapper'>URIs:
-          <ul class='uris'>{{uris}}</ul></dt><dd>{{ uriCount }}</dd>
-        <dt>Memory (MB):</dt><dd>{{ mem }}</dd>
-        <dt>CPUs:</dt><dd>{{ cpus }}</dd>
-        <dt>Instances:</dt><dd>{{ instances }}</dd>
-      </dl>
-      <div class='action-bar'>
-        <a class='scale' href='#'>SCALE</a> |
-        <a class='suspend' href='#'>SUSPEND</a> |
-        <a class='destroy' href='#'>DESTROY</a>
-      </div>
+    <script type="text/template" id="app-task">
+      <td>{{ id }}</td>
+      <td>{{ host }}</td>
+      <td>{{ ports.join(',') }}</td>
     </script>
 
     <script type="text/template" id="form-view">

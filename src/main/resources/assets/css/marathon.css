@@ -204,6 +204,11 @@ h1 {
   text-transform: uppercase;
 }
 
+.btn-xs {
+  font-size: 12px;
+  padding: 1px 5px;
+}
+
 .btn-link {
   color: #999;
 }
@@ -218,6 +223,12 @@ h1 {
 .btn-primary:hover {
   background-color: #3C729D;
   color: #fff;
+}
+
+.btn-default {
+  background-color: transparent;
+  border-color: #FFFFFF;
+  color: #FFFFFF;
 }
 
 .system-folder,
@@ -483,4 +494,8 @@ h1 {
 .table-hover > tbody > tr:hover > td {
   background-color: #B8E8EF;
   color: #111113;
+}
+
+.app-item-btn {
+  margin-top: 20px;
 }
