@@ -496,6 +496,7 @@ h1 {
   color: #111113;
 }
 
-.app-item-btn {
-  margin-top: 20px;
+.app-item-header {
+  margin-top: 0px;
 }
+
