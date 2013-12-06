@@ -57,8 +57,6 @@
       <td>{{ instances }}</td>
     </script>
 
-
-
     <script type="text/template" id="app-item-detail">
       <div class='app-item'>
         <div class='info-wrapper'>
@@ -132,11 +130,11 @@
           <input id='uris-field' name='uris' tabindex='6'>
         </div>
         <div class='text-right' style='margin-top: 40px;'>
+          <button type='submit' id='save' class='btn btn-primary pull-right' tabindex='7'>
+            Start
+          </button>
           <button class='btn btn-link' data-lightbox-close='true' tabindex='8'>
             Cancel
-          </button>
-          <button type='submit' id='save' class='btn btn-primary' tabindex='7'>
-            Start
           </button>
         </div>
       </form>
@@ -152,8 +150,5 @@
     <script src='js/libs/underscore-min.js'></script>
     <script src='js/libs/backbone-min.js'></script>
     <script src='js/marathon.js'></script>
-
-
-
   </body>
 </html>
