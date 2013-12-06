@@ -200,8 +200,13 @@ h1 {
   border-radius: 0;
   font-family: Lato;
   font-size: 24px;
-  padding: 7px 35px;
+  padding: 7px 25px;
   text-transform: uppercase;
+}
+
+.btn-xs {
+  font-size: 12px;
+  padding: 1px 5px;
 }
 
 .btn-link {
@@ -218,6 +223,12 @@ h1 {
 .btn-primary:hover {
   background-color: #3C729D;
   color: #fff;
+}
+
+.btn-default {
+  background-color: transparent;
+  border-color: #FFFFFF;
+  color: #FFFFFF;
 }
 
 .system-folder,
@@ -484,3 +495,8 @@ h1 {
   background-color: #B8E8EF;
   color: #111113;
 }
+
+.app-item-header {
+  margin-top: 0px;
+}
+

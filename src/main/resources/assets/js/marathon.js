@@ -306,6 +306,25 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     url: 'v1/apps/'
   });
 
+  var Task = Backbone.Model;
+
+  var TaskList = Backbone.Collection.extend({
+    comparator: 'id',
+    model: Task,
+    url: function() {
+      return 'v1/apps/' + this.app.get('id') + '/tasks'
+    },
+
+    initialize: function(models, opts) {
+      this.app = opts.app
+    },
+
+    parse: function(resp) {
+      return resp[this.app.id]
+    }
+
+  });
+
   // Simple base view to keep the render logic similar.
   var MarathonView = Backbone.View.extend({
 
@@ -379,6 +398,13 @@ jQuery.fn.fastLiveFilter = function(list, options) {
 
     initialize: function(opts) {
       this.lightbox = opts.lightbox;
+
+      this.tasks = new TaskList(null, { app: this.model });
+      this.listenTo(this.tasks, {
+        reset: this.tasksRender
+      });
+
+      this.tasks.fetch({reset: true});
     },
 
     suspend: function(e) {
@@ -406,8 +432,23 @@ jQuery.fn.fastLiveFilter = function(list, options) {
       }
 
       e.preventDefault();
+    },
+
+    tasksRender: function() {
+      var taskTable = this.$(".task-table");
+      this.tasks.each(function(model) {
+        var view = new TaskView({ model: model });
+        taskTable.append(view.render().el);
+      });
+
+      return this;
     }
 
+  });
+
+  var TaskView = MarathonView.extend({
+    tagName: 'tr',
+    template: _.template($("#app-task").text())
   });
 
   var FormView = MarathonView.extend({
