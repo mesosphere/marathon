@@ -80,9 +80,9 @@ jQuery.fn.fastLiveFilter = function(list, options) {
         this.set('open', true);
       },
 
-      close: function(){
-        this.trigger('close');
+      close: function() {
         this.set('open', false);
+        this.trigger('closed');
       },
 
       dismiss: function(){
@@ -125,10 +125,13 @@ jQuery.fn.fastLiveFilter = function(list, options) {
         'click [data-lightbox-close]': 'close'
       },
 
-      bindings: function(){
-        this.model.on('change:open', this.toggle, this);
-        this.model.on('change:content', this.updateContent, this);
-        this.model.on('change:backgroundColor', this.updateColor, this);
+      bindings: function() {
+        this.listenTo(this.model, {
+          'change:backgroundColor': this.updateColor,
+          'change:content': this.updateContent,
+          'change:open': this.toggle,
+          'closed': this.remove
+        });
       },
 
       initialize: function(){
@@ -306,30 +309,29 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     url: 'v1/apps/'
   });
 
-  var Task = Backbone.Model;
+  var Task = Backbone.Model.extend({});
 
   var TaskList = Backbone.Collection.extend({
     comparator: 'id',
     model: Task,
     url: function() {
-      return 'v1/apps/' + this.app.get('id') + '/tasks'
+      return 'v1/apps/' + this.app.get('id') + '/tasks';
     },
 
     initialize: function(models, opts) {
-      this.app = opts.app
+      this.app = opts.app;
     },
 
     parse: function(resp) {
-      return resp[this.app.id]
+      return resp[this.app.id];
     }
-
   });
 
   // Simple base view to keep the render logic similar.
   var MarathonView = Backbone.View.extend({
 
     data: function() {
-      return this.model.toJSON()
+      return this.model.toJSON();
     },
 
     remove: function() {
@@ -381,6 +383,7 @@ jQuery.fn.fastLiveFilter = function(list, options) {
         model: this.model,
         lightbox: lightbox
       });
+
       lightbox.content(detail_view);
       lightbox.open();
     }
@@ -500,7 +503,6 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     initialize: function() {
       this.$addButton = this.$('.add-button');
       this.$table = this.$(".item-table > tbody");
-      this.lightbox = new Backpack.Lightbox();
 
       this.listenTo(this.collection, {
         add: this.add,
@@ -523,14 +525,16 @@ jQuery.fn.fastLiveFilter = function(list, options) {
     },
 
     addNew: function() {
+      var lightbox = new Backpack.Lightbox();
+
       this.formView = new FormView({model: new Item()});
       this.formView.once('save', function(data) {
         this.collection.create(data);
-        this.lightbox.close();
+        lightbox.close();
       }, this);
 
-      this.lightbox.content(this.formView);
-      this.lightbox.open();
+      lightbox.content(this.formView);
+      lightbox.open();
     }
   });
 
