@@ -1,15 +1,11 @@
 /** @jsx React.DOM */
 
 define([
-  "React",
-  "jsx!components/AppModalComponent"
-], function(React, AppModalComponent) {
+  "React"
+], function(React) {
   return React.createClass({
     onClick: function() {
-      React.renderComponent(
-        <AppModalComponent model={this.props.model} />,
-        document.getElementById("lightbox")
-      );
+      this.props.onClick(this.props.model);
     },
     render: function() {
       var model = this.props.model;
