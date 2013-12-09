@@ -122,6 +122,14 @@ h1 {
   margin-left: 0.5em;
 }
 
+.modal {
+  display: block;
+}
+
+.modal-content {
+  background-color: #111113;
+}
+
 /* ==============
  * Helpers
  * ==============
@@ -207,6 +215,10 @@ h1 {
 .btn-xs {
   font-size: 12px;
   padding: 1px 5px;
+}
+
+.btn-xs + .btn-xs {
+  margin-left: 5px;
 }
 
 .btn-link {

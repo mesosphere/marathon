@@ -11,7 +11,8 @@
   </head>
 
   <body>
-    <div class="texture-background"><div class="container">
+    <div class="texture-background"></div>
+    <div class="container">
       <div class="row">
         <div class="col-md-6">
           <h1>
@@ -20,135 +21,23 @@
               <input type='text' id='setter'>
               <span id='system-text'></span>
               <span id='prompt-text'></span>
-              <span id='caret' class='system-caret'></span>
+              
             </div>
           </h1>
         </div>
         <div class="col-md-6 text-right">
-          <button type="button" class="btn btn-primary btn-lg add-button h1">+ New</button>
-        </div>
-      </div>
-
-      <div class="start-view-list">
-        <table class="table table-hover item-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>CMD</th>
-              <th>URIs</th>
-              <th>Memory</th>
-              <th>CPUs</th>
-              <th>Instances</th>
-            </tr>
-          </thead>
-          <tbody>
-          </tbody>
-        </table>
-
-      </div>
-    </div></div>
-
-    <script type="text/template" id="app-item">
-      <td>{{ id }}</td>
-      <td>{{ cmd }}</td>
-      <td>{{ uriCount }}</td>
-      <td>{{ mem }}</td>
-      <td>{{ cpus }}</td>
-      <td>{{ instances }}</td>
-    </script>
-
-    <script type="text/template" id="app-item-detail">
-      <div class='app-item'>
-        <div class='info-wrapper'>
-          <div class="row">
-            <div class="col-md-3">
-              <h3 class='app-item-header'>{{ id }}</h3>
-            </div>
-            <div class="col-md-9 text-right">
-              <button class="btn btn-xs btn-default scale">SCALE</button>
-              <button class="btn btn-xs btn-default suspend">SUSPEND</button>
-              <button class="btn btn-xs btn-danger destroy">DESTROY</button>
-            </div>
-          </div>
-          <dl class='dl-horizontal'>
-            <dt>CMD:</dt><dd>{{ cmd }}</dd>
-            <dt class='uri-wrapper'>URIs:
-              <ul class='uris'>{{uris}}</ul></dt><dd>{{ uris.length }}</dd>
-            <dt>Memory (MB):</dt><dd>{{ mem }}</dd>
-            <dt>CPUs:</dt><dd>{{ cpus }}</dd>
-            <dt>Instances:</dt><dd>{{ instances }}</dd>
-          </dl>
-        </div>
-        <table class="table task-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Host</th>
-              <th>Ports</th>
-            </tr>
-          </thead>
-          <tbody>
-          </tbody>
-        </table>
-      </div>
-    </script>
-
-    <script type="text/template" id="app-task">
-      <td>{{ id }}</td>
-      <td>{{ host }}</td>
-      <td>{{ ports.join(',') }}</td>
-    </script>
-
-    <script type="text/template" id="form-view">
-      <form id='add-app-form'>
-        <h2 class='window-header'>New Application</h2>
-        <div class='input-row'>
-          <label for='id-field'>ID</label>
-          <input id='id-field' name='id' value='{{id}}' tabindex='1' autofocus required>
-        </div>
-        <div class='input-row'>
-          <label for='cmd-field'>Command</label>
-          <input id='cmd-field' name='cmd' tabindex='2' required>
-        </div>
-        <div class='input-row'>
-          <label for='mem-field'>Memory (MB)</label>
-          <input id='mem-field' name='mem' min='0'
-            value='{{mem}}' tabindex='3' required type='number'>
-        </div>
-        <div class='input-row'>
-          <label for='cpus-field'>CPUs</label>
-          <input id='cpus-field' name='cpus' min='0' step='any'
-            value='{{cpus}}' tabindex='4' required type='number'>
-        </div>
-        <div class='input-row'>
-          <label for='instances-field'>Instances</label>
-          <input id='instances-field' name='instances' min='1'
-            value='{{instances}}' tabindex='5' required type='number' step='1'>
-        </div>
-        <div class='input-row'>
-          <label for='uris-field'>URIs</label>
-          <input id='uris-field' name='uris' tabindex='6'>
-        </div>
-        <div class='text-right' style='margin-top: 40px;'>
-          <button type='submit' id='save' class='btn btn-primary pull-right' tabindex='7'>
-            Start
-          </button>
-          <button class='btn btn-link' data-lightbox-close='true' tabindex='8'>
-            Cancel
+          <button type="button" class="btn btn-primary btn-lg add-button h1">
+            + New
           </button>
         </div>
-      </form>
-    </script>
-
-    <script type="text/template" id="lightbox">
-      <div class='lightbox-inner'>
-        <div class='lb-content'></div>
       </div>
-    </script>
 
-    <script src='js/libs/jquery-min.js'></script>
-    <script src='js/libs/underscore-min.js'></script>
-    <script src='js/libs/backbone-min.js'></script>
-    <script src='js/marathon.js'></script>
+      <div class="start-view-list" id="job-list"></div>
+    </div>
+
+    <div id="lightbox"></div>
+
+    <script src='js/libs/JSXTransformer.js'></script>
+    <script data-main='js/main.js' src='js/require-2.1.9.js'></script>
   </body>
 </html>
