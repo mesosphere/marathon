@@ -126,8 +126,18 @@ h1 {
   display: block;
 }
 
+.modal-footer {
+  border-bottom: 7px solid rgb(60, 114, 157);
+  border-top: none;
+  margin-top: 0;
+}
+
+.modal-header {
+  border-bottom: none;
+}
+
 .modal-content {
-  background-color: #111113;
+  background-color: #222224;
 }
 
 /* ==============
@@ -136,9 +146,10 @@ h1 {
  */
 .fullscreen {
   position: absolute;
-  display: block;
-  width: 100%;
-  height: 100%;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
 }
 
 .app {
@@ -207,8 +218,6 @@ h1 {
 .btn {
   border-radius: 0;
   font-family: Lato;
-  font-size: 24px;
-  padding: 7px 25px;
   text-transform: uppercase;
 }
 
@@ -241,6 +250,11 @@ h1 {
   background-color: transparent;
   border-color: #FFFFFF;
   color: #FFFFFF;
+}
+
+.btn-default.disabled,
+.btn-default[disabled] {
+  background-color: transparent;
 }
 
 .system-folder,
@@ -439,6 +453,7 @@ h1 {
 .texture-background {
   background: -webkit-linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
   background: linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
+  z-index: -1;
 
   -webkit-animation-duration: 1s;
   -webkit-animation-name: power-on;
