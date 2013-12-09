@@ -1,14 +1,19 @@
 /** @jsx React.DOM */
 
 define([
+  "jquery",
   "React"
-], function(React) {
+], function($, React) {
   return React.createClass({
     destroy: function(event) {
       if (event.target.className === "modal" ||
           event.target.className === "modal-dialog") {
         var domNode = this.getDOMNode();
-        React.unmountComponentAtNode(domNode);
+
+        // TODO(ssorallen): Why does this need to unmount from the parentNode?
+        // If it is unmounted from `domNode`, the second render throws an
+        // invariant exception.
+        React.unmountComponentAtNode(domNode.parentNode);
 
         $(domNode).remove();
       }
@@ -19,9 +24,7 @@ define([
           <div className="modal" onClick={this.destroy}>
             <div className="modal-dialog">
               <div className="modal-content">
-                <div className="modal-body">
-                  {this.props.children}
-                </div>
+                {this.props.children}
               </div>
             </div>
           </div>
