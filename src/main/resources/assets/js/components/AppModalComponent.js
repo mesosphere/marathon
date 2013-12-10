@@ -7,9 +7,13 @@ define([
   "mixins/BackboneMixin"
 ], function(React, ModalComponent, TaskListComponent, BackboneMixin) {
   return React.createClass({
+    destroy: function() {
+      this.refs.modalComponent.destroy();
+    },
     destroyApp: function() {
       if (confirm("Destroy app '" + this.props.model.get("id") + "'?\nThis is irreversible.")) {
         this.props.model.destroy();
+        this.refs.modalComponent.destroy();
       }
     },
     mixins: [BackboneMixin],
@@ -17,10 +21,10 @@ define([
       var model = this.props.model;
 
       return (
-        <ModalComponent>
+        <ModalComponent ref="modalComponent">
           <div className="modal-header">
              <button type="button" className="close"
-               aria-hidden="true">&times;</button>
+                aria-hidden="true" onClick={this.destroy}>&times;</button>
             <h3 className="modal-title">{model.get("id")}</h3>
           </div>
           <div className="modal-body">
