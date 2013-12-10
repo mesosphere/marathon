@@ -12,12 +12,6 @@ require.config({
       deps: ["Underscore", "jquery"],
       exports: "Backbone"
     },
-    JSXTransformer: {
-      exports: "JSXTransformer"
-    },
-    React: {
-      exports: "React"
-    },
     Underscore: {
       exports: "_"
     }
