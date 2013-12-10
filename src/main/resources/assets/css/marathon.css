@@ -61,7 +61,7 @@ h3 {
 }
 
 h1 {
-  font-size: 50px;
+  font-size: 45px;
 }
 
 .close,
@@ -387,13 +387,7 @@ h1 {
 }
 
 .add-button {
-  margin-top: 25px;
-}
-
-.add-button:active {
-  position: relative;
-  top: 1px;
-  opacity: 0.5;
+  margin-top: 20px;
 }
 
 .table-hover > tbody > tr:hover > td {
