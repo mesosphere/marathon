@@ -23,7 +23,8 @@ define([
     },
     sync: function(method, model, options) {
       var localOptions = options || {};
-      var upperCaseMethod = method.toUpperCase();
+      var localMethod = options.add ? "create" : method;
+      var upperCaseMethod = localMethod.toUpperCase();
 
       if (upperCaseMethod in model.urls) {
         options.contentType = "application/json";
@@ -32,9 +33,10 @@ define([
         options.url = model.urls[upperCaseMethod];
       }
 
-      Backbone.sync.apply(this, [method, model, localOptions]);
+      Backbone.sync.apply(this, [localMethod, model, localOptions]);
     },
     urls: {
+      "CREATE": "v1/apps/start",
       "DELETE": "v1/apps/stop",
       "UPDATE": "v1/apps/scale"
     }
