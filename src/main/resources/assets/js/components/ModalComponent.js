@@ -1,9 +1,8 @@
 /** @jsx React.DOM */
 
 define([
-  "jquery",
   "React"
-], function($, React) {
+], function(React) {
   return React.createClass({
     destroy: function(event) {
       var domNode = this.getDOMNode();
@@ -13,8 +12,6 @@ define([
       // If it is unmounted from `domNode`, the second render throws an
       // invariant exception.
       React.unmountComponentAtNode(domNode.parentNode);
-
-      $(domNode).remove();
     },
     onClick: function(event) {
       if (event.target.className === "modal" ||
