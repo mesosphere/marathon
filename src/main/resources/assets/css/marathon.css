@@ -200,59 +200,10 @@ h1 {
   width: 900px;
 }
 
-.list {
-  position: relative;
-  left: 399px;
-  font-size: 56px;
-  font-family: 'Lato';
-  text-transform: uppercase;
-  font-weight: 100;
-  width: 600px;
-  color: black;
-}
-
-.list li {
-  margin-top: 5px;
-  padding: 3px 10px;
-  color: #B8E8EF;
-  background: rgba(60,114,157,0.2);
-}
-
-.list li:hover {
-  cursor: pointer;
-  background: rgba(60,114,157,1);
-}
-
-.list li:first-child {
-  margin-top: 0;
-}
-
-.list .add {
-  text-align: center;
-  color: #111113;
-  font-weight: bold;
-  background: transparent;
-  color: #3C729D;
-  border: 1px solid #3C729D;
-}
-
-.add:hover {
-  color: #111113;
-}
-
 .title {
   text-transform: uppercase;
   padding: 8px 10px 5px;
   border: 1px solid #3C729D;
-}
-
-.apps-wrapper .items {
-  width: 100%;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  font-size: 36px;
-  overflow-y: scroll;
 }
 
 .items li {
@@ -262,37 +213,16 @@ h1 {
   color: #E6E6E6;
 }
 
-.app-inner.left.open {
-  text-align: right;
-  opacity: 0.4;
-}
-.app-inner.right {
-  display:none;
-  text-align: left;
-}
-.app-inner.right.open {
-  display: table-cell;
-}
-
-.right .app-content {
-  margin-left: 25px;
-}
-
-.left .app-content {
-  margin-right: 25px;
-}
-
 .content {
-  padding: 20px;
   opacity: 0;
 
   -webkit-animation-duration: 250ms;
   -webkit-animation-name: power-on;
   -webkit-animation-timing-function: linear;
-  -webkit-animation-delay: 1s;
+  -webkit-animation-delay: 0.6s;
   -webkit-animation-fill-mode: forwards;
 
-  animation-delay: 1s;
+  animation-delay: 0.6s;
   animation-duration: 250ms;
   animation-fill-mode: forwards;
   animation-name: power-on;
@@ -342,36 +272,8 @@ h1 {
   animation-timing-function: ease-in;
 }
 
-.outer-border {
-  border: 2px solid #C9F0FB;
-  border-radius: 3px;
-  height: 96%;
-  width: 98%;
-}
-
-.inner-border {
-  border: 1px solid #3C729D;
-  border-radius: 3px;
-  height: 93%;
-  width: 95%;
-}
-
-.start-view {
-  height: auto;
-  min-width: 100%;
-  background: rgba(60,114,157,0.8);
-}
-
 .start-view-list {
   overflow: hidden;
-}
-
-.marathon.add {
-  -webkit-transform: rotateX(-2deg);
-  -webkit-transform-origin-x: 50%;
-  -webkit-transform-origin-y: 50%;
-  -webkit-transform-origin-z: initial;
-  -webkit-transform-style: preserve-3d;
 }
 
 .app-item .uris {
@@ -398,4 +300,3 @@ h1 {
 .app-item-header {
   margin-top: 0px;
 }
-
