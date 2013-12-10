@@ -16,14 +16,21 @@ define([
     mixins: [BackboneMixin],
     render: function() {
       var _this = this;
-
       var comparator = this.props.collection.comparator;
+
       var appNodes = this.props.collection.map(function(model) {
         return <AppComponent key={model.cid} model={model} onClick={_this.onAppClick} />;
       });
 
       return (
         <table className="table table-hover item-table">
+          <colgroup>
+            <col style={{width: "20%"}} />
+            <col style={{width: "20%"}} />
+            <col style={{width: "20%"}} />
+            <col style={{width: "20%"}} />
+            <col style={{width: "20%"}} />
+          </colgroup>
           <thead>
             <tr>
               <th onClick={this.sortCollectionBy.bind(this, "id")}>
