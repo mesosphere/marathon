@@ -3,11 +3,16 @@
 define([
   "jquery",
   "React",
-  "components/ModalComponent"
-], function($, React, ModalComponent) {
+  "mixins/BackboneMixin",
+  "jsx!components/ModalComponent"
+], function($, React, BackboneMixin, ModalComponent) {
   return React.createClass({
     destroy: function() {
       this.refs.modalComponent.destroy();
+    },
+    mixins: [BackboneMixin],
+    onChange: function(event) {
+      this.props.model.set(event.target.name, event.target.value);
     },
     onSubmit: function(event) {
       event.preventDefault();
@@ -58,8 +63,8 @@ define([
                   CPUs
                 </label>
                 <div className="col-md-9">
-                  <input className="form-control" id="cpus-field" placeholder={model.get("cpus")}
-                    name="cpus" min="0" step="any" type="number" />
+                  <input className="form-control" id="cpus-field" value={model.get("cpus")}
+                    name="cpus" min="0" step="any" type="number" required onChange={this.onChange} />
                 </div>
               </div>
               <div className="form-group">
@@ -67,8 +72,8 @@ define([
                   Instances
                 </label>
                 <div className="col-md-9">
-                  <input className="form-control" id="instances-field" placeholder={model.get("instances")}
-                    name="instances" min="1" step="1" type="number" />
+                  <input className="form-control" id="instances-field" value={model.get("instances")}
+                    name="instances" min="1" step="1" type="number" required onChange={this.onChange} />
                 </div>
               </div>
               <div className="form-group">
