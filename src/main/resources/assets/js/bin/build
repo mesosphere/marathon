@@ -1,0 +1,8 @@
+jsx . build
+sed -i.bak 's/jsx!//g' build/*.js
+sed -i.bak 's/jsx!//g' build/**/*.js
+rm build/*.bak
+rm build/**/*.bak
+r.js -o main.build.js
+
+rm -rf build
