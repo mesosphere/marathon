@@ -46,8 +46,8 @@ define([
                   ID
                 </label>
                 <div className="col-md-9">
-                  <input className="form-control" id="id-field" name="id"
-                    autoFocus required />
+                  <input className="form-control" id="id-field" name="id" value={model.get("id")}
+                    autoFocus required onChange={this.onChange} />
                 </div>
               </div>
               <div className="form-group">
@@ -65,6 +65,15 @@ define([
                 <div className="col-md-9">
                   <input className="form-control" id="cpus-field" value={model.get("cpus")}
                     name="cpus" min="0" step="any" type="number" required onChange={this.onChange} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="mem-field" className="col-md-3 control-label">
+                  Memory (MB)
+                </label>
+                <div className="col-md-9">
+                  <input className="form-control" id="mem-field" value={model.get("mem")}
+                    name="mem" min="0" step="any" type="number" required onChange={this.onChange} />
                 </div>
               </div>
               <div className="form-group">

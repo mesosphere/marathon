@@ -40,7 +40,7 @@ define([
                 CMD {(comparator === "cmd") ? "▼" : null}
               </th>
               <th onClick={this.sortCollectionBy.bind(this, "mem")}>
-                Memory {(comparator === "mem") ? "▼" : null}
+                Memory (MB) {(comparator === "mem") ? "▼" : null}
               </th>
               <th onClick={this.sortCollectionBy.bind(this, "cpus")}>
                 CPUs {(comparator === "cpus") ? "▼" : null}
