@@ -125,6 +125,15 @@ set the `assets_path` flag when running Marathon:
 
 ### Configuration Options
 
+* `MESOS_NATIVE_LIBRARY`: `bin/start` searches `/usr/lib` and `/usr/local/lib` for the Mesos
+  native library since those are the common installation paths. If the Mesos library lives
+  elsewhere in your configuration, set the environment variable `MESOS_NATIVE_LIBRARY` to
+  the full path of the library.
+
+  For example:
+
+      MESOS_NATIVE_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk_hosts localhost:2181
+
 Run `./bin/start --help` for a full list of configuration options.
 
 ## Example API Usage
