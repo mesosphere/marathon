@@ -85,16 +85,16 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 ## Setting Up And Running Marathon
 
-First, install [Mesos][Mesos]. One easy way is via your system's package manager.
-Current builds for major Linux distributions and Mac OS X are available from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
+1. Install [Mesos][Mesos]. One easy way is via your system's package manager.
+    Current builds for major Linux distributions and Mac OS X are available from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
 
-If building from source, see the [Getting Started](http://mesos.apache.org/gettingstarted/) page
-or the [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
-for details. Running `make install` will install Mesos in `/usr/local` in the same way as these packages do.
+    If building from source, see the [Getting Started](http://mesos.apache.org/gettingstarted/) page
+    or the [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
+    for details. Running `make install` will install Mesos in `/usr/local` in the same way as these packages do.
 
-To create a Jar for Marathon, checkout the sources and use Maven to build it:
+2. Check out Marathon and use Maven to build a JAR:
 
-    mvn package
+        mvn package
 
 ### Production Mode
 
