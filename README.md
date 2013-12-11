@@ -121,7 +121,7 @@ When editing assets like CSS and JavaScript locally, they are loaded from the pa
 JAR by default and are not editable. To load them from a directory for easy editing,
 set the `assets_path` flag when running Marathon:
 
-    ./bin/start --master local --zk_hosts localhost:2181 --assets_path ./path/to/assets
+    ./bin/start --master local --zk_hosts localhost:2181 --assets_path src/main/resources/assets/
 
 ### Configuration Options
 
