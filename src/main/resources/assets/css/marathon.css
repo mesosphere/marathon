@@ -84,8 +84,13 @@ h1 {
 
 .dl-horizontal dd {
   color: #ffffff;
-  float: left;
-  margin-left: 0.5em;
+}
+
+@media (min-width: 768px) {
+  .dl-horizontal dd {
+    float: left;
+    margin-left: 0.5em;
+  }
 }
 
 .modal {
