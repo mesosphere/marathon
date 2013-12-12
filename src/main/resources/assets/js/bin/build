@@ -1,3 +1,6 @@
+# Remove old dist directory to start fresh
+rm -rf dist
+
 jsx . build
 sed -i.bak 's/jsx!//g' build/*.js
 sed -i.bak 's/jsx!//g' build/**/*.js
@@ -5,4 +8,8 @@ rm build/*.bak
 rm build/**/*.bak
 r.js -o main.build.js
 
+# Remove intermediate build artifacts
 rm -rf build
+
+# Remove all compiled files but the desired `main.js`
+find dist -not -name 'main.js' -not -name 'dist' | xargs rm -rf
