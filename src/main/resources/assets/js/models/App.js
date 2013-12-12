@@ -16,6 +16,9 @@ define([
     },
     initialize: function() {
       this.set("tasks", new TaskCollection(null, {appId: this.id}));
+      this.listenTo(this, "change:id", function(model, value, options) {
+        this.get("tasks").options.appId = value;
+      });
     },
     scale: function(instances) {
       this.set("instances", instances);
