@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.FrameworkInfo
+import org.apache.mesos.Protos.{TaskID, FrameworkInfo}
 import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
 import mesosphere.marathon.api.v1.AppDefinition
@@ -18,6 +18,7 @@ import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
 import scala.util.Random
 import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.marathon.Protos.MarathonTask
 
 /**
  * Wrapper class for the scheduler
@@ -100,6 +101,24 @@ class MarathonSchedulerService @Inject()(
   def getApp(appName: String): Option[AppDefinition] = {
     val future = store.fetch(appName)
     Await.result(future, defaultWait)
+  }
+
+  def killTasks(appName: String, tasks: Iterable[MarathonTask], scale: Boolean): Iterable[MarathonTask] = {
+    if (scale) {
+      getApp(appName) match {
+        case Some(appDef) =>
+          appDef.instances = appDef.instances - tasks.size
+
+          Await.result(scaleApp(appDef, false), defaultWait)
+        case None =>
+      }
+    }
+
+    tasks.map(task => {
+      log.info(f"Killing task ${task.getId} on host ${task.getHost}")
+      driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+      task
+    })
   }
 
   //Begin Service interface

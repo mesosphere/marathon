@@ -16,6 +16,7 @@ import mesosphere.marathon.api.v1.{Implicits, AppDefinition}
 import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
 import mesosphere.marathon.event.ApiPostEvent
+import javax.ws.rs.core.Response.Status
 
 /**
  * @author Tobi Knaup
@@ -28,15 +29,13 @@ class AppsResource @Inject()(
                               service: MarathonSchedulerService,
                               taskTracker: TaskTracker) {
 
-  import Implicits._
-
   val log = Logger.getLogger(getClass.getName)
 
   @GET
   @Timed
-  def index(@QueryParam("id") id: String, @QueryParam("cmd") cmd: String) = {
-    val apps = if (id != null || cmd != null) {
-      search(id, cmd)
+  def index(@QueryParam("cmd") cmd: String) = {
+    val apps = if (cmd != null) {
+      search(cmd)
     } else {
       service.listApps()
     }
@@ -49,6 +48,19 @@ class AppsResource @Inject()(
     maybePostEvent(req, app)
     Await.result(service.startApp(app), service.defaultWait)
     Response.noContent.build
+  }
+
+  @GET
+  @Path("{id}")
+  @Timed
+  def show(@PathParam("id") id: String): Response = {
+    service.getApp(id) match {
+      case Some(app) => {
+        app.tasks = taskTracker.get(app.id)
+        Response.ok(Map("app" -> app)).build
+      }
+      case None => Response.status(Status.NOT_FOUND).build
+    }
   }
 
   @PUT
@@ -84,13 +96,10 @@ class AppsResource @Inject()(
     }
   }
 
-  private def search(id: String, cmd: String) = {
+  private def search(cmd: String) = {
     service.listApps().filter {
       x =>
         var valid = true
-        if (id != null && !id.isEmpty && !x.id.toLowerCase.contains(id.toLowerCase)) {
-          valid = false
-        }
         if (cmd != null && !cmd.isEmpty && !x.cmd.toLowerCase.contains(cmd.toLowerCase)) {
           valid = false
         }
