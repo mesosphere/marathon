@@ -115,6 +115,10 @@ Point your web browser to `http://localhost:8080`, and you should see the Marath
 
     ./bin/start --master local --zk_hosts localhost:2181
     
+    or 
+    
+    ./bin/start --master 12.31.2.456:5050 --zk_hosts localhost:2181 where 12.31.2.456:5050 is mesos-master:port 
+
 #### Working on assets
 
 When editing assets like CSS and JavaScript locally, they are loaded from the packaged
