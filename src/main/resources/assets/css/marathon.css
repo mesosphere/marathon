@@ -41,7 +41,7 @@
 
 body {
   background: #111113;
-  color: #B8E8EF;
+  color: #ffffff;
   font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
 }
 
@@ -64,6 +64,10 @@ h1 {
   font-size: 45px;
 }
 
+th {
+  color: #B8E8EF;
+}
+
 .close,
 .close:focus,
 .close:hover {
@@ -73,6 +77,10 @@ h1 {
   text-shadow: none;
 }
 
+dt {
+  color: #B8E8EF;
+}
+
 .dl-horizontal {
   /* Contain the floats */
   overflow: hidden;
@@ -80,10 +88,6 @@ h1 {
 
 .dl-horizontal dt {
   width: auto;
-}
-
-.dl-horizontal dd {
-  color: #ffffff;
 }
 
 @media (min-width: 768px) {
@@ -124,6 +128,7 @@ h1 {
 }
 
 .control-label {
+  color: #B8E8EF;
   font-family: Lato;
   text-transform: uppercase;
 }
