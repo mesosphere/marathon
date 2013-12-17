@@ -61,14 +61,12 @@ class AppDefinitionTest {
 
     def shouldViolate(app: AppDefinition, path: String, message: String) {
       val violations = validator.validate(app).asScala
-      assertTrue(violations.exists(v =>
-        v.getPropertyPath.toString == path && v.getMessage == message))
+      assertTrue(violations.exists(v => v.getPropertyPath.toString == path))
     }
 
     def shouldNotViolate(app: AppDefinition, path: String, message: String) {
       val violations = validator.validate(app).asScala
-      assertFalse(violations.exists(v =>
-        v.getPropertyPath.toString == path && v.getMessage == message))
+      assertFalse(violations.exists(v => v.getPropertyPath.toString == path))
     }
 
     val app = new AppDefinition
