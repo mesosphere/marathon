@@ -59,25 +59,25 @@ class AppDefinitionTest {
   def testValidation() {
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
-    def shouldViolate(app: AppDefinition, path: String, message: String) {
+    def shouldViolate(app: AppDefinition, path: String, template: String) {
       val violations = validator.validate(app).asScala
       assertTrue(violations.exists(v =>
-        v.getPropertyPath.toString == path && v.getMessage == message))
+        v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
-    def shouldNotViolate(app: AppDefinition, path: String, message: String) {
+    def shouldNotViolate(app: AppDefinition, path: String, template: String) {
       val violations = validator.validate(app).asScala
       assertFalse(violations.exists(v =>
-        v.getPropertyPath.toString == path && v.getMessage == message))
+        v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
     val app = new AppDefinition
     app.id = "a b"
-    shouldViolate(app, "id", "must match \"^[A-Za-z0-9_.-]+$\"")
+    shouldViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
     app.id = "a#$%^&*b"
-    shouldViolate(app, "id", "must match \"^[A-Za-z0-9_.-]+$\"")
+    shouldViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
     app.id = "ab"
-    shouldNotViolate(app, "id", "must match \"^[A-Za-z0-9_.-]+$\"")
+    shouldNotViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
