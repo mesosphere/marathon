@@ -54,10 +54,15 @@ class AppsResource @Inject()(
   @PUT
   @Path("{id}")
   @Timed
-  def update(@Context req: HttpServletRequest, @PathParam("id") id: String, app: AppDefinition): Response = {
-    app.id = id
-    maybePostEvent(req, app)
-    Await.result(service.scaleApp(app), service.defaultWait)
+  def update(
+    @Context req: HttpServletRequest,
+    @PathParam("id") id: String,
+    @Valid appUpdate: AppUpdate
+  ): Response = {
+    service.getApp(id).foreach { app =>
+      maybePostEvent(req, appUpdate.apply(app))
+    }
+    Await.result(service.updateApp(id, appUpdate), service.defaultWait)
     Response.noContent.build
   }
 

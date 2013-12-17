@@ -5,7 +5,8 @@ import org.apache.mesos.{SchedulerDriver, Scheduler}
 import java.util.logging.{Level, Logger}
 import scala.collection.JavaConverters._
 import mesosphere.mesos.TaskBuilder
-import mesosphere.marathon.api.v1.{AppDefinition, AppUpdate}
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.MarathonStore
 import scala.util.{Failure, Success}
 import scala.concurrent.{Future, ExecutionContext}
@@ -195,8 +196,9 @@ class MarathonScheduler @Inject()(
   }
 
   def updateApp(driver: SchedulerDriver,
+                id: String,
                 appUpdate: AppUpdate): Future[_] = {
-    store.fetch(appUpdate.id).flatMap {
+    store.fetch(id).flatMap {
       case Some(storedApp) => {
         val updatedApp = appUpdate.apply(storedApp)
         store.store(updatedApp.id, updatedApp).map { _ =>
@@ -204,14 +206,14 @@ class MarathonScheduler @Inject()(
           update(driver, updatedApp, appUpdate)
         }
       }
-      case None => throw new UnknownAppException(appUpdate.id)
+      case None => throw new UnknownAppException(id)
     }
   }
 
-  //  TODO: Optionally deprecate `scaleApp` once `updateApp` has been implemented and tested.
-  def scaleApp(driver: SchedulerDriver,
-               app: AppDefinition,
-               applyNow: Boolean): Future[_] = {
+@deprecated("The scale operation has been subsumed by update in the v2 API.", "0.2.2")
+def scaleApp(driver: SchedulerDriver,
+             app: AppDefinition,
+             applyNow: Boolean): Future[_] = {
     store.fetch(app.id).flatMap {
       case Some(storedApp) => {
         storedApp.instances = app.instances
@@ -263,15 +265,6 @@ class MarathonScheduler @Inject()(
    */
   private def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate) {
     // TODO: implement app instance restart logic
-    /*
-    appUpdate.restartStrategy match {
-      case Lazy = ()
-      case Now => {
-      }
-      case Rolling(maxBatchSize, interval) => {  
-      }
-    }
-    */
   }
 
   /**

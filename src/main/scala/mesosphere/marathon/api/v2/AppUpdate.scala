@@ -1,5 +1,6 @@
-package mesosphere.marathon.api.v1
+package mesosphere.marathon.api.v2
 
+import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.Constraint
 import org.hibernate.validator.constraints.NotEmpty
 import javax.validation.constraints.Pattern
@@ -13,10 +14,6 @@ import scala.collection.mutable
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 class AppUpdate {
-
-  @NotEmpty
-  @Pattern(regexp = "^[A-Za-z0-9_.-]+$")
-  var id: String = ""
 
   var cmd: Option[String] = None
 

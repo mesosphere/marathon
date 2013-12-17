@@ -53,18 +53,6 @@ class AppsResource @Inject()(
   }
 
   @POST
-  @Path("update")
-  @Timed
-  def update(@Context req: HttpServletRequest, @Valid appUpdate: AppUpdate): Response = {
-    service.getApp(appUpdate.id).foreach { app =>
-      maybePostEvent(req, appUpdate.apply(app))
-    }
-    Await.result(service.updateApp(appUpdate), service.defaultWait)
-    Response.noContent.build
-  }
-
-  //  TODO: Optionally deprecate `scale` once `update` has been implemented and tested.
-  @POST
   @Path("scale")
   @Timed
   def scale(@Context req: HttpServletRequest, app: AppDefinition): Response = {
