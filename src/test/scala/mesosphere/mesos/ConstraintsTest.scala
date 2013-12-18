@@ -38,15 +38,6 @@ class ConstraintsTest {
       .build()
   }
 
-  def makeScalarAttribute(attr: String, attrVal: String) = {
-    Attribute.newBuilder()
-      .setName(attr)
-      .setText(Text.newBuilder()
-      .setValue(attrVal))
-      .setType(org.apache.mesos.Protos.Value.Type.SCALAR)
-      .build()
-  }
-
   def makeTaskWithHost(id: String, host: String) = {
     MarathonTask.newBuilder()
       .setHost(host)
