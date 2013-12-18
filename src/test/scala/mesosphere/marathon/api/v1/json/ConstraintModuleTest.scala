@@ -10,6 +10,7 @@ import mesosphere.marathon.Protos.Constraint
  * @author Tobi Knaup
  */
 class ConstraintModuleTest {
+
   @Test
   def testDeserialize() {
     val mapper = new ObjectMapper
@@ -24,6 +25,7 @@ class ConstraintModuleTest {
 
     shouldMatch("""["hostname","UNIQUE"]""", "hostname", Constraint.Operator.UNIQUE)
     shouldMatch("""["rackid","GROUP_BY","1"]""", "rackid", Constraint.Operator.GROUP_BY, "1")
+    shouldMatch("""["jdk","LIKE","7"]""", "jdk", Constraint.Operator.LIKE, "7")
   }
 
   @Test
@@ -40,5 +42,7 @@ class ConstraintModuleTest {
       .setOperator(Constraint.Operator.UNIQUE).build)
     shouldMatch("""["rackid","GROUP_BY","1"]""", Constraint.newBuilder.setField("rackid")
       .setOperator(Constraint.Operator.GROUP_BY).setValue("1").build)
+    shouldMatch("""["jdk","LIKE","7"]""", Constraint.newBuilder.setField("jdk")
+      .setOperator(Constraint.Operator.LIKE).setValue("7").build)
   }
 }

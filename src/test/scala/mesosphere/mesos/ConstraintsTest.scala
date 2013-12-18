@@ -38,6 +38,15 @@ class ConstraintsTest {
       .build()
   }
 
+  def makeScalarAttribute(attr: String, attrVal: String) = {
+    Attribute.newBuilder()
+      .setName(attr)
+      .setText(Text.newBuilder()
+      .setValue(attrVal))
+      .setType(org.apache.mesos.Protos.Value.Type.SCALAR)
+      .build()
+  }
+
   def makeTaskWithHost(id: String, host: String) = {
     MarathonTask.newBuilder()
       .setHost(host)
@@ -165,6 +174,29 @@ class ConstraintsTest {
     assertFalse(f"Should not meet unique constraint for rack. ${sameRack}",
       uniqueRackNotMet)
 
+  }
+
+  @Test
+  def testAttributesLikeByConstraints() {
+    val task1_rack1 = makeSampleTask("task1", Map("foo" -> "bar"))
+    val task2_rack1 = makeSampleTask("task2", Map("jdk" -> "7"))
+    val freshRack = Set(task1_rack1,task2_rack1)
+
+    val clusterNotMet = Constraints.meetsConstraint(freshRack.toSet, // list of tasks register in the cluster
+      Set(makeAttribute("jdk", "6")),  // slave attributes
+      "foohost",
+      "jdk",
+      Constraint.Operator.LIKE,
+      Some("7"))
+    assertFalse("Should not meet cluster constraints.", clusterNotMet)
+
+    val clusterMet = Constraints.meetsConstraint(freshRack.toSet, // list of tasks register in the cluster
+      Set(makeAttribute("jdk", "7")),  // slave attributes
+      "foohost",
+      "jdk",
+      Constraint.Operator.LIKE,
+      Some("7"))
+    assertTrue("Should not meet cluster constraints.", clusterMet)
   }
 
   @Test
