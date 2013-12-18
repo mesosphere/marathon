@@ -105,7 +105,7 @@ object Constraints {
             if (value.nonEmpty) {
               field match {
                 case "hostname" => hostname.matches(value.get)
-                case _ => attr.get.getText.getValue == value.get
+                case _ => attr.get.getText.getValue.matches(value.get)
               }
             } else {
               log.warning("Error, value is required for LIKE operation")
