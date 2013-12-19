@@ -5,6 +5,7 @@ import org.apache.mesos.{SchedulerDriver, Scheduler}
 import java.util.logging.{Level, Logger}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.HashSet
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.MarathonStore
@@ -136,8 +137,21 @@ class MarathonScheduler @Inject()(
           driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
         }
       }
+    } else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
+      log.warning(s"Received status update for unknown app ${appID}")
+      log.warning(s"Killing task ${status.getTaskId}")
+      driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
     } else {
-      taskTracker.statusUpdate(appID, status)
+      taskTracker.statusUpdate(appID, status).onComplete {
+        case Success(t) =>
+          t match {
+            case None =>
+              log.warning(s"Killing task ${status.getTaskId}")
+              driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
+            case _ =>
+          }
+        case _ =>
+      }
     }
   }
 
@@ -225,7 +239,9 @@ class MarathonScheduler @Inject()(
       case Success(iterator) => {
         log.info("Syncing tasks for all apps")
         val buf = new ListBuffer[TaskStatus]
+        val appNames = new HashSet[String]
         for (appName <- iterator) {
+          appNames += appName
           scale(driver, appName)
           val tasks = taskTracker.get(appName)
           for (task <- tasks) {
@@ -233,6 +249,17 @@ class MarathonScheduler @Inject()(
             if (statuses.nonEmpty) {
               buf += statuses.last
             }
+          }
+        }
+        for (app <- taskTracker.list.keys) {
+          if (!appNames.contains(app)) {
+            log.warning(s"App ${app} exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
+            val tasks = taskTracker.get(app)
+            for (task <- tasks) {
+              log.info(s"Killing task ${task.getId}")
+              driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+            }
+            taskTracker.expunge(app)
           }
         }
         log.info("About to reconcile tasks with Mesos")
