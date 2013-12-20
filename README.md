@@ -5,7 +5,6 @@ Given that you have Mesos running as the kernel for your datacenter,
 Marathon is the `init` or [upstart][upstart] daemon.
 
 Marathon provides a REST API for starting, stopping, and scaling services.
-There is also a [Ruby command line client](https://github.com/mesosphere/marathon_client).
 Marathon is written in Scala and can run in highly-available mode by running multiple Marathon instances.
 The state of running tasks gets stored in the Mesos state abstraction.
 
@@ -17,29 +16,6 @@ Marathon is a *meta framework*:
 you can start other Mesos frameworks such as Chronos or [Storm][Storm].
 It can launch anything that can be launched in a standard shell.
 In fact, you can even start other Marathon instances via Marathon.
-
-## Help
-
-If you have questions, please post on the [Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework) email list.
-You can find Mesos support in the `#mesos` channel on [freenode][freenode] (IRC).
-The team at [Mesosphere](http://mesosphere.io) is also happy to answer any questions.
-
-## Authors
-
-Marathon was written by the team that also developed [Chronos][Chronos].
-
-* [Tobias Knaup](https://github.com/guenter)
-* [Florian Leibert](https://github.com/florianleibert)
-* [Harry Shoff](https://github.com/hshoff)
-* [Jason Dusek](https://github.com/solidsnack)
-
-## Requirements
-
-* [Mesos][Mesos] 0.14.0+
-* [Zookeeper][Zookeeper]
-* JDK 1.6+
-* Scala 2.10+
-* Maven 3.0+
 
 ## Features
 
@@ -85,6 +61,16 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 ## Setting Up And Running Marathon
 
+### Requirements
+
+* [Mesos][Mesos] 0.14.0+
+* [Zookeeper][Zookeeper]
+* JDK 1.6+
+* Scala 2.10+
+* Maven 3.0+
+
+### Installation
+
 1. Install [Mesos][Mesos]. One easy way is via your system's package manager.
     Current builds for major Linux distributions and Mac OS X are available from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
 
@@ -96,7 +82,9 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
         mvn package
 
-### Production Mode
+3. Run `./bin/build-distribution` to package Marathon as an [executable JAR](http://mesosphere.io/2013/12/07/executable-jars/) (optional).
+
+### Running in Production Mode
 
 To launch Marathon in *production mode*, you need to have both [Zookeeper][Zookeeper] and Mesos running.
 The following command launches Marathon on Mesos in *production mode*.
@@ -106,7 +94,7 @@ Point your web browser to `localhost:8080` and you should see the Marathon UI.
 
 Note the different format of the `--master` and `--zk_hosts` options. Marathon uses `--master` to find the Mesos masters, and `--zk_hosts` to find Zookeepers for storing state. They are separate options because Mesos masters can be discovered in other ways as well.
 
-### Local Mode
+### Running in Development Mode
 
 Mesos local mode allows you to run Marathon without launching a full Mesos cluster.
 It is meant for experimentation and not recommended for production use. Note that you still need to run Zookeeper for storing state.
@@ -154,6 +142,25 @@ Running Chronos with the [Marathon Client](https://github.com/mesosphere/maratho
         -C "./chronos/bin/demo ./chronos/config/nomail.yml \
         ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
 
+## Marathon Clients
+
+* [Ruby gem and command line client](https://rubygems.org/gems/marathon_client)
+* [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
+
+## Help
+
+If you have questions, please post on the [Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework) email list.
+You can find Mesos support in the `#mesos` channel on [freenode][freenode] (IRC).
+The team at [Mesosphere](http://mesosphere.io) is also happy to answer any questions.
+
+## Authors
+
+Marathon was written by the team that also developed [Chronos][Chronos].
+
+* [Tobias Knaup](https://github.com/guenter)
+* [Florian Leibert](https://github.com/florianleibert)
+* [Harry Shoff](https://github.com/hshoff)
+* [Jason Dusek](https://github.com/solidsnack)
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
 [HTTPie]: https://github.com/jkbr/httpie "a CLI, cURL-like tool for humans"
