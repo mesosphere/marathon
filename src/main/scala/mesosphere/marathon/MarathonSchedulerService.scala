@@ -72,10 +72,17 @@ class MarathonSchedulerService @Inject()(
 
   def startApp(app: AppDefinition): Future[_] = {
     // Backwards compatibility
-    if (app.ports == Nil) {
-      val port = newAppPort(app)
-      app.ports = Seq(port)
-      log.info(s"Assigned port $port to app '${app.id}'")
+    val oldPorts = app.ports
+    val newPorts = if (oldPorts == Nil) {
+      Seq(newAppPort(app))
+    } else {
+      oldPorts.map(port => if (port == 0) newAppPort(app) else port)
+    }
+
+    if (oldPorts != newPorts) {
+      val asMsg = Seq(oldPorts, newPorts).map("[" + _.mkString(", ") + "]")
+      log.info(s"Assigned some ports for ${app.id}: ${asMsg.mkString(" -> ")}")
+      app.ports = newPorts
     }
 
     scheduler.startApp(driver, app)
