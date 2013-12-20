@@ -33,7 +33,7 @@ version: plugin := org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate
 version: marathon-runnable.jar
 	( cd marathon && \
 	  mvn $(plugin) -Dexpression=project.version | sed '/^\[/d' ) | \
-	  head -n1 > version
+	  tail -n1 > version
 
 marathon-runnable.jar:
 	cd marathon && mvn package && bin/build-distribution
