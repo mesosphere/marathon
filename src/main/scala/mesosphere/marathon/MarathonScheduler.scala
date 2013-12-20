@@ -135,6 +135,12 @@ class MarathonScheduler @Inject()(
           driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
         }
       }
+    } else {
+      if (!taskTracker.contains(appID)) {
+        log.warning(s"Received status update for unknown app ${appID}")
+        log.warning(s"Killing task ${status.getTaskId}")
+        driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
+      }
     }
   }
 
