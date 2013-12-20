@@ -151,16 +151,19 @@ Running Chronos with the [Marathon Client](https://github.com/mesosphere/maratho
 
 If you have questions, please post on the [Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework) email list.
 You can find Mesos support in the `#mesos` channel on [freenode][freenode] (IRC).
-The team at [Mesosphere](http://mesosphere.io) is also happy to answer any questions.
+The team at [Mesosphere][Mesosphere] is also happy to answer any questions.
 
-## Authors
+## Contributors
 
-Marathon was written by the team that also developed [Chronos][Chronos].
+Marathon was written by the team at [Mesosphere][Mesosphere] that also developed [Chronos][Chronos], with many contributions from the community.
 
 * [Tobias Knaup](https://github.com/guenter)
+* [Ross Allen](https://github.com/ssorallen)
 * [Florian Leibert](https://github.com/florianleibert)
 * [Harry Shoff](https://github.com/hshoff)
+* [Brenden Matthews](https://github.com/brndnmtthws)
 * [Jason Dusek](https://github.com/solidsnack)
+* [Thomas Rampelberg](https://github.com/pyronicide)
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
 [HTTPie]: https://github.com/jkbr/httpie "a CLI, cURL-like tool for humans"
@@ -169,3 +172,4 @@ Marathon was written by the team that also developed [Chronos][Chronos].
 [Storm]: http://storm-project.net/ "distributed realtime computation"
 [freenode]: https://freenode.net/ "IRC channels"
 [upstart]: http://upstart.ubuntu.com/ "Ubuntu's event-based daemons"
+[Mesosphere]: http://mesosphere.io/ "Mesosphere"
