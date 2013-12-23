@@ -2,9 +2,9 @@ require.config({
   paths: {
     "Backbone": "libs/backbone-min",
     "jsx": "libs/jsx-0.0.1",
-    "JSXTransformer": "libs/JSXTransformer",
+    "JSXTransformer": "libs/JSXTransformer-0.8.0.max",
     "jquery": "libs/jquery-min",
-    "React": "libs/react-0.5.1",
+    "React": "libs/react-0.8.0",
     "Underscore": "libs/underscore-min"
   },
   shim: {
