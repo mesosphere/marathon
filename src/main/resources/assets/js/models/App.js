@@ -42,6 +42,31 @@ define([
       "CREATE": "v1/apps/start",
       "DELETE": "v1/apps/stop",
       "UPDATE": "v1/apps/scale"
+    },
+    validate: function(attrs, options) {
+      var errors = [];
+
+      if (!_.isNumber(attrs.mem) || attrs.mem < 0) {
+        errors.push("Memory must be a non-negative Number");
+      }
+
+      if (!_.isNumber(attrs.cpus) || attrs.cpus < 0) {
+        errors.push("CPUs must be a non-negative Number");
+      }
+
+      if (!_.isNumber(attrs.instances) || attrs.instances < 0) {
+        errors.push("Instances must be a non-negative Number");
+      }
+
+      if (!_.isString(attrs.id) || attrs.id.length < 1) {
+        errors.push("ID must be a non-empty String");
+      }
+
+      if (!_.isString(attrs.cmd) || attrs.cmd.length < 1) {
+        errors.push("Cmd must be a non-empty String");
+      }
+
+      if (errors.length > 0) return errors;
     }
   });
 });
