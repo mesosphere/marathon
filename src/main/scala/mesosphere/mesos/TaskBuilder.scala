@@ -46,10 +46,8 @@ class TaskBuilder (app: AppDefinition,
       Executor.dispatch(app.executor)
     }
 
-    TaskBuilder.getPorts(offer, app.ports.size).map(f = portRanges => {
-      val ports = portRanges.map(r => {
-        Seq.range(r._1, r._2 + 1)
-      }).flatten
+    TaskBuilder.getPorts(offer, app.ports.size).map { portRanges =>
+      val ports = portRanges.flatMap { case (begin, end, _) => begin to end }
 
       val taskId = newTaskId(app.id)
       val builder = TaskInfo.newBuilder
@@ -62,9 +60,7 @@ class TaskBuilder (app: AppDefinition,
           scalarResource(TaskBuilder.memResourceName, app.mem, memRole))
 
       if (portRanges.nonEmpty) {
-        portRanges.map(r => {
-          builder.addResources(portsResource(r))
-        })
+        portRanges.foreach(r => builder.addResources(portsResource(r)))
       }
 
       executor match {
@@ -86,7 +82,7 @@ class TaskBuilder (app: AppDefinition,
       }
 
       builder.build -> ports
-    })
+    }
   }
 
   private def portsResource(range: (Int, Int, String)): Resource = {
