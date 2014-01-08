@@ -3,7 +3,7 @@ require.config({
     "Backbone": "libs/backbone-min",
     "jsx": "libs/jsx-0.0.1",
     "JSXTransformer": "libs/JSXTransformer-0.8.0.max",
-    "jquery": "libs/jquery-min",
+    "jquery": "libs/jquery-2.0.3",
     "React": "libs/react-0.8.0",
     "Underscore": "libs/underscore-min"
   },
