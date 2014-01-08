@@ -14,9 +14,9 @@ define([
         <tr onClick={this.onClick}>
           <td>{model.get("id")}</td>
           <td>{model.get("cmd")}</td>
-          <td>{model.get("mem")}</td>
-          <td>{model.get("cpus")}</td>
-          <td>{model.get("instances")}</td>
+          <td className="text-right">{model.get("mem")}</td>
+          <td className="text-right">{model.get("cpus")}</td>
+          <td className="text-right">{model.get("instances")}</td>
         </tr>
       );
     }

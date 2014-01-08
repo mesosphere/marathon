@@ -28,11 +28,11 @@ define([
       return (
         <table className="table table-hover item-table">
           <colgroup>
-            <col style={{width: "20%"}} />
-            <col style={{width: "20%"}} />
-            <col style={{width: "20%"}} />
-            <col style={{width: "20%"}} />
-            <col style={{width: "20%"}} />
+            <col style={{width: "30%"}} />
+            <col style={{width: "30%"}} />
+            <col style={{width: "14%"}} />
+            <col style={{width: "13%"}} />
+            <col style={{width: "13%"}} />
           </colgroup>
           <thead>
             <tr>
@@ -42,14 +42,14 @@ define([
               <th onClick={this.sortCollectionBy.bind(this, "cmd")}>
                 CMD {(comparator === "cmd") ? "▼" : null}
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "mem")}>
-                Memory (MB) {(comparator === "mem") ? "▼" : null}
+              <th onClick={this.sortCollectionBy.bind(this, "mem")} className="text-right">
+                {(comparator === "mem") ? "▼" : null} Memory (MB)
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "cpus")}>
-                CPUs {(comparator === "cpus") ? "▼" : null}
+              <th onClick={this.sortCollectionBy.bind(this, "cpus")} className="text-right">
+                {(comparator === "cpus") ? "▼" : null} CPUs
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "instances")}>
-                Instances {(comparator === "instances") ? "▼" : null}
+              <th onClick={this.sortCollectionBy.bind(this, "instances")} className="text-right">
+                {(comparator === "instances") ? "▼" : null} Instances
               </th>
             </tr>
           </thead>
