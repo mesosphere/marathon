@@ -56,11 +56,15 @@ define([
       );
     },
     scaleApp: function() {
-      var instances = prompt("Scale to how many instances?",
-        this.props.model.get("instances"));
+      var model = this.props.model;
+      var instances = parseInt(prompt("Scale to how many instances?",
+        model.get("instances")), 10);
 
-      if (instances != null) {
-        this.props.model.scale(instances);
+      model.set({instances: instances}, {validate: true});
+      if (model.validationError == null) {
+        model.save();
+      } else {
+        alert("Not scaling: " + model.validationError[0]);
       }
     },
     suspendApp: function() {

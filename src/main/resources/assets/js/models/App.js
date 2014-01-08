@@ -20,10 +20,6 @@ define([
         this.get("tasks").options.appId = value;
       });
     },
-    scale: function(instances) {
-      this.set("instances", instances);
-      this.save();
-    },
     sync: function(method, model, options) {
       var localOptions = options || {};
       var localMethod = options.add ? "create" : method;
@@ -46,15 +42,16 @@ define([
     validate: function(attrs, options) {
       var errors = [];
 
-      if (!_.isNumber(attrs.mem) || attrs.mem < 0) {
+      if (_.isNaN(attrs.mem) || !_.isNumber(attrs.mem) || attrs.mem < 0) {
         errors.push("Memory must be a non-negative Number");
       }
 
-      if (!_.isNumber(attrs.cpus) || attrs.cpus < 0) {
+      if (_.isNaN(attrs.cpus) || !_.isNumber(attrs.cpus) || attrs.cpus < 0) {
         errors.push("CPUs must be a non-negative Number");
       }
 
-      if (!_.isNumber(attrs.instances) || attrs.instances < 0) {
+      if (_.isNaN(attrs.instances) || !_.isNumber(attrs.instances) ||
+          attrs.instances < 0) {
         errors.push("Instances must be a non-negative Number");
       }
 
