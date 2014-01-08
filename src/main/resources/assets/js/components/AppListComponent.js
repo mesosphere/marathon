@@ -7,14 +7,25 @@ define([
   "mixins/BackboneMixin"
 ], function(React, AppComponent, AppModalComponent, BackboneMixin) {
   return React.createClass({
+    componentDidMount: function() {
+      this.startPolling();
+    },
+    componentWillUnmount: function() {
+      this.stopPolling();
+    },
     getResource: function() {
       return this.props.collection;
     },
+    fetchResource: function() {
+      this.props.collection.fetch();
+    },
     onAppClick: function(model) {
       React.renderComponent(
-        <AppModalComponent model={model} />,
+        <AppModalComponent model={model} onDestroy={this.startPolling} />,
         document.getElementById("lightbox")
       );
+
+      this.stopPolling();
     },
     mixins: [BackboneMixin],
     render: function() {
@@ -62,6 +73,15 @@ define([
     sortCollectionBy: function(attribute) {
       this.props.collection.comparator = attribute;
       this.props.collection.sort();
+    },
+    startPolling: function() {
+      if (this._interval == null) {
+        this._interval = setInterval(this.fetchResource, 10000);
+      }
+    },
+    stopPolling: function() {
+      clearInterval(this._interval);
+      this._interval = null;
     }
   });
 });
