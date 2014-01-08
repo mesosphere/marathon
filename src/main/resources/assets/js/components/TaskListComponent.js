@@ -27,6 +27,9 @@ define([
         fetchState: STATE_LOADING
       };
     },
+    getResource: function() {
+      return this.props.collection;
+    },
     mixins: [BackboneMixin],
     render: function() {
       var taskNodes;

@@ -16,6 +16,9 @@ define([
         this.refs.modalComponent.destroy();
       }
     },
+    getResource: function() {
+      return this.props.model;
+    },
     mixins: [BackboneMixin],
     render: function() {
       var model = this.props.model;

@@ -10,6 +10,9 @@ define([
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
+    getResource: function() {
+      return this.props.model;
+    },
     mixins: [BackboneMixin],
     onChange: function(event) {
       this.props.model.set(event.target.name, event.target.value);

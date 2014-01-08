@@ -7,6 +7,9 @@ define([
   "mixins/BackboneMixin"
 ], function(React, AppComponent, AppModalComponent, BackboneMixin) {
   return React.createClass({
+    getResource: function() {
+      return this.props.collection;
+    },
     onAppClick: function(model) {
       React.renderComponent(
         <AppModalComponent model={model} />,
