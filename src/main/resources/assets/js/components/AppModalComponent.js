@@ -57,14 +57,19 @@ define([
     },
     scaleApp: function() {
       var model = this.props.model;
-      var instances = parseInt(prompt("Scale to how many instances?",
-        model.get("instances")), 10);
+      var instancesString = prompt("Scale to how many instances?",
+        model.get("instances"));
 
-      model.set({instances: instances}, {validate: true});
-      if (model.validationError == null) {
-        model.save();
-      } else {
-        alert("Not scaling: " + model.validationError[0]);
+      // If "Cancel" is clicked, `prompt` returns null and nothing should
+      // happen.
+      if (instancesString != null) {
+        var instances = parseInt(instancesString, 10);
+        model.set({instances: instances}, {validate: true});
+        if (model.validationError == null) {
+          model.save();
+        } else {
+          alert("Not scaling: " + model.validationError[0]);
+        }
       }
     },
     suspendApp: function() {
