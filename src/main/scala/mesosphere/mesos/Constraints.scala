@@ -102,11 +102,14 @@ object Constraints {
 
             condA || condB
           case Operator.LIKE => {
-            if (field == "hostname" && value.nonEmpty) {
-              hostname.matches(value.get)
+            if (value.nonEmpty) {
+              field match {
+                case "hostname" => hostname.matches(value.get)
+                case _ => attr.get.getText.getValue.matches(value.get)
+              }
             } else {
-              log.warning("Error, LIKE is only implemented for hostname")
-              true
+              log.warning("Error, value is required for LIKE operation")
+              false
             }
           }
         }
