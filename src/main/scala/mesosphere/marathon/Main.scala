@@ -17,10 +17,11 @@ import java.util.Properties
  */
 object Main extends App {
 
-  val properties: Properties = new Properties
-  properties.load(this.getClass.getClassLoader.getResourceAsStream("marathon.properties"))
+  val properties = new Properties
+  properties.load(getClass.getClassLoader.getResourceAsStream("marathon.properties"))
 
   val log = Logger.getLogger(getClass.getName)
+  log.info(s"Starting Marathon ${properties.getProperty("marathon.version")}")
 
   def modules() = {
     Seq(
