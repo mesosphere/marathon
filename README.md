@@ -133,9 +133,9 @@ Run `./bin/start --help` for a full list of configuration options.
 
 Using [HTTPie][HTTPie]:
 
-    http POST localhost:8080/v1/apps/start id=sleep cmd='sleep 600' instances=1 mem=128 cpus=1
-    http POST localhost:8080/v1/apps/scale id=sleep instances=2
-    http POST localhost:8080/v1/apps/stop id=sleep
+    http POST localhost:8080/v1/apps/start id=app_123 cmd='sleep 600' instances=1 mem=128 cpus=1
+    http POST localhost:8080/v1/apps/scale id=app_123 instances=2
+    http POST localhost:8080/v1/apps/stop id=app_123
 
 Using HTTPie with constraints:
 
@@ -146,7 +146,7 @@ Using HTTPie with constraints:
 
 Using [HTTPie][HTTPie]:
 
-    http PUT localhost:8080/v2/apps/sleep cmd='sleep 20' cpus=0.3 mem=9 instances=3
+    http PUT localhost:8080/v2/apps/app_123 cmd='sleep 20' cpus=0.3 mem=9 instances=3
 
 Running Chronos with the [Marathon Client](https://github.com/mesosphere/marathon_client):
 
