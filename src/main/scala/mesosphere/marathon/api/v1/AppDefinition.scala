@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v1
 
 import mesosphere.mesos.TaskBuilder
-import mesosphere.marathon.Protos
+import mesosphere.marathon.{ContainerInfo, Protos}
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 import org.hibernate.validator.constraints.NotEmpty
@@ -19,7 +19,6 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   @NotEmpty
   @Pattern(regexp = "^[A-Za-z0-9_.-]+$")
   var id: String = ""
-  @NotEmpty
   var cmd: String = ""
   var env: Map[String, String] = Map.empty
   var instances: Int = 0
@@ -37,13 +36,14 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   // the cluster.
   var taskRateLimit: Double = 1.0
 
+  var container: ContainerInfo = null
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
     val cpusResource = TaskBuilder.scalarResource(AppDefinition.CPUS, cpus)
     val memResource = TaskBuilder.scalarResource(AppDefinition.MEM, mem)
 
-    Protos.ServiceDefinition.newBuilder
+    val builder = Protos.ServiceDefinition.newBuilder
       .setId(id)
       .setCmd(commandInfo)
       .setInstances(instances)
@@ -53,7 +53,10 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
-      .build
+
+    if (container != null) builder.setContainer(container.toProto)
+
+    builder.build
   }
 
   def mergeFromProto(proto: Protos.ServiceDefinition) {
@@ -66,6 +69,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     instances = proto.getInstances
     ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]]
     constraints = proto.getConstraintsList.asScala.toSet
+    if (proto.hasContainer) container = ContainerInfo(proto.getContainer)
 
     // Add command environment
     for (variable <- proto.getCmd.getEnvironment.getVariablesList.asScala) {
