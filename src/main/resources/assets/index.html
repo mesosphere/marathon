@@ -5,34 +5,32 @@
     <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
     <title>Marathon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <link rel='stylesheet' type='text/css' href='css/bootstrap-3.0.2.css'>
     <link rel='stylesheet' type='text/css' href='css/marathon.css'>
   </head>
 
-  <body class='fullscreen marathon'>
-    <div class='fullscreen texture-background'></div>
-
-    <div class='fullscreen content'>
-      <h1>
-        <span class='system-folder'>Marathon /</span>
-        <div id='terminal'>
-          <input type='text' id='setter'>
-          <span id='system-text'></span>
-          <span id='prompt-text'></span>
-          <span id='caret' class='system-caret'></span>
+  <body>
+    <div class="container content">
+      <div class="row">
+        <div class="col-md-6">
+          <h1>
+            <span class='system-folder'>Marathon /</span>
+            <div id='terminal'>
+              <input type='text' id='setter'>
+              <span id='system-text'></span>
+              <span id='prompt-text'></span>
+              <span id='caret' class='system-caret'></span>
+            </div>
+          </h1>
         </div>
-      </h1>
-
-      <div class='list'></div>
-      <ul class='start-view-list list-unstyled'>
-        <li><div class='app-item add-button'>+</div></li>
-      </ul>
+        <div class="col-md-6 text-right" id="new-app-button-container"></div>
+      </div>
+      <div class="start-view-list" id="job-list"></div>
     </div>
 
-    <script src='js/libs/jquery-min.js'></script>
-    <script src='js/libs/underscore-min.js'></script>
-    <script src='js/libs/backbone-min.js'></script>
-    <script src='js/marathon.js'></script>
+    <div id="lightbox"></div>
+    <div class="texture-background fullscreen"></div>
+
+    <script data-main='js/dist/main.js' src='js/require-2.1.9.js'></script>
   </body>
 </html>

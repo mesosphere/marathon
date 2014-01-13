@@ -1,19 +1,16 @@
 #!/bin/bash
 set -o errexit -o nounset -o pipefail
 
-
 FRAMEWORK_HOME=`dirname $0`/..
 
-if [ -z ${MESOS_HOME+x} ]
+if [ -z ${MESOS_NATIVE_LIBRARY+x} ]
 then
-  echo "MESOS_HOME is not set. Defaulting to /usr/local"
-  MESOS_HOME='/usr/local'
-else
-  echo "MESOS_HOME is set to: $MESOS_HOME"
+  search_paths='/usr/lib /usr/local/lib'
+  echo "MESOS_NATIVE_LIBRARY is not set. Searching in $search_paths."
+  export MESOS_NATIVE_LIBRARY=$(find -L $search_paths -name libmesos.dylib -or -name libmesos.so 2>/dev/null | head -n1)
 fi
 
-export MESOS_NATIVE_LIBRARY=$(find -L "$MESOS_HOME" -name libmesos.dylib -or -name libmesos.so | head -n1)
-echo "MESOS_NATIVE_LIBRARY set to $MESOS_NATIVE_LIBRARY"
+echo "MESOS_NATIVE_LIBRARY is set to $MESOS_NATIVE_LIBRARY"
 
 # Start Marathon
 java -jar "$FRAMEWORK_HOME"/target/marathon-*-jar-with-dependencies.jar "$@"

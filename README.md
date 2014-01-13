@@ -85,16 +85,16 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 ## Setting Up And Running Marathon
 
-First, install [Mesos][Mesos]. One easy way is via your system's package manager.
-Current builds for major Linux distributions and Mac OS X are available from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
+1. Install [Mesos][Mesos]. One easy way is via your system's package manager.
+    Current builds for major Linux distributions and Mac OS X are available from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
 
-If building from source, see the [Getting Started](http://mesos.apache.org/gettingstarted/) page
-or the [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
-for details. Running `make install` will install Mesos in `/usr/local` in the same way as these packages do.
+    If building from source, see the [Getting Started](http://mesos.apache.org/gettingstarted/) page
+    or the [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
+    for details. Running `make install` will install Mesos in `/usr/local` in the same way as these packages do.
 
-To create a Jar for Marathon, checkout the sources and use Maven to build it:
+2. Check out Marathon and use Maven to build a JAR:
 
-    mvn package
+        mvn package
 
 ### Production Mode
 
@@ -102,7 +102,7 @@ To launch Marathon in *production mode*, you need to have both [Zookeeper][Zooke
 The following command launches Marathon on Mesos in *production mode*.
 Point your web browser to `localhost:8080` and you should see the Marathon UI.
 
-    ./bin/start --master zk://zk1.foo.bar/mesos,zk2.foo.bar/mesos --zk_hosts zk1.foo.bar,zk2.foo.bar
+    ./bin/start --master zk://zk1.foo.bar/mesos,zk2.foo.bar/mesos --zk_hosts zk1.foo.bar:2181,zk2.foo.bar:2181
 
 Note the different format of the `--master` and `--zk_hosts` options. Marathon uses `--master` to find the Mesos masters, and `--zk_hosts` to find Zookeepers for storing state. They are separate options because Mesos masters can be discovered in other ways as well.
 
@@ -121,9 +121,17 @@ When editing assets like CSS and JavaScript locally, they are loaded from the pa
 JAR by default and are not editable. To load them from a directory for easy editing,
 set the `assets_path` flag when running Marathon:
 
-    ./bin/start --master local --zk_hosts localhost:2181 --assets_path ./path/to/assets
+    ./bin/start --master local --zk_hosts localhost:2181 --assets_path src/main/resources/assets/
 
 ### Configuration Options
+
+* `MESOS_NATIVE_LIBRARY`: `bin/start` searches the common installation paths, `/usr/lib`
+  and `/usr/local/lib`, for the Mesos native library. If the library lives elsewhere in
+  your configuration, set the environment variable `MESOS_NATIVE_LIBRARY` to its full path.
+
+  For example:
+
+      MESOS_NATIVE_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk_hosts localhost:2181
 
 Run `./bin/start --help` for a full list of configuration options.
 

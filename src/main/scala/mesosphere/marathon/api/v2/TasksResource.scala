@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import javax.ws.rs._
 import scala.Array
-import javax.ws.rs.core.{Response, MediaType}
+import javax.ws.rs.core.MediaType
 import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
@@ -15,22 +15,40 @@ import com.codahale.metrics.annotation.Timed
  */
 
 @Path("v2/tasks")
-@Produces(Array(MediaType.APPLICATION_JSON))
-class TasksResource @Inject()(
-                               service: MarathonSchedulerService,
-                               taskTracker: TaskTracker) {
-
-  import Implicits._
+class TasksResource @Inject()(service: MarathonSchedulerService,
+                              taskTracker: TaskTracker) {
 
   val log = Logger.getLogger(getClass.getName)
 
   @GET
+  @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def index() = {
+  def indexJson() = {
     taskTracker.list.map { case ((key, setOfTasks)) =>
       // TODO teach Jackson how to serialize a MarathonTask instead
       // TODO JSON format is weird
-      (key, setOfTasks.tasks.map(s => s: Map[String, Object]))
+      (key, setOfTasks.tasks)
     }
+  }
+
+  @GET
+  @Produces(Array(MediaType.TEXT_PLAIN))
+  @Timed
+  def indexTxt() = {
+    val sb = new StringBuilder
+    for (app <- service.listApps()) {
+      val tasks = taskTracker.get(app.id)
+
+      for ((port, i) <- app.ports.zipWithIndex) {
+        val cleanId = app.id.replaceAll("\\s+", "_")
+        sb.append(s"${cleanId}_$port $port ")
+
+        for (task <- tasks) {
+          sb.append(s"${task.getHost}:${task.getPorts(i)} ")
+        }
+        sb.append("\n")
+      }
+    }
+    sb.toString()
   }
 }

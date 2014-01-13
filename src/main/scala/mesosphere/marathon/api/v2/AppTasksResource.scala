@@ -4,12 +4,9 @@ import javax.ws.rs._
 import com.codahale.metrics.annotation.Timed
 import javax.ws.rs.core.{MediaType, Response}
 import scala.{Array, Some}
-import scala.concurrent.Await
-import org.apache.mesos.Protos.TaskID
 import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.v1.Implicits
 import java.util.logging.Logger
 
 /**
@@ -20,49 +17,39 @@ import java.util.logging.Logger
 class AppTasksResource @Inject()(service: MarathonSchedulerService,
                                  taskTracker: TaskTracker) {
 
-  import Implicits._
-
   val log = Logger.getLogger(getClass.getName)
 
 
-  @GET
+  @DELETE
   @Timed
-  def show(@PathParam("appId") appId: String) = {
+  def deleteMany(@PathParam("appId") appId: String,
+                 @QueryParam("host") host: String,
+                 @QueryParam("scale") scale: Boolean = false) = {
     if (taskTracker.contains(appId)) {
       val tasks = taskTracker.get(appId)
-      val result = Map(appId -> tasks.map(s => s: Map[String, Object]))
-      Response.ok(result).build
+      val toKill = tasks.filter(_.getHost == host || host == "*")
+
+      service.killTasks(appId, toKill, scale)
+      Response.ok(Map("tasks" -> toKill)).build
     } else {
-      Response.noContent.status(404).build
+      Response.status(Response.Status.NOT_FOUND).build
     }
   }
 
-  @DELETE
-  @Path("{taskId}")
-  @Timed
-  def delete(@PathParam("appId") appId: String,
-             @QueryParam("host") host: String,
-             @PathParam("taskId") id: String = "*",
-             @QueryParam("scale") scale: Boolean = false) = {
-    val tasks = taskTracker.get(appId)
-    val toKill = tasks.filter(x =>
-      x.getHost == host || x.getId == id || host == "*"
-    )
-
-    if (scale) {
-      service.getApp(appId) match {
-        case Some(appDef) =>
-          appDef.instances = appDef.instances - toKill.size
-
-          Await.result(service.scaleApp(appDef, false), service.defaultWait)
-        case None =>
+  def deleteOne(@PathParam("appId") appId: String,
+                @PathParam("taskId") id: String,
+                @QueryParam("scale") scale: Boolean = false) = {
+    if (taskTracker.contains(appId)) {
+      val tasks = taskTracker.get(appId)
+      tasks.find(_.getId == id) match {
+        case Some(task) => {
+          service.killTasks(appId, Seq(task), scale)
+          Response.ok(Map("task" -> task)).build
+        }
+        case None => Response.status(Response.Status.NOT_FOUND).build
       }
+    } else {
+      Response.status(Response.Status.NOT_FOUND).build
     }
-
-    toKill.map({task =>
-      log.info(f"Killing task ${task.getId} on host ${task.getHost}")
-      service.driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
-      task: Map[String, Object]
-    })
   }
 }
