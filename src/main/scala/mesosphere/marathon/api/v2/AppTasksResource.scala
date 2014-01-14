@@ -36,6 +36,9 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
     }
   }
 
+  @DELETE
+  @Path("{taskId}")
+  @Timed
   def deleteOne(@PathParam("appId") appId: String,
                 @PathParam("taskId") id: String,
                 @QueryParam("scale") scale: Boolean = false) = {
