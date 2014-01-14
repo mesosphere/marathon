@@ -6,6 +6,7 @@ import java.util.logging.{Level, Logger}
 import scala.collection.JavaConverters._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.MarathonStore
 import scala.util.{Failure, Success}
 import scala.concurrent.{Future, ExecutionContext}
@@ -194,9 +195,25 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  def scaleApp(driver: SchedulerDriver,
-               app: AppDefinition,
-               applyNow: Boolean): Future[_] = {
+  def updateApp(driver: SchedulerDriver,
+                id: String,
+                appUpdate: AppUpdate): Future[_] = {
+    store.fetch(id).flatMap {
+      case Some(storedApp) => {
+        val updatedApp = appUpdate.apply(storedApp)
+        store.store(updatedApp.id, updatedApp).map { _ =>
+          scale(driver, updatedApp)
+          update(driver, updatedApp, appUpdate)
+        }
+      }
+      case None => throw new UnknownAppException(id)
+    }
+  }
+
+@deprecated("The scale operation has been subsumed by update in the v2 API.")
+def scaleApp(driver: SchedulerDriver,
+             app: AppDefinition,
+             applyNow: Boolean): Future[_] = {
     store.fetch(app.id).flatMap {
       case Some(storedApp) => {
         storedApp.instances = app.instances
@@ -235,6 +252,19 @@ class MarathonScheduler @Inject()(
                       offer: Offer): Option[(TaskInfo, Seq[Int])] = {
     // TODO this should return a MarathonTask
     new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
+  }
+
+  /**
+   * Ensures current application parameters (resource requirements, URLs,
+   * command, and constraints) are applied consistently across running
+   * application instances.
+   *
+   * @param driver
+   * @param updatedApp
+   * @param appUpdate
+   */
+  private def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate) {
+    // TODO: implement app instance restart logic
   }
 
   /**

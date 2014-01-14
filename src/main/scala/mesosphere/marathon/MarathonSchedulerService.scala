@@ -4,6 +4,7 @@ import org.apache.mesos.Protos.{TaskID, FrameworkInfo}
 import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.MarathonStore
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import javax.inject.{Named, Inject}
@@ -86,6 +87,11 @@ class MarathonSchedulerService @Inject()(
     scheduler.stopApp(driver, app)
   }
 
+  def updateApp(id: String, appUpdate: AppUpdate): Future[_] = {
+    scheduler.updateApp(driver, id, appUpdate)
+  }
+
+  @deprecated("The scale operation has been subsumed by update in the v2 API.")
   def scaleApp(app: AppDefinition, applyNow: Boolean = true): Future[_] = {
     scheduler.scaleApp(driver, app, applyNow)
   }
