@@ -48,6 +48,8 @@ define([
         <ModalComponent ref="modalComponent">
           <form method="post" className="form-horizontal" role="form" onSubmit={this.onSubmit}>
             <div className="modal-header">
+              <button type="button" className="close"
+                aria-hidden="true" onClick={this.destroy}>&times;</button>
               <h3 className="modal-title">New Application</h3>
             </div>
             <div className="modal-body">
