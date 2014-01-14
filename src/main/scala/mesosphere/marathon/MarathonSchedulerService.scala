@@ -91,7 +91,7 @@ class MarathonSchedulerService @Inject()(
     scheduler.updateApp(driver, id, appUpdate)
   }
 
-  @deprecated("The scale operation has been subsumed by update in the v2 API.", "0.2.2")
+  @deprecated("The scale operation has been subsumed by update in the v2 API.")
   def scaleApp(app: AppDefinition, applyNow: Boolean = true): Future[_] = {
     scheduler.scaleApp(driver, app, applyNow)
   }
