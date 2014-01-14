@@ -16,12 +16,15 @@ define([
         this.refs.modalComponent.destroy();
       }
     },
+    getResource: function() {
+      return this.props.model;
+    },
     mixins: [BackboneMixin],
     render: function() {
       var model = this.props.model;
 
       return (
-        <ModalComponent ref="modalComponent">
+        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
           <div className="modal-header">
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
@@ -53,16 +56,25 @@ define([
       );
     },
     scaleApp: function() {
-      var instances = prompt("Scale to how many instances?",
-        this.props.model.get("instances"));
+      var model = this.props.model;
+      var instancesString = prompt("Scale to how many instances?",
+        model.get("instances"));
 
-      if (instances != null) {
-        this.props.model.scale(instances);
+      // If "Cancel" is clicked, `prompt` returns null and nothing should
+      // happen.
+      if (instancesString != null) {
+        var instances = parseInt(instancesString, 10);
+        model.set({instances: instances}, {validate: true});
+        if (model.validationError == null) {
+          model.save();
+        } else {
+          alert("Not scaling: " + model.validationError[0]);
+        }
       }
     },
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
-        this.props.model.scale(0);
+        this.props.model.save({instances: 0});
       }
     }
   });

@@ -7,11 +7,25 @@ define([
   "mixins/BackboneMixin"
 ], function(React, AppComponent, AppModalComponent, BackboneMixin) {
   return React.createClass({
+    componentDidMount: function() {
+      this.startPolling();
+    },
+    componentWillUnmount: function() {
+      this.stopPolling();
+    },
+    getResource: function() {
+      return this.props.collection;
+    },
+    fetchResource: function() {
+      this.props.collection.fetch();
+    },
     onAppClick: function(model) {
       React.renderComponent(
-        <AppModalComponent model={model} />,
+        <AppModalComponent model={model} onDestroy={this.startPolling} />,
         document.getElementById("lightbox")
       );
+
+      this.stopPolling();
     },
     mixins: [BackboneMixin],
     render: function() {
@@ -25,11 +39,11 @@ define([
       return (
         <table className="table table-hover item-table">
           <colgroup>
-            <col style={{width: "20%"}} />
-            <col style={{width: "20%"}} />
-            <col style={{width: "20%"}} />
-            <col style={{width: "20%"}} />
-            <col style={{width: "20%"}} />
+            <col style={{width: "30%"}} />
+            <col style={{width: "30%"}} />
+            <col style={{width: "14%"}} />
+            <col style={{width: "13%"}} />
+            <col style={{width: "13%"}} />
           </colgroup>
           <thead>
             <tr>
@@ -39,14 +53,14 @@ define([
               <th onClick={this.sortCollectionBy.bind(this, "cmd")}>
                 CMD {(comparator === "cmd") ? "▼" : null}
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "mem")}>
-                Memory (MB) {(comparator === "mem") ? "▼" : null}
+              <th onClick={this.sortCollectionBy.bind(this, "mem")} className="text-right">
+                {(comparator === "mem") ? "▼" : null} Memory (MB)
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "cpus")}>
-                CPUs {(comparator === "cpus") ? "▼" : null}
+              <th onClick={this.sortCollectionBy.bind(this, "cpus")} className="text-right">
+                {(comparator === "cpus") ? "▼" : null} CPUs
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "instances")}>
-                Instances {(comparator === "instances") ? "▼" : null}
+              <th onClick={this.sortCollectionBy.bind(this, "instances")} className="text-right">
+                {(comparator === "instances") ? "▼" : null} Instances
               </th>
             </tr>
           </thead>
@@ -59,6 +73,15 @@ define([
     sortCollectionBy: function(attribute) {
       this.props.collection.comparator = attribute;
       this.props.collection.sort();
+    },
+    startPolling: function() {
+      if (this._interval == null) {
+        this._interval = setInterval(this.fetchResource, 10000);
+      }
+    },
+    stopPolling: function() {
+      clearInterval(this._interval);
+      this._interval = null;
     }
   });
 });

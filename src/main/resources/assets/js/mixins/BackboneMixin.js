@@ -1,15 +1,18 @@
 define([
 ], function() {
+  // Binds a listener to a component's resource so the component can be updated
+  // when the resource changes.
+  //
+  // An object that uses this mixin must implement `getResource` and return an
+  // object that extends `Backbone.Events`. Common use cases are
+  // `Backbone.Model` and `Backbone.Collection`.
   return {
     componentDidMount: function() {
       this._boundForceUpdate = this.forceUpdate.bind(this, null);
-      this.getBackboneObject().on("all", this._boundForceUpdate, this);
+      this.getResource().on("all", this._boundForceUpdate, this);
     },
     componentWillUnmount: function() {
-      this.getBackboneObject().off("all", this._boundForceUpdate);
-    },
-    getBackboneObject: function() {
-      return this.props.collection || this.props.model;
+      this.getResource().off("all", this._boundForceUpdate);
     }
   };
 });

@@ -10,6 +10,9 @@ define([
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
+    getResource: function() {
+      return this.props.model;
+    },
     mixins: [BackboneMixin],
     onChange: function(event) {
       this.props.model.set(event.target.name, event.target.value);
@@ -28,6 +31,13 @@ define([
       // URIs should be an Array of Strings.
       if ("uris" in modelAttrs) modelAttrs.uris = modelAttrs.uris.split(",");
 
+      // mem, cpus, and instances are all Numbers and should be parsed as such.
+      if ("mem" in modelAttrs) modelAttrs.mem = parseFloat(modelAttrs.mem);
+      if ("cpus" in modelAttrs) modelAttrs.cpus = parseFloat(modelAttrs.cpus);
+      if ("instances" in modelAttrs) {
+        modelAttrs.instances = parseInt(modelAttrs.instances, 10);
+      }
+
       this.props.onCreate(modelAttrs);
       this.destroy();
     },
@@ -38,6 +48,8 @@ define([
         <ModalComponent ref="modalComponent">
           <form method="post" className="form-horizontal" role="form" onSubmit={this.onSubmit}>
             <div className="modal-header">
+              <button type="button" className="close"
+                aria-hidden="true" onClick={this.destroy}>&times;</button>
               <h3 className="modal-title">New Application</h3>
             </div>
             <div className="modal-body">
@@ -55,7 +67,9 @@ define([
                   Command
                 </label>
                 <div className="col-md-9">
-                  <input className="form-control" id="cmd-field" name="cmd" required />
+                  <textarea style={{resize: "vertical"}} className="form-control"
+                    id="cmd-field" name="cmd" required>
+                  </textarea>
                 </div>
               </div>
               <div className="form-group">

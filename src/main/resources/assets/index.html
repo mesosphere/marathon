@@ -1,36 +1,36 @@
 <!DOCTYPE html>
-<html lang='en'>
+<html lang="en">
   <head>
-    <meta charset='utf-8'>
-    <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+    <meta charset="utf-8">
     <title>Marathon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel='stylesheet' type='text/css' href='css/bootstrap-3.0.2.css'>
-    <link rel='stylesheet' type='text/css' href='css/marathon.css'>
+    <link rel="icon" type="image/png" href="/img/marathon-icon.png">
+    <link rel="stylesheet" href="css/bootstrap-3.0.2.css">
+    <link rel="stylesheet" href="css/marathon.css">
   </head>
 
   <body>
-    <div class="container content">
+    <div class="container">
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-sm-6">
           <h1>
-            <span class='system-folder'>Marathon /</span>
-            <div id='terminal'>
-              <input type='text' id='setter'>
-              <span id='system-text'></span>
-              <span id='prompt-text'></span>
-              <span id='caret' class='system-caret'></span>
+            <span class="system-folder">Marathon /</span>
+            <div id="terminal">
+              <input type="text" id="setter">
+              <span id="system-text"></span>
+              <span id="prompt-text"></span>
+              <span id="caret" class="system-caret"></span>
             </div>
           </h1>
         </div>
-        <div class="col-md-6 text-right" id="new-app-button-container"></div>
+        <div class="col-sm-6 text-right" id="new-app-button-container"></div>
       </div>
-      <div class="start-view-list" id="job-list"></div>
+      <div id="job-list"></div>
     </div>
 
     <div id="lightbox"></div>
     <div class="texture-background fullscreen"></div>
 
-    <script data-main='js/dist/main.js' src='js/require-2.1.9.js'></script>
+    <script data-main="js/dist/main.js" src="js/require-2.1.9.js"></script>
   </body>
 </html>

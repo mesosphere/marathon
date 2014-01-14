@@ -24,16 +24,6 @@
   100% { opacity: 1; }
 }
 
-@-webkit-keyframes power-on {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes power-on {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 /* ==============
  * Base
  * ==============
@@ -43,13 +33,6 @@ body {
   background: #111113;
   color: #ffffff;
   font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
-}
-
-header {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  text-align: center;
 }
 
 h1,
@@ -147,15 +130,6 @@ dt {
   text-transform: uppercase;
 }
 
-.btn-xs {
-  font-size: 12px;
-  padding: 1px 5px;
-}
-
-.btn-xs + .btn-xs {
-  margin-left: 5px;
-}
-
 .btn-link {
   color: #999;
 }
@@ -194,6 +168,15 @@ dt {
 }
 
 .system-caret {
+  /* Force a new stacking context to prevent this animation from making the page
+   * flicker in Chrome 31.
+   */
+  -webkit-transform: translatez(0);
+  -moz-transform: translatez(0);
+  -ms-transform: translatez(0);
+  -o-transform: translatez(0);
+  transform: translatez(0);
+
   -webkit-animation-duration: 1.2s;
   -webkit-animation-iteration-count: infinite;
   -webkit-animation-name: blink;
@@ -203,40 +186,6 @@ dt {
   animation-iteration-count: infinite;
   animation-name: blink;
   animation-timing-function: steps(1, start);
-}
-
-.system-select {
-  display: inline-block;
-  width: 900px;
-}
-
-.title {
-  text-transform: uppercase;
-  padding: 8px 10px 5px;
-  border: 1px solid #3C729D;
-}
-
-.items li {
-  padding: 18px 10px 14px;
-  border: 1px solid #3C729D;
-  border-top-color: transparent;
-  color: #E6E6E6;
-}
-
-.content {
-  opacity: 0;
-
-  -webkit-animation-duration: 250ms;
-  -webkit-animation-name: power-on;
-  -webkit-animation-timing-function: linear;
-  -webkit-animation-delay: 0.6s;
-  -webkit-animation-fill-mode: forwards;
-
-  animation-delay: 0.6s;
-  animation-duration: 250ms;
-  animation-fill-mode: forwards;
-  animation-name: power-on;
-  animation-timing-function: linear;
 }
 
 #terminal {
@@ -272,30 +221,6 @@ dt {
   background: -webkit-linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
   background: linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
   z-index: -1;
-
-  -webkit-animation-duration: 1s;
-  -webkit-animation-name: power-on;
-  -webkit-animation-timing-function: ease-in;
-
-  animation-duration: 1s;
-  animation-name: power-on;
-  animation-timing-function: ease-in;
-}
-
-.start-view-list {
-  overflow: hidden;
-}
-
-.app-item .uris {
-  position: absolute;
-  background: black;
-  padding: 3px;
-  color: white;
-  display: none;
-}
-
-.uri-wrapper:hover .uris {
-  display: block;
 }
 
 .add-button {
@@ -305,8 +230,4 @@ dt {
 .table-hover > tbody > tr:hover > td {
   background-color: #B8E8EF;
   color: #111113;
-}
-
-.app-item-header {
-  margin-top: 0px;
 }
