@@ -26,7 +26,7 @@ In fact, you can even start other Marathon instances via Marathon.
 * *Metrics* -- via Coda Hale's [metrics library](http://metrics.codahale.com/)
 * *Service Constraints* -- e.g., only one instance of a service per rack, node, etc.
 * *Service Discovery* and *Monitoring*
-* *Event Subscription* -- e.g., if you need to notify an external service about task updates or state changes, you can supply an HTTP endpoint to receive notifications
+* *Event Subscription* -- e.g., if you need to notify an external service about task updates or state changes, you can supply an HTTP endpoint to receive notifications. See the [wiki page](https://github.com/mesosphere/marathon/wiki/Event-Bus) for details.
 
 ## Overview
 
