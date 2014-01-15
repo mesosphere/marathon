@@ -41,7 +41,11 @@ class MarathonModule extends Module {
                                         beanDesc: BeanDescription): JsonDeserializer[_] = {
         if (constraintClass.isAssignableFrom(javaType.getRawClass)) {
           new ConstraintDeserializer
-        } else {
+        }
+        else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
+          new MarathonTaskDeserializer
+        }
+        else {
           null
         }
       }
@@ -82,7 +86,16 @@ class MarathonModule extends Module {
       jgen.writeObjectField("id", task.getId)
       jgen.writeObjectField("host", task.getHost)
       jgen.writeObjectField("ports", task.getPortsList)
+      jgen.writeObjectField("")
       jgen.writeEndObject()
     }
   }
+
+  // TODO: handle fields!
+  // Currently there is no support for handling updates to task instances (CD)
+  class MarathonTaskDeserializer extends JsonDeserializer[MarathonTask] {
+    def deserialize(json: JsonParser, context: DeserializationContext): MarathonTask =
+      MarathonTask.newBuilder.build
+  }
+
 }
