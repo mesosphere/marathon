@@ -2205,6 +2205,16 @@ public final class Protos {
     // optional int64 started_at = 6;
     boolean hasStartedAt();
     long getStartedAt();
+    
+    // repeated .mesos.TaskStatus statuses = 7;
+    java.util.List<org.apache.mesos.Protos.TaskStatus> 
+        getStatusesList();
+    org.apache.mesos.Protos.TaskStatus getStatuses(int index);
+    int getStatusesCount();
+    java.util.List<? extends org.apache.mesos.Protos.TaskStatusOrBuilder> 
+        getStatusesOrBuilderList();
+    org.apache.mesos.Protos.TaskStatusOrBuilder getStatusesOrBuilder(
+        int index);
   }
   public static final class MarathonTask extends
       com.google.protobuf.GeneratedMessage
@@ -2354,6 +2364,27 @@ public final class Protos {
       return startedAt_;
     }
     
+    // repeated .mesos.TaskStatus statuses = 7;
+    public static final int STATUSES_FIELD_NUMBER = 7;
+    private java.util.List<org.apache.mesos.Protos.TaskStatus> statuses_;
+    public java.util.List<org.apache.mesos.Protos.TaskStatus> getStatusesList() {
+      return statuses_;
+    }
+    public java.util.List<? extends org.apache.mesos.Protos.TaskStatusOrBuilder> 
+        getStatusesOrBuilderList() {
+      return statuses_;
+    }
+    public int getStatusesCount() {
+      return statuses_.size();
+    }
+    public org.apache.mesos.Protos.TaskStatus getStatuses(int index) {
+      return statuses_.get(index);
+    }
+    public org.apache.mesos.Protos.TaskStatusOrBuilder getStatusesOrBuilder(
+        int index) {
+      return statuses_.get(index);
+    }
+    
     private void initFields() {
       id_ = "";
       host_ = "";
@@ -2361,6 +2392,7 @@ public final class Protos {
       attributes_ = java.util.Collections.emptyList();
       stagedAt_ = 0L;
       startedAt_ = 0L;
+      statuses_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2373,6 +2405,12 @@ public final class Protos {
       }
       for (int i = 0; i < getAttributesCount(); i++) {
         if (!getAttributes(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getStatusesCount(); i++) {
+        if (!getStatuses(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -2401,6 +2439,9 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeInt64(6, startedAt_);
+      }
+      for (int i = 0; i < statuses_.size(); i++) {
+        output.writeMessage(7, statuses_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -2439,6 +2480,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(6, startedAt_);
+      }
+      for (int i = 0; i < statuses_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(7, statuses_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2557,6 +2602,7 @@ public final class Protos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getAttributesFieldBuilder();
+          getStatusesFieldBuilder();
         }
       }
       private static Builder create() {
@@ -2581,6 +2627,12 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000010);
         startedAt_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000020);
+        if (statusesBuilder_ == null) {
+          statuses_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000040);
+        } else {
+          statusesBuilder_.clear();
+        }
         return this;
       }
       
@@ -2649,6 +2701,15 @@ public final class Protos {
           to_bitField0_ |= 0x00000008;
         }
         result.startedAt_ = startedAt_;
+        if (statusesBuilder_ == null) {
+          if (((bitField0_ & 0x00000040) == 0x00000040)) {
+            statuses_ = java.util.Collections.unmodifiableList(statuses_);
+            bitField0_ = (bitField0_ & ~0x00000040);
+          }
+          result.statuses_ = statuses_;
+        } else {
+          result.statuses_ = statusesBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2713,6 +2774,32 @@ public final class Protos {
         if (other.hasStartedAt()) {
           setStartedAt(other.getStartedAt());
         }
+        if (statusesBuilder_ == null) {
+          if (!other.statuses_.isEmpty()) {
+            if (statuses_.isEmpty()) {
+              statuses_ = other.statuses_;
+              bitField0_ = (bitField0_ & ~0x00000040);
+            } else {
+              ensureStatusesIsMutable();
+              statuses_.addAll(other.statuses_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.statuses_.isEmpty()) {
+            if (statusesBuilder_.isEmpty()) {
+              statusesBuilder_.dispose();
+              statusesBuilder_ = null;
+              statuses_ = other.statuses_;
+              bitField0_ = (bitField0_ & ~0x00000040);
+              statusesBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getStatusesFieldBuilder() : null;
+            } else {
+              statusesBuilder_.addAllMessages(other.statuses_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -2724,6 +2811,12 @@ public final class Protos {
         }
         for (int i = 0; i < getAttributesCount(); i++) {
           if (!getAttributes(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getStatusesCount(); i++) {
+          if (!getStatuses(i).isInitialized()) {
             
             return false;
           }
@@ -2792,6 +2885,12 @@ public final class Protos {
             case 48: {
               bitField0_ |= 0x00000020;
               startedAt_ = input.readInt64();
+              break;
+            }
+            case 58: {
+              org.apache.mesos.Protos.TaskStatus.Builder subBuilder = org.apache.mesos.Protos.TaskStatus.newBuilder();
+              input.readMessage(subBuilder, extensionRegistry);
+              addStatuses(subBuilder.buildPartial());
               break;
             }
           }
@@ -3143,6 +3242,192 @@ public final class Protos {
         startedAt_ = 0L;
         onChanged();
         return this;
+      }
+      
+      // repeated .mesos.TaskStatus statuses = 7;
+      private java.util.List<org.apache.mesos.Protos.TaskStatus> statuses_ =
+        java.util.Collections.emptyList();
+      private void ensureStatusesIsMutable() {
+        if (!((bitField0_ & 0x00000040) == 0x00000040)) {
+          statuses_ = new java.util.ArrayList<org.apache.mesos.Protos.TaskStatus>(statuses_);
+          bitField0_ |= 0x00000040;
+         }
+      }
+      
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder> statusesBuilder_;
+      
+      public java.util.List<org.apache.mesos.Protos.TaskStatus> getStatusesList() {
+        if (statusesBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(statuses_);
+        } else {
+          return statusesBuilder_.getMessageList();
+        }
+      }
+      public int getStatusesCount() {
+        if (statusesBuilder_ == null) {
+          return statuses_.size();
+        } else {
+          return statusesBuilder_.getCount();
+        }
+      }
+      public org.apache.mesos.Protos.TaskStatus getStatuses(int index) {
+        if (statusesBuilder_ == null) {
+          return statuses_.get(index);
+        } else {
+          return statusesBuilder_.getMessage(index);
+        }
+      }
+      public Builder setStatuses(
+          int index, org.apache.mesos.Protos.TaskStatus value) {
+        if (statusesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureStatusesIsMutable();
+          statuses_.set(index, value);
+          onChanged();
+        } else {
+          statusesBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      public Builder setStatuses(
+          int index, org.apache.mesos.Protos.TaskStatus.Builder builderForValue) {
+        if (statusesBuilder_ == null) {
+          ensureStatusesIsMutable();
+          statuses_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          statusesBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      public Builder addStatuses(org.apache.mesos.Protos.TaskStatus value) {
+        if (statusesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureStatusesIsMutable();
+          statuses_.add(value);
+          onChanged();
+        } else {
+          statusesBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      public Builder addStatuses(
+          int index, org.apache.mesos.Protos.TaskStatus value) {
+        if (statusesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureStatusesIsMutable();
+          statuses_.add(index, value);
+          onChanged();
+        } else {
+          statusesBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      public Builder addStatuses(
+          org.apache.mesos.Protos.TaskStatus.Builder builderForValue) {
+        if (statusesBuilder_ == null) {
+          ensureStatusesIsMutable();
+          statuses_.add(builderForValue.build());
+          onChanged();
+        } else {
+          statusesBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      public Builder addStatuses(
+          int index, org.apache.mesos.Protos.TaskStatus.Builder builderForValue) {
+        if (statusesBuilder_ == null) {
+          ensureStatusesIsMutable();
+          statuses_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          statusesBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      public Builder addAllStatuses(
+          java.lang.Iterable<? extends org.apache.mesos.Protos.TaskStatus> values) {
+        if (statusesBuilder_ == null) {
+          ensureStatusesIsMutable();
+          super.addAll(values, statuses_);
+          onChanged();
+        } else {
+          statusesBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      public Builder clearStatuses() {
+        if (statusesBuilder_ == null) {
+          statuses_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000040);
+          onChanged();
+        } else {
+          statusesBuilder_.clear();
+        }
+        return this;
+      }
+      public Builder removeStatuses(int index) {
+        if (statusesBuilder_ == null) {
+          ensureStatusesIsMutable();
+          statuses_.remove(index);
+          onChanged();
+        } else {
+          statusesBuilder_.remove(index);
+        }
+        return this;
+      }
+      public org.apache.mesos.Protos.TaskStatus.Builder getStatusesBuilder(
+          int index) {
+        return getStatusesFieldBuilder().getBuilder(index);
+      }
+      public org.apache.mesos.Protos.TaskStatusOrBuilder getStatusesOrBuilder(
+          int index) {
+        if (statusesBuilder_ == null) {
+          return statuses_.get(index);  } else {
+          return statusesBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      public java.util.List<? extends org.apache.mesos.Protos.TaskStatusOrBuilder> 
+           getStatusesOrBuilderList() {
+        if (statusesBuilder_ != null) {
+          return statusesBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(statuses_);
+        }
+      }
+      public org.apache.mesos.Protos.TaskStatus.Builder addStatusesBuilder() {
+        return getStatusesFieldBuilder().addBuilder(
+            org.apache.mesos.Protos.TaskStatus.getDefaultInstance());
+      }
+      public org.apache.mesos.Protos.TaskStatus.Builder addStatusesBuilder(
+          int index) {
+        return getStatusesFieldBuilder().addBuilder(
+            index, org.apache.mesos.Protos.TaskStatus.getDefaultInstance());
+      }
+      public java.util.List<org.apache.mesos.Protos.TaskStatus.Builder> 
+           getStatusesBuilderList() {
+        return getStatusesFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder> 
+          getStatusesFieldBuilder() {
+        if (statusesBuilder_ == null) {
+          statusesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder>(
+                  statuses_,
+                  ((bitField0_ & 0x00000040) == 0x00000040),
+                  getParentForChildren(),
+                  isClean());
+          statuses_ = null;
+        }
+        return statusesBuilder_;
       }
       
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.MarathonTask)
@@ -3856,13 +4141,14 @@ public final class Protos {
       "\0132\017.mesos.Resource\022\023\n\013description\030\005 \001(\t\022" +
       "\r\n\005ports\030\006 \003(\r\0224\n\013constraints\030\007 \003(\0132\037.me",
       "sosphere.marathon.Constraint\022\022\n\010executor" +
-      "\030\010 \002(\t:\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011\"\204\001\n\014M" +
+      "\030\010 \002(\t:\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011\"\251\001\n\014M" +
       "arathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n" +
       "\005ports\030\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos" +
       ".Attribute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted" +
-      "_at\030\006 \001(\003\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220" +
-      "\n\005tasks\030\002 \003(\0132!.mesosphere.marathon.Mara" +
-      "thonTaskB\035\n\023mesosphere.marathonB\006Protos"
+      "_at\030\006 \001(\003\022#\n\010statuses\030\007 \003(\0132\021.mesos.Task" +
+      "Status\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005t" +
+      "asks\030\002 \003(\0132!.mesosphere.marathon.Maratho" +
+      "nTaskB\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -3890,7 +4176,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
-              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", },
+              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "Statuses", },
               mesosphere.marathon.Protos.MarathonTask.class,
               mesosphere.marathon.Protos.MarathonTask.Builder.class);
           internal_static_mesosphere_marathon_MarathonApp_descriptor =

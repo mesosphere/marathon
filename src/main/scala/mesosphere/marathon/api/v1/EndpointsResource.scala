@@ -37,7 +37,9 @@ class EndpointsResource @Inject()(
         sb.append(s"${cleanId}_$port $port ")
 
         for (task <- tasks) {
-          sb.append(s"${task.getHost}:${task.getPorts(i)} ")
+          if (i < task.getPortsCount()) {
+            sb.append(s"${task.getHost}:${task.getPorts(i)} ")
+          }
         }
         sb.append("\n")
       }

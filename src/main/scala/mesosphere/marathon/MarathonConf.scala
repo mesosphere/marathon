@@ -66,4 +66,8 @@ trait MarathonConf extends ScallopConf {
     "whether they succeed or fail.",
     default = Some(60000L))
 
+  lazy val reconciliationPeriod = opt[Long]("reconciliation_period",
+    descr = "This is the period, in minutes, for which Marathon will " +
+    "reconcile tasks with the Mesos master",
+    default = Some(15L))
 }
