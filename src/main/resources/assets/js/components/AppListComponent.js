@@ -37,7 +37,7 @@ define([
       });
 
       return (
-        <table className="table table-hover item-table">
+        <table className="table table-hover table-selectable">
           <colgroup>
             <col style={{width: "30%"}} />
             <col style={{width: "30%"}} />
