@@ -19,9 +19,77 @@ define([
     getResource: function() {
       return this.props.model;
     },
+    getInitialState: function() {
+      return {
+        selectedTasks: {}
+      };
+    },
+    killSelectedTasks: function(options) {
+      var _this = this;
+      var _options = options || {};
+
+      var selectedTaskIds = Object.keys(this.state.selectedTasks);
+      var tasksToKill = this.props.model.get("tasks").filter(function(task) {
+        return selectedTaskIds.indexOf(task.id) >= 0;
+      });
+
+      tasksToKill.forEach(function(task) {
+        task.destroy({
+          scale: _options.scale,
+          success: function() {
+            var instances;
+            if (_options.scale) {
+              instances = _this.props.model.get("instances");
+              _this.props.model.set("instances", instances - 1);
+            }
+
+            delete _this.state.selectedTasks[task.id];
+
+            // Force an update since React doesn't know a key was removed from
+            // `selectedTasks`.
+            _this.forceUpdate();
+          },
+          wait: true
+        });
+      });
+    },
+    killSelectedTasksAndScale: function() {
+      this.killSelectedTasks({scale: true});
+    },
     mixins: [BackboneMixin],
+    refreshTaskList: function() {
+      this.refs.taskList.fetchTasks();
+    },
     render: function() {
+      var buttons;
       var model = this.props.model;
+      var selectedTasksLength = Object.keys(this.state.selectedTasks).length;
+
+      if (selectedTasksLength === 0) {
+        buttons =
+          <p>
+            <button className="btn btn-sm btn-default" onClick={this.refreshTaskList}>
+              ↻ Refresh
+            </button>
+          </p>;
+      } else {
+        // Killing two tasks in quick succession raises an exception. Disable
+        // "Kill & Scale" if more than one task is selected to prevent the
+        // exception from happening.
+        //
+        // TODO(ssorallen): Remove once
+        //   https://github.com/mesosphere/marathon/issues/108 is addressed.
+        buttons =
+          <p class="btn-group">
+            <button className="btn btn-sm btn-default" onClick={this.killSelectedTasks}>
+              Kill
+            </button>
+            <button className="btn btn-sm btn-default" disabled={selectedTasksLength > 1}
+                onClick={this.killSelectedTasksAndScale}>
+              Kill &amp; Scale
+            </button>
+          </p>;
+      }
 
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
@@ -38,7 +106,11 @@ define([
               <dt>CPUs:</dt><dd>{model.get("cpus")}</dd>
               <dt>Instances:</dt><dd>{model.get("instances")}</dd>
             </dl>
-            <TaskListComponent collection={model.get("tasks")} />
+            {buttons}
+            <TaskListComponent collection={model.get("tasks")}
+              ref="taskList" selectedTasks={this.state.selectedTasks}
+              onTaskSelect={this.selectTask}
+              onTaskToggle={this.toggleTask} />
           </div>
           <div className="modal-footer">
             <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
@@ -60,9 +132,9 @@ define([
       var instancesString = prompt("Scale to how many instances?",
         model.get("instances"));
 
-      // If "Cancel" is clicked, `prompt` returns null and nothing should
-      // happen.
-      if (instancesString != null) {
+      // Clicking "Cancel" in a prompt returns either null or an empty String.
+      // perform the action only if a value is submitted.
+      if (instancesString != null && instancesString !== "") {
         var instances = parseInt(instancesString, 10);
         model.set({instances: instances}, {validate: true});
         if (model.validationError == null) {
@@ -71,6 +143,27 @@ define([
           alert("Not scaling: " + model.validationError[0]);
         }
       }
+    },
+    selectTask: function(task, event) {
+      this.toggleTask(task, event.target.checked);
+    },
+    toggleTask: function(task, value) {
+      var selectedTasks = this.state.selectedTasks;
+
+      // If `toggleTask` is used as a callback for an event handler, the second
+      // parameter will be an event object. Use it to set the value only if it
+      // is a Boolean.
+      var localValue = (typeof value === Boolean) ?
+        value :
+        !selectedTasks[task.id];
+
+      if (localValue === true) {
+        selectedTasks[task.id] = true;
+      } else {
+        delete selectedTasks[task.id];
+      }
+
+      this.setState({selectedTasks: selectedTasks});
     },
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {

@@ -227,7 +227,12 @@ dt {
   margin-top: 20px;
 }
 
+.table > tbody > tr.active > td,
 .table-hover > tbody > tr:hover > td {
   background-color: #B8E8EF;
   color: #111113;
+}
+
+.table-selectable tr > td {
+  cursor: pointer;
 }
