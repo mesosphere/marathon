@@ -44,6 +44,12 @@ define([
     render: function() {
       var taskNodes;
       var _this = this;
+      var tasksLength = this.props.collection.length;
+
+      // If there are no tasks, they can't all be selected. Otherwise, assume
+      // they are all selected and let the iteration below decide if that is
+      // true.
+      var allTasksSelected = tasksLength > 0;
 
       if (this.state.fetchState === STATE_LOADING) {
         taskNodes =
@@ -59,7 +65,7 @@ define([
               Error fetching tasks. Refresh the list to try again.
             </td>
           </tr>;
-      } else if (this.props.collection.length === 0) {
+      } else if (tasksLength === 0) {
         taskNodes =
           <tr>
             <td className="text-center" colSpan="4">
@@ -76,6 +82,8 @@ define([
           if (_this.props.selectedTasks[task.id] === true) {
             active = true;
             className = "active";
+          } else {
+            allTasksSelected = false;
           }
 
           return (
@@ -97,7 +105,12 @@ define([
         <table className="table table-selectable">
           <thead>
             <tr>
-              <th></th>
+              <th style={{width: "1px"}}>
+                <input type="checkbox"
+                  checked={allTasksSelected}
+                  disabled={tasksLength === 0}
+                  onChange={this.props.onAllTasksToggle} />
+              </th>
               <th>ID</th>
               <th>Hosts</th>
               <th>Ports</th>
