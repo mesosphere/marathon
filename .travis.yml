@@ -5,3 +5,4 @@ jdk:
   - openjdk6
 scala:
   - "2.10.2"
+script: "mvn test -B"
