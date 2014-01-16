@@ -1,8 +1,7 @@
 language: scala
 before_script:
-  - "cd src/main/resources/assets/ && npm install && ./bin/build"
+  - "pushd src/main/resources/assets/ && npm install && ./bin/build && popd"
 jdk:
   - openjdk6
 scala:
   - "2.10.2"
-script: "mvn test -B"
