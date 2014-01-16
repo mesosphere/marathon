@@ -1,5 +1,7 @@
 language: scala
-scala:
-  - "2.10.2"
+before_script:
+  - "cd src/main/resources/assets/ && npm install && ./bin/build"
 jdk:
   - openjdk6
+scala:
+  - "2.10.2"
