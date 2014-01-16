@@ -3,3 +3,5 @@
 target
 .reviewboardrc
 dependency-reduced-pom.xml
+node_modules
+
