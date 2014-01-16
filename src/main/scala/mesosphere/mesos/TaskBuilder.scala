@@ -9,11 +9,12 @@ import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.Value.Ranges
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{PathExecutor, CommandExecutor, Executor, Main}
+import mesosphere.marathon._
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
 import scala.util.Random
 import mesosphere.marathon.Protos.Constraint.Operator
+import scala.Some
 
 
 /**
@@ -64,19 +65,28 @@ class TaskBuilder (app: AppDefinition,
       }
 
       executor match {
-        case CommandExecutor() =>
+        case CommandExecutor() => {
+          if (app.container != null) {
+            log.info("The command executor can not handle a ContainerInfo.")
+            return None
+          }
           builder.setCommand(TaskBuilder.commandInfo(app, ports))
+        }
 
         case PathExecutor(path) => {
           val executorId = f"marathon-${taskId.getValue}" // Fresh executor
           val escaped = "'" + path + "'" // TODO: Really escape this.
-          val cmd = f"chmod ug+rx $escaped && exec $escaped ${app.cmd}"
-          val binary = new ByteArrayOutputStream()
-          mapper.writeValue(binary, app)
+          val shell = f"chmod ug+rx $escaped && exec $escaped ${app.cmd}"
+          val command =
+            TaskBuilder.commandInfo(app, ports).toBuilder.setValue(shell)
+
           val info = ExecutorInfo.newBuilder()
             .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
-            .setCommand(TaskBuilder.commandInfo(app, ports).toBuilder.setValue(cmd).build)
+            .setCommand(command)
+
           builder.setExecutor(info)
+          val binary = new ByteArrayOutputStream()
+          mapper.writeValue(binary, app)
           builder.setData(ByteString.copyFrom(binary.toByteArray))
         }
       }
