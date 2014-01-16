@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ser.Serializers
 import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import java.text.SimpleDateFormat
+import java.util.{Date, TimeZone}
 
 /**
  * @author Tobi Knaup
@@ -80,13 +82,23 @@ class MarathonModule extends Module {
     }
   }
 
+  val isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ");
+  isoDateFormat setTimeZone TimeZone.getTimeZone("UTC")
+
+  def timestampToUTC(timestamp: Long): String = isoDateFormat.format(new Date(timestamp))
+
   class MarathonTaskSerializer extends JsonSerializer[MarathonTask] {
     def serialize(task: MarathonTask, jgen: JsonGenerator, provider: SerializerProvider) {
+
+      val startedAt = task.getStartedAt
+      val stagedAt = task.getStagedAt
+
       jgen.writeStartObject()
       jgen.writeObjectField("id", task.getId)
       jgen.writeObjectField("host", task.getHost)
       jgen.writeObjectField("ports", task.getPortsList)
-      jgen.writeObjectField("")
+      jgen.writeObjectField("startedAt", if (startedAt == 0) null else timestampToUTC(startedAt))
+      jgen.writeObjectField("stagedAt", if (stagedAt == 0) null else timestampToUTC(stagedAt))
       jgen.writeEndObject()
     }
   }
@@ -94,8 +106,9 @@ class MarathonModule extends Module {
   // TODO: handle fields!
   // Currently there is no support for handling updates to task instances (CD)
   class MarathonTaskDeserializer extends JsonDeserializer[MarathonTask] {
-    def deserialize(json: JsonParser, context: DeserializationContext): MarathonTask =
+    def deserialize(json: JsonParser, context: DeserializationContext): MarathonTask = {
       MarathonTask.newBuilder.build
+    }
   }
 
 }
