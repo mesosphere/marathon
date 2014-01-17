@@ -1,0 +1,22 @@
+#!/bin/bash
+
+shopt -s expand_aliases
+
+# Find locally installed NPM binaries
+alias npmexec='PATH=$(npm bin):$PATH'
+
+# Start fresh
+rm -rf js/dist
+
+npmexec jsx js js/build
+sed -i.bak 's/jsx!//g' js/build/*.js
+sed -i.bak 's/jsx!//g' js/build/**/*.js
+rm js/build/*.bak
+rm js/build/**/*.bak
+npmexec r.js -o js/main.build.js
+
+# Remove intermediate build artifacts
+rm -rf js/build
+
+# Remove all compiled files but the desired `main.js`
+find js/dist -not -name 'main.js' -not -name 'dist' | xargs rm -rf

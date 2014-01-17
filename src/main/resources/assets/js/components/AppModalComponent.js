@@ -109,6 +109,7 @@ define([
             {buttons}
             <TaskListComponent collection={model.get("tasks")}
               ref="taskList" selectedTasks={this.state.selectedTasks}
+              onAllTasksToggle={this.toggleAllTasks}
               onTaskSelect={this.selectTask}
               onTaskToggle={this.toggleTask} />
           </div>
@@ -146,6 +147,21 @@ define([
     },
     selectTask: function(task, event) {
       this.toggleTask(task, event.target.checked);
+    },
+    toggleAllTasks: function() {
+      var newSelectedTasks = {};
+      var modelTasks = this.props.model.get("tasks");
+
+      // Note: not an **exact** check for all tasks being selected but a good
+      // enough proxy.
+      var allTasksSelected = Object.keys(this.state.selectedTasks).length ===
+        modelTasks.length;
+
+      if (!allTasksSelected) {
+        modelTasks.forEach(function(task) { newSelectedTasks[task.id] = true; });
+      }
+
+      this.setState({selectedTasks: newSelectedTasks});
     },
     toggleTask: function(task, value) {
       var selectedTasks = this.state.selectedTasks;

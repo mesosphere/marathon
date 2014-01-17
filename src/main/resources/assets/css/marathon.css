@@ -37,7 +37,8 @@ body {
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
   font-family: Lato;
   font-weight: 300;
   color: #ffffff;
@@ -45,6 +46,10 @@ h3 {
 
 h1 {
   font-size: 45px;
+}
+
+hr {
+  border-color: #333;
 }
 
 th {

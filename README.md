@@ -84,6 +84,23 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 3. Run `./bin/build-distribution` to package Marathon as an [executable JAR](http://mesosphere.io/2013/12/07/executable-jars/) (optional).
 
+#### Compiling Assets
+
+**Note: You only need to follow these steps if you plan to edit the JavaScript source.**
+
+1. Install [NPM](https://npmjs.org/)
+2. Change to the assets directory
+
+        cd src/main/resources/assets
+3. Install dev dependencies
+
+        npm install
+4. Build the assets
+
+        ./bin/build
+
+The main JS file will be written to `src/main/resources/assets/js/dist/main.js`.
+
 ### Running in Production Mode
 
 To launch Marathon in *production mode*, you need to have both [Zookeeper][Zookeeper] and Mesos running.
