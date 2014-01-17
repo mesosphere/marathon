@@ -20,8 +20,8 @@ The full JSON format of an application resource is as follows:
         ["attribute", "OPERATOR", "value"]
     ], 
     "container": {
-        "image": "s3://path/to/myImage",
-        "options": ["-optionA", "-optionB", "-optionC"]
+        "image": "docker:///zaiste/postgresql",
+        "options": ["-e", "X=7"]
     }, 
     "cpus": 2, 
     "env": {}, 
