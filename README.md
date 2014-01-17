@@ -189,6 +189,7 @@ Marathon was written by the team at [Mesosphere][Mesosphere] that also developed
 * [Brenden Matthews](https://github.com/brndnmtthws)
 * [Jason Dusek](https://github.com/solidsnack)
 * [Thomas Rampelberg](https://github.com/pyronicide)
+* [Connor Doyle](https://github.com/ConnorDoyle)
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
 [HTTPie]: https://github.com/jkbr/httpie "a CLI, cURL-like tool for humans"
