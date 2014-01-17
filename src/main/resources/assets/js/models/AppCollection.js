@@ -5,6 +5,9 @@ define([
   return Backbone.Collection.extend({
     comparator: "id",
     model: App,
-    url: "v1/apps"
+    parse: function(response) {
+      return response.apps;
+    },
+    url: "/v2/apps"
   });
 });

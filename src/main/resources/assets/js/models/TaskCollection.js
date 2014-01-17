@@ -7,11 +7,8 @@ define([
       this.options = options;
     },
     model: Task,
-    parse: function(data) {
-      return data[this.options.appId];
-    },
     url: function() {
-      return "v1/apps/" + this.options.appId + "/tasks";
+      return "/v2/apps/" + this.options.appId + "/tasks";
     }
   });
 });

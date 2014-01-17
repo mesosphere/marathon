@@ -8,7 +8,7 @@ define([
   return React.createClass({
     saveModel: function(attributes) {
       this.state.model.set(attributes);
-      this.props.collection.create(this.state.model);
+      this.props.collection.create(this.state.model, {wait: true});
     },
     showModal: function(event) {
       var model = new App();

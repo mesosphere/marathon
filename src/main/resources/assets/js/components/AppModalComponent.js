@@ -29,7 +29,7 @@ define([
       var _options = options || {};
 
       var selectedTaskIds = Object.keys(this.state.selectedTasks);
-      var tasksToKill = this.props.model.get("tasks").filter(function(task) {
+      var tasksToKill = this.props.model.tasks.filter(function(task) {
         return selectedTaskIds.indexOf(task.id) >= 0;
       });
 
@@ -107,7 +107,7 @@ define([
               <dt>Instances:</dt><dd>{model.get("instances")}</dd>
             </dl>
             {buttons}
-            <TaskListComponent collection={model.get("tasks")}
+            <TaskListComponent collection={model.tasks}
               ref="taskList" selectedTasks={this.state.selectedTasks}
               onAllTasksToggle={this.toggleAllTasks}
               onTaskSelect={this.selectTask}
@@ -150,7 +150,7 @@ define([
     },
     toggleAllTasks: function() {
       var newSelectedTasks = {};
-      var modelTasks = this.props.model.get("tasks");
+      var modelTasks = this.props.model.tasks;
 
       // Note: not an **exact** check for all tasks being selected but a good
       // enough proxy.
