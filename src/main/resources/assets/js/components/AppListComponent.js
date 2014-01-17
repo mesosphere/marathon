@@ -32,12 +32,25 @@ define([
       var _this = this;
       var comparator = this.props.collection.comparator;
 
-      var appNodes = this.props.collection.map(function(model) {
-        return <AppComponent key={model.cid} model={model} onClick={_this.onAppClick} />;
-      });
+      var appNodes;
+      var tableClassName = "table";
+      if (this.props.collection.length > 0) {
+        appNodes = this.props.collection.map(function(model) {
+          return <AppComponent key={model.cid} model={model} onClick={_this.onAppClick} />;
+        });
+
+        // Give rows the selectable look when there are apps to click.
+        tableClassName += " table-hover table-selectable";
+      } else {
+        appNodes =
+          <tr>
+            <td className="text-center" colSpan="5">No running apps.</td>
+          </tr>;
+      }
+
 
       return (
-        <table className="table table-hover table-selectable">
+        <table className={tableClassName}>
           <colgroup>
             <col style={{width: "30%"}} />
             <col style={{width: "30%"}} />
