@@ -99,6 +99,8 @@ define([
                     name="instances" min="1" step="1" type="number" required onChange={this.onChange} />
                 </div>
               </div>
+              <hr />
+              <h4>Optional Settings</h4>
               <div className="form-group">
                 <label htmlFor="uris-field" className="col-md-3 control-label">
                   URIs
