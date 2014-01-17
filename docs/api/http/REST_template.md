@@ -92,7 +92,7 @@ The query parameters `host` and `scale` are both optional.  If `host` is specifi
 
 **Example:**
 
-http --ignore-stdin --json --verbose --pretty format DELETE localhost:8080/v2/apps/myApp/tasks?host=mesos.vm&scale=false
+http --ignore-stdin --json --verbose --pretty format DELETE localhost:8080/v2/apps/myApp/tasks?host=mesos.vm\\&scale=false
 
 #### DELETE `/v2/apps/{app_id}/tasks/{task_id}?scale={true|false}`
 
