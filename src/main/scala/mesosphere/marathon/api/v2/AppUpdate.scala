@@ -1,5 +1,6 @@
 package mesosphere.marathon.api.v2
 
+import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.Constraint
 import org.hibernate.validator.constraints.NotEmpty
@@ -30,6 +31,9 @@ class AppUpdate {
 
   var constraints: Option[Set[Constraint]] = None
 
+  @JsonDeserialize(contentAs = classOf[ContainerInfo])
+  var container: Option[ContainerInfo] = None
+
   /**
    * Returns the supplied [[AppDefinition]] after updating its members
    * with respect to this update request.
@@ -40,6 +44,7 @@ class AppUpdate {
     cpus.foreach { app.cpus = _ }
     mem.foreach { app.mem = _ }
     constraints.foreach { app.constraints = _ }
+    container.foreach { containerInfo => app.container = Some(containerInfo) }
     app
   }
 
