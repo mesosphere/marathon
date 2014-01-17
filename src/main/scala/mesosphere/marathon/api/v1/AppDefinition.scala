@@ -9,6 +9,7 @@ import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos.Constraint
 import javax.validation.constraints.Pattern
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 
 /**
@@ -36,7 +37,8 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   // the cluster.
   var taskRateLimit: Double = 1.0
 
-  var container: ContainerInfo = null
+  @JsonDeserialize(contentAs = classOf[ContainerInfo])
+  var container: Option[ContainerInfo] = None
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
@@ -54,7 +56,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
       .addResources(cpusResource)
       .addResources(memResource)
 
-    if (container != null) builder.setContainer(container.toProto)
+    for (c <- container) builder.setContainer(c.toProto)
 
     builder.build
   }
@@ -69,7 +71,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     instances = proto.getInstances
     ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]]
     constraints = proto.getConstraintsList.asScala.toSet
-    if (proto.hasContainer) container = ContainerInfo(proto.getContainer)
+    if (proto.hasContainer) container = Some(ContainerInfo(proto.getContainer))
 
     // Add command environment
     for (variable <- proto.getCmd.getEnvironment.getVariablesList.asScala) {

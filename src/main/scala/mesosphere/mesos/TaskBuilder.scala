@@ -66,7 +66,7 @@ class TaskBuilder (app: AppDefinition,
 
       executor match {
         case CommandExecutor() => {
-          if (app.container != null) {
+          if (app.container.nonEmpty) {
             log.info("The command executor can not handle a ContainerInfo.")
             return None
           }
