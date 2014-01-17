@@ -38,7 +38,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   @JsonInclude(Include.NON_DEFAULT)
   var taskRateLimit: Double = 1.0
   @JsonInclude(Include.NON_EMPTY)
-  var tasks: Iterable[MarathonTask] = Nil
+  var tasks: Seq[MarathonTask] = Nil
 
   var container: ContainerInfo = null
 
