@@ -8,6 +8,42 @@
 
 #### POST `/v2/apps`
 
+**Notes:**
+
+The full JSON format of an application resource is as follows:
+
+```json
+{
+    "cmd": "(env && sleep 300)", 
+    "constraints": [
+        ["attribute", "OPERATOR", "value"]
+    ], 
+    "container": {
+        "image": "s3://path/to/myImage",
+        "options": ["-optionA", "-optionB", "-optionC"]
+    }, 
+    "cpus": 2, 
+    "env": {}, 
+    "executor": "", 
+    "id": "myApp", 
+    "instances": 3, 
+    "mem": 256.0, 
+    "ports": [
+        8080, 
+        9000
+    ], 
+    "uris": [
+        "http://www.marioornelas.com/mr-t-dances2.gif"
+    ]
+}
+```
+
+_Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER", "GROUP_BY"].  For additional information on using placement constraints see [Marathon, a Mesos framework, adds Placement Constraints][constraints].
+
+_Container:_ Additional data passed to the container on application launch.  These consist of an "image" and an array of string options.  The meaning of this data is fully dependent upon the Mesos slave's containerizer.
+
+_Ports:_ An array of required port resources on the host.  To generate one or more arbitrary free ports for each application instance, pass zeroes as port values.  Each port value is exposed to the instance via environment variables `$PORT0`, `$PORT1`, etc.  Ports assigned to running instances are also available via the 
+
 **Example:**
 
 :http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
@@ -48,11 +84,21 @@ http --ignore-stdin --json --verbose --pretty format DELETE localhost:8080/v2/ap
 
 :http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://www.marioornelas.com/mr-t-dances2.gif"]'
 
-#### DELETE `/v2/apps/{app_id}/tasks`
+#### DELETE `/v2/apps/{app_id}/tasks?host={host}&scale={true|false}`
 
-http --ignore-stdin DELETE localhost:8080/v2/apps/myApp/tasks
+**Notes:**
 
-#### DELETE `/v2/apps/{app_id}/tasks/{task_id}`
+The query parameters `host` and `scale` are both optional.  If `host` is specified, only tasks running on the supplied slave are killed.  If `scale=true` is specified, then the application is scaled down by the number of killed tasks.  The `scale` parameter defaults to `false`.
+
+**Example:**
+
+http --ignore-stdin --json --verbose --pretty format DELETE localhost:8080/v2/apps/myApp/tasks?host=mesos.vm&scale=false
+
+#### DELETE `/v2/apps/{app_id}/tasks/{task_id}?scale={true|false}`
+
+**Notes:**
+
+The query parameter `scale` is optional.  If `scale=true` is specified, then the application is scaled down one if supplied `task_id` exists.  The `scale` parameter defaults to `false`.
 
 **Example:**
 
@@ -188,3 +234,5 @@ http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v1/debug
 **Example:**
 
 http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v1/debug/leaderUrl
+
+[constraints]: http://mesosphere.io/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints

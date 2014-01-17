@@ -140,7 +140,7 @@ set the `assets_path` flag when running Marathon:
 
 Run `./bin/start --help` for a full list of configuration options.
 
-## Example API Usage
+## REST API Usage
 
 ### V1 API
 
