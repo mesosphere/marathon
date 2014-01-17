@@ -19,6 +19,16 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
 
   val log = Logger.getLogger(getClass.getName)
 
+  @GET
+  @Timed
+  def index(@PathParam("appId") appId: String) = {
+    if (taskTracker.contains(appId)) {
+      val tasks = taskTracker.get(appId)
+      tasks
+    } else {
+      Response.status(Response.Status.NOT_FOUND).build
+    }
+  }
 
   @DELETE
   @Timed

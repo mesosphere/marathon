@@ -84,6 +84,12 @@ http --ignore-stdin --json --verbose --pretty format DELETE localhost:8080/v2/ap
 
 :http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://www.marioornelas.com/mr-t-dances2.gif"]'
 
+#### GET `/v2/apps/{app_id}/tasks`
+
+**Examples:**
+
+http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v2/apps/myApp/tasks
+
 #### DELETE `/v2/apps/{app_id}/tasks?host={host}&scale={true|false}`
 
 **Notes:**
