@@ -48,7 +48,7 @@ _Ports:_ An array of required port resources on the host.  To generate one or mo
 
 :http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
 
-http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://www.marioornelas.com/mr-t-dances2.gif"]'
+http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v2/apps id=myApp cmd='env && sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' constraints:='[["hostname", "UNIQUE", ""]]' container:='{"image": "docker:///zaiste/postgresql", "options": ["-e", "X=7"]}' uris:='["http://www.marioornelas.com/mr-t-dances2.gif"]'
 
 #### GET `/v2/apps`
 
