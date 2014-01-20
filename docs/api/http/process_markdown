@@ -9,12 +9,13 @@ cat <<USAGE
 
 USAGE
 }; function --help { -h ;}                 # A nice way to handle -h and --help
-export LC_ALL=en_US.UTF-8                    # A locale that works consistently
+export LC_ALL=en_US.UTF-8                  # A locale that works consistently
 template=./REST_template.md
 target=../../../REST.md
 
 function main {
   rm -f "$target"
+  process_template < "$template" > "$target"
 }
 
 function process_template {
@@ -23,6 +24,7 @@ function process_template {
   do
     case "$line" in
       'http '*)
+        sleep 5;
         msg "Evaluating \`$line'..."
         out '```'
         eval "$line"
@@ -44,4 +46,3 @@ if [[ ${1:-} ]] && declare -F | cut -d' ' -f3 | fgrep -qx -- "${1:-}"
 then "$@"
 else main "$@"
 fi
-
