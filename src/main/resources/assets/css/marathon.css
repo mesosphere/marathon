@@ -193,6 +193,12 @@ dt {
   border-bottom: 2px solid #fff;
 }
 
+.overflow-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ==============
  * Textures
  * ==============
@@ -205,6 +211,10 @@ dt {
 
 .add-button {
   margin-top: 20px;
+}
+
+.table-fixed {
+  table-layout: fixed;
 }
 
 .table > tbody > tr.active > td,

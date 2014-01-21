@@ -12,8 +12,8 @@ define([
 
       return (
         <tr onClick={this.onClick}>
-          <td>{model.get("id")}</td>
-          <td>{model.get("cmd")}</td>
+          <td className="overflow-ellipsis">{model.get("id")}</td>
+          <td className="overflow-ellipsis">{model.get("cmd")}</td>
           <td className="text-right">{model.get("mem")}</td>
           <td className="text-right">{model.get("cpus")}</td>
           <td className="text-right">{model.get("instances")}</td>
