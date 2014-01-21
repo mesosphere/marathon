@@ -168,10 +168,6 @@ dt {
   text-transform: uppercase;
 }
 
-.navigator {
-  width: 600px;
-}
-
 .system-caret {
   /* Force a new stacking context to prevent this animation from making the page
    * flicker in Chrome 31.
@@ -191,31 +187,10 @@ dt {
   animation-iteration-count: infinite;
   animation-name: blink;
   animation-timing-function: steps(1, start);
-}
 
-#terminal {
-  display: inline-block;
-}
-
-#setter {
-  left: -1000px;
-  position: absolute;
-}
-
-.system-caret {
   width: 30px;
   display:inline-block;
-  border-bottom: 2px solid rgba(184,232,239,1);
-}
-
-.system-caret.focus {
-  border-bottom: 2px solid #428bca;
-}
-
-.input {
-  font-size: 56px;
-  font-family: 'Lato';
-  font-weight: 300;
+  border-bottom: 2px solid #fff;
 }
 
 /* ==============
