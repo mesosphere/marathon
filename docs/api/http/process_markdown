@@ -20,7 +20,7 @@ function main {
 
 function process_template {
   out '<!-- AUTO-GENERATED FILE; DO NOT MODIFY -->'
-  while read -r line
+  while IFS='' read -r line
   do
     case "$line" in
       'http '*)
