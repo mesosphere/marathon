@@ -45,9 +45,19 @@ class AppsResource @Inject()(
   @POST
   @Timed
   def create(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
-    maybePostEvent(req, app)
-    Await.result(service.startApp(app), service.defaultWait)
-    Response.noContent.build
+
+    // Return a 400: Bad Request if container options are supplied
+    // with the default executor
+    if (containerOptsAreInvalid(app))
+      Response.status(Status.BAD_REQUEST).entity(
+        "Container options are not supported with the default executor"
+      ).build
+
+    else {
+      maybePostEvent(req, app)
+      Await.result(service.startApp(app), service.defaultWait)
+      Response.noContent.build
+    }
   }
 
   @GET
@@ -71,11 +81,25 @@ class AppsResource @Inject()(
     @PathParam("id") id: String,
     @Valid appUpdate: AppUpdate
   ): Response = {
-    service.getApp(id).foreach { app =>
-      maybePostEvent(req, appUpdate.apply(app))
+    service.getApp(id) match {
+      case Some(app) => {
+        val updatedApp = appUpdate.apply(app)
+
+        // Return a 400: Bad Request if container options are supplied
+        // with the default executor
+        if (containerOptsAreInvalid(updatedApp))
+          Response.status(Status.BAD_REQUEST).entity(
+            "Container options are not supported with the default executor"
+          ).build
+
+        else {
+          maybePostEvent(req, updatedApp)
+          Await.result(service.updateApp(id, appUpdate), service.defaultWait)
+          Response.noContent.build
+        }
+      }
+      case None => Response.status(Status.NOT_FOUND).build
     }
-    Await.result(service.updateApp(id, appUpdate), service.defaultWait)
-    Response.noContent.build
   }
 
   @DELETE
@@ -92,6 +116,8 @@ class AppsResource @Inject()(
   @Path("{appId}/tasks")
   def appTasksResource() = new AppTasksResource(service, taskTracker)
 
+  private def containerOptsAreInvalid(app: AppDefinition): Boolean =
+    (app.executor == "" || app.executor == "//cmd") && app.container.isDefined
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) {
     if (eventBus.nonEmpty) {
