@@ -24,7 +24,9 @@ The full JSON format of an application resource is as follows:
         "options": ["-e", "X=7"]
     }, 
     "cpus": 2, 
-    "env": {}, 
+    "env": {
+        "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
+    }, 
     "executor": "", 
     "id": "myApp", 
     "instances": 3, 
@@ -34,14 +36,14 @@ The full JSON format of an application resource is as follows:
         9000
     ], 
     "uris": [
-        "http://www.marioornelas.com/mr-t-dances2.gif"
+        "http://bit.ly/1aJASkb"
     ]
 }
 ```
 
 _Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER", "GROUP_BY"].  For additional information on using placement constraints see [Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.io/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
 
-_Container:_ Additional data passed to the container on application launch.  These consist of an "image" and an array of string options.  The meaning of this data is fully dependent upon the Mesos slave's containerizer.
+_Container:_ Additional data passed to the container on application launch.  These consist of an "image" and an array of string options.  The meaning of this data is fully dependent upon the executor.  Furthermore, _it is invalid to pass container options when using the default command executor_.
 
 _Ports:_ An array of required port resources on the host.  To generate one or more arbitrary free ports for each application instance, pass zeros as port values.  Each port value is exposed to the instance via environment variables `$PORT0`, `$PORT1`, etc.  Ports assigned to running instances are also available via the task resource.
 
@@ -52,7 +54,7 @@ _Ports:_ An array of required port resources on the host.  To generate one or mo
 POST /v2/apps HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
-Content-Length: 287
+Content-Length: 234
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
@@ -66,14 +68,10 @@ User-Agent: HTTPie/0.7.2
             ""
         ]
     ], 
-    "container": {
-        "image": "docker:///zaiste/postgresql", 
-        "options": [
-            "-e", 
-            "X=7"
-        ]
-    }, 
     "cpus": "0.1", 
+    "env": {
+        "LD_LIBRARY_PATH": "/usr/local/lib/mLib"
+    }, 
     "id": "myApp", 
     "instances": "3", 
     "mem": "5", 
@@ -82,7 +80,7 @@ User-Agent: HTTPie/0.7.2
         0
     ], 
     "uris": [
-        "http://www.marioornelas.com/mr-t-dances2.gif"
+        "http://bit.ly/1aJASkb"
     ]
 }
 
@@ -123,25 +121,21 @@ Transfer-Encoding: chunked
                     ""
                 ]
             ], 
-            "container": {
-                "image": "docker:///zaiste/postgresql", 
-                "options": [
-                    "-e", 
-                    "X=7"
-                ]
-            }, 
+            "container": null, 
             "cpus": 0.1, 
-            "env": {}, 
+            "env": {
+                "LD_LIBRARY_PATH": "/usr/local/lib/mLib"
+            }, 
             "executor": "", 
             "id": "myApp", 
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                10784, 
-                10214
+                11387, 
+                11860
             ], 
             "uris": [
-                "http://www.marioornelas.com/mr-t-dances2.gif"
+                "http://bit.ly/1aJASkb"
             ]
         }
     ]
@@ -177,25 +171,33 @@ Transfer-Encoding: chunked
                 ""
             ]
         ], 
-        "container": {
-            "image": "docker:///zaiste/postgresql", 
-            "options": [
-                "-e", 
-                "X=7"
-            ]
-        }, 
+        "container": null, 
         "cpus": 0.1, 
-        "env": {}, 
+        "env": {
+            "LD_LIBRARY_PATH": "/usr/local/lib/mLib"
+        }, 
         "executor": "", 
         "id": "myApp", 
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            10784, 
-            10214
+            11387, 
+            11860
+        ], 
+        "tasks": [
+            {
+                "host": "mesos.vm", 
+                "id": "myApp_0-1390419348076", 
+                "ports": [
+                    31570, 
+                    31571
+                ], 
+                "stagedAt": "2014-01-22T19:35+0000", 
+                "startedAt": null
+            }
         ], 
         "uris": [
-            "http://www.marioornelas.com/mr-t-dances2.gif"
+            "http://bit.ly/1aJASkb"
         ]
     }
 }
@@ -231,25 +233,21 @@ Transfer-Encoding: chunked
                     ""
                 ]
             ], 
-            "container": {
-                "image": "docker:///zaiste/postgresql", 
-                "options": [
-                    "-e", 
-                    "X=7"
-                ]
-            }, 
+            "container": null, 
             "cpus": 0.1, 
-            "env": {}, 
+            "env": {
+                "LD_LIBRARY_PATH": "/usr/local/lib/mLib"
+            }, 
             "executor": "", 
             "id": "myApp", 
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                10784, 
-                10214
+                11387, 
+                11860
             ], 
             "uris": [
-                "http://www.marioornelas.com/mr-t-dances2.gif"
+                "http://bit.ly/1aJASkb"
             ]
         }
     ]
@@ -339,12 +337,12 @@ Transfer-Encoding: chunked
 [
     {
         "host": "mesos.vm", 
-        "id": "myApp_0-1389998086543", 
+        "id": "myApp_0-1390419373115", 
         "ports": [
-            31414, 
-            31415
+            31396, 
+            31397
         ], 
-        "stagedAt": "2014-01-17T22:34+0000", 
+        "stagedAt": "2014-01-22T19:36+0000", 
         "startedAt": null
     }
 ]
@@ -378,23 +376,13 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1389998091554", 
+            "id": "myApp_0-1390419373115", 
             "ports": [
-                31372, 
-                31373
+                31396, 
+                31397
             ], 
-            "stagedAt": "2014-01-17T22:34+0000", 
+            "stagedAt": "2014-01-22T19:36+0000", 
             "startedAt": null
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1389998086543", 
-            "ports": [
-                31414, 
-                31415
-            ], 
-            "stagedAt": "2014-01-17T22:34+0000", 
-            "startedAt": "2014-01-17T22:34+0000"
         }
     ]
 }
@@ -471,23 +459,23 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            13488, 
-            11306
+            11268, 
+            15539
         ], 
         "tasks": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1389998096560", 
+                "id": "myApp_0-1390419379123", 
                 "ports": [
-                    31025, 
-                    31026
+                    31069, 
+                    31070
                 ], 
-                "stagedAt": "2014-01-17T22:34+0000", 
+                "stagedAt": "2014-01-22T19:36+0000", 
                 "startedAt": null
             }
         ], 
         "uris": [
-            "http://www.marioornelas.com/mr-t-dances2.gif"
+            "http://bit.ly/1aJASkb"
         ]
     }
 }
@@ -508,7 +496,7 @@ Transfer-Encoding: chunked
 POST /v1/apps/start HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
-Content-Length: 154
+Content-Length: 131
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
@@ -524,7 +512,7 @@ User-Agent: HTTPie/0.7.2
         0
     ], 
     "uris": [
-        "http://www.marioornelas.com/mr-t-dances2.gif"
+        "http://bit.ly/1aJASkb"
     ]
 }
 
@@ -566,11 +554,11 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            19544, 
-            10695
+            16012, 
+            13188
         ], 
         "uris": [
-            "http://www.marioornelas.com/mr-t-dances2.gif"
+            "http://bit.ly/1aJASkb"
         ]
     }
 ]
@@ -658,11 +646,11 @@ Transfer-Encoding: chunked
         "instances": 4, 
         "mem": 5.0, 
         "ports": [
-            17998, 
-            19019
+            11397, 
+            11021
         ], 
         "uris": [
-            "http://www.marioornelas.com/mr-t-dances2.gif"
+            "http://bit.ly/1aJASkb"
         ]
     }
 ]
@@ -697,11 +685,11 @@ Transfer-Encoding: chunked
         "instances": 4, 
         "mem": 5.0, 
         "ports": [
-            17998, 
-            19019
+            11397, 
+            11021
         ], 
         "uris": [
-            "http://www.marioornelas.com/mr-t-dances2.gif"
+            "http://bit.ly/1aJASkb"
         ]
     }
 ]
@@ -730,34 +718,18 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1389998133632", 
+            "id": "myApp_1-1390419417202", 
             "ports": [
-                31906, 
-                31907
+                31645, 
+                31646
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1389998122610", 
+            "id": "myApp_1-1390419418202", 
             "ports": [
-                31922, 
-                31923
-            ]
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_2-1389998128621", 
-            "ports": [
-                31904, 
-                31905
-            ]
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1389998117598", 
-            "ports": [
-                31894, 
-                31895
+                31794, 
+                31795
             ]
         }
     ]
@@ -791,40 +763,24 @@ Transfer-Encoding: chunked
         "instances": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_3-1389998133632", 
+                "id": "myApp_1-1390419424210", 
                 "ports": [
-                    31906, 
-                    31907
+                    31837, 
+                    31838
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_1-1389998122610", 
+                "id": "myApp_1-1390419423208", 
                 "ports": [
-                    31922, 
-                    31923
-                ]
-            }, 
-            {
-                "host": "mesos.vm", 
-                "id": "myApp_2-1389998128621", 
-                "ports": [
-                    31904, 
-                    31905
-                ]
-            }, 
-            {
-                "host": "mesos.vm", 
-                "id": "myApp_0-1389998117598", 
-                "ports": [
-                    31894, 
-                    31895
+                    31931, 
+                    31932
                 ]
             }
         ], 
         "ports": [
-            17998, 
-            19019
+            11397, 
+            11021
         ]
     }
 ]
@@ -854,40 +810,24 @@ Transfer-Encoding: chunked
     "instances": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1389998133632", 
+            "id": "myApp_1-1390419430216", 
             "ports": [
-                31906, 
-                31907
+                31963, 
+                31964
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1389998122610", 
+            "id": "myApp_1-1390419429215", 
             "ports": [
-                31922, 
-                31923
-            ]
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_2-1389998128621", 
-            "ports": [
-                31904, 
-                31905
-            ]
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1389998117598", 
-            "ports": [
-                31894, 
-                31895
+                31851, 
+                31852
             ]
         }
     ], 
     "ports": [
-        17998, 
-        19019
+        11397, 
+        11021
     ]
 }
 ```
@@ -917,34 +857,18 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1389998133632", 
+            "id": "myApp_1-1390419435263", 
             "ports": [
-                31906, 
-                31907
+                31487, 
+                31488
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1389998122610", 
+            "id": "myApp_1-1390419436223", 
             "ports": [
-                31922, 
-                31923
-            ]
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_2-1389998128621", 
-            "ports": [
-                31904, 
-                31905
-            ]
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1389998117598", 
-            "ports": [
-                31894, 
-                31895
+                31710, 
+                31711
             ]
         }
     ]

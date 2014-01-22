@@ -23,7 +23,9 @@ The full JSON format of an application resource is as follows:
         "options": ["-e", "X=7"]
     }, 
     "cpus": 2, 
-    "env": {}, 
+    "env": {
+        "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
+    }, 
     "executor": "", 
     "id": "myApp", 
     "instances": 3, 
@@ -33,14 +35,14 @@ The full JSON format of an application resource is as follows:
         9000
     ], 
     "uris": [
-        "http://www.marioornelas.com/mr-t-dances2.gif"
+        "http://bit.ly/1aJASkb"
     ]
 }
 ```
 
 _Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER", "GROUP_BY"].  For additional information on using placement constraints see [Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.io/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
 
-_Container:_ Additional data passed to the container on application launch.  These consist of an "image" and an array of string options.  The meaning of this data is fully dependent upon the Mesos slave's containerizer.
+_Container:_ Additional data passed to the container on application launch.  These consist of an "image" and an array of string options.  The meaning of this data is fully dependent upon the executor.  Furthermore, _it is invalid to pass container options when using the default command executor_.
 
 _Ports:_ An array of required port resources on the host.  To generate one or more arbitrary free ports for each application instance, pass zeros as port values.  Each port value is exposed to the instance via environment variables `$PORT0`, `$PORT1`, etc.  Ports assigned to running instances are also available via the task resource.
 
@@ -48,7 +50,7 @@ _Ports:_ An array of required port resources on the host.  To generate one or mo
 
 :http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
 
-http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v2/apps id=myApp cmd='env && sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' constraints:='[["hostname", "UNIQUE", ""]]' container:='{"image": "docker:///zaiste/postgresql", "options": ["-e", "X=7"]}' uris:='["http://www.marioornelas.com/mr-t-dances2.gif"]'
+http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v2/apps id=myApp cmd='env && sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' env:='{"LD_LIBRARY_PATH": "/usr/local/lib/mLib"}' constraints:='[["hostname", "UNIQUE", ""]]' uris:='["http://bit.ly/1aJASkb"]'
 
 #### GET `/v2/apps`
 
@@ -82,7 +84,7 @@ http --ignore-stdin --json --verbose --pretty format PUT localhost:8080/v2/apps/
 
 http --ignore-stdin --json --verbose --pretty format DELETE localhost:8080/v2/apps/myApp
 
-:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://www.marioornelas.com/mr-t-dances2.gif"]'
+:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://bit.ly/1aJASkb"]'
 
 #### GET `/v2/apps/{app_id}/tasks`
 
@@ -158,7 +160,7 @@ http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v2/apps/
 
 :http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
 
-http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v1/apps/start id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://www.marioornelas.com/mr-t-dances2.gif"]'
+http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v1/apps/start id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://bit.ly/1aJASkb"]'
 
 #### GET `/v1/apps`
 
@@ -172,7 +174,7 @@ http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v1/apps
 
 http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v1/apps/stop id=myApp
 
-:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://www.marioornelas.com/mr-t-dances2.gif"]'
+:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://bit.ly/1aJASkb"]'
 
 #### POST `/v1/apps/scale`
 
