@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v1
 import javax.ws.rs.ext.{Provider, ExceptionMapper}
 import javax.ws.rs.core.{MediaType, Response}
 import scala.concurrent.TimeoutException
-import mesosphere.marathon.UnknownAppException
+import mesosphere.marathon.{BadRequestException, UnknownAppException}
 import java.util.logging.{Level, Logger}
 import com.sun.jersey.api.NotFoundException
 
@@ -23,6 +23,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       case e: TimeoutException => 504 // Gateway timeout
       case e: UnknownAppException => 404 // Not found
       case e: NotFoundException => 404 // Not found
+      case e: BadRequestException => 400 // Bad Request
       case _ => 500 // Internal server error
     }
     val entity = exception match {

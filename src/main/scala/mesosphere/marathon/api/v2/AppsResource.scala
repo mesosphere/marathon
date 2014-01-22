@@ -15,7 +15,7 @@ import javax.validation.Valid
 import mesosphere.marathon.api.v1.{Implicits, AppDefinition}
 import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
-import mesosphere.marathon.event.ApiPostEvent
+import mesosphere.marathon.BadRequestException
 import javax.ws.rs.core.Response.Status
 
 /**
@@ -48,10 +48,9 @@ class AppsResource @Inject()(
 
     // Return a 400: Bad Request if container options are supplied
     // with the default executor
-    if (containerOptsAreInvalid(app))
-      Response.status(Status.BAD_REQUEST).entity(
-        "Container options are not supported with the default executor"
-      ).build
+    if (containerOptsAreInvalid(app)) throw new BadRequestException(
+      "Container options are not supported with the default executor"
+    )
 
     else {
       maybePostEvent(req, app)
@@ -87,10 +86,9 @@ class AppsResource @Inject()(
 
         // Return a 400: Bad Request if container options are supplied
         // with the default executor
-        if (containerOptsAreInvalid(updatedApp))
-          Response.status(Status.BAD_REQUEST).entity(
-            "Container options are not supported with the default executor"
-          ).build
+        if (containerOptsAreInvalid(app)) throw new BadRequestException(
+          "Container options are not supported with the default executor"
+        )
 
         else {
           maybePostEvent(req, updatedApp)
