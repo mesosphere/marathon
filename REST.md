@@ -47,7 +47,9 @@ _Container:_ Additional data passed to the container on application launch.  The
 
 _Ports:_ An array of required port resources on the host.  To generate one or more arbitrary free ports for each application instance, pass zeros as port values.  Each port value is exposed to the instance via environment variables `$PORT0`, `$PORT1`, etc.  Ports assigned to running instances are also available via the task resource.
 
-**Example:**
+##### Example
+
+**Request:**
 
 
 ```
@@ -83,7 +85,12 @@ User-Agent: HTTPie/0.7.2
         "https://raw.github.com/mesosphere/marathon/master/README.md"
     ]
 }
+```
 
+**Response:**
+
+
+```
 HTTP/1.1 204 No Content
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -93,7 +100,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 #### GET `/v2/apps`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v2/apps HTTP/1.1
@@ -104,7 +113,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -131,8 +144,8 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                13778, 
-                14506
+                17988, 
+                13669
             ], 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -144,7 +157,9 @@ Transfer-Encoding: chunked
 
 #### GET `/v2/apps/{app_id}`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v2/apps/myApp HTTP/1.1
@@ -155,7 +170,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -181,19 +200,19 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            13778, 
-            14506
+            17988, 
+            13669
         ], 
         "tasks": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1390450889282", 
+                "id": "myApp_0-1390455027370", 
                 "ports": [
-                    31737, 
-                    31738
+                    31340, 
+                    31341
                 ], 
-                "stagedAt": "2014-01-23T04:21+0000", 
-                "startedAt": "2014-01-23T04:21+0000"
+                "stagedAt": "2014-01-23T05:30+0000", 
+                "startedAt": "2014-01-23T05:30+0000"
             }
         ], 
         "uris": [
@@ -205,7 +224,9 @@ Transfer-Encoding: chunked
 
 #### GET `/v2/apps?cmd={command}`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v2/apps?cmd=sleep%2060 HTTP/1.1
@@ -216,7 +237,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -243,8 +268,8 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                13778, 
-                14506
+                17988, 
+                13669
             ], 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -256,7 +281,9 @@ Transfer-Encoding: chunked
 
 #### PUT `/v2/apps/{app_id}`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 PUT /v2/apps/myApp HTTP/1.1
@@ -283,7 +310,11 @@ User-Agent: HTTPie/0.7.2
         9000
     ]
 }
+```
 
+**Response:**
+
+```
 HTTP/1.1 204 No Content
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -294,7 +325,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 #### DELETE `/v2/apps/{app_id}`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 DELETE /v2/apps/myApp HTTP/1.1
@@ -306,7 +339,12 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+
+**Response:**
+
+```
 HTTP/1.1 204 No Content
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -317,7 +355,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 #### GET `/v2/apps/{app_id}/tasks`
 
-**Example (as JSON):**
+##### Example (as JSON)
+
+**Request:**
 
 ```
 GET /v2/apps/myApp/tasks HTTP/1.1
@@ -328,7 +368,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -338,19 +382,21 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1390450916329", 
+            "id": "myApp_0-1390455060411", 
             "ports": [
-                31675, 
-                31676
+                31190, 
+                31191
             ], 
-            "stagedAt": "2014-01-23T04:21+0000", 
+            "stagedAt": "2014-01-23T05:31+0000", 
             "startedAt": null
         }
     ]
 }
 ```
 
-**Example (as text):**
+##### Example (as text)
+
+**Request:**
 
 ```
 GET /v2/apps/myApp/tasks HTTP/1.1
@@ -360,14 +406,18 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	13913	mesos.vm:31675	mesos.vm:31515	
-myApp	11186	mesos.vm:31676	mesos.vm:31516	
+myApp	15658	mesos.vm:31190	mesos.vm:31654	
+myApp	10180	mesos.vm:31191	mesos.vm:31655	
 
 ```
 
@@ -377,7 +427,9 @@ myApp	11186	mesos.vm:31676	mesos.vm:31516
 
 The query parameters `host` and `scale` are both optional.  If `host` is specified, only tasks running on the supplied slave are killed.  If `scale=true` is specified, then the application is scaled down by the number of killed tasks.  The `scale` parameter defaults to `false`.
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 DELETE /v2/apps/myApp/tasks?host=mesos.vm&scale=false HTTP/1.1
@@ -389,7 +441,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -399,32 +455,12 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1390450916329", 
+            "id": "myApp_0-1390455072426", 
             "ports": [
-                31675, 
-                31676
+                31823, 
+                31824
             ], 
-            "stagedAt": "2014-01-23T04:21+0000", 
-            "startedAt": "2014-01-23T04:22+0000"
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_1-1390450921340", 
-            "ports": [
-                31515, 
-                31516
-            ], 
-            "stagedAt": "2014-01-23T04:22+0000", 
-            "startedAt": "2014-01-23T04:22+0000"
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_2-1390450926351", 
-            "ports": [
-                31824, 
-                31825
-            ], 
-            "stagedAt": "2014-01-23T04:22+0000", 
+            "stagedAt": "2014-01-23T05:31+0000", 
             "startedAt": null
         }
     ]
@@ -437,7 +473,9 @@ Transfer-Encoding: chunked
 
 The query parameter `scale` is optional.  If `scale=true` is specified, then the application is scaled down one if the supplied `task_id` exists.  The `scale` parameter defaults to `false`.
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 DELETE /v2/apps/myApp/tasks/myApp_3-1389916890411 HTTP/1.1
@@ -447,9 +485,11 @@ Content-Length: 0
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
+```
 
+**Response:**
 
-
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -473,7 +513,9 @@ Transfer-Encoding: chunked
 
 #### GET `/v2/tasks`
 
-**Example (as JSON):**
+##### Example (as JSON)
+
+**Request:**
 
 ```
 GET /v2/tasks HTTP/1.1
@@ -484,7 +526,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -494,29 +540,31 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1390450932357", 
+            "id": "myApp_1-1390455080443", 
             "ports": [
-                31399, 
-                31400
+                31925, 
+                31926
             ], 
-            "stagedAt": "2014-01-23T04:22+0000", 
+            "stagedAt": "2014-01-23T05:31+0000", 
             "startedAt": null
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1390450931356", 
+            "id": "myApp_0-1390455075436", 
             "ports": [
-                31038, 
-                31039
+                31755, 
+                31756
             ], 
-            "stagedAt": "2014-01-23T04:22+0000", 
-            "startedAt": null
+            "stagedAt": "2014-01-23T05:31+0000", 
+            "startedAt": "2014-01-23T05:31+0000"
         }
     ]
 }
 ```
 
-**Example (as text):**
+##### Example (as text)
+
+**Request:**
 
 ```
 GET /v2/tasks HTTP/1.1
@@ -526,14 +574,18 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	13913	mesos.vm:31399	mesos.vm:31038	
-myApp	11186	mesos.vm:31400	mesos.vm:31039	
+myApp	15658	mesos.vm:31938	mesos.vm:31925	mesos.vm:31755	
+myApp	10180	mesos.vm:31939	mesos.vm:31926	mesos.vm:31756	
 
 ```
 
@@ -545,7 +597,9 @@ myApp	11186	mesos.vm:31400	mesos.vm:31039
 
 #### POST `/v1/apps/start`
 
-**Example:**
+##### Example
+
+**Request:**
 
 
 ```
@@ -571,7 +625,12 @@ User-Agent: HTTPie/0.7.2
         "https://raw.github.com/mesosphere/marathon/master/README.md"
     ]
 }
+```
 
+**Response:**
+
+
+```
 HTTP/1.1 204 No Content
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -581,7 +640,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 #### GET `/v1/apps`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v1/apps HTTP/1.1
@@ -592,7 +653,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -610,8 +675,8 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            14809, 
-            16778
+            16438, 
+            14094
         ], 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -622,7 +687,9 @@ Transfer-Encoding: chunked
 
 #### POST `/v1/apps/stop`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 POST /v1/apps/stop HTTP/1.1
@@ -636,7 +703,12 @@ User-Agent: HTTPie/0.7.2
 {
     "id": "myApp"
 }
+```
 
+
+**Request:**
+
+```
 HTTP/1.1 204 No Content
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -647,7 +719,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 #### POST `/v1/apps/scale`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 POST /v1/apps/scale HTTP/1.1
@@ -662,7 +736,11 @@ User-Agent: HTTPie/0.7.2
     "id": "myApp", 
     "instances": "4"
 }
+```
 
+**Response:**
+
+```
 HTTP/1.1 204 No Content
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -673,7 +751,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 #### GET `/v1/apps/search?id={app_id}&cmd={command}`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v1/apps/search?id=myApp HTTP/1.1
@@ -684,7 +764,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -702,8 +786,8 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            11704, 
-            12338
+            17361, 
+            13038
         ], 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -712,7 +796,9 @@ Transfer-Encoding: chunked
 ]
 ```
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v1/apps/search?cmd=sleep%2060 HTTP/1.1
@@ -723,7 +809,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -741,8 +831,8 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            11704, 
-            12338
+            17361, 
+            13038
         ], 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -753,7 +843,9 @@ Transfer-Encoding: chunked
 
 #### GET `/v1/apps/{app_id}/tasks`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v1/apps/myApp/tasks HTTP/1.1
@@ -764,7 +856,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -774,34 +870,34 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1390450963442", 
+            "id": "myApp_2-1390455119500", 
             "ports": [
-                31631, 
-                31632
+                31039, 
+                31040
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1390450974458", 
+            "id": "myApp_0-1390455108485", 
             "ports": [
-                31031, 
-                31032
+                31157, 
+                31158
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1390450968451", 
+            "id": "myApp_1-1390455113494", 
             "ports": [
-                31676, 
-                31677
+                31066, 
+                31067
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1390450958419", 
+            "id": "myApp_3-1390455124508", 
             "ports": [
-                31679, 
-                31680
+                31025, 
+                31026
             ]
         }
     ]
@@ -812,7 +908,9 @@ Transfer-Encoding: chunked
 
 #### GET `/v1/endpoints`
 
-**Example (as JSON):**
+##### Example (as JSON)
+
+**Request:**
 
 ```
 GET /v1/endpoints HTTP/1.1
@@ -823,7 +921,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -835,38 +937,48 @@ Transfer-Encoding: chunked
         "instances": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_1-1390450963442", 
+                "id": "myApp_2-1390455119500", 
                 "ports": [
-                    31631, 
-                    31632
+                    31039, 
+                    31040
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_3-1390450974458", 
+                "id": "myApp_0-1390455108485", 
                 "ports": [
-                    31031, 
-                    31032
+                    31157, 
+                    31158
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1390450958419", 
+                "id": "myApp_1-1390455113494", 
                 "ports": [
-                    31679, 
-                    31680
+                    31066, 
+                    31067
+                ]
+            }, 
+            {
+                "host": "mesos.vm", 
+                "id": "myApp_3-1390455124508", 
+                "ports": [
+                    31025, 
+                    31026
                 ]
             }
         ], 
         "ports": [
-            11704, 
-            12338
+            17361, 
+            13038
         ]
     }
 ]
 ```
 
-**Example (as text):**
+##### Example (as text)
+
+**Request:**
 
 ```
 GET /v1/endpoints HTTP/1.1
@@ -876,20 +988,26 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_11704 11704 mesos.vm:31631 mesos.vm:31031 mesos.vm:31679 
-myApp_12338 12338 mesos.vm:31632 mesos.vm:31032 mesos.vm:31680 
+myApp_17361 17361 mesos.vm:31039 mesos.vm:31066 mesos.vm:31157 mesos.vm:31025 
+myApp_13038 13038 mesos.vm:31040 mesos.vm:31067 mesos.vm:31158 mesos.vm:31026 
 
 ```
 
 #### GET `/v1/endpoints/{app_id}`
 
-**Example (as JSON):**
+##### Example (as JSON)
+
+**Request:**
 
 ```
 GET /v1/endpoints/myApp HTTP/1.1
@@ -900,7 +1018,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -911,37 +1033,47 @@ Transfer-Encoding: chunked
     "instances": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1390450963442", 
+            "id": "myApp_2-1390455119500", 
             "ports": [
-                31631, 
-                31632
+                31039, 
+                31040
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1390450974458", 
+            "id": "myApp_0-1390455108485", 
             "ports": [
-                31031, 
-                31032
+                31157, 
+                31158
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1390450958419", 
+            "id": "myApp_1-1390455113494", 
             "ports": [
-                31679, 
-                31680
+                31066, 
+                31067
+            ]
+        }, 
+        {
+            "host": "mesos.vm", 
+            "id": "myApp_3-1390455124508", 
+            "ports": [
+                31025, 
+                31026
             ]
         }
     ], 
     "ports": [
-        11704, 
-        12338
+        17361, 
+        13038
     ]
 }
 ```
 
-**Example (as text):**
+##### Example (as text)
+
+**Request:**
 
 ```
 GET /v1/endpoints/myApp HTTP/1.1
@@ -951,14 +1083,18 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_11704 11704 mesos.vm:31631 mesos.vm:31031 mesos.vm:31679 
-myApp_12338 12338 mesos.vm:31632 mesos.vm:31032 mesos.vm:31680 
+myApp_17361 17361 mesos.vm:31066 mesos.vm:31157 mesos.vm:31025 
+myApp_13038 13038 mesos.vm:31067 mesos.vm:31158 mesos.vm:31026 
 
 ```
 
@@ -966,7 +1102,9 @@ myApp_12338 12338 mesos.vm:31632 mesos.vm:31032 mesos.vm:31680
 
 #### GET `/v1/tasks`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v1/tasks HTTP/1.1
@@ -977,7 +1115,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -987,26 +1129,26 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1390450963442", 
+            "id": "myApp_0-1390455108485", 
             "ports": [
-                31631, 
-                31632
+                31157, 
+                31158
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1390450974458", 
+            "id": "myApp_1-1390455113494", 
             "ports": [
-                31031, 
-                31032
+                31066, 
+                31067
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1390450958419", 
+            "id": "myApp_3-1390455124508", 
             "ports": [
-                31679, 
-                31680
+                31025, 
+                31026
             ]
         }
     ]
@@ -1016,7 +1158,9 @@ Transfer-Encoding: chunked
 
 #### POST `/v1/tasks/kill?appId={app_id}&host={host}&id={task_id}&scale={true|false}`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 POST /v1/tasks/kill?appId=myApp HTTP/1.1
@@ -1028,7 +1172,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1041,7 +1189,9 @@ Transfer-Encoding: chunked
 
 #### GET `/v1/debug/isLeader`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v1/debug/isLeader HTTP/1.1
@@ -1052,7 +1202,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1063,7 +1217,9 @@ true
 
 #### GET `/v1/debug/leaderUrl`
 
-**Example:**
+##### Example
+
+**Request:**
 
 ```
 GET /v1/debug/leaderUrl HTTP/1.1
@@ -1074,7 +1230,11 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 
+```
 
+**Response:**
+
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
