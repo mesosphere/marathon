@@ -38,7 +38,7 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
-  def index(@PathParam("appId") appId: String) = {
+  def indexTxt(@PathParam("appId") appId: String) = {
     service.getApp(appId) match {
       case Some(app) => Response.ok(
         EndpointsHelper.appsToEndpointString(

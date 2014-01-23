@@ -8,7 +8,7 @@
 
 #### POST `/v2/apps`
 
-**Notes:**
+Create and start a new application.
 
 The full JSON format of an application resource is as follows:
 
@@ -62,6 +62,8 @@ http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v2/app
 
 #### GET `/v2/apps`
 
+List all running applications.
+
 ##### Example
 
 **Request:**
@@ -73,6 +75,8 @@ http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps
 http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps
 
 #### GET `/v2/apps/{app_id}`
+
+List the application with id `app_id`.
 
 ##### Example
 
@@ -86,6 +90,8 @@ http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps
 
 #### GET `/v2/apps?cmd={command}`
 
+List the application with id `app_id`.
+
 ##### Example
 
 **Request:**
@@ -97,6 +103,8 @@ http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps
 http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps?cmd=sleep%2060
 
 #### PUT `/v2/apps/{app_id}`
+
+Change parameters of a running application.  The new application parameters apply only to subsequently created tasks, and currently running tasks are __not__ pre-emptively restarted.
 
 ##### Example
 
@@ -111,6 +119,8 @@ http --print=hb --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps
 :http --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps/myApp cmd='sleep 60' constraints:='[]' ports:='[0, 0]' cpus=0.1 mem=5 instances=3
 
 #### DELETE `/v2/apps/{app_id}`
+
+Destroy an application. All data about that application will be deleted.
 
 ##### Example
 
@@ -127,6 +137,8 @@ http --print=hb --ignore-stdin --json --pretty format DELETE localhost:8080/v2/a
 :http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 #### GET `/v2/apps/{app_id}/tasks`
+
+List all running tasks for application `app_id`.
 
 ##### Example (as JSON)
 
@@ -150,7 +162,7 @@ http --print=hb --ignore-stdin --pretty format GET localhost:8080/v2/apps/myApp/
 
 #### DELETE `/v2/apps/{app_id}/tasks?host={host}&scale={true|false}`
 
-**Notes:**
+Kill tasks that belong to the application `app_id`, optionally filtered by the task's `host`.
 
 The query parameters `host` and `scale` are both optional.  If `host` is specified, only tasks running on the supplied slave are killed.  If `scale=true` is specified, then the application is scaled down by the number of killed tasks.  The `scale` parameter defaults to `false`.
 
@@ -166,7 +178,7 @@ http --print=hb --ignore-stdin --json --pretty format DELETE 'localhost:8080/v2/
 
 #### DELETE `/v2/apps/{app_id}/tasks/{task_id}?scale={true|false}`
 
-**Notes:**
+Kill the task with ID `task_id` that belongs to the application `app_id`.
 
 The query parameter `scale` is optional.  If `scale=true` is specified, then the application is scaled down one if the supplied `task_id` exists.  The `scale` parameter defaults to `false`.
 
@@ -209,6 +221,8 @@ Transfer-Encoding: chunked
 ### _Tasks_
 
 #### GET `/v2/tasks`
+
+List tasks of all running applications.
 
 ##### Example (as JSON)
 

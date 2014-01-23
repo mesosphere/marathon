@@ -1,13 +1,11 @@
-## DELETE `/v2/apps/{app_id}`
-
-Destroy an application. All data about that application will be deleted.
+## POST `/v1/tasks/kill?appId={app_id}&host={host}&id={task_id}&scale={true|false}`
 
 ### Example
 
 **Request:**
 
 ```
-DELETE /v2/apps/myApp HTTP/1.1
+POST /v1/tasks/kill?appId=myApp HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0
@@ -18,13 +16,13 @@ User-Agent: HTTPie/0.7.2
 
 ```
 
-
 **Response:**
 
 ```
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
 
-
+[]
 ```
