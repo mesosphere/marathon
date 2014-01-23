@@ -7,7 +7,11 @@ import scala.{Array, Some}
 import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.api.EndpointsHelper
+import mesosphere.marathon.api.v1.AppDefinition
+import scala.concurrent.Await
 import java.util.logging.Logger
+
 
 /**
  * @author Tobi Knaup
@@ -20,13 +24,30 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
   val log = Logger.getLogger(getClass.getName)
 
   @GET
+  @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def index(@PathParam("appId") appId: String) = {
+  def indexJson(@PathParam("appId") appId: String) = {
     if (taskTracker.contains(appId)) {
       val tasks = taskTracker.get(appId)
       tasks
     } else {
       Response.status(Response.Status.NOT_FOUND).build
+    }
+  }
+
+  @GET
+  @Produces(Array(MediaType.TEXT_PLAIN))
+  @Timed
+  def index(@PathParam("appId") appId: String) = {
+    service.getApp(appId) match {
+      case Some(app) => Response.ok(
+        EndpointsHelper.appsToEndpointString(
+          taskTracker,
+          Seq(app),
+          "\t"
+        )
+      ).build
+      case None => Response.status(Response.Status.NOT_FOUND).build
     }
   }
 

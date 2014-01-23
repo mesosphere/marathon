@@ -7,6 +7,7 @@ import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.v1.Implicits
+import mesosphere.marathon.api.EndpointsHelper
 import java.util.logging.Logger
 import com.codahale.metrics.annotation.Timed
 
@@ -34,21 +35,10 @@ class TasksResource @Inject()(service: MarathonSchedulerService,
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
-  def indexTxt() = {
-    val sb = new StringBuilder
-    for (app <- service.listApps()) {
-      val tasks = taskTracker.get(app.id)
+  def indexTxt() = EndpointsHelper.appsToEndpointString(
+    taskTracker,
+    service.listApps(),
+    "\t"
+  )
 
-      for ((port, i) <- app.ports.zipWithIndex) {
-        val cleanId = app.id.replaceAll("\\s+", "_")
-        sb.append(s"${cleanId}_$port $port ")
-
-        for (task <- tasks) {
-          sb.append(s"${task.getHost}:${task.getPorts(i)} ")
-        }
-        sb.append("\n")
-      }
-    }
-    sb.toString()
-  }
 }

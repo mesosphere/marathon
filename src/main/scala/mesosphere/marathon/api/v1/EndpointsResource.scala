@@ -70,14 +70,17 @@ class EndpointsResource @Inject()(
     Await.result(f, store.defaultWait)
   }
 
+  /**
+    * Produces a script-friendly string representation of the supplied
+    * apps' tasks.
+    */
   private def appsToEndpointString(apps: Seq[AppDefinition]): String = {
     val sb = new StringBuilder
     for (app <- apps) {
+      val cleanId = app.id.replaceAll("\\s+", "_")
       val tasks = taskTracker.get(app.id)
       for ((port, i) <- app.ports.zipWithIndex) {
-        val cleanId = app.id.replaceAll("\\s+", "_")
         sb.append(s"${cleanId}_$port $port ")
-
         for (task <- tasks) {
           sb.append(s"${task.getHost}:${task.getPorts(i)} ")
         }

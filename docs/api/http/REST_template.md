@@ -88,9 +88,13 @@ http --ignore-stdin --json --verbose --pretty format DELETE localhost:8080/v2/ap
 
 #### GET `/v2/apps/{app_id}/tasks`
 
-**Examples:**
+**Example (as JSON):**
 
 http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v2/apps/myApp/tasks
+
+**Example (as text):**
+
+http --ignore-stdin --verbose --pretty format GET localhost:8080/v2/apps/myApp/tasks Accept:text/plain
 
 #### DELETE `/v2/apps/{app_id}/tasks?host={host}&scale={true|false}`
 
@@ -106,7 +110,7 @@ http --ignore-stdin --json --verbose --pretty format DELETE 'localhost:8080/v2/a
 
 **Notes:**
 
-The query parameter `scale` is optional.  If `scale=true` is specified, then the application is scaled down one if supplied `task_id` exists.  The `scale` parameter defaults to `false`.
+The query parameter `scale` is optional.  If `scale=true` is specified, then the application is scaled down one if the supplied `task_id` exists.  The `scale` parameter defaults to `false`.
 
 **Example:**
 
@@ -144,9 +148,13 @@ Transfer-Encoding: chunked
 
 #### GET `/v2/tasks`
 
-**Example:**
+**Example (as JSON):**
 
-http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v2/apps/myApp
+http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v2/tasks
+
+**Example (as text):**
+
+http --ignore-stdin --verbose --pretty format GET localhost:8080/v2/tasks Accept:text/plain
 
 ## API Version 1 _(DEPRECATED)_
 
