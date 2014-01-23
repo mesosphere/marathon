@@ -35,7 +35,7 @@ The full JSON format of an application resource is as follows:
         9000
     ], 
     "uris": [
-        "http://bit.ly/1aJASkb"
+        "https://raw.github.com/mesosphere/marathon/master/README.md"
     ]
 }
 ```
@@ -50,7 +50,7 @@ _Ports:_ An array of required port resources on the host.  To generate one or mo
 
 :http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
 
-http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v2/apps id=myApp cmd='env && sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' env:='{"LD_LIBRARY_PATH": "/usr/local/lib/mLib"}' constraints:='[["hostname", "UNIQUE", ""]]' uris:='["http://bit.ly/1aJASkb"]'
+http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v2/apps id=myApp cmd='env && sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' env:='{"LD_LIBRARY_PATH": "/usr/local/lib/myLib"}' constraints:='[["hostname", "UNIQUE", ""]]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 #### GET `/v2/apps`
 
@@ -84,7 +84,7 @@ http --ignore-stdin --json --verbose --pretty format PUT localhost:8080/v2/apps/
 
 http --ignore-stdin --json --verbose --pretty format DELETE localhost:8080/v2/apps/myApp
 
-:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://bit.ly/1aJASkb"]'
+:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 #### GET `/v2/apps/{app_id}/tasks`
 
@@ -160,7 +160,7 @@ http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v2/apps/
 
 :http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
 
-http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v1/apps/start id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://bit.ly/1aJASkb"]'
+http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v1/apps/start id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 #### GET `/v1/apps`
 
@@ -174,7 +174,7 @@ http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v1/apps
 
 http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v1/apps/stop id=myApp
 
-:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["http://bit.ly/1aJASkb"]'
+:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 #### POST `/v1/apps/scale`
 
@@ -182,7 +182,7 @@ http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v1/apps
 
 http --ignore-stdin --json --verbose --pretty format POST localhost:8080/v1/apps/scale id=myApp instances=4
 
-:http --ignore-stdin PUT localhost:8080/v2/apps id=myApp instances=3
+:http --ignore-stdin PUT localhost:8080/v2/apps/myApp instances=3
 
 #### GET `/v1/apps/search?id={app_id}&cmd={command}`
 
@@ -204,15 +204,23 @@ http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v1/apps/
 
 #### GET `/v1/endpoints`
 
-**Example:**
+**Example (as JSON):**
 
 http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v1/endpoints
 
+**Example (as text):**
+
+http --ignore-stdin --verbose --pretty format GET localhost:8080/v1/endpoints Accept:text/plain
+
 #### GET `/v1/endpoints/{app_id}`
 
-**Example:**
+**Example (as JSON):**
 
 http --ignore-stdin --json --verbose --pretty format GET localhost:8080/v1/endpoints/myApp
+
+**Example (as text):**
+
+http --ignore-stdin --verbose --pretty format GET localhost:8080/v1/endpoints/myApp Accept:text/plain
 
 ### Tasks
 
