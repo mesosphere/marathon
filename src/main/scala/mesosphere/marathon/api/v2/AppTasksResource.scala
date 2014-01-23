@@ -29,7 +29,7 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
   def indexJson(@PathParam("appId") appId: String) = {
     if (taskTracker.contains(appId)) {
       val tasks = taskTracker.get(appId)
-      tasks
+      Response.ok(Map("tasks" -> tasks)).build
     } else {
       Response.status(Response.Status.NOT_FOUND).build
     }
