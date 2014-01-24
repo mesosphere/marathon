@@ -26,30 +26,22 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "myApp": [
+    "tasks": [
         {
+            "appId": "myApp", 
             "host": "mesos.vm", 
-            "id": "myApp_1-1390455080443", 
+            "id": "myApp_0-1390600378835", 
             "ports": [
-                31925, 
-                31926
+                31895, 
+                31896
             ], 
-            "stagedAt": "2014-01-23T05:31+0000", 
-            "startedAt": null
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1390455075436", 
-            "ports": [
-                31755, 
-                31756
-            ], 
-            "stagedAt": "2014-01-23T05:31+0000", 
-            "startedAt": "2014-01-23T05:31+0000"
+            "stagedAt": "2014-01-24T21:52+0000", 
+            "startedAt": "2014-01-24T21:53+0000"
         }
     ]
 }
 ```
+
 
 ### Example (as text)
 
