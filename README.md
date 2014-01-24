@@ -4,7 +4,7 @@ Marathon is a [Mesos][Mesos] framework for long-running services.
 Given that you have Mesos running as the kernel for your datacenter, 
 Marathon is the `init` or [upstart][upstart] daemon.
 
-Marathon provides a REST API for starting, stopping, and scaling services.
+Marathon provides a [REST API](https://github.com/mesosphere/marathon/blob/master/REST.md) for starting, stopping, and scaling services.
 Marathon is written in Scala and can run in highly-available mode by running multiple Marathon instances.
 The state of running tasks gets stored in the Mesos state abstraction.
 
