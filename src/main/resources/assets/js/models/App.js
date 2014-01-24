@@ -6,38 +6,34 @@ define([
   return Backbone.Model.extend({
     defaults: function() {
       return {
-        id: _.uniqueId("app_"),
         cmd: null,
-        mem: 10.0,
+        constraints: [],
         cpus: 0.1,
+        id: _.uniqueId("app_"),
         instances: 1,
+        mem: 10.0,
         uris: []
       };
     },
-    initialize: function() {
-      this.set("tasks", new TaskCollection(null, {appId: this.id}));
-      this.listenTo(this, "change:id", function(model, value, options) {
-        this.get("tasks").options.appId = value;
+    initialize: function(options) {
+      // If this model belongs to a collection when it is instantiated, it has
+      // already been persisted to the server.
+      this.persisted = (this.collection != null);
+
+      this.tasks = new TaskCollection(null, {appId: this.id});
+      this.on({
+        "change:id": function(model, value, options) {
+          // Inform TaskCollection of new ID so it can send requests to the new
+          // endpoint.
+          this.tasks.options.appId = value;
+        },
+        "sync": function(model, response, options) {
+          this.persisted = true;
+        }
       });
     },
-    sync: function(method, model, options) {
-      var localOptions = options || {};
-      var localMethod = options.add ? "create" : method;
-      var upperCaseMethod = localMethod.toUpperCase();
-
-      if (upperCaseMethod in model.urls) {
-        options.contentType = "application/json";
-        options.data = JSON.stringify(model.toJSON());
-        options.method = "POST";
-        options.url = model.urls[upperCaseMethod];
-      }
-
-      Backbone.sync.apply(this, [localMethod, model, localOptions]);
-    },
-    urls: {
-      "CREATE": "v1/apps/start",
-      "DELETE": "v1/apps/stop",
-      "UPDATE": "v1/apps/scale"
+    isNew: function() {
+      return !this.persisted;
     },
     validate: function(attrs, options) {
       var errors = [];

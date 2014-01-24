@@ -45,7 +45,8 @@ h4 {
 }
 
 h1 {
-  font-size: 45px;
+  font-weight: 100;
+  text-transform: uppercase;
 }
 
 hr {
@@ -162,16 +163,6 @@ dt {
   background-color: transparent;
 }
 
-.system-folder,
-.system-caret {
-  font-weight: 100;
-  text-transform: uppercase;
-}
-
-.navigator {
-  width: 600px;
-}
-
 .system-caret {
   /* Force a new stacking context to prevent this animation from making the page
    * flicker in Chrome 31.
@@ -191,31 +182,16 @@ dt {
   animation-iteration-count: infinite;
   animation-name: blink;
   animation-timing-function: steps(1, start);
-}
 
-#terminal {
-  display: inline-block;
-}
-
-#setter {
-  left: -1000px;
-  position: absolute;
-}
-
-.system-caret {
-  width: 30px;
+  width: 0.7em;
   display:inline-block;
-  border-bottom: 2px solid rgba(184,232,239,1);
+  border-bottom: 1px solid #fff;
 }
 
-.system-caret.focus {
-  border-bottom: 2px solid #428bca;
-}
-
-.input {
-  font-size: 56px;
-  font-family: 'Lato';
-  font-weight: 300;
+.overflow-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ==============
@@ -228,8 +204,12 @@ dt {
   z-index: -1;
 }
 
-.add-button {
+.header-btn {
   margin-top: 20px;
+}
+
+.table-fixed {
+  table-layout: fixed;
 }
 
 .table > tbody > tr.active > td,

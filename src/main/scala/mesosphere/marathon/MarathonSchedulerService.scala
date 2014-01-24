@@ -1,9 +1,10 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.FrameworkInfo
+import org.apache.mesos.Protos.{TaskID, FrameworkInfo}
 import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.MarathonStore
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import javax.inject.{Named, Inject}
@@ -18,6 +19,7 @@ import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
 import scala.util.Random
 import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.marathon.Protos.MarathonTask
 
 /**
  * Wrapper class for the scheduler
@@ -92,6 +94,11 @@ class MarathonSchedulerService @Inject()(
     scheduler.stopApp(driver, app)
   }
 
+  def updateApp(id: String, appUpdate: AppUpdate): Future[_] = {
+    scheduler.updateApp(driver, id, appUpdate)
+  }
+
+  @deprecated("The scale operation has been subsumed by update in the v2 API.")
   def scaleApp(app: AppDefinition, applyNow: Boolean = true): Future[_] = {
     scheduler.scaleApp(driver, app, applyNow)
   }
@@ -107,6 +114,24 @@ class MarathonSchedulerService @Inject()(
   def getApp(appName: String): Option[AppDefinition] = {
     val future = store.fetch(appName)
     Await.result(future, defaultWait)
+  }
+
+  def killTasks(appName: String, tasks: Iterable[MarathonTask], scale: Boolean): Iterable[MarathonTask] = {
+    if (scale) {
+      getApp(appName) match {
+        case Some(appDef) =>
+          appDef.instances = appDef.instances - tasks.size
+
+          Await.result(scaleApp(appDef, false), defaultWait)
+        case None =>
+      }
+    }
+
+    tasks.map(task => {
+      log.info(f"Killing task ${task.getId} on host ${task.getHost}")
+      driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+      task
+    })
   }
 
   //Begin Service interface

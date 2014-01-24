@@ -140,18 +140,26 @@ set the `assets_path` flag when running Marathon:
 
 Run `./bin/start --help` for a full list of configuration options.
 
-## Example API Usage
+## REST API Usage
+
+### V1 API
 
 Using [HTTPie][HTTPie]:
 
-    http POST localhost:8080/v1/apps/start id=sleep cmd='sleep 600' instances=1 mem=128 cpus=1
-    http POST localhost:8080/v1/apps/scale id=sleep instances=2
-    http POST localhost:8080/v1/apps/stop id=sleep
+    http POST localhost:8080/v1/apps/start id=app_123 cmd='sleep 600' instances=1 mem=128 cpus=1
+    http POST localhost:8080/v1/apps/scale id=app_123 instances=2
+    http POST localhost:8080/v1/apps/stop id=app_123
 
 Using HTTPie with constraints:
 
     http POST localhost:8080/v1/apps/start id=constraints cmd='hostname && sleep 600' \
         instances=100 mem=64 cpus=0.1 constraints:='[["hostname", "UNIQUE", ""]]'
+
+### V2 API
+
+Using [HTTPie][HTTPie]:
+
+    http PUT localhost:8080/v2/apps/app_123 cmd='sleep 20' cpus=0.3 mem=9 instances=3
 
 Running Chronos with the [Marathon Client](https://github.com/mesosphere/marathon_client):
 
@@ -181,6 +189,7 @@ Marathon was written by the team at [Mesosphere][Mesosphere] that also developed
 * [Brenden Matthews](https://github.com/brndnmtthws)
 * [Jason Dusek](https://github.com/solidsnack)
 * [Thomas Rampelberg](https://github.com/pyronicide)
+* [Connor Doyle](https://github.com/ConnorDoyle)
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
 [HTTPie]: https://github.com/jkbr/httpie "a CLI, cURL-like tool for humans"

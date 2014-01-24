@@ -4,7 +4,7 @@
 
     <groupId>mesosphere</groupId>
     <artifactId>marathon</artifactId>
-    <version>0.3.1-SNAPSHOT</version>
+    <version>0.4.0-SNAPSHOT</version>
 
     <properties>
         <encoding>UTF-8</encoding>
@@ -14,7 +14,7 @@
         <scala.version>2.10.3</scala.version>
 
         <!-- runtime deps versions -->
-        <chaos.version>0.4.9</chaos.version>
+        <chaos.version>0.5.0</chaos.version>
         <mesos.version>0.14.2</mesos.version>
         <protobuf.version>2.4.1</protobuf.version>
         <akka.version>2.2.3</akka.version>
@@ -108,6 +108,12 @@
             <groupId>org.json4s</groupId>
             <artifactId>json4s-jackson_2.10</artifactId>
             <version>${json4s.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>mesosphere</groupId>

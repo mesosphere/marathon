@@ -8,7 +8,7 @@ define([
   return React.createClass({
     saveModel: function(attributes) {
       this.state.model.set(attributes);
-      this.props.collection.create(this.state.model);
+      this.props.collection.create(this.state.model, {wait: true});
     },
     showModal: function(event) {
       var model = new App();
@@ -23,8 +23,8 @@ define([
     },
     render: function() {
       return (
-        <button type="button" className="btn btn-primary btn-lg add-button" onClick={this.showModal}>
-          + New
+        <button type="button" className="btn btn-primary header-btn" onClick={this.showModal}>
+          + New App
         </button>
       );
     }

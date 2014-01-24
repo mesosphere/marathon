@@ -6,9 +6,10 @@ import scala.collection.mutable
 import scala.collection.JavaConverters._
 import org.hibernate.validator.constraints.NotEmpty
 import mesosphere.marathon.state.MarathonState
-import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import javax.validation.constraints.Pattern
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.{JsonInclude, JsonIgnoreProperties}
+import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 
@@ -35,7 +36,10 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   // Number of new tasks this app may spawn per second in response to
   // terminated tasks. This prevents frequently failing apps from spamming
   // the cluster.
+  @JsonInclude(Include.NON_DEFAULT)
   var taskRateLimit: Double = 1.0
+  @JsonInclude(Include.NON_EMPTY)
+  var tasks: Seq[MarathonTask] = Nil
 
   @JsonDeserialize(contentAs = classOf[ContainerInfo])
   var container: Option[ContainerInfo] = None

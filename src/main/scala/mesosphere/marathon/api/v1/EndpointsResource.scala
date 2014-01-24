@@ -27,23 +27,7 @@ class EndpointsResource @Inject()(
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
-  def endpoints() = {
-    val sb = new StringBuilder
-    for (app <- schedulerService.listApps()) {
-      val tasks = taskTracker.get(app.id)
-
-      for ((port, i) <- app.ports.zipWithIndex) {
-        val cleanId = app.id.replaceAll("\\s+", "_")
-        sb.append(s"${cleanId}_$port $port ")
-
-        for (task <- tasks) {
-          sb.append(s"${task.getHost}:${task.getPorts(i)} ")
-        }
-        sb.append("\n")
-      }
-    }
-    sb.toString()
-  }
+  def endpoints() = appsToEndpointString(schedulerService.listApps())
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
@@ -56,10 +40,22 @@ class EndpointsResource @Inject()(
   }
 
   @GET
-  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MediaType.TEXT_PLAIN))
   @Path("{id}")
   @Timed
   def endpointsForApp(@PathParam("id") id: String): Response = {
+    val f = store.fetch(id).map(_ match {
+      case Some(app) => Response.ok(appsToEndpointString(Seq(app))).build
+      case None => Response.status(Status.NOT_FOUND).build
+    })
+    Await.result(f, store.defaultWait)
+  }
+
+  @GET
+  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Path("{id}")
+  @Timed
+  def endpointsForAppJson(@PathParam("id") id: String): Response = {
     val f = store.fetch(id).map(_ match {
       case Some(app) => {
         val instances = taskTracker.get(id).map(t => t: Map[String, Object])
@@ -73,4 +69,25 @@ class EndpointsResource @Inject()(
     })
     Await.result(f, store.defaultWait)
   }
+
+  /**
+    * Produces a script-friendly string representation of the supplied
+    * apps' tasks.
+    */
+  private def appsToEndpointString(apps: Seq[AppDefinition]): String = {
+    val sb = new StringBuilder
+    for (app <- apps) {
+      val cleanId = app.id.replaceAll("\\s+", "_")
+      val tasks = taskTracker.get(app.id)
+      for ((port, i) <- app.ports.zipWithIndex) {
+        sb.append(s"${cleanId}_$port $port ")
+        for (task <- tasks) {
+          sb.append(s"${task.getHost}:${task.getPorts(i)} ")
+        }
+        sb.append("\n")
+      }
+    }
+    sb.toString()
+  }
+
 }

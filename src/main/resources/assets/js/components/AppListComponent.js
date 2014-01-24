@@ -33,7 +33,7 @@ define([
       var comparator = this.props.collection.comparator;
 
       var appNodes;
-      var tableClassName = "table";
+      var tableClassName = "table table-fixed";
       if (this.props.collection.length > 0) {
         appNodes = this.props.collection.map(function(model) {
           return <AppComponent key={model.cid} model={model} onClick={_this.onAppClick} />;
@@ -52,8 +52,8 @@ define([
       return (
         <table className={tableClassName}>
           <colgroup>
-            <col style={{width: "30%"}} />
-            <col style={{width: "30%"}} />
+            <col style={{width: "25%"}} />
+            <col style={{width: "35%"}} />
             <col style={{width: "14%"}} />
             <col style={{width: "13%"}} />
             <col style={{width: "13%"}} />

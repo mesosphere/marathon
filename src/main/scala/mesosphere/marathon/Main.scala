@@ -56,8 +56,8 @@ object Main extends App {
     with HttpConf with MarathonConf with AppConfiguration
       with EventConfiguration with HttpEventConfiguration with ZookeeperConf
 
-  run(List(
+  run(
     classOf[HttpService],
     classOf[MarathonSchedulerService]
-  ))
+  )
 }
