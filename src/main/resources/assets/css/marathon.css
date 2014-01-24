@@ -45,7 +45,8 @@ h4 {
 }
 
 h1 {
-  font-size: 45px;
+  font-weight: 100;
+  text-transform: uppercase;
 }
 
 hr {
@@ -162,12 +163,6 @@ dt {
   background-color: transparent;
 }
 
-.system-folder,
-.system-caret {
-  font-weight: 100;
-  text-transform: uppercase;
-}
-
 .system-caret {
   /* Force a new stacking context to prevent this animation from making the page
    * flicker in Chrome 31.
@@ -188,9 +183,9 @@ dt {
   animation-name: blink;
   animation-timing-function: steps(1, start);
 
-  width: 30px;
+  width: 0.7em;
   display:inline-block;
-  border-bottom: 2px solid #fff;
+  border-bottom: 1px solid #fff;
 }
 
 .overflow-ellipsis {
@@ -209,7 +204,7 @@ dt {
   z-index: -1;
 }
 
-.add-button {
+.header-btn {
   margin-top: 20px;
 }
 

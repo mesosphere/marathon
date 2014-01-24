@@ -23,8 +23,8 @@ define([
     },
     render: function() {
       return (
-        <button type="button" className="btn btn-primary btn-lg add-button" onClick={this.showModal}>
-          + New
+        <button type="button" className="btn btn-primary header-btn" onClick={this.showModal}>
+          + New App
         </button>
       );
     }
