@@ -6,8 +6,8 @@ import javax.ws.rs.core.MediaType
 import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.v1.Implicits
 import mesosphere.marathon.api.EndpointsHelper
+import mesosphere.marathon.api.v2.json.EnrichedTask
 import java.util.logging.Logger
 import com.codahale.metrics.annotation.Timed
 
@@ -25,11 +25,12 @@ class TasksResource @Inject()(service: MarathonSchedulerService,
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
   def indexJson() = {
-    taskTracker.list.map { case ((key, setOfTasks)) =>
-      // TODO teach Jackson how to serialize a MarathonTask instead
-      // TODO JSON format is weird
-      (key, setOfTasks.tasks)
+    val flatTasksList = taskTracker.list.flatMap {
+      case ((appId, setOfTasks)) =>
+        setOfTasks.tasks.map(EnrichedTask(appId, _))
     }
+
+    Map("tasks" -> flatTasksList)
   }
 
   @GET

@@ -19,6 +19,7 @@ class MarathonModule extends Module {
 
   private val constraintClass = classOf[Constraint]
   private val marathonTaskClass = classOf[MarathonTask]
+  private val enrichedTaskClass = classOf[EnrichedTask]
 
   def getModuleName: String = "MarathonModule"
 
@@ -32,6 +33,8 @@ class MarathonModule extends Module {
           new ConstraintSerializer
         } else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
           new MarathonTaskSerializer
+        } else if (enrichedTaskClass.isAssignableFrom(javaType.getRawClass)) {
+          new EnrichedTaskSerializer
         } else {
           null
         }
@@ -89,25 +92,38 @@ class MarathonModule extends Module {
 
   class MarathonTaskSerializer extends JsonSerializer[MarathonTask] {
     def serialize(task: MarathonTask, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+      writeFieldValues(task, jgen, provider)
+      jgen.writeEndObject()
+    }
 
+    def writeFieldValues(task: MarathonTask, jgen: JsonGenerator, provider: SerializerProvider) {
       val startedAt = task.getStartedAt
       val stagedAt = task.getStagedAt
-
-      jgen.writeStartObject()
       jgen.writeObjectField("id", task.getId)
       jgen.writeObjectField("host", task.getHost)
       jgen.writeObjectField("ports", task.getPortsList)
       jgen.writeObjectField("startedAt", if (startedAt == 0) null else timestampToUTC(startedAt))
       jgen.writeObjectField("stagedAt", if (stagedAt == 0) null else timestampToUTC(stagedAt))
-      jgen.writeEndObject()
     }
   }
+
+  object MarathonTaskSerializer extends MarathonTaskSerializer
 
   // TODO: handle fields!
   // Currently there is no support for handling updates to task instances (CD)
   class MarathonTaskDeserializer extends JsonDeserializer[MarathonTask] {
     def deserialize(json: JsonParser, context: DeserializationContext): MarathonTask = {
       MarathonTask.newBuilder.build
+    }
+  }
+
+  class EnrichedTaskSerializer extends JsonSerializer[EnrichedTask] {
+    def serialize(enriched: EnrichedTask, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+      jgen.writeObjectField("appId", enriched.appId)
+      MarathonTaskSerializer.writeFieldValues(enriched.task, jgen, provider)
+      jgen.writeEndObject()
     }
   }
 
