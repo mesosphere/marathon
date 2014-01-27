@@ -90,7 +90,7 @@ http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps
 
 #### GET `/v2/apps?cmd={command}`
 
-List the application with id `app_id`.
+List all running applications, filtered by `command`.
 
 ##### Example
 
