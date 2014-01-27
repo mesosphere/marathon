@@ -7,7 +7,7 @@
   * [POST /v2/apps](#post-v2apps) - Create and start a new app
   * [GET /v2/apps](#get-v2apps) - List all running apps
   * [GET /v2/apps/{app_id}](#get-v2appsapp_id) - List the app `app_id`
-  * [GET /v2/apps?cmd={command}](#get-v2appscmdcommand) - List the app with cmd `command`
+  * [GET /v2/apps?cmd={command}](#get-v2appscmdcommand) - List all running apps, filtered by `command`
   * [PUT /v2/apps/{app_id}](#put-v2appsapp_id) - Change config of the app `app_id`
   * [DELETE /v2/apps/{app_id}](#delete-v2appsapp_id) - Destroy app `app_id`
   * [GET /v2/apps/{app_id}/tasks](#get-v2appsapp_idtasks) - List running tasks for app `app_id`
