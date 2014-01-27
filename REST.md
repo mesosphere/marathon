@@ -228,7 +228,7 @@ Transfer-Encoding: chunked
 
 #### GET `/v2/apps?cmd={command}`
 
-List the application with id `app_id`.
+List the applications with cmd `command`.
 
 ##### Example
 
