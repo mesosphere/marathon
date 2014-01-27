@@ -6,7 +6,7 @@ import org.junit.Test
 import org.apache.mesos.state.InMemoryState
 import mesosphere.marathon.Protos.MarathonTask
 import org.apache.mesos.Protos.Value.Text
-import org.apache.mesos.Protos.{TaskID, Attribute}
+import org.apache.mesos.Protos.{TaskID, Attribute, TaskStatus, TaskState}
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
 
 import org.junit.Assert._
@@ -45,6 +45,15 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       .build()
   }
 
+  def makeTaskStatus(id: String, state: TaskState = TaskState.TASK_RUNNING) = {
+    TaskStatus.newBuilder
+      .setTaskId(TaskID.newBuilder
+        .setValue(id)
+      )
+      .setState(state)
+      .build
+  }
+
   @Test
   def testStartingPersistsTasks() {
     def shouldContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) {
@@ -68,13 +77,13 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
     val task3 = makeTask(taskId3, "foo.bar.bam", 300)
 
     taskTracker.starting(app, task1)
-    taskTracker.running(app, taskId1)
+    taskTracker.running(app, makeTaskStatus(taskId1))
 
     taskTracker.starting(app, task2)
-    taskTracker.running(app, taskId2)
+    taskTracker.running(app, makeTaskStatus(taskId2))
 
     taskTracker.starting(app, task3)
-    taskTracker.running(app, taskId3)
+    taskTracker.running(app, makeTaskStatus(taskId3))
 
     val results = taskTracker.fetchApp(app).tasks
 
@@ -106,13 +115,13 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
     val task3 = makeTask(taskId3, "foo.bar.bam", 300)
 
     taskTracker1.starting(app, task1)
-    taskTracker1.running(app, taskId1)
+    taskTracker1.running(app, makeTaskStatus(taskId1))
 
     taskTracker1.starting(app, task2)
-    taskTracker1.running(app, taskId2)
+    taskTracker1.running(app, makeTaskStatus(taskId2))
 
     taskTracker1.starting(app, task3)
-    taskTracker1.running(app, taskId3)
+    taskTracker1.running(app, makeTaskStatus(taskId3))
 
     val taskTracker2 = new TaskTracker(state)
     val results = taskTracker2.fetchApp(app).tasks
@@ -146,9 +155,9 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       assertTrue("Tasks are not properly serialized", taskTracker.count("app1") == 3)
     }
 
-    taskTracker.running("app1", "task1")
-    taskTracker.running("app1", "task2")
-    taskTracker.running("app1", "task3")
+    taskTracker.running("app1", makeTaskStatus("task1"))
+    taskTracker.running("app1", makeTaskStatus("task2"))
+    taskTracker.running("app1", makeTaskStatus("task3"))
 
     {
       val baos = new ByteArrayOutputStream()

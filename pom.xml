@@ -15,7 +15,7 @@
 
         <!-- runtime deps versions -->
         <chaos.version>0.5.0</chaos.version>
-        <mesos.version>0.14.2</mesos.version>
+        <mesos.version>0.15.0</mesos.version>
         <protobuf.version>2.4.1</protobuf.version>
         <akka.version>2.2.3</akka.version>
         <spray.version>1.2-RC4</spray.version>

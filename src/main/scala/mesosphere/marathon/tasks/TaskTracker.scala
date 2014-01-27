@@ -2,7 +2,7 @@ package mesosphere.marathon.tasks
 
 import scala.collection._
 import scala.collection.JavaConverters._
-import org.apache.mesos.Protos.TaskID
+import org.apache.mesos.Protos.{TaskID, TaskStatus}
 import javax.inject.Inject
 import org.apache.mesos.state.State
 import java.util.logging.{Level, Logger}
@@ -59,12 +59,14 @@ class TaskTracker @Inject()(state: State) {
     get(appName) += task
   }
 
-  def running(appName: String, taskId: String): Future[MarathonTask] = {
+  def running(appName: String, status: TaskStatus): Future[MarathonTask] = {
+    val taskId = status.getTaskId.getValue
     val task = get(appName).find(_.getId == taskId) match {
       case Some(stagedTask) => {
         get(appName).remove(stagedTask)
         stagedTask.toBuilder
           .setStartedAt(System.currentTimeMillis)
+          .addStatuses(status)
           .build
       }
       case _ => {
@@ -74,6 +76,7 @@ class TaskTracker @Inject()(state: State) {
           .setId(taskId)
           .setStagedAt(System.currentTimeMillis)
           .setStartedAt(System.currentTimeMillis)
+          .addStatuses(status)
           .build
       }
     }
@@ -82,9 +85,10 @@ class TaskTracker @Inject()(state: State) {
   }
 
   def terminated(appName: String,
-                 taskId: String): Future[Option[MarathonTask]] = {
+                 status: TaskStatus): Future[Option[MarathonTask]] = {
     val now = System.currentTimeMillis
     val appTasks = get(appName)
+    val taskId = status.getTaskId.getValue
 
     appTasks.find(_.getId == taskId) match {
       case Some(task) => {
@@ -109,6 +113,27 @@ class TaskTracker @Inject()(state: State) {
         None
     }
   }
+
+  def statusUpdate(appName: String,
+                   status: TaskStatus): Future[Option[MarathonTask]] = {
+    val taskId = status.getTaskId.getValue
+    get(appName).find(_.getId == taskId) match {
+      case Some(task) => {
+        get(appName).remove(task)
+        val updatedTask = task.toBuilder
+          .addStatuses(status)
+          .build
+        get(appName) += updatedTask
+        store(appName).map(_ => Some(updatedTask))
+      }
+      case _ => {
+        log.warning(s"No task for ID ${taskId}")
+        None
+      }
+    }
+  }
+
+
 
   def startUp(appName: String) {
     // NO-OP

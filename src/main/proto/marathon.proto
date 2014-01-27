@@ -40,6 +40,7 @@ message MarathonTask {
   repeated mesos.Attribute attributes = 4;
   optional int64 staged_at = 5;
   optional int64 started_at = 6;
+  repeated mesos.TaskStatus statuses = 7;
 }
 
 message MarathonApp {
