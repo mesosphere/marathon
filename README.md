@@ -86,7 +86,7 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 #### Compiling Assets
 
-**Note: You only need to follow these steps if you plan to edit the JavaScript source.**
+*Note: You only need to follow these steps if you plan to edit the JavaScript source.*
 
 1. Install [NPM](https://npmjs.org/)
 2. Change to the assets directory
@@ -160,27 +160,28 @@ Marathon API can do.
     # Stop the app
     curl -X DELETE localhost:8080/v2/apps/app_123
 
-Start an app with constraints
+##### Example starting an app using constraints
 
+    # Start an app with a hostname uniqueness constraint
     curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
         localhost:8080/v2/apps \
         -d '{"id": "constraints", "cmd": "hostname && sleep 600", "instances": 10, "mem": 64, "cpus": 0.1, "constraints": [["hostname", "UNIQUE", ""]]}'
 
-#### The V1 API (Deprecated)
+### The V1 API (Deprecated)
 
 The V1 API was deprecated in Marathon v0.4.0 on 2014-01-24 but continues to work
 as it did before being deprecated. Details on the V1 API can be found in the
 [API documentation](REST.md).
 
-#### Running Chronos with the [Marathon Client](https://github.com/mesosphere/marathon_client):
-
-    marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
-        -C "./chronos/bin/demo ./chronos/config/nomail.yml \
-        ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
-
 ## Marathon Clients
 
 * [Ruby gem and command line client](https://rubygems.org/gems/marathon_client)
+
+    Running Chronos with the Ruby Marathon Client:
+
+        marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
+            -C "./chronos/bin/demo ./chronos/config/nomail.yml \
+            ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
 
 ## Help
