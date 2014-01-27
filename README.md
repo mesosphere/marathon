@@ -160,19 +160,19 @@ Marathon API can do.
     # Stop the app
     curl -X DELETE localhost:8080/v2/apps/app_123
 
-#### Start an app with constraints
+Start an app with constraints
 
     curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
         localhost:8080/v2/apps \
         -d '{"id": "constraints", "cmd": "hostname && sleep 600", "instances": 10, "mem": 64, "cpus": 0.1, "constraints": [["hostname", "UNIQUE", ""]]}'
 
-### The V1 API (Deprecated)
+#### The V1 API (Deprecated)
 
 The V1 API was deprecated in Marathon v0.4.0 on 2014-01-24 but continues to work
 as it did before being deprecated. Details on the V1 API can be found in the
 [API documentation](REST.md).
 
-### Running Chronos with the [Marathon Client](https://github.com/mesosphere/marathon_client):
+#### Running Chronos with the [Marathon Client](https://github.com/mesosphere/marathon_client):
 
     marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
         -C "./chronos/bin/demo ./chronos/config/nomail.yml \
