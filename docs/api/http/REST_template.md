@@ -2,8 +2,19 @@
 
 ## API Version 2
 
-========
-
+* [Apps](#apps)
+  * [POST /v2/apps](#post-v2apps) - Create and start a new app
+  * [GET /v2/apps](#get-v2apps) - List all running apps
+  * [GET /v2/apps/{app_id}](#get-v2appsapp_id) - List the app `app_id`
+  * [GET /v2/apps?cmd={command}](#get-v2appscmdcommand) - List the app with cmd `command`
+  * [PUT /v2/apps/{app_id}](#put-v2appsapp_id) - Change config of the app `app_id`
+  * [DELETE /v2/apps/{app_id}](#delete-v2appsapp_id) - Destroy app `app_id`
+  * [GET /v2/apps/{app_id}/tasks](#get-v2appsapp_idtasks) - List running tasks for app `app_id`
+  * [DELETE /v2/apps/{app_id}/tasks?host={host}&scale={true|false}](#delete-v2appsapp_idtaskshosthostscaletruefalse) - kill tasks belonging to app `app_id`
+  * [DELETE /v2/apps/{app_id}/tasks/{task_id}?scale={true|false}](#delete-v2appsapp_idtaskstask_idscaletruefalse) - Kill the task `task_id` that belongs to the application `app_id`
+* [Tasks](#tasks)
+  * [GET /v2/tasks](#get-v2tasks) - List all running tasks
+ 
 ### _Apps_
 
 #### POST `/v2/apps`
@@ -245,8 +256,6 @@ http --print=HB --ignore-stdin --pretty format GET localhost:8080/v2/tasks Accep
 http --print=hb --ignore-stdin --pretty format GET localhost:8080/v2/tasks Accept:text/plain
 
 ## API Version 1 _(DEPRECATED)_
-
-========
 
 ### _Apps_
 
