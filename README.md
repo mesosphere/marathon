@@ -86,7 +86,7 @@ The engineer may be temporarily embarrased, but Marathon saves him from having t
 
 #### Compiling Assets
 
-**Note: You only need to follow these steps if you plan to edit the JavaScript source.**
+*Note: You only need to follow these steps if you plan to edit the JavaScript source.*
 
 1. Install [NPM](https://npmjs.org/)
 2. Change to the assets directory
@@ -142,34 +142,46 @@ Run `./bin/start --help` for a full list of configuration options.
 
 ## REST API Usage
 
-### V1 API
+The full [API documentation](REST.md) shows details about everything the
+Marathon API can do.
 
-Using [HTTPie][HTTPie]:
+### Example using the V2 API
 
-    http POST localhost:8080/v1/apps/start id=app_123 cmd='sleep 600' instances=1 mem=128 cpus=1
-    http POST localhost:8080/v1/apps/scale id=app_123 instances=2
-    http POST localhost:8080/v1/apps/stop id=app_123
+    # Start an app with 128 MB memory, 1 CPU, and 1 instance
+    curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
+        localhost:8080/v2/apps \
+        -d '{"id": "app_123", "cmd": "sleep 600", "instances": 1, "mem": 128, "cpus": 1}'
 
-Using HTTPie with constraints:
+    # Scale the app to 2 instances
+    curl -X PUT -H "Accept: application/json" -H "Content-Type: application/json" \
+        localhost:8080/v2/apps/app_123 \
+        -d '{"instances": 2}'
 
-    http POST localhost:8080/v1/apps/start id=constraints cmd='hostname && sleep 600' \
-        instances=100 mem=64 cpus=0.1 constraints:='[["hostname", "UNIQUE", ""]]'
+    # Stop the app
+    curl -X DELETE localhost:8080/v2/apps/app_123
 
-### V2 API
+##### Example starting an app using constraints
 
-Using [HTTPie][HTTPie]:
+    # Start an app with a hostname uniqueness constraint
+    curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
+        localhost:8080/v2/apps \
+        -d '{"id": "constraints", "cmd": "hostname && sleep 600", "instances": 10, "mem": 64, "cpus": 0.1, "constraints": [["hostname", "UNIQUE", ""]]}'
 
-    http PUT localhost:8080/v2/apps/app_123 cmd='sleep 20' cpus=0.3 mem=9 instances=3
+### The V1 API (Deprecated)
 
-Running Chronos with the [Marathon Client](https://github.com/mesosphere/marathon_client):
-
-    marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
-        -C "./chronos/bin/demo ./chronos/config/nomail.yml \
-        ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
+The V1 API was deprecated in Marathon v0.4.0 on 2014-01-24 but continues to work
+as it did before being deprecated. Details on the V1 API can be found in the
+[API documentation](REST.md).
 
 ## Marathon Clients
 
 * [Ruby gem and command line client](https://rubygems.org/gems/marathon_client)
+
+    Running Chronos with the Ruby Marathon Client:
+
+        marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
+            -C "./chronos/bin/demo ./chronos/config/nomail.yml \
+            ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
 
 ## Help
@@ -192,7 +204,6 @@ Marathon was written by the team at [Mesosphere][Mesosphere] that also developed
 * [Connor Doyle](https://github.com/ConnorDoyle)
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
-[HTTPie]: https://github.com/jkbr/httpie "a CLI, cURL-like tool for humans"
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
 [Zookeeper]: https://zookeeper.apache.org/ "Apache Zookeeper"
 [Storm]: http://storm-project.net/ "distributed realtime computation"
