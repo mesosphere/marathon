@@ -10,7 +10,7 @@ import com.google.common.util.concurrent.AbstractExecutionThreadService
 import javax.inject.{Named, Inject}
 import java.util.{TimerTask, Timer}
 import scala.concurrent.{Future, ExecutionContext, Await}
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, MILLISECONDS}
 import java.util.concurrent.atomic.AtomicBoolean
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Group.JoinException
@@ -39,8 +39,13 @@ class MarathonSchedulerService @Inject()(
   import ExecutionContext.Implicits.global
 
   // Time to wait before trying to reconcile app tasks after driver starts
-  val registrationWait = Duration(60, "seconds")
-  val periodicWait = Duration(config.reconciliationPeriod(), "minutes")
+  val reconciliationInitialDelay =
+    Duration(config.reconciliationInitialDelay(), MILLISECONDS)
+
+  // Interval between task reconciliation operations
+  val reconciliationFrequency =
+    Duration(config.reconciliationFrequency(), MILLISECONDS)
+
   val reconciliationTimer = new Timer("reconciliationTimer")
 
   val log = Logger.getLogger(getClass.getName)
@@ -143,7 +148,7 @@ class MarathonSchedulerService @Inject()(
     if (leader.get) {
       runDriver()
     } else {
-      offerLeaderShip()
+      offerLeadership()
     }
   }
 
@@ -185,7 +190,7 @@ class MarathonSchedulerService @Inject()(
 
     // Don't offer leadership if we're shutting down
     if (isRunning) {
-      offerLeaderShip()
+      offerLeadership()
     }
   }
 
@@ -198,17 +203,14 @@ class MarathonSchedulerService @Inject()(
   //End Leader interface
 
   private def scheduleTaskReconciliation {
-    val task = new TimerTask {
-      def run() {
-        scheduler.reconcileTasks(driver)
-      }
-    }
-    reconciliationTimer.schedule(task,
-                                 new java.util.Date(System.currentTimeMillis + registrationWait.toMillis),
-                                 periodicWait.toMillis)
+    reconciliationTimer.schedule(
+      new TimerTask { def run() { scheduler.reconcileTasks(driver) }},
+      reconciliationInitialDelay.toMillis,
+      reconciliationFrequency.toMillis
+    )
   }
 
-  private def offerLeaderShip() {
+  private def offerLeadership() {
     if (candidate.nonEmpty) {
       log.info("Offering leadership.")
       candidate.get.offerLeadership(this)
