@@ -279,7 +279,7 @@ def scaleApp(driver: SchedulerDriver,
             taskTracker.expunge(app)
           }
         }
-        log.info("About to reconcile tasks with Mesos")
+        log.info("Requesting task reconciliation with the Mesos master")
         driver.reconcileTasks(buf.asJava)
       }
       case Failure(t) => {
