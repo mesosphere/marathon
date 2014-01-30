@@ -25,7 +25,10 @@ object Main extends App {
 
   def modules() = {
     Seq(
-      new HttpModule(conf),
+      new HttpModule(conf) {
+        // burst browser cache for assets
+        protected override val resourceCacheControlHeader = Some("max-age=0, must-revalidate")
+      },
       new MetricsModule,
       new MarathonModule(conf),
       new MarathonRestModule,
