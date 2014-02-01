@@ -32,7 +32,7 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
   var constraints: Set[Constraint] = Set()
 
   var uris: Seq[String] = Seq()
-  var ports: Seq[Int] = Nil
+  var ports: Seq[Int] = Seq(0)
   // Number of new tasks this app may spawn per second in response to
   // terminated tasks. This prevents frequently failing apps from spamming
   // the cluster.
