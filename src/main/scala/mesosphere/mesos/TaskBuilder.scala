@@ -67,8 +67,9 @@ class TaskBuilder (app: AppDefinition,
       executor match {
         case CommandExecutor() => {
           if (app.container.nonEmpty) {
-            log.warning("The command executor can not handle container options. " +
-                        "No tasks will be started for this appliction.")
+            log.warning("The command executor can not handle container " +
+                        "options. No tasks will be started for this " +
+                        "appliction.")
             return None
           }
           builder.setCommand(TaskBuilder.commandInfo(app, ports))
