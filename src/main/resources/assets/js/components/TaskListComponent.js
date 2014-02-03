@@ -33,6 +33,9 @@ define([
     getResource: function() {
       return this.props.collection;
     },
+    handleCheckboxClick: function(task, event) {
+      this.props.onTaskToggle(task, event.target.checked);
+    },
     handleTrClick: function(task, event) {
       // If the click happens on the checkbox, let the checkbox's onchange event
       // handler handle it and skip handling the event here.
@@ -43,7 +46,6 @@ define([
     mixins: [BackboneMixin],
     render: function() {
       var taskNodes;
-      var _this = this;
       var tasksLength = this.props.collection.length;
 
       // If there are no tasks, they can't all be selected. Otherwise, assume
@@ -79,7 +81,7 @@ define([
 
           // Expicitly check for Boolean since the key might not exist in the
           // object.
-          if (_this.props.selectedTasks[task.id] === true) {
+          if (this.props.selectedTasks[task.id] === true) {
             active = true;
             className = "active";
           } else {
@@ -87,18 +89,18 @@ define([
           }
 
           return (
-            <tr key={task.cid} className={className} onClick={_this.handleTrClick.bind(this, task)}>
+            <tr key={task.cid} className={className} onClick={this.handleTrClick.bind(this, task)}>
               <td width="1">
                 <input type="checkbox"
                   checked={active}
-                  onChange={_this.props.onTaskSelect.bind(this, task)} />
+                  onChange={this.handleCheckboxClick.bind(this, task)} />
               </td>
               <td>{task.get("id")}</td>
               <td>{task.get("host")}</td>
               <td>{task.get("ports").join(",")}</td>
             </tr>
           );
-        });
+        }, this);
       }
 
       return (
