@@ -4,6 +4,10 @@ define([
   "jquery",
   "React"
 ], function($, React) {
+  function modalSizeClassName(size) {
+    return (size == null) ? "" : "modal-" + size;
+  }
+
   return React.createClass({
     componentDidMount: function() {
       var _this = this;
@@ -20,12 +24,14 @@ define([
     },
     destroy: function(event) {
       var domNode = this.getDOMNode();
-      if (this.props.onDestroy != null) this.props.onDestroy();
-
-      // TODO(ssorallen): Why does this need to unmount from the parentNode?
-      // If it is unmounted from `domNode`, the second render throws an
-      // invariant exception.
+      this.props.onDestroy();
       React.unmountComponentAtNode(domNode.parentNode);
+    },
+    getDefaultProps: function() {
+      return {
+        onDestroy: $.noop,
+        size: null
+      };
     },
     onClick: function(event) {
       var $target = $(event.target);
@@ -35,10 +41,14 @@ define([
       }
     },
     render: function() {
+      var modalClassName =
+        "modal-dialog " + modalSizeClassName(this.props.size);
+
       return (
         <div>
-          <div className="modal fade" onClick={this.onClick} ref="modal">
-            <div className="modal-dialog">
+          <div className="modal fade" onClick={this.onClick} ref="modal"
+              role="dialog" aria-hidden="true" tabIndex="-1">
+            <div className={modalClassName}>
               <div className="modal-content">
                 {this.props.children}
               </div>

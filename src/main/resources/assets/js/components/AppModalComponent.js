@@ -92,7 +92,7 @@ define([
       }
 
       return (
-        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
+        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy} size="lg">
           <div className="modal-header">
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
