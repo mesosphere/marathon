@@ -6,8 +6,7 @@ define([
   "jsx!components/NewAppModalComponent"
 ], function(React, App, NewAppModalComponent) {
   return React.createClass({
-    saveModel: function(attributes) {
-      this.state.model.set(attributes);
+    saveModel: function() {
       this.props.collection.create(this.state.model, {wait: true});
     },
     showModal: function(event) {
