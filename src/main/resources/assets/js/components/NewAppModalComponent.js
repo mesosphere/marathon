@@ -68,7 +68,7 @@ define([
                 </label>
                 <div className="col-md-9">
                   <textarea style={{resize: "vertical"}} className="form-control"
-                    id="cmd-field" name="cmd" required>
+                    id="cmd-field" name="cmd">
                   </textarea>
                 </div>
               </div>
