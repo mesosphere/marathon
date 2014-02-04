@@ -227,10 +227,10 @@ class MarathonScheduler @Inject()(
     }
   }
 
-@deprecated("The scale operation has been subsumed by update in the v2 API.")
-def scaleApp(driver: SchedulerDriver,
-             app: AppDefinition,
-             applyNow: Boolean): Future[_] = {
+  @deprecated("The scale operation has been subsumed by update in the v2 API.")
+  def scaleApp(driver: SchedulerDriver,
+               app: AppDefinition,
+               applyNow: Boolean): Future[_] = {
     store.fetch(app.id).flatMap {
       case Some(storedApp) => {
         storedApp.instances = app.instances
@@ -280,6 +280,7 @@ def scaleApp(driver: SchedulerDriver,
           }
         }
         log.info("Requesting task reconciliation with the Mesos master")
+        log.finest(s"Tasks to reconcile: $buf")
         driver.reconcileTasks(buf.asJava)
       }
       case Failure(t) => {
