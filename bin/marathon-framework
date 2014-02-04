@@ -42,7 +42,10 @@ function load_options_and_log {
     while read -u 9 -r -d '' path
     do
       local name="${path#./}"
-      cmd+=( "--$name" "$(cat "$conf_dir/$name")" )
+      case "$name" in
+        '?'*) cmd+=( "--${name#'?'}" ) ;;
+        *)    cmd+=( "--$name" "$(cat "$conf_dir/$name")" ) ;;
+      esac
     done 9< <(cd "$conf_dir" && find . -type f -not -name '.*' -print0)
   fi
   logged marathon "${cmd[@]}" "$@"

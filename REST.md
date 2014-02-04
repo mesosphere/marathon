@@ -3,7 +3,23 @@
 
 ## API Version 2
 
-========
+* [Apps](#apps)
+  * [POST /v2/apps](#post-v2apps): Create and start a new app
+  * [GET /v2/apps](#get-v2apps): List all running apps
+  * [GET /v2/apps/{app_id}](#get-v2appsapp_id): List the app `app_id`
+  * [GET /v2/apps?cmd={command}](#get-v2appscmdcommand): List all running
+    apps, filtered by `command`
+  * [PUT /v2/apps/{app_id}](#put-v2appsapp_id): Change config of the app
+    `app_id`
+  * [DELETE /v2/apps/{app_id}](#delete-v2appsapp_id): Destroy app `app_id`
+  * [GET /v2/apps/{app_id}/tasks](#get-v2appsapp_idtasks): List running tasks
+    for app `app_id`
+  * [DELETE /v2/apps/{app_id}/tasks?host={host}&scale={true|false}](#delete-v2appsapp_idtaskshosthostscaletruefalse):
+    kill tasks belonging to app `app_id`
+  * [DELETE /v2/apps/{app_id}/tasks/{task_id}?scale={true|false}](#delete-v2appsapp_idtaskstask_idscaletruefalse):
+    Kill the task `task_id` that belongs to the application `app_id`
+* [Tasks](#tasks)
+  * [GET /v2/tasks](#get-v2tasks): List all running tasks
 
 ### _Apps_
 
@@ -15,37 +31,46 @@ The full JSON format of an application resource is as follows:
 
 ```json
 {
-    "cmd": "(env && sleep 300)", 
+    "cmd": "(env && sleep 300)",
     "constraints": [
         ["attribute", "OPERATOR", "value"]
-    ], 
+    ],
     "container": {
         "image": "docker:///zaiste/postgresql",
         "options": ["-e", "X=7"]
-    }, 
-    "cpus": 2, 
+    },
+    "cpus": 2,
     "env": {
         "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
-    }, 
-    "executor": "", 
-    "id": "myApp", 
-    "instances": 3, 
-    "mem": 256.0, 
+    },
+    "executor": "",
+    "id": "myApp",
+    "instances": 3,
+    "mem": 256.0,
     "ports": [
-        8080, 
+        8080,
         9000
-    ], 
+    ],
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
     ]
 }
 ```
 
-_Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER", "GROUP_BY"].  For additional information on using placement constraints see [Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.io/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
+_Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER",
+"GROUP_BY"].  For additional information on using placement constraints see
+[Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.io/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
 
-_Container:_ Additional data passed to the container on application launch.  These consist of an "image" and an array of string options.  The meaning of this data is fully dependent upon the executor.  Furthermore, _it is invalid to pass container options when using the default command executor_.
+_Container:_ Additional data passed to the container on application launch.
+These consist of an "image" and an array of string options.  The meaning of
+this data is fully dependent upon the executor.  Furthermore, _it is invalid to
+pass container options when using the default command executor_.
 
-_Ports:_ An array of required port resources on the host.  To generate one or more arbitrary free ports for each application instance, pass zeros as port values.  Each port value is exposed to the instance via environment variables `$PORT0`, `$PORT1`, etc.  Ports assigned to running instances are also available via the task resource.
+_Ports:_ An array of required port resources on the host.  To generate one or
+more arbitrary free ports for each application instance, pass zeros as port
+values.  Each port value is exposed to the instance via environment variables
+`$PORT0`, `$PORT1`, etc.  Ports assigned to running instances are also
+available via the task resource.
 
 ##### Example
 
@@ -146,8 +171,8 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                11813, 
-                11833
+                12899, 
+                17655
             ], 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -204,19 +229,19 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            11813, 
-            11833
+            12899, 
+            17655
         ], 
         "tasks": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1390600330763", 
+                "id": "myApp_0-1391462472402", 
                 "ports": [
-                    31740, 
-                    31741
+                    31182, 
+                    31183
                 ], 
-                "stagedAt": "2014-01-24T21:52+0000", 
-                "startedAt": "2014-01-24T21:52+0000"
+                "stagedAt": "2014-02-03T21:21+0000", 
+                "startedAt": "2014-02-03T21:21+0000"
             }
         ], 
         "uris": [
@@ -228,7 +253,7 @@ Transfer-Encoding: chunked
 
 #### GET `/v2/apps?cmd={command}`
 
-List the application with id `app_id`.
+List all running applications, filtered by `command`.
 
 ##### Example
 
@@ -274,8 +299,8 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                11813, 
-                11833
+                12899, 
+                17655
             ], 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -287,7 +312,9 @@ Transfer-Encoding: chunked
 
 #### PUT `/v2/apps/{app_id}`
 
-Change parameters of a running application.  The new application parameters apply only to subsequently created tasks, and currently running tasks are __not__ pre-emptively restarted.
+Change parameters of a running application.  The new application parameters
+apply only to subsequently created tasks, and currently running tasks are
+__not__ pre-emptively restarted.
 
 ##### Example
 
@@ -394,13 +421,33 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1390600359808", 
+            "id": "myApp_2-1391462507485", 
             "ports": [
-                31805, 
-                31806
+                31991, 
+                31992
             ], 
-            "stagedAt": "2014-01-24T21:52+0000", 
-            "startedAt": "2014-01-24T21:52+0000"
+            "stagedAt": "2014-02-03T21:21+0000", 
+            "startedAt": null
+        }, 
+        {
+            "host": "mesos.vm", 
+            "id": "myApp_1-1391462501474", 
+            "ports": [
+                31943, 
+                31944
+            ], 
+            "stagedAt": "2014-02-03T21:21+0000", 
+            "startedAt": "2014-02-03T21:21+0000"
+        }, 
+        {
+            "host": "mesos.vm", 
+            "id": "myApp_1-1391462502479", 
+            "ports": [
+                31952, 
+                31953
+            ], 
+            "stagedAt": "2014-02-03T21:21+0000", 
+            "startedAt": "2014-02-03T21:21+0000"
         }
     ]
 }
@@ -428,16 +475,20 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	14140	mesos.vm:31280	mesos.vm:31964	mesos.vm:31805	
-myApp	16878	mesos.vm:31281	mesos.vm:31965	mesos.vm:31806	
+myApp	14277	mesos.vm:31991	mesos.vm:31943	mesos.vm:31952	
+myApp	13887	mesos.vm:31992	mesos.vm:31944	mesos.vm:31953	
 
 ```
 
 #### DELETE `/v2/apps/{app_id}/tasks?host={host}&scale={true|false}`
 
-Kill tasks that belong to the application `app_id`, optionally filtered by the task's `host`.
+Kill tasks that belong to the application `app_id`, optionally filtered by the
+task's `host`.
 
-The query parameters `host` and `scale` are both optional.  If `host` is specified, only tasks running on the supplied slave are killed.  If `scale=true` is specified, then the application is scaled down by the number of killed tasks.  The `scale` parameter defaults to `false`.
+The query parameters `host` and `scale` are both optional.  If `host` is
+specified, only tasks running on the supplied slave are killed.  If
+`scale=true` is specified, then the application is scaled down by the number of
+killed tasks.  The `scale` parameter defaults to `false`.
 
 ##### Example
 
@@ -467,22 +518,12 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1390600375829", 
+            "id": "myApp_0-1391462518505", 
             "ports": [
-                31556, 
-                31557
+                31880, 
+                31881
             ], 
-            "stagedAt": "2014-01-24T21:52+0000", 
-            "startedAt": null
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_1-1390600376833", 
-            "ports": [
-                31254, 
-                31255
-            ], 
-            "stagedAt": "2014-01-24T21:52+0000", 
+            "stagedAt": "2014-02-03T21:21+0000", 
             "startedAt": null
         }
     ]
@@ -493,7 +534,9 @@ Transfer-Encoding: chunked
 
 Kill the task with ID `task_id` that belongs to the application `app_id`.
 
-The query parameter `scale` is optional.  If `scale=true` is specified, then the application is scaled down one if the supplied `task_id` exists.  The `scale` parameter defaults to `false`.
+The query parameter `scale` is optional.  If `scale=true` is specified, then
+the application is scaled down one if the supplied `task_id` exists.  The
+`scale` parameter defaults to `false`.
 
 ##### Example
 
@@ -519,13 +562,13 @@ Transfer-Encoding: chunked
 
 {
     "task": {
-        "host": "mesos.vm", 
-        "id": "myApp_3-1389916890411", 
+        "host": "mesos.vm",
+        "id": "myApp_3-1389916890411",
         "ports": [
-            31509, 
+            31509,
             31510
-        ], 
-        "stagedAt": "2014-01-17T00:01+0000", 
+        ],
+        "stagedAt": "2014-01-17T00:01+0000",
         "startedAt": "2014-01-17T00:01+0000"
     }
 }
@@ -565,13 +608,24 @@ Transfer-Encoding: chunked
         {
             "appId": "myApp", 
             "host": "mesos.vm", 
-            "id": "myApp_0-1390600378835", 
+            "id": "myApp_0-1391462520504", 
             "ports": [
-                31895, 
-                31896
+                31238, 
+                31239
             ], 
-            "stagedAt": "2014-01-24T21:52+0000", 
-            "startedAt": "2014-01-24T21:53+0000"
+            "stagedAt": "2014-02-03T21:22+0000", 
+            "startedAt": "2014-02-03T21:22+0000"
+        }, 
+        {
+            "appId": "myApp", 
+            "host": "mesos.vm", 
+            "id": "myApp_1-1391462525519", 
+            "ports": [
+                31057, 
+                31058
+            ], 
+            "stagedAt": "2014-02-03T21:22+0000", 
+            "startedAt": null
         }
     ]
 }
@@ -599,14 +653,12 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	14140	mesos.vm:31931	mesos.vm:31997	mesos.vm:31895	
-myApp	16878	mesos.vm:31932	mesos.vm:31998	mesos.vm:31896	
+myApp	14277	mesos.vm:31028	mesos.vm:31238	mesos.vm:31057	
+myApp	13887	mesos.vm:31029	mesos.vm:31239	mesos.vm:31058	
 
 ```
 
 ## API Version 1 _(DEPRECATED)_
-
-========
 
 ### _Apps_
 
@@ -690,8 +742,8 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            19967, 
-            14444
+            12613, 
+            17540
         ], 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -801,8 +853,8 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            12836, 
-            13072
+            15491, 
+            12322
         ], 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -846,8 +898,8 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            12836, 
-            13072
+            15491, 
+            12322
         ], 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -885,34 +937,34 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1390600430909", 
+            "id": "myApp_0-1391462555560", 
             "ports": [
-                31995, 
-                31996
+                31838, 
+                31839
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1390600424903", 
+            "id": "myApp_3-1391462572596", 
             "ports": [
-                31993, 
-                31994
+                31780, 
+                31781
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1390600418897", 
+            "id": "myApp_1-1391462561569", 
             "ports": [
-                31989, 
-                31990
+                31622, 
+                31623
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1390600412889", 
+            "id": "myApp_2-1391462567582", 
             "ports": [
-                31912, 
-                31913
+                31961, 
+                31962
             ]
         }
     ]
@@ -952,32 +1004,32 @@ Transfer-Encoding: chunked
         "instances": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_3-1390600430909", 
+                "id": "myApp_0-1391462555560", 
                 "ports": [
-                    31995, 
-                    31996
+                    31838, 
+                    31839
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_2-1390600424903", 
+                "id": "myApp_3-1391462572596", 
                 "ports": [
-                    31993, 
-                    31994
+                    31780, 
+                    31781
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1390600412889", 
+                "id": "myApp_2-1391462567582", 
                 "ports": [
-                    31912, 
-                    31913
+                    31961, 
+                    31962
                 ]
             }
         ], 
         "ports": [
-            12836, 
-            13072
+            15491, 
+            12322
         ]
     }
 ]
@@ -1005,8 +1057,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_12836 12836 mesos.vm:31995 mesos.vm:31993 mesos.vm:31912 
-myApp_13072 13072 mesos.vm:31996 mesos.vm:31994 mesos.vm:31913 
+myApp_15491 15491 mesos.vm:31780 mesos.vm:31838 mesos.vm:31961 
+myApp_12322 12322 mesos.vm:31781 mesos.vm:31839 mesos.vm:31962 
 
 ```
 
@@ -1040,32 +1092,32 @@ Transfer-Encoding: chunked
     "instances": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1390600430909", 
+            "id": "myApp_0-1391462555560", 
             "ports": [
-                31995, 
-                31996
+                31838, 
+                31839
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1390600424903", 
+            "id": "myApp_3-1391462572596", 
             "ports": [
-                31993, 
-                31994
+                31780, 
+                31781
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1390600412889", 
+            "id": "myApp_2-1391462567582", 
             "ports": [
-                31912, 
-                31913
+                31961, 
+                31962
             ]
         }
     ], 
     "ports": [
-        12836, 
-        13072
+        15491, 
+        12322
     ]
 }
 ```
@@ -1092,8 +1144,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_12836 12836 mesos.vm:31995 mesos.vm:31993 mesos.vm:31912 
-myApp_13072 13072 mesos.vm:31996 mesos.vm:31994 mesos.vm:31913 
+myApp_15491 15491 mesos.vm:31780 mesos.vm:31838 mesos.vm:31961 
+myApp_12322 12322 mesos.vm:31781 mesos.vm:31839 mesos.vm:31962 
 
 ```
 
@@ -1128,26 +1180,26 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1390600430909", 
+            "id": "myApp_0-1391462555560", 
             "ports": [
-                31995, 
-                31996
+                31838, 
+                31839
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1390600424903", 
+            "id": "myApp_3-1391462572596", 
             "ports": [
-                31993, 
-                31994
+                31780, 
+                31781
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1390600412889", 
+            "id": "myApp_2-1391462567582", 
             "ports": [
-                31912, 
-                31913
+                31961, 
+                31962
             ]
         }
     ]
