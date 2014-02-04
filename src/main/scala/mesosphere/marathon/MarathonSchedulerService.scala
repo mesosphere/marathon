@@ -75,11 +75,7 @@ class MarathonSchedulerService @Inject()(
   def startApp(app: AppDefinition): Future[_] = {
     // Backwards compatibility
     val oldPorts = app.ports
-    val newPorts = if (oldPorts == Nil) {
-      Seq(newAppPort(app))
-    } else {
-      oldPorts.map(port => if (port == 0) newAppPort(app) else port)
-    }
+    val newPorts = oldPorts.map(p => if (p == 0) newAppPort(app) else p)
 
     if (oldPorts != newPorts) {
       val asMsg = Seq(oldPorts, newPorts).map("[" + _.mkString(", ") + "]")
