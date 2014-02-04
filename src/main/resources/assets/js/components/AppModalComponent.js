@@ -3,9 +3,13 @@
 define([
   "React",
   "jsx!components/ModalComponent",
+  "jsx!components/TabPaneComponent",
   "jsx!components/TaskListComponent",
+  "jsx!components/TogglableTabsComponent",
   "mixins/BackboneMixin"
-], function(React, ModalComponent, TaskListComponent, BackboneMixin) {
+], function(React, ModalComponent, TabPaneComponent,
+    TaskListComponent, TogglableTabsComponent, BackboneMixin) {
+
   return React.createClass({
     destroy: function() {
       this.refs.modalComponent.destroy();
@@ -91,27 +95,88 @@ define([
           </p>;
       }
 
+      var cmdNode = (model.get("cmd") == null) ?
+        <dd className="text-muted">None</dd> :
+        <dd>{model.get("cmd")}</dd>;
+      var constraintsNode = (model.get("constraints").length < 1) ?
+        <dd className="text-muted">None</dd> :
+        <dd>
+          {model.get("constraints").map(function(c) {
+            return c.join(":");
+          }).join("<br />")}
+        </dd>;
+      var containerNode = (model.get("container") == null) ?
+        <dd className="text-muted">None</dd> :
+        <dd>{model.get("container")}</dd>;
+      var envNode = (Object.keys(model.get("env")).length === 0) ?
+        <dd className="text-muted">None</dd> :
+        <dd>
+          {Object.keys(model.get("env")).map(function(k) {
+            return k + "=" + model.get("env")[k]
+          }).join("<br />")}
+        </dd>;
+      var executorNode = (model.get("executor") === "") ?
+        <dd className="text-muted">None</dd> :
+        <dd>{model.get("executor")}</dd>;
+      var portsNode = (model.get("ports").length === 0 ) ?
+        <dd className="text-muted">None</dd> :
+        <dd>{model.get("ports").join(",")}</dd>;
+      var urisNode = (model.get("uris").length === 0) ?
+        <dd className="text-muted">None</dd> :
+        <dd>{model.get("uris").join("<br />")}</dd>
+
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy} size="lg">
           <div className="modal-header">
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
             <h3 className="modal-title">{model.get("id")}</h3>
+            <ul className="list-inline">
+              <li>
+                <span className="text-info">Instances </span>
+                <span className="badge">{model.get("instances")}</span>
+              </li>
+              <li>
+                <span className="text-info">CPUs </span>
+                <span className="badge">{model.get("cpus")}</span>
+              </li>
+              <li>
+                <span className="text-info">Memory </span>
+                <span className="badge">{model.get("mem")} MB</span>
+              </li>
+            </ul>
           </div>
-          <div className="modal-body">
-            <dl className="dl-horizontal">
-              <dt>CMD:</dt><dd>{model.get("cmd")}</dd>
-              <dt>URIs:</dt><dd>{model.get("uris").length}</dd>
-              <dt>Memory (MB):</dt><dd>{model.get("mem")}</dd>
-              <dt>CPUs:</dt><dd>{model.get("cpus")}</dd>
-              <dt>Instances:</dt><dd>{model.get("instances")}</dd>
-            </dl>
-            {buttons}
-            <TaskListComponent collection={model.tasks}
-              ref="taskList" selectedTasks={this.state.selectedTasks}
-              onAllTasksToggle={this.toggleAllTasks}
-              onTaskToggle={this.toggleTask} />
-          </div>
+          <TogglableTabsComponent className="modal-body"
+              tabs={[
+                {id: "tasks", text: "Tasks"},
+                {id: "configuration", text: "Configuration"}
+              ]}>
+            <TabPaneComponent id="tasks">
+              {buttons}
+              <TaskListComponent collection={model.tasks}
+                ref="taskList" selectedTasks={this.state.selectedTasks}
+                onAllTasksToggle={this.toggleAllTasks}
+                onTaskToggle={this.toggleTask} />
+            </TabPaneComponent>
+            <TabPaneComponent id="configuration">
+              <dl className="dl-horizontal">
+                <dt>Command</dt>
+                {cmdNode}
+                <dt>Constraints</dt>
+                {constraintsNode}
+                <dt>Container</dt>
+                {containerNode}
+                <dt>Environment</dt>
+                {envNode}
+                <dt>Executor</dt>
+                {executorNode}
+                <dt>Ports</dt>
+                {portsNode}
+                <dt>URIs</dt>
+                {urisNode}
+              </dl>
+            </TabPaneComponent>
+          </TogglableTabsComponent>
           <div className="modal-footer">
             <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
               DESTROY

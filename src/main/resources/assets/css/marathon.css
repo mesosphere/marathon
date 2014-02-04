@@ -51,6 +51,10 @@ th {
   font-weight: 200;
 }
 
+.badge {
+  background-color: #555;
+}
+
 .close,
 .close:focus,
 .close:hover {
@@ -58,22 +62,6 @@ th {
   font-weight: 200;
   opacity: 1;
   text-shadow: none;
-}
-
-.dl-horizontal {
-  /* Contain the floats */
-  overflow: hidden;
-}
-
-.dl-horizontal dt {
-  width: auto;
-}
-
-@media (min-width: 768px) {
-  .dl-horizontal dd {
-    float: left;
-    margin-left: 0.5em;
-  }
 }
 
 .modal {
@@ -94,6 +82,7 @@ th {
   background-color: #222224;
 }
 
+
 .has-error .help-block,
 .has-error .control-label,
 .has-error .radio,
@@ -101,6 +90,41 @@ th {
 .has-error .radio-inline,
 .has-error .checkbox-inline {
   color: #F98482;
+}
+
+.nav-tabs {
+  border-bottom-color: #444;
+  margin-bottom: 20px;
+  margin-left: -20px;
+  margin-right: -20px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.nav-tabs > li > a {
+  color: #aaa;
+  line-height: 1.1;
+}
+
+.nav-tabs > li > a:hover {
+  color: #444;
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+  background-color: transparent;
+  border-color: #444;
+  border-bottom-color: #222224;
+  color: #FFF;
+}
+
+.list-inline > li {
+  margin-right: 10px;
+}
+
+.text-info {
+  color: #B8E8EF;
 }
 
 /* ==============
