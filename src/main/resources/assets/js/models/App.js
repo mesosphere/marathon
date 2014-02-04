@@ -56,7 +56,11 @@ define([
       }
 
       if (!_.isString(attrs.cmd) || attrs.cmd.length < 1) {
-        errors.push("Cmd must be a non-empty String");
+        // Prevent erroring out on UPDATE operations like scale/suspend. 
+        // If cmd string is empty, then don't error out, if an executor and container are provide.
+        if (!_.isString(attrs.executor) || attrs.executor.length < 1 || !attrs.container || !_.isString(attrs.container.image) || attrs.container.image.length < 1 || attrs.container.image.indexOf('docker') != 0) {
+          errors.push("Cmd must be a non-empty String, if executor and container image are not provided");
+        }
       }
 
       if (errors.length > 0) return errors;
