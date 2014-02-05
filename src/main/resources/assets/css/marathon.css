@@ -55,7 +55,7 @@ th {
 .close:focus,
 .close:hover {
   color: #ffffff;
-  font-weight: normal;
+  font-weight: 200;
   opacity: 1;
   text-shadow: none;
 }
