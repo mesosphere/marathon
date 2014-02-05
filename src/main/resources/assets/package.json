@@ -1,6 +1,6 @@
 {
   "name": "marathon-assets",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Static assets for Mesosphere's Marathon.",
   "main": "js/main.js",
   "scripts": {
@@ -10,8 +10,6 @@
     "marathon",
     "mesos"
   ],
-  "author": "Ross Allen",
-  "license": "BSD-2-Clause",
   "dependencies": {},
   "devDependencies": {
     "envify": "~0.2.0",
