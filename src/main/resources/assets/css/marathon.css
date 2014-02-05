@@ -25,19 +25,19 @@
 body {
   background: #111113;
   color: #ffffff;
-  font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 200;
 }
 
-h1,
-h2,
-h3,
-h4 {
+h1, .h1,
+h2, .h2,
+h3, .h3,
+h4, .h4 {
   font-family: Lato;
-  font-weight: 300;
   color: #ffffff;
 }
 
-h1 {
+h1, .h1 {
   text-transform: uppercase;
 }
 
@@ -45,8 +45,10 @@ hr {
   border-color: #333;
 }
 
+dt,
 th {
   color: #B8E8EF;
+  font-weight: 200;
 }
 
 .close,
@@ -56,10 +58,6 @@ th {
   font-weight: normal;
   opacity: 1;
   text-shadow: none;
-}
-
-dt {
-  color: #B8E8EF;
 }
 
 .dl-horizontal {
@@ -119,21 +117,19 @@ dt {
 
 .control-label {
   color: #B8E8EF;
-  font-family: Lato;
+  font-weight: 200;
   text-transform: uppercase;
 }
 
 .form-control {
   background: transparent;
   border-color: rgba(133, 133, 133, 0.1);
-  font-family: Lato;
   color: white;
   box-shadow: inset 0 4px 4px rgba(0,0,0,0.3);
 }
 
 .btn {
   border-radius: 0;
-  font-family: Lato;
   text-transform: uppercase;
 }
 

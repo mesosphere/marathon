@@ -64,7 +64,7 @@ define([
                 ID {(comparator === "id") ? "▼" : null}
               </th>
               <th onClick={this.sortCollectionBy.bind(this, "cmd")}>
-                CMD {(comparator === "cmd") ? "▼" : null}
+                Command {(comparator === "cmd") ? "▼" : null}
               </th>
               <th onClick={this.sortCollectionBy.bind(this, "mem")} className="text-right">
                 {(comparator === "mem") ? "▼" : null} Memory (MB)
