@@ -92,7 +92,7 @@ define([
       }
 
       return (
-        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
+        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy} size="lg">
           <div className="modal-header">
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
@@ -110,7 +110,6 @@ define([
             <TaskListComponent collection={model.tasks}
               ref="taskList" selectedTasks={this.state.selectedTasks}
               onAllTasksToggle={this.toggleAllTasks}
-              onTaskSelect={this.selectTask}
               onTaskToggle={this.toggleTask} />
           </div>
           <div className="modal-footer">
@@ -144,9 +143,6 @@ define([
           alert("Not scaling: " + model.validationError[0]);
         }
       }
-    },
-    selectTask: function(task, event) {
-      this.toggleTask(task, event.target.checked);
     },
     toggleAllTasks: function() {
       var newSelectedTasks = {};

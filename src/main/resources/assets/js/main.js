@@ -19,9 +19,22 @@ require.config({
 });
 
 require([
-  "jsx!bootstrap"
-], function() {
-  // We be bootstrappin'. The bootstrapping can't happen here because it needs
-  // to be rendered as JSX. RequireJS's "data-main" is always loaded as type
-  // "text/javascript", which won't work here.
+  "React",
+  "models/AppCollection",
+  "jsx!components/AppListComponent",
+  "jsx!components/NewAppButtonComponent"
+], function(React, AppCollection, AppListComponent, NewAppButtonComponent) {
+  var appCollection = new AppCollection();
+
+  React.renderComponent(
+    NewAppButtonComponent({collection: appCollection}),
+    document.getElementById("new-app-button-container")
+  );
+
+  React.renderComponent(
+    AppListComponent({collection: appCollection}),
+    document.getElementById("job-list")
+  );
+
+  appCollection.fetch({reset: true});
 });
