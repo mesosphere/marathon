@@ -15,11 +15,12 @@ define([
         constraints: [],
         container: null,
         cpus: 0.1,
+        env: {},
         executor: "",
         id: _.uniqueId("app_"),
         instances: 1,
-        mem: 10.0,
-        ports: [],
+        mem: 16.0,
+        ports: [0],
         uris: []
       };
     },
