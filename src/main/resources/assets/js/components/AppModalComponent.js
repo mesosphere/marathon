@@ -100,21 +100,27 @@ define([
         <dd>{model.get("cmd")}</dd>;
       var constraintsNode = (model.get("constraints").length < 1) ?
         <dd className="text-muted">None</dd> :
-        <dd>
-          {model.get("constraints").map(function(c) {
-            return c.join(":");
-          }).join("<br />")}
-        </dd>;
+        model.get("constraints").map(function(c) {
+
+          // Only include constraint parts if they are not empty Strings. For
+          // example, a hostname uniqueness constraint looks like:
+          //
+          //     ["hostname", "UNIQUE", ""]
+          //
+          // it should print "hostname:UNIQUE" instead of "hostname:UNIQUE:", no
+          // trailing colon.
+          return <dd>{c.filter(function(s) { return s !== ""; }).join(":")}</dd>;
+        });
       var containerNode = (model.get("container") == null) ?
         <dd className="text-muted">None</dd> :
         <dd>{model.get("container")}</dd>;
       var envNode = (Object.keys(model.get("env")).length === 0) ?
         <dd className="text-muted">None</dd> :
-        <dd>
-          {Object.keys(model.get("env")).map(function(k) {
-            return k + "=" + model.get("env")[k]
-          }).join("<br />")}
-        </dd>;
+
+        // Print environment variables as key value pairs like "key=value"
+        Object.keys(model.get("env")).map(function(k) {
+          return <dd>{k + "=" + model.get("env")[k]}</dd>
+        });
       var executorNode = (model.get("executor") === "") ?
         <dd className="text-muted">None</dd> :
         <dd>{model.get("executor")}</dd>;
@@ -123,7 +129,9 @@ define([
         <dd>{model.get("ports").join(",")}</dd>;
       var urisNode = (model.get("uris").length === 0) ?
         <dd className="text-muted">None</dd> :
-        <dd>{model.get("uris").join("<br />")}</dd>
+        model.get("uris").map(function(u) {
+          return <dd>{u}</dd>;
+        });
 
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy} size="lg">

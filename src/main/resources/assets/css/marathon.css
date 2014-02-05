@@ -69,19 +69,19 @@ th {
 }
 
 .modal-footer {
-  border-bottom: 7px solid rgb(60, 114, 157);
   border-top: none;
   margin-top: 0;
+  padding-top: 0;
 }
 
 .modal-header {
   border-bottom: none;
+  padding-bottom: 0;
 }
 
 .modal-content {
   background-color: #222224;
 }
-
 
 .has-error .help-block,
 .has-error .control-label,
@@ -108,6 +108,19 @@ th {
 
 .nav-tabs > li > a:hover {
   color: #444;
+}
+
+.table > thead > tr > th {
+  border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+.table > thead > tr > th,
+.table > tbody > tr > th,
+.table > tfoot > tr > th,
+.table > thead > tr > td,
+.table > tbody > tr > td,
+.table > tfoot > tr > td {
+  border-top-color: rgba(255, 255, 255, 0.3);
 }
 
 .nav-tabs > li.active > a,
