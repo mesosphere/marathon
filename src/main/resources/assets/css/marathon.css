@@ -34,7 +34,6 @@ h2, .h2,
 h3, .h3,
 h4, .h4 {
   font-family: Lato;
-  color: #ffffff;
 }
 
 h1, .h1 {
@@ -52,7 +51,8 @@ th {
 }
 
 .badge {
-  background-color: #555;
+  background-color: #B8E8EF;
+  color: #333;
 }
 
 .close,
