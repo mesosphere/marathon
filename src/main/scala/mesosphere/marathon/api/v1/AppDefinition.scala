@@ -2,16 +2,20 @@ package mesosphere.marathon.api.v1
 
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.{ContainerInfo, Protos}
-import scala.collection.mutable
-import scala.collection.JavaConverters._
-import org.hibernate.validator.constraints.NotEmpty
 import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import javax.validation.constraints.Pattern
-import com.fasterxml.jackson.annotation.{JsonInclude, JsonIgnoreProperties}
+import org.hibernate.validator.constraints.NotEmpty
+import org.apache.mesos.Protos.TaskState
+import com.fasterxml.jackson.annotation.{
+  JsonInclude,
+  JsonIgnoreProperties,
+  JsonProperty
+}
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-
+import scala.collection.mutable
+import scala.collection.JavaConverters._
 
 /**
  * @author Tobi Knaup
@@ -43,6 +47,18 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
 
   @JsonDeserialize(contentAs = classOf[ContainerInfo])
   var container: Option[ContainerInfo] = None
+
+  @JsonProperty()
+  def tasksStaged(): Int = tasks.count { task =>
+    task.getStagedAt != 0 &&
+    task.getStartedAt == 0
+  }
+
+  @JsonProperty()
+  def tasksRunning(): Int = tasks.count { task =>
+    val statusList = task.getStatusesList.asScala
+    statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
+  }
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
