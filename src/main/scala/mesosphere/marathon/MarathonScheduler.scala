@@ -227,7 +227,7 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  @deprecated("The scale operation has been subsumed by update in the v2 API.")
+  @deprecated("The scale operation has been subsumed by update in the v2 API.", "0.4.0")
   def scaleApp(driver: SchedulerDriver,
                app: AppDefinition,
                applyNow: Boolean): Future[_] = {

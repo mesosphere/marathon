@@ -31,7 +31,7 @@ class LeaderProxyFilter @Inject()
     val bytes = new Array[Byte](1024)
     Iterator
       .continually(input.read(bytes))
-      .takeWhile(-1 !=)
+      .takeWhile(_ != -1)
       .foreach(read => output.write(bytes, 0, read))
   }
 

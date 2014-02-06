@@ -1,8 +1,7 @@
 package mesosphere.util
 
 import scala.concurrent._
-import scala.Some
-
+import scala.language.implicitConversions
 
 object BackToTheFuture {
 

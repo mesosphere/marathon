@@ -220,6 +220,7 @@
                             <args>
                                 <param>-unchecked</param>
                                 <param>-deprecation</param>
+                                <param>-feature</param>
                                 <param>-encoding</param>
                                 <param>utf8</param>
                             </args>
