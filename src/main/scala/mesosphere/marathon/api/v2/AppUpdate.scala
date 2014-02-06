@@ -14,25 +14,27 @@ import scala.collection.mutable
 //       used in MarathonScheduler.
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-class AppUpdate {
+case class AppUpdate(
 
-  var cmd: Option[String] = None
+  cmd: Option[String] = None,
 
   @JsonDeserialize(contentAs = classOf[java.lang.Integer])
-  var instances: Option[Int] = None
+  instances: Option[Int] = None,
 
   @JsonDeserialize(contentAs = classOf[java.lang.Double])
-  var cpus: Option[Double] = None
+  cpus: Option[Double] = None,
 
   @JsonDeserialize(contentAs = classOf[java.lang.Double])
-  var mem: Option[Double] = None
+  mem: Option[Double] = None,
 
-  var uris: Option[Seq[String]] = None
+  uris: Option[Seq[String]] = None,
 
-  var constraints: Option[Set[Constraint]] = None
+  constraints: Option[Set[Constraint]] = None,
 
   @JsonDeserialize(contentAs = classOf[ContainerInfo])
-  var container: Option[ContainerInfo] = None
+  container: Option[ContainerInfo] = None
+
+) {
 
   /**
    * Returns the supplied [[AppDefinition]] after updating its members

@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v1
 
 import mesosphere.marathon.Protos.MarathonTask
+import scala.language.implicitConversions
 
 /**
  * Implicits for the API
