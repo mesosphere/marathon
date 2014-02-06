@@ -155,7 +155,6 @@ th {
 .control-label {
   color: #B8E8EF;
   font-weight: 200;
-  text-transform: uppercase;
 }
 
 .form-control {
@@ -167,7 +166,6 @@ th {
 
 .btn {
   border-radius: 0;
-  text-transform: uppercase;
 }
 
 .btn-link {

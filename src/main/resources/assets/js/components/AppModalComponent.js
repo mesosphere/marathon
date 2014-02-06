@@ -187,14 +187,14 @@ define([
           </TogglableTabsComponent>
           <div className="modal-footer">
             <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
-              DESTROY
+              Destroy
             </button>
             <button className="btn btn-sm btn-default"
                 onClick={this.suspendApp} disabled={this.props.model.get("instances") < 1}>
-              SUSPEND
+              Suspend
             </button>
             <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
-              SCALE
+              Scale
             </button>
           </div>
         </ModalComponent>
