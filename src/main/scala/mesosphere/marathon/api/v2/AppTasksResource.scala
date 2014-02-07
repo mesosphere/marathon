@@ -58,7 +58,11 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
                  @QueryParam("scale") scale: Boolean = false) = {
     if (taskTracker.contains(appId)) {
       val tasks = taskTracker.get(appId)
-      val toKill = tasks.filter(_.getHost == host || host == "*")
+
+      val toKill = Option(host) match {
+        case Some(hostname) => tasks.filter(_.getHost == hostname || hostname == "*")
+        case _ => tasks
+      }
 
       service.killTasks(appId, toKill, scale)
       Response.ok(Map("tasks" -> toKill)).build
