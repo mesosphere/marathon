@@ -98,14 +98,10 @@ class MarathonSchedulerService @Inject()(
     scheduler.stopApp(driver, app)
   }
 
-  def updateApp(id: String, appUpdate: AppUpdate): Future[_] = {
-    scheduler.updateApp(driver, id, appUpdate)
-  }
-
-  @deprecated("The scale operation has been subsumed by update in the v2 API.", "0.4.0")
-  def scaleApp(app: AppDefinition, applyNow: Boolean = true): Future[_] = {
-    scheduler.scaleApp(driver, app, applyNow)
-  }
+  def updateApp(appName: String, appUpdate: AppUpdate): Future[_] =
+    scheduler.updateApp(driver, appName, appUpdate).map { updatedApp =>
+      scheduler.scale(driver, updatedApp)
+    }
 
   def listApps(): Seq[AppDefinition] = {
     // TODO method is expensive, it's n+1 trips to ZK. Cache this?
@@ -122,20 +118,18 @@ class MarathonSchedulerService @Inject()(
 
   def killTasks(appName: String, tasks: Iterable[MarathonTask], scale: Boolean): Iterable[MarathonTask] = {
     if (scale) {
-      getApp(appName) match {
-        case Some(appDef) =>
-          appDef.instances = appDef.instances - tasks.size
-
-          Await.result(scaleApp(appDef, false), defaultWait)
-        case None =>
+      getApp(appName) foreach { app =>
+        val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
+        Await.result(scheduler.updateApp(driver, appName, appUpdate), defaultWait)
       }
     }
 
-    tasks.map(task => {
+    tasks.foreach { task =>
       log.info(f"Killing task ${task.getId} on host ${task.getHost}")
       driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
-      task
-    })
+    }
+
+    tasks
   }
 
   //Begin Service interface

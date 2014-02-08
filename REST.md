@@ -171,8 +171,8 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                16815, 
-                13246
+                17232, 
+                17138
             ], 
             "tasksRunning": 0, 
             "tasksStaged": 0, 
@@ -231,19 +231,19 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            16815, 
-            13246
+            17232, 
+            17138
         ], 
         "tasks": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1391652605326", 
+                "id": "myApp_0-1391740154488", 
                 "ports": [
-                    31728, 
-                    31729
+                    31801, 
+                    31802
                 ], 
-                "stagedAt": "2014-02-06T02:10+0000", 
-                "startedAt": "2014-02-06T02:10+0000"
+                "stagedAt": "2014-02-07T02:29+0000", 
+                "startedAt": "2014-02-07T02:29+0000"
             }
         ], 
         "tasksRunning": 1, 
@@ -303,8 +303,8 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                16815, 
-                13246
+                17232, 
+                17138
             ], 
             "tasksRunning": 0, 
             "tasksStaged": 0, 
@@ -427,23 +427,13 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1391652639375", 
+            "id": "myApp_0-1391740199536", 
             "ports": [
-                31913, 
-                31914
+                31699, 
+                31700
             ], 
-            "stagedAt": "2014-02-06T02:10+0000", 
+            "stagedAt": "2014-02-07T02:29+0000", 
             "startedAt": null
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1391652634351", 
-            "ports": [
-                31453, 
-                31454
-            ], 
-            "stagedAt": "2014-02-06T02:10+0000", 
-            "startedAt": "2014-02-06T02:10+0000"
         }
     ]
 }
@@ -471,8 +461,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	14298	mesos.vm:31453	mesos.vm:31913	mesos.vm:31926	
-myApp	13227	mesos.vm:31454	mesos.vm:31914	mesos.vm:31927	
+myApp	16766	mesos.vm:31800	mesos.vm:31699	
+myApp	16068	mesos.vm:31801	mesos.vm:31700	
 
 ```
 
@@ -514,12 +504,12 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1391652651394", 
+            "id": "myApp_0-1391740216560", 
             "ports": [
-                31827, 
-                31828
+                31791, 
+                31792
             ], 
-            "stagedAt": "2014-02-06T02:10+0000", 
+            "stagedAt": "2014-02-07T02:30+0000", 
             "startedAt": null
         }
     ]
@@ -604,13 +594,24 @@ Transfer-Encoding: chunked
         {
             "appId": "myApp", 
             "host": "mesos.vm", 
-            "id": "myApp_0-1391652654401", 
+            "id": "myApp_1-1391740226573", 
             "ports": [
-                31928, 
-                31929
+                31085, 
+                31086
             ], 
-            "stagedAt": "2014-02-06T02:10+0000", 
-            "startedAt": "2014-02-06T02:10+0000"
+            "stagedAt": "2014-02-07T02:30+0000", 
+            "startedAt": null
+        }, 
+        {
+            "appId": "myApp", 
+            "host": "mesos.vm", 
+            "id": "myApp_0-1391740220567", 
+            "ports": [
+                31201, 
+                31202
+            ], 
+            "stagedAt": "2014-02-07T02:30+0000", 
+            "startedAt": "2014-02-07T02:30+0000"
         }
     ]
 }
@@ -638,8 +639,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	14298	mesos.vm:31279	mesos.vm:31989	mesos.vm:31928	
-myApp	13227	mesos.vm:31280	mesos.vm:31990	mesos.vm:31929	
+myApp	16766	mesos.vm:31049	mesos.vm:31085	mesos.vm:31201	
+myApp	16068	mesos.vm:31050	mesos.vm:31086	mesos.vm:31202	
 
 ```
 
@@ -727,8 +728,8 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            16535, 
-            12339
+            11775, 
+            19284
         ], 
         "tasksRunning": 0, 
         "tasksStaged": 0, 
@@ -840,8 +841,8 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            12814, 
-            15793
+            14900, 
+            19651
         ], 
         "tasksRunning": 0, 
         "tasksStaged": 0, 
@@ -887,8 +888,8 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            12814, 
-            15793
+            14900, 
+            19651
         ], 
         "tasksRunning": 0, 
         "tasksStaged": 0, 
@@ -928,34 +929,26 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1391652687442", 
+            "id": "myApp_2-1391740274636", 
             "ports": [
-                31258, 
-                31259
+                31368, 
+                31369
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1391652697473", 
+            "id": "myApp_0-1391740263620", 
             "ports": [
-                31170, 
-                31171
+                31231, 
+                31232
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1391652703482", 
+            "id": "myApp_3-1391740280643", 
             "ports": [
-                31301, 
-                31302
-            ]
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_1-1391652692449", 
-            "ports": [
-                31375, 
-                31376
+                31120, 
+                31121
             ]
         }
     ]
@@ -995,40 +988,32 @@ Transfer-Encoding: chunked
         "instances": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1391652687442", 
+                "id": "myApp_2-1391740274636", 
                 "ports": [
-                    31258, 
-                    31259
+                    31368, 
+                    31369
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_2-1391652697473", 
+                "id": "myApp_0-1391740263620", 
                 "ports": [
-                    31170, 
-                    31171
+                    31231, 
+                    31232
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_3-1391652703482", 
+                "id": "myApp_3-1391740280643", 
                 "ports": [
-                    31301, 
-                    31302
-                ]
-            }, 
-            {
-                "host": "mesos.vm", 
-                "id": "myApp_1-1391652692449", 
-                "ports": [
-                    31375, 
-                    31376
+                    31120, 
+                    31121
                 ]
             }
         ], 
         "ports": [
-            12814, 
-            15793
+            14900, 
+            19651
         ]
     }
 ]
@@ -1056,8 +1041,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_12814 12814 mesos.vm:31258 mesos.vm:31375 mesos.vm:31301 
-myApp_15793 15793 mesos.vm:31259 mesos.vm:31376 mesos.vm:31302 
+myApp_14900 14900 mesos.vm:31231 mesos.vm:31120 mesos.vm:31368 
+myApp_19651 19651 mesos.vm:31232 mesos.vm:31121 mesos.vm:31369 
 
 ```
 
@@ -1091,32 +1076,32 @@ Transfer-Encoding: chunked
     "instances": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1391652687442", 
+            "id": "myApp_2-1391740274636", 
             "ports": [
-                31258, 
-                31259
+                31368, 
+                31369
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1391652703482", 
+            "id": "myApp_0-1391740263620", 
             "ports": [
-                31301, 
-                31302
+                31231, 
+                31232
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1391652692449", 
+            "id": "myApp_3-1391740280643", 
             "ports": [
-                31375, 
-                31376
+                31120, 
+                31121
             ]
         }
     ], 
     "ports": [
-        12814, 
-        15793
+        14900, 
+        19651
     ]
 }
 ```
@@ -1143,8 +1128,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_12814 12814 mesos.vm:31258 mesos.vm:31375 mesos.vm:31301 
-myApp_15793 15793 mesos.vm:31259 mesos.vm:31376 mesos.vm:31302 
+myApp_14900 14900 mesos.vm:31120 mesos.vm:31368 mesos.vm:31373 
+myApp_19651 19651 mesos.vm:31121 mesos.vm:31369 mesos.vm:31374 
 
 ```
 
@@ -1179,26 +1164,26 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1391652687442", 
+            "id": "myApp_2-1391740329711", 
             "ports": [
-                31258, 
-                31259
+                31373, 
+                31374
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1391652703482", 
+            "id": "myApp_2-1391740274636", 
             "ports": [
-                31301, 
-                31302
+                31368, 
+                31369
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1391652692449", 
+            "id": "myApp_3-1391740280643", 
             "ports": [
-                31375, 
-                31376
+                31120, 
+                31121
             ]
         }
     ]

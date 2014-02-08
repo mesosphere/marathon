@@ -214,33 +214,16 @@ class MarathonScheduler @Inject()(
 
   def updateApp(driver: SchedulerDriver,
                 id: String,
-                appUpdate: AppUpdate): Future[_] = {
+                appUpdate: AppUpdate): Future[AppDefinition] = {
     store.fetch(id).flatMap {
       case Some(storedApp) => {
         val updatedApp = appUpdate.apply(storedApp)
         store.store(updatedApp.id, updatedApp).map { _ =>
-          scale(driver, updatedApp)
           update(driver, updatedApp, appUpdate)
+          updatedApp
         }
       }
       case None => throw new UnknownAppException(id)
-    }
-  }
-
-  @deprecated("The scale operation has been subsumed by update in the v2 API.", "0.4.0")
-  def scaleApp(driver: SchedulerDriver,
-               app: AppDefinition,
-               applyNow: Boolean): Future[_] = {
-    store.fetch(app.id).flatMap {
-      case Some(storedApp) => {
-        storedApp.instances = app.instances
-        store.store(app.id, storedApp).map { _ =>
-          if (applyNow) {
-            scale(driver, storedApp)
-          }
-        }
-      }
-      case None => throw new UnknownAppException(app.id)
     }
   }
 
@@ -313,7 +296,7 @@ class MarathonScheduler @Inject()(
    * @param driver
    * @param app
    */
-  private def scale(driver: SchedulerDriver, app: AppDefinition) {
+  def scale(driver: SchedulerDriver, app: AppDefinition) {
     taskTracker.get(app.id).synchronized {
       val currentCount = taskTracker.count(app.id)
       val targetCount = app.instances

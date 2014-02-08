@@ -24,7 +24,7 @@ function process_template {
   do
     case "$line" in
       'http '*)
-        sleep 3;
+        sleep 4;
         msg "Evaluating \`$line'..."
         out '```'
         eval "$line"
