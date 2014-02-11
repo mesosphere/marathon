@@ -199,7 +199,7 @@ Marathon API can do.
 
 The V1 API was deprecated in Marathon v0.4.0 on 2014-01-24 but continues to work
 as it did before being deprecated. Details on the V1 API can be found in the
-[API documentation](REST.md).
+[API documentation](REST.md#api-version-1-deprecated).
 
 ## Marathon Clients
 
