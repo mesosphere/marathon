@@ -7,7 +7,7 @@ import scala.concurrent.Future
 import spray.httpx.Json4sJacksonSupport
 import org.json4s.{DefaultFormats, FieldSerializer}
 import spray.client.pipelining._
-import mesosphere.marathon.event.MarathonEvent
+import mesosphere.marathon.event.{Unsubscribe, Subscribe, SubscriptionEvent, MarathonEvent}
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Main
 import spray.http.HttpRequest
@@ -19,13 +19,35 @@ class HttpEventActor extends Actor with ActorLogging with Json4sJacksonSupport {
 
   implicit val ec = HttpEventModule.executionContext
 
-  val urls = Main.conf.httpEventEndpoints()
+  // you don't have to take care of thread-safety
+  // because actors processes their own messages sequentially.
+  var urls = Main.conf.httpEventEndpoints.get.map(
+    _.foldLeft(Set.empty[String]){(set,url) => set + url}
+  ).getOrElse(Set.empty[String])
 
   val pipeline: HttpRequest => Future[HttpResponse] = (
     addHeader("Accept", "application/json")
       ~> sendReceive)
 
   def receive = {
+    case event:SubscriptionEvent => {
+      event match{
+        case Subscribe(_, callback_url,_) =>
+          urls += callback_url
+          log.info(s"call back url ${callback_url} is registered.")
+          // subscribe event should be broadcasted.
+          log.info("POSTing to all endpoints.")
+          urls.foreach(x => post(x, event))
+
+        case Unsubscribe(_, callback_url,_) =>
+          // unsubscribe event should be broadcasted.
+          log.info("POSTing to all endpoints.")
+          urls.foreach(x => post(x, event))
+          urls -= callback_url
+          log.info(s"call back url ${callback_url} is unregistered.")
+      }
+    }
+
     case event: MarathonEvent => {
       log.info("POSTing to all endpoints.")
       try {
