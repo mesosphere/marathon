@@ -29,25 +29,7 @@ class HttpEventActor extends Actor with ActorLogging with Json4sJacksonSupport {
     addHeader("Accept", "application/json")
       ~> sendReceive)
 
-  def receive = {
-    case event:SubscriptionEvent => {
-      event match{
-        case Subscribe(_, callback_url,_) =>
-          urls += callback_url
-          log.info(s"call back url ${callback_url} is registered.")
-          // subscribe event should be broadcasted.
-          log.info("POSTing to all endpoints.")
-          urls.foreach(x => post(x, event))
-
-        case Unsubscribe(_, callback_url,_) =>
-          // unsubscribe event should be broadcasted.
-          log.info("POSTing to all endpoints.")
-          urls.foreach(x => post(x, event))
-          urls -= callback_url
-          log.info(s"call back url ${callback_url} is unregistered.")
-      }
-    }
-
+  def receive = subscription orElse {
     case event: MarathonEvent => {
       log.info("POSTing to all endpoints.")
       try {
@@ -61,6 +43,24 @@ class HttpEventActor extends Actor with ActorLogging with Json4sJacksonSupport {
     case _ => {
       log.warning("Message not understood!")
     }
+  }
+
+  def subscription = {
+    case event @ Subscribe(_, callback_url,_) =>
+      urls += callback_url
+      log.info(s"call back url ${callback_url} is registered.")
+
+      // subscribe event should be broadcasted.
+      log.info("POSTing to all endpoints.")
+      urls.foreach(x => post(x, event))
+
+    case event @ Unsubscribe(_, callback_url,_) =>
+      // unsubscribe event should be broadcasted.
+      log.info("POSTing to all endpoints.")
+      urls.foreach(x => post(x, event))
+
+      urls -= callback_url
+      log.info(s"call back url ${callback_url} is unregistered.")
   }
 
   def post(urlString: String, event: MarathonEvent) {
