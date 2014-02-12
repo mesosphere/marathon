@@ -55,6 +55,15 @@ th {
   color: #333;
 }
 
+.badge-default {
+  background-color: #EEE;
+  color: #444;
+}
+
+.badge-warning {
+  background-color: #E8EF98;
+}
+
 .close,
 .close:focus,
 .close:hover {
