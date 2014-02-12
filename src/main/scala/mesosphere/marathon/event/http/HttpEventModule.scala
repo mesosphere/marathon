@@ -1,12 +1,15 @@
 package mesosphere.marathon.event.http
 
-import com.google.inject.{Singleton, Provides, AbstractModule}
+import scala.language.postfixOps
+import com.google.inject.{Scopes, Singleton, Provides, AbstractModule}
 import akka.actor.{Props, ActorRef, ActorSystem}
 import com.google.inject.name.Named
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import org.rogach.scallop.ScallopConf
 import java.util.logging.Logger
+import scala.concurrent.duration._
+import akka.util.Timeout
 
 trait HttpEventConfiguration extends ScallopConf {
 
@@ -22,6 +25,7 @@ class HttpEventModule extends AbstractModule {
 
   def configure() {
     bind(classOf[HttpCallbackEventSubscriber]).asEagerSingleton()
+    bind(classOf[HttpCallbackSubscriptionService]).in(Scopes.SINGLETON)
   }
 
   @Provides
@@ -54,5 +58,8 @@ object HttpEventModule {
 
   val executorService = Executors.newCachedThreadPool()
   val executionContext = ExecutionContext.fromExecutorService(executorService)
+
+  //TODO(everpeace) this should be configurable option?
+  val timeout = Timeout(5 seconds)
 }
 

@@ -66,20 +66,20 @@ case class MesosStatusUpdateEvent(
     override val eventType: String = "status_update_event")
   extends MarathonEvent
 
-trait SubscriptionEvent extends MarathonEvent{
+trait MarathonSubscriptionEvent extends MarathonEvent{
   def clientIp: String
   def callback_uri:String
-  def eventType = "subscription_event"
+  override def eventType = "marathon_subscription_event"
 }
 
 case class Subscribe(
     override val clientIp: String,
     override val callback_uri:String,
-    override val eventType: String = "subscribe")
-  extends SubscriptionEvent
+    override val eventType: String = "subscribe_event")
+  extends MarathonSubscriptionEvent
 
 case class Unsubscribe(
     override val clientIp: String,
     override val callback_uri:String,
-    override val eventType: String = "unsubscribe")
-  extends SubscriptionEvent
+    override val eventType: String = "unsubscribe_event")
+  extends MarathonSubscriptionEvent
