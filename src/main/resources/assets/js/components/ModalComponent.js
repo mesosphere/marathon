@@ -17,7 +17,7 @@ define([
         if (event.keyCode === 27) { _this.destroy(); }
       });
 
-      this.timeout = setTimeout(this.transitionIn, 0);
+      this.timeout = setTimeout(this.transitionIn, 10);
     },
     componentWillUnmount: function() {
       $(document).off(".modalComponent");
