@@ -85,7 +85,7 @@ class MarathonModule extends Module {
     }
   }
 
-  val isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ");
+  val isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmX");
   isoDateFormat setTimeZone TimeZone.getTimeZone("UTC")
 
   def timestampToUTC(timestamp: Long): String = isoDateFormat.format(new Date(timestamp))
