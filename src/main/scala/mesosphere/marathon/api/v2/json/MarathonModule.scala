@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import java.text.SimpleDateFormat
 import java.util.{Date, TimeZone}
+import org.joda.time.format.{ISODateTimeFormat, DateTimeFormatter}
+import org.joda.time.{DateTimeZone, DateTime}
 
 /**
  * @author Tobi Knaup
@@ -85,10 +87,10 @@ class MarathonModule extends Module {
     }
   }
 
-  val isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmX");
-  isoDateFormat setTimeZone TimeZone.getTimeZone("UTC")
+  val isoDateFormatter = ISODateTimeFormat.dateTime()
+  isoDateFormatter.withZone(DateTimeZone.UTC)
 
-  def timestampToUTC(timestamp: Long): String = isoDateFormat.format(new Date(timestamp))
+  def timestampToUTC(timestamp: Long): String = isoDateFormatter.print(new DateTime(timestamp))
 
   class MarathonTaskSerializer extends JsonSerializer[MarathonTask] {
     def serialize(task: MarathonTask, jgen: JsonGenerator, provider: SerializerProvider) {
