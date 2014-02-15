@@ -63,6 +63,15 @@ class ConstraintsTest {
 
     assertTrue("Should meet first task constraint.", firstTaskOnHost)
 
+    val wrongHostName = Constraints.meetsConstraint(firstTask.toSet,
+      attributes,
+      "wrong.com",
+      "hostname",
+      Operator.CLUSTER,
+      Some("right.com"))
+
+    assertFalse("Should not accept the wrong hostname.", wrongHostName)
+
     val differentHosts = Set(task1_host1, task2_host2, task3_host3)
 
     val differentHostsDifferentTasks = Constraints.meetsConstraint(
