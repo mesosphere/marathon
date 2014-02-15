@@ -11,9 +11,14 @@ import "mesos.proto";
 message Constraint {
   required string field = 1;
   enum Operator {
+      // Field must be unique across all tasks.
       UNIQUE = 0;
+      // Field must match the regex given by value.
       LIKE = 1;
+      // Tasks will be clustered, i.e. all tasks need to have the same value. If value is not set, any value will be
+      // accepted for the first task, and subsequent tasks must use that same value.
       CLUSTER = 2;
+      // Tasks will be grouped by field. Value specifies the minimum size of each group.
       GROUP_BY = 3;
   }
   required Operator operator = 2;
