@@ -3,8 +3,8 @@ package mesosphere.mesos
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.Main
 import java.util.logging.Logger
+import org.apache.mesos.Protos.Offer
 
 object Int {
   def unapply(s: String): Option[Int] = try {
@@ -14,6 +14,7 @@ object Int {
   }
 }
 
+// TODO this needs a refactor
 object Constraints {
 
   private[this] val log = Logger.getLogger(getClass.getName)
@@ -25,51 +26,41 @@ object Constraints {
     case _ => default
   }
 
-
-  def meetsConstraint(tasks: Set[mesosphere.marathon.Protos.MarathonTask],
-                      attributes: Set[org.apache.mesos.Protos.Attribute],
-                      hostname: String,
+  def meetsConstraint(tasks: Iterable[mesosphere.marathon.Protos.MarathonTask],
+                      offer: Offer,
                       constraint: Constraint): Boolean = {
-    meetsConstraint(tasks, attributes, hostname, constraint.getField, constraint.getOperator,
-      Option(constraint.getValue))
-  }
 
-  def meetsConstraint(tasks: Set[mesosphere.marathon.Protos.MarathonTask],
-                      attributes: Set[org.apache.mesos.Protos.Attribute],
-                      hostname: String,
-                      field: String,
-                      op: Operator,
-                      value : Option[String]): Boolean = {
-
-    //TODO(*): Implement LIKE (use value for this)
+    val field = constraint.getField
+    val value = constraint.getValue
 
     if (field == "hostname") {
-      return op match {
+      return constraint.getOperator match {
+        case Operator.LIKE =>
+          offer.getHostname.matches(value)
         case Operator.UNIQUE =>
           // All running tasks must have a hostname that is different from the one in the offer
-          tasks.forall(_.getHost != hostname)
+          tasks.forall(_.getHost != offer.getHostname)
         case Operator.CLUSTER =>
           // Hostname must match or be empty
-          (value.isEmpty || value.get == hostname) &&
+          (value.isEmpty || value == offer.getHostname) &&
           // All running tasks must have the same hostname as the one in the offer
-          tasks.forall(_.getHost == hostname)
+          tasks.forall(_.getHost == offer.getHostname)
       }
     }
 
-    val attr = attributes.find(_.getName == field)
+    val attr = offer.getAttributesList.asScala.find(_.getName == field)
 
     if (attr.nonEmpty) {
       val matches = matchTaskAttributes(tasks, field, attr.get.getText.getValue)
-      op match {
+      constraint.getOperator match {
         case Operator.UNIQUE => matches.isEmpty
         case Operator.CLUSTER =>
           // If no value is set, accept the first one. Otherwise check for it.
-          (value.isEmpty || attr.get.getText.getValue == value.get) &&
+          (value.isEmpty || attr.get.getText.getValue == value) &&
           // All running tasks should have the matching attribute
           matches.size == tasks.size
         case Operator.GROUP_BY =>
-          val minimum = List(groupByDefault, getIntValue(value.getOrElse(""),
-            groupByDefault)).max
+          val minimum = List(groupByDefault, getIntValue(value, groupByDefault)).max
           // Group tasks by the constraint value
           val groupedTasks = tasks.groupBy(
             x =>
@@ -102,10 +93,7 @@ object Constraints {
           condA || condB
         case Operator.LIKE => {
           if (value.nonEmpty) {
-            field match {
-              case "hostname" => hostname.matches(value.get)
-              case _ => attr.get.getText.getValue.matches(value.get)
-            }
+            attr.get.getText.getValue.matches(value)
           } else {
             log.warning("Error, value is required for LIKE operation")
             false
@@ -117,16 +105,6 @@ object Constraints {
       // that's not supplied.
       false
     }
-  }
-
-  private def matchLike(attributes: Set[org.apache.mesos.Protos.Attribute],
-    hostname: String,
-    field: String,
-    op: Operator,
-    value : String): Boolean = {
-
-    (attributes.filter(_.getName == field).filter(_.getText == value).nonEmpty
-      || (field == "hostname" && hostname.matches(value)))
   }
 
   /**

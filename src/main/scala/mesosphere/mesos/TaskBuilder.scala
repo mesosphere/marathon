@@ -137,15 +137,11 @@ class TaskBuilder (app: AppDefinition,
     }
 
     if (app.constraints.nonEmpty) {
-      val currentlyRunningTasks = taskTracker.get(app.id)
-      if (app.constraints.filterNot(c =>
-          Constraints
-            .meetsConstraint(
-              currentlyRunningTasks.toSet,
-              offer.getAttributesList.asScala.toSet,
-              offer.getHostname,
-              c))
-        .nonEmpty) {
+      val runningTasks = taskTracker.get(app.id)
+      val constraintsMet = app.constraints.forall(
+        Constraints.meetsConstraint(runningTasks, offer, _)
+      )
+      if (!constraintsMet) {
         log.warning("Did not meet a constraint in an offer." )
         return None
       }
