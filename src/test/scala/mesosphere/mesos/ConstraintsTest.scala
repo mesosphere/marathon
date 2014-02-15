@@ -32,8 +32,7 @@ class ConstraintsTest {
   def makeAttribute(attr: String, attrVal: String) = {
     Attribute.newBuilder()
       .setName(attr)
-      .setText(Text.newBuilder()
-      .setValue(attrVal))
+      .setText(Text.newBuilder().setValue(attrVal))
       .setType(org.apache.mesos.Protos.Value.Type.TEXT)
       .build()
   }
@@ -192,17 +191,17 @@ class ConstraintsTest {
 
   @Test
   def testRackGroupedByConstraints() {
-    val task1_rack1 = makeSampleTask("task1", Map("rackid" -> "1"))
-    val task2_rack1 = makeSampleTask("task2", Map("rackid" -> "1"))
-    val task3_rack2 = makeSampleTask("task3", Map("rackid" -> "2"))
-    val task4_rack1 = makeSampleTask("task4", Map("rackid" -> "1"))
-    val task5_rack3 = makeSampleTask("task5", Map("rackid" -> "3"))
+    val task1_rack1 = makeSampleTask("task1", Map("rackid" -> "rack-1"))
+    val task2_rack1 = makeSampleTask("task2", Map("rackid" -> "rack-1"))
+    val task3_rack2 = makeSampleTask("task3", Map("rackid" -> "rack-2"))
+    val task4_rack1 = makeSampleTask("task4", Map("rackid" -> "rack-1"))
+    val task5_rack3 = makeSampleTask("task5", Map("rackid" -> "rack-3"))
 
     var sameRack = Set[MarathonTask]()
     var uniqueRack = Set[MarathonTask]()
 
     val clusterFreshRackMet = Constraints.meetsConstraint(sameRack,
-      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "1")),
+      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "rack-1")),
       "foohost",
       "rackid",
       Constraint.Operator.GROUP_BY,
@@ -213,7 +212,7 @@ class ConstraintsTest {
     sameRack ++= Set(task1_rack1)
 
     val clusterRackMet = Constraints.meetsConstraint(sameRack,
-      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "1")),
+      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "rack-1")),
       "foohost",
       "rackid",
       Constraint.Operator.GROUP_BY,
@@ -223,7 +222,7 @@ class ConstraintsTest {
       clusterRackMet)
 
     val clusterRackMet2 = Constraints.meetsConstraint(sameRack,
-      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "2")),
+      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "rack-2")),
       "foohost",
       "rackid",
       Constraint.Operator.GROUP_BY,
@@ -234,7 +233,7 @@ class ConstraintsTest {
     sameRack ++= Set(task3_rack2)
 
     val clusterRackMet3 = Constraints.meetsConstraint(sameRack,
-      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "1")),
+      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "rack-1")),
       "foohost",
       "rackid",
       Constraint.Operator.GROUP_BY,
@@ -246,7 +245,7 @@ class ConstraintsTest {
     sameRack ++= Set(task2_rack1)
 
     val clusterRackNotMet = Constraints.meetsConstraint(sameRack,
-      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "1")),
+      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "rack-1")),
       "foohost",
       "rackid",
       Constraint.Operator.GROUP_BY,
@@ -255,7 +254,7 @@ class ConstraintsTest {
     assertFalse("Should not meet cluster constraint.", clusterRackNotMet)
 
     val uniqueFreshRackMet = Constraints.meetsConstraint(uniqueRack,
-      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "1")),
+      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "rack-1")),
       "foohost",
       "rackid",
       Constraint.Operator.UNIQUE,
@@ -268,7 +267,7 @@ class ConstraintsTest {
     uniqueRack ++= Set(task4_rack1)
 
     val uniqueRackMet = Constraints.meetsConstraint(uniqueRack,
-      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "3")),
+      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "rack-3")),
       "foohost",
       "rackid",
       Constraint.Operator.UNIQUE,
@@ -280,7 +279,7 @@ class ConstraintsTest {
     uniqueRack ++= Set(task5_rack3)
 
     val uniqueRackNotMet = Constraints.meetsConstraint(uniqueRack,
-      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "1")),
+      Set(makeAttribute("foo", "bar"), makeAttribute("rackid", "rack-1")),
       "foohost",
       "rackid",
       Constraint.Operator.UNIQUE,
