@@ -219,6 +219,51 @@ class TaskBuilderTest extends AssertionsForJUnit
   }
 
   @Test
+  def testUniqueHostNameAndClusterAttribute() {
+    val app = makeBasicApp()
+    app.instances = 10
+    app.constraints = Set(
+      Constraint.newBuilder.setField("spark").setOperator(Constraint.Operator.CLUSTER).setValue("enabled").build,
+      Constraint.newBuilder.setField("hostname").setOperator(Constraint.Operator.UNIQUE).build
+    )
+
+    val runningTasks = new mutable.HashSet[MarathonTask]()
+    val taskTracker = mock[TaskTracker]
+    when(taskTracker.get(app.id)).thenReturn(runningTasks)
+
+    val builder = new TaskBuilder(app,
+      s => TaskID.newBuilder.setValue(s).build, taskTracker)
+
+    def shouldBuildTask(message: String, offer: Offer) {
+      val tupleOption = builder.buildIfMatches(offer)
+      assertTrue(message, tupleOption.isDefined)
+      val marathonTask = MarathonTasks.makeTask(
+        tupleOption.get._1.getTaskId.getValue,
+        offer.getHostname,
+        tupleOption.get._2,
+        offer.getAttributesList.asScala.toList)
+      runningTasks.add(marathonTask)
+    }
+
+    def shouldNotBuildTask(message: String, offer: Offer) {
+      val tupleOption = builder.buildIfMatches(offer)
+      assertFalse(message, tupleOption.isDefined)
+    }
+
+    val offerHostA = makeBasicOffer()
+      .setHostname("alpha")
+      .addAttributes(makeAttribute("spark", "disabled"))
+      .build
+    shouldNotBuildTask("Should not take an offer with spark:disabled", offerHostA)
+
+    val offerHostB = makeBasicOffer()
+      .setHostname("beta")
+      .addAttributes(makeAttribute("spark", "enabled"))
+      .build
+    shouldBuildTask("Should take offer with spark:enabled", offerHostB)
+  }
+
+  @Test
   def testGetPortsSingleRange() = {
     val portsResource = makePortsResource(Seq((31000, 32000)))
     val portRanges = TaskBuilder.getPorts(portsResource, 2).get
