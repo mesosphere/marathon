@@ -1,9 +1,0 @@
-{
-  "id":"Sleep",
-  "cmd":"sleep 500",
-  "instances":1,
-  "env":{
-    "FOO":"BAR"
-  }
-}
-

@@ -1,0 +1,13 @@
+{
+  "id": "Hello_Rails",
+  "cmd": "cd hello && bundle install && bundle exec unicorn -p $PORT",
+  "mem": 100,
+  "cpus": 1.0,
+  "instances": 1,
+  "uris": [
+    "http://downloads.mesosphere.io/tutorials/RailsHello.tgz"
+  ],
+  "env": {
+    "RAILS_ENV": "production"
+  }
+}

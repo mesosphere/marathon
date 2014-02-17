@@ -1,0 +1,10 @@
+{
+  "id": "Tomcat",
+  "cmd": "cd apache-tomcat-* && ./bin/catalina.sh run",
+  "mem": 512,
+  "cpus": 1.0,
+  "instances": 1,
+  "uris": [
+    "http://www.gtlib.gatech.edu/pub/apache/tomcat/tomcat-7/v7.0.50/bin/apache-tomcat-7.0.50.tar.gz"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "Hello_Play",
+  "cmd": "./Hello-*/bin/hello -Dhttp.port=$PORT",
+  "mem": 512,
+  "cpus": 1.0,
+  "instances": 1,
+  "uris": [
+    "http://downloads.mesosphere.io/tutorials/PlayHello.zip"
+  ]
+}
