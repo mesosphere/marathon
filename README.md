@@ -211,6 +211,7 @@ as it did before being deprecated. Details on the V1 API can be found in the
             -C "./chronos/bin/demo ./chronos/config/nomail.yml \
             ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
+* [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
 
 ## Help
 
