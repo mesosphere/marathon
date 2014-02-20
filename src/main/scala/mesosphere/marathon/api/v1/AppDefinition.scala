@@ -14,7 +14,6 @@ import com.fasterxml.jackson.annotation.{
 }
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import scala.collection.mutable
 import scala.collection.JavaConverters._
 import scala.annotation.target.field
 
@@ -67,7 +66,7 @@ case class AppDefinition(
   @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
   var container: Option[ContainerInfo] = None
 
-) extends MarathonState[Protos.ServiceDefinition] {
+) extends MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   // the default constructor exists solely for interop with automatic
   // (de)serializers
@@ -106,42 +105,35 @@ case class AppDefinition(
     builder.build
   }
 
-  def mergeFromProto(proto: Protos.ServiceDefinition) {
-    val envMap = mutable.HashMap.empty[String, String]
+  def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
+    val envMap: Map[String, String] =
+      proto.getCmd.getEnvironment.getVariablesList.asScala.map {
+        v => v.getName -> v.getValue
+      }.toMap
 
-    id = proto.getId
-    cmd = proto.getCmd.getValue
-    executor = proto.getExecutor
-    taskRateLimit = proto.getTaskRateLimit
-    instances = proto.getInstances
-    ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]]
-    constraints = proto.getConstraintsList.asScala.toSet
-    if (proto.hasContainer) container = Some(ContainerInfo(proto.getContainer))
+    val resourcesMap: Map[String, Double] =
+      proto.getResourcesList.asScala.map {
+        r => r.getName -> r.getScalar.getValue
+      }.toMap
 
-    // Add command environment
-    for (variable <- proto.getCmd.getEnvironment.getVariablesList.asScala) {
-      envMap(variable.getName) = variable.getValue
-    }
-    env = envMap.toMap
-
-    // Add URIs
-    uris = proto.getCmd.getUrisList.asScala.map(_.getValue)
-
-    // Add resources
-    for (resource <- proto.getResourcesList.asScala) {
-      val value = resource.getScalar.getValue
-      resource.getName match {
-        case AppDefinition.CPUS =>
-          cpus = value
-        case AppDefinition.MEM =>
-          mem = value
-      }
-    }
-
-    // Restore
+    AppDefinition(
+      id = proto.getId,
+      cmd = proto.getCmd.getValue,
+      executor = proto.getExecutor,
+      taskRateLimit = proto.getTaskRateLimit,
+      instances = proto.getInstances,
+      ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]],
+      constraints = proto.getConstraintsList.asScala.toSet,
+      container = if (proto.hasContainer) Some(ContainerInfo(proto.getContainer))
+                  else None,
+      cpus = resourcesMap.get(AppDefinition.CPUS).getOrElse(this.cpus),
+      mem = resourcesMap.get(AppDefinition.MEM).getOrElse(this.mem),
+      env = envMap,
+      uris = proto.getCmd.getUrisList.asScala.map(_.getValue)
+    )
   }
 
-  def mergeFromProto(bytes: Array[Byte]) {
+  def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
     mergeFromProto(proto)
   }

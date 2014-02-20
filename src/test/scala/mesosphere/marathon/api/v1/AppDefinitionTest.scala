@@ -39,6 +39,7 @@ class AppDefinitionTest {
   def testMergeFromProto() {
     val cmd = CommandInfo.newBuilder
       .setValue("bash foo-*/start -Dhttp.port=$PORT")
+
     val proto = ServiceDefinition.newBuilder
       .setId("play")
       .setCmd(cmd)
@@ -46,13 +47,12 @@ class AppDefinitionTest {
       .setExecutor("//cmd")
       .build
 
-    val app = new AppDefinition
-    app.mergeFromProto(proto)
+    val mergeResult = AppDefinition().mergeFromProto(proto)
 
-    assertEquals("play", app.id)
-    assertEquals(3, app.instances)
-    assertEquals("//cmd", app.executor)
-    assertEquals("bash foo-*/start -Dhttp.port=$PORT", app.cmd)
+    assertEquals("play", mergeResult.id)
+    assertEquals(3, mergeResult.instances)
+    assertEquals("//cmd", mergeResult.executor)
+    assertEquals("bash foo-*/start -Dhttp.port=$PORT", mergeResult.cmd)
   }
 
   @Test
