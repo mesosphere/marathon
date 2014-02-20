@@ -36,6 +36,10 @@ case class AppUpdate(
 
 ) {
 
+  // the default constructor exists solely for interop with automatic
+  // (de)serializers
+  def this() = this(cmd = None)
+
   /**
    * Returns the supplied [[AppDefinition]] after updating its members
    * with respect to this update request.

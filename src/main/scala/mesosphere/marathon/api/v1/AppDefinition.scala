@@ -16,37 +16,62 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import scala.collection.mutable
 import scala.collection.JavaConverters._
+import scala.annotation.target.field
+
+object FieldConstraints {
+  type FieldNotEmpty = NotEmpty @field
+  type FieldPattern = Pattern @field
+  type FieldJsonInclude = JsonInclude @field
+  type FieldJsonDeserialize = JsonDeserialize @field
+}
+
+import FieldConstraints._
 
 /**
  * @author Tobi Knaup
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
-  @NotEmpty
-  @Pattern(regexp = "^[A-Za-z0-9_.-]+$")
-  var id: String = ""
-  var cmd: String = ""
-  var env: Map[String, String] = Map.empty
-  var instances: Int = 0
-  var cpus: Double = 1.0
-  var mem: Double = 128.0
-  @Pattern(regexp="(^//cmd$)|(^/[^/].*$)|")
-  var executor: String = ""
+case class AppDefinition(
 
-  var constraints: Set[Constraint] = Set()
+  @FieldNotEmpty
+  @FieldPattern(regexp = "^[A-Za-z0-9_.-]+$")
+  var id: String = "",
 
-  var uris: Seq[String] = Seq()
-  var ports: Seq[Int] = Seq(0)
+  var cmd: String = "",
+
+  var env: Map[String, String] = Map.empty,
+
+  var instances: Int = AppDefinition.DEFAULT_INSTANCES,
+
+  var cpus: Double = AppDefinition.DEFAULT_CPUS,
+
+  var mem: Double = AppDefinition.DEFAULT_MEM,
+
+  @FieldPattern(regexp="(^//cmd$)|(^/[^/].*$)|")
+  var executor: String = "",
+
+  var constraints: Set[Constraint] = Set(),
+
+  var uris: Seq[String] = Seq(),
+
+  var ports: Seq[Int] = Seq(0),
+
   // Number of new tasks this app may spawn per second in response to
   // terminated tasks. This prevents frequently failing apps from spamming
   // the cluster.
-  @JsonInclude(Include.NON_DEFAULT)
-  var taskRateLimit: Double = 1.0
-  @JsonInclude(Include.NON_EMPTY)
-  var tasks: Seq[MarathonTask] = Nil
+  var taskRateLimit: Double = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
 
-  @JsonDeserialize(contentAs = classOf[ContainerInfo])
+  @FieldJsonInclude(Include.NON_EMPTY)
+  var tasks: Seq[MarathonTask] = Seq(),
+
+  @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
   var container: Option[ContainerInfo] = None
+
+) extends MarathonState[Protos.ServiceDefinition] {
+
+  // the default constructor exists solely for interop with automatic
+  // (de)serializers
+  def this() = this(id = "")
 
   @JsonProperty()
   def tasksStaged(): Int = tasks.count { task =>
@@ -124,5 +149,12 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
 
 object AppDefinition {
   val CPUS = "cpus"
+  val DEFAULT_CPUS = 1.0
+
   val MEM = "mem"
+  val DEFAULT_MEM = 128.0
+
+  val DEFAULT_INSTANCES = 0
+
+  val DEFAULT_TASK_RATE_LIMIT = 1.0
 }

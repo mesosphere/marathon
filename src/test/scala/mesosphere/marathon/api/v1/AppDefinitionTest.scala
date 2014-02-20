@@ -80,6 +80,25 @@ class AppDefinitionTest {
     shouldNotViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
   }
 
+  @Test
+  def testSerialization() {
+    import com.fasterxml.jackson.databind.ObjectMapper
+    import com.fasterxml.jackson.module.scala.DefaultScalaModule
+    import mesosphere.marathon.api.v2.json.MarathonModule
+    import mesosphere.marathon.api.v1.json.ConstraintModule
+
+    val mapper = new ObjectMapper
+    mapper.registerModule(DefaultScalaModule)
+    mapper.registerModule(new MarathonModule)
+    mapper.registerModule(new ConstraintModule)
+
+    val original = AppDefinition()
+    val json = mapper.writeValueAsString(original)
+    val readResult = mapper.readValue(json, classOf[AppDefinition])
+
+    assertTrue(readResult == original)
+  }
+
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
     proto.getResourcesList.asScala
       .find(_.getName == name)
