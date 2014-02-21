@@ -171,12 +171,12 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                14985, 
-                16543
+                13971, 
+                12162
             ], 
             "taskRateLimit": 1.0, 
-            "tasksRunning": 1, 
-            "tasksStaged": 0, 
+            "tasksRunning": 0, 
+            "tasksStaged": 1, 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
             ]
@@ -232,20 +232,20 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            14985, 
-            16543
+            13971, 
+            12162
         ], 
         "taskRateLimit": 1.0, 
         "tasks": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1393020459646", 
+                "id": "myApp_0-1393024649759", 
                 "ports": [
-                    31187, 
-                    31188
+                    31877, 
+                    31878
                 ], 
-                "stagedAt": "2014-02-21T22:07:39.648Z", 
-                "startedAt": "2014-02-21T22:07:45.026Z"
+                "stagedAt": "2014-02-21T23:17:29.762Z", 
+                "startedAt": "2014-02-21T23:17:35.065Z"
             }
         ], 
         "tasksRunning": 1, 
@@ -305,8 +305,8 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                14985, 
-                16543
+                13971, 
+                12162
             ], 
             "taskRateLimit": 1.0, 
             "tasksRunning": 1, 
@@ -430,13 +430,23 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1393020505705", 
+            "id": "myApp_1-1393024693819", 
             "ports": [
-                31085, 
-                31086
+                31965, 
+                31966
             ], 
-            "stagedAt": "2014-02-21T22:08:25.706Z", 
+            "stagedAt": "2014-02-21T23:18:13.821Z", 
             "startedAt": null
+        }, 
+        {
+            "host": "mesos.vm", 
+            "id": "myApp_0-1393024688811", 
+            "ports": [
+                31816, 
+                31817
+            ], 
+            "stagedAt": "2014-02-21T23:18:08.813Z", 
+            "startedAt": "2014-02-21T23:18:14.214Z"
         }
     ]
 }
@@ -464,8 +474,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	15716	mesos.vm:31085	mesos.vm:31564	mesos.vm:31975	
-myApp	17254	mesos.vm:31086	mesos.vm:31565	mesos.vm:31976	
+myApp	13631	mesos.vm:31965	mesos.vm:31463	mesos.vm:31816	
+myApp	10150	mesos.vm:31966	mesos.vm:31464	mesos.vm:31817	
 
 ```
 
@@ -507,22 +517,12 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1393020522730", 
+            "id": "myApp_0-1393024710845", 
             "ports": [
-                31938, 
-                31939
+                31782, 
+                31783
             ], 
-            "stagedAt": "2014-02-21T22:08:42.731Z", 
-            "startedAt": null
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_1-1393020523732", 
-            "ports": [
-                31962, 
-                31963
-            ], 
-            "stagedAt": "2014-02-21T22:08:43.733Z", 
+            "stagedAt": "2014-02-21T23:18:30.846Z", 
             "startedAt": null
         }
     ]
@@ -607,24 +607,24 @@ Transfer-Encoding: chunked
         {
             "appId": "myApp", 
             "host": "mesos.vm", 
-            "id": "myApp_0-1393020526737", 
+            "id": "myApp_1-1393024719875", 
             "ports": [
-                31632, 
-                31633
+                31384, 
+                31385
             ], 
-            "stagedAt": "2014-02-21T22:08:46.738Z", 
-            "startedAt": "2014-02-21T22:08:52.806Z"
+            "stagedAt": "2014-02-21T23:18:39.877Z", 
+            "startedAt": null
         }, 
         {
             "appId": "myApp", 
             "host": "mesos.vm", 
-            "id": "myApp_1-1393020532745", 
+            "id": "myApp_0-1393024714858", 
             "ports": [
-                31697, 
-                31698
+                31928, 
+                31929
             ], 
-            "stagedAt": "2014-02-21T22:08:52.746Z", 
-            "startedAt": null
+            "stagedAt": "2014-02-21T23:18:34.859Z", 
+            "startedAt": "2014-02-21T23:18:40.060Z"
         }
     ]
 }
@@ -652,8 +652,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	15716	mesos.vm:31632	mesos.vm:31697	mesos.vm:31644	
-myApp	17254	mesos.vm:31633	mesos.vm:31698	mesos.vm:31645	
+myApp	13631	mesos.vm:31112	mesos.vm:31384	mesos.vm:31928	
+myApp	10150	mesos.vm:31113	mesos.vm:31385	mesos.vm:31929	
 
 ```
 
@@ -741,12 +741,12 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            12842, 
-            14220
+            12374, 
+            10971
         ], 
         "taskRateLimit": 1.0, 
         "tasksRunning": 0, 
-        "tasksStaged": 0, 
+        "tasksStaged": 2, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ]
@@ -855,12 +855,10 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            14638, 
-            14263
+            11056, 
+            12101
         ], 
         "taskRateLimit": 1.0, 
-        "tasksRunning": 0, 
-        "tasksStaged": 0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ]
@@ -903,12 +901,10 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            14638, 
-            14263
+            11056, 
+            12101
         ], 
         "taskRateLimit": 1.0, 
-        "tasksRunning": 0, 
-        "tasksStaged": 0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ]
@@ -945,26 +941,34 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1393020569822", 
+            "id": "myApp_1-1393024768944", 
             "ports": [
-                31250, 
-                31251
+                31266, 
+                31267
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1393020586851", 
+            "id": "myApp_3-1393024779962", 
             "ports": [
-                31116, 
-                31117
+                31037, 
+                31038
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1393020580835", 
+            "id": "myApp_2-1393024774954", 
             "ports": [
-                31741, 
-                31742
+                31413, 
+                31414
+            ]
+        }, 
+        {
+            "host": "mesos.vm", 
+            "id": "myApp_0-1393024762936", 
+            "ports": [
+                31289, 
+                31290
             ]
         }
     ]
@@ -1004,32 +1008,40 @@ Transfer-Encoding: chunked
         "instances": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1393020569822", 
+                "id": "myApp_1-1393024768944", 
                 "ports": [
-                    31250, 
-                    31251
+                    31266, 
+                    31267
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_3-1393020586851", 
+                "id": "myApp_3-1393024779962", 
                 "ports": [
-                    31116, 
-                    31117
+                    31037, 
+                    31038
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_2-1393020580835", 
+                "id": "myApp_2-1393024774954", 
                 "ports": [
-                    31741, 
-                    31742
+                    31413, 
+                    31414
+                ]
+            }, 
+            {
+                "host": "mesos.vm", 
+                "id": "myApp_0-1393024762936", 
+                "ports": [
+                    31289, 
+                    31290
                 ]
             }
         ], 
         "ports": [
-            14638, 
-            14263
+            11056, 
+            12101
         ]
     }
 ]
@@ -1057,8 +1069,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_14638 14638 mesos.vm:31116 mesos.vm:31741 mesos.vm:31250 
-myApp_14263 14263 mesos.vm:31117 mesos.vm:31742 mesos.vm:31251 
+myApp_11056 11056 mesos.vm:31266 mesos.vm:31289 mesos.vm:31413 mesos.vm:31037 
+myApp_12101 12101 mesos.vm:31267 mesos.vm:31290 mesos.vm:31414 mesos.vm:31038 
 
 ```
 
@@ -1092,32 +1104,32 @@ Transfer-Encoding: chunked
     "instances": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1393020569822", 
+            "id": "myApp_3-1393024779962", 
             "ports": [
-                31250, 
-                31251
+                31037, 
+                31038
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1393020586851", 
+            "id": "myApp_2-1393024774954", 
             "ports": [
-                31116, 
-                31117
+                31413, 
+                31414
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1393020580835", 
+            "id": "myApp_0-1393024762936", 
             "ports": [
-                31741, 
-                31742
+                31289, 
+                31290
             ]
         }
     ], 
     "ports": [
-        14638, 
-        14263
+        11056, 
+        12101
     ]
 }
 ```
@@ -1144,8 +1156,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_14638 14638 mesos.vm:31116 mesos.vm:31741 mesos.vm:31878 
-myApp_14263 14263 mesos.vm:31117 mesos.vm:31742 mesos.vm:31879 
+myApp_11056 11056 mesos.vm:31289 mesos.vm:31413 mesos.vm:31037 
+myApp_12101 12101 mesos.vm:31290 mesos.vm:31414 mesos.vm:31038 
 
 ```
 
@@ -1180,26 +1192,26 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1393020635923", 
+            "id": "myApp_3-1393024779962", 
             "ports": [
-                31878, 
-                31879
+                31037, 
+                31038
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1393020586851", 
+            "id": "myApp_2-1393024774954", 
             "ports": [
-                31116, 
-                31117
+                31413, 
+                31414
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1393020580835", 
+            "id": "myApp_2-1393024829079", 
             "ports": [
-                31741, 
-                31742
+                31050, 
+                31051
             ]
         }
     ]

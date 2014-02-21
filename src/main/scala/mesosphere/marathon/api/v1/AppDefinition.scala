@@ -64,32 +64,6 @@ case class AppDefinition(
   // (de)serializers
   def this() = this(id = "")
 
-  /**
-   * If this value is a Left, then the tasks key is "left out" of the
-   * JSON serialized form.
-   */
-  @JsonIgnore
-  var tasksSnapshot: Either[Seq[MarathonTask], Seq[MarathonTask]] = Left(Nil)
-
-  @JsonProperty
-  @JsonInclude(Include.NON_EMPTY)
-  def tasks(): Option[Seq[MarathonTask]] = tasksSnapshot.right.toOption
-
-  @JsonProperty
-  def tasksStaged(): Int = {
-    val taskList = tasksSnapshot.right.getOrElse(tasksSnapshot.left.get)
-    taskList.count { task => task.getStagedAt != 0 && task.getStartedAt == 0 }
-  }
-
-  @JsonProperty
-  def tasksRunning(): Int = {
-    val taskList = tasksSnapshot.right.getOrElse(tasksSnapshot.left.get)
-    taskList.count { task =>
-      val statusList = task.getStatusesList.asScala
-      statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
-    }
-  }
-
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
     val cpusResource = TaskBuilder.scalarResource(AppDefinition.CPUS, cpus)
@@ -143,6 +117,19 @@ case class AppDefinition(
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
     mergeFromProto(proto)
   }
+
+  def withTaskCounts(taskTracker: TaskTracker): AppDefinition.WithTaskCounts =
+    new AppDefinition.WithTaskCounts(
+      taskTracker, id, cmd, env, instances, cpus, mem, executor,
+      constraints, uris, ports, taskRateLimit, container
+    )
+
+  def withTasks(taskTracker: TaskTracker): AppDefinition.WithTasks =
+    new AppDefinition.WithTasks(
+      taskTracker, id, cmd, env, instances, cpus, mem, executor,
+      constraints, uris, ports, taskRateLimit, container
+    )
+
 }
 
 object AppDefinition {
@@ -155,4 +142,64 @@ object AppDefinition {
   val DEFAULT_INSTANCES = 0
 
   val DEFAULT_TASK_RATE_LIMIT = 1.0
+
+  import mesosphere.marathon.tasks.TaskTracker
+
+  protected[marathon] class WithTaskCounts(
+    taskTracker: TaskTracker,
+    id: String,
+    cmd: String,
+    env: Map[String, String],
+    instances: Int,
+    cpus: Double,
+    mem: Double,
+    executor: String,
+    constraints: Set[Constraint],
+    uris: Seq[String],
+    ports: Seq[Int],
+    taskRateLimit: Double,
+    container: Option[ContainerInfo]
+  ) extends AppDefinition(
+    id, cmd, env, instances, cpus, mem, executor,
+    constraints, uris, ports, taskRateLimit, container
+  ) {
+    @JsonIgnore
+    protected def appTasks(): Seq[MarathonTask] =
+      taskTracker.get(this.id).toSeq
+
+    @JsonProperty
+    def tasksStaged(): Int = appTasks.count { task =>
+      task.getStagedAt != 0 && task.getStartedAt == 0
+    }
+
+    @JsonProperty
+    def tasksRunning(): Int = appTasks.count { task =>
+      val statusList = task.getStatusesList.asScala
+      statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
+    }
+  }
+
+  protected[marathon] class WithTasks(
+        taskTracker: TaskTracker,
+    id: String,
+    cmd: String,
+    env: Map[String, String],
+    instances: Int,
+    cpus: Double,
+    mem: Double,
+    executor: String,
+    constraints: Set[Constraint],
+    uris: Seq[String],
+    ports: Seq[Int],
+    taskRateLimit: Double,
+    container: Option[ContainerInfo]
+  ) extends WithTaskCounts(
+    taskTracker, id, cmd, env, instances, cpus, mem, executor,
+    constraints, uris, ports, taskRateLimit, container
+  ) {
+    @JsonProperty
+    @JsonInclude
+    def tasks = appTasks
+  }
+
 }

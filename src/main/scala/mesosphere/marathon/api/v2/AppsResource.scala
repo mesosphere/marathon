@@ -40,11 +40,7 @@ class AppsResource @Inject()(
       service.listApps()
     }
 
-    apps.foreach { app =>
-      app.tasksSnapshot = Left(taskTracker.get(app.id).toSeq)
-    }
-
-    Map("apps" -> apps)
+    Map("apps" -> apps.map { _.withTaskCounts(taskTracker) })
   }
 
   @POST
@@ -69,8 +65,7 @@ class AppsResource @Inject()(
   @Timed
   def show(@PathParam("id") id: String): Response = service.getApp(id) match {
     case Some(app) => {
-      app.tasksSnapshot = Right(taskTracker.get(app.id).toSeq)
-      Response.ok(Map("app" -> app)).build
+      Response.ok(Map("app" -> app.withTasks(taskTracker))).build
     }
     case None => Response.status(Status.NOT_FOUND).build
   }
