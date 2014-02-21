@@ -35,7 +35,7 @@ class AppsResource @Inject()(
     val apps = service.listApps
 
     apps.foreach { app =>
-      app.tasksSnapshot = Left(taskTracker.get(app.id))
+      app.tasksSnapshot = Left(taskTracker.get(app.id).toSeq)
     }
 
     apps
