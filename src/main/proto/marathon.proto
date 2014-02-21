@@ -57,3 +57,7 @@ message ContainerInfo {
   required bytes image = 1 [default = ""];
   repeated bytes options = 2;
 }
+
+message EventSubscribers {
+  repeated string callback_urls = 1;
+}
