@@ -31,25 +31,27 @@ class TaskBuilderTest extends AssertionsForJUnit
       .addResources(TaskBuilder.scalarResource("mem", 128))
       .build
 
-    val app = new AppDefinition
-    app.id = "testApp"
-    app.cpus = 1
-    app.mem = 64
-    app.executor = "//cmd"
-    app.ports = Seq(8080, 8081)
+    val task: Option[(TaskInfo, Seq[Int])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "testApp",
+        cpus = 1,
+        mem = 64,
+        executor = "//cmd",
+        ports = Seq(8080, 8081)
+      )
+    )
 
-    val task = buildIfMatches(offer, app)
     assertTrue(task.isDefined)
 
-    val taskInfo = task.get._1
+    val (taskInfo, taskPorts) = task.get
     val range = taskInfo.getResourcesList.asScala
       .find(r => r.getName == TaskBuilder.portsResourceName)
       .map(r => r.getRanges.getRange(0))
-    val ports = task.get._2
     assertTrue(range.isDefined)
-    assertEquals(2, ports.size)
-    assertEquals(ports(0), range.get.getBegin.toInt)
-    assertEquals(ports(1), range.get.getEnd.toInt)
+    assertEquals(2, taskPorts.size)
+    assertEquals(taskPorts(0), range.get.getBegin.toInt)
+    assertEquals(taskPorts(1), range.get.getEnd.toInt)
 
     for (r <- taskInfo.getResourcesList.asScala) {
       assertEquals("*", r.getRole)
@@ -68,25 +70,27 @@ class TaskBuilderTest extends AssertionsForJUnit
       .addResources(makePortsResource(Seq((33000, 34000)), "marathon"))
       .build
 
-    val app = new AppDefinition
-    app.id = "testApp"
-    app.cpus = 2
-    app.mem = 200
-    app.executor = "//cmd"
-    app.ports = Seq(8080, 8081)
+    val task: Option[(TaskInfo, Seq[Int])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "testApp",
+        cpus = 2,
+        mem = 200,
+        executor = "//cmd",
+        ports = Seq(8080, 8081)
+      )
+    )
 
-    val task = buildIfMatches(offer, app)
     assertTrue(task.isDefined)
 
-    val taskInfo = task.get._1
+    val (taskInfo, taskPorts) = task.get
     val range = taskInfo.getResourcesList.asScala
       .find(r => r.getName == TaskBuilder.portsResourceName)
       .map(r => r.getRanges.getRange(0))
-    val ports = task.get._2
     assertTrue(range.isDefined)
-    assertEquals(2, ports.size)
-    assertEquals(ports(0), range.get.getBegin.toInt)
-    assertEquals(ports(1), range.get.getEnd.toInt)
+    assertEquals(2, taskPorts.size)
+    assertEquals(taskPorts(0), range.get.getBegin.toInt)
+    assertEquals(taskPorts(1), range.get.getEnd.toInt)
 
     for (r <- taskInfo.getResourcesList.asScala) {
       assertEquals("marathon", r.getRole)
@@ -105,25 +109,27 @@ class TaskBuilderTest extends AssertionsForJUnit
       .addResources(makePortsResource(Seq((33000, 34000)), "marathon"))
       .build
 
-    val app = new AppDefinition
-    app.id = "testApp"
-    app.cpus = 1
-    app.mem = 64
-    app.executor = "//cmd"
-    app.ports = Seq(8080, 8081)
+    val task: Option[(TaskInfo, Seq[Int])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "testApp",
+        cpus = 1,
+        mem = 64,
+        executor = "//cmd",
+        ports = Seq(8080, 8081)
+      )
+    )
 
-    val task = buildIfMatches(offer, app)
     assertTrue(task.isDefined)
 
-    val taskInfo = task.get._1
+    val (taskInfo, taskPorts) = task.get
     val range = taskInfo.getResourcesList.asScala
       .find(r => r.getName == TaskBuilder.portsResourceName)
       .map(r => r.getRanges.getRange(0))
-    val ports = task.get._2
     assertTrue(range.isDefined)
-    assertEquals(2, ports.size)
-    assertEquals(ports(0), range.get.getBegin.toInt)
-    assertEquals(ports(1), range.get.getEnd.toInt)
+    assertEquals(2, taskPorts.size)
+    assertEquals(taskPorts(0), range.get.getBegin.toInt)
+    assertEquals(taskPorts(1), range.get.getEnd.toInt)
 
     // In this case, the first roles are sufficient so we'll use those first.
     for (r <- taskInfo.getResourcesList.asScala) {
@@ -141,8 +147,14 @@ class TaskBuilderTest extends AssertionsForJUnit
       .addAttributes(makeAttribute("rackid", "1"))
       .build
 
-    val app = makeBasicApp()
-    app.constraints = Set(Constraint.newBuilder.setField("rackid").setOperator(Constraint.Operator.UNIQUE).build())
+    val app = makeBasicApp().copy(
+      constraints = Set(
+        Constraint.newBuilder
+          .setField("rackid")
+          .setOperator(Constraint.Operator.UNIQUE)
+          .build()
+        )
+    )
 
     val t1 = makeSampleTask(app.id, "rackid", "2")
     val t2 = makeSampleTask(app.id, "rackid", "3")
@@ -162,11 +174,12 @@ class TaskBuilderTest extends AssertionsForJUnit
   def testRackAndHostConstraints() {
     // Test the case where we want tasks to be balanced across racks/AZs
     // and run only one per machine
-    val app = makeBasicApp()
-    app.instances = 10
-    app.constraints = Set(
-      Constraint.newBuilder.setField("rackid").setOperator(Constraint.Operator.GROUP_BY).setValue("3").build,
-      Constraint.newBuilder.setField("hostname").setOperator(Constraint.Operator.UNIQUE).build
+    val app = makeBasicApp().copy(
+      instances = 10,
+      constraints = Set(
+        Constraint.newBuilder.setField("rackid").setOperator(Constraint.Operator.GROUP_BY).setValue("3").build,
+        Constraint.newBuilder.setField("hostname").setOperator(Constraint.Operator.UNIQUE).build
+      )
     )
 
     val runningTasks = new mutable.HashSet[MarathonTask]()
@@ -220,11 +233,12 @@ class TaskBuilderTest extends AssertionsForJUnit
 
   @Test
   def testUniqueHostNameAndClusterAttribute() {
-    val app = makeBasicApp()
-    app.instances = 10
-    app.constraints = Set(
-      Constraint.newBuilder.setField("spark").setOperator(Constraint.Operator.CLUSTER).setValue("enabled").build,
-      Constraint.newBuilder.setField("hostname").setOperator(Constraint.Operator.UNIQUE).build
+    val app = makeBasicApp().copy(
+      instances = 10,
+      constraints = Set(
+        Constraint.newBuilder.setField("spark").setOperator(Constraint.Operator.CLUSTER).setValue("enabled").build,
+        Constraint.newBuilder.setField("hostname").setOperator(Constraint.Operator.UNIQUE).build
+      )
     )
 
     val runningTasks = new mutable.HashSet[MarathonTask]()

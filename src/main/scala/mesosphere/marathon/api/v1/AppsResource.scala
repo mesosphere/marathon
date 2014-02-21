@@ -32,7 +32,13 @@ class AppsResource @Inject()(
   @GET
   @Timed
   def index = {
-    service.listApps
+    val apps = service.listApps
+
+    apps.foreach { app =>
+      app.tasksSnapshot = Left(taskTracker.get(app.id))
+    }
+
+    apps
   }
 
   @POST

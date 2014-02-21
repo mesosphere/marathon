@@ -5,27 +5,21 @@ import mesosphere.marathon.{ContainerInfo, Protos}
 import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.tasks.TaskTracker
-import org.apache.mesos.Protos.TaskState
-import javax.validation.constraints.Pattern
-import org.hibernate.validator.constraints.NotEmpty
+import mesosphere.marathon.api.FieldConstraints.{
+  FieldPattern,
+  FieldNotEmpty,
+  FieldJsonDeserialize
+}
 import com.fasterxml.jackson.annotation.{
   JsonInclude,
+  JsonIgnore,
   JsonIgnoreProperties,
   JsonProperty
 }
 import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
-import scala.annotation.target.field
 
-object FieldConstraints {
-  type FieldNotEmpty = NotEmpty @field
-  type FieldPattern = Pattern @field
-  type FieldJsonInclude = JsonInclude @field
-  type FieldJsonDeserialize = JsonDeserialize @field
-}
-
-import FieldConstraints._
 
 /**
  * @author Tobi Knaup
@@ -35,34 +29,34 @@ case class AppDefinition(
 
   @FieldNotEmpty
   @FieldPattern(regexp = "^[A-Za-z0-9_.-]+$")
-  var id: String = "",
+  id: String = "",
 
-  var cmd: String = "",
+  cmd: String = "",
 
-  var env: Map[String, String] = Map.empty,
+  env: Map[String, String] = Map.empty,
 
-  var instances: Int = AppDefinition.DEFAULT_INSTANCES,
+  instances: Int = AppDefinition.DEFAULT_INSTANCES,
 
-  var cpus: Double = AppDefinition.DEFAULT_CPUS,
+  cpus: Double = AppDefinition.DEFAULT_CPUS,
 
-  var mem: Double = AppDefinition.DEFAULT_MEM,
+  mem: Double = AppDefinition.DEFAULT_MEM,
 
   @FieldPattern(regexp="(^//cmd$)|(^/[^/].*$)|")
-  var executor: String = "",
+  executor: String = "",
 
-  var constraints: Set[Constraint] = Set(),
+  constraints: Set[Constraint] = Set(),
 
-  var uris: Seq[String] = Seq(),
+  uris: Seq[String] = Seq(),
 
-  var ports: Seq[Int] = Seq(0),
+  ports: Seq[Int] = Seq(0),
 
   // Number of new tasks this app may spawn per second in response to
   // terminated tasks. This prevents frequently failing apps from spamming
   // the cluster.
-  var taskRateLimit: Double = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
+  taskRateLimit: Double = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
 
   @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
-  var container: Option[ContainerInfo] = None
+  container: Option[ContainerInfo] = None
 
 ) extends MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
@@ -70,20 +64,30 @@ case class AppDefinition(
   // (de)serializers
   def this() = this(id = "")
 
-  @JsonProperty("tasks")
-  @JsonInclude(Include.NON_EMPTY)
-  var tasksSnapshot: Seq[MarathonTask] = Nil
+  /**
+   * If this value is a Left, then the tasks key is "left out" of the
+   * JSON serialized form.
+   */
+  @JsonIgnore
+  var tasksSnapshot: Either[Seq[MarathonTask], Seq[MarathonTask]] = Left(Nil)
 
   @JsonProperty
-  def tasksStaged(): Int = tasksSnapshot.count { task =>
-    task.getStagedAt != 0 &&
-    task.getStartedAt == 0
+  @JsonInclude(Include.NON_EMPTY)
+  def tasks(): Option[Seq[MarathonTask]] = tasksSnapshot.right.toOption
+
+  @JsonProperty
+  def tasksStaged(): Int = {
+    val taskList = tasksSnapshot.right.getOrElse(tasksSnapshot.left.get)
+    taskList.count { task => task.getStagedAt != 0 && task.getStartedAt == 0 }
   }
 
   @JsonProperty
-  def tasksRunning(): Int = tasksSnapshot.count { task =>
-    val statusList = task.getStatusesList.asScala
-    statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
+  def tasksRunning(): Int = {
+    val taskList = tasksSnapshot.right.getOrElse(tasksSnapshot.left.get)
+    taskList.count { task =>
+      val statusList = task.getStatusesList.asScala
+      statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
+    }
   }
 
   def toProto: Protos.ServiceDefinition = {

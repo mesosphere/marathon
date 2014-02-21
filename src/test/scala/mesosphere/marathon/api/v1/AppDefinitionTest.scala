@@ -15,14 +15,15 @@ class AppDefinitionTest {
 
   @Test
   def testToProto() {
-    val app = new AppDefinition
-    app.id = "play"
-    app.cmd = "bash foo-*/start -Dhttp.port=$PORT"
-    app.cpus = 4
-    app.mem = 256
-    app.instances = 5
-    app.ports = Seq(8080, 8081)
-    app.executor = "//cmd"
+    val app = AppDefinition(
+      id = "play",
+      cmd = "bash foo-*/start -Dhttp.port=$PORT",
+      cpus = 4,
+      mem = 256,
+      instances = 5,
+      ports = Seq(8080, 8081),
+      executor = "//cmd"
+    )
 
     val proto = app.toProto
     assertEquals("play", proto.getId)
@@ -71,13 +72,20 @@ class AppDefinitionTest {
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
-    val app = new AppDefinition
-    app.id = "a b"
+    val app = AppDefinition(id = "a b")
     shouldViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
-    app.id = "a#$%^&*b"
-    shouldViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
-    app.id = "ab"
-    shouldNotViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
+
+    shouldViolate(
+      app.copy(id = "a#$%^&*b"),
+      "id",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldNotViolate(
+      app.copy(id = "ab"),
+      "id",
+      "{javax.validation.constraints.Pattern.message}"
+    )
   }
 
   @Test
@@ -85,12 +93,10 @@ class AppDefinitionTest {
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.marathon.api.v2.json.MarathonModule
-    import mesosphere.marathon.api.v1.json.ConstraintModule
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     mapper.registerModule(new MarathonModule)
-    mapper.registerModule(new ConstraintModule)
 
     val original = AppDefinition()
     val json = mapper.writeValueAsString(original)

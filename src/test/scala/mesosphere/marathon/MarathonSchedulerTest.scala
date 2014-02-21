@@ -49,10 +49,11 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     val driver = mock[SchedulerDriver]
     val offer = makeBasicOffer(4, 1024, 31000, 32000).build
     val offers = Lists.newArrayList(offer)
-    val app = new AppDefinition
-    app.id = "testOffers"
-    app.executor = "//cmd"
-    app.ports = Seq(8080)
+    val app = AppDefinition(
+      id = "testOffers",
+      executor = "//cmd",
+      ports = Seq(8080)
+    )
 
     when(tracker.newTaskId("testOffers"))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
