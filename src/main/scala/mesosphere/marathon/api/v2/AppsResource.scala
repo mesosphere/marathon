@@ -62,14 +62,12 @@ class AppsResource @Inject()(
   @GET
   @Path("{id}")
   @Timed
-  def show(@PathParam("id") id: String): Response = {
-    service.getApp(id) match {
-      case Some(app) => {
-        app.tasks = taskTracker.get(app.id).toSeq
-        Response.ok(Map("app" -> app)).build
-      }
-      case None => Response.status(Status.NOT_FOUND).build
+  def show(@PathParam("id") id: String): Response = service.getApp(id) match {
+    case Some(app) => {
+      app.tasksSnapshot = taskTracker.get(app.id).toSeq
+      Response.ok(Map("app" -> app)).build
     }
+    case None => Response.status(Status.NOT_FOUND).build
   }
 
   @PUT

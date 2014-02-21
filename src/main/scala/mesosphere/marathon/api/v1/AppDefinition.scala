@@ -4,9 +4,10 @@ import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.{ContainerInfo, Protos}
 import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
+import mesosphere.marathon.tasks.TaskTracker
+import org.apache.mesos.Protos.TaskState
 import javax.validation.constraints.Pattern
 import org.hibernate.validator.constraints.NotEmpty
-import org.apache.mesos.Protos.TaskState
 import com.fasterxml.jackson.annotation.{
   JsonInclude,
   JsonIgnoreProperties,
@@ -60,9 +61,6 @@ case class AppDefinition(
   // the cluster.
   var taskRateLimit: Double = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
 
-  @FieldJsonInclude(Include.NON_EMPTY)
-  var tasks: Seq[MarathonTask] = Seq(),
-
   @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
   var container: Option[ContainerInfo] = None
 
@@ -72,14 +70,18 @@ case class AppDefinition(
   // (de)serializers
   def this() = this(id = "")
 
-  @JsonProperty()
-  def tasksStaged(): Int = tasks.count { task =>
+  @JsonProperty("tasks")
+  @JsonInclude(Include.NON_EMPTY)
+  var tasksSnapshot: Seq[MarathonTask] = Nil
+
+  @JsonProperty
+  def tasksStaged(): Int = tasksSnapshot.count { task =>
     task.getStagedAt != 0 &&
     task.getStartedAt == 0
   }
 
-  @JsonProperty()
-  def tasksRunning(): Int = tasks.count { task =>
+  @JsonProperty
+  def tasksRunning(): Int = tasksSnapshot.count { task =>
     val statusList = task.getStatusesList.asScala
     statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
   }
