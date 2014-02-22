@@ -10,7 +10,9 @@ trait PersistenceStore[T] {
 
   def fetch(key: String): Future[Option[T]]
 
-  def store(key: String, value: T): Future[Option[T]]
+  def store(key: String, value: T): Future[Option[T]] = modify(key)(_ => value)
+
+  def modify(key:String)(f: T => T): Future[Option[T]]
 
   def expunge(key: String): Future[Boolean]
 
