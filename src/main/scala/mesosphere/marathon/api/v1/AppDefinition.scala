@@ -119,16 +119,10 @@ case class AppDefinition(
   }
 
   def withTaskCounts(taskTracker: TaskTracker): AppDefinition.WithTaskCounts =
-    new AppDefinition.WithTaskCounts(
-      taskTracker, id, cmd, env, instances, cpus, mem, executor,
-      constraints, uris, ports, taskRateLimit, container
-    )
+    new AppDefinition.WithTaskCounts(taskTracker, this)
 
   def withTasks(taskTracker: TaskTracker): AppDefinition.WithTasks =
-    new AppDefinition.WithTasks(
-      taskTracker, id, cmd, env, instances, cpus, mem, executor,
-      constraints, uris, ports, taskRateLimit, container
-    )
+    new AppDefinition.WithTasks(taskTracker, this)
 
 }
 
@@ -147,21 +141,10 @@ object AppDefinition {
 
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
-    id: String,
-    cmd: String,
-    env: Map[String, String],
-    instances: Int,
-    cpus: Double,
-    mem: Double,
-    executor: String,
-    constraints: Set[Constraint],
-    uris: Seq[String],
-    ports: Seq[Int],
-    taskRateLimit: Double,
-    container: Option[ContainerInfo]
+    app: AppDefinition
   ) extends AppDefinition(
-    id, cmd, env, instances, cpus, mem, executor,
-    constraints, uris, ports, taskRateLimit, container
+    app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
+    app.constraints, app.uris, app.ports, app.taskRateLimit, app.container
   ) {
     @JsonIgnore
     protected def appTasks(): Seq[MarathonTask] =
@@ -180,23 +163,9 @@ object AppDefinition {
   }
 
   protected[marathon] class WithTasks(
-        taskTracker: TaskTracker,
-    id: String,
-    cmd: String,
-    env: Map[String, String],
-    instances: Int,
-    cpus: Double,
-    mem: Double,
-    executor: String,
-    constraints: Set[Constraint],
-    uris: Seq[String],
-    ports: Seq[Int],
-    taskRateLimit: Double,
-    container: Option[ContainerInfo]
-  ) extends WithTaskCounts(
-    taskTracker, id, cmd, env, instances, cpus, mem, executor,
-    constraints, uris, ports, taskRateLimit, container
-  ) {
+    taskTracker: TaskTracker,
+    app: AppDefinition
+  ) extends WithTaskCounts(taskTracker, app) {
     @JsonProperty
     @JsonInclude
     def tasks = appTasks
