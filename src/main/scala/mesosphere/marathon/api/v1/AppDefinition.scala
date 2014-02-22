@@ -137,8 +137,6 @@ object AppDefinition {
 
   val DEFAULT_TASK_RATE_LIMIT = 1.0
 
-  import mesosphere.marathon.tasks.TaskTracker
-
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
     app: AppDefinition
@@ -147,7 +145,7 @@ object AppDefinition {
     app.constraints, app.uris, app.ports, app.taskRateLimit, app.container
   ) {
     @JsonIgnore
-    protected def appTasks(): Seq[MarathonTask] =
+    protected[this] def appTasks(): Seq[MarathonTask] =
       taskTracker.get(this.id).toSeq
 
     @JsonProperty
