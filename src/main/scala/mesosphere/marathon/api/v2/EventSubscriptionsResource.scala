@@ -1,24 +1,26 @@
 package mesosphere.marathon.api.v2
 
 import scala.language.postfixOps
-import javax.inject.Inject
+import com.google.inject.Inject
 import javax.ws.rs._
 import javax.ws.rs.core.{Context, MediaType}
 import com.codahale.metrics.annotation.Timed
 import javax.servlet.http.HttpServletRequest
 import java.util.logging.Logger
 import mesosphere.marathon.event.{Unsubscribe, Subscribe}
-import mesosphere.marathon.event.http.HttpCallbackSubscriptionService
+import mesosphere.marathon.event.http.{HttpEventModule, HttpCallbackSubscriptionService}
 import scala.concurrent.Await
-import scala.concurrent.duration._
 import mesosphere.marathon.BadRequestException
 
 @Path("v2/event_subscriptions")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class EventSubscriptionsResource @Inject()(service: HttpCallbackSubscriptionService) {
+class EventSubscriptionsResource {
   // TODO(everpeace) this should be configurable option?
-  val timeout = 5 seconds
+  val timeout = HttpEventModule.timeout.duration
   val log = Logger.getLogger(getClass.getName)
+
+  @Inject(optional = true)
+  val service: HttpCallbackSubscriptionService = null
 
   @GET
   @Timed
@@ -45,7 +47,8 @@ class EventSubscriptionsResource @Inject()(service: HttpCallbackSubscriptionServ
 
   private def validateSubscriptionService = {
     if (Option(service).isEmpty) throw new BadRequestException(
-      "http event callback system is not running on Marathon. Please re-start Marathon with \"--event_subscriber http_callback\"."
+      "http event callback system is not running on this Marathon instance. " +
+        "Please re-start this instance with \"--event_subscriber http_callback\"."
     )
   }
 }
