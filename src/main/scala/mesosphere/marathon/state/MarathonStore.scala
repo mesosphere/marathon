@@ -11,11 +11,10 @@ import mesosphere.marathon.StorageException
  * @author Tobi Knaup
  */
 
-class MarathonStore[S <: MarathonState[_, S]](state: State,
-                       newState: () => S) extends PersistenceStore[S] {
+class MarathonStore[S <: MarathonState[_]](state: State,
+                       newState: () => S, prefix:String = "app:") extends PersistenceStore[S] {
 
   val defaultWait = Duration(3, "seconds")
-  val prefix = "app:"
 
   import ExecutionContext.Implicits.global
   import mesosphere.util.BackToTheFuture._
