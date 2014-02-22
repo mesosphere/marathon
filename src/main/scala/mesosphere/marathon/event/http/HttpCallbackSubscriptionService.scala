@@ -5,19 +5,26 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import mesosphere.marathon.event._
 import javax.inject.{Named, Inject}
-import mesosphere.marathon.event.http.HttpEventActor.GetSubscribers
+import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
+import com.google.common.eventbus.EventBus
 
 class HttpCallbackSubscriptionService @Inject()(
-  @Named(HttpEventModule.StatusUpdateActor) val actor: ActorRef) {
+  @Named(HttpEventModule.SubscribersKeeperActor) val subscribersKeeper: ActorRef,
+  @Named(EventModule.busName) eventBus: Option[EventBus]) {
 
+  implicit val ec = HttpEventModule.executionContext
   implicit val timeout = HttpEventModule.timeout
 
   def handleSubscriptionEvent(event: MarathonSubscriptionEvent) = {
-    actor ? event
+    (subscribersKeeper ? event).map{ msg =>
+      // Subscribe and Unsubscribe event should be broadcast.
+      eventBus.map( _.post(event))
+      event
+    }
   }
 
   def getSubscribers = {
-    (actor ? GetSubscribers).mapTo[List[String]]
+    (subscribersKeeper ? GetSubscribers).mapTo[List[String]]
   }
 
 }
