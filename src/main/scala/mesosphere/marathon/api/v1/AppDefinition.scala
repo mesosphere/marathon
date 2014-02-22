@@ -144,17 +144,28 @@ object AppDefinition {
     app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
     app.constraints, app.uris, app.ports, app.taskRateLimit, app.container
   ) {
+
+    /**
+     * Snapshot of the known tasks for this app
+     */
     @JsonIgnore
-    protected[this] def appTasks(): Seq[MarathonTask] =
+    protected[this] val appTasks: Seq[MarathonTask] =
       taskTracker.get(this.id).toSeq
 
+    /**
+      * Snapshot of the number of staged (but not running) tasks
+      * for this app
+      */
     @JsonProperty
-    def tasksStaged(): Int = appTasks.count { task =>
+    val tasksStaged: Int = appTasks.count { task =>
       task.getStagedAt != 0 && task.getStartedAt == 0
     }
 
+    /**
+      * Snapshot of the number of running tasks for this app
+      */
     @JsonProperty
-    def tasksRunning(): Int = appTasks.count { task =>
+    val tasksRunning: Int = appTasks.count { task =>
       val statusList = task.getStatusesList.asScala
       statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
     }
@@ -165,7 +176,6 @@ object AppDefinition {
     app: AppDefinition
   ) extends WithTaskCounts(taskTracker, app) {
     @JsonProperty
-    @JsonInclude
     def tasks = appTasks
   }
 
