@@ -38,7 +38,8 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
   }
 
   private def add(callback_url: String) = store.modify(SUBSCRIBERS) {
-    subscribers =>
+    deserialize =>
+      val subscribers = deserialize()
       if (!subscribers.callback_urls.contains(callback_url)) {
         subscribers.callback_urls = subscribers.callback_urls + callback_url
       } else {
@@ -48,7 +49,8 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
   }
 
   private def remove(callback_url: String) = store.modify(SUBSCRIBERS) {
-    subscribers =>
+    deserialize =>
+      val subscribers = deserialize()
       if (subscribers.callback_urls.contains(callback_url)) {
         subscribers.callback_urls = subscribers.callback_urls - callback_url
       } else {
