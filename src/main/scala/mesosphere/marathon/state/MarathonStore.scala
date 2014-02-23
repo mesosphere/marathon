@@ -26,11 +26,11 @@ class MarathonStore[S <: MarathonState[_]](state: State,
     }
   }
 
-  def modify(key: String)(f: S => S): Future[Option[S]] = {
+  def modify(key: String)(f: (() => S) => S): Future[Option[S]] = {
     state.fetch(prefix + key) flatMap {
       case Some(variable) =>
-        val fetched = stateFromBytes(variable.value).getOrElse(newState())
-        state.store(variable.mutate(f(fetched).toProtoByteArray)) map {
+        val deserialize = () => stateFromBytes(variable.value).getOrElse(newState())
+        state.store(variable.mutate(f(deserialize).toProtoByteArray)) map {
           case Some(newVar) => stateFromBytes(newVar.value)
           case None => throw new StorageException(s"Failed to store $key")
         }
