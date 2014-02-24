@@ -130,7 +130,7 @@ To launch Marathon in *production mode*, you need to have both
 Marathon on Mesos in *production mode*. Point your web browser to
 `localhost:8080` and you should see the Marathon UI.
 
-    ./bin/start --master zk://zk1.foo.bar/mesos,zk2.foo.bar/mesos --zk_hosts zk1.foo.bar:2181,zk2.foo.bar:2181
+    ./bin/start --master zk://zk1.foo.bar:2181/mesos,zk2.foo.bar:2181/mesos --zk_hosts zk1.foo.bar:2181,zk2.foo.bar:2181
 
 Note the different format of the `--master` and `--zk_hosts` options. Marathon
 uses `--master` to find the Mesos masters, and `--zk_hosts` to find Zookeepers
