@@ -31,9 +31,7 @@ class AppsResource @Inject()(
 
   @GET
   @Timed
-  def index = {
-    service.listApps
-  }
+  def index = service.listApps.map { _.withTaskCounts(taskTracker) }
 
   @POST
   @Path("start")

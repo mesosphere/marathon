@@ -32,11 +32,11 @@ class MarathonModule extends Module {
       override def findSerializer(config: SerializationConfig, javaType: JavaType,
                                   beanDesc: BeanDescription): JsonSerializer[_] = {
         if (constraintClass.isAssignableFrom(javaType.getRawClass)) {
-          new ConstraintSerializer
+          ConstraintSerializer
         } else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
-          new MarathonTaskSerializer
+          MarathonTaskSerializer
         } else if (enrichedTaskClass.isAssignableFrom(javaType.getRawClass)) {
-          new EnrichedTaskSerializer
+          EnrichedTaskSerializer
         } else {
           null
         }
@@ -47,10 +47,10 @@ class MarathonModule extends Module {
       override def findBeanDeserializer(javaType: JavaType, config: DeserializationConfig,
                                         beanDesc: BeanDescription): JsonDeserializer[_] = {
         if (constraintClass.isAssignableFrom(javaType.getRawClass)) {
-          new ConstraintDeserializer
+          ConstraintDeserializer
         }
         else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
-          new MarathonTaskDeserializer
+          MarathonTaskDeserializer
         }
         else {
           null
@@ -59,7 +59,7 @@ class MarathonModule extends Module {
     })
   }
 
-  class ConstraintSerializer extends JsonSerializer[Constraint] {
+  object ConstraintSerializer extends JsonSerializer[Constraint] {
     def serialize(constraint: Constraint, jgen: JsonGenerator, provider: SerializerProvider) {
       jgen.writeStartArray()
       jgen.writeString(constraint.getField)
@@ -71,7 +71,7 @@ class MarathonModule extends Module {
     }
   }
 
-  class ConstraintDeserializer extends JsonDeserializer[Constraint] {
+  object ConstraintDeserializer extends JsonDeserializer[Constraint] {
     def deserialize(json: JsonParser, context: DeserializationContext): Constraint = {
       val builder = Constraint.newBuilder
       json.nextToken() // skip [
@@ -92,7 +92,7 @@ class MarathonModule extends Module {
 
   def timestampToUTC(timestamp: Long): String = isoDateFormatter.print(new DateTime(timestamp))
 
-  class MarathonTaskSerializer extends JsonSerializer[MarathonTask] {
+  object MarathonTaskSerializer extends JsonSerializer[MarathonTask] {
     def serialize(task: MarathonTask, jgen: JsonGenerator, provider: SerializerProvider) {
       jgen.writeStartObject()
       writeFieldValues(task, jgen, provider)
@@ -110,17 +110,15 @@ class MarathonModule extends Module {
     }
   }
 
-  object MarathonTaskSerializer extends MarathonTaskSerializer
-
   // TODO: handle fields!
   // Currently there is no support for handling updates to task instances (CD)
-  class MarathonTaskDeserializer extends JsonDeserializer[MarathonTask] {
+  object MarathonTaskDeserializer extends JsonDeserializer[MarathonTask] {
     def deserialize(json: JsonParser, context: DeserializationContext): MarathonTask = {
       MarathonTask.newBuilder.build
     }
   }
 
-  class EnrichedTaskSerializer extends JsonSerializer[EnrichedTask] {
+  object EnrichedTaskSerializer extends JsonSerializer[EnrichedTask] {
     def serialize(enriched: EnrichedTask, jgen: JsonGenerator, provider: SerializerProvider) {
       jgen.writeStartObject()
       jgen.writeObjectField("appId", enriched.appId)

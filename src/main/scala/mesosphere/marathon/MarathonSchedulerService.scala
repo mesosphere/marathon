@@ -88,10 +88,9 @@ class MarathonSchedulerService @Inject()(
     if (oldPorts != newPorts) {
       val asMsg = Seq(oldPorts, newPorts).map("[" + _.mkString(", ") + "]")
       log.info(s"Assigned some ports for ${app.id}: ${asMsg.mkString(" -> ")}")
-      app.ports = newPorts
     }
 
-    scheduler.startApp(driver, app)
+    scheduler.startApp(driver, app.copy(ports = newPorts))
   }
 
   def stopApp(app: AppDefinition): Future[_] = {

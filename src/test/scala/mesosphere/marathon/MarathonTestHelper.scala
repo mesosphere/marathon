@@ -64,14 +64,12 @@ trait MarathonTestHelper {
       .build
   }
 
-  def makeBasicApp() = {
-    val app = new AppDefinition
-    app.id = "testApp"
-    app.cpus = 1
-    app.mem = 64
-    app.executor = "//cmd"
-    app
-  }
+  def makeBasicApp() = AppDefinition(
+    id = "testApp",
+    cpus = 1,
+    mem = 64,
+    executor = "//cmd"
+  )
 
   def makeAttribute(attr: String, attrVal: String) = {
     Attribute.newBuilder()

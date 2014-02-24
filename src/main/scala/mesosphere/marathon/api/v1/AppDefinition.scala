@@ -4,61 +4,65 @@ import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.{ContainerInfo, Protos}
 import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
-import javax.validation.constraints.Pattern
-import org.hibernate.validator.constraints.NotEmpty
-import org.apache.mesos.Protos.TaskState
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.api.FieldConstraints.{
+  FieldPattern,
+  FieldNotEmpty,
+  FieldJsonDeserialize
+}
 import com.fasterxml.jackson.annotation.{
   JsonInclude,
+  JsonIgnore,
   JsonIgnoreProperties,
   JsonProperty
 }
 import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import scala.collection.mutable
+import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
+
 
 /**
  * @author Tobi Knaup
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
-  @NotEmpty
-  @Pattern(regexp = "^[A-Za-z0-9_.-]+$")
-  var id: String = ""
-  var cmd: String = ""
-  var env: Map[String, String] = Map.empty
-  var instances: Int = 0
-  var cpus: Double = 1.0
-  var mem: Double = 128.0
-  @Pattern(regexp="(^//cmd$)|(^/[^/].*$)|")
-  var executor: String = ""
+case class AppDefinition(
 
-  var constraints: Set[Constraint] = Set()
+  @FieldNotEmpty
+  @FieldPattern(regexp = "^[A-Za-z0-9_.-]+$")
+  id: String = "",
 
-  var uris: Seq[String] = Seq()
-  var ports: Seq[Int] = Seq(0)
+  cmd: String = "",
+
+  env: Map[String, String] = Map.empty,
+
+  instances: Int = AppDefinition.DEFAULT_INSTANCES,
+
+  cpus: Double = AppDefinition.DEFAULT_CPUS,
+
+  mem: Double = AppDefinition.DEFAULT_MEM,
+
+  @FieldPattern(regexp="(^//cmd$)|(^/[^/].*$)|")
+  executor: String = "",
+
+  constraints: Set[Constraint] = Set(),
+
+  uris: Seq[String] = Seq(),
+
+  ports: Seq[Int] = Seq(0),
+
   // Number of new tasks this app may spawn per second in response to
   // terminated tasks. This prevents frequently failing apps from spamming
   // the cluster.
-  @JsonInclude(Include.NON_DEFAULT)
-  var taskRateLimit: Double = 1.0
-  @JsonInclude(Include.NON_EMPTY)
-  var tasks: Seq[MarathonTask] = Nil
+  taskRateLimit: Double = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
 
-  @JsonDeserialize(contentAs = classOf[ContainerInfo])
-  var container: Option[ContainerInfo] = None
+  @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
+  container: Option[ContainerInfo] = None
 
-  @JsonProperty()
-  def tasksStaged(): Int = tasks.count { task =>
-    task.getStagedAt != 0 &&
-    task.getStartedAt == 0
-  }
+) extends MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
-  @JsonProperty()
-  def tasksRunning(): Int = tasks.count { task =>
-    val statusList = task.getStatusesList.asScala
-    statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
-  }
+  // the default constructor exists solely for interop with automatic
+  // (de)serializers
+  def this() = this(id = "")
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
@@ -81,48 +85,98 @@ class AppDefinition extends MarathonState[Protos.ServiceDefinition] {
     builder.build
   }
 
-  def mergeFromProto(proto: Protos.ServiceDefinition) {
-    val envMap = mutable.HashMap.empty[String, String]
+  def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
+    val envMap: Map[String, String] =
+      proto.getCmd.getEnvironment.getVariablesList.asScala.map {
+        v => v.getName -> v.getValue
+      }.toMap
 
-    id = proto.getId
-    cmd = proto.getCmd.getValue
-    executor = proto.getExecutor
-    taskRateLimit = proto.getTaskRateLimit
-    instances = proto.getInstances
-    ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]]
-    constraints = proto.getConstraintsList.asScala.toSet
-    if (proto.hasContainer) container = Some(ContainerInfo(proto.getContainer))
+    val resourcesMap: Map[String, Double] =
+      proto.getResourcesList.asScala.map {
+        r => r.getName -> r.getScalar.getValue
+      }.toMap
 
-    // Add command environment
-    for (variable <- proto.getCmd.getEnvironment.getVariablesList.asScala) {
-      envMap(variable.getName) = variable.getValue
-    }
-    env = envMap.toMap
-
-    // Add URIs
-    uris = proto.getCmd.getUrisList.asScala.map(_.getValue)
-
-    // Add resources
-    for (resource <- proto.getResourcesList.asScala) {
-      val value = resource.getScalar.getValue
-      resource.getName match {
-        case AppDefinition.CPUS =>
-          cpus = value
-        case AppDefinition.MEM =>
-          mem = value
-      }
-    }
-
-    // Restore
+    AppDefinition(
+      id = proto.getId,
+      cmd = proto.getCmd.getValue,
+      executor = proto.getExecutor,
+      taskRateLimit = proto.getTaskRateLimit,
+      instances = proto.getInstances,
+      ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]],
+      constraints = proto.getConstraintsList.asScala.toSet,
+      container = if (proto.hasContainer) Some(ContainerInfo(proto.getContainer))
+                  else None,
+      cpus = resourcesMap.get(AppDefinition.CPUS).getOrElse(this.cpus),
+      mem = resourcesMap.get(AppDefinition.MEM).getOrElse(this.mem),
+      env = envMap,
+      uris = proto.getCmd.getUrisList.asScala.map(_.getValue)
+    )
   }
 
-  def mergeFromProto(bytes: Array[Byte]) {
+  def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
     mergeFromProto(proto)
   }
+
+  def withTaskCounts(taskTracker: TaskTracker): AppDefinition.WithTaskCounts =
+    new AppDefinition.WithTaskCounts(taskTracker, this)
+
+  def withTasks(taskTracker: TaskTracker): AppDefinition.WithTasks =
+    new AppDefinition.WithTasks(taskTracker, this)
+
 }
 
 object AppDefinition {
   val CPUS = "cpus"
+  val DEFAULT_CPUS = 1.0
+
   val MEM = "mem"
+  val DEFAULT_MEM = 128.0
+
+  val DEFAULT_INSTANCES = 0
+
+  val DEFAULT_TASK_RATE_LIMIT = 1.0
+
+  protected[marathon] class WithTaskCounts(
+    taskTracker: TaskTracker,
+    app: AppDefinition
+  ) extends AppDefinition(
+    app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
+    app.constraints, app.uris, app.ports, app.taskRateLimit, app.container
+  ) {
+
+    /**
+     * Snapshot of the known tasks for this app
+     */
+    @JsonIgnore
+    protected[this] val appTasks: Seq[MarathonTask] =
+      taskTracker.get(this.id).toSeq
+
+    /**
+      * Snapshot of the number of staged (but not running) tasks
+      * for this app
+      */
+    @JsonProperty
+    val tasksStaged: Int = appTasks.count { task =>
+      task.getStagedAt != 0 && task.getStartedAt == 0
+    }
+
+    /**
+      * Snapshot of the number of running tasks for this app
+      */
+    @JsonProperty
+    val tasksRunning: Int = appTasks.count { task =>
+      val statusList = task.getStatusesList.asScala
+      statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
+    }
+  }
+
+  protected[marathon] class WithTasks(
+    taskTracker: TaskTracker,
+    app: AppDefinition
+  ) extends WithTaskCounts(taskTracker, app) {
+    @JsonProperty
+    def tasks = appTasks
+  }
+
 }
