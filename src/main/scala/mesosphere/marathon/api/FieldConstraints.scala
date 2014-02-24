@@ -15,4 +15,5 @@ object FieldConstraints {
   type FieldPattern = Pattern @field
   type FieldJsonInclude = JsonInclude @field
   type FieldJsonDeserialize = JsonDeserialize @field
+  type FieldJsonProperty = JsonProperty @field
 }

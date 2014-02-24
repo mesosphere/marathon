@@ -33,10 +33,10 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     }
   }
 
-  def broadcast(event: MarathonEvent) = {
+  def broadcast(event: MarathonEvent): Unit = {
     log.info("POSTing to all endpoints.")
-    (subscribersKeeper ? GetSubscribers).mapTo[List[String]].map{ urls  =>
-      urls.foreach(post(_,event))
+    (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].foreach {
+      _.urls.foreach { post(_,event) }
     }
   }
 

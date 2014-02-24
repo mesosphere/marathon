@@ -11,7 +11,7 @@ import mesosphere.marathon.StorageException
  * @author Tobi Knaup
  */
 
-class MarathonStore[S <: MarathonState[_]](state: State,
+class MarathonStore[S <: MarathonState[_, S]](state: State,
                        newState: () => S, prefix:String = "app:") extends PersistenceStore[S] {
 
   val defaultWait = Duration(3, "seconds")

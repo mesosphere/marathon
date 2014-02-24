@@ -28,18 +28,18 @@ class EventSubscribersTest {
   @Test
   def mergeFromProtoEmpty() {
     val proto = Protos.EventSubscribers.newBuilder().build()
-    val subscribers = new EventSubscribers
-    subscribers.mergeFromProto(proto)
+    val subscribers = EventSubscribers()
+    val mergeResult = subscribers.mergeFromProto(proto)
 
-    assertEquals(subscribers.callback_urls, Set.empty[String])
+    assertEquals(mergeResult.urls, Set.empty[String])
   }
 
   @Test
   def mergeFromProtoNotEmpty() {
     val proto = Protos.EventSubscribers.newBuilder().addCallbackUrls("http://localhost:9090/callback").build()
-    val subscribers = new EventSubscribers
-    subscribers.mergeFromProto(proto)
+    val subscribers = EventSubscribers()
+    val mergeResult = subscribers.mergeFromProto(proto)
 
-    assertEquals(subscribers.callback_urls, Set("http://localhost:9090/callback"))
+    assertEquals(mergeResult.urls, Set("http://localhost:9090/callback"))
   }
 }
