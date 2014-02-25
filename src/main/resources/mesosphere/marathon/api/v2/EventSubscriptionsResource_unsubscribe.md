@@ -1,6 +1,6 @@
-## DELETE `/v2/event_subscriptions?callback_url={callback_url}`
+## DELETE `/v2/eventSubscriptions?callbackUrl={callbackUrl}`
 
-De-register a callback url from event subscribers list.
+De-register a callback URL from event subscribers list.
 
 _NOTE: To activate this endpoint, you need to startup a Marathon instance with `--event_subscriber http_callback`_
 
@@ -10,7 +10,7 @@ _NOTE: To activate this endpoint, you need to startup a Marathon instance with `
 
 
 ```
-DELETE /v2/event_subscriptions?callback_url=http://localhost:9292/callback HTTP/1.1
+DELETE /v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0
@@ -28,7 +28,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "callback_url": "http://localhost:9292/callback",
+    "callbackUrl": "http://localhost:9292/callback",
     "clientIp": "127.0.0.1",
     "eventType": "unsubscribe_event"
 }

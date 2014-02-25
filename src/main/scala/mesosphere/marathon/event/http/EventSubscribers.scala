@@ -7,7 +7,7 @@ import collection.JavaConversions._
 import mesosphere.marathon.api.FieldConstraints.FieldJsonProperty
 
 case class EventSubscribers(
-  @FieldJsonProperty("callback_urls")
+  @FieldJsonProperty("callbackUrls")
   urls: Set[String] = Set.empty[String]
 ) extends MarathonState[Protos.EventSubscribers, EventSubscribers]{
 

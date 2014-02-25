@@ -12,7 +12,7 @@ import mesosphere.marathon.event.http.{HttpEventModule, HttpCallbackSubscription
 import scala.concurrent.Await
 import mesosphere.marathon.BadRequestException
 
-@Path("v2/event_subscriptions")
+@Path("v2/eventSubscriptions")
 @Produces(Array(MediaType.APPLICATION_JSON))
 class EventSubscriptionsResource {
   // TODO(everpeace) this should be configurable option?
@@ -31,17 +31,17 @@ class EventSubscriptionsResource {
 
   @POST
   @Timed
-  def subscribe(@Context req: HttpServletRequest, @QueryParam("callback_url") callback_url: String) = {
+  def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String) = {
     validateSubscriptionService
-    val future = service.handleSubscriptionEvent(Subscribe(req.getRemoteAddr, callback_url))
+    val future = service.handleSubscriptionEvent(Subscribe(req.getRemoteAddr, callbackUrl))
     Await.result(future, timeout)
   }
 
   @DELETE
   @Timed
-  def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callback_url") callback_url: String) = {
+  def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String) = {
     validateSubscriptionService
-    val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callback_url))
+    val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
     Await.result(future, timeout)
   }
 

@@ -1,4 +1,4 @@
-## GET `/v2/event_subscriptions`
+## GET `/v2/eventSubscriptions`
 
 List all event subscriber callback URLs.
 
@@ -9,7 +9,7 @@ _NOTE: To activate this endpoint, you need to startup a Marathon instance with `
 **Request:**
 
 ```
-GET /v2/event_subscriptions HTTP/1.1
+GET /v2/eventSubscriptions HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
@@ -25,9 +25,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-  "callback_urls": [
-    "http://localhost:9090/callback",
-    "http://localhost:9191/callback"
-  ]
+    "callbackUrls": [
+        "http://localhost:9090/callback",
+        "http://localhost:9191/callback"
+    ]
 }
 ```

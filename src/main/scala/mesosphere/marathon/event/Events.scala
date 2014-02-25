@@ -68,18 +68,18 @@ case class MesosStatusUpdateEvent(
 
 sealed trait MarathonSubscriptionEvent extends MarathonEvent{
   def clientIp: String
-  def callback_url: String
+  def callbackUrl: String
   override def eventType = "marathon_subscription_event"
 }
 
 case class Subscribe(
     clientIp: String,
-    callback_url: String,
+    callbackUrl: String,
     override val eventType: String = "subscribe_event")
   extends MarathonSubscriptionEvent
 
 case class Unsubscribe(
     clientIp: String,
-    callback_url: String,
+    callbackUrl: String,
     override val eventType: String = "unsubscribe_event")
   extends MarathonSubscriptionEvent

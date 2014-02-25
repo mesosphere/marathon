@@ -17,26 +17,26 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
 
   override def receive = {
 
-    case event @ Subscribe(_, callback_url, _) => {
-      val addResult: Future[Option[EventSubscribers]] = add(callback_url)
+    case event @ Subscribe(_, callbackUrl, _) => {
+      val addResult: Future[Option[EventSubscribers]] = add(callbackUrl)
 
       val subscribers: Future[MarathonSubscriptionEvent] =
         addResult.collect { case Some(subscribers) =>
-          if (subscribers.urls.contains(callback_url))
-            log.info("Callback [%s] subscribed." format callback_url)
+          if (subscribers.urls.contains(callbackUrl))
+            log.info("Callback [%s] subscribed." format callbackUrl)
           event
         }
 
       subscribers pipeTo sender
     }
 
-    case event @ Unsubscribe(_, callback_url, _) => {
-      val removeResult: Future[Option[EventSubscribers]] = remove(callback_url)
+    case event @ Unsubscribe(_, callbackUrl, _) => {
+      val removeResult: Future[Option[EventSubscribers]] = remove(callbackUrl)
 
       val subscribers: Future[MarathonSubscriptionEvent] =
         removeResult.collect { case Some(subscribers) =>
-          if (!subscribers.urls.contains(callback_url))
-            log.info("Callback [%s] unsubscribed." format callback_url)
+          if (!subscribers.urls.contains(callbackUrl))
+            log.info("Callback [%s] unsubscribed." format callbackUrl)
           event
         }
 
@@ -55,25 +55,25 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
 
   }
 
-  protected[this] def add(callback_url: String): Future[Option[EventSubscribers]] =
+  protected[this] def add(callbackUrl: String): Future[Option[EventSubscribers]] =
     store.modify(SUBSCRIBERS) { deserialize =>
       val existingSubscribers = deserialize()
-      if (existingSubscribers.urls.contains(callback_url)) {
-        log.info("Existing callback [%s] resubscribed." format callback_url)
+      if (existingSubscribers.urls.contains(callbackUrl)) {
+        log.info("Existing callback [%s] resubscribed." format callbackUrl)
         existingSubscribers
       }
-      else EventSubscribers(existingSubscribers.urls + callback_url)
+      else EventSubscribers(existingSubscribers.urls + callbackUrl)
     }
 
-  protected[this] def remove(callback_url: String): Future[Option[EventSubscribers]] =
+  protected[this] def remove(callbackUrl: String): Future[Option[EventSubscribers]] =
     store.modify(SUBSCRIBERS) { deserialize =>
       val existingSubscribers = deserialize()
 
-      if (existingSubscribers.urls.contains(callback_url))
-        EventSubscribers(existingSubscribers.urls - callback_url)
+      if (existingSubscribers.urls.contains(callbackUrl))
+        EventSubscribers(existingSubscribers.urls - callbackUrl)
 
       else {
-        log.warning("Attempted to unsubscribe nonexistent callback [%s]." format callback_url)
+        log.warning("Attempted to unsubscribe nonexistent callback [%s]." format callbackUrl)
         existingSubscribers
       }
     }
