@@ -46,7 +46,7 @@ object EventModule {
   final val busName = "events"
 }
 
-trait MarathonEvent {
+sealed trait MarathonEvent {
   def eventType = "marathon_event"
 }
 
@@ -66,3 +66,20 @@ case class MesosStatusUpdateEvent(
     override val eventType: String = "status_update_event")
   extends MarathonEvent
 
+sealed trait MarathonSubscriptionEvent extends MarathonEvent{
+  def clientIp: String
+  def callbackUrl: String
+  override def eventType = "marathon_subscription_event"
+}
+
+case class Subscribe(
+    clientIp: String,
+    callbackUrl: String,
+    override val eventType: String = "subscribe_event")
+  extends MarathonSubscriptionEvent
+
+case class Unsubscribe(
+    clientIp: String,
+    callbackUrl: String,
+    override val eventType: String = "unsubscribe_event")
+  extends MarathonSubscriptionEvent

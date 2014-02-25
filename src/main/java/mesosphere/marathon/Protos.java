@@ -4710,6 +4710,395 @@ public final class Protos {
     // @@protoc_insertion_point(class_scope:mesosphere.marathon.ContainerInfo)
   }
   
+  public interface EventSubscribersOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // repeated string callback_urls = 1;
+    java.util.List<String> getCallbackUrlsList();
+    int getCallbackUrlsCount();
+    String getCallbackUrls(int index);
+  }
+  public static final class EventSubscribers extends
+      com.google.protobuf.GeneratedMessage
+      implements EventSubscribersOrBuilder {
+    // Use EventSubscribers.newBuilder() to construct.
+    private EventSubscribers(Builder builder) {
+      super(builder);
+    }
+    private EventSubscribers(boolean noInit) {}
+    
+    private static final EventSubscribers defaultInstance;
+    public static EventSubscribers getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public EventSubscribers getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_EventSubscribers_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_EventSubscribers_fieldAccessorTable;
+    }
+    
+    // repeated string callback_urls = 1;
+    public static final int CALLBACK_URLS_FIELD_NUMBER = 1;
+    private com.google.protobuf.LazyStringList callbackUrls_;
+    public java.util.List<String>
+        getCallbackUrlsList() {
+      return callbackUrls_;
+    }
+    public int getCallbackUrlsCount() {
+      return callbackUrls_.size();
+    }
+    public String getCallbackUrls(int index) {
+      return callbackUrls_.get(index);
+    }
+    
+    private void initFields() {
+      callbackUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < callbackUrls_.size(); i++) {
+        output.writeBytes(1, callbackUrls_.getByteString(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      {
+        int dataSize = 0;
+        for (int i = 0; i < callbackUrls_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(callbackUrls_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getCallbackUrlsList().size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static mesosphere.marathon.Protos.EventSubscribers parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static mesosphere.marathon.Protos.EventSubscribers parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static mesosphere.marathon.Protos.EventSubscribers parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static mesosphere.marathon.Protos.EventSubscribers parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static mesosphere.marathon.Protos.EventSubscribers parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static mesosphere.marathon.Protos.EventSubscribers parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static mesosphere.marathon.Protos.EventSubscribers parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static mesosphere.marathon.Protos.EventSubscribers parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static mesosphere.marathon.Protos.EventSubscribers parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static mesosphere.marathon.Protos.EventSubscribers parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(mesosphere.marathon.Protos.EventSubscribers prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements mesosphere.marathon.Protos.EventSubscribersOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_EventSubscribers_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_EventSubscribers_fieldAccessorTable;
+      }
+      
+      // Construct using mesosphere.marathon.Protos.EventSubscribers.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        callbackUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return mesosphere.marathon.Protos.EventSubscribers.getDescriptor();
+      }
+      
+      public mesosphere.marathon.Protos.EventSubscribers getDefaultInstanceForType() {
+        return mesosphere.marathon.Protos.EventSubscribers.getDefaultInstance();
+      }
+      
+      public mesosphere.marathon.Protos.EventSubscribers build() {
+        mesosphere.marathon.Protos.EventSubscribers result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private mesosphere.marathon.Protos.EventSubscribers buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        mesosphere.marathon.Protos.EventSubscribers result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public mesosphere.marathon.Protos.EventSubscribers buildPartial() {
+        mesosphere.marathon.Protos.EventSubscribers result = new mesosphere.marathon.Protos.EventSubscribers(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          callbackUrls_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              callbackUrls_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.callbackUrls_ = callbackUrls_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof mesosphere.marathon.Protos.EventSubscribers) {
+          return mergeFrom((mesosphere.marathon.Protos.EventSubscribers)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(mesosphere.marathon.Protos.EventSubscribers other) {
+        if (other == mesosphere.marathon.Protos.EventSubscribers.getDefaultInstance()) return this;
+        if (!other.callbackUrls_.isEmpty()) {
+          if (callbackUrls_.isEmpty()) {
+            callbackUrls_ = other.callbackUrls_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureCallbackUrlsIsMutable();
+            callbackUrls_.addAll(other.callbackUrls_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              ensureCallbackUrlsIsMutable();
+              callbackUrls_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // repeated string callback_urls = 1;
+      private com.google.protobuf.LazyStringList callbackUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureCallbackUrlsIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          callbackUrls_ = new com.google.protobuf.LazyStringArrayList(callbackUrls_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      public java.util.List<String>
+          getCallbackUrlsList() {
+        return java.util.Collections.unmodifiableList(callbackUrls_);
+      }
+      public int getCallbackUrlsCount() {
+        return callbackUrls_.size();
+      }
+      public String getCallbackUrls(int index) {
+        return callbackUrls_.get(index);
+      }
+      public Builder setCallbackUrls(
+          int index, String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureCallbackUrlsIsMutable();
+        callbackUrls_.set(index, value);
+        onChanged();
+        return this;
+      }
+      public Builder addCallbackUrls(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureCallbackUrlsIsMutable();
+        callbackUrls_.add(value);
+        onChanged();
+        return this;
+      }
+      public Builder addAllCallbackUrls(
+          java.lang.Iterable<String> values) {
+        ensureCallbackUrlsIsMutable();
+        super.addAll(values, callbackUrls_);
+        onChanged();
+        return this;
+      }
+      public Builder clearCallbackUrls() {
+        callbackUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+      void addCallbackUrls(com.google.protobuf.ByteString value) {
+        ensureCallbackUrlsIsMutable();
+        callbackUrls_.add(value);
+        onChanged();
+      }
+      
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.EventSubscribers)
+    }
+    
+    static {
+      defaultInstance = new EventSubscribers(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.EventSubscribers)
+  }
+  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_Constraint_descriptor;
   private static
@@ -4735,6 +5124,11 @@ public final class Protos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_mesosphere_marathon_ContainerInfo_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_mesosphere_marathon_EventSubscribers_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_mesosphere_marathon_EventSubscribers_fieldAccessorTable;
   
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -4764,8 +5158,9 @@ public final class Protos {
       "(\0132\021.mesos.TaskStatus\"M\n\013MarathonApp\022\014\n\004" +
       "name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.m" +
       "arathon.MarathonTask\"1\n\rContainerInfo\022\017\n",
-      "\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014B\035\n\023mesos" +
-      "phere.marathonB\006Protos"
+      "\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\")\n\020Event" +
+      "Subscribers\022\025\n\rcallback_urls\030\001 \003(\tB\035\n\023me" +
+      "sosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4812,6 +5207,14 @@ public final class Protos {
               new java.lang.String[] { "Image", "Options", },
               mesosphere.marathon.Protos.ContainerInfo.class,
               mesosphere.marathon.Protos.ContainerInfo.Builder.class);
+          internal_static_mesosphere_marathon_EventSubscribers_descriptor =
+            getDescriptor().getMessageTypes().get(5);
+          internal_static_mesosphere_marathon_EventSubscribers_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_mesosphere_marathon_EventSubscribers_descriptor,
+              new java.lang.String[] { "CallbackUrls", },
+              mesosphere.marathon.Protos.EventSubscribers.class,
+              mesosphere.marathon.Protos.EventSubscribers.Builder.class);
           return null;
         }
       };

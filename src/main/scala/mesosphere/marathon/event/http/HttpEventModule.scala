@@ -1,12 +1,20 @@
 package mesosphere.marathon.event.http
 
-import com.google.inject.{Singleton, Provides, AbstractModule}
+import scala.language.postfixOps
+import com.google.inject.{Scopes, Singleton, Provides, AbstractModule}
 import akka.actor.{Props, ActorRef, ActorSystem}
+import akka.pattern.ask
 import com.google.inject.name.Named
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import org.rogach.scallop.ScallopConf
 import java.util.logging.Logger
+import scala.concurrent.duration._
+import akka.util.Timeout
+import org.apache.mesos.state.State
+import mesosphere.marathon.state.MarathonStore
+import mesosphere.marathon.Main
+import mesosphere.marathon.event.{MarathonSubscriptionEvent, Subscribe}
 
 trait HttpEventConfiguration extends ScallopConf {
 
@@ -22,6 +30,7 @@ class HttpEventModule extends AbstractModule {
 
   def configure() {
     bind(classOf[HttpCallbackEventSubscriber]).asEagerSingleton()
+    bind(classOf[HttpCallbackSubscriptionService]).in(Scopes.SINGLETON)
   }
 
   @Provides
@@ -32,8 +41,40 @@ class HttpEventModule extends AbstractModule {
 
   @Provides
   @Named(HttpEventModule.StatusUpdateActor)
-  def provideActor(system: ActorSystem): ActorRef = {
-    system.actorOf(Props[HttpEventActor])
+  def provideStatusUpdateActor(system: ActorSystem,
+                               @Named(HttpEventModule.SubscribersKeeperActor)
+                               subscribersKeeper: ActorRef): ActorRef = {
+    system.actorOf(Props(new HttpEventActor(subscribersKeeper)))
+  }
+
+  @Provides
+  @Named(HttpEventModule.SubscribersKeeperActor)
+  def provideSubscribersKeeperActor(system: ActorSystem,
+                                    store: MarathonStore[EventSubscribers]): ActorRef = {
+    implicit val timeout = HttpEventModule.timeout
+    implicit val ec = HttpEventModule.executionContext
+    val local_ip = java.net.InetAddress.getLocalHost().getHostAddress()
+
+    val actor = system.actorOf(Props(new SubscribersKeeperActor(store)))
+    Main.conf.httpEventEndpoints.get map {
+      urls =>
+        log.info(s"http_endpoints(${urls}) are specified at startup. Those will be added to subscribers list.")
+        urls.foreach{ url =>
+          val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
+          f.onFailure {
+            case th: Throwable =>
+              log.warning(s"Failed to add ${url} to event subscribers. exception message => ${th.getMessage}")
+          }
+        }
+    }
+
+    actor
+  }
+
+  @Provides
+  @Singleton
+  def provideCallbackUrlsStore(state: State): MarathonStore[EventSubscribers] = {
+    new MarathonStore[EventSubscribers](state, () => new EventSubscribers(Set.empty[String]), "events:")
   }
 
 //  @Provides
@@ -51,8 +92,12 @@ class HttpEventModule extends AbstractModule {
 
 object HttpEventModule {
   final val StatusUpdateActor = "EventsActor"
+  final val SubscribersKeeperActor = "SubscriberKeeperActor"
 
   val executorService = Executors.newCachedThreadPool()
   val executionContext = ExecutionContext.fromExecutorService(executorService)
+
+  //TODO(everpeace) this should be configurable option?
+  val timeout = Timeout(10 seconds)
 }
 

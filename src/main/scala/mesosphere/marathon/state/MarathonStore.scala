@@ -12,10 +12,9 @@ import mesosphere.marathon.StorageException
  */
 
 class MarathonStore[S <: MarathonState[_, S]](state: State,
-                       newState: () => S) extends PersistenceStore[S] {
+                       newState: () => S, prefix:String = "app:") extends PersistenceStore[S] {
 
   val defaultWait = Duration(3, "seconds")
-  val prefix = "app:"
 
   import ExecutionContext.Implicits.global
   import mesosphere.util.BackToTheFuture._
@@ -27,10 +26,11 @@ class MarathonStore[S <: MarathonState[_, S]](state: State,
     }
   }
 
-  def store(key: String, value: S): Future[Option[S]] = {
+  def modify(key: String)(f: (() => S) => S): Future[Option[S]] = {
     state.fetch(prefix + key) flatMap {
       case Some(variable) =>
-        state.store(variable.mutate(value.toProtoByteArray)) map {
+        val deserialize = () => stateFromBytes(variable.value).getOrElse(newState())
+        state.store(variable.mutate(f(deserialize).toProtoByteArray)) map {
           case Some(newVar) => stateFromBytes(newVar.value)
           case None => throw new StorageException(s"Failed to store $key")
         }
