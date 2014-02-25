@@ -24,7 +24,7 @@ class ConstraintModule extends Module {
       override def findSerializer(config: SerializationConfig, javaType: JavaType,
                                   beanDesc: BeanDescription): JsonSerializer[_] = {
         if (contraintClass.isAssignableFrom(javaType.getRawClass)) {
-          new ConstraintSerializer
+          ConstraintSerializer
         } else {
           null
         }
@@ -35,7 +35,7 @@ class ConstraintModule extends Module {
       override def findBeanDeserializer(javaType: JavaType, config: DeserializationConfig,
                                         beanDesc: BeanDescription): JsonDeserializer[_] = {
         if (contraintClass.isAssignableFrom(javaType.getRawClass)) {
-          new ConstraintDeserializer
+          ConstraintDeserializer
         } else {
           null
         }
@@ -43,7 +43,7 @@ class ConstraintModule extends Module {
     })
   }
 
-  class ConstraintSerializer extends JsonSerializer[Constraint] {
+  object ConstraintSerializer extends JsonSerializer[Constraint] {
     def serialize(constraint: Constraint, jgen: JsonGenerator, provider: SerializerProvider) = {
       jgen.writeStartArray()
       jgen.writeString(constraint.getField)
@@ -55,7 +55,7 @@ class ConstraintModule extends Module {
     }
   }
 
-  class ConstraintDeserializer extends JsonDeserializer[Constraint] {
+  object ConstraintDeserializer extends JsonDeserializer[Constraint] {
     def deserialize(json: JsonParser, context: DeserializationContext): Constraint = {
       val builder = Constraint.newBuilder
       json.nextToken() // skip [

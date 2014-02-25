@@ -1,6 +1,6 @@
 ## GET `/v2/event_subscriptions`
 
-List all event subscriber's callback urls.
+List all event subscriber callback URLs.
 
 _NOTE: To activate this endpoint, you need to startup a Marathon instance with `--event_subscriber http_callback`_
 
@@ -24,9 +24,10 @@ Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-[
+{
+  "callback_urls": [
     "http://localhost:9090/callback",
     "http://localhost:9191/callback"
-]
+  ]
+}
 ```
-

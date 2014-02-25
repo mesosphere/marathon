@@ -11,7 +11,7 @@ import mesosphere.marathon.StorageException
  * @author Tobi Knaup
  */
 
-class MarathonStore[S <: MarathonState[_]](state: State,
+class MarathonStore[S <: MarathonState[_, S]](state: State,
                        newState: () => S, prefix:String = "app:") extends PersistenceStore[S] {
 
   val defaultWait = Duration(3, "seconds")
@@ -53,9 +53,10 @@ class MarathonStore[S <: MarathonState[_]](state: State,
     // TODO use implicit conversion after it has been merged
     future {
       try {
-        state.names().get().asScala
-          .filter(_.startsWith(prefix))
-          .map(_.replaceFirst(prefix, ""))
+        state.names().get.asScala.collect {
+          case name if name startsWith prefix =>
+            name.replaceFirst(prefix, "")
+        }
       } catch {
         // Thrown when node doesn't exist
         case e: ExecutionException => Seq().iterator
@@ -65,10 +66,9 @@ class MarathonStore[S <: MarathonState[_]](state: State,
 
   private def stateFromBytes(bytes: Array[Byte]): Option[S] = {
     try {
-      val state = newState()
-      state.mergeFromProto(bytes)
-      Some(state)
-    } catch {
+      Some(newState().mergeFromProto(bytes))
+    }
+    catch {
       case e: InvalidProtocolBufferException => None
     }
   }

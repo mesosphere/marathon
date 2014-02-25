@@ -6,13 +6,13 @@ import com.google.protobuf.Message
  * @author Tobi Knaup
  */
 
-trait MarathonState[T <: Message] {
+trait MarathonState[M <: Message, T <: MarathonState[M, _]] {
 
-  def mergeFromProto(message: T)
+  def mergeFromProto(message: M): T
 
-  def mergeFromProto(bytes: Array[Byte])
+  def mergeFromProto(bytes: Array[Byte]): T
 
-  def toProto: T
+  def toProto: M
 
   def toProtoByteArray: Array[Byte] = toProto.toByteArray
 

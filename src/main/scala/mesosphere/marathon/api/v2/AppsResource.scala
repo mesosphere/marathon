@@ -39,7 +39,8 @@ class AppsResource @Inject()(
     } else {
       service.listApps()
     }
-    Map("apps" -> apps)
+
+    Map("apps" -> apps.map { _.withTaskCounts(taskTracker) })
   }
 
   @POST
@@ -62,14 +63,11 @@ class AppsResource @Inject()(
   @GET
   @Path("{id}")
   @Timed
-  def show(@PathParam("id") id: String): Response = {
-    service.getApp(id) match {
-      case Some(app) => {
-        app.tasks = taskTracker.get(app.id).toSeq
-        Response.ok(Map("app" -> app)).build
-      }
-      case None => Response.status(Status.NOT_FOUND).build
+  def show(@PathParam("id") id: String): Response = service.getApp(id) match {
+    case Some(app) => {
+      Response.ok(Map("app" -> app.withTasks(taskTracker))).build
     }
+    case None => Response.status(Status.NOT_FOUND).build
   }
 
   @PUT
@@ -104,8 +102,7 @@ class AppsResource @Inject()(
   @Path("{id}")
   @Timed
   def delete(@Context req: HttpServletRequest, @PathParam("id") id: String): Response = {
-    val app = new AppDefinition
-    app.id = id
+    val app = AppDefinition(id = id)
     maybePostEvent(req, app)
     Await.result(service.stopApp(app), service.defaultWait)
     Response.noContent.build

@@ -1,12 +1,12 @@
 package mesosphere.marathon.event.http
 
 
+import mesosphere.marathon.event._
+import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
 import akka.actor.ActorRef
 import akka.pattern.ask
-import mesosphere.marathon.event._
-import javax.inject.{Named, Inject}
-import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
 import com.google.common.eventbus.EventBus
+import javax.inject.{Named, Inject}
 
 class HttpCallbackSubscriptionService @Inject()(
   @Named(HttpEventModule.SubscribersKeeperActor) val subscribersKeeper: ActorRef,
@@ -24,7 +24,7 @@ class HttpCallbackSubscriptionService @Inject()(
   }
 
   def getSubscribers = {
-    (subscribersKeeper ? GetSubscribers).mapTo[List[String]]
+    (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers]
   }
 
 }
