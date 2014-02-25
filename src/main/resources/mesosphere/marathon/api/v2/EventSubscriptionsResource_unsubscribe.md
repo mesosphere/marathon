@@ -28,7 +28,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "callback_uri": "http://localhost:9292/callback",
+    "callback_url": "http://localhost:9292/callback",
     "clientIp": "127.0.0.1",
     "eventType": "unsubscribe_event"
 }
