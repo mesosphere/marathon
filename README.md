@@ -1,14 +1,14 @@
 # Marathon [![Build Status](https://travis-ci.org/mesosphere/marathon.png?branch=master)](https://travis-ci.org/mesosphere/marathon)
 
-Marathon is a [Mesos][Mesos] framework for long-running services. Given that
+Marathon is a [Mesos][Mesos] framework for long-running applications. Given that
 you have Mesos running as the kernel for your datacenter, Marathon is the
-`init` or [upstart][upstart] daemon.
+[init][init] or [upstart][upstart] daemon.
 
 Marathon provides a
 [REST API](https://github.com/mesosphere/marathon/blob/master/REST.md) for
-starting, stopping, and scaling services. Marathon is written in Scala and can
-run in highly-available mode by running multiple Marathon instances. The state
-of running tasks gets stored in the Mesos state abstraction.
+starting, stopping, and scaling applications. Marathon is written in Scala and
+can run in highly-available mode by running multiple copies of Marathon. The
+state of running tasks gets stored in the Mesos state abstraction.
 
 Try Marathon now on [Elastic Mesos](http://elastic.mesosphere.io).
 
@@ -16,25 +16,27 @@ Go to the [interactive Marathon tutorial](http://mesosphere.io/learn/run-service
 that can be personalized for your cluster.
 
 Marathon is a *meta framework*: you can start other Mesos frameworks such as
-Chronos or [Storm][Storm]. It can launch anything that can be launched in a
-standard shell. In fact, you can even start other Marathon instances via
-Marathon.
+Chronos or [Storm][Storm] with it to ensure they survive machine failures.
+It can launch anything that can be launched in a standard shell. In fact, you
+can even start other Marathon instances via Marathon.
 
 ## Features
 
 * *HA* -- run any number of Marathon schedulers, but only one gets elected as
-    leader; if you access a non-leader, you get an HTTP redirect to the current
-    leader
+    leader; if you access a non-leader, your request gets proxied to the
+    current leader
 * *Basic Auth* and *SSL*
 * *REST API*
 * *Web UI*
 * *Metrics* -- via Coda Hale's [metrics library](http://metrics.codahale.com/)
-* *Service Constraints* -- e.g., only one instance of a service per rack, node,
-    etc.
-* *Service Discovery* and *Monitoring*
-* *Event Subscription* -- e.g., if you need to notify an external service about
-    task updates or state changes, you can supply an HTTP endpoint to receive
-    notifications. See the
+* *Constraints* -- e.g., only one instance of an application per rack, node,
+    etc. See the
+    [documentation](https://github.com/mesosphere/marathon/wiki/Constraints)
+    for more info.
+* *Service Discovery* and *Load Balancing* -- see the [documentation](https://github.com/mesosphere/marathon/wiki/Service-Discovery-&-Load-Balancing) for more info.
+* *Event Subscription* -- e.g., if you need to notify an external web service
+    about task updates or state changes, you can supply an HTTP endpoint to
+    receive notifications. See the
     [wiki page](https://github.com/mesosphere/marathon/wiki/Event-Bus) for
     details.
 
@@ -54,33 +56,38 @@ Since Chronos itself is a framework and receives Mesos resource offers, it can
 start tasks on Mesos. In the use case shown below, Chronos is currently running
 two tasks. One dumps a production MySQL database to S3, while another sends an
 email newsletter to all customers via Rake. Meanwhile, Marathon also runs the
-services required for the web app, in general.
+other applications that make up our website, such as JBoss servers, a Jetty
+service, Sinatra, Rails, and so on.
 
 ![architecture](https://raw.github.com/mesosphere/marathon/master/docs/architecture.png "Marathon on Mesos")
 
 The next graphic shows a more application-centric view of Marathon running
-three tasks: Search, Jetty, and Rails.
+three applications, each with a different number of tasks: Search (1), Jetty
+(3), and Rails (5).
 
 ![Marathon1](https://raw.github.com/mesosphere/marathon/master/docs/marathon1.png "Initial Marathon")
 
 As the website gains traction and the user base grows, we decide to scale-out
-the search and Rails-based services.
+the search service and our Rails-based application. This is done via a simple
+REST call to the Marathon API to add more tasks. Marathon will take care of
+placing the new tasks on machines with spare capacity, honoring the
+constraints we previously set.
 
 ![Marathon2](https://raw.github.com/mesosphere/marathon/master/docs/marathon2.png "Marathon scale-out")
 
 Imagine that one of the datacenter workers trips over a power cord and a server
 gets unplugged. No problem for Marathon, it moves the affected search service
-and Rails instance to a node that has spare capacity. The engineer may be
+and Rails tasks to a node that has spare capacity. The engineer may be
 temporarily embarrased, but Marathon saves him from having to explain a
 difficult situation!
 
-![Marathon3](https://raw.github.com/mesosphere/marathon/master/docs/marathon3.png "Marathon recovering a service")
+![Marathon3](https://raw.github.com/mesosphere/marathon/master/docs/marathon3.png "Marathon recovering an application")
 
 ## Setting Up And Running Marathon
 
 ### Requirements
 
-* [Mesos][Mesos] 0.14.0+
+* [Mesos][Mesos] 0.15.0+
 * [Zookeeper][Zookeeper]
 * JDK 1.6+
 * Scala 2.10+
@@ -241,4 +248,5 @@ developed [Chronos][Chronos], with many contributions from the community.
 [Storm]: http://storm-project.net/ "distributed realtime computation"
 [freenode]: https://freenode.net/ "IRC channels"
 [upstart]: http://upstart.ubuntu.com/ "Ubuntu's event-based daemons"
+[init]: https://en.wikipedia.org/wiki/Init "init"
 [Mesosphere]: http://mesosphere.io/ "Mesosphere"
