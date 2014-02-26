@@ -40,7 +40,7 @@ EOF
 }
 
 function marathon_apps {
-  curl -s "$1/v1/endpoints" | rules
+  curl -H "Accept: text/plain" -s "$1/v2/tasks" | rules
 }
 
 function rules {
@@ -52,7 +52,7 @@ function rules {
     shift 2
     cat <<EOF
 
-listen $name
+listen ${name}_${port}
   bind 127.0.0.1:$port
   mode http
   option tcplog
