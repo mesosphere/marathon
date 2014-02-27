@@ -242,6 +242,8 @@ developed [Chronos][Chronos], with many contributions from the community.
 * [Thomas Rampelberg](https://github.com/pyronicide)
 * [Connor Doyle](https://github.com/ConnorDoyle)
 
+[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
+
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
 [Zookeeper]: https://zookeeper.apache.org/ "Apache Zookeeper"
