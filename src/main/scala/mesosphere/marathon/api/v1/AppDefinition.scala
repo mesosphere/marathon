@@ -2,13 +2,14 @@ package mesosphere.marathon.api.v1
 
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.{ContainerInfo, Protos}
-import mesosphere.marathon.state.MarathonState
+import mesosphere.marathon.state.{MarathonState, Timestamp, Timestamped}
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.FieldConstraints.{
   FieldPattern,
   FieldNotEmpty,
-  FieldJsonDeserialize
+  FieldJsonDeserialize,
+  FieldJsonProperty
 }
 import com.fasterxml.jackson.annotation.{
   JsonInclude,
@@ -50,15 +51,21 @@ case class AppDefinition(
 
   ports: Seq[Int] = Seq(0),
 
-  // Number of new tasks this app may spawn per second in response to
-  // terminated tasks. This prevents frequently failing apps from spamming
-  // the cluster.
+  /**
+   * Number of new tasks this app may spawn per second in response to
+   * terminated tasks. This prevents frequently failing apps from spamming
+   * the cluster.
+   */
   taskRateLimit: Double = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
 
   @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
-  container: Option[ContainerInfo] = None
+  container: Option[ContainerInfo] = None,
 
-) extends MarathonState[Protos.ServiceDefinition, AppDefinition] {
+  @FieldJsonProperty
+  version: Timestamp = Timestamp.now
+
+) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
+  with Timestamped {
 
   // the default constructor exists solely for interop with automatic
   // (de)serializers
@@ -79,6 +86,7 @@ case class AppDefinition(
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
+      .setVersion(version.toString)
 
     for (c <- container) builder.setContainer(c.toProto)
 
@@ -109,7 +117,8 @@ case class AppDefinition(
       cpus = resourcesMap.get(AppDefinition.CPUS).getOrElse(this.cpus),
       mem = resourcesMap.get(AppDefinition.MEM).getOrElse(this.mem),
       env = envMap,
-      uris = proto.getCmd.getUrisList.asScala.map(_.getValue)
+      uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
+      version = Timestamp(proto.getVersion)
     )
   }
 

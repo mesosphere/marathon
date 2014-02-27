@@ -4,6 +4,7 @@ import mesosphere.chaos.http.RestModule
 import com.google.inject.Scopes
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
+
 /**
  * @author Tobi Knaup
  */
@@ -35,4 +36,5 @@ class MarathonRestModule extends RestModule {
     bind(classOf[LeaderProxyFilter]).asEagerSingleton()
     filter("/*").through(classOf[LeaderProxyFilter])
   }
+
 }
