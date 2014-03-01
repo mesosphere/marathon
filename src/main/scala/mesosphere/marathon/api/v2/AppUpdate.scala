@@ -1,10 +1,12 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.ContainerInfo
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.FieldConstraints.FieldJsonDeserialize
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+
 
 import scala.collection.mutable
 
@@ -32,7 +34,10 @@ case class AppUpdate(
   executor: Option[String] = None,
 
   @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
-  container: Option[ContainerInfo] = None
+  container: Option[ContainerInfo] = None,
+
+  @FieldJsonDeserialize(contentAs = classOf[Timestamp])
+  version: Option[Timestamp] = None
 
 ) {
 
@@ -54,7 +59,27 @@ case class AppUpdate(
     for (v <- mem) updated = updated.copy(mem = v)
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
-    updated.copy(container = this.container)
+
+    updated.copy(container = this.container, version = Timestamp.now)
   }
+
+}
+
+object AppUpdate {
+
+  /**
+   * Creates an AppUpdate from the supplied AppDefinition
+   */
+  def fromAppDefinition(app: AppDefinition): AppUpdate =
+    AppUpdate(
+      cmd = Option(app.cmd),
+      instances = Option(app.instances),
+      cpus = Option(app.cpus),
+      mem = Option(app.mem),
+      uris = Option(app.uris),
+      constraints = Option(app.constraints),
+      executor = Option(app.executor),
+      container = app.container
+    )
 
 }

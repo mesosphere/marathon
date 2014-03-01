@@ -25,6 +25,10 @@ message Constraint {
   optional string value = 3;
 }
 
+message AppRepository {
+  repeated ServiceDefinition history = 2;
+}
+
 message ServiceDefinition {
   required string id = 1;
   required mesos.CommandInfo cmd = 2;
@@ -62,3 +66,4 @@ message ContainerInfo {
 message EventSubscribers {
   repeated string callback_urls = 1;
 }
+

@@ -133,12 +133,6 @@ class TaskTracker @Inject()(state: State) {
     }
   }
 
-
-
-  def startUp(appName: String) {
-    // NO-OP
-  }
-
   def expunge(appName: String) {
     val variable = fetchFromState(appName)
     state.expunge(variable)

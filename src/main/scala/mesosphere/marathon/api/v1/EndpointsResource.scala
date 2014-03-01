@@ -6,7 +6,7 @@ import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.state.MarathonStore
+import mesosphere.marathon.state.{MarathonStore, AppRepository}
 import scala.concurrent.Await
 import javax.ws.rs.core.Response.Status
 
@@ -17,8 +17,7 @@ import javax.ws.rs.core.Response.Status
 @Path("v1/endpoints")
 class EndpointsResource @Inject()(
     schedulerService: MarathonSchedulerService,
-    taskTracker: TaskTracker,
-    store: MarathonStore[AppDefinition]) {
+    taskTracker: TaskTracker) {
 
   import Implicits._
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -43,20 +42,18 @@ class EndpointsResource @Inject()(
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Path("{id}")
   @Timed
-  def endpointsForApp(@PathParam("id") id: String): Response = {
-    val f = store.fetch(id).map(_ match {
+  def endpointsForApp(@PathParam("id") id: String): Response =
+    schedulerService.getApp(id) match {
       case Some(app) => Response.ok(appsToEndpointString(Seq(app))).build
       case None => Response.status(Status.NOT_FOUND).build
-    })
-    Await.result(f, store.defaultWait)
-  }
+    }
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Path("{id}")
   @Timed
-  def endpointsForAppJson(@PathParam("id") id: String): Response = {
-    val f = store.fetch(id).map(_ match {
+  def endpointsForAppJson(@PathParam("id") id: String): Response =
+    schedulerService.getApp(id) match {
       case Some(app) => {
         val instances = taskTracker.get(id).map(t => t: Map[String, Object])
         val body = Map(
@@ -66,9 +63,7 @@ class EndpointsResource @Inject()(
         Response.ok(body).build
       }
       case None => Response.status(Status.NOT_FOUND).build
-    })
-    Await.result(f, store.defaultWait)
-  }
+    }
 
   /**
     * Produces a script-friendly string representation of the supplied

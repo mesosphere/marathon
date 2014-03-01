@@ -151,7 +151,7 @@ object AppDefinition {
     app: AppDefinition
   ) extends AppDefinition(
     app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
-    app.constraints, app.uris, app.ports, app.taskRateLimit, app.container
+    app.constraints, app.uris, app.ports, app.taskRateLimit, app.container, app.version
   ) {
 
     /**

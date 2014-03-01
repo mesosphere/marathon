@@ -5,7 +5,7 @@ import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.MarathonStore
+import mesosphere.marathon.state.{MarathonStore, AppRepository}
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import javax.inject.{Named, Inject}
 import java.util.{TimerTask, Timer}
@@ -30,7 +30,7 @@ class MarathonSchedulerService @Inject()(
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
-    store: MarathonStore[AppDefinition],
+    store: MarathonStore[AppRepository],
     frameworkIdUtil: FrameworkIdUtil,
     scheduler: MarathonScheduler)
   extends AbstractExecutionThreadService with Leader {
@@ -72,7 +72,11 @@ class MarathonSchedulerService @Inject()(
   // Set the role, if provided.
   config.mesosRole.get.map(frameworkInfo.setRole)
 
-  val driver = new MesosSchedulerDriver(scheduler, frameworkInfo.build, config.mesosMaster())
+  val driver = new MesosSchedulerDriver(
+    scheduler,
+    frameworkInfo.build,
+    config.mesosMaster()
+  )
 
   var abdicateCmd: Option[ExceptionalCommand[JoinException]] = None
 
@@ -105,17 +109,23 @@ class MarathonSchedulerService @Inject()(
   def listApps(): Seq[AppDefinition] = {
     // TODO method is expensive, it's n+1 trips to ZK. Cache this?
     val names = Await.result(store.names(), defaultWait)
-    val futures = names.map(name => store.fetch(name))
+    val futures = names.map(scheduler.currentAppVersion(_))
     val futureServices = Future.sequence(futures)
     Await.result(futureServices, defaultWait).map(_.get).toSeq
   }
 
+  def listAppVersions(appName: String): Option[AppRepository] =
+    Await.result(store.fetch(appName), defaultWait)
+
   def getApp(appName: String): Option[AppDefinition] = {
-    val future = store.fetch(appName)
-    Await.result(future, defaultWait)
+    Await.result(scheduler.currentAppVersion(appName), defaultWait)
   }
 
-  def killTasks(appName: String, tasks: Iterable[MarathonTask], scale: Boolean): Iterable[MarathonTask] = {
+  def killTasks(
+    appName: String,
+    tasks: Iterable[MarathonTask],
+    scale: Boolean
+  ): Iterable[MarathonTask] = {
     if (scale) {
       getApp(appName) foreach { app =>
         val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
