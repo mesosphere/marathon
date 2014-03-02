@@ -6,20 +6,26 @@
 * [Apps](#apps)
   * [POST /v2/apps](#post-v2apps): Create and start a new app
   * [GET /v2/apps](#get-v2apps): List all running apps
-  * [GET /v2/apps/{app_id}](#get-v2appsapp_id): List the app `app_id`
   * [GET /v2/apps?cmd={command}](#get-v2appscmdcommand): List all running
     apps, filtered by `command`
-  * [PUT /v2/apps/{app_id}](#put-v2appsapp_id): Change config of the app
-    `app_id`
-  * [DELETE /v2/apps/{app_id}](#delete-v2appsapp_id): Destroy app `app_id`
-  * [GET /v2/apps/{app_id}/tasks](#get-v2appsapp_idtasks): List running tasks
-    for app `app_id`
-  * [DELETE /v2/apps/{app_id}/tasks?host={host}&scale={true|false}](#delete-v2appsapp_idtaskshosthostscaletruefalse):
-    kill tasks belonging to app `app_id`
-  * [DELETE /v2/apps/{app_id}/tasks/{task_id}?scale={true|false}](#delete-v2appsapp_idtaskstask_idscaletruefalse):
-    Kill the task `task_id` that belongs to the application `app_id`
+  * [GET /v2/apps/{appId}](#get-v2appsappId): List the app `appId`
+  * [GET /v2/apps/{appId}/versions](#get-v2appsappIdversions): List the versions of the application with id `appId`.
+  * [GET /v2/apps/{appId}/versions/{version}](#get-v2appsappIdversionsversion): List the configuration of the application with id `appId` at version `version`.
+  * [PUT /v2/apps/{appId}](#put-v2appsappId): Change config of the app
+    `appId`
+  * [DELETE /v2/apps/{appId}](#delete-v2appsappId): Destroy app `appId`
+  * [GET /v2/apps/{appId}/tasks](#get-v2appsappIdtasks): List running tasks
+    for app `appId`
+  * [DELETE /v2/apps/{appId}/tasks?host={host}&scale={true|false}](#delete-v2appsappIdtaskshosthostscaletruefalse):
+    kill tasks belonging to app `appId`
+  * [DELETE /v2/apps/{appId}/tasks/{taskId}?scale={true|false}](#delete-v2appsappIdtaskstaskIdscaletruefalse):
+    Kill the task `taskId` that belongs to the application `appId`
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-v2tasks): List all running tasks
+* [Event Subscriptions](#event-subscriptions)
+  * [POST /v2/eventSubscriptions?callbackUrl={url}](#post-v2eventSubscriptionscallbackUrlurl): Register a callback URL as an event subscriber
+  * [GET /v2/eventSubscriptions](#get-v2eventSubscriptions): List all event subscriber callback URLs
+  * [DELETE /v2/eventSubscriptions?callbackUrl={url}](#delete-v2eventSubscriptionscallbackUrlurl) Unregister a callback URL from the event subscribers list
 
 ### _Apps_
 
@@ -51,9 +57,13 @@ The full JSON format of an application resource is as follows:
         8080,
         9000
     ],
+    "taskRateLimit": 1.0,
+    "tasksRunning": 3, 
+    "tasksStaged": 0, 
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
-    ]
+    ], 
+    "version": "2014-03-01T23:29:30.158Z"
 }
 ```
 
@@ -171,89 +181,18 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                13971, 
-                12162
+                18513, 
+                13963
             ], 
             "taskRateLimit": 1.0, 
             "tasksRunning": 0, 
             "tasksStaged": 1, 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
-            ]
+            ], 
+            "version": "2014-03-02T00:46:35.519Z"
         }
     ]
-}
-```
-
-#### GET `/v2/apps/{app_id}`
-
-List the application with id `app_id`.
-
-##### Example
-
-**Request:**
-
-```
-GET /v2/apps/myApp HTTP/1.1
-Accept: application/json
-Accept-Encoding: gzip, deflate, compress
-Content-Type: application/json; charset=utf-8
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
-
-
-```
-
-**Response:**
-
-```
-HTTP/1.1 200 OK
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-Transfer-Encoding: chunked
-
-{
-    "app": {
-        "cmd": "env && sleep 60", 
-        "constraints": [
-            [
-                "hostname", 
-                "UNIQUE", 
-                ""
-            ]
-        ], 
-        "container": null, 
-        "cpus": 0.1, 
-        "env": {
-            "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
-        }, 
-        "executor": "", 
-        "id": "myApp", 
-        "instances": 3, 
-        "mem": 5.0, 
-        "ports": [
-            13971, 
-            12162
-        ], 
-        "taskRateLimit": 1.0, 
-        "tasks": [
-            {
-                "host": "mesos.vm", 
-                "id": "myApp_0-1393024649759", 
-                "ports": [
-                    31877, 
-                    31878
-                ], 
-                "stagedAt": "2014-02-21T23:17:29.762Z", 
-                "startedAt": "2014-02-21T23:17:35.065Z"
-            }
-        ], 
-        "tasksRunning": 1, 
-        "tasksStaged": 0, 
-        "uris": [
-            "https://raw.github.com/mesosphere/marathon/master/README.md"
-        ]
-    }
 }
 ```
 
@@ -305,21 +244,175 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                13971, 
-                12162
+                18513, 
+                13963
             ], 
             "taskRateLimit": 1.0, 
             "tasksRunning": 1, 
             "tasksStaged": 0, 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
-            ]
+            ], 
+            "version": "2014-03-02T00:46:35.519Z"
         }
     ]
 }
 ```
 
-#### PUT `/v2/apps/{app_id}`
+#### GET `/v2/apps/{appId}`
+
+List the application with id `appId`.
+
+##### Example
+
+**Request:**
+
+```
+GET /v2/apps/myApp HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+
+```
+
+**Response:**
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "app": {
+        "cmd": "env && sleep 60", 
+        "constraints": [
+            [
+                "hostname", 
+                "UNIQUE", 
+                ""
+            ]
+        ], 
+        "container": null, 
+        "cpus": 0.1, 
+        "env": {
+            "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
+        }, 
+        "executor": "", 
+        "id": "myApp", 
+        "instances": 3, 
+        "mem": 5.0, 
+        "ports": [
+            18513, 
+            13963
+        ], 
+        "taskRateLimit": 1.0, 
+        "tasks": [
+            {
+                "host": "mesos.vm", 
+                "id": "myApp_0-1393721198781", 
+                "ports": [
+                    31037, 
+                    31038
+                ], 
+                "stagedAt": "2014-03-02T00:46:38.782Z", 
+                "startedAt": "2014-03-02T00:46:44.164Z"
+            }
+        ], 
+        "tasksRunning": 1, 
+        "tasksStaged": 0, 
+        "uris": [
+            "https://raw.github.com/mesosphere/marathon/master/README.md"
+        ], 
+        "version": "2014-03-02T00:46:35.519Z"
+    }
+}
+```
+
+#### GET `/v2/apps/{appId}/versions`
+
+List the versions of the application with id `appId`.
+
+##### Example
+
+**Request:**
+
+```
+GET /v2/apps/myApp/versions HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+
+```
+
+**Response:**
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "versions": [
+        "2014-03-02T00:46:35.519Z"
+    ]
+}
+```
+
+#### GET `/v2/apps/{appId}/versions/{version}`
+
+List the configuration of the application with id `appId` at version `version`.
+
+##### Example
+
+**Request:**
+
+```
+GET /v2/apps/myApp/versions/2014-03-01T23:17:50.295Z HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate, compress
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+```
+
+**Response:**
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "cmd": "sleep 60", 
+    "constraints": [], 
+    "container": null, 
+    "cpus": 0.1, 
+    "env": {}, 
+    "executor": "", 
+    "id": "myApp", 
+    "instances": 4, 
+    "mem": 5.0, 
+    "ports": [
+        18027, 
+        13200
+    ], 
+    "taskRateLimit": 1.0, 
+    "uris": [
+        "https://raw.github.com/mesosphere/marathon/master/README.md"
+    ], 
+    "version": "2014-03-01T23:17:50.295Z"
+}
+```
+
+#### PUT `/v2/apps/{appId}`
 
 Change parameters of a running application.  The new application parameters
 apply only to subsequently created tasks, and currently running tasks are
@@ -366,6 +459,32 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 ```
 
+
+##### Example (version rollback)
+
+If the `version` key is supplied in the JSON body, the rest of the object is ignored.  If the supplied version is known, then the app is updated (a new version is created) with those parameters.  Otherwise, if the supplied version is not known Marathon responds with a 404.
+
+**Request:**
+
+```
+PUT /v2/apps/myApp HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Length: 39
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+{
+    "version": "2014-03-01T23:17:50.295Z"
+}
+```
+
+```
+HTTP/1.1 204 No Content
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+```
 
 #### DELETE `/v2/apps/{app_id}`
 
@@ -430,23 +549,13 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1393024693819", 
+            "id": "myApp_0-1393721251846", 
             "ports": [
-                31965, 
-                31966
+                31657, 
+                31658
             ], 
-            "stagedAt": "2014-02-21T23:18:13.821Z", 
+            "stagedAt": "2014-03-02T00:47:31.847Z", 
             "startedAt": null
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1393024688811", 
-            "ports": [
-                31816, 
-                31817
-            ], 
-            "stagedAt": "2014-02-21T23:18:08.813Z", 
-            "startedAt": "2014-02-21T23:18:14.214Z"
         }
     ]
 }
@@ -474,8 +583,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	13631	mesos.vm:31965	mesos.vm:31463	mesos.vm:31816	
-myApp	10150	mesos.vm:31966	mesos.vm:31464	mesos.vm:31817	
+myApp	14810	mesos.vm:31657	mesos.vm:31369	mesos.vm:31618	
+myApp	14562	mesos.vm:31658	mesos.vm:31370	mesos.vm:31619	
 
 ```
 
@@ -517,12 +626,22 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1393024710845", 
+            "id": "myApp_1-1393721268870", 
             "ports": [
-                31782, 
-                31783
+                31251, 
+                31252
             ], 
-            "stagedAt": "2014-02-21T23:18:30.846Z", 
+            "stagedAt": "2014-03-02T00:47:48.871Z", 
+            "startedAt": null
+        }, 
+        {
+            "host": "mesos.vm", 
+            "id": "myApp_1-1393721269871", 
+            "ports": [
+                31352, 
+                31353
+            ], 
+            "stagedAt": "2014-03-02T00:47:49.872Z", 
             "startedAt": null
         }
     ]
@@ -607,24 +726,24 @@ Transfer-Encoding: chunked
         {
             "appId": "myApp", 
             "host": "mesos.vm", 
-            "id": "myApp_1-1393024719875", 
+            "id": "myApp_0-1393721272874", 
             "ports": [
-                31384, 
-                31385
+                31110, 
+                31111
             ], 
-            "stagedAt": "2014-02-21T23:18:39.877Z", 
-            "startedAt": null
+            "stagedAt": "2014-03-02T00:47:52.876Z", 
+            "startedAt": "2014-03-02T00:47:58.251Z"
         }, 
         {
             "appId": "myApp", 
             "host": "mesos.vm", 
-            "id": "myApp_0-1393024714858", 
+            "id": "myApp_1-1393721277887", 
             "ports": [
-                31928, 
-                31929
+                31205, 
+                31206
             ], 
-            "stagedAt": "2014-02-21T23:18:34.859Z", 
-            "startedAt": "2014-02-21T23:18:40.060Z"
+            "stagedAt": "2014-03-02T00:47:57.888Z", 
+            "startedAt": null
         }
     ]
 }
@@ -652,10 +771,123 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	13631	mesos.vm:31112	mesos.vm:31384	mesos.vm:31928	
-myApp	10150	mesos.vm:31113	mesos.vm:31385	mesos.vm:31929	
+myApp	14810	mesos.vm:31205	mesos.vm:31160	mesos.vm:31110	
+myApp	14562	mesos.vm:31206	mesos.vm:31161	mesos.vm:31111	
 
 ```
+
+### _Event Subscribers_
+
+#### POST /v2/eventSubscriptions?callbackUrl={url}
+
+Register a callback URL as event subscriber.
+
+_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+
+**Request:**
+
+```
+POST /v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Length: 0
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+
+```
+
+
+**Response:**
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "callbackUrl": "http://localhost:9292/callback", 
+    "clientIp": "10.141.141.1", 
+    "eventType": "subscribe_event"
+}
+```
+
+#### GET `/v2/eventSubscriptions`
+
+List all event subscriber callback URLs.
+
+_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+
+##### Example
+
+**Request:**
+
+```
+GET /v2/eventSubscriptions HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+
+```
+
+**Response:**
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "callbackUrls": [
+        "http://localhost:9292/callback"
+    ]
+}
+```
+
+## DELETE `/v2/eventSubscriptions?callbackUrl={url}`
+
+Unregister a callback URL from the event subscribers list.
+
+_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+
+### Example
+
+**Request:**
+
+```
+DELETE /v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Length: 0
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+
+```
+
+
+**Response:**
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "callbackUrl": "http://localhost:9292/callback", 
+    "clientIp": "10.141.141.1", 
+    "eventType": "unsubscribe_event"
+}
+```
+
 
 ## API Version 1 _(DEPRECATED)_
 
@@ -741,15 +973,16 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            12374, 
-            10971
+            13119, 
+            14570
         ], 
         "taskRateLimit": 1.0, 
         "tasksRunning": 0, 
-        "tasksStaged": 2, 
+        "tasksStaged": 1, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
-        ]
+        ], 
+        "version": "2014-03-02T00:48:44.019Z"
     }
 ]
 ```
@@ -855,13 +1088,14 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            11056, 
-            12101
+            11834, 
+            12962
         ], 
         "taskRateLimit": 1.0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
-        ]
+        ], 
+        "version": "2014-03-02T00:49:10.106Z"
     }
 ]
 ```
@@ -901,13 +1135,14 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            11056, 
-            12101
+            11834, 
+            12962
         ], 
         "taskRateLimit": 1.0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
-        ]
+        ], 
+        "version": "2014-03-02T00:49:10.106Z"
     }
 ]
 ```
@@ -941,34 +1176,26 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_1-1393024768944", 
+            "id": "myApp_3-1393721359030", 
             "ports": [
-                31266, 
-                31267
+                31152, 
+                31153
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1393024779962", 
+            "id": "myApp_0-1393721341992", 
             "ports": [
-                31037, 
-                31038
+                31346, 
+                31347
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1393024774954", 
+            "id": "myApp_1-1393721347008", 
             "ports": [
-                31413, 
-                31414
-            ]
-        }, 
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1393024762936", 
-            "ports": [
-                31289, 
-                31290
+                31019, 
+                31020
             ]
         }
     ]
@@ -1008,40 +1235,32 @@ Transfer-Encoding: chunked
         "instances": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_1-1393024768944", 
+                "id": "myApp_3-1393721359030", 
                 "ports": [
-                    31266, 
-                    31267
+                    31152, 
+                    31153
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_3-1393024779962", 
+                "id": "myApp_0-1393721341992", 
                 "ports": [
-                    31037, 
-                    31038
+                    31346, 
+                    31347
                 ]
             }, 
             {
                 "host": "mesos.vm", 
-                "id": "myApp_2-1393024774954", 
+                "id": "myApp_1-1393721347008", 
                 "ports": [
-                    31413, 
-                    31414
-                ]
-            }, 
-            {
-                "host": "mesos.vm", 
-                "id": "myApp_0-1393024762936", 
-                "ports": [
-                    31289, 
-                    31290
+                    31019, 
+                    31020
                 ]
             }
         ], 
         "ports": [
-            11056, 
-            12101
+            11834, 
+            12962
         ]
     }
 ]
@@ -1069,8 +1288,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_11056 11056 mesos.vm:31266 mesos.vm:31289 mesos.vm:31413 mesos.vm:31037 
-myApp_12101 12101 mesos.vm:31267 mesos.vm:31290 mesos.vm:31414 mesos.vm:31038 
+myApp_11834 11834 mesos.vm:31346 mesos.vm:31152 mesos.vm:31019 
+myApp_12962 12962 mesos.vm:31347 mesos.vm:31153 mesos.vm:31020 
 
 ```
 
@@ -1104,32 +1323,32 @@ Transfer-Encoding: chunked
     "instances": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1393024779962", 
+            "id": "myApp_3-1393721359030", 
             "ports": [
-                31037, 
-                31038
+                31152, 
+                31153
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1393024774954", 
+            "id": "myApp_0-1393721341992", 
             "ports": [
-                31413, 
-                31414
+                31346, 
+                31347
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_0-1393024762936", 
+            "id": "myApp_1-1393721347008", 
             "ports": [
-                31289, 
-                31290
+                31019, 
+                31020
             ]
         }
     ], 
     "ports": [
-        11056, 
-        12101
+        11834, 
+        12962
     ]
 }
 ```
@@ -1156,8 +1375,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_11056 11056 mesos.vm:31289 mesos.vm:31413 mesos.vm:31037 
-myApp_12101 12101 mesos.vm:31290 mesos.vm:31414 mesos.vm:31038 
+myApp_11834 11834 mesos.vm:31017 mesos.vm:31152 mesos.vm:31019 
+myApp_12962 12962 mesos.vm:31018 mesos.vm:31153 mesos.vm:31020 
 
 ```
 
@@ -1192,26 +1411,26 @@ Transfer-Encoding: chunked
     "myApp": [
         {
             "host": "mesos.vm", 
-            "id": "myApp_3-1393024779962", 
+            "id": "myApp_3-1393721359030", 
             "ports": [
-                31037, 
-                31038
+                31152, 
+                31153
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1393024774954", 
+            "id": "myApp_2-1393721408098", 
             "ports": [
-                31413, 
-                31414
+                31017, 
+                31018
             ]
         }, 
         {
             "host": "mesos.vm", 
-            "id": "myApp_2-1393024829079", 
+            "id": "myApp_2-1393721413111", 
             "ports": [
-                31050, 
-                31051
+                31013, 
+                31014
             ]
         }
     ]

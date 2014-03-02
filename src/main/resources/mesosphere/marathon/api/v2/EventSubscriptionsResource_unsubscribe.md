@@ -1,6 +1,6 @@
 ## DELETE `/v2/eventSubscriptions?callbackUrl={callbackUrl}`
 
-De-register a callback URL from event subscribers list.
+Unregister a callback URL from the event subscribers list.
 
 _NOTE: To activate this endpoint, you need to startup a Marathon instance with `--event_subscriber http_callback`_
 

@@ -1,6 +1,6 @@
-## GET `/v2/apps/{app_id}`
+## GET `/v2/apps/{appId}`
 
-List the application with id `app_id`.
+List the application with id `appId`.
 
 ### Example
 
@@ -45,24 +45,28 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            17988, 
-            13669
+            15092, 
+            14566
         ], 
+        "taskRateLimit": 1.0, 
         "tasks": [
             {
                 "host": "mesos.vm", 
-                "id": "myApp_0-1390455027370", 
+                "id": "myApp_0-1393717344297", 
                 "ports": [
-                    31340, 
-                    31341
+                    31651, 
+                    31652
                 ], 
-                "stagedAt": "2014-01-23T05:30+0000", 
-                "startedAt": "2014-01-23T05:30+0000"
+                "stagedAt": "2014-03-01T23:42:24.298Z", 
+                "startedAt": "2014-03-01T23:42:29.902Z"
             }
         ], 
+        "tasksRunning": 1, 
+        "tasksStaged": 0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
-        ]
+        ], 
+        "version": "2014-03-01T23:42:20.938Z"
     }
 }
 ```
