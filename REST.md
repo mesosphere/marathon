@@ -8,17 +8,17 @@
   * [GET /v2/apps](#get-v2apps): List all running apps
   * [GET /v2/apps?cmd={command}](#get-v2appscmdcommand): List all running
     apps, filtered by `command`
-  * [GET /v2/apps/{appId}](#get-v2appsappId): List the app `appId`
-  * [GET /v2/apps/{appId}/versions](#get-v2appsappIdversions): List the versions of the application with id `appId`.
-  * [GET /v2/apps/{appId}/versions/{version}](#get-v2appsappIdversionsversion): List the configuration of the application with id `appId` at version `version`.
-  * [PUT /v2/apps/{appId}](#put-v2appsappId): Change config of the app
+  * [GET /v2/apps/{appId}](#get-v2appsappid): List the app `appId`
+  * [GET /v2/apps/{appId}/versions](#get-v2appsappidversions): List the versions of the application with id `appId`.
+  * [GET /v2/apps/{appId}/versions/{version}](#get-v2appsappidversionsversion): List the configuration of the application with id `appId` at version `version`.
+  * [PUT /v2/apps/{appId}](#put-v2appsappid): Change config of the app
     `appId`
-  * [DELETE /v2/apps/{appId}](#delete-v2appsappId): Destroy app `appId`
-  * [GET /v2/apps/{appId}/tasks](#get-v2appsappIdtasks): List running tasks
+  * [DELETE /v2/apps/{appId}](#delete-v2appsappid): Destroy app `appId`
+  * [GET /v2/apps/{appId}/tasks](#get-v2appsappidtasks): List running tasks
     for app `appId`
-  * [DELETE /v2/apps/{appId}/tasks?host={host}&scale={true|false}](#delete-v2appsappIdtaskshosthostscaletruefalse):
+  * [DELETE /v2/apps/{appId}/tasks?host={host}&scale={true|false}](#delete-v2appsappidtaskshosthostscaletruefalse):
     kill tasks belonging to app `appId`
-  * [DELETE /v2/apps/{appId}/tasks/{taskId}?scale={true|false}](#delete-v2appsappIdtaskstaskIdscaletruefalse):
+  * [DELETE /v2/apps/{appId}/tasks/{taskId}?scale={true|false}](#delete-v2appsappidtaskstaskidscaletruefalse):
     Kill the task `taskId` that belongs to the application `appId`
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-v2tasks): List all running tasks
@@ -486,7 +486,7 @@ Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 ```
 
-#### DELETE `/v2/apps/{app_id}`
+#### DELETE `/v2/apps/{appId}`
 
 Destroy an application. All data about that application will be deleted.
 
@@ -518,9 +518,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
 ```
 
 
-#### GET `/v2/apps/{app_id}/tasks`
+#### GET `/v2/apps/{appId}/tasks`
 
-List all running tasks for application `app_id`.
+List all running tasks for application `appId`.
 
 ##### Example (as JSON)
 
@@ -588,9 +588,9 @@ myApp	15057	mesos.vm:31322	mesos.vm:31137	mesos.vm:31043
 
 ```
 
-#### DELETE `/v2/apps/{app_id}/tasks?host={host}&scale={true|false}`
+#### DELETE `/v2/apps/{appId}/tasks?host={host}&scale={true|false}`
 
-Kill tasks that belong to the application `app_id`, optionally filtered by the
+Kill tasks that belong to the application `appId`, optionally filtered by the
 task's `host`.
 
 The query parameters `host` and `scale` are both optional.  If `host` is
@@ -638,12 +638,12 @@ Transfer-Encoding: chunked
 }
 ```
 
-#### DELETE `/v2/apps/{app_id}/tasks/{task_id}?scale={true|false}`
+#### DELETE `/v2/apps/{appId}/tasks/{taskId}?scale={true|false}`
 
-Kill the task with ID `task_id` that belongs to the application `app_id`.
+Kill the task with ID `taskId` that belongs to the application `appId`.
 
 The query parameter `scale` is optional.  If `scale=true` is specified, then
-the application is scaled down one if the supplied `task_id` exists.  The
+the application is scaled down one if the supplied `taskId` exists.  The
 `scale` parameter defaults to `false`.
 
 ##### Example
@@ -1041,7 +1041,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 ```
 
 
-#### GET `/v1/apps/search?id={app_id}&cmd={command}`
+#### GET `/v1/apps/search?id={appId}&cmd={command}`
 
 ##### Example
 
@@ -1137,7 +1137,7 @@ Transfer-Encoding: chunked
 ]
 ```
 
-#### GET `/v1/apps/{app_id}/tasks`
+#### GET `/v1/apps/{appId}/tasks`
 
 ##### Example
 
@@ -1291,7 +1291,7 @@ myApp_19885 19885 mesos.vm:31749 mesos.vm:31511 mesos.vm:31217
 
 ```
 
-#### GET `/v1/endpoints/{app_id}`
+#### GET `/v1/endpoints/{appId}`
 
 ##### Example (as JSON)
 
@@ -1436,7 +1436,7 @@ Transfer-Encoding: chunked
 ```
 
 
-#### POST `/v1/tasks/kill?appId={app_id}&host={host}&id={task_id}&scale={true|false}`
+#### POST `/v1/tasks/kill?appId={appId}&host={host}&id={taskId}&scale={true|false}`
 
 ##### Example
 
