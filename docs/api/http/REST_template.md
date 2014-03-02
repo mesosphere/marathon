@@ -22,9 +22,9 @@
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-v2tasks): List all running tasks
 * [Event Subscriptions](#event-subscriptions)
-  * [POST /v2/eventSubscriptions?callbackUrl={url}](#post-v2eventSubscriptionscallbackUrlurl): Register a callback URL as an event subscriber
-  * [GET /v2/eventSubscriptions](#get-v2eventSubscriptions): List all event subscriber callback URLs
-  * [DELETE /v2/eventSubscriptions?callbackUrl={url}](#delete-v2eventSubscriptionscallbackUrlurl) Unregister a callback URL from the event subscribers list
+  * [POST /v2/eventSubscriptions?callbackUrl={url}](#post-v2eventsubscriptionscallbackurlurl): Register a callback URL as an event subscriber
+  * [GET /v2/eventSubscriptions](#get-v2eventsubscriptions): List all event subscriber callback URLs
+  * [DELETE /v2/eventSubscriptions?callbackUrl={url}](#delete-v2eventsubscriptionscallbackurlurl) Unregister a callback URL from the event subscribers list
 
 ### _Apps_
 
@@ -373,11 +373,11 @@ http --print=HB --ignore-stdin --pretty format GET localhost:8080/v2/tasks Accep
 
 http --print=hb --ignore-stdin --pretty format GET localhost:8080/v2/tasks Accept:text/plain
 
-### _Event Subscribers_
+### _Event Subscriptions_
 
 #### POST /v2/eventSubscriptions?callbackUrl={url}
 
-Register a callback URL as event subscriber.
+Register a callback URL as an event subscriber.
 
 _NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
 
@@ -407,13 +407,13 @@ http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/even
 
 http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/eventSubscriptions
 
-## DELETE `/v2/eventSubscriptions?callbackUrl={url}`
+#### DELETE `/v2/eventSubscriptions?callbackUrl={url}`
 
 Unregister a callback URL from the event subscribers list.
 
 _NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
 
-### Example
+##### Example
 
 **Request:**
 
