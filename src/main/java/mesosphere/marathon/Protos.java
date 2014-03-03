@@ -637,7 +637,7 @@ public final class Protos {
   public interface AppRepositoryOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .mesosphere.marathon.ServiceDefinition history = 2;
+    // repeated .mesosphere.marathon.ServiceDefinition history = 1;
     java.util.List<mesosphere.marathon.Protos.ServiceDefinition> 
         getHistoryList();
     mesosphere.marathon.Protos.ServiceDefinition getHistory(int index);
@@ -675,8 +675,8 @@ public final class Protos {
       return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_AppRepository_fieldAccessorTable;
     }
     
-    // repeated .mesosphere.marathon.ServiceDefinition history = 2;
-    public static final int HISTORY_FIELD_NUMBER = 2;
+    // repeated .mesosphere.marathon.ServiceDefinition history = 1;
+    public static final int HISTORY_FIELD_NUMBER = 1;
     private java.util.List<mesosphere.marathon.Protos.ServiceDefinition> history_;
     public java.util.List<mesosphere.marathon.Protos.ServiceDefinition> getHistoryList() {
       return history_;
@@ -718,7 +718,7 @@ public final class Protos {
                         throws java.io.IOException {
       getSerializedSize();
       for (int i = 0; i < history_.size(); i++) {
-        output.writeMessage(2, history_.get(i));
+        output.writeMessage(1, history_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -731,7 +731,7 @@ public final class Protos {
       size = 0;
       for (int i = 0; i < history_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, history_.get(i));
+          .computeMessageSize(1, history_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -988,7 +988,7 @@ public final class Protos {
               }
               break;
             }
-            case 18: {
+            case 10: {
               mesosphere.marathon.Protos.ServiceDefinition.Builder subBuilder = mesosphere.marathon.Protos.ServiceDefinition.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addHistory(subBuilder.buildPartial());
@@ -1000,7 +1000,7 @@ public final class Protos {
       
       private int bitField0_;
       
-      // repeated .mesosphere.marathon.ServiceDefinition history = 2;
+      // repeated .mesosphere.marathon.ServiceDefinition history = 1;
       private java.util.List<mesosphere.marathon.Protos.ServiceDefinition> history_ =
         java.util.Collections.emptyList();
       private void ensureHistoryIsMutable() {
@@ -5814,7 +5814,7 @@ public final class Protos {
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\";\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
       "\020\002\022\014\n\010GROUP_BY\020\003\"H\n\rAppRepository\0227\n\007his" +
-      "tory\030\002 \003(\0132&.mesosphere.marathon.Service" +
+      "tory\030\001 \003(\0132&.mesosphere.marathon.Service" +
       "Definition\"\307\002\n\021ServiceDefinition\022\n\n\002id\030\001" +
       " \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n" +
       "\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.me",
