@@ -13,35 +13,35 @@ import scala.math.{Ordered, Ordering}
  * @tparam T the type of the elements of this collection
  * @tparam V the type of T's versions
  */
-class History[T <: Versioned[V], V <: Ordered[V]] protected (
+class History[T <: Timestamped] protected (
   underlying: SortedSet[T]
 ) extends SortedSet[T] {
 
   def this() =
-    this(SortedSet[T]()(Versioned.versionOrdering[T, V]))
+    this(SortedSet[T]()(Timestamped.timestampOrdering[T]))
 
   def this(elems: Seq[T]) =
-    this(SortedSet[T](elems: _*)(Versioned.versionOrdering[T, V]))
+    this(SortedSet[T](elems: _*)(Timestamped.timestampOrdering[T]))
 
-  def +(elem: T): History[T, V] = new History(underlying + elem)
+  def +(elem: T): History[T] = new History(underlying + elem)
 
-  def -(elem: T): History[T, V] = new History(underlying - elem)
+  def -(elem: T): History[T] = new History(underlying - elem)
 
   def contains(elem: T): Boolean = underlying contains elem
 
   def iterator: Iterator[T] = underlying.iterator
 
-  implicit def ordering: Ordering[T] = Versioned.versionOrdering[T, V]
+  implicit def ordering: Ordering[T] = Timestamped.timestampOrdering[T]
 
-  def rangeImpl(from: Option[T], until: Option[T]): History[T, V] =
+  def rangeImpl(from: Option[T], until: Option[T]): History[T] =
     new History(underlying.rangeImpl(from, until))
 }
 
 object History {
 
-  def apply[T <: Versioned[V], V <: Ordered[V]](): History[T, V] =
-    new History[T, V]()
+  def apply[T <: Timestamped](): History[T] =
+    new History[T]()
 
-  def apply[T <: Versioned[V], V <: Ordered[V]](elems: T*): History[T, V] =
-    new History[T, V](elems)
+  def apply[T <: Timestamped](elems: T*): History[T] =
+    new History[T](elems)
 }

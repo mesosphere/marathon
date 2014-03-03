@@ -6,8 +6,7 @@ import scala.collection.JavaConverters._
 
 
 case class AppRepository(
-  history: History[AppDefinition, Timestamp] =
-    History[AppDefinition, Timestamp]()
+  history: History[AppDefinition] = History[AppDefinition]()
 ) extends MarathonState[Protos.AppRepository, AppRepository] {
 
   def currentVersion(): Option[AppDefinition] = history.lastOption
@@ -19,7 +18,7 @@ case class AppRepository(
 
   def mergeFromProto(proto: Protos.AppRepository): AppRepository =
     AppRepository(
-      History[AppDefinition, Timestamp](
+      History[AppDefinition](
         proto.getHistoryList.asScala.map { bytes =>
           AppDefinition().mergeFromProto(bytes)
         }: _*
@@ -34,8 +33,8 @@ case class AppRepository(
 object AppRepository {
 
   def apply(): AppRepository =
-    AppRepository(History[AppDefinition, Timestamp]())
+    AppRepository(History[AppDefinition]())
 
   def apply(apps: AppDefinition*): AppRepository =
-    AppRepository(History[AppDefinition, Timestamp](apps: _*))
+    AppRepository(History[AppDefinition](apps: _*))
 }
