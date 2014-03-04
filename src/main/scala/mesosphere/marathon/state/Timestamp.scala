@@ -5,7 +5,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import scala.math.Ordered
 
 /**
- * An ordered wrapper for timestamps.
+ * An ordered wrapper for UTC timestamps.
  */
 case class Timestamp(time: DateTime) extends Ordered[Timestamp] {
   def compare(that: Timestamp) = this.time compareTo that.time

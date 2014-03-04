@@ -5,13 +5,12 @@ import scala.math.{Ordered, Ordering}
 
 
 /**
- * A sorted set of like-typed versioned elements.
+ * A sorted set of like-typed timestamped elements.
  *
  * The natural ordering of this collection is derived from the orderedness
- * of the elements' versions.
+ * of the elements' timestamps.
  *
  * @tparam T the type of the elements of this collection
- * @tparam V the type of T's versions
  */
 class History[T <: Timestamped] protected (
   underlying: SortedSet[T]
