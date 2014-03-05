@@ -6,31 +6,36 @@ The full JSON format of an application resource is as follows:
 
 ```json
 {
-    "cmd": "(env && sleep 300)", 
+    "cmd": "(env && sleep 300)",
     "constraints": [
         ["attribute", "OPERATOR", "value"]
-    ], 
+    ],
     "container": {
         "image": "docker:///zaiste/postgresql",
         "options": ["-e", "X=7"]
-    }, 
-    "cpus": 2, 
+    },
+    "cpus": 2,
     "env": {
         "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
-    }, 
-    "executor": "", 
-    "id": "myApp", 
-    "instances": 3, 
-    "mem": 256.0, 
+    },
+    "executor": "",
+    "id": "myApp",
+    "instances": 3,
+    "mem": 256.0,
     "ports": [
-        8080, 
+        8080,
         9000
-    ], 
+    ],
+    "taskRateLimit": 1.0,
+    "tasksRunning": 3, 
+    "tasksStaged": 0, 
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
-    ]
+    ], 
+    "version": "2014-03-01T23:29:30.158Z"
 }
 ```
+
 
 _Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER", "GROUP_BY"].  For additional information on using placement constraints see [Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.io/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
 

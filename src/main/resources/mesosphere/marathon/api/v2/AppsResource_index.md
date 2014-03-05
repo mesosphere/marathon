@@ -46,12 +46,16 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                17988, 
-                13669
+                15092, 
+                14566
             ], 
+            "taskRateLimit": 1.0, 
+            "tasksRunning": 0, 
+            "tasksStaged": 1, 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
-            ]
+            ], 
+            "version": "2014-03-01T23:42:20.938Z"
         }
     ]
 }
@@ -105,12 +109,16 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                17988, 
-                13669
+                15092, 
+                14566
             ], 
+            "taskRateLimit": 1.0, 
+            "tasksRunning": 1, 
+            "tasksStaged": 0, 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
-            ]
+            ], 
+            "version": "2014-03-01T23:42:20.938Z"
         }
     ]
 }

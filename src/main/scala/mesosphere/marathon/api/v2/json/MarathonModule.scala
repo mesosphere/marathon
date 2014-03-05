@@ -2,16 +2,14 @@ package mesosphere.marathon.api.v2.json
 
 import com.fasterxml.jackson.databind._
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
+import mesosphere.marathon.state.Timestamp
 import com.fasterxml.jackson.core.{JsonToken, JsonParser, JsonGenerator, Version}
 import com.fasterxml.jackson.databind.Module.SetupContext
 import com.fasterxml.jackson.databind.ser.Serializers
 import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import java.text.SimpleDateFormat
-import java.util.{Date, TimeZone}
-import org.joda.time.format.{ISODateTimeFormat, DateTimeFormatter}
-import org.joda.time.{DateTimeZone, DateTime}
+
 
 /**
  * @author Tobi Knaup
@@ -22,6 +20,7 @@ class MarathonModule extends Module {
   private val constraintClass = classOf[Constraint]
   private val marathonTaskClass = classOf[MarathonTask]
   private val enrichedTaskClass = classOf[EnrichedTask]
+  private val timestampClass = classOf[Timestamp]
 
   def getModuleName: String = "MarathonModule"
 
@@ -33,11 +32,17 @@ class MarathonModule extends Module {
                                   beanDesc: BeanDescription): JsonSerializer[_] = {
         if (constraintClass.isAssignableFrom(javaType.getRawClass)) {
           ConstraintSerializer
-        } else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
+        }
+        else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
           MarathonTaskSerializer
-        } else if (enrichedTaskClass.isAssignableFrom(javaType.getRawClass)) {
+        }
+        else if (enrichedTaskClass.isAssignableFrom(javaType.getRawClass)) {
           EnrichedTaskSerializer
-        } else {
+        }
+        else if (timestampClass.isAssignableFrom(javaType.getRawClass)) {
+          TimestampSerializer
+        }
+        else {
           null
         }
       }
@@ -51,6 +56,9 @@ class MarathonModule extends Module {
         }
         else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
           MarathonTaskDeserializer
+        }
+        else if (timestampClass.isAssignableFrom(javaType.getRawClass)) {
+          TimestampDeserializer
         }
         else {
           null
@@ -87,10 +95,17 @@ class MarathonModule extends Module {
     }
   }
 
-  val isoDateFormatter = ISODateTimeFormat.dateTime()
-  isoDateFormatter.withZone(DateTimeZone.UTC)
+  object TimestampSerializer extends JsonSerializer[Timestamp] {
+    def serialize(ts: Timestamp, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeString(ts.toString)
+    }
+  }
 
-  def timestampToUTC(timestamp: Long): String = isoDateFormatter.print(new DateTime(timestamp))
+  object TimestampDeserializer extends JsonDeserializer[Timestamp] {
+    def deserialize(json: JsonParser, context: DeserializationContext): Timestamp = {
+      Timestamp(json.getText)
+    }
+  }
 
   object MarathonTaskSerializer extends JsonSerializer[MarathonTask] {
     def serialize(task: MarathonTask, jgen: JsonGenerator, provider: SerializerProvider) {
@@ -105,8 +120,8 @@ class MarathonModule extends Module {
       jgen.writeObjectField("id", task.getId)
       jgen.writeObjectField("host", task.getHost)
       jgen.writeObjectField("ports", task.getPortsList)
-      jgen.writeObjectField("startedAt", if (startedAt == 0) null else timestampToUTC(startedAt))
-      jgen.writeObjectField("stagedAt", if (stagedAt == 0) null else timestampToUTC(stagedAt))
+      jgen.writeObjectField("startedAt", if (startedAt == 0) null else Timestamp(startedAt))
+      jgen.writeObjectField("stagedAt", if (stagedAt == 0) null else Timestamp(stagedAt))
     }
   }
 

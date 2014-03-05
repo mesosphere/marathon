@@ -5,6 +5,7 @@ import org.junit.Assert._
 import com.google.common.collect.Lists
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.ServiceDefinition
+import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.CommandInfo
 import javax.validation.Validation
 
@@ -46,6 +47,7 @@ class AppDefinitionTest {
       .setCmd(cmd)
       .setInstances(3)
       .setExecutor("//cmd")
+      .setVersion(Timestamp.now.toString)
       .build
 
     val mergeResult = AppDefinition().mergeFromProto(proto)
@@ -89,7 +91,7 @@ class AppDefinitionTest {
   }
 
   @Test
-  def testSerialization() {
+  def testSerializationRoundtrip() {
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.marathon.api.v2.json.MarathonModule

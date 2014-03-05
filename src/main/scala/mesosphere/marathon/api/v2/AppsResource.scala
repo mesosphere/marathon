@@ -10,6 +10,7 @@ import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 import java.util.logging.Logger
 import com.codahale.metrics.annotation.Timed
+import com.sun.jersey.api.NotFoundException
 import javax.servlet.http.HttpServletRequest
 import javax.validation.Valid
 import mesosphere.marathon.api.v1.{Implicits, AppDefinition}
@@ -46,18 +47,11 @@ class AppsResource @Inject()(
   @POST
   @Timed
   def create(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
+    validateContainerOpts(app)
 
-    // Return a 400: Bad Request if container options are supplied
-    // with the default executor
-    if (containerOptsAreInvalid(app)) throw new BadRequestException(
-      "Container options are not supported with the default executor"
-    )
-
-    else {
-      maybePostEvent(req, app)
-      Await.result(service.startApp(app), service.defaultWait)
-      Response.noContent.build
-    }
+    maybePostEvent(req, app)
+    Await.result(service.startApp(app), service.defaultWait)
+    Response.noContent.build
   }
 
   @GET
@@ -77,26 +71,29 @@ class AppsResource @Inject()(
     @Context req: HttpServletRequest,
     @PathParam("id") id: String,
     @Valid appUpdate: AppUpdate
-  ): Response = {
-    service.getApp(id) match {
-      case Some(app) => {
-        val updatedApp = appUpdate.apply(app)
+  ): Response =
+    service.listAppVersions(id) match {
+      case Some(repo) if repo.history.nonEmpty => {
+        val effectiveUpdate: AppUpdate =
+          appUpdate.version.flatMap { version =>
+            // rollback to the specified version
+            val rollback = repo.history.find(_.version == version).map {
+              AppUpdate.fromAppDefinition(_)
+            }
+            if (! rollback.isDefined) throw new NotFoundException(
+              "Rollback version does not exist"
+            )
+            rollback
+          }.getOrElse(appUpdate)
 
-        // Return a 400: Bad Request if container options are supplied
-        // with the default executor
-        if (containerOptsAreInvalid(app)) throw new BadRequestException(
-          "Container options are not supported with the default executor"
-        )
-
-        else {
-          maybePostEvent(req, updatedApp)
-          Await.result(service.updateApp(id, appUpdate), service.defaultWait)
-          Response.noContent.build
-        }
+        val updatedApp = effectiveUpdate.apply(repo.currentVersion.get)
+        validateContainerOpts(updatedApp)
+        maybePostEvent(req, updatedApp)
+        Await.result(service.updateApp(id, effectiveUpdate), service.defaultWait)
+        Response.noContent.build
       }
-      case None => Response.status(Status.NOT_FOUND).build
+      case _ => Response.status(Status.NOT_FOUND).build
     }
-  }
 
   @DELETE
   @Path("{id}")
@@ -111,8 +108,18 @@ class AppsResource @Inject()(
   @Path("{appId}/tasks")
   def appTasksResource() = new AppTasksResource(service, taskTracker)
 
-  private def containerOptsAreInvalid(app: AppDefinition): Boolean =
-    (app.executor == "" || app.executor == "//cmd") && app.container.isDefined
+  @Path("{appId}/versions")
+  def appVersionsResource() = new AppVersionsResource(service)
+
+  /**
+   * Causes a 400: Bad Request if container options are supplied
+   * with the default executor
+   */
+  private def validateContainerOpts(app: AppDefinition): Unit =
+    if ((app.executor == "" || app.executor == "//cmd") && app.container.isDefined)
+      throw new BadRequestException(
+        "Container options are not supported with the default executor"
+      )
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) {
     if (eventBus.nonEmpty) {

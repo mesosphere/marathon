@@ -25,6 +25,10 @@ message Constraint {
   optional string value = 3;
 }
 
+message AppRepository {
+  repeated ServiceDefinition history = 1;
+}
+
 message ServiceDefinition {
   required string id = 1;
   required mesos.CommandInfo cmd = 2;
@@ -36,6 +40,7 @@ message ServiceDefinition {
   required string executor = 8 [default = ""];
   optional double taskRateLimit = 9 [default = 1];
   optional ContainerInfo container = 10;
+  required string version = 11;
 }
 
 message MarathonTask {
@@ -61,3 +66,4 @@ message ContainerInfo {
 message EventSubscribers {
   repeated string callback_urls = 1;
 }
+

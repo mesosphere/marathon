@@ -5,20 +5,26 @@
 * [Apps](#apps)
   * [POST /v2/apps](#post-v2apps): Create and start a new app
   * [GET /v2/apps](#get-v2apps): List all running apps
-  * [GET /v2/apps/{app_id}](#get-v2appsapp_id): List the app `app_id`
   * [GET /v2/apps?cmd={command}](#get-v2appscmdcommand): List all running
     apps, filtered by `command`
-  * [PUT /v2/apps/{app_id}](#put-v2appsapp_id): Change config of the app
-    `app_id`
-  * [DELETE /v2/apps/{app_id}](#delete-v2appsapp_id): Destroy app `app_id`
-  * [GET /v2/apps/{app_id}/tasks](#get-v2appsapp_idtasks): List running tasks
-    for app `app_id`
-  * [DELETE /v2/apps/{app_id}/tasks?host={host}&scale={true|false}](#delete-v2appsapp_idtaskshosthostscaletruefalse):
-    kill tasks belonging to app `app_id`
-  * [DELETE /v2/apps/{app_id}/tasks/{task_id}?scale={true|false}](#delete-v2appsapp_idtaskstask_idscaletruefalse):
-    Kill the task `task_id` that belongs to the application `app_id`
+  * [GET /v2/apps/{appId}](#get-v2appsappid): List the app `appId`
+  * [GET /v2/apps/{appId}/versions](#get-v2appsappidversions): List the versions of the application with id `appId`.
+  * [GET /v2/apps/{appId}/versions/{version}](#get-v2appsappidversionsversion): List the configuration of the application with id `appId` at version `version`.
+  * [PUT /v2/apps/{appId}](#put-v2appsappid): Change config of the app
+    `appId`
+  * [DELETE /v2/apps/{appId}](#delete-v2appsappid): Destroy app `appId`
+  * [GET /v2/apps/{appId}/tasks](#get-v2appsappidtasks): List running tasks
+    for app `appId`
+  * [DELETE /v2/apps/{appId}/tasks?host={host}&scale={true|false}](#delete-v2appsappidtaskshosthostscaletruefalse):
+    kill tasks belonging to app `appId`
+  * [DELETE /v2/apps/{appId}/tasks/{taskId}?scale={true|false}](#delete-v2appsappidtaskstaskidscaletruefalse):
+    Kill the task `taskId` that belongs to the application `appId`
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-v2tasks): List all running tasks
+* [Event Subscriptions](#event-subscriptions)
+  * [POST /v2/eventSubscriptions?callbackUrl={url}](#post-v2eventsubscriptionscallbackurlurl): Register a callback URL as an event subscriber
+  * [GET /v2/eventSubscriptions](#get-v2eventsubscriptions): List all event subscriber callback URLs
+  * [DELETE /v2/eventSubscriptions?callbackUrl={url}](#delete-v2eventsubscriptionscallbackurlurl) Unregister a callback URL from the event subscribers list
 
 ### _Apps_
 
@@ -50,9 +56,13 @@ The full JSON format of an application resource is as follows:
         8080,
         9000
     ],
+    "taskRateLimit": 1.0,
+    "tasksRunning": 3, 
+    "tasksStaged": 0, 
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
-    ]
+    ], 
+    "version": "2014-03-01T23:29:30.158Z"
 }
 ```
 
@@ -99,20 +109,6 @@ http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps
 
 http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps
 
-#### GET `/v2/apps/{app_id}`
-
-List the application with id `app_id`.
-
-##### Example
-
-**Request:**
-
-http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp
-
-**Response:**
-
-http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp
-
 #### GET `/v2/apps?cmd={command}`
 
 List all running applications, filtered by `command`.
@@ -127,7 +123,81 @@ http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps
 
 http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps?cmd=sleep%2060
 
-#### PUT `/v2/apps/{app_id}`
+#### GET `/v2/apps/{appId}`
+
+List the application with id `appId`.
+
+##### Example
+
+**Request:**
+
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp
+
+**Response:**
+
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp
+
+#### GET `/v2/apps/{appId}/versions`
+
+List the versions of the application with id `appId`.
+
+##### Example
+
+**Request:**
+
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp/versions
+
+**Response:**
+
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp/versions
+
+#### GET `/v2/apps/{appId}/versions/{version}`
+
+List the configuration of the application with id `appId` at version `version`.
+
+##### Example
+
+**Request:**
+
+```
+GET /v2/apps/myApp/versions/2014-03-01T23:17:50.295Z HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate, compress
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+```
+
+**Response:**
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "cmd": "sleep 60", 
+    "constraints": [], 
+    "container": null, 
+    "cpus": 0.1, 
+    "env": {}, 
+    "executor": "", 
+    "id": "myApp", 
+    "instances": 4, 
+    "mem": 5.0, 
+    "ports": [
+        18027, 
+        13200
+    ], 
+    "taskRateLimit": 1.0, 
+    "uris": [
+        "https://raw.github.com/mesosphere/marathon/master/README.md"
+    ], 
+    "version": "2014-03-01T23:17:50.295Z"
+}
+```
+
+#### PUT `/v2/apps/{appId}`
 
 Change parameters of a running application.  The new application parameters
 apply only to subsequently created tasks, and currently running tasks are
@@ -145,7 +215,33 @@ http --print=hb --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps
 
 :http --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps/myApp cmd='sleep 60' constraints:='[]' ports:='[0, 0]' cpus=0.1 mem=5 instances=3
 
-#### DELETE `/v2/apps/{app_id}`
+##### Example (version rollback)
+
+If the `version` key is supplied in the JSON body, the rest of the object is ignored.  If the supplied version is known, then the app is updated (a new version is created) with those parameters.  Otherwise, if the supplied version is not known Marathon responds with a 404.
+
+**Request:**
+
+```
+PUT /v2/apps/myApp HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Length: 39
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+{
+    "version": "2014-03-01T23:17:50.295Z"
+}
+```
+
+```
+HTTP/1.1 204 No Content
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+```
+
+#### DELETE `/v2/apps/{appId}`
 
 Destroy an application. All data about that application will be deleted.
 
@@ -163,9 +259,9 @@ http --print=hb --ignore-stdin --json --pretty format DELETE localhost:8080/v2/a
 
 :http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
-#### GET `/v2/apps/{app_id}/tasks`
+#### GET `/v2/apps/{appId}/tasks`
 
-List all running tasks for application `app_id`.
+List all running tasks for application `appId`.
 
 ##### Example (as JSON)
 
@@ -187,9 +283,9 @@ http --print=HB --ignore-stdin --pretty format GET localhost:8080/v2/apps/myApp/
 
 http --print=hb --ignore-stdin --pretty format GET localhost:8080/v2/apps/myApp/tasks Accept:text/plain
 
-#### DELETE `/v2/apps/{app_id}/tasks?host={host}&scale={true|false}`
+#### DELETE `/v2/apps/{appId}/tasks?host={host}&scale={true|false}`
 
-Kill tasks that belong to the application `app_id`, optionally filtered by the
+Kill tasks that belong to the application `appId`, optionally filtered by the
 task's `host`.
 
 The query parameters `host` and `scale` are both optional.  If `host` is
@@ -207,12 +303,12 @@ http --print=HB --ignore-stdin --json --pretty format DELETE 'localhost:8080/v2/
 
 http --print=hb --ignore-stdin --json --pretty format DELETE 'localhost:8080/v2/apps/myApp/tasks?host=mesos.vm&scale=false'
 
-#### DELETE `/v2/apps/{app_id}/tasks/{task_id}?scale={true|false}`
+#### DELETE `/v2/apps/{appId}/tasks/{taskId}?scale={true|false}`
 
-Kill the task with ID `task_id` that belongs to the application `app_id`.
+Kill the task with ID `taskId` that belongs to the application `appId`.
 
 The query parameter `scale` is optional.  If `scale=true` is specified, then
-the application is scaled down one if the supplied `task_id` exists.  The
+the application is scaled down one if the supplied `taskId` exists.  The
 `scale` parameter defaults to `false`.
 
 ##### Example
@@ -277,6 +373,59 @@ http --print=HB --ignore-stdin --pretty format GET localhost:8080/v2/tasks Accep
 
 http --print=hb --ignore-stdin --pretty format GET localhost:8080/v2/tasks Accept:text/plain
 
+### _Event Subscriptions_
+
+#### POST /v2/eventSubscriptions?callbackUrl={url}
+
+Register a callback URL as an event subscriber.
+
+_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+
+**Request:**
+
+http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback
+
+:http --ignore-stdin DELETE localhost:8080/v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback
+
+**Response:**
+
+http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback
+
+#### GET `/v2/eventSubscriptions`
+
+List all event subscriber callback URLs.
+
+_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+
+##### Example
+
+**Request:**
+
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/eventSubscriptions
+
+**Response:**
+
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/eventSubscriptions
+
+#### DELETE `/v2/eventSubscriptions?callbackUrl={url}`
+
+Unregister a callback URL from the event subscribers list.
+
+_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+
+##### Example
+
+**Request:**
+
+http --print=HB --ignore-stdin --json --pretty format DELETE localhost:8080/v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback
+
+:http --ignore-stdin --json POST localhost:8080/v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback
+
+**Response:**
+
+http --print=hb --ignore-stdin --json --pretty format DELETE localhost:8080/v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback
+
+
 ## API Version 1 _(DEPRECATED)_
 
 ### _Apps_
@@ -339,7 +488,7 @@ http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/app
 
 :http --ignore-stdin PUT localhost:8080/v2/apps/myApp instances=3
 
-#### GET `/v1/apps/search?id={app_id}&cmd={command}`
+#### GET `/v1/apps/search?id={appId}&cmd={command}`
 
 ##### Example
 
@@ -361,7 +510,7 @@ http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v1/apps
 
 http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/apps/search?cmd=sleep%2060
 
-#### GET `/v1/apps/{app_id}/tasks`
+#### GET `/v1/apps/{appId}/tasks`
 
 ##### Example
 
@@ -397,7 +546,7 @@ http --print=HB --ignore-stdin --pretty format GET localhost:8080/v1/endpoints A
 
 http --print=hb --ignore-stdin --pretty format GET localhost:8080/v1/endpoints Accept:text/plain
 
-#### GET `/v1/endpoints/{app_id}`
+#### GET `/v1/endpoints/{appId}`
 
 ##### Example (as JSON)
 
@@ -434,7 +583,7 @@ http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v1/task
 http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/tasks
 
 
-#### POST `/v1/tasks/kill?appId={app_id}&host={host}&id={task_id}&scale={true|false}`
+#### POST `/v1/tasks/kill?appId={appId}&host={host}&id={taskId}&scale={true|false}`
 
 ##### Example
 

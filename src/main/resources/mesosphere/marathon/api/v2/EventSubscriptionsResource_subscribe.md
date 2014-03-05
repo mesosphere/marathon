@@ -2,7 +2,7 @@
 
 Register a callback URL as event subscriber.
 
-_NOTE: To activate this endpoint, you need to startup a Marathon instance with `--event_subscriber http_callback`_
+_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
 
 ### Example
 
