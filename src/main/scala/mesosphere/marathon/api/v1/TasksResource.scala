@@ -2,14 +2,12 @@ package mesosphere.marathon.api.v1
 
 import javax.ws.rs._
 import mesosphere.marathon.MarathonSchedulerService
-import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.tasks.TaskTracker
-import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
 import com.codahale.metrics.annotation.Timed
 import java.util.logging.Logger
-import org.apache.mesos.Protos.TaskID
-import scala.concurrent.Await
+import javax.ws.rs.core.Response.ResponseBuilder
 
 @Path("v1/tasks")
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -42,6 +40,7 @@ class TasksResource @Inject()(
       x.getHost == host || x.getId == id || host == "*"
     )
 
-    service.killTasks(appId, toKill, scale)
+    if (toKill.size == 0) Response.noContent.status(404).build
+    else service.killTasks(appId, toKill, scale)
   }
 }
