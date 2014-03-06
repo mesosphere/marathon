@@ -18,6 +18,7 @@ import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
 import mesosphere.marathon.BadRequestException
 import javax.ws.rs.core.Response.Status
+import java.net.URI
 
 /**
  * @author Tobi Knaup
@@ -51,7 +52,7 @@ class AppsResource @Inject()(
 
     maybePostEvent(req, app)
     Await.result(service.startApp(app), service.defaultWait)
-    Response.noContent.build
+    Response.created(new URI(s"${app.id}")).build
   }
 
   @GET
