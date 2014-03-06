@@ -5,22 +5,14 @@ import mesosphere.marathon.{ContainerInfo, Protos}
 import mesosphere.marathon.state.{MarathonState, Timestamp, Timestamped}
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.FieldConstraints.{
-  FieldPattern,
-  FieldNotEmpty,
-  FieldJsonDeserialize,
-  FieldJsonProperty
-}
+import mesosphere.marathon.api.FieldConstraints._
 import com.fasterxml.jackson.annotation.{
-  JsonInclude,
   JsonIgnore,
   JsonIgnoreProperties,
   JsonProperty
 }
-import com.fasterxml.jackson.annotation.JsonInclude.Include
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
-
 
 /**
  * @author Tobi Knaup
@@ -36,6 +28,7 @@ case class AppDefinition(
 
   env: Map[String, String] = Map.empty,
 
+  @FieldMin(0)
   instances: Int = AppDefinition.DEFAULT_INSTANCES,
 
   cpus: Double = AppDefinition.DEFAULT_CPUS,

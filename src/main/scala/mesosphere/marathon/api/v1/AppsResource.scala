@@ -13,7 +13,6 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.eventbus.EventBus
 import scala.concurrent.Await
 import java.util.logging.Logger
-import javax.ws.rs.core.Response.Status
 import mesosphere.marathon.api.Responses
 
 /**
@@ -53,7 +52,7 @@ class AppsResource @Inject()(
   @POST
   @Path("scale")
   @Timed
-  def scale(@Context req: HttpServletRequest, app: AppDefinition): Response = {
+  def scale(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
     val appUpdate = AppUpdate(instances = Some(app.instances))
     Await.result(service.updateApp(app.id, appUpdate), service.defaultWait)

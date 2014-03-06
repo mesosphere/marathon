@@ -7,8 +7,8 @@ import com.fasterxml.jackson.annotation.{
   JsonValue
 }
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import javax.validation.constraints.Pattern
-import scala.annotation.target.field
+import javax.validation.constraints.{Min, Pattern}
+import scala.annotation.meta.field
 
 /**
  * Provides type aliases for constraint annotations that target fields
@@ -21,4 +21,5 @@ object FieldConstraints {
   type FieldJsonDeserialize = JsonDeserialize @field
   type FieldJsonProperty = JsonProperty @field
   type FieldJsonValue = JsonValue @field
+  type FieldMin = Min @field
 }
