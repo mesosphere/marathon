@@ -95,7 +95,7 @@ difficult situation!
 
 ### Installation
 
-1. Install [Mesos][Mesos]. One easy way is via your system's package manager.
+1.  Install [Mesos][Mesos]. One easy way is via your system's package manager.
     Current builds for major Linux distributions and Mac OS X are available
     from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
 
@@ -105,30 +105,24 @@ difficult situation!
     for details. Running `make install` will install Mesos in `/usr/local` in
     the same way as these packages do.
 
-1. Check out Marathon and use Maven to build a JAR:
+1.  Download and unpack the latest release:
 
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.4.1.tgz
+        tar xzf marathon-0.4.1.tgz
+
+
+#### Building From Source
+
+1.  If you want to build Marathon from source, check out this repo and use Maven to build a JAR:
+
+        git clone https://github.com/mesosphere/marathon.git
+        cd marathon
         mvn package
 
-1. Run `./bin/build-distribution` to package Marathon as an
+1.  Run `./bin/build-distribution` to package Marathon as an
     [executable JAR](http://mesosphere.io/2013/12/07/executable-jars/)
     (optional).
 
-#### Compiling Assets
-
-*Note: You only need to follow these steps if you plan to edit the JavaScript source.*
-
-1. Install [NPM](https://npmjs.org/)
-2. Change to the assets directory
-
-        cd src/main/resources/assets
-3. Install dev dependencies
-
-        npm install
-4. Build the assets
-
-        ./bin/build
-
-The main JS file will be written to `src/main/resources/assets/js/dist/main.js`.
 
 ### Running in Production Mode
 
@@ -161,6 +155,23 @@ packaged JAR by default and are not editable. To load them from a directory for
 easy editing, set the `assets_path` flag when running Marathon:
 
     ./bin/start --master local --zk_hosts localhost:2181 --assets_path src/main/resources/assets/
+
+#### Compiling Assets
+
+*Note: You only need to follow these steps if you plan to edit the JavaScript source.*
+
+1. Install [NPM](https://npmjs.org/)
+2. Change to the assets directory
+
+        cd src/main/resources/assets
+3. Install dev dependencies
+
+        npm install
+4. Build the assets
+
+        ./bin/build
+
+The main JS file will be written to `src/main/resources/assets/js/dist/main.js`.
 
 ### Configuration Options
 
