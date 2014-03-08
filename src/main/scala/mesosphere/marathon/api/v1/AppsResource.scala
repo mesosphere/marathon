@@ -14,6 +14,7 @@ import com.google.common.eventbus.EventBus
 import scala.concurrent.Await
 import java.util.logging.Logger
 import javax.ws.rs.core.Response.Status
+import mesosphere.marathon.api.Responses
 
 /**
  * @author Tobi Knaup
@@ -97,7 +98,7 @@ class AppsResource @Inject()(
       val result = Map(appId -> tasks.map(s => s: Map[String, Object]))
       Response.ok(result).build
     } else {
-      Response.status(Status.NOT_FOUND).build
+      Responses.unknownApp(appId)
     }
   }
 

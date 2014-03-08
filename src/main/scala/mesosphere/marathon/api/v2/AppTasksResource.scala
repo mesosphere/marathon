@@ -7,10 +7,11 @@ import scala.{Array, Some}
 import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.EndpointsHelper
+import mesosphere.marathon.api.{Responses, EndpointsHelper}
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Await
 import java.util.logging.Logger
+import javax.ws.rs.core.Response.Status
 
 
 /**
@@ -31,7 +32,7 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
       val tasks = taskTracker.get(appId)
       Response.ok(Map("tasks" -> tasks)).build
     } else {
-      Response.status(Response.Status.NOT_FOUND).build
+      Responses.unknownApp(appId)
     }
   }
 
@@ -47,7 +48,7 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
           "\t"
         )
       ).build
-      case None => Response.status(Response.Status.NOT_FOUND).build
+      case None => Responses.unknownApp(appId)
     }
   }
 
@@ -67,7 +68,7 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
       service.killTasks(appId, toKill, scale)
       Response.ok(Map("tasks" -> toKill)).build
     } else {
-      Response.status(Response.Status.NOT_FOUND).build
+      Responses.unknownApp(appId)
     }
   }
 
@@ -84,10 +85,10 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
           service.killTasks(appId, Seq(task), scale)
           Response.ok(Map("task" -> task)).build
         }
-        case None => Response.status(Response.Status.NOT_FOUND).build
+        case None => Responses.unknownTask(id)
       }
     } else {
-      Response.status(Response.Status.NOT_FOUND).build
+      Responses.unknownApp(appId)
     }
   }
 }

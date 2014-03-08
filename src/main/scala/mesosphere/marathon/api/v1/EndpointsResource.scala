@@ -9,6 +9,7 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.state.{MarathonStore, AppRepository}
 import scala.concurrent.Await
 import javax.ws.rs.core.Response.Status
+import mesosphere.marathon.api.Responses
 
 /**
  * @author Tobi Knaup
@@ -45,7 +46,7 @@ class EndpointsResource @Inject()(
   def endpointsForApp(@PathParam("id") id: String): Response =
     schedulerService.getApp(id) match {
       case Some(app) => Response.ok(appsToEndpointString(Seq(app))).build
-      case None => Response.status(Status.NOT_FOUND).build
+      case None => Response.status(Status.NOT_FOUND).entity(s"App '$id' does not exist").build
     }
 
   @GET
@@ -62,7 +63,7 @@ class EndpointsResource @Inject()(
           "instances" -> instances)
         Response.ok(body).build
       }
-      case None => Response.status(Status.NOT_FOUND).build
+      case None => Responses.unknownApp(id)
     }
 
   /**
