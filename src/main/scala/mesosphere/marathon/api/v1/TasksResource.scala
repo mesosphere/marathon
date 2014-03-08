@@ -7,7 +7,7 @@ import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
 import com.codahale.metrics.annotation.Timed
 import java.util.logging.Logger
-import javax.ws.rs.core.Response.ResponseBuilder
+import javax.ws.rs.core.Response.{Status, ResponseBuilder}
 
 @Path("v1/tasks")
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -40,7 +40,9 @@ class TasksResource @Inject()(
       x.getHost == host || x.getId == id || host == "*"
     )
 
-    if (toKill.size == 0) Response.noContent.status(404).build
-    else service.killTasks(appId, toKill, scale)
+    if (toKill.size == 0)
+      Response.status(Status.NOT_FOUND).build
+    else
+      service.killTasks(appId, toKill, scale)
   }
 }

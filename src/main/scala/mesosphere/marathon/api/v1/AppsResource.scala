@@ -13,6 +13,7 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.eventbus.EventBus
 import scala.concurrent.Await
 import java.util.logging.Logger
+import javax.ws.rs.core.Response.Status
 
 /**
  * @author Tobi Knaup
@@ -96,7 +97,7 @@ class AppsResource @Inject()(
       val result = Map(appId -> tasks.map(s => s: Map[String, Object]))
       Response.ok(result).build
     } else {
-      Response.noContent.status(404).build
+      Response.status(Status.NOT_FOUND).build
     }
   }
 
