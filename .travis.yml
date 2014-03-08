@@ -1,6 +1,6 @@
 language: scala
 before_script:
-  - gem install travis-artifacts
+  - export PROJECT_VERSION="`sed -n 's|.*<version>\(.*\)</version>.*|\1|p' pom.xml | awk '{ print $1; exit }'`" && echo Project version is $PROJECT_VERSION
   - pushd src/main/resources/assets/ && npm install && ./bin/build && popd
 jdk:
   - openjdk6
@@ -14,6 +14,6 @@ env:
     - secure: Ujj0GCEtGTs5jJneR41XFKgI9i9FXzkka6EsmI7BPOcJUfdp7NhGtxPsmMdheQZA725HQf5ES8ve6CzKuJbCdJ4IJx6HKJp1xgLDdGshcYW8kUha+sYeh9/vpagaZoNYJ9ArpdEHP7yJbKmga79pyoPAp3NbkY5QG8onaJCphZw=
     - secure: MKUdKA6AbtETQvYkebXWbA+1zsQqG81d9bNuBlOc1vOt+whMAjEGdgZ/aqokXWJzNMFlaBdSeDfhS48+ibYUh2mW2N7XRwwTotVUcEAXdkoYYlfxfkTeHO2anadQVr/VYvLhDGSG+UCyEgTea1BmsqR2jutw/IIn2zS+mKALKt8=
 after_success:
-  - export PROJECT_VERSION="`sed -n 's|.*<version>\(.*\)</version>.*|\1|p' pom.xml | awk '{ print $1; exit }'`" && echo Project version is $PROJECT_VERSION
+  - gem install --no-rdoc --no-ri travis-artifacts faraday_middleware
   - bin/build-distribution
   - travis-artifacts upload --path target/marathon-runnable.jar --target-path marathon/$TRAVIS_BRANCH/marathon_$PROJECT_VERSION.jar
