@@ -1,6 +1,5 @@
 package mesosphere.marathon.api.v1
 
-import scala.collection.JavaConverters._
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.v2.AppUpdate
@@ -13,9 +12,8 @@ import javax.servlet.http.HttpServletRequest
 import com.codahale.metrics.annotation.Timed
 import com.google.common.eventbus.EventBus
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import java.util.logging.Logger
-import org.apache.mesos.Protos.TaskID
+import javax.ws.rs.core.Response.Status
 
 /**
  * @author Tobi Knaup
@@ -99,7 +97,7 @@ class AppsResource @Inject()(
       val result = Map(appId -> tasks.map(s => s: Map[String, Object]))
       Response.ok(result).build
     } else {
-      Response.noContent.status(404).build
+      Response.status(Status.NOT_FOUND).build
     }
   }
 
