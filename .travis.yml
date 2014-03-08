@@ -22,5 +22,5 @@ after_success:
   - bin/build-distribution
   - cp target/marathon-runnable.jar "$ARTIFACT"
   - shasum --binary --algorithm 256 "$ARTIFACT" > "$ARTIFACT".sha256
-  - travis-artifacts upload --path "$ARTIFACT" --target-path marathon/$TRAVIS_BRANCH/
-  - travis-artifacts upload --path "$ARTIFACT".sha256 --target-path marathon/$TRAVIS_BRANCH/
+  - travis-artifacts upload --path "$ARTIFACT" --target-path marathon/"$TRAVIS_BRANCH"/
+  - travis-artifacts upload --path "$ARTIFACT".sha256 --target-path marathon/"$TRAVIS_BRANCH"/
