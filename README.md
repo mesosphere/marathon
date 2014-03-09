@@ -231,6 +231,16 @@ as it did before being deprecated. Details on the V1 API can be found in the
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
 
+## Companies using Marathon
+
+* [Airbnb](https://www.airbnb.com/)
+* [eBay](http://www.ebay.com/)
+* [Guidewire](http://www.guidewire.com/)
+* [OpenTable](http://www.opentable.com/)
+* [PayPal](https://www.paypal.com)
+
+Not in the list? Open a pull request and add yourself!
+
 ## Help
 
 If you have questions, please post on the
