@@ -1,7 +1,7 @@
 language: scala
 before_script:
   - export PROJECT_VERSION="`sed -n 's|.*<version>\(.*\)</version>.*|\1|p' pom.xml | awk '{ print $1; exit }'`" && echo Project version is $PROJECT_VERSION
-  - export ARTIFACT="marathon_$PROJECT_VERSION.tgz"
+  - export ARTIFACT="marathon-$PROJECT_VERSION.tgz"
   - pushd src/main/resources/assets/ && npm install && ./bin/build && popd
 jdk:
   - openjdk6
