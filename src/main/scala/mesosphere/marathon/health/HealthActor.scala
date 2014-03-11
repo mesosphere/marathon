@@ -79,7 +79,7 @@ case class HealthActor(system: ActorSystem, service: MarathonSchedulerService)
 
   private def addAllHealthChecks(): Unit = for {
     app <- service.listApps()
-    healthCheck <- app.healthCheck
+    healthCheck <- app.healthChecks
   } insertHealthCheck(HealthCheckPayload(app.id, healthCheck))
 
   def receive = {

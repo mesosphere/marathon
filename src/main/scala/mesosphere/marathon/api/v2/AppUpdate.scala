@@ -43,7 +43,7 @@ case class AppUpdate(
   version: Option[Timestamp] = None,
 
   @FieldJsonDeserialize(contentAs = classOf[HealthCheckDefinition])
-  healthCheck: Option[HealthCheckDefinition] = None
+  healthChecks: Set[HealthCheckDefinition] = Set()
 ) {
 
   // the default constructor exists solely for interop with automatic
@@ -65,15 +65,14 @@ case class AppUpdate(
     for (v <- ports) updated = updated.copy(ports = v)
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
-    for (v <- healthCheck) updated = updated.copy(healthCheck = Some(v))
 
+    updated.copy(healthChecks = this.healthChecks)
     updated.copy(container = this.container, version = Timestamp.now())
   }
 
 }
 
 object AppUpdate {
-
   /**
    * Creates an AppUpdate from the supplied AppDefinition
    */
@@ -88,7 +87,7 @@ object AppUpdate {
       constraints = Option(app.constraints),
       executor = Option(app.executor),
       container = app.container,
-      healthCheck = app.healthCheck
+      healthChecks = app.healthChecks
     )
 
 }

@@ -237,9 +237,10 @@ class MarathonScheduler @Inject()(
       case Some(appRepo) if appRepo.history.nonEmpty => {
         val existingAppDef = appRepo.currentVersion().get
         val updatedApp = appUpdate(existingAppDef)
-        if (existingAppDef.healthCheck.isEmpty && updatedApp.healthCheck.isDefined)
+        val newHealthChecks = updatedApp.healthChecks.filterNot(existingAppDef.healthChecks.contains)
+        for (healthCheck <- newHealthChecks)
           healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Insert,
-            HealthCheckPayload(existingAppDef.id, updatedApp.healthCheck.get)))
+            HealthCheckPayload(existingAppDef.id, healthCheck)))
         store.store(
           updatedApp.id,
           AppRepository(appRepo.history + updatedApp)
