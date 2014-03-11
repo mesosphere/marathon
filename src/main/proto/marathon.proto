@@ -50,7 +50,7 @@ message ServiceDefinition {
   optional double taskRateLimit = 9 [default = 1];
   optional ContainerInfo container = 10;
   required string version = 11;
-  optional HealthCheckDefinition healthCheck = 12;
+  repeated HealthCheckDefinition healthCheck = 12;
 }
 
 message MarathonTask {

@@ -1,6 +1,4 @@
-package scala.mesosphere.marathon.api.v1;
-
-import mesosphere.marathon.api.v1.AppDefinitionValidator;
+package mesosphere.marathon.api.v1;
 
 import javax.validation.Constraint;
 import javax.validation.Payload;
