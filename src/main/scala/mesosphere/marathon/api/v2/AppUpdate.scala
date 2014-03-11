@@ -57,6 +57,7 @@ case class AppUpdate(
     for (v <- instances) updated = updated.copy(instances = v)
     for (v <- cpus) updated = updated.copy(cpus = v)
     for (v <- mem) updated = updated.copy(mem = v)
+    for (v <- uris) updated = updated.copy(uris = v)
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
 
