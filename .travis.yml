@@ -1,7 +1,30 @@
 language: scala
 before_script:
-  - "pushd src/main/resources/assets/ && npm install && ./bin/build && popd"
+  - export PROJECT_VERSION="`sed -n 's|.*<version>\(.*\)</version>.*|\1|p' pom.xml | awk '{ print $1; exit }'`" && echo Project version is $PROJECT_VERSION
+  - export ARTIFACT="marathon-$PROJECT_VERSION.tgz"
+  - pushd src/main/resources/assets/ && npm install && ./bin/build && popd
 jdk:
   - openjdk6
 scala:
-  - "2.10.2"
+  - 2.10.2
+env:
+  global:
+    - ARTIFACTS_AWS_REGION=us-east-1
+    - ARTIFACTS_S3_BUCKET=downloads.mesosphere.io
+    # IAM User: MarathonRelease
+    - secure: Ujj0GCEtGTs5jJneR41XFKgI9i9FXzkka6EsmI7BPOcJUfdp7NhGtxPsmMdheQZA725HQf5ES8ve6CzKuJbCdJ4IJx6HKJp1xgLDdGshcYW8kUha+sYeh9/vpagaZoNYJ9ArpdEHP7yJbKmga79pyoPAp3NbkY5QG8onaJCphZw=
+    - secure: MKUdKA6AbtETQvYkebXWbA+1zsQqG81d9bNuBlOc1vOt+whMAjEGdgZ/aqokXWJzNMFlaBdSeDfhS48+ibYUh2mW2N7XRwwTotVUcEAXdkoYYlfxfkTeHO2anadQVr/VYvLhDGSG+UCyEgTea1BmsqR2jutw/IIn2zS+mKALKt8=
+after_success:
+  # Pin to Faraday 0.8.9 due to:
+  # https://github.com/travis-ci/travis-artifacts/issues/23
+  - gem install --no-rdoc --no-ri --version 0.8.9 faraday
+  - gem install --no-rdoc --no-ri travis-artifacts
+  - bin/build-distribution
+  # Prepend a marathon version dir to the tarball elements (requires GNU tar)
+  - |
+    tar -czv -f "$ARTIFACT" --transform "s,,marathon-$PROJECT_VERSION/," \
+      Dockerfile README.md REST.md LICENSE bin examples docs \
+      target/marathon-*-jar-with-dependencies.jar
+  - shasum --binary --algorithm 256 "$ARTIFACT" > "$ARTIFACT".sha256
+  - travis-artifacts upload --path "$ARTIFACT" --target-path marathon/"$TRAVIS_BRANCH"/
+  - travis-artifacts upload --path "$ARTIFACT".sha256 --target-path marathon/"$TRAVIS_BRANCH"/
