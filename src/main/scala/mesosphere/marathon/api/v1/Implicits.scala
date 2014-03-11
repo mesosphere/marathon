@@ -2,6 +2,8 @@ package mesosphere.marathon.api.v1
 
 import mesosphere.marathon.Protos.MarathonTask
 import scala.language.implicitConversions
+import scala.concurrent.duration.{FiniteDuration, Duration}
+import java.util.concurrent.TimeUnit
 
 /**
  * Implicits for the API
@@ -19,4 +21,8 @@ object Implicits {
       // TODO attributes
     )
   }
+
+  implicit def DurationToFiniteDuration(dur: Duration): FiniteDuration =
+    FiniteDuration(dur.toSeconds, TimeUnit.SECONDS)
+
 }

@@ -33,11 +33,11 @@ object Main extends App {
       new MarathonModule(conf),
       new MarathonRestModule,
       new EventModule(conf)
-    ) ++ getEventsModule()
+    ) ++ getEventsModule
   }
 
   //TODO(*): Rethink how this could be done.
-  def getEventsModule(): Option[AbstractModule] = {
+  def getEventsModule: Option[AbstractModule] = {
     if (conf.eventSubscriber.isSupplied) {
       conf.eventSubscriber() match {
         case "http_callback" => {

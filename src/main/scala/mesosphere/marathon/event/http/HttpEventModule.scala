@@ -13,11 +13,11 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 import org.apache.mesos.state.State
 import mesosphere.marathon.state.MarathonStore
-import mesosphere.marathon.Main
+import mesosphere.marathon.{MarathonSchedulerService, Main}
 import mesosphere.marathon.event.{MarathonSubscriptionEvent, Subscribe}
+import mesosphere.marathon.health.{HealthActor, HealthActorProxy}
 
 trait HttpEventConfiguration extends ScallopConf {
-
   lazy val httpEventEndpoints = opt[List[String]]("http_endpoints",
     descr = "The URLs of the event endpoints master",
     required = false,
@@ -25,7 +25,6 @@ trait HttpEventConfiguration extends ScallopConf {
 }
 
 class HttpEventModule extends AbstractModule {
-
   val log = Logger.getLogger(getClass.getName)
 
   def configure() {
@@ -48,22 +47,27 @@ class HttpEventModule extends AbstractModule {
   }
 
   @Provides
+  @Singleton
+  def provideHealthActorProxy(system: ActorSystem, service: MarathonSchedulerService) =
+    HealthActorProxy(system.actorOf(Props(HealthActor(system, service))))
+
+  @Provides
   @Named(HttpEventModule.SubscribersKeeperActor)
   def provideSubscribersKeeperActor(system: ActorSystem,
                                     store: MarathonStore[EventSubscribers]): ActorRef = {
     implicit val timeout = HttpEventModule.timeout
     implicit val ec = HttpEventModule.executionContext
-    val local_ip = java.net.InetAddress.getLocalHost().getHostAddress()
+    val local_ip = java.net.InetAddress.getLocalHost.getHostAddress
 
     val actor = system.actorOf(Props(new SubscribersKeeperActor(store)))
     Main.conf.httpEventEndpoints.get map {
       urls =>
-        log.info(s"http_endpoints(${urls}) are specified at startup. Those will be added to subscribers list.")
+        log.info(s"http_endpoints($urls) are specified at startup. Those will be added to subscribers list.")
         urls.foreach{ url =>
           val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
           f.onFailure {
             case th: Throwable =>
-              log.warning(s"Failed to add ${url} to event subscribers. exception message => ${th.getMessage}")
+              log.warning(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")
           }
         }
     }
@@ -76,23 +80,12 @@ class HttpEventModule extends AbstractModule {
   def provideCallbackUrlsStore(state: State): MarathonStore[EventSubscribers] = {
     new MarathonStore[EventSubscribers](state, () => new EventSubscribers(Set.empty[String]), "events:")
   }
-
-//  @Provides
-//  @Singleton
-//  def provideCallbackSubscriber(@Named(EventModule.busName) bus: Option[EventBus],
-//    @Named(HttpEventModule.StatusUpdateActor) actor : ActorRef): HttpCallbackEventSubscriber = {
-//    val callback = new HttpCallbackEventSubscriber(actor)
-//    if (bus.nonEmpty) {
-//      bus.get.register(callback)
-//      log.warning("Registered HttpCallbackEventSubscriber with Bus." )
-//    }
-//    callback
-//  }
 }
 
 object HttpEventModule {
   final val StatusUpdateActor = "EventsActor"
   final val SubscribersKeeperActor = "SubscriberKeeperActor"
+  final val HealthActor = "HealthActor"
 
   val executorService = Executors.newCachedThreadPool()
   val executionContext = ExecutionContext.fromExecutorService(executorService)
@@ -100,4 +93,3 @@ object HttpEventModule {
   //TODO(everpeace) this should be configurable option?
   val timeout = Timeout(10 seconds)
 }
-

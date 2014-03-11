@@ -11,12 +11,28 @@ import com.fasterxml.jackson.annotation.{
   JsonIgnoreProperties,
   JsonProperty
 }
+import scala.collection.JavaConverters._
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
+import javax.validation.ConstraintValidatorContext
+import scala.mesosphere.marathon.api.v1.ValidPortIndex
+
+class AppDefinitionValidator extends javax.validation.ConstraintValidator[ValidPortIndex, AppDefinition] {
+  @Override
+  def initialize(constraintAnnotation: ValidPortIndex) = Unit
+
+  @Override
+  def isValid(appDef: AppDefinition, context: ConstraintValidatorContext): Boolean = {
+    appDef.healthCheck.map(hc =>
+      (0 until appDef.ports.size).contains(hc.portIndex)
+    ).getOrElse(true)
+  }
+}
 
 /**
  * @author Tobi Knaup
  */
+@ValidPortIndex
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppDefinition(
 
@@ -56,7 +72,10 @@ case class AppDefinition(
   container: Option[ContainerInfo] = None,
 
   @FieldJsonProperty
-  version: Timestamp = Timestamp.now
+  version: Timestamp = Timestamp.now(),
+
+  @FieldJsonDeserialize(contentAs = classOf[HealthCheckDefinition])
+  healthCheck: Option[HealthCheckDefinition] = None
 
 ) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
   with Timestamped {
@@ -64,6 +83,13 @@ case class AppDefinition(
   // the default constructor exists solely for interop with automatic
   // (de)serializers
   def this() = this(id = "")
+
+  for (hc <- healthCheck) {
+    val portsIndices = 0 until ports.size
+    if (!new AppDefinitionValidator().isValid(this, null))
+      throw new RuntimeException(
+        s"portIndex (${hc.portIndex}}) must be within ports bounds: ${portsIndices.head} and ${portsIndices.last}")
+  }
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
@@ -80,8 +106,9 @@ case class AppDefinition(
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
-      .setVersion(version.toString)
+      .setVersion(version.toString())
 
+    for (hc <- healthCheck) builder.setHealthCheck(hc.toProto)
     for (c <- container) builder.setContainer(c.toProto)
 
     builder.build
@@ -112,7 +139,9 @@ case class AppDefinition(
       mem = resourcesMap.get(AppDefinition.MEM).getOrElse(this.mem),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
-      version = Timestamp(proto.getVersion)
+      version = Timestamp(proto.getVersion),
+      healthCheck = if (proto.hasHealthCheck) Some(HealthCheckDefinition.mergeFromProto(proto.getHealthCheck))
+                    else None
     )
   }
 
