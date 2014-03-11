@@ -33,14 +33,18 @@ case class HealthActorProxy(actor: ActorRef){
   def sendMessage(msg: HealthMessagePacketBase): Unit = actor ! msg
 }
 
-case class HealthActor(system: ActorSystem, service: MarathonSchedulerService)
-    extends Actor with ActorLogging {
-
+object HealthActorData {
   case class HealthCheckDescriptor(healthCheckDef: HealthCheckDefinition,
-      cancellable: Cancellable)
+                                   cancellable: Cancellable)
 
   val healthChecks = mutable.Map[String, Set[HealthCheckDescriptor]]().withDefaultValue(
     Set.empty[HealthCheckDescriptor])
+}
+
+case class HealthActor(system: ActorSystem, service: MarathonSchedulerService)
+    extends Actor with ActorLogging {
+
+  val healthChecks = HealthActorData.healthChecks
 
   private def insertHealthCheck(payload: HealthCheckPayload): Unit = {
     val existing = healthChecks(payload.appID)
@@ -54,7 +58,7 @@ case class HealthActor(system: ActorSystem, service: MarathonSchedulerService)
           HealthCheckTick(payload))
 
       healthChecks(payload.appID) = existing +
-        HealthCheckDescriptor(payload.healthCheckDef, cancellable)
+        HealthActorData.HealthCheckDescriptor(payload.healthCheckDef, cancellable)
     }
   }
 
