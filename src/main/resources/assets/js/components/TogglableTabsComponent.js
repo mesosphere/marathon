@@ -8,8 +8,7 @@ define([
   return React.createClass({
     getInitialState: function() {
       return {
-        activeTabId:
-          _.isArray(this.props.children) ?
+        activeTabId: _.isArray(this.props.children) ?
           this.props.children[0].props.id :
           this.props.children.props.id
       };
@@ -20,17 +19,11 @@ define([
       });
     },
     render: function() {
-      var childNodes;
-      if (_.isArray(this.props.children)) {
-        childNodes = this.props.children.map(function(child) {
-          child.props.isActive = (child.props.id === this.state.activeTabId);
-          return child;
-        }, this);
-      } else {
-        this.props.children.props.isActive =
-          this.props.children.props.id === this.state.activeTabId;
-        childNodes = this.props.children;
-      }
+      var childNodes = React.Children.map(this.props.children, function(child) {
+        return React.addons.cloneWithProps(child, {
+          isActive: (child.props.id === this.state.activeTabId)
+        });
+      }, this);
 
       return (
         <div className={this.props.className}>
@@ -39,7 +32,7 @@ define([
             onTabClick={this.onTabClick}
             tabs={this.props.tabs} />
           <div className="tab-content">
-            {this.props.children}
+            {childNodes}
           </div>
         </div>
       );
