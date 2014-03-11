@@ -22,7 +22,7 @@ after_success:
   - bin/build-distribution
   # Prepend a marathon version dir to the tarball elements (requires GNU tar)
   - |
-    tar -czv -f "$ARTIFACT" --transform "s,,marathon_$PROJECT_VERSION/," \
+    tar -czv -f "$ARTIFACT" --transform "s,,marathon-$PROJECT_VERSION/," \
       Dockerfile README.md REST.md LICENSE bin examples docs \
       target/marathon-*-jar-with-dependencies.jar
   - shasum --binary --algorithm 256 "$ARTIFACT" > "$ARTIFACT".sha256
