@@ -19,6 +19,7 @@ import mesosphere.marathon.event.ApiPostEvent
 import mesosphere.marathon.BadRequestException
 import javax.ws.rs.core.Response.Status
 import java.net.URI
+import mesosphere.marathon.api.Responses
 
 /**
  * @author Tobi Knaup
@@ -62,7 +63,7 @@ class AppsResource @Inject()(
     case Some(app) => {
       Response.ok(Map("app" -> app.withTasks(taskTracker))).build
     }
-    case None => Response.status(Status.NOT_FOUND).build
+    case None => Responses.unknownApp(id)
   }
 
   @PUT
@@ -93,7 +94,7 @@ class AppsResource @Inject()(
         Await.result(service.updateApp(id, effectiveUpdate), service.defaultWait)
         Response.noContent.build
       }
-      case _ => Response.status(Status.NOT_FOUND).build
+      case _ => Responses.unknownApp(id)
     }
 
   @DELETE

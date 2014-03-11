@@ -6,6 +6,7 @@ import javax.ws.rs.core.{MediaType, Response}
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.state.Timestamp
 import java.util.logging.Logger
+import mesosphere.marathon.api.Responses
 
 
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -20,7 +21,7 @@ class AppVersionsResource(service: MarathonSchedulerService) {
       case Some(repo) if repo.history.nonEmpty => {
         Response.ok(Map("versions" -> repo.history.map(_.version))).build
       }
-      case _ => Response.status(Response.Status.NOT_FOUND).build
+      case _ => Responses.unknownApp(appId)
     }
 
   @GET
@@ -35,7 +36,7 @@ class AppVersionsResource(service: MarathonSchedulerService) {
       repo.history.find(app => app.version == timestampVersion)
     } match {
       case Some(version) => version
-      case None => Response.status(Response.Status.NOT_FOUND).build
+      case None => Responses.unknownApp(appId)
     }
   }
 

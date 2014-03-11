@@ -41,7 +41,7 @@ class TasksResource @Inject()(
     )
 
     if (toKill.size == 0)
-      Response.status(Status.NOT_FOUND).build
+      Response.status(Status.NOT_FOUND).entity(Map("message" -> "No tasks matched your filters")).build
     else
       service.killTasks(appId, toKill, scale)
   }
