@@ -1,7 +1,7 @@
 language: scala
 before_script:
   - export PROJECT_VERSION="`sed -n 's|.*<version>\(.*\)</version>.*|\1|p' pom.xml | awk '{ print $1; exit }'`" && echo Project version is $PROJECT_VERSION
-  - export ARTIFACT="marathon-runnable_$PROJECT_VERSION.jar"
+  - export ARTIFACT="marathon_$PROJECT_VERSION.tgz"
   - pushd src/main/resources/assets/ && npm install && ./bin/build && popd
 jdk:
   - openjdk6
@@ -20,7 +20,11 @@ after_success:
   - gem install --no-rdoc --no-ri --version 0.8.9 faraday
   - gem install --no-rdoc --no-ri travis-artifacts
   - bin/build-distribution
-  - cp target/marathon-runnable.jar "$ARTIFACT"
+  # Prepend a marathon version dir to the tarball elements (requires GNU tar)
+  - |
+    tar -czv -f "$ARTIFACT" --transform "s,,marathon_$PROJECT_VERSION/," \
+      Dockerfile README.md REST.md LICENSE bin examples docs \
+      target/marathon-*-jar-with-dependencies.jar
   - shasum --binary --algorithm 256 "$ARTIFACT" > "$ARTIFACT".sha256
   - travis-artifacts upload --path "$ARTIFACT" --target-path marathon/"$TRAVIS_BRANCH"/
   - travis-artifacts upload --path "$ARTIFACT".sha256 --target-path marathon/"$TRAVIS_BRANCH"/
