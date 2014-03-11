@@ -2,13 +2,10 @@ package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v1.{HealthCheckDefinition, AppDefinition}
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.FieldConstraints.FieldJsonDeserialize
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-
-
-import scala.collection.mutable
 
 // TODO: Accept a task restart strategy as a constructor parameter here, to be
 //       used in MarathonScheduler.
@@ -37,8 +34,10 @@ case class AppUpdate(
   container: Option[ContainerInfo] = None,
 
   @FieldJsonDeserialize(contentAs = classOf[Timestamp])
-  version: Option[Timestamp] = None
+  version: Option[Timestamp] = None,
 
+  @FieldJsonDeserialize(contentAs = classOf[HealthCheckDefinition])
+  healthCheck: Option[HealthCheckDefinition] = None
 ) {
 
   // the default constructor exists solely for interop with automatic
@@ -50,7 +49,6 @@ case class AppUpdate(
    * with respect to this update request.
    */
   def apply(app: AppDefinition): AppDefinition = {
-
     var updated = app
 
     for (v <- cmd) updated = updated.copy(cmd = v)
@@ -59,8 +57,9 @@ case class AppUpdate(
     for (v <- mem) updated = updated.copy(mem = v)
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
+    for (v <- healthCheck) updated = updated.copy(healthCheck = Some(v))
 
-    updated.copy(container = this.container, version = Timestamp.now)
+    updated.copy(container = this.container, version = Timestamp.now())
   }
 
 }
@@ -79,7 +78,8 @@ object AppUpdate {
       uris = Option(app.uris),
       constraints = Option(app.constraints),
       executor = Option(app.executor),
-      container = app.container
+      container = app.container,
+      healthCheck = app.healthCheck
     )
 
 }

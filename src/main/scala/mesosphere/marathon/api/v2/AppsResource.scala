@@ -78,16 +78,14 @@ class AppsResource @Inject()(
         val effectiveUpdate: AppUpdate =
           appUpdate.version.flatMap { version =>
             // rollback to the specified version
-            val rollback = repo.history.find(_.version == version).map {
-              AppUpdate.fromAppDefinition(_)
-            }
-            if (! rollback.isDefined) throw new NotFoundException(
+            val rollback = repo.history.find(_.version == version).map(AppUpdate.fromAppDefinition)
+            if (!rollback.isDefined) throw new NotFoundException(
               "Rollback version does not exist"
             )
             rollback
           }.getOrElse(appUpdate)
 
-        val updatedApp = effectiveUpdate.apply(repo.currentVersion.get)
+        val updatedApp = effectiveUpdate.apply(repo.currentVersion().get)
         validateContainerOpts(updatedApp)
         maybePostEvent(req, updatedApp)
         Await.result(service.updateApp(id, effectiveUpdate), service.defaultWait)

@@ -5,23 +5,30 @@ import org.apache.mesos.{SchedulerDriver, Scheduler}
 import java.util.logging.{Level, Logger}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.collection.mutable.HashSet
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.{MarathonStore, AppRepository}
-import scala.util.{Failure, Success}
 import scala.concurrent.{Future, ExecutionContext}
 import com.google.common.collect.Lists
 import javax.inject.{Named, Inject}
 import com.google.common.eventbus.EventBus
-import mesosphere.marathon.event.{EventModule, MesosStatusUpdateEvent}
+import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks}
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
-
+import mesosphere.marathon.event.MesosStatusUpdateEvent
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
+import mesosphere.marathon.health.{
+  HealthCheckPayload,
+  HealthCheckMessagePayload,
+  HealthMessagePacketPayload,
+  HealthActorProxy
+}
 
 /**
  * @author Tobi Knaup
@@ -29,6 +36,7 @@ import mesosphere.util.RateLimiters
 class MarathonScheduler @Inject()(
     @Named(EventModule.busName) eventBus: Option[EventBus],
     @Named("restMapper") mapper: ObjectMapper,
+    healthActor: HealthActorProxy,
     store: MarathonStore[AppRepository],
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
@@ -48,7 +56,7 @@ class MarathonScheduler @Inject()(
   protected[marathon] def currentAppVersion(
     appId: String
   ): Future[Option[AppDefinition]] =
-    store.fetch(appId).map { _.flatMap(_.currentVersion) }
+    store.fetch(appId).map { _.flatMap(_.currentVersion()) }
 
   def registered(driver: SchedulerDriver, frameworkId: FrameworkID, master: MasterInfo) {
     log.info("Registered as %s to master '%s'".format(frameworkId.getValue, master.getId))
@@ -65,7 +73,7 @@ class MarathonScheduler @Inject()(
     val toKill = taskTracker.checkStagedTasks
     if (toKill.nonEmpty) {
       log.warning(s"There are ${toKill.size} tasks stuck in staging which will be killed")
-      log.info(s"About to kill these tasks: ${toKill}")
+      log.info(s"About to kill these tasks: $toKill")
       for (task <- toKill) {
         driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
       }
@@ -227,7 +235,11 @@ class MarathonScheduler @Inject()(
   ): Future[AppDefinition] = {
     store.fetch(id).flatMap {
       case Some(appRepo) if appRepo.history.nonEmpty => {
-        val updatedApp = appUpdate(appRepo.currentVersion.get)
+        val existingAppDef = appRepo.currentVersion().get
+        val updatedApp = appUpdate(existingAppDef)
+        if (existingAppDef.healthCheck.isEmpty && updatedApp.healthCheck.isDefined)
+          healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Insert,
+            HealthCheckPayload(existingAppDef.id, updatedApp.healthCheck.get)))
         store.store(
           updatedApp.id,
           AppRepository(appRepo.history + updatedApp)
@@ -252,7 +264,7 @@ class MarathonScheduler @Inject()(
       case Success(iterator) => {
         log.info("Syncing tasks for all apps")
         val buf = new ListBuffer[TaskStatus]
-        val appNames = new HashSet[String]
+        val appNames = new scala.collection.mutable.HashSet[String]
         for (appName <- iterator) {
           appNames += appName
           scale(driver, appName)
@@ -266,7 +278,7 @@ class MarathonScheduler @Inject()(
         }
         for (app <- taskTracker.list.keys) {
           if (!appNames.contains(app)) {
-            log.warning(s"App ${app} exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
+            log.warning(s"App $app exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
             val tasks = taskTracker.get(app)
             for (task <- tasks) {
               log.info(s"Killing task ${task.getId}")

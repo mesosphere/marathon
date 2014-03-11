@@ -20,6 +20,7 @@ import com.twitter.common.zookeeper.Candidate.Leader
 import scala.util.Random
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.health.{HealthMessagePacket, HealthCheckMessage, HealthActorProxy}
 
 /**
  * Wrapper class for the scheduler
@@ -27,6 +28,7 @@ import mesosphere.marathon.Protos.MarathonTask
  * @author Tobi Knaup
  */
 class MarathonSchedulerService @Inject()(
+    healthActor: HealthActorProxy,
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
@@ -155,17 +157,19 @@ class MarathonSchedulerService @Inject()(
     log.info("Shutting down")
     abdicateCmd.map(_.execute)
     stopDriver()
-    reconciliationTimer.cancel
+    reconciliationTimer.cancel()
   }
 
   def runDriver() {
     log.info("Running driver")
+    healthActor.sendMessage(HealthMessagePacket(HealthCheckMessage.AddAll))
     scheduleTaskReconciliation
     driver.run()
   }
 
   def stopDriver() {
     log.info("Stopping driver")
+    healthActor.sendMessage(HealthMessagePacket(HealthCheckMessage.RemoveAll))
     driver.stop(true) // failover = true
   }
 
