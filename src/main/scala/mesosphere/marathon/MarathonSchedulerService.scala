@@ -111,7 +111,7 @@ class MarathonSchedulerService @Inject()(
   def listApps(): Seq[AppDefinition] = {
     // TODO method is expensive, it's n+1 trips to ZK. Cache this?
     val names = Await.result(store.names(), defaultWait)
-    val futures = names.map(scheduler.currentAppVersion(_))
+    val futures = names.map(scheduler.currentAppVersion)
     val futureServices = Future.sequence(futures)
     Await.result(futureServices, defaultWait).map(_.get).toSeq
   }

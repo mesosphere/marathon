@@ -182,11 +182,11 @@ class TaskTracker @Inject()(state: State) {
         source.readFully(bytes)
         val app = MarathonApp.parseFrom(bytes)
         if (app.getName != appName) {
-          log.warning(s"App name from task state for ${appName} is wrong!  Got '${app.getName}' Continuing anyway...")
+          log.warning(s"App name from task state for $appName is wrong!  Got '${app.getName}' Continuing anyway...")
         }
         results ++= app.getTasksList.asScala.toSet
       } else {
-        log.warning(s"Unable to deserialize task state for ${appName}")
+        log.warning(s"Unable to deserialize task state for $appName")
       }
     } catch {
       case e: com.google.protobuf.InvalidProtocolBufferException =>
@@ -208,7 +208,7 @@ class TaskTracker @Inject()(state: State) {
     val size = app.getSerializedSize
     sink.writeInt(size)
     sink.write(app.toByteArray)
-    sink.flush
+    sink.flush()
   }
 
   def fetchFromState(appName: String) = {
