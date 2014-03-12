@@ -16,6 +16,7 @@ import mesosphere.marathon.state.MarathonStore
 import mesosphere.marathon.{MarathonSchedulerService, Main}
 import mesosphere.marathon.event.{MarathonSubscriptionEvent, Subscribe}
 import mesosphere.marathon.health.{HealthActor, HealthActorProxy}
+import mesosphere.marathon.tasks.TaskTracker
 
 trait HttpEventConfiguration extends ScallopConf {
   lazy val httpEventEndpoints = opt[List[String]]("http_endpoints",
@@ -48,8 +49,9 @@ class HttpEventModule extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideHealthActorProxy(system: ActorSystem, service: MarathonSchedulerService) =
-    HealthActorProxy(system.actorOf(Props(HealthActor(system, service))))
+  def provideHealthActorProxy(system: ActorSystem, service: MarathonSchedulerService,
+                              taskTracker: TaskTracker) =
+    HealthActorProxy(system.actorOf(Props(HealthActor(system, service, taskTracker))))
 
   @Provides
   @Named(HttpEventModule.SubscribersKeeperActor)

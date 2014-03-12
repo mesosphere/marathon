@@ -1,10 +1,19 @@
 package mesosphere.marathon.health
 
 import akka.actor._
-import mesosphere.marathon.api.v1.HealthCheckDefinition
+import mesosphere.marathon.api.v1.{HealthCheckProtocol, HealthCheckDefinition}
 import scala.collection.mutable
 import mesosphere.marathon.api.v1.Implicits.DurationToFiniteDuration
 import mesosphere.marathon.MarathonSchedulerService
+import spray.httpx.RequestBuilding.Get
+import scala.util.Try
+import mesosphere.marathon.tasks.TaskTracker
+
+//import spray.http.{HttpResponse, HttpRequest}
+import scala.concurrent.{ExecutionContext, Future}
+import spray.client.pipelining._
+import spray.http.HttpRequest
+import spray.http.HttpResponse
 
 object HealthCheckMessage extends Enumeration {
   val AddAll = Value
@@ -41,15 +50,20 @@ object HealthActorData {
     Set.empty[HealthCheckDescriptor])
 }
 
-case class HealthActor(system: ActorSystem, service: MarathonSchedulerService)
+case class HealthActor(system: ActorSystem, service: MarathonSchedulerService, taskTracker: TaskTracker)
     extends Actor with ActorLogging {
+
+  import system.dispatcher // for ExecutionContext
+
+  val pipeline: HttpRequest => Future[HttpResponse] = (
+    addHeader("Accept", "application/json")
+      ~> sendReceive)
 
   val healthChecks = HealthActorData.healthChecks
 
   private def insertHealthCheck(payload: HealthCheckPayload): Unit = {
     val existing = healthChecks(payload.appID)
     if (!existing.map(_.healthCheckDef).contains(payload.healthCheckDef)) {
-      import system.dispatcher // for ExecutionContext
 
       val cancellable =
         system.scheduler.schedule(payload.healthCheckDef.initialDelay,
@@ -82,9 +96,33 @@ case class HealthActor(system: ActorSystem, service: MarathonSchedulerService)
     healthCheck <- app.healthChecks
   } insertHealthCheck(HealthCheckPayload(app.id, healthCheck))
 
+  private def doHealthCheck(tick: HealthCheckTick): Unit = {
+    val healthCheckDef = tick.payload.healthCheckDef
+    assert(healthCheckDef.protocol == HealthCheckProtocol.HttpHealthCheck)
+
+    val appDef = service.getApp(tick.payload.appID).get
+    val app = taskTracker.fetchApp(tick.payload.appID)
+
+    val uris = app.tasks.map(task =>
+      s"${task.getHost}:${appDef.ports(healthCheckDef.portIndex)}/${healthCheckDef.path}")
+
+    val futures = for (uri <- uris) yield {
+      log.info("Sending GET to:" + uri)
+      for (res <- pipeline(Get(uri))) yield (uri, res)
+    }
+
+    Future.sequence(futures).onComplete { t =>
+      val statuses = t.get.map(res =>
+        (res._1, res._2.status.intValue,
+          healthCheckDef.acceptableResponses.contains(res._2.status.intValue)))
+      val failures = statuses.filter(_._3)
+      failures.foreach(f => log.error(s"Health check failed for: ${f._1}. status: ${f._2}"))
+    }
+  }
+
   def receive = {
     case packet: HealthMessagePacket => packet.message match {
-      case HealthCheckMessage.AddAll => addAllHealthChecks()
+      case HealthCheckMessage.AddAll    => addAllHealthChecks()
       case HealthCheckMessage.RemoveAll => removeAllHealthChecks()
     }
     case packet: HealthMessagePacketPayload => packet.message match {
@@ -92,5 +130,6 @@ case class HealthActor(system: ActorSystem, service: MarathonSchedulerService)
       case HealthCheckMessagePayload.Remove =>
         removeHealthCheck(packet.payload.appID, packet.payload.healthCheckDef)
     }
+    case tick: HealthCheckTick => doHealthCheck(tick)
   }
 }
