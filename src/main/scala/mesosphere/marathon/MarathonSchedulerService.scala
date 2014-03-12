@@ -20,7 +20,8 @@ import com.twitter.common.zookeeper.Candidate.Leader
 import scala.util.Random
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.health.{HealthMessagePacket, HealthCheckMessage, HealthActorProxy}
+import mesosphere.marathon.health._
+import scala.Some
 
 /**
  * Wrapper class for the scheduler
@@ -162,7 +163,9 @@ class MarathonSchedulerService @Inject()(
 
   def runDriver() {
     log.info("Running driver")
-    healthActor.sendMessage(HealthMessagePacket(HealthCheckMessage.AddAll))
+    for (app <- listApps())
+      healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Insert,
+        HealthCheckPayload(app, app.healthChecks.toSeq)))
     scheduleTaskReconciliation()
     driver.run()
   }
