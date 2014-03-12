@@ -20,4 +20,4 @@ rm -rf js/build
 
 # Remove all compiled files but the desired `main.js`
 find js/dist -not -name 'main.js' -not -name 'dist' | xargs rm -rf
-gzip -fk js/dist/main.js
+gzip < js/dist/main.js > js/dist/main.js.gz
