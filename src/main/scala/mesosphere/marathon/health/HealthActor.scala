@@ -6,11 +6,8 @@ import scala.collection.mutable
 import mesosphere.marathon.api.v1.Implicits.DurationToFiniteDuration
 import mesosphere.marathon.MarathonSchedulerService
 import spray.httpx.RequestBuilding.Get
-import scala.util.Try
 import mesosphere.marathon.tasks.TaskTracker
-
-//import spray.http.{HttpResponse, HttpRequest}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import spray.client.pipelining._
 import spray.http.HttpRequest
 import spray.http.HttpResponse
@@ -116,7 +113,9 @@ case class HealthActor(system: ActorSystem, service: MarathonSchedulerService, t
         (res._1, res._2.status.intValue,
           healthCheckDef.acceptableResponses.contains(res._2.status.intValue)))
       val failures = statuses.filter(_._3)
-      failures.foreach(f => log.error(s"Health check failed for: ${f._1}. status: ${f._2}"))
+      failures.foreach(f =>
+        log.error(s"Health check failed for app.id: ${tick.payload.appID}: path: ${f._1}. status: ${f._2}"))
+      if (failures.isEmpty) log.info(s"Health check passed for app.id: ${tick.payload.appID}")
     }
   }
 
