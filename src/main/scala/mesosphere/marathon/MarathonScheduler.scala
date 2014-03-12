@@ -197,13 +197,11 @@ class MarathonScheduler @Inject()(
 
   private def reconcileHealthChecks(newApp: AppDefinition, oldApp: AppDefinition = AppDefinition()) = {
     val newHealthChecks = newApp.healthChecks.filterNot(oldApp.healthChecks.contains)
-    for (healthCheck <- newHealthChecks)
-      healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Insert,
-        HealthCheckPayload(oldApp.id, healthCheck)))
+    healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Insert,
+      HealthCheckPayload(newApp, newHealthChecks.toSeq)))
     val removedHealthChecks = oldApp.healthChecks.filterNot(newApp.healthChecks.contains)
-    for (healthCheck <- removedHealthChecks)
-      healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Remove,
-        HealthCheckPayload(oldApp.id, healthCheck)))
+    healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Remove,
+      HealthCheckPayload(oldApp, removedHealthChecks.toSeq)))
   }
 
   // TODO move stuff below out of the scheduler

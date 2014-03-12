@@ -49,9 +49,8 @@ class HttpEventModule extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideHealthActorProxy(system: ActorSystem, service: MarathonSchedulerService,
-                              taskTracker: TaskTracker) =
-    HealthActorProxy(system.actorOf(Props(HealthActor(system, service, taskTracker))))
+  def provideHealthActorProxy(system: ActorSystem, taskTracker: TaskTracker) =
+    HealthActorProxy(system.actorOf(Props(HealthActor(system, taskTracker))))
 
   @Provides
   @Named(HttpEventModule.SubscribersKeeperActor)
