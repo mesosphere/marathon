@@ -18,6 +18,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
+import mesosphere.marathon.health.HealthActorProxy
 
 /**
  * @author Tobi Knaup
@@ -31,6 +32,7 @@ class MarathonSchedulerTest extends AssertionsForJUnit
   var scheduler: MarathonScheduler = null
   var frameworkIdUtil: FrameworkIdUtil = null
   var rateLimiters: RateLimiters = null
+  var healthActor: HealthActorProxy = null
 
   @Before
   def setupScheduler() = {
@@ -39,8 +41,9 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     rateLimiters = mock[RateLimiters]
+    healthActor = mock[HealthActorProxy]
     scheduler = new MarathonScheduler(
-      None, new ObjectMapper, store, tracker, queue, frameworkIdUtil,
+      None, new ObjectMapper, healthActor, store, tracker, queue, frameworkIdUtil,
       rateLimiters)
   }
 
