@@ -62,17 +62,13 @@ class AppDefinitionTest {
   def testValidation() {
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
-    def shouldViolate(app: AppDefinition, path: String, template: String) {
+    def should(assertion: (Boolean) => Unit, app: AppDefinition, path: String, template: String) = {
       val violations = validator.validate(app).asScala
-      assertTrue(violations.exists(v =>
+      assertion(violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
-
-    def shouldNotViolate(app: AppDefinition, path: String, template: String) {
-      val violations = validator.validate(app).asScala
-      assertFalse(violations.exists(v =>
-        v.getPropertyPath.toString == path && v.getMessageTemplate == template))
-    }
+    def shouldViolate(app: AppDefinition, path: String, template: String) = should(assertTrue, app, path, template)
+    def shouldNotViolate(app: AppDefinition, path: String, template: String) = should(assertFalse, app, path, template)
 
     val app = AppDefinition(id = "a b")
     shouldViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
@@ -87,6 +83,12 @@ class AppDefinitionTest {
       app.copy(id = "ab"),
       "id",
       "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldViolate(
+      AppDefinition(id = "test", instances = -3),
+      "instances",
+      "{javax.validation.constraints.Min.message}"
     )
   }
 

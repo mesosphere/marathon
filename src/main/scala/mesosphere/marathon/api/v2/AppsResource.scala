@@ -13,7 +13,7 @@ import com.codahale.metrics.annotation.Timed
 import com.sun.jersey.api.NotFoundException
 import javax.servlet.http.HttpServletRequest
 import javax.validation.Valid
-import mesosphere.marathon.api.v1.{Implicits, AppDefinition}
+import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
 import mesosphere.marathon.BadRequestException
