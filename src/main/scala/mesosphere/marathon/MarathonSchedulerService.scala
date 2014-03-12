@@ -163,7 +163,7 @@ class MarathonSchedulerService @Inject()(
   def runDriver() {
     log.info("Running driver")
     healthActor.sendMessage(HealthMessagePacket(HealthCheckMessage.AddAll))
-    scheduleTaskReconciliation
+    scheduleTaskReconciliation()
     driver.run()
   }
 
@@ -205,7 +205,7 @@ class MarathonSchedulerService @Inject()(
   }
   //End Leader interface
 
-  private def scheduleTaskReconciliation {
+  private def scheduleTaskReconciliation() {
     reconciliationTimer.schedule(
       new TimerTask { def run() { scheduler.reconcileTasks(driver) }},
       reconciliationInitialDelay.toMillis,

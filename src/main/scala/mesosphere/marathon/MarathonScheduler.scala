@@ -156,7 +156,7 @@ class MarathonScheduler @Inject()(
         }
       }
     } else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
-      log.warning(s"Received status update for unknown app ${appID}")
+      log.warning(s"Received status update for unknown app $appID")
       log.warning(s"Killing task ${status.getTaskId}")
       driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
     } else {
@@ -195,6 +195,17 @@ class MarathonScheduler @Inject()(
     suicide()
   }
 
+  private def reconcileHealthChecks(newApp: AppDefinition, oldApp: AppDefinition = AppDefinition()) = {
+    val newHealthChecks = newApp.healthChecks.filterNot(oldApp.healthChecks.contains)
+    for (healthCheck <- newHealthChecks)
+      healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Insert,
+        HealthCheckPayload(oldApp.id, healthCheck)))
+    val removedHealthChecks = oldApp.healthChecks.filterNot(newApp.healthChecks.contains)
+    for (healthCheck <- removedHealthChecks)
+      healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Remove,
+        HealthCheckPayload(oldApp.id, healthCheck)))
+  }
+
   // TODO move stuff below out of the scheduler
 
   def startApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
@@ -203,6 +214,7 @@ class MarathonScheduler @Inject()(
 
       store.store(app.id, AppRepository(app)).map { _ =>
         log.info(s"Starting app ${app.id}")
+        reconcileHealthChecks(app)
         rateLimiters.setPermits(app.id, app.taskRateLimit)
         scale(driver, app)
       }
@@ -237,10 +249,7 @@ class MarathonScheduler @Inject()(
       case Some(appRepo) if appRepo.history.nonEmpty => {
         val existingAppDef = appRepo.currentVersion().get
         val updatedApp = appUpdate(existingAppDef)
-        val newHealthChecks = updatedApp.healthChecks.filterNot(existingAppDef.healthChecks.contains)
-        for (healthCheck <- newHealthChecks)
-          healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Insert,
-            HealthCheckPayload(existingAppDef.id, healthCheck)))
+        reconcileHealthChecks(updatedApp, existingAppDef)
         store.store(
           updatedApp.id,
           AppRepository(appRepo.history + updatedApp)
