@@ -5,29 +5,40 @@ import mesosphere.marathon.api.FieldConstraints._
 import mesosphere.marathon.Protos
 import scala.concurrent.duration._
 import scala.collection.JavaConversions._
+import com.fasterxml.jackson.core.`type`.TypeReference
+import mesosphere.marathon.state.{MarathonState, Timestamped}
 
 object HealthCheckProtocol extends Enumeration {
   val HttpHealthCheck = Value
   // TODO: Add TcpHealthCheck
 }
 
+class HealthCheckProtocolType extends TypeReference[HealthCheckProtocol.type]
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class HealthCheckDefinition(
-    @FieldNotEmpty
-    path: String,
+  @FieldNotEmpty
+  path: String = "",
 
-    @FieldNotEmpty
-    protocol: HealthCheckProtocol.Value,
+  @FieldNotEmpty
+  @FieldJsonScalaEnumeration(classOf[HealthCheckProtocolType])
+  protocol: HealthCheckProtocol.Value = HealthCheckProtocol.HttpHealthCheck,
 
-    @FieldNotEmpty
-    acceptableResponses: List[Int],
+  @FieldNotEmpty
+  acceptableResponses: List[Int] = List(),
 
-    @FieldNotEmpty
-    portIndex: Integer,
+  @FieldNotEmpty
+  portIndex: Integer = -1,
 
-    initialDelay: Duration = 10.seconds,
-    interval: Duration = 60.seconds
-  ) {
+  initialDelay: Duration = 10.seconds,
+  interval: Duration = 60.seconds
+) extends MarathonState[Protos.HealthCheckDefinition, HealthCheckDefinition] {
+
+  // the default constructor exists solely for interop with automatic
+  // (de)serializers
+  def this() = this(path = "", protocol = HealthCheckProtocol.HttpHealthCheck,
+    acceptableResponses = List(), portIndex = -1)
+
   def toProto: Protos.HealthCheckDefinition = {
     val builder = Protos.HealthCheckDefinition.newBuilder
       .setPath(this.path)
@@ -36,14 +47,10 @@ case class HealthCheckDefinition(
       .setInitialDelaySeconds(this.initialDelay.toSeconds.toInt)
       .setIntervalSeconds(this.interval.toSeconds.toInt)
 
-    acceptableResponses.zipWithIndex.foreach(tup =>
-      builder.setAcceptableResponses(tup._2, tup._1))
-
+    builder.addAllAcceptableResponses(acceptableResponses.map(_.asInstanceOf[Integer]))
     builder.build
   }
-}
 
-object HealthCheckDefinition {
   def mergeFromProto(proto: Protos.HealthCheckDefinition): HealthCheckDefinition = {
     HealthCheckDefinition(
       path = proto.getPath,
@@ -54,4 +61,7 @@ object HealthCheckDefinition {
       interval = proto.getIntervalSeconds.seconds
     )
   }
+
+  def mergeFromProto(bytes: Array[Byte]): HealthCheckDefinition =
+    mergeFromProto(Protos.HealthCheckDefinition.parseFrom(bytes))
 }

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.{
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import javax.validation.constraints.Pattern
 import scala.annotation.target.field
+import com.fasterxml.jackson.module.scala.JsonScalaEnumeration
 
 /**
  * Provides type aliases for constraint annotations that target fields
@@ -21,4 +22,5 @@ object FieldConstraints {
   type FieldJsonDeserialize = JsonDeserialize @field
   type FieldJsonProperty = JsonProperty @field
   type FieldJsonValue = JsonValue @field
+  type FieldJsonScalaEnumeration = JsonScalaEnumeration @field
 }
