@@ -107,9 +107,7 @@ case class AppDefinition(
       .addResources(memResource)
       .setVersion(version.toString())
 
-    healthChecks.zipWithIndex.foreach(tup =>
-      builder.setHealthCheck(tup._2, tup._1.toProto))
-
+    builder.addAllHealthCheck(healthChecks.map(_.toProto))
     for (c <- container) builder.setContainer(c.toProto)
 
     builder.build
@@ -141,7 +139,7 @@ case class AppDefinition(
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
       version = Timestamp(proto.getVersion),
-      healthChecks = proto.getHealthCheckList.map(HealthCheckDefinition.mergeFromProto).toSet
+      healthChecks = proto.getHealthCheckList.map(new HealthCheckDefinition().mergeFromProto).toSet
     )
   }
 
