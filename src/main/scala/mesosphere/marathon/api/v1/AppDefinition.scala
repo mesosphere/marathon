@@ -5,7 +5,7 @@ import mesosphere.marathon.{ContainerInfo, Protos}
 import mesosphere.marathon.state.{MarathonState, Timestamp, Timestamped}
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.FieldConstraints._
+import mesosphere.marathon.api.validation.FieldConstraints._
 import com.fasterxml.jackson.annotation.{
   JsonIgnore,
   JsonIgnoreProperties,
@@ -42,6 +42,7 @@ case class AppDefinition(
 
   uris: Seq[String] = Seq(),
 
+  @FieldUniqueElements
   ports: Seq[Int] = Seq(0),
 
   /**

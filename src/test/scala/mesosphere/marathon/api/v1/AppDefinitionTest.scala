@@ -67,8 +67,12 @@ class AppDefinitionTest {
       assertion(violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
-    def shouldViolate(app: AppDefinition, path: String, template: String) = should(assertTrue, app, path, template)
-    def shouldNotViolate(app: AppDefinition, path: String, template: String) = should(assertFalse, app, path, template)
+
+    def shouldViolate(app: AppDefinition, path: String, template: String) =
+      should(assertTrue, app, path, template)
+
+    def shouldNotViolate(app: AppDefinition, path: String, template: String) =
+      should(assertFalse, app, path, template)
 
     val app = AppDefinition(id = "a b")
     shouldViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
@@ -90,6 +94,13 @@ class AppDefinitionTest {
       "instances",
       "{javax.validation.constraints.Min.message}"
     )
+
+    shouldViolate(
+      AppDefinition(id = "test", instances = -3, ports = Seq(9000, 8080, 9000)),
+      "ports",
+      "Elements must be unique"
+    )
+
   }
 
   @Test

@@ -1,6 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.api.FieldConstraints.FieldJsonValue
+import mesosphere.marathon.api.validation.FieldConstraints.FieldJsonValue
 import org.joda.time.{DateTime, DateTimeZone}
 import scala.math.Ordered
 

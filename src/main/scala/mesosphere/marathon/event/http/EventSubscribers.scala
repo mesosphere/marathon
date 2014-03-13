@@ -4,7 +4,7 @@ import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos
 import collection.JavaConversions._
 
-import mesosphere.marathon.api.FieldConstraints.FieldJsonProperty
+import mesosphere.marathon.api.validation.FieldConstraints.FieldJsonProperty
 
 case class EventSubscribers(
   @FieldJsonProperty("callbackUrls")
