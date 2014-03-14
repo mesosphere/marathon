@@ -238,6 +238,7 @@ as it did before being deprecated. Details on the V1 API can be found in the
 * [Guidewire](http://www.guidewire.com/)
 * [OpenTable](http://www.opentable.com/)
 * [PayPal](https://www.paypal.com)
+* [Viadeo](http://www.viadeo.com)
 
 Not in the list? Open a pull request and add yourself!
 
