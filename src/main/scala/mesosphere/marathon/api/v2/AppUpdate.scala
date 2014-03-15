@@ -4,7 +4,10 @@ import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.FieldConstraints.FieldJsonDeserialize
+import mesosphere.marathon.api.validation.FieldConstraints.{
+  FieldJsonDeserialize,
+  FieldUniqueElements
+}
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 
@@ -28,6 +31,9 @@ case class AppUpdate(
   mem: Option[Double] = None,
 
   uris: Option[Seq[String]] = None,
+
+  @FieldUniqueElements
+  ports: Option[Seq[Int]] = None,
 
   constraints: Option[Set[Constraint]] = None,
 
@@ -58,6 +64,7 @@ case class AppUpdate(
     for (v <- cpus) updated = updated.copy(cpus = v)
     for (v <- mem) updated = updated.copy(mem = v)
     for (v <- uris) updated = updated.copy(uris = v)
+    for (v <- ports) updated = updated.copy(ports = v)
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
 
@@ -78,6 +85,7 @@ object AppUpdate {
       cpus = Option(app.cpus),
       mem = Option(app.mem),
       uris = Option(app.uris),
+      ports = Option(app.ports),
       constraints = Option(app.constraints),
       executor = Option(app.executor),
       container = app.container

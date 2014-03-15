@@ -1,4 +1,4 @@
-package mesosphere.marathon.api
+package mesosphere.marathon.api.validation
 
 import org.hibernate.validator.constraints.NotEmpty
 import com.fasterxml.jackson.annotation.{
@@ -15,6 +15,7 @@ import scala.annotation.meta.field
  * associated with Scala class constructor arguments.
  */
 object FieldConstraints {
+  type FieldUniqueElements = UniqueElements @field
   type FieldNotEmpty = NotEmpty @field
   type FieldPattern = Pattern @field
   type FieldJsonInclude = JsonInclude @field
