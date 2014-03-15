@@ -28,9 +28,9 @@ import mesosphere.marathon.api.Responses
 @Path("v2/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject()(
-                              @Named(EventModule.busName) eventBus: Option[EventBus],
-                              service: MarathonSchedulerService,
-                              taskTracker: TaskTracker) {
+    @Named(EventModule.busName) eventBus: Option[EventBus],
+    service: MarathonSchedulerService,
+    taskTracker: TaskTracker) {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -74,18 +74,19 @@ class AppsResource @Inject()(
     @PathParam("id") id: String,
     @Valid appUpdate: AppUpdate
   ): Response = {
-    
-    val effectiveUpdate = if (appUpdate.version.isDefined) {
-      // lookup the old version, create an AppUpdate from it.
-      service.getApp(id, appUpdate.version.get) match {
-        case Some(appDef) => AppUpdate.fromAppDefinition(appDef)
-        case None => throw new NotFoundException(
-        	"Rollback version does not exist"
-        ) 
+
+    val effectiveUpdate =
+      if (appUpdate.version.isEmpty) appUpdate
+      else {
+        // lookup the old version, create an AppUpdate from it.
+        service.getApp(id, appUpdate.version.get) match {
+          case Some(appDef) => AppUpdate.fromAppDefinition(appDef)
+          case None => throw new NotFoundException(
+          	"Rollback version does not exist"
+          ) 
+        }
       }
-    }
-    else appUpdate
-    
+
     service.getApp(id) match {
       case Some(appDef) => {
         val updatedApp = effectiveUpdate.apply(appDef)
