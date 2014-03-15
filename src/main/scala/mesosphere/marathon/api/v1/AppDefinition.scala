@@ -1,5 +1,6 @@
 package mesosphere.marathon.api.v1
 
+import scala.collection.JavaConversions._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.{ContainerInfo, Protos}
 import mesosphere.marathon.state.{MarathonState, Timestamp, Timestamped}
@@ -11,12 +12,28 @@ import com.fasterxml.jackson.annotation.{
   JsonIgnoreProperties,
   JsonProperty
 }
+import scala.collection.JavaConverters._
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
+import javax.validation.ConstraintValidatorContext
+import scala.mesosphere.marathon.api.v1.ValidPortIndex
+import scala.Some
+
+
+class AppDefinitionValidator extends javax.validation.ConstraintValidator[ValidPortIndex, AppDefinition] {
+
+  @Override
+  def initialize(constraintAnnotation: ValidPortIndex) = Unit
+
+  @Override
+  def isValid(appDef: AppDefinition, context: ConstraintValidatorContext): Boolean =
+    appDef.healthChecks.forall(hc => (0 until appDef.ports.size).contains(hc.portIndex))
+}
 
 /**
  * @author Tobi Knaup
  */
+@ValidPortIndex
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppDefinition(
 
@@ -56,7 +73,10 @@ case class AppDefinition(
   container: Option[ContainerInfo] = None,
 
   @FieldJsonProperty
-  version: Timestamp = Timestamp.now
+  version: Timestamp = Timestamp.now(),
+
+  @FieldJsonDeserialize(contentAs = classOf[HealthCheckDefinition])
+  healthChecks: Set[HealthCheckDefinition] = Set()
 
 ) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
   with Timestamped {
@@ -64,6 +84,13 @@ case class AppDefinition(
   // the default constructor exists solely for interop with automatic
   // (de)serializers
   def this() = this(id = "")
+
+  for (hc <- healthChecks) {
+    val portsIndices = 0 until ports.size
+    if (!new AppDefinitionValidator().isValid(this, null))
+      throw new RuntimeException(
+        s"portIndex (${hc.portIndex}}) must be within ports bounds: ${portsIndices.head} and ${portsIndices.last}")
+  }
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
@@ -80,8 +107,9 @@ case class AppDefinition(
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
-      .setVersion(version.toString)
+      .setVersion(version.toString())
 
+    builder.addAllHealthCheck(healthChecks.map(_.toProto))
     for (c <- container) builder.setContainer(c.toProto)
 
     builder.build
@@ -112,7 +140,8 @@ case class AppDefinition(
       mem = resourcesMap.get(AppDefinition.MEM).getOrElse(this.mem),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
-      version = Timestamp(proto.getVersion)
+      version = Timestamp(proto.getVersion),
+      healthChecks = proto.getHealthCheckList.map(new HealthCheckDefinition().mergeFromProto).toSet
     )
   }
 

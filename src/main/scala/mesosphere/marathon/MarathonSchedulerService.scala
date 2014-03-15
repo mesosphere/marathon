@@ -20,6 +20,8 @@ import com.twitter.common.zookeeper.Candidate.Leader
 import scala.util.Random
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.health._
+import scala.Some
 
 /**
  * Wrapper class for the scheduler
@@ -27,6 +29,7 @@ import mesosphere.marathon.Protos.MarathonTask
  * @author Tobi Knaup
  */
 class MarathonSchedulerService @Inject()(
+    healthActor: HealthActorProxy,
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
@@ -109,7 +112,7 @@ class MarathonSchedulerService @Inject()(
   def listApps(): Seq[AppDefinition] = {
     // TODO method is expensive, it's n+1 trips to ZK. Cache this?
     val names = Await.result(store.names(), defaultWait)
-    val futures = names.map(scheduler.currentAppVersion(_))
+    val futures = names.map(scheduler.currentAppVersion)
     val futureServices = Future.sequence(futures)
     Await.result(futureServices, defaultWait).map(_.get).toSeq
   }
@@ -155,17 +158,21 @@ class MarathonSchedulerService @Inject()(
     log.info("Shutting down")
     abdicateCmd.map(_.execute)
     stopDriver()
-    reconciliationTimer.cancel
+    reconciliationTimer.cancel()
   }
 
   def runDriver() {
     log.info("Running driver")
-    scheduleTaskReconciliation
+    for (app <- listApps())
+      healthActor.sendMessage(HealthMessagePacketPayload(HealthCheckMessagePayload.Insert,
+        HealthCheckPayload(app, app.healthChecks.toSeq)))
+    scheduleTaskReconciliation()
     driver.run()
   }
 
   def stopDriver() {
     log.info("Stopping driver")
+    healthActor.sendMessage(HealthMessagePacket(HealthCheckMessage.RemoveAll))
     driver.stop(true) // failover = true
   }
 
@@ -201,7 +208,7 @@ class MarathonSchedulerService @Inject()(
   }
   //End Leader interface
 
-  private def scheduleTaskReconciliation {
+  private def scheduleTaskReconciliation() {
     reconciliationTimer.schedule(
       new TimerTask { def run() { scheduler.reconcileTasks(driver) }},
       reconciliationInitialDelay.toMillis,

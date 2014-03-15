@@ -29,6 +29,15 @@ message AppRepository {
   repeated ServiceDefinition history = 1;
 }
 
+message HealthCheckDefinition {
+  required string path = 1;
+  required string protocol = 2;
+  repeated uint32 acceptableResponses = 3;
+  required uint32 portIndex = 4;
+  optional uint32 initialDelaySeconds = 5 [default = 10];
+  optional uint32 intervalSeconds = 6 [default = 60];
+}
+
 message ServiceDefinition {
   required string id = 1;
   required mesos.CommandInfo cmd = 2;
@@ -41,6 +50,7 @@ message ServiceDefinition {
   optional double taskRateLimit = 9 [default = 1];
   optional ContainerInfo container = 10;
   required string version = 11;
+  repeated HealthCheckDefinition healthCheck = 12;
 }
 
 message MarathonTask {

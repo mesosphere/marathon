@@ -1,6 +1,6 @@
 package mesosphere.marathon.event
 
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v1.{HealthCheckDefinition, AppDefinition}
 import org.rogach.scallop.ScallopConf
 import com.google.inject.{Singleton, Provides, AbstractModule}
 import com.google.common.eventbus.{AsyncEventBus, EventBus}
@@ -83,3 +83,20 @@ case class Unsubscribe(
     callbackUrl: String,
     override val eventType: String = "unsubscribe_event")
   extends MarathonSubscriptionEvent
+
+sealed trait MarathonHealthCheckEvent extends MarathonEvent{
+  def callbackUrl: String
+  override def eventType = "marathon_health_check_event"
+}
+
+case class AddHealthCheck(
+    healthCheck: HealthCheckDefinition,
+    override val callbackUrl: String,
+    override val eventType: String = "add_health_check_event")
+  extends MarathonHealthCheckEvent
+
+case class RemoveHealthCheck(
+    appId: Int,
+    override val callbackUrl: String,
+    override val eventType: String = "remove_health_check_event")
+  extends MarathonHealthCheckEvent
