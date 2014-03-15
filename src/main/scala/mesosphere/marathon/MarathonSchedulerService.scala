@@ -5,7 +5,7 @@ import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.{MarathonStore, AppRepository}
+import mesosphere.marathon.state.{MarathonStore, AppRepository, Timestamp}
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import javax.inject.{Named, Inject}
 import java.util.{TimerTask, Timer}
@@ -30,7 +30,7 @@ class MarathonSchedulerService @Inject()(
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
-    store: MarathonStore[AppRepository],
+    appRepository: AppRepository,
     frameworkIdUtil: FrameworkIdUtil,
     scheduler: MarathonScheduler)
   extends AbstractExecutionThreadService with Leader {
@@ -81,7 +81,7 @@ class MarathonSchedulerService @Inject()(
   var abdicateCmd: Option[ExceptionalCommand[JoinException]] = None
 
   def defaultWait = {
-    store.defaultWait
+    appRepository.defaultWait
   }
 
   def startApp(app: AppDefinition): Future[_] = {
@@ -106,21 +106,20 @@ class MarathonSchedulerService @Inject()(
       scheduler.scale(driver, updatedApp)
     }
 
-  def listApps(): Seq[AppDefinition] = {
-    // TODO method is expensive, it's n+1 trips to ZK. Cache this?
-    val names = Await.result(store.names(), defaultWait)
-    val futures = names.map(scheduler.currentAppVersion(_))
-    val futureServices = Future.sequence(futures)
-    Await.result(futureServices, defaultWait).map(_.get).toSeq
-  }
+  def listApps(): Iterable[AppDefinition] = 
+    Await.result(appRepository.apps, defaultWait)
 
-  def listAppVersions(appName: String): Option[AppRepository] =
-    Await.result(store.fetch(appName), defaultWait)
+  def listAppVersions(appName: String): Iterable[Timestamp] =
+    Await.result(appRepository.listVersions(appName), defaultWait)
 
   def getApp(appName: String): Option[AppDefinition] = {
-    Await.result(scheduler.currentAppVersion(appName), defaultWait)
+    Await.result(appRepository.currentVersion(appName), defaultWait)
   }
 
+  def getApp(appName: String, version: Timestamp) : Option[AppDefinition] = {
+    Await.result(appRepository.app(appName, version), defaultWait)
+  }
+  
   def killTasks(
     appName: String,
     tasks: Iterable[MarathonTask],
@@ -218,7 +217,7 @@ class MarathonSchedulerService @Inject()(
 
   private def newAppPort(app: AppDefinition): Int = {
     // TODO this is pretty expensive, find a better way
-    val assignedPorts = listApps().map(_.ports).flatten
+    val assignedPorts = listApps().map(_.ports).flatten.toSeq
     var port = 0
     do {
       port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
