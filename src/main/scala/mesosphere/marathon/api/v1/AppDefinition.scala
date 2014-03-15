@@ -19,7 +19,9 @@ import javax.validation.ConstraintValidatorContext
 import scala.mesosphere.marathon.api.v1.ValidPortIndex
 import scala.Some
 
+
 class AppDefinitionValidator extends javax.validation.ConstraintValidator[ValidPortIndex, AppDefinition] {
+
   @Override
   def initialize(constraintAnnotation: ValidPortIndex) = Unit
 
