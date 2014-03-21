@@ -68,8 +68,8 @@ The full JSON format of an application resource is as follows:
 ```
 
 _Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER",
-"GROUP_BY"].  For additional information on using placement constraints see
-[Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.io/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
+"GROUP_BY"]. For additional information on using placement constraints see
+the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constraints).
 
 _Container:_ Additional data passed to the container on application launch.
 These consist of an "image" and an array of string options.  The meaning of
