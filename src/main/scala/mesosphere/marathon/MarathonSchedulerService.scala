@@ -55,7 +55,7 @@ class MarathonSchedulerService @Inject()(
   val frameworkInfo = FrameworkInfo.newBuilder()
     .setName(frameworkName)
     .setFailoverTimeout(config.mesosFailoverTimeout())
-    .setUser("") // Let Mesos assign the user
+    .setUser(config.mesosUser())
     .setCheckpoint(config.checkpoint())
 
 

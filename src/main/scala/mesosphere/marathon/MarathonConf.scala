@@ -2,6 +2,7 @@ package mesosphere.marathon
 
 import org.rogach.scallop.ScallopConf
 import java.net.InetSocketAddress
+import scala.sys.SystemProperties
 
 /**
  * @author Tobi Knaup
@@ -75,4 +76,7 @@ trait MarathonConf extends ScallopConf {
     "reconciliation operations.",
     default = Some(30000L)) // 30 seconds
 
+  lazy val mesosUser = opt[String]("mesos_user",
+    descr = "Mesos user for this framework",
+    default = new SystemProperties().get("user.name")) // Current logged in user
 }
