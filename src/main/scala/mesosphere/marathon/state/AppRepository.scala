@@ -77,12 +77,13 @@ class AppRepository(store: PersistenceStore[AppDefinition]) {
    * Deletes all versions of the app with the supplied id.
    */
   def expunge(appId: String): Future[Iterable[Boolean]] =
-    listVersions(appId).flatMap { timestamps => 
-        val futureBooleans = timestamps.map { timestamp =>
-        	val key = appId + ID_DELIMITER + timestamp.toString
-        	store.expunge(key)
-        }
-        Future.sequence(futureBooleans)
+    listVersions(appId).flatMap { timestamps =>
+      val versionsDeleteResult = timestamps.map { timestamp =>
+      	val key = appId + ID_DELIMITER + timestamp.toString
+      	store.expunge(key)
+      }
+      val currentDeleteResult = store.expunge(appId)
+      Future.sequence(currentDeleteResult +: versionsDeleteResult.toSeq)
     }
 
 }
