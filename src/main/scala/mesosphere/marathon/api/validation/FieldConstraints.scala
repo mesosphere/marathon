@@ -15,7 +15,7 @@ import scala.annotation.meta.field
  * associated with Scala class constructor arguments.
  */
 object FieldConstraints {
-  type FieldUniqueElements = UniqueElements @field
+  type FieldPortsArray = PortsArray @field
   type FieldNotEmpty = NotEmpty @field
   type FieldPattern = Pattern @field
   type FieldJsonInclude = JsonInclude @field

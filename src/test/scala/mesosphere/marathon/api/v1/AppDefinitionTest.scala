@@ -101,6 +101,12 @@ class AppDefinitionTest {
       "Elements must be unique"
     )
 
+    shouldNotViolate(
+      AppDefinition(id = "test", ports = Seq(0, 0, 8080)),
+      "ports",
+      "Elements must be unique"
+    )
+
   }
 
   @Test

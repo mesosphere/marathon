@@ -6,7 +6,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.validation.FieldConstraints.{
   FieldJsonDeserialize,
-  FieldUniqueElements
+  FieldPortsArray
 }
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
@@ -32,7 +32,7 @@ case class AppUpdate(
 
   uris: Option[Seq[String]] = None,
 
-  @FieldUniqueElements
+  @FieldPortsArray
   ports: Option[Seq[Int]] = None,
 
   constraints: Option[Set[Constraint]] = None,
