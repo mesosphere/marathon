@@ -13,7 +13,6 @@ class MarathonRestModule extends RestModule {
 
   override val jacksonModules = Seq(
     DefaultScalaModule,
-    new v1.json.ConstraintModule,
     new v2.json.MarathonModule
   )
 

@@ -4,17 +4,18 @@ import org.junit.Test
 import org.junit.Assert._
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.Constraint
-;
+import mesosphere.marathon.api.v2.json.MarathonModule
+
 
 /**
  * @author Tobi Knaup
  */
-class ConstraintModuleTest {
+class ConstraintTest {
 
   @Test
   def testDeserialize() {
     val mapper = new ObjectMapper
-    mapper.registerModule(new ConstraintModule)
+    mapper.registerModule(new MarathonModule)
 
     def shouldMatch(json: String, field: String, operator: Constraint.Operator, value: String = "") {
       val constraint = mapper.readValue(json, classOf[Constraint])
@@ -31,7 +32,7 @@ class ConstraintModuleTest {
   @Test
   def testSerialize() {
     val mapper = new ObjectMapper
-    mapper.registerModule(new ConstraintModule)
+    mapper.registerModule(new MarathonModule)
 
     def shouldMatch(expected: String, constraint: Constraint) {
       val actual = mapper.writeValueAsString(constraint)
