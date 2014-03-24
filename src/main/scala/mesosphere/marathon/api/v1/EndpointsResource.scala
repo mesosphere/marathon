@@ -27,7 +27,7 @@ class EndpointsResource @Inject()(
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
-  def endpoints() = appsToEndpointString(schedulerService.listApps())
+  def endpoints() = appsToEndpointString(schedulerService.listApps().toSeq)
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))

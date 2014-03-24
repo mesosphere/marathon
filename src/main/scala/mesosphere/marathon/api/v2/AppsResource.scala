@@ -73,22 +73,22 @@ class AppsResource @Inject()(
     @Context req: HttpServletRequest,
     @PathParam("id") id: String,
     @Valid appUpdate: AppUpdate
-  ): Response =
-    service.listAppVersions(id) match {
-      case Some(repo) if repo.history.nonEmpty => {
-        val effectiveUpdate: AppUpdate =
-          appUpdate.version.flatMap { version =>
-            // rollback to the specified version
-            val rollback = repo.history.find(_.version == version).map {
-              AppUpdate.fromAppDefinition(_)
-            }
-            if (! rollback.isDefined) throw new NotFoundException(
-              "Rollback version does not exist"
-            )
-            rollback
-          }.getOrElse(appUpdate)
-
-        val updatedApp = effectiveUpdate.apply(repo.currentVersion.get)
+  ): Response = {
+    
+    val effectiveUpdate = if (appUpdate.version.isDefined) {
+      // lookup the old version, create an AppUpdate from it.
+      service.getApp(id, appUpdate.version.get) match {
+        case Some(appDef) => AppUpdate.fromAppDefinition(appDef)
+        case None => throw new NotFoundException(
+        	"Rollback version does not exist"
+        ) 
+      }
+    }
+    else appUpdate
+    
+    service.getApp(id) match {
+      case Some(appDef) => {
+        val updatedApp = effectiveUpdate.apply(appDef)
         validateContainerOpts(updatedApp)
         maybePostEvent(req, updatedApp)
         Await.result(service.updateApp(id, effectiveUpdate), service.defaultWait)
@@ -96,7 +96,8 @@ class AppsResource @Inject()(
       }
       case _ => Responses.unknownApp(id)
     }
-
+  }
+  
   @DELETE
   @Path("{id}")
   @Timed

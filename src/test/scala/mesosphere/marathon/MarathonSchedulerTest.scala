@@ -25,7 +25,7 @@ import mesosphere.util.RateLimiters
 class MarathonSchedulerTest extends AssertionsForJUnit
   with MockitoSugar with MarathonTestHelper {
 
-  var store: MarathonStore[AppRepository] = null
+  var repo: AppRepository = null
   var tracker: TaskTracker = null
   var queue: TaskQueue = null
   var scheduler: MarathonScheduler = null
@@ -34,13 +34,13 @@ class MarathonSchedulerTest extends AssertionsForJUnit
 
   @Before
   def setupScheduler() = {
-    store = mock[MarathonStore[AppRepository]]
+    repo = mock[AppRepository]
     tracker = mock[TaskTracker]
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     rateLimiters = mock[RateLimiters]
     scheduler = new MarathonScheduler(
-      None, new ObjectMapper, store, tracker, queue, frameworkIdUtil,
+      None, new ObjectMapper, repo, tracker, queue, frameworkIdUtil,
       rateLimiters)
   }
 

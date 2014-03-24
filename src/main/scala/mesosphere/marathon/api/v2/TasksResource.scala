@@ -38,7 +38,7 @@ class TasksResource @Inject()(service: MarathonSchedulerService,
   @Timed
   def indexTxt() = EndpointsHelper.appsToEndpointString(
     taskTracker,
-    service.listApps(),
+    service.listApps().toSeq,
     "\t"
   )
 
