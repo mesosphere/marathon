@@ -42,8 +42,8 @@ case class AppDefinition(
 
   uris: Seq[String] = Seq(),
 
-  @FieldUniqueElements
-  ports: Seq[Int] = Seq(0),
+  @FieldPortsArray
+  ports: Seq[Int] = AppDefinition.DEFAULT_PORTS,
 
   /**
    * Number of new tasks this app may spawn per second in response to
@@ -135,6 +135,9 @@ object AppDefinition {
 
   val MEM = "mem"
   val DEFAULT_MEM = 128.0
+
+  val RANDOM_PORT_VALUE = 0
+  val DEFAULT_PORTS = Seq(RANDOM_PORT_VALUE)
 
   val DEFAULT_INSTANCES = 0
 
