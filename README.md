@@ -278,20 +278,12 @@ email list. You can find Mesos support in the `#mesos` channel on
 [freenode][freenode] (IRC). The team at [Mesosphere][Mesosphere] is also happy
 to answer any questions.
 
-## Contributors
+## Authors
 
-Marathon was written by the team at [Mesosphere][Mesosphere] that also
-developed [Chronos][Chronos], with many contributions from the community.
-
-* [Tobias Knaup](https://github.com/guenter)
-* [Ross Allen](https://github.com/ssorallen)
-* [Florian Leibert](https://github.com/florianleibert)
-* [Harry Shoff](https://github.com/hshoff)
-* [Brenden Matthews](https://github.com/brndnmtthws)
-* [Jason Dusek](https://github.com/solidsnack)
-* [Thomas Rampelberg](https://github.com/pyronicide)
-* [Connor Doyle](https://github.com/ConnorDoyle)
-* [Cory G Watson](https://github.com/gphat)
+Marathon was created by [Tobias Knaup](https://github.com/guenter) and
+[Florian Leibert](https://github.com/florianleibert) and continues to be
+developed by the team at [Mesosphere][Mesosphere] and by many contributors from
+the community.
 
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
 
