@@ -10,6 +10,7 @@ import mesosphere.marathon.api.Responses
 
 
 @Produces(Array(MediaType.APPLICATION_JSON))
+@Consumes(Array(MediaType.APPLICATION_JSON))
 class AppVersionsResource(service: MarathonSchedulerService) {
 
   val log = Logger.getLogger(getClass.getName)
