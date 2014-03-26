@@ -8,6 +8,9 @@ define([
     this.message = message;
   }
 
+  var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "env",
+    "executor", "id", "instances", "mem", "ports", "uris"];
+
   return Backbone.Model.extend({
     defaults: function() {
       return {
@@ -43,6 +46,18 @@ define([
     },
     isNew: function() {
       return !this.persisted;
+    },
+    save: function(attrs, options) {
+      options || (options = {});
+
+      var allAttrs = _.extend({}, this.attributes, attrs);
+      var allowedAttrs = _.pick(allAttrs, EDITABLE_ATTRIBUTES);
+
+      options.contentType = "application/json";
+      options.data = JSON.stringify(allowedAttrs);
+
+      return Backbone.Model.prototype.save.call(
+        this, allowedAttrs, options);
     },
     validate: function(attrs, options) {
       var errors = [];
