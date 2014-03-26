@@ -47,12 +47,21 @@ define([
     isNew: function() {
       return !this.persisted;
     },
+    /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
+     * sending immutable values like "tasksRunning" and "tasksStaged" and the
+     * "version" value, which when sent prevents any other attributes from being
+     * changed.
+     */
     save: function(attrs, options) {
       options || (options = {});
 
       var allAttrs = _.extend({}, this.attributes, attrs);
       var allowedAttrs = _.pick(allAttrs, EDITABLE_ATTRIBUTES);
 
+      /* When `options.data` is supplied, Backbone does not attempt to infer its
+       * content type. It must be explicitly set for the content to be
+       * interpreted as JSON.
+       */
       options.contentType = "application/json";
       options.data = JSON.stringify(allowedAttrs);
 
