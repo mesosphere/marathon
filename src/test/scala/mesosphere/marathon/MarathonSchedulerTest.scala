@@ -12,7 +12,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
 import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
-import org.apache.mesos.Protos.{TaskID, TaskInfo}
+import org.apache.mesos.Protos.{OfferID, TaskID, TaskInfo}
 import org.mockito.ArgumentCaptor
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
@@ -62,17 +62,21 @@ class MarathonSchedulerTest extends AssertionsForJUnit
 
     scheduler.resourceOffers(driver, offers)
 
-    val taskInfos = ArgumentCaptor.forClass(classOf[java.util.List[TaskInfo]])
-    val marathonTask = ArgumentCaptor.forClass(classOf[MarathonTask])
+    val offersCaptor = ArgumentCaptor.forClass(classOf[java.util.List[OfferID]])
+    val taskInfosCaptor = ArgumentCaptor.forClass(classOf[java.util.List[TaskInfo]])
+    val marathonTaskCaptor = ArgumentCaptor.forClass(classOf[MarathonTask])
 
-    verify(driver).launchTasks(same(offer.getId), taskInfos.capture())
-    verify(tracker).starting(same(app.id), marathonTask.capture())
+    verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
+    verify(tracker).starting(same(app.id), marathonTaskCaptor.capture())
 
-    assertEquals(1, taskInfos.getValue.size())
-    val taskInfoPortVar = taskInfos.getValue.get(0).getCommand.getEnvironment
+    assertEquals(1, offersCaptor.getValue.size())
+    assertEquals(offer.getId, offersCaptor.getValue.get(0))
+
+    assertEquals(1, taskInfosCaptor.getValue.size())
+    val taskInfoPortVar = taskInfosCaptor.getValue.get(0).getCommand.getEnvironment
       .getVariablesList.asScala.find(v => v.getName == "PORT")
     assertTrue(taskInfoPortVar.isDefined)
-    val marathonTaskPort = marathonTask.getValue.getPorts(0)
+    val marathonTaskPort = marathonTaskCaptor.getValue.getPorts(0)
     assertEquals(taskInfoPortVar.get.getValue, marathonTaskPort.toString)
   }
 }

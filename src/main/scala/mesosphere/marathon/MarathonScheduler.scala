@@ -86,7 +86,7 @@ class MarathonScheduler @Inject()(
                 task.getTaskId.getValue, offer.getHostname, ports,
                 offer.getAttributesList.asScala.toList)
               taskTracker.starting(app.id, marathonTask)
-              driver.launchTasks(offer.getId, taskInfos)
+              driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
             }
             case None => {
               log.fine("Offer doesn't match request. Declining.")
