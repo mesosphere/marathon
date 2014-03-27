@@ -8,7 +8,7 @@ define([
     this.message = message;
   }
 
-  var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "env",
+  var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
     "executor", "id", "instances", "mem", "ports", "uris"];
 
   return Backbone.Model.extend({
