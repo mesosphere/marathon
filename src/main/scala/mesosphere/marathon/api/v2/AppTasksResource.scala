@@ -19,6 +19,7 @@ import javax.ws.rs.core.Response.Status
  */
 
 @Produces(Array(MediaType.APPLICATION_JSON))
+@Consumes(Array(MediaType.APPLICATION_JSON))
 class AppTasksResource @Inject()(service: MarathonSchedulerService,
                                  taskTracker: TaskTracker) {
 

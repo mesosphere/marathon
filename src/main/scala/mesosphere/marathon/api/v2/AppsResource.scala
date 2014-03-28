@@ -27,6 +27,7 @@ import mesosphere.marathon.api.Responses
 
 @Path("v2/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
+@Consumes(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject()(
     @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
