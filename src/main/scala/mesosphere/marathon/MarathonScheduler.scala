@@ -21,20 +21,23 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
-
+import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.health.HealthCheckManager
+import scala.util.{Try, Success, Failure}
 
 /**
  * @author Tobi Knaup
  */
 class MarathonScheduler @Inject()(
-    @Named(EventModule.busName) eventBus: Option[EventBus],
-    @Named("restMapper") mapper: ObjectMapper,
-    appRepository: AppRepository,
-    taskTracker: TaskTracker,
-    taskQueue: TaskQueue,
-    frameworkIdUtil: FrameworkIdUtil,
-    rateLimiters: RateLimiters)
-  extends Scheduler {
+  @Named(EventModule.busName) eventBus: Option[EventBus],
+  @Named("restMapper") mapper: ObjectMapper,
+  appRepository: AppRepository,
+  healthCheckManager: HealthCheckManager,
+  taskTracker: TaskTracker,
+  taskQueue: TaskQueue,
+  frameworkIdUtil: FrameworkIdUtil,
+  rateLimiters: RateLimiters
+) extends Scheduler {
 
   private val log = Logger.getLogger(getClass.getName)
 
@@ -192,11 +195,13 @@ class MarathonScheduler @Inject()(
     currentAppVersion(app.id).flatMap { appOption =>
       require(appOption.isEmpty, s"Already started app '${app.id}'")
 
-      appRepository.store(app).map { _ =>
+      val persistenceResult = appRepository.store(app).map { _ =>
         log.info(s"Starting app ${app.id}")
         rateLimiters.setPermits(app.id, app.taskRateLimit)
         scale(driver, app)
       }
+
+      persistenceResult.map { _ => healthCheckManager.reconcileWith(app) }
     }
   }
 
@@ -205,6 +210,8 @@ class MarathonScheduler @Inject()(
       if (!successes.forall(_ == true)) {
         throw new StorageException("Error expunging " + app.id )
       }
+
+      healthCheckManager.removeAllFor(app.id)
 
       log.info(s"Stopping app ${app.id}")
       val tasks = taskTracker.get(app.id)
@@ -227,7 +234,9 @@ class MarathonScheduler @Inject()(
     appRepository.currentVersion(id).flatMap {
       case Some(currentVersion) => {
         val updatedApp = appUpdate(currentVersion)
-        
+
+        healthCheckManager.reconcileWith(updatedApp)
+
         appRepository.store(updatedApp).map { _ =>
           update(driver, updatedApp, appUpdate)
           updatedApp

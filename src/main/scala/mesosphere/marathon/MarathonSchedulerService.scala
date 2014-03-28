@@ -20,6 +20,7 @@ import com.twitter.common.zookeeper.Candidate.Leader
 import scala.util.Random
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.health.HealthCheckManager
 
 /**
  * Wrapper class for the scheduler
@@ -27,6 +28,7 @@ import mesosphere.marathon.Protos.MarathonTask
  * @author Tobi Knaup
  */
 class MarathonSchedulerService @Inject()(
+    healthCheckManager: HealthCheckManager,
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
@@ -106,7 +108,7 @@ class MarathonSchedulerService @Inject()(
       scheduler.scale(driver, updatedApp)
     }
 
-  def listApps(): Iterable[AppDefinition] = 
+  def listApps(): Iterable[AppDefinition] =
     Await.result(appRepository.apps, defaultWait)
 
   def listAppVersions(appName: String): Iterable[Timestamp] =
@@ -160,6 +162,7 @@ class MarathonSchedulerService @Inject()(
   def runDriver() {
     log.info("Running driver")
     scheduleTaskReconciliation
+    listApps foreach healthCheckManager.reconcileWith
     driver.run()
   }
 

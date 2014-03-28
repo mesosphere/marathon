@@ -9,6 +9,7 @@ import org.mockito.Matchers._
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.state.{MarathonStore, AppRepository}
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
 import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
@@ -26,6 +27,7 @@ class MarathonSchedulerTest extends AssertionsForJUnit
   with MockitoSugar with MarathonTestHelper {
 
   var repo: AppRepository = null
+  var hcManager: HealthCheckManager = null
   var tracker: TaskTracker = null
   var queue: TaskQueue = null
   var scheduler: MarathonScheduler = null
@@ -35,13 +37,21 @@ class MarathonSchedulerTest extends AssertionsForJUnit
   @Before
   def setupScheduler() = {
     repo = mock[AppRepository]
+    hcManager = mock[HealthCheckManager]
     tracker = mock[TaskTracker]
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     rateLimiters = mock[RateLimiters]
     scheduler = new MarathonScheduler(
-      None, new ObjectMapper, repo, tracker, queue, frameworkIdUtil,
-      rateLimiters)
+      None,
+      new ObjectMapper,
+      repo,
+      hcManager,
+      tracker,
+      queue,
+      frameworkIdUtil,
+      rateLimiters
+    )
   }
 
   @Test

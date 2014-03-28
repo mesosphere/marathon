@@ -18,18 +18,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class TaskTracker @Inject()(state: State) {
 
+  import TaskTracker.App
   import ExecutionContext.Implicits.global
   import mesosphere.util.BackToTheFuture._
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
   val prefix = "tasks:"
-
-  class App(
-    val appName: String,
-    var tasks: mutable.Set[MarathonTask],
-    var shutdown: Boolean
-  )
 
   private val apps = new mutable.HashMap[String, App] with
     mutable.SynchronizedMap[String, App]
@@ -236,4 +231,12 @@ class TaskTracker @Inject()(state: State) {
     })
     toKill
   }
+}
+
+object TaskTracker {
+  class App(
+    val appName: String,
+    var tasks: mutable.Set[MarathonTask],
+    var shutdown: Boolean
+  )
 }

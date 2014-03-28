@@ -9,7 +9,8 @@ import com.fasterxml.jackson.databind.ser.Serializers
 import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-
+import scala.concurrent.duration.FiniteDuration
+import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * @author Tobi Knaup
@@ -21,6 +22,7 @@ class MarathonModule extends Module {
   private val marathonTaskClass = classOf[MarathonTask]
   private val enrichedTaskClass = classOf[EnrichedTask]
   private val timestampClass = classOf[Timestamp]
+  private val finiteDurationClass = classOf[FiniteDuration]
 
   def getModuleName: String = "MarathonModule"
 
@@ -30,39 +32,29 @@ class MarathonModule extends Module {
     context.addSerializers(new Serializers.Base {
       override def findSerializer(config: SerializationConfig, javaType: JavaType,
                                   beanDesc: BeanDescription): JsonSerializer[_] = {
-        if (constraintClass.isAssignableFrom(javaType.getRawClass)) {
-          ConstraintSerializer
-        }
-        else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
-          MarathonTaskSerializer
-        }
-        else if (enrichedTaskClass.isAssignableFrom(javaType.getRawClass)) {
-          EnrichedTaskSerializer
-        }
-        else if (timestampClass.isAssignableFrom(javaType.getRawClass)) {
-          TimestampSerializer
-        }
-        else {
-          null
-        }
+
+        def matches(clazz: Class[_]): Boolean = clazz isAssignableFrom javaType.getRawClass
+
+        if (matches(constraintClass)) ConstraintSerializer
+        else if (matches(marathonTaskClass)) MarathonTaskSerializer
+        else if (matches(enrichedTaskClass)) EnrichedTaskSerializer
+        else if (matches(timestampClass)) TimestampSerializer
+        else if (matches(finiteDurationClass)) FiniteDurationSerializer
+        else null
       }
     })
 
     context.addDeserializers(new Deserializers.Base {
       override def findBeanDeserializer(javaType: JavaType, config: DeserializationConfig,
                                         beanDesc: BeanDescription): JsonDeserializer[_] = {
-        if (constraintClass.isAssignableFrom(javaType.getRawClass)) {
-          ConstraintDeserializer
-        }
-        else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
-          MarathonTaskDeserializer
-        }
-        else if (timestampClass.isAssignableFrom(javaType.getRawClass)) {
-          TimestampDeserializer
-        }
-        else {
-          null
-        }
+
+        def matches(clazz: Class[_]): Boolean = clazz isAssignableFrom javaType.getRawClass
+
+        if (matches(constraintClass)) ConstraintDeserializer
+        else if (matches(marathonTaskClass)) MarathonTaskDeserializer
+        else if (matches(timestampClass)) TimestampDeserializer
+        else if (matches(finiteDurationClass)) FiniteDurationDeserializer
+        else null
       }
     })
   }
@@ -102,9 +94,19 @@ class MarathonModule extends Module {
   }
 
   object TimestampDeserializer extends JsonDeserializer[Timestamp] {
-    def deserialize(json: JsonParser, context: DeserializationContext): Timestamp = {
+    def deserialize(json: JsonParser, context: DeserializationContext): Timestamp =
       Timestamp(json.getText)
+  }
+
+  object FiniteDurationSerializer extends JsonSerializer[FiniteDuration] {
+    def serialize(fd: FiniteDuration, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeNumber(fd.toSeconds)
     }
+  }
+
+  object FiniteDurationDeserializer extends JsonDeserializer[FiniteDuration] {
+    def deserialize(json: JsonParser, context: DeserializationContext): FiniteDuration =
+      FiniteDuration(json.getLongValue, SECONDS)
   }
 
   object MarathonTaskSerializer extends JsonSerializer[MarathonTask] {

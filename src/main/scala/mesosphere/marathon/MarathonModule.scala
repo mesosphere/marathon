@@ -12,9 +12,11 @@ import scala.collection.JavaConverters._
 import com.twitter.common.quantity.{Time, Amount}
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
+import akka.actor.ActorSystem
 import mesosphere.marathon.state.{MarathonStore, AppRepository}
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 
@@ -103,7 +105,18 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf)
 
   @Provides
   @Singleton
-  def provideFrameworkIdUtil(state: State): FrameworkIdUtil = {
+  def provideActorSystem(): ActorSystem = ActorSystem("marathon")
+
+  @Provides
+  @Singleton
+  def provideHealthCheckManager(
+    system: ActorSystem,
+    taskTracker: TaskTracker
+  ): HealthCheckManager = new HealthCheckManager(system, taskTracker)
+
+  @Provides
+  @Singleton
+  def provideFrameworkIdUtil(state: State): FrameworkIdUtil =
     new FrameworkIdUtil(state)
-  }
+
 }

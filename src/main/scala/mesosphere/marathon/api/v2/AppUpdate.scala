@@ -8,6 +8,8 @@ import mesosphere.marathon.api.validation.FieldConstraints.{
   FieldJsonDeserialize,
   FieldPortsArray
 }
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.Protos.Constraint
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 
@@ -42,6 +44,8 @@ case class AppUpdate(
   @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
   container: Option[ContainerInfo] = None,
 
+  healthChecks: Option[Set[HealthCheck]] = None,
+
   @FieldJsonDeserialize(contentAs = classOf[Timestamp])
   version: Option[Timestamp] = None
 
@@ -67,8 +71,12 @@ case class AppUpdate(
     for (v <- ports) updated = updated.copy(ports = v)
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
+    for (v <- healthChecks) updated = updated.copy(healthChecks = v)
 
-    updated.copy(container = this.container, version = Timestamp.now)
+    updated.copy(
+      container = this.container,
+      version = Timestamp.now
+    )
   }
 
 }
@@ -88,7 +96,8 @@ object AppUpdate {
       ports = Option(app.ports),
       constraints = Option(app.constraints),
       executor = Option(app.executor),
-      container = app.container
+      container = app.container,
+      healthChecks = Option(app.healthChecks)
     )
 
 }

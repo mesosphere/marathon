@@ -34,12 +34,6 @@ class HttpEventModule extends AbstractModule {
   }
 
   @Provides
-  @Singleton
-  def provideActorSystem(): ActorSystem = {
-    ActorSystem("MarathonEvents")
-  }
-
-  @Provides
   @Named(HttpEventModule.StatusUpdateActor)
   def provideStatusUpdateActor(system: ActorSystem,
                                @Named(HttpEventModule.SubscribersKeeperActor)

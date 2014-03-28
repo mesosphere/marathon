@@ -25,8 +25,18 @@ message Constraint {
   optional string value = 3;
 }
 
-message AppRepository {
-  repeated ServiceDefinition history = 1;
+message HealthCheckDefinition {
+  enum Protocol {
+    HTTP = 0;
+    TCP = 1;
+  }
+  required Protocol protocol = 1;
+  required uint32 portIndex = 2;
+  optional uint32 initialDelaySeconds = 3 [default = 15];
+  optional uint32 intervalSeconds = 4 [default = 60];
+  optional uint32 timeoutSeconds = 5 [default = 15];
+  optional string path = 6;                // used for HTTP only
+  repeated uint32 acceptableResponses = 7; // used for HTTP only
 }
 
 message ServiceDefinition {
@@ -41,6 +51,7 @@ message ServiceDefinition {
   optional double taskRateLimit = 9 [default = 1];
   optional ContainerInfo container = 10;
   required string version = 11;
+  repeated HealthCheckDefinition healthChecks = 12;
 }
 
 message MarathonTask {
