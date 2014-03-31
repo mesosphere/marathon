@@ -84,7 +84,7 @@ class MarathonScheduler @Inject()(
 
               val marathonTask = MarathonTasks.makeTask(
                 task.getTaskId.getValue, offer.getHostname, ports,
-                offer.getAttributesList.asScala.toList)
+                offer.getAttributesList.asScala.toList, app.version)
               taskTracker.starting(app.id, marathonTask)
               driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
             }

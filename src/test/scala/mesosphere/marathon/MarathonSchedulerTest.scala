@@ -7,7 +7,7 @@ import org.junit.Assert._
 import org.mockito.Mockito._
 import org.mockito.Matchers._
 import com.fasterxml.jackson.databind.ObjectMapper
-import mesosphere.marathon.state.{MarathonStore, AppRepository}
+import mesosphere.marathon.state.{Timestamp, MarathonStore, AppRepository}
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
 import org.apache.mesos.SchedulerDriver
@@ -49,10 +49,12 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     val driver = mock[SchedulerDriver]
     val offer = makeBasicOffer(4, 1024, 31000, 32000).build
     val offers = Lists.newArrayList(offer)
+    val now = Timestamp.now
     val app = AppDefinition(
       id = "testOffers",
       executor = "//cmd",
-      ports = Seq(8080)
+      ports = Seq(8080),
+      version = now
     )
 
     when(tracker.newTaskId("testOffers"))
@@ -78,5 +80,7 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     assertTrue(taskInfoPortVar.isDefined)
     val marathonTaskPort = marathonTaskCaptor.getValue.getPorts(0)
     assertEquals(taskInfoPortVar.get.getValue, marathonTaskPort.toString)
+    val marathonTaskVersion = marathonTaskCaptor.getValue.getVersion
+    assertEquals(now.toString(), marathonTaskVersion)
   }
 }

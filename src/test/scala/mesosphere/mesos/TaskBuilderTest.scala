@@ -16,6 +16,7 @@ import scala.collection.mutable
 import scala.collection.JavaConverters._
 import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.state.Timestamp
 
 /**
  * @author Tobi Knaup
@@ -196,7 +197,8 @@ class TaskBuilderTest extends AssertionsForJUnit
         tupleOption.get._1.getTaskId.getValue,
         offer.getHostname,
         tupleOption.get._2,
-        offer.getAttributesList.asScala.toList)
+        offer.getAttributesList.asScala.toList,
+        Timestamp.now)
       runningTasks.add(marathonTask)
     }
 
@@ -255,7 +257,7 @@ class TaskBuilderTest extends AssertionsForJUnit
         tupleOption.get._1.getTaskId.getValue,
         offer.getHostname,
         tupleOption.get._2,
-        offer.getAttributesList.asScala.toList)
+        offer.getAttributesList.asScala.toList, Timestamp.now)
       runningTasks.add(marathonTask)
     }
 
