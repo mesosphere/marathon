@@ -4127,6 +4127,21 @@ public final class Protos {
      */
     org.apache.mesos.Protos.TaskStatusOrBuilder getStatusesOrBuilder(
         int index);
+
+    // optional string version = 8;
+    /**
+     * <code>optional string version = 8;</code>
+     */
+    boolean hasVersion();
+    /**
+     * <code>optional string version = 8;</code>
+     */
+    java.lang.String getVersion();
+    /**
+     * <code>optional string version = 8;</code>
+     */
+    com.google.protobuf.ByteString
+        getVersionBytes();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.MarathonTask}
@@ -4234,6 +4249,11 @@ public final class Protos {
                 mutable_bitField0_ |= 0x00000040;
               }
               statuses_.add(input.readMessage(org.apache.mesos.Protos.TaskStatus.PARSER, extensionRegistry));
+              break;
+            }
+            case 66: {
+              bitField0_ |= 0x00000010;
+              version_ = input.readBytes();
               break;
             }
           }
@@ -4498,6 +4518,49 @@ public final class Protos {
       return statuses_.get(index);
     }
 
+    // optional string version = 8;
+    public static final int VERSION_FIELD_NUMBER = 8;
+    private java.lang.Object version_;
+    /**
+     * <code>optional string version = 8;</code>
+     */
+    public boolean hasVersion() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional string version = 8;</code>
+     */
+    public java.lang.String getVersion() {
+      java.lang.Object ref = version_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          version_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string version = 8;</code>
+     */
+    public com.google.protobuf.ByteString
+        getVersionBytes() {
+      java.lang.Object ref = version_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        version_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
       id_ = "";
       host_ = "";
@@ -4506,6 +4569,7 @@ public final class Protos {
       stagedAt_ = 0L;
       startedAt_ = 0L;
       statuses_ = java.util.Collections.emptyList();
+      version_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4556,6 +4620,9 @@ public final class Protos {
       for (int i = 0; i < statuses_.size(); i++) {
         output.writeMessage(7, statuses_.get(i));
       }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(8, getVersionBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -4597,6 +4664,10 @@ public final class Protos {
       for (int i = 0; i < statuses_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(7, statuses_.get(i));
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(8, getVersionBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4738,6 +4809,8 @@ public final class Protos {
         } else {
           statusesBuilder_.clear();
         }
+        version_ = "";
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
@@ -4805,6 +4878,10 @@ public final class Protos {
         } else {
           result.statuses_ = statusesBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.version_ = version_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4898,6 +4975,11 @@ public final class Protos {
               statusesBuilder_.addAllMessages(other.statuses_);
             }
           }
+        }
+        if (other.hasVersion()) {
+          bitField0_ |= 0x00000080;
+          version_ = other.version_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5700,6 +5782,80 @@ public final class Protos {
           statuses_ = null;
         }
         return statusesBuilder_;
+      }
+
+      // optional string version = 8;
+      private java.lang.Object version_ = "";
+      /**
+       * <code>optional string version = 8;</code>
+       */
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional string version = 8;</code>
+       */
+      public java.lang.String getVersion() {
+        java.lang.Object ref = version_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          version_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string version = 8;</code>
+       */
+      public com.google.protobuf.ByteString
+          getVersionBytes() {
+        java.lang.Object ref = version_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          version_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string version = 8;</code>
+       */
+      public Builder setVersion(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string version = 8;</code>
+       */
+      public Builder clearVersion() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        version_ = getDefaultInstance().getVersion();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string version = 8;</code>
+       */
+      public Builder setVersionBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
+        version_ = value;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.MarathonTask)
@@ -7671,16 +7827,17 @@ public final class Protos {
       "re.marathon.Constraint\022\022\n\010executor\030\010 \002(\t" +
       ":\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011\0225\n\tcontaine" +
       "r\030\n \001(\0132\".mesosphere.marathon.ContainerI" +
-      "nfo\022\017\n\007version\030\013 \002(\t\"\251\001\n\014MarathonTask\022\n\n" +
+      "nfo\022\017\n\007version\030\013 \002(\t\"\272\001\n\014MarathonTask\022\n\n" +
       "\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$" +
       "\n\nattributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\t" +
       "staged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010s" +
-      "tatuses\030\007 \003(\0132\021.mesos.TaskStatus\"M\n\013Mara",
-      "thonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.m" +
-      "esosphere.marathon.MarathonTask\"1\n\rConta" +
-      "inerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003" +
-      "(\014\")\n\020EventSubscribers\022\025\n\rcallback_urls\030" +
-      "\001 \003(\tB\035\n\023mesosphere.marathonB\006Protos"
+      "tatuses\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007vers",
+      "ion\030\010 \001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220" +
+      "\n\005tasks\030\002 \003(\0132!.mesosphere.marathon.Mara" +
+      "thonTask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014" +
+      ":\000\022\017\n\007options\030\002 \003(\014\")\n\020EventSubscribers\022" +
+      "\025\n\rcallback_urls\030\001 \003(\tB\035\n\023mesosphere.mar" +
+      "athonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -7710,7 +7867,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
-              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "Statuses", });
+              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "Statuses", "Version", });
           internal_static_mesosphere_marathon_MarathonApp_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_mesosphere_marathon_MarathonApp_fieldAccessorTable = new

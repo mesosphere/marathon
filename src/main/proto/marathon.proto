@@ -51,6 +51,7 @@ message MarathonTask {
   optional int64 staged_at = 5;
   optional int64 started_at = 6;
   repeated mesos.TaskStatus statuses = 7;
+  optional string version = 8;
 }
 
 message MarathonApp {

@@ -4,15 +4,18 @@ import org.apache.mesos.Protos.Attribute
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
 import org.apache.mesos.Protos
+import mesosphere.marathon.state.Timestamp
 
 object MarathonTasks {
   def makeTask(id: String,
                host: String,
                ports: Iterable[Int],
-               attributes: List[Attribute]) = {
+               attributes: List[Attribute],
+               version: Timestamp) = {
     MarathonTask.newBuilder()
       .setId(id)
       .setHost(host)
+      .setVersion(version.toString())
       .addAllPorts(ports.map(i => i: java.lang.Integer).asJava)
       .addAllAttributes(attributes.asJava)
       .setStagedAt(System.currentTimeMillis)
