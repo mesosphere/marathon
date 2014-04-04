@@ -13,6 +13,9 @@ import com.fasterxml.jackson.annotation.{
 }
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
+import java.lang.{Integer => JInt, Double => JDouble}
+
+// myApp, env && sleep 30, Map(), 2, 0.2, 32.0, , Set(), List(), List(0), 1.0, None, Map()
 
 /**
  * @author Tobi Knaup
@@ -29,11 +32,11 @@ case class AppDefinition(
   env: Map[String, String] = Map.empty,
 
   @FieldMin(0)
-  instances: Int = AppDefinition.DEFAULT_INSTANCES,
+  instances: JInt = AppDefinition.DEFAULT_INSTANCES,
 
-  cpus: Double = AppDefinition.DEFAULT_CPUS,
+  cpus: JDouble = AppDefinition.DEFAULT_CPUS,
 
-  mem: Double = AppDefinition.DEFAULT_MEM,
+  mem: JDouble = AppDefinition.DEFAULT_MEM,
 
   @FieldPattern(regexp="(^//cmd$)|(^/[^/].*$)|")
   executor: String = "",
@@ -43,27 +46,21 @@ case class AppDefinition(
   uris: Seq[String] = Seq(),
 
   @FieldPortsArray
-  ports: Seq[Int] = AppDefinition.DEFAULT_PORTS,
+  ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
   /**
    * Number of new tasks this app may spawn per second in response to
    * terminated tasks. This prevents frequently failing apps from spamming
    * the cluster.
    */
-  taskRateLimit: Double = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
+  taskRateLimit: JDouble = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
 
-  @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
   container: Option[ContainerInfo] = None,
 
-  @FieldJsonProperty
   version: Timestamp = Timestamp.now
 
 ) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
   with Timestamped {
-
-  // the default constructor exists solely for interop with automatic
-  // (de)serializers
-  def this() = this(id = "")
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
@@ -93,9 +90,9 @@ case class AppDefinition(
         v => v.getName -> v.getValue
       }.toMap
 
-    val resourcesMap: Map[String, Double] =
+    val resourcesMap: Map[String, JDouble] =
       proto.getResourcesList.asScala.map {
-        r => r.getName -> r.getScalar.getValue
+        r => r.getName -> (r.getScalar.getValue: JDouble)
       }.toMap
 
     AppDefinition(
@@ -104,7 +101,7 @@ case class AppDefinition(
       executor = proto.getExecutor,
       taskRateLimit = proto.getTaskRateLimit,
       instances = proto.getInstances,
-      ports = proto.getPortsList.asScala.asInstanceOf[Seq[Int]],
+      ports = proto.getPortsList.asScala,
       constraints = proto.getConstraintsList.asScala.toSet,
       container = if (proto.hasContainer) Some(ContainerInfo(proto.getContainer))
                   else None,
@@ -137,7 +134,7 @@ object AppDefinition {
   val DEFAULT_MEM = 128.0
 
   val RANDOM_PORT_VALUE = 0
-  val DEFAULT_PORTS = Seq(RANDOM_PORT_VALUE)
+  val DEFAULT_PORTS: Seq[JInt] = Seq(RANDOM_PORT_VALUE)
 
   val DEFAULT_INSTANCES = 0
 

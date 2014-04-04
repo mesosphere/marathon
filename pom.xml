@@ -15,7 +15,7 @@
 
         <!-- runtime deps versions -->
         <chaos.version>0.5.3</chaos.version>
-        <jackson-ccm.version>0.1.0-SNAPSHOT</jackson-ccm.version>
+        <jackson-ccm.version>0.1.0</jackson-ccm.version>
         <mesos.version>0.17.0</mesos.version>
         <protobuf.version>2.5.0</protobuf.version>
         <akka.version>2.2.3</akka.version>
