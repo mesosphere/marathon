@@ -15,8 +15,6 @@ import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
 import java.lang.{Integer => JInt, Double => JDouble}
 
-// myApp, env && sleep 30, Map(), 2, 0.2, 32.0, , Set(), List(), List(0), 1.0, None, Map()
-
 /**
  * @author Tobi Knaup
  */
