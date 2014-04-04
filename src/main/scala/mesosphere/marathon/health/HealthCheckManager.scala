@@ -3,11 +3,11 @@ package mesosphere.marathon.health
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{ActorRef, ActorSystem, Props}
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 
 case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
-class HealthCheckManager @Inject() (system: ActorSystem, taskTracker: TaskTracker) {
+class HealthCheckManager @Singleton @Inject() (system: ActorSystem, taskTracker: TaskTracker) {
 
   import HealthCheckActor.Health
 

@@ -109,13 +109,6 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf)
 
   @Provides
   @Singleton
-  def provideHealthCheckManager(
-    system: ActorSystem,
-    taskTracker: TaskTracker
-  ): HealthCheckManager = new HealthCheckManager(system, taskTracker)
-
-  @Provides
-  @Singleton
   def provideFrameworkIdUtil(state: State): FrameworkIdUtil =
     new FrameworkIdUtil(state)
 
