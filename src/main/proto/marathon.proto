@@ -1,5 +1,6 @@
 //
 // protoc --java_out=src/main/java/ --proto_path=/path/to/mesos/include/mesos/ --proto_path=src/main/proto/ src/main/proto/marathon.proto
+// requires protoc >= 2.5.0
 //
 package mesosphere.marathon;
 

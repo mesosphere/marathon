@@ -1,4 +1,4 @@
-## POST `/v2/eventSubscriptions?callbackUrl={callbackUrl}`
+## POST `/v2/eventSubscriptions/http?callbackUrl={callbackUrl}`
 
 Register a callback URL as event subscriber.
 
@@ -10,7 +10,7 @@ _NOTE: To activate this endpoint, you need to startup Marathon with `--event_sub
 
 
 ```
-POST /v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback HTTP/1.1
+POST /v2/eventSubscriptions/http?callbackUrl=http://localhost:9292/callback HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0
