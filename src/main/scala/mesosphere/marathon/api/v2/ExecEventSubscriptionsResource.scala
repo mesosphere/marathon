@@ -13,7 +13,7 @@ import scala.concurrent.Await
 import mesosphere.marathon.BadRequestException
 
 // TODO(ian-kent) can be refactored with HttpEventSubscriptionsResource
-@Path("v2/eventSubscriptions/exec")
+@Path("v2/eventSubscriptionsExec")
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class ExecEventSubscriptionsResource {

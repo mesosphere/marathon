@@ -50,9 +50,7 @@ class ExecEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     val stdin = write(event)
     val is = new ByteArrayInputStream(stdin.getBytes("UTF-8"))
     val res = (Process(cmdString) #< is).!
-    if(res == 0)
-      log.debug("Result: " + res)
-    else
+    if(res != 0)
       log.warning("Command failed with exit code " + res)
   }
 

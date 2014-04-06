@@ -1,4 +1,4 @@
-## GET `/v2/eventSubscriptions/exec`
+## GET `/v2/eventSubscriptionsExec`
 
 List all event subscriber exec commands.
 
@@ -9,7 +9,7 @@ _NOTE: To activate this endpoint, you need to startup a Marathon instance with `
 **Request:**
 
 ```
-GET /v2/eventSubscriptions/exec HTTP/1.1
+GET /v2/eventSubscriptionsExec HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080

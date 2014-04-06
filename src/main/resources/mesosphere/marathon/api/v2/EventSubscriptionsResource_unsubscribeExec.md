@@ -1,4 +1,4 @@
-## DELETE `/v2/eventSubscriptions/exec?execCmd={execCmd}`
+## DELETE `/v2/eventSubscriptionsExec?execCmd={execCmd}`
 
 Unregister a exec command from the event subscribers list.
 
@@ -10,7 +10,7 @@ _NOTE: To activate this endpoint, you need to startup a Marathon instance with `
 
 
 ```
-DELETE /v2/eventSubscriptions/exec?callbackUrl=tee%20/tmp/marathon-event HTTP/1.1
+DELETE /v2/eventSubscriptionsExec?callbackUrl=tee%20/tmp/marathon-event HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0

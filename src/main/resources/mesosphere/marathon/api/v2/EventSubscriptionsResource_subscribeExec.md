@@ -1,8 +1,8 @@
-## POST `/v2/eventSubscriptions/http?callbackUrl={callbackUrl}`
+## POST `/v2/eventSubscriptionsExec?execCmd={execCmd}`
 
-Register a callback URL as event subscriber.
+Register a exec command as event subscriber.
 
-_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber exec_callback`_
 
 ### Example
 
@@ -10,7 +10,7 @@ _NOTE: To activate this endpoint, you need to startup Marathon with `--event_sub
 
 
 ```
-POST /v2/eventSubscriptions/http?callbackUrl=http://localhost:9292/callback HTTP/1.1
+POST /v2/eventSubscriptionsExec?execCmd=tee%20/tmp/marathon-event HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0
@@ -28,7 +28,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "callbackUrl": "http://localhost:9292/callback",
+    "execCmd": "tee /tmp/marathon-event",
     "clientIp": "127.0.0.1",
     "eventType": "subscribe_event"
 }

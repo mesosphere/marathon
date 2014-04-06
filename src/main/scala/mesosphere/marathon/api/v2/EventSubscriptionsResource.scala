@@ -12,10 +12,10 @@ import mesosphere.marathon.event.http.{HttpEventModule, HttpCallbackSubscription
 import scala.concurrent.Await
 import mesosphere.marathon.BadRequestException
 
-@Path("v2/eventSubscriptions/http")
+@Path("v2/eventSubscriptions")
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class HttpEventSubscriptionsResource {
+class EventSubscriptionsResource {
   // TODO(everpeace) this should be configurable option?
   val timeout = HttpEventModule.timeout.duration
   val log = Logger.getLogger(getClass.getName)
