@@ -97,9 +97,9 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf)
 
   @Provides
   @Singleton
-  def provideMarathonStore(state: State): MarathonStore[AppRepository] = {
-    new MarathonStore[AppRepository](state, AppRepository.apply)
-  }
+  def provideAppRepository(state: State): AppRepository = new AppRepository(
+    new MarathonStore[AppDefinition](state, () => AppDefinition.apply())
+  )
 
   @Provides
   @Singleton

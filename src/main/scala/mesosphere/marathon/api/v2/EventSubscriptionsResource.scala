@@ -14,6 +14,7 @@ import mesosphere.marathon.BadRequestException
 
 @Path("v2/eventSubscriptions")
 @Produces(Array(MediaType.APPLICATION_JSON))
+@Consumes(Array(MediaType.APPLICATION_JSON))
 class EventSubscriptionsResource {
   // TODO(everpeace) this should be configurable option?
   val timeout = HttpEventModule.timeout.duration

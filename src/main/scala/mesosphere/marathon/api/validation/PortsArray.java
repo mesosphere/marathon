@@ -17,9 +17,9 @@ import javax.validation.Payload;
 	ElementType.PARAMETER
 })
 @Documented
-@Constraint(validatedBy = UniqueElementsValidator.class)
+@Constraint(validatedBy = PortsArrayValidator.class)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface UniqueElements {
+public @interface PortsArray {
 	String message() default "Elements must be unique";
 	Class<?>[] groups() default {};
 	Class<? extends Payload>[] payload() default {};

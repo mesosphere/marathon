@@ -131,7 +131,7 @@ To launch Marathon in *production mode*, you need to have both
 Marathon on Mesos in *production mode*. Point your web browser to
 `localhost:8080` and you should see the Marathon UI.
 
-    ./bin/start --master zk://zk1.foo.bar:2181/mesos,zk2.foo.bar:2181/mesos --zk_hosts zk1.foo.bar:2181,zk2.foo.bar:2181
+    ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk_hosts zk1.foo.bar:2181,zk2.foo.bar:2181
 
 Note the different format of the `--master` and `--zk_hosts` options. Marathon
 uses `--master` to find the Mesos masters, and `--zk_hosts` to find Zookeepers
@@ -172,6 +172,34 @@ easy editing, set the `assets_path` flag when running Marathon:
         ./bin/build
 
 The main JS file will be written to `src/main/resources/assets/js/dist/main.js`.
+
+### Command Line Options
+
+There are some command line options that can influence how Marathon works.
+
+* `--master`: The URL of the Mesos master. The format is a comma-delimited list of
+    of hosts like `zk://host1:port,host2:port/mesos`. Pay particular attention to the
+    leading 'zk://' and trailing `/mesos`!
+* `--failover_timeout`: The failover_timeout for mesos in seconds (default: 1 week)
+* `--ha`: Runs Marathon in HA mode with leader election. Allows starting an arbitrary
+    number of other Marathons but all need to be started in HA mode. This mode
+    requires a running ZooKeeper. See `--master`.
+* `--checkpoint`: Enable checkpointing of tasks. Requires checkpointing enabled on
+    slaves. Allows tasks to continue running during mesos-slave restarts and upgrades.
+* `--local_port_min`: Min port number to use when assigning ports to apps.
+* `--local_port_max`: Max port number to use when assigning ports to apps.
+* `--executor`: Executor to use when none is specified.
+* `--hostname`: The advertised hostname stored in ZooKeeper so another standby host
+    can redirect to the elected leader.
+* `--mesos_role`: Mesos role for this framework.
+* `--task_launch_timeout`: Time, in milliseconds, to wait for a task to enter the
+    TASK_RUNNING state before killing it.
+* `--task_rate_limit`: This is the time window within which instances may be launched
+    for a given app.  For example, if an app has 5 instances, it will only launch 5
+    instances within 60s regardless of whether they succeed or fail.
+* `--reconciliation_initial_delay`: This is the length of time, in milliseconds, before
+    Marathon begins to periodically perform task reconciliation operations.
+* `--mesos_user`: Mesos user for this framework. Defaults to current user.
 
 ### Configuration Options
 
@@ -250,19 +278,12 @@ email list. You can find Mesos support in the `#mesos` channel on
 [freenode][freenode] (IRC). The team at [Mesosphere][Mesosphere] is also happy
 to answer any questions.
 
-## Contributors
+## Authors
 
-Marathon was written by the team at [Mesosphere][Mesosphere] that also
-developed [Chronos][Chronos], with many contributions from the community.
-
-* [Tobias Knaup](https://github.com/guenter)
-* [Ross Allen](https://github.com/ssorallen)
-* [Florian Leibert](https://github.com/florianleibert)
-* [Harry Shoff](https://github.com/hshoff)
-* [Brenden Matthews](https://github.com/brndnmtthws)
-* [Jason Dusek](https://github.com/solidsnack)
-* [Thomas Rampelberg](https://github.com/pyronicide)
-* [Connor Doyle](https://github.com/ConnorDoyle)
+Marathon was created by [Tobias Knaup](https://github.com/guenter) and
+[Florian Leibert](https://github.com/florianleibert) and continues to be
+developed by the team at [Mesosphere][Mesosphere] and by many contributors from
+the community.
 
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
 

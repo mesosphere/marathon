@@ -7,12 +7,12 @@ import org.junit.Assert._
 import org.mockito.Mockito._
 import org.mockito.Matchers._
 import com.fasterxml.jackson.databind.ObjectMapper
-import mesosphere.marathon.state.{MarathonStore, AppRepository}
+import mesosphere.marathon.state.{Timestamp, MarathonStore, AppRepository}
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
 import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
-import org.apache.mesos.Protos.{TaskID, TaskInfo}
+import org.apache.mesos.Protos.{OfferID, TaskID, TaskInfo}
 import org.mockito.ArgumentCaptor
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
@@ -25,7 +25,7 @@ import mesosphere.util.RateLimiters
 class MarathonSchedulerTest extends AssertionsForJUnit
   with MockitoSugar with MarathonTestHelper {
 
-  var store: MarathonStore[AppRepository] = null
+  var repo: AppRepository = null
   var tracker: TaskTracker = null
   var queue: TaskQueue = null
   var scheduler: MarathonScheduler = null
@@ -34,13 +34,13 @@ class MarathonSchedulerTest extends AssertionsForJUnit
 
   @Before
   def setupScheduler() = {
-    store = mock[MarathonStore[AppRepository]]
+    repo = mock[AppRepository]
     tracker = mock[TaskTracker]
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     rateLimiters = mock[RateLimiters]
     scheduler = new MarathonScheduler(
-      None, new ObjectMapper, store, tracker, queue, frameworkIdUtil,
+      None, new ObjectMapper, repo, tracker, queue, frameworkIdUtil,
       rateLimiters)
   }
 
@@ -49,10 +49,12 @@ class MarathonSchedulerTest extends AssertionsForJUnit
     val driver = mock[SchedulerDriver]
     val offer = makeBasicOffer(4, 1024, 31000, 32000).build
     val offers = Lists.newArrayList(offer)
+    val now = Timestamp.now
     val app = AppDefinition(
       id = "testOffers",
       executor = "//cmd",
-      ports = Seq(8080)
+      ports = Seq(8080),
+      version = now
     )
 
     when(tracker.newTaskId("testOffers"))
@@ -62,17 +64,23 @@ class MarathonSchedulerTest extends AssertionsForJUnit
 
     scheduler.resourceOffers(driver, offers)
 
-    val taskInfos = ArgumentCaptor.forClass(classOf[java.util.List[TaskInfo]])
-    val marathonTask = ArgumentCaptor.forClass(classOf[MarathonTask])
+    val offersCaptor = ArgumentCaptor.forClass(classOf[java.util.List[OfferID]])
+    val taskInfosCaptor = ArgumentCaptor.forClass(classOf[java.util.List[TaskInfo]])
+    val marathonTaskCaptor = ArgumentCaptor.forClass(classOf[MarathonTask])
 
-    verify(driver).launchTasks(same(offer.getId), taskInfos.capture())
-    verify(tracker).starting(same(app.id), marathonTask.capture())
+    verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
+    verify(tracker).starting(same(app.id), marathonTaskCaptor.capture())
 
-    assertEquals(1, taskInfos.getValue.size())
-    val taskInfoPortVar = taskInfos.getValue.get(0).getCommand.getEnvironment
+    assertEquals(1, offersCaptor.getValue.size())
+    assertEquals(offer.getId, offersCaptor.getValue.get(0))
+
+    assertEquals(1, taskInfosCaptor.getValue.size())
+    val taskInfoPortVar = taskInfosCaptor.getValue.get(0).getCommand.getEnvironment
       .getVariablesList.asScala.find(v => v.getName == "PORT")
     assertTrue(taskInfoPortVar.isDefined)
-    val marathonTaskPort = marathonTask.getValue.getPorts(0)
+    val marathonTaskPort = marathonTaskCaptor.getValue.getPorts(0)
     assertEquals(taskInfoPortVar.get.getValue, marathonTaskPort.toString)
+    val marathonTaskVersion = marathonTaskCaptor.getValue.getVersion
+    assertEquals(now.toString(), marathonTaskVersion)
   }
 }

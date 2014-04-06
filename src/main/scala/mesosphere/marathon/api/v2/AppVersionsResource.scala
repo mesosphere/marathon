@@ -10,19 +10,18 @@ import mesosphere.marathon.api.Responses
 
 
 @Produces(Array(MediaType.APPLICATION_JSON))
+@Consumes(Array(MediaType.APPLICATION_JSON))
 class AppVersionsResource(service: MarathonSchedulerService) {
 
   val log = Logger.getLogger(getClass.getName)
 
   @GET
   @Timed
-  def index(@PathParam("appId") appId: String) =
-    service.listAppVersions(appId) match {
-      case Some(repo) if repo.history.nonEmpty => {
-        Response.ok(Map("versions" -> repo.history.map(_.version))).build
-      }
-      case _ => Responses.unknownApp(appId)
-    }
+  def index(@PathParam("appId") appId: String) = {
+    val versions = service.listAppVersions(appId).toSeq
+    if (versions.isEmpty) Responses.unknownApp(appId)
+    else Response.ok(Map("versions" -> versions)).build
+  }
 
   @GET
   @Timed
@@ -31,11 +30,10 @@ class AppVersionsResource(service: MarathonSchedulerService) {
            @PathParam("version") version: String) = {
 
     val timestampVersion = Timestamp(version)
-
-    service.listAppVersions(appId).map { repo =>
-      repo.history.find(app => app.version == timestampVersion)
-    } match {
-      case Some(version) => version
+    val versions = service.listAppVersions(appId).toSeq
+    
+    service.getApp(appId, Timestamp(version)) match {
+      case Some(appdef) => appdef
       case None => Responses.unknownApp(appId)
     }
   }
