@@ -57,13 +57,13 @@ class ExecEventModule extends AbstractModule {
 
     val actor = system.actorOf(Props(new SubscribersKeeperActor(store)))
     Main.conf.execEventEndpoints.get map {
-      urls =>
-        log.info(s"exec_endpoints(${urls}) are specified at startup. Those will be added to subscribers list.")
-        urls.foreach{ url =>
-          val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
+      cmds =>
+        log.info(s"exec_endpoints(${cmds}) are specified at startup. Those will be added to subscribers list.")
+        cmds.foreach{ cmd =>
+          val f = (actor ? Subscribe(local_ip, cmd)).mapTo[MarathonSubscriptionEvent]
           f.onFailure {
             case th: Throwable =>
-              log.warning(s"Failed to add ${url} to event subscribers. exception message => ${th.getMessage}")
+              log.warning(s"Failed to add ${cmd} to event subscribers. exception message => ${th.getMessage}")
           }
         }
     }
@@ -73,7 +73,7 @@ class ExecEventModule extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideCallbackUrlsStore(state: State): MarathonStore[EventSubscribers] = {
+  def provideCallbackCmdsStore(state: State): MarathonStore[EventSubscribers] = {
     new MarathonStore[EventSubscribers](state, () => new EventSubscribers(Set.empty[String]), "events:")
   }
 

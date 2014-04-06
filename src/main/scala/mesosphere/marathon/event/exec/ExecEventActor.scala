@@ -41,17 +41,19 @@ class ExecEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
   def broadcast(event: MarathonEvent): Unit = {
     log.info("Executing command endpoints")
     (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].foreach {
-      _.urls.foreach { exec(_,event) }
+      _.cmds.foreach { exec(_,event) }
     }
   }
 
   def exec(cmdString: String, event: MarathonEvent) {
     log.info("Executing command: " + cmdString)
     val stdin = write(event)
-    log.info("Got json: " + stdin)
     val is = new ByteArrayInputStream(stdin.getBytes("UTF-8"))
-    val res = (Process(cmdString) #< is).!!
-    log.info("Result: " + res)
+    val res = (Process(cmdString) #< is).!
+    if(res == 0)
+      log.debug("Result: " + res)
+    else
+      log.warning("Command failed with exit code " + res)
   }
 
   implicit def json4sJacksonFormats = DefaultFormats + FieldSerializer

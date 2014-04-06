@@ -17,26 +17,26 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
 
   override def receive = {
 
-    case event @ Subscribe(_, callbackUrl, _) => {
-      val addResult: Future[Option[EventSubscribers]] = add(callbackUrl)
+    case event @ Subscribe(_, execCmd, _) => {
+      val addResult: Future[Option[EventSubscribers]] = add(execCmd)
 
       val subscribers: Future[MarathonSubscriptionEvent] =
         addResult.collect { case Some(subscribers) =>
-          if (subscribers.urls.contains(callbackUrl))
-            log.info("Callback [%s] subscribed." format callbackUrl)
+          if (subscribers.cmds.contains(execCmd))
+            log.info("Callback [%s] subscribed." format execCmd)
           event
         }
 
       subscribers pipeTo sender
     }
 
-    case event @ Unsubscribe(_, callbackUrl, _) => {
-      val removeResult: Future[Option[EventSubscribers]] = remove(callbackUrl)
+    case event @ Unsubscribe(_, execCmd, _) => {
+      val removeResult: Future[Option[EventSubscribers]] = remove(execCmd)
 
       val subscribers: Future[MarathonSubscriptionEvent] =
         removeResult.collect { case Some(subscribers) =>
-          if (!subscribers.urls.contains(callbackUrl))
-            log.info("Callback [%s] unsubscribed." format callbackUrl)
+          if (!subscribers.cmds.contains(execCmd))
+            log.info("Callback [%s] unsubscribed." format execCmd)
           event
         }
 
@@ -55,25 +55,25 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
 
   }
 
-  protected[this] def add(callbackUrl: String): Future[Option[EventSubscribers]] =
+  protected[this] def add(execCmd: String): Future[Option[EventSubscribers]] =
     store.modify(SUBSCRIBERS) { deserialize =>
       val existingSubscribers = deserialize()
-      if (existingSubscribers.urls.contains(callbackUrl)) {
-        log.info("Existing callback [%s] resubscribed." format callbackUrl)
+      if (existingSubscribers.cmds.contains(execCmd)) {
+        log.info("Existing callback [%s] resubscribed." format execCmd)
         existingSubscribers
       }
-      else EventSubscribers(existingSubscribers.urls + callbackUrl)
+      else EventSubscribers(existingSubscribers.cmds + execCmd)
     }
 
-  protected[this] def remove(callbackUrl: String): Future[Option[EventSubscribers]] =
+  protected[this] def remove(execCmd: String): Future[Option[EventSubscribers]] =
     store.modify(SUBSCRIBERS) { deserialize =>
       val existingSubscribers = deserialize()
 
-      if (existingSubscribers.urls.contains(callbackUrl))
-        EventSubscribers(existingSubscribers.urls - callbackUrl)
+      if (existingSubscribers.cmds.contains(execCmd))
+        EventSubscribers(existingSubscribers.cmds - execCmd)
 
       else {
-        log.warning("Attempted to unsubscribe nonexistent callback [%s]." format callbackUrl)
+        log.warning("Attempted to unsubscribe nonexistent callback [%s]." format execCmd)
         existingSubscribers
       }
     }
@@ -83,5 +83,5 @@ object SubscribersKeeperActor {
 
   case object GetSubscribers
 
-  final val SUBSCRIBERS = "http_event_subscribers"
+  final val SUBSCRIBERS = "exec_event_subscribers"
 }

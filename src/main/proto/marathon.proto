@@ -66,5 +66,6 @@ message ContainerInfo {
 
 message EventSubscribers {
   repeated string callback_urls = 1;
+  repeated string exec_cmds = 2;
 }
 
