@@ -8,20 +8,21 @@ import com.codahale.metrics.annotation.Timed
 import javax.servlet.http.HttpServletRequest
 import java.util.logging.Logger
 import mesosphere.marathon.event.{Unsubscribe, Subscribe}
-import mesosphere.marathon.event.http.{HttpEventModule, HttpCallbackSubscriptionService}
+import mesosphere.marathon.event.exec.{ExecEventModule, ExecCallbackSubscriptionService}
 import scala.concurrent.Await
 import mesosphere.marathon.BadRequestException
 
-@Path("v2/eventSubscriptions")
+// TODO(ian-kent) can be refactored with HttpEventSubscriptionsResource
+@Path("v2/eventSubscriptions/exec")
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class EventSubscriptionsResource {
+class ExecEventSubscriptionsResource {
   // TODO(everpeace) this should be configurable option?
-  val timeout = HttpEventModule.timeout.duration
+  val timeout = ExecEventModule.timeout.duration
   val log = Logger.getLogger(getClass.getName)
 
   @Inject(optional = true)
-  val service: HttpCallbackSubscriptionService = null
+  val service: ExecCallbackSubscriptionService = null
 
   @GET
   @Timed
@@ -32,7 +33,7 @@ class EventSubscriptionsResource {
 
   @POST
   @Timed
-  def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String) = {
+  def subscribe(@Context req: HttpServletRequest, @QueryParam("execCmd") callbackUrl: String) = {
     validateSubscriptionService
     val future = service.handleSubscriptionEvent(Subscribe(req.getRemoteAddr, callbackUrl))
     Await.result(future, timeout)
@@ -40,7 +41,7 @@ class EventSubscriptionsResource {
 
   @DELETE
   @Timed
-  def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String) = {
+  def unsubscribe(@Context req: HttpServletRequest, @QueryParam("execCmd") callbackUrl: String) = {
     validateSubscriptionService
     val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
     Await.result(future, timeout)
@@ -48,8 +49,8 @@ class EventSubscriptionsResource {
 
   private def validateSubscriptionService = {
     if (Option(service).isEmpty) throw new BadRequestException(
-      "http event callback system is not running on this Marathon instance. " +
-        "Please re-start this instance with \"--event_subscriber http_callback\"."
+      "exec event callback system is not running on this Marathon instance. " +
+        "Please re-start this instance with \"--event_subscriber exec_callback\"."
     )
   }
 }

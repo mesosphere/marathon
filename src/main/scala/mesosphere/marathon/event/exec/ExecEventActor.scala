@@ -16,6 +16,10 @@ import scala.util.Success
 import scala.util.Failure
 import mesosphere.marathon.event.exec.SubscribersKeeperActor.GetSubscribers
 import scala.sys.process._
+import org.json4s.jackson.{Serialization, Json4sScalaModule}
+import com.fasterxml.jackson.databind.ObjectMapper
+import java.io.ByteArrayInputStream
+import org.json4s.jackson.Serialization.{read,write}
 
 class ExecEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLogging with Json4sJacksonSupport {
 
@@ -37,12 +41,17 @@ class ExecEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
   def broadcast(event: MarathonEvent): Unit = {
     log.info("Executing command endpoints")
     (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].foreach {
-      _.urls.foreach { post(_,event) }
+      _.urls.foreach { exec(_,event) }
     }
   }
 
-  def post(cmdString: String, event: MarathonEvent) {
-    cmdString.!
+  def exec(cmdString: String, event: MarathonEvent) {
+    log.info("Executing command: " + cmdString)
+    val stdin = write(event)
+    log.info("Got json: " + stdin)
+    val is = new ByteArrayInputStream(stdin.getBytes("UTF-8"))
+    val res = (Process(cmdString) #< is).!!
+    log.info("Result: " + res)
   }
 
   implicit def json4sJacksonFormats = DefaultFormats + FieldSerializer

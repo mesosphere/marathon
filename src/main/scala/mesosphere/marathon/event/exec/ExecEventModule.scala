@@ -56,7 +56,7 @@ class ExecEventModule extends AbstractModule {
     val local_ip = java.net.InetAddress.getLocalHost().getHostAddress()
 
     val actor = system.actorOf(Props(new SubscribersKeeperActor(store)))
-    Main.conf.httpEventEndpoints.get map {
+    Main.conf.execEventEndpoints.get map {
       urls =>
         log.info(s"exec_endpoints(${urls}) are specified at startup. Those will be added to subscribers list.")
         urls.foreach{ url =>
