@@ -26,10 +26,6 @@ class ExecEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
   implicit val ec = ExecEventModule.executionContext
   implicit val timeout = ExecEventModule.timeout
 
-  val pipeline: HttpRequest => Future[HttpResponse] = (
-    addHeader("Accept", "application/json")
-      ~> sendReceive)
-
   def receive = {
     case event: MarathonEvent =>
       broadcast(event)
