@@ -215,7 +215,7 @@ class MarathonSchedulerService @Inject()(
     }
   }
 
-  private def newAppPort(app: AppDefinition): Int = {
+  private def newAppPort(app: AppDefinition): Integer = {
     // TODO this is pretty expensive, find a better way
     val assignedPorts = listApps().map(_.ports).flatten.toSeq
     var port = 0

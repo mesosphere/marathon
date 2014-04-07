@@ -7,7 +7,7 @@ import scala.math.Ordered
 /**
  * An ordered wrapper for UTC timestamps.
  */
-class Timestamp(dateTime: DateTime) extends Ordered[Timestamp] {
+case class Timestamp(dateTime: DateTime) extends Ordered[Timestamp] {
 
   val time = dateTime.toDateTime(DateTimeZone.UTC)
 
@@ -22,8 +22,6 @@ class Timestamp(dateTime: DateTime) extends Ordered[Timestamp] {
 }
 
 object Timestamp {
-
-  def apply(dateTime: DateTime): Timestamp = new Timestamp(dateTime)
 
   /**
    * Returns a new Timestamp representing the instant that is the supplied

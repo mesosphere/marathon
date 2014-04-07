@@ -114,10 +114,12 @@ class AppDefinitionTest {
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.marathon.api.v2.json.MarathonModule
+    import mesosphere.jackson.CaseClassModule
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     mapper.registerModule(new MarathonModule)
+    mapper.registerModule(CaseClassModule)
 
     val original = AppDefinition()
     val json = mapper.writeValueAsString(original)
