@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.{
   JsonProperty
 }
 import org.apache.mesos.Protos.TaskState
+import scala.collection.mutable
 import scala.collection.JavaConverters._
 import java.lang.{Integer => JInt, Double => JDouble}
 
@@ -122,6 +123,21 @@ case class AppDefinition(
   def withTasks(taskTracker: TaskTracker): AppDefinition.WithTasks =
     new AppDefinition.WithTasks(taskTracker, this)
 
+  def portsEnv(ports: Seq[Int]): Map[String, String] = {
+    if (ports.isEmpty) {
+      return Map.empty
+    }
+
+    val env = mutable.HashMap.empty[String, String]
+
+    ports.zipWithIndex.foreach(p => {
+      env += (s"APP_PORT${p._2}" -> p._1.toString)
+    })
+
+    env += ("APP_PORT" -> ports.head.toString)
+    env += ("APP_PORTS" -> ports.mkString(","))
+    env.toMap
+  }
 }
 
 object AppDefinition {
