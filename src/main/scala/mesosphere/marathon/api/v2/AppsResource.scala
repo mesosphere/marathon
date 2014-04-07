@@ -37,9 +37,10 @@ class AppsResource @Inject()(
 
   @GET
   @Timed
-  def index(@QueryParam("cmd") cmd: String) = {
-    val apps = if (cmd != null) {
-      search(cmd)
+  def index(@QueryParam("cmd") cmd: String,
+            @QueryParam("id") id: String) = {
+    val apps = if (cmd != null || id != null) {
+      search(cmd, id)
     } else {
       service.listApps()
     }
@@ -134,15 +135,16 @@ class AppsResource @Inject()(
     }
   }
 
-  private def search(cmd: String) = {
-    service.listApps().filter {
-      x =>
-        var valid = true
-        if (cmd != null && !cmd.isEmpty && !x.cmd.toLowerCase.contains(cmd.toLowerCase)) {
-          valid = false
-        }
-        // Maybe add some other query parameters?
-        valid
+  private def search(cmd: String, id: String): Iterable[AppDefinition] = {
+    /** Returns true iff `a` is a prefix of `b`, case-insensitively */
+    def isPrefix(a: String, b: String): Boolean =
+      b.toLowerCase contains a.toLowerCase
+
+    service.listApps().filterNot { app =>
+      val appMatchesCmd = cmd != null && cmd.nonEmpty && isPrefix(cmd, app.cmd)
+      val appMatchesId = id != null && id.nonEmpty && isPrefix(id, app.id)
+
+      appMatchesCmd || appMatchesId
     }
   }
 }
