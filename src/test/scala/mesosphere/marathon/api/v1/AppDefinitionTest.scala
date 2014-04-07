@@ -133,4 +133,14 @@ class AppDefinitionTest {
       .find(_.getName == name)
       .get.getScalar.getValue
   }
+
+  @Test
+  def testPortsEnv() {
+    val app : AppDefinition = new AppDefinition(id = "test", ports = Seq(8080, 8081))
+    val env = app.portsEnv(app.ports)
+    assertEquals("8080,8081", env("APP_PORTS"))
+    assertEquals("8080", env("APP_PORT"))
+    assertEquals("8080", env("APP_PORT0"))
+    assertEquals("8081", env("APP_PORT1"))
+  }
 }
