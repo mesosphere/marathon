@@ -4,6 +4,9 @@ import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.state.Timestamp
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, Props}
 import akka.routing.{RoundRobinRouter, DefaultResizer}
+import mesosphere.marathon.api.validation.FieldConstraints._
+import scala.Some
+import com.fasterxml.jackson.annotation.JsonInclude.Include
 
 class HealthCheckActor(
   appId: String,
@@ -101,6 +104,7 @@ object HealthCheckActor {
     taskId: String,
     lastSuccess: Option[Timestamp] = None,
     lastFailure: Option[Timestamp] = None,
+    @FieldJsonInclude(Include.NON_NULL)
     lastFailureCause: Option[String] = None,
     consecutiveFailures: Int = 0
   ) {

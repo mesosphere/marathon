@@ -20,6 +20,7 @@ import mesosphere.marathon.BadRequestException
 import javax.ws.rs.core.Response.Status
 import java.net.URI
 import mesosphere.marathon.api.Responses
+import mesosphere.marathon.health.HealthCheckManager
 
 /**
  * @author Tobi Knaup
@@ -31,7 +32,8 @@ import mesosphere.marathon.api.Responses
 class AppsResource @Inject()(
     @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
-    taskTracker: TaskTracker) {
+    taskTracker: TaskTracker,
+    healthCheckManager: HealthCheckManager) {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -111,7 +113,7 @@ class AppsResource @Inject()(
   }
 
   @Path("{appId}/tasks")
-  def appTasksResource() = new AppTasksResource(service, taskTracker)
+  def appTasksResource() = new AppTasksResource(service, taskTracker, healthCheckManager)
 
   @Path("{appId}/versions")
   def appVersionsResource() = new AppVersionsResource(service)

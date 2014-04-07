@@ -3,7 +3,13 @@ package mesosphere.marathon.health
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.pattern.ask
+import akka.util.Timeout
 import javax.inject.{Inject, Singleton}
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
@@ -68,8 +74,16 @@ class HealthCheckManager @Singleton @Inject() (system: ActorSystem, taskTracker:
     for (hc <- toAdd) add(app.id, hc)
   }
 
-  def status(appId: String, taskId: String): Seq[Option[Health]] = {
-    ??? // TODO(CD)
+  def status(appId: String, taskId: String): Future[Seq[Option[Health]]] = {
+    implicit val timeout : Timeout = Timeout(2, SECONDS)
+    appHealthChecks.get(appId) match {
+      case Some(activeHealthCheckSet) => Future.sequence(
+        activeHealthCheckSet.toSeq.map {
+          case ActiveHealthCheck(_, actor) => (actor ? GetTaskHealth(taskId)).mapTo[Option[Health]]
+        }
+      )
+      case None => Future { Seq() }
+    }
   }
 
   def status(appId: String): Map[String, Seq[Option[Health]]] = {

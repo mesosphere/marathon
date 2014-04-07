@@ -8,10 +8,14 @@ import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.{Responses, EndpointsHelper}
-import mesosphere.marathon.api.v1.AppDefinition
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import java.util.logging.Logger
-import javax.ws.rs.core.Response.Status
+import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.Protos.MarathonTask
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration.SECONDS
+import mesosphere.marathon.api.v2.json.EnrichedTask
 
 
 /**
@@ -21,7 +25,8 @@ import javax.ws.rs.core.Response.Status
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class AppTasksResource @Inject()(service: MarathonSchedulerService,
-                                 taskTracker: TaskTracker) {
+                                 taskTracker: TaskTracker,
+                                 healthCheckManager: HealthCheckManager) {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -30,7 +35,10 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
   @Timed
   def indexJson(@PathParam("appId") appId: String) = {
     if (taskTracker.contains(appId)) {
-      val tasks = taskTracker.get(appId)
+      val tasks = taskTracker.get(appId).map {
+        case task : MarathonTask => EnrichedTask(appId, task,
+          Await.result(healthCheckManager.status(appId, task.getId), Duration(2, SECONDS)))
+      }
       Response.ok(Map("tasks" -> tasks)).build
     } else {
       Responses.unknownApp(appId)
