@@ -1,6 +1,8 @@
 package mesosphere.marathon.api
 
 import mesosphere.chaos.http.RestModule
+import mesosphere.jackson.CaseClassModule
+import mesosphere.marathon.api.v2.json.MarathonModule
 import com.google.inject.Scopes
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
@@ -12,8 +14,8 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 class MarathonRestModule extends RestModule {
 
   override val jacksonModules = Seq(
-    DefaultScalaModule,
-    new v2.json.MarathonModule
+    new DefaultScalaModule with CaseClassModule,
+    new MarathonModule
   )
 
   protected override def configureServlets() {

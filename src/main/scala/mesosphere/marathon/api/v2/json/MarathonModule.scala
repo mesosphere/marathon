@@ -124,6 +124,7 @@ class MarathonModule extends Module {
       jgen.writeObjectField("ports", task.getPortsList)
       jgen.writeObjectField("startedAt", if (startedAt == 0) null else Timestamp(startedAt))
       jgen.writeObjectField("stagedAt", if (stagedAt == 0) null else Timestamp(stagedAt))
+      jgen.writeObjectField("version", task.getVersion)
     }
   }
 

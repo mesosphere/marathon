@@ -68,8 +68,8 @@ The full JSON format of an application resource is as follows:
 ```
 
 _Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER",
-"GROUP_BY"]. For additional information on using placement constraints see
-the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constraints).
+"GROUP_BY"].  For additional information on using placement constraints see
+[Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.io/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
 
 _Container:_ Additional data passed to the container on application launch.
 These consist of an "image" and an array of string options.  The meaning of
@@ -126,8 +126,10 @@ User-Agent: HTTPie/0.7.2
 
 
 ```
-HTTP/1.1 204 No Content
+HTTP/1.1 201 Created
+Content-Length: 0
 Content-Type: application/json
+Location: http://localhost:8080/v2/apps/myApp
 Server: Jetty(8.y.z-SNAPSHOT)
 
 
@@ -181,16 +183,16 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                11183, 
-                11806
+                13321, 
+                10982
             ], 
             "taskRateLimit": 1.0, 
-            "tasksRunning": 0, 
-            "tasksStaged": 1, 
+            "tasksRunning": 1, 
+            "tasksStaged": 0, 
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
             ], 
-            "version": "2014-03-02T05:54:56.810Z"
+            "version": "2014-04-04T06:25:31.399Z"
         }
     ]
 }
@@ -244,8 +246,8 @@ Transfer-Encoding: chunked
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
-                11183, 
-                11806
+                13321, 
+                10982
             ], 
             "taskRateLimit": 1.0, 
             "tasksRunning": 1, 
@@ -253,7 +255,7 @@ Transfer-Encoding: chunked
             "uris": [
                 "https://raw.github.com/mesosphere/marathon/master/README.md"
             ], 
-            "version": "2014-03-02T05:54:56.810Z"
+            "version": "2014-04-04T06:25:31.399Z"
         }
     ]
 }
@@ -306,20 +308,21 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            11183, 
-            11806
+            13321, 
+            10982
         ], 
         "taskRateLimit": 1.0, 
         "tasks": [
             {
-                "host": "mesos.vm", 
-                "id": "myApp_0-1393739702337", 
+                "host": "agouti.local", 
+                "id": "myApp_0-1396592732285", 
                 "ports": [
-                    31486, 
-                    31487
+                    31876, 
+                    31877
                 ], 
-                "stagedAt": "2014-03-02T05:55:02.342Z", 
-                "startedAt": "2014-03-02T05:55:07.835Z"
+                "stagedAt": "2014-04-04T06:25:32.287Z", 
+                "startedAt": "2014-04-04T06:25:32.766Z", 
+                "version": "2014-04-04T06:25:31.399Z"
             }
         ], 
         "tasksRunning": 1, 
@@ -327,7 +330,7 @@ Transfer-Encoding: chunked
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ], 
-        "version": "2014-03-02T05:54:56.810Z"
+        "version": "2014-04-04T06:25:31.399Z"
     }
 }
 ```
@@ -361,7 +364,7 @@ Transfer-Encoding: chunked
 
 {
     "versions": [
-        "2014-03-02T05:54:56.810Z"
+        "2014-04-04T06:25:31.399Z"
     ]
 }
 ```
@@ -548,14 +551,26 @@ Transfer-Encoding: chunked
 {
     "tasks": [
         {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1393739753390", 
+            "host": "agouti.local", 
+            "id": "myApp_1-1396592790353", 
             "ports": [
-                31321, 
-                31322
+                31336, 
+                31337
             ], 
-            "stagedAt": "2014-03-02T05:55:53.391Z", 
-            "startedAt": null
+            "stagedAt": "2014-04-04T06:26:30.355Z", 
+            "startedAt": "2014-04-04T06:26:30.860Z", 
+            "version": "2014-04-04T06:26:23.051Z"
+        }, 
+        {
+            "host": "agouti.local", 
+            "id": "myApp_0-1396592784349", 
+            "ports": [
+                31382, 
+                31383
+            ], 
+            "stagedAt": "2014-04-04T06:26:24.351Z", 
+            "startedAt": "2014-04-04T06:26:24.919Z", 
+            "version": "2014-04-04T06:26:23.051Z"
         }
     ]
 }
@@ -583,8 +598,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	16861	mesos.vm:31321	mesos.vm:31136	mesos.vm:31042	
-myApp	15057	mesos.vm:31322	mesos.vm:31137	mesos.vm:31043	
+myApp	19385	agouti.local:31336	agouti.local:31364	agouti.local:31382	
+myApp	11186	agouti.local:31337	agouti.local:31365	agouti.local:31383	
 
 ```
 
@@ -623,18 +638,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "tasks": [
-        {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1393739770422", 
-            "ports": [
-                31931, 
-                31932
-            ], 
-            "stagedAt": "2014-03-02T05:56:10.423Z", 
-            "startedAt": null
-        }
-    ]
+    "tasks": []
 }
 ```
 
@@ -715,25 +719,39 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "appId": "myApp", 
-            "host": "mesos.vm", 
-            "id": "myApp_1-1393739780433", 
+            "host": "agouti.local", 
+            "id": "myApp_2-1396592796360", 
             "ports": [
-                31799, 
-                31800
+                31364, 
+                31365
             ], 
-            "stagedAt": "2014-03-02T05:56:20.434Z", 
-            "startedAt": null
+            "stagedAt": "2014-04-04T06:26:36.362Z", 
+            "startedAt": "2014-04-04T06:26:37.285Z", 
+            "version": "2014-04-04T06:26:23.051Z"
         }, 
         {
             "appId": "myApp", 
-            "host": "mesos.vm", 
-            "id": "myApp_0-1393739774427", 
+            "host": "agouti.local", 
+            "id": "myApp_1-1396592790353", 
             "ports": [
-                31694, 
-                31695
+                31336, 
+                31337
             ], 
-            "stagedAt": "2014-03-02T05:56:14.429Z", 
-            "startedAt": "2014-03-02T05:56:19.985Z"
+            "stagedAt": "2014-04-04T06:26:30.355Z", 
+            "startedAt": "2014-04-04T06:26:30.860Z", 
+            "version": "2014-04-04T06:26:23.051Z"
+        }, 
+        {
+            "appId": "myApp", 
+            "host": "agouti.local", 
+            "id": "myApp_0-1396592784349", 
+            "ports": [
+                31382, 
+                31383
+            ], 
+            "stagedAt": "2014-04-04T06:26:24.351Z", 
+            "startedAt": "2014-04-04T06:26:24.919Z", 
+            "version": "2014-04-04T06:26:23.051Z"
         }
     ]
 }
@@ -761,8 +779,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	16861	mesos.vm:31727	mesos.vm:31694	mesos.vm:31799	
-myApp	15057	mesos.vm:31728	mesos.vm:31695	mesos.vm:31800	
+myApp	19385	agouti.local:31336	agouti.local:31364	agouti.local:31382	
+myApp	11186	agouti.local:31337	agouti.local:31365	agouti.local:31383	
 
 ```
 
@@ -799,7 +817,7 @@ Transfer-Encoding: chunked
 
 {
     "callbackUrl": "http://localhost:9292/callback", 
-    "clientIp": "10.141.141.1", 
+    "clientIp": "0:0:0:0:0:0:0:1", 
     "eventType": "subscribe_event"
 }
 ```
@@ -873,7 +891,7 @@ Transfer-Encoding: chunked
 
 {
     "callbackUrl": "http://localhost:9292/callback", 
-    "clientIp": "10.141.141.1", 
+    "clientIp": "0:0:0:0:0:0:0:1", 
     "eventType": "unsubscribe_event"
 }
 ```
@@ -963,16 +981,16 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            19950, 
-            18363
+            13024, 
+            16512
         ], 
         "taskRateLimit": 1.0, 
-        "tasksRunning": 0, 
-        "tasksStaged": 1, 
+        "tasksRunning": 2, 
+        "tasksStaged": 0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ], 
-        "version": "2014-03-02T05:57:05.651Z"
+        "version": "2014-04-04T06:27:40.439Z"
     }
 ]
 ```
@@ -1078,14 +1096,14 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            18152, 
-            19885
+            17753, 
+            18445
         ], 
         "taskRateLimit": 1.0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ], 
-        "version": "2014-03-02T05:57:31.679Z"
+        "version": "2014-04-04T06:28:07.054Z"
     }
 ]
 ```
@@ -1125,14 +1143,14 @@ Transfer-Encoding: chunked
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
-            18152, 
-            19885
+            17753, 
+            18445
         ], 
         "taskRateLimit": 1.0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ], 
-        "version": "2014-03-02T05:57:31.679Z"
+        "version": "2014-04-04T06:28:07.054Z"
     }
 ]
 ```
@@ -1165,35 +1183,35 @@ Transfer-Encoding: chunked
 {
     "myApp": [
         {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1393739843524", 
+            "host": "agouti.local", 
+            "id": "myApp_0-1396592878455", 
             "ports": [
-                31510, 
-                31511
+                31759, 
+                31760
             ]
         }, 
         {
-            "host": "mesos.vm", 
-            "id": "myApp_1-1393739849530", 
+            "host": "agouti.local", 
+            "id": "myApp_2-1396592890464", 
             "ports": [
-                31216, 
-                31217
+                31991, 
+                31992
             ]
         }, 
         {
-            "host": "mesos.vm", 
-            "id": "myApp_3-1393739860544", 
+            "host": "agouti.local", 
+            "id": "myApp_1-1396592884460", 
             "ports": [
-                31248, 
-                31249
+                31945, 
+                31946
             ]
         }, 
         {
-            "host": "mesos.vm", 
-            "id": "myApp_2-1393739854537", 
+            "host": "agouti.local", 
+            "id": "myApp_3-1396592896470", 
             "ports": [
-                31748, 
-                31749
+                31938, 
+                31939
             ]
         }
     ]
@@ -1232,33 +1250,33 @@ Transfer-Encoding: chunked
         "id": "myApp", 
         "instances": [
             {
-                "host": "mesos.vm", 
-                "id": "myApp_0-1393739843524", 
+                "host": "agouti.local", 
+                "id": "myApp_0-1396592878455", 
                 "ports": [
-                    31510, 
-                    31511
+                    31759, 
+                    31760
                 ]
             }, 
             {
-                "host": "mesos.vm", 
-                "id": "myApp_1-1393739849530", 
+                "host": "agouti.local", 
+                "id": "myApp_2-1396592890464", 
                 "ports": [
-                    31216, 
-                    31217
+                    31991, 
+                    31992
                 ]
             }, 
             {
-                "host": "mesos.vm", 
-                "id": "myApp_2-1393739854537", 
+                "host": "agouti.local", 
+                "id": "myApp_3-1396592896470", 
                 "ports": [
-                    31748, 
-                    31749
+                    31938, 
+                    31939
                 ]
             }
         ], 
         "ports": [
-            18152, 
-            19885
+            17753, 
+            18445
         ]
     }
 ]
@@ -1286,8 +1304,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_18152 18152 mesos.vm:31748 mesos.vm:31510 mesos.vm:31216 
-myApp_19885 19885 mesos.vm:31749 mesos.vm:31511 mesos.vm:31217 
+myApp_17753 17753 agouti.local:31991 agouti.local:31938 agouti.local:31759 
+myApp_18445 18445 agouti.local:31992 agouti.local:31939 agouti.local:31760 
 
 ```
 
@@ -1320,33 +1338,33 @@ Transfer-Encoding: chunked
     "id": "myApp", 
     "instances": [
         {
-            "host": "mesos.vm", 
-            "id": "myApp_0-1393739843524", 
+            "host": "agouti.local", 
+            "id": "myApp_0-1396592878455", 
             "ports": [
-                31510, 
-                31511
+                31759, 
+                31760
             ]
         }, 
         {
-            "host": "mesos.vm", 
-            "id": "myApp_1-1393739849530", 
+            "host": "agouti.local", 
+            "id": "myApp_2-1396592890464", 
             "ports": [
-                31216, 
-                31217
+                31991, 
+                31992
             ]
         }, 
         {
-            "host": "mesos.vm", 
-            "id": "myApp_2-1393739854537", 
+            "host": "agouti.local", 
+            "id": "myApp_3-1396592896470", 
             "ports": [
-                31748, 
-                31749
+                31938, 
+                31939
             ]
         }
     ], 
     "ports": [
-        18152, 
-        19885
+        17753, 
+        18445
     ]
 }
 ```
@@ -1373,8 +1391,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_18152 18152 mesos.vm:31881 mesos.vm:31748 mesos.vm:31216 
-myApp_19885 19885 mesos.vm:31882 mesos.vm:31749 mesos.vm:31217 
+myApp_17753 17753 agouti.local:31991 agouti.local:31938 agouti.local:31988 
+myApp_18445 18445 agouti.local:31992 agouti.local:31939 agouti.local:31989 
 
 ```
 
@@ -1408,27 +1426,27 @@ Transfer-Encoding: chunked
 {
     "myApp": [
         {
-            "host": "mesos.vm", 
-            "id": "myApp_2-1393739909630", 
+            "host": "agouti.local", 
+            "id": "myApp_2-1396592951529", 
             "ports": [
-                31881, 
-                31882
+                31994, 
+                31995
             ]
         }, 
         {
-            "host": "mesos.vm", 
-            "id": "myApp_2-1393739915636", 
+            "host": "agouti.local", 
+            "id": "myApp_3-1396592896470", 
             "ports": [
-                31862, 
-                31863
+                31938, 
+                31939
             ]
         }, 
         {
-            "host": "mesos.vm", 
-            "id": "myApp_2-1393739854537", 
+            "host": "agouti.local", 
+            "id": "myApp_2-1396592939516", 
             "ports": [
-                31748, 
-                31749
+                31988, 
+                31989
             ]
         }
     ]
@@ -1457,12 +1475,14 @@ User-Agent: HTTPie/0.7.2
 **Response:**
 
 ```
-HTTP/1.1 200 OK
+HTTP/1.1 404 Not Found
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-[]
+{
+    "message": "No tasks matched your filters"
+}
 ```
 
 ### _Debug_
@@ -1520,5 +1540,5 @@ Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-mesos:8080
+agouti.local:8080
 ```

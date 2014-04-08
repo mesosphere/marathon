@@ -11,9 +11,9 @@ import mesosphere.marathon.api.validation.FieldConstraints.{
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-
-
 import scala.collection.mutable
+import java.lang.{Integer => JInt, Double => JDouble}
+
 
 // TODO: Accept a task restart strategy as a constructor parameter here, to be
 //       used in MarathonScheduler.
@@ -23,37 +23,28 @@ case class AppUpdate(
 
   cmd: Option[String] = None,
 
-  @FieldJsonDeserialize(contentAs = classOf[java.lang.Integer])
-  instances: Option[Int] = None,
+  instances: Option[JInt] = None,
 
-  @FieldJsonDeserialize(contentAs = classOf[java.lang.Double])
-  cpus: Option[Double] = None,
+  cpus: Option[JDouble] = None,
 
-  @FieldJsonDeserialize(contentAs = classOf[java.lang.Double])
-  mem: Option[Double] = None,
+  mem: Option[JDouble] = None,
 
   uris: Option[Seq[String]] = None,
 
   @FieldPortsArray
-  ports: Option[Seq[Int]] = None,
+  ports: Option[Seq[JInt]] = None,
 
   constraints: Option[Set[Constraint]] = None,
 
   executor: Option[String] = None,
 
-  @FieldJsonDeserialize(contentAs = classOf[ContainerInfo])
   container: Option[ContainerInfo] = None,
 
   healthChecks: Option[Set[HealthCheck]] = None,
 
-  @FieldJsonDeserialize(contentAs = classOf[Timestamp])
   version: Option[Timestamp] = None
 
 ) {
-
-  // the default constructor exists solely for interop with automatic
-  // (de)serializers
-  def this() = this(cmd = None)
 
   /**
    * Returns the supplied [[AppDefinition]] after updating its members
