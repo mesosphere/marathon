@@ -229,7 +229,7 @@ Marathon API can do.
     # Scale the app to 2 instances
     curl -X PUT -H "Accept: application/json" -H "Content-Type: application/json" \
         localhost:8080/v2/apps/app_123 \
-        -d '{"instances": 2}'
+        -d '{"id": "app_123", "cmd": "sleep 600", "instances": 2, "mem": 128, "cpus": 1}'
 
     # Stop the app
     curl -X DELETE localhost:8080/v2/apps/app_123
