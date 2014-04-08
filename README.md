@@ -1,8 +1,8 @@
 # Marathon [![Build Status](https://travis-ci.org/mesosphere/marathon.png?branch=master)](https://travis-ci.org/mesosphere/marathon)
 
-Marathon is a [Mesos][Mesos] framework for long-running applications. Given that
+Marathon is an [Apache Mesos][Mesos] framework for long-running applications. Given that
 you have Mesos running as the kernel for your datacenter, Marathon is the
-[init][init] or [upstart][upstart] daemon.
+[`init`][init] or [`upstart`][upstart] daemon.
 
 Marathon provides a
 [REST API](https://github.com/mesosphere/marathon/blob/master/REST.md) for
@@ -10,9 +10,9 @@ starting, stopping, and scaling applications. Marathon is written in Scala and
 can run in highly-available mode by running multiple copies of Marathon. The
 state of running tasks gets stored in the Mesos state abstraction.
 
-Try Marathon now on [Elastic Mesos](http://elastic.mesosphere.io).
-
-Go to the [interactive Marathon tutorial](http://mesosphere.io/learn/run-services-with-marathon/)
+Try Marathon now on [Elastic Mesos](http://elastic.mesosphere.io) and learn how
+to use it in Mesosphere's interactive
+[Marathon tutorial](http://mesosphere.io/learn/run-services-with-marathon/)
 that can be personalized for your cluster.
 
 Marathon is a *meta framework*: you can start other Mesos frameworks such as
