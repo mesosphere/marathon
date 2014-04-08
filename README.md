@@ -282,7 +282,7 @@ to answer any questions.
 
 Marathon was created by [Tobias Knaup](https://github.com/guenter) and
 [Florian Leibert](https://github.com/florianleibert) and continues to be
-developed by the team at [Mesosphere][Mesosphere] and by many contributors from
+developed by the team at Mesosphere and by many contributors from
 the community.
 
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
