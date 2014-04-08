@@ -10,6 +10,7 @@ import mesosphere.marathon.api.EndpointsHelper
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import java.util.logging.Logger
 import com.codahale.metrics.annotation.Timed
+import mesosphere.marathon.health.HealthCheckActor.Health
 
 /**
  * @author Tobi Knaup
@@ -27,7 +28,7 @@ class TasksResource @Inject()(service: MarathonSchedulerService,
   def indexJson() = {
     val flatTasksList = taskTracker.list.flatMap {
       case ((appId, setOfTasks)) =>
-        setOfTasks.tasks.map(EnrichedTask(appId, _))
+        setOfTasks.tasks.map(EnrichedTask(appId, _, Seq[Option[Health]]()))
     }
 
     Map("tasks" -> flatTasksList)

@@ -39,6 +39,7 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
+    bind(classOf[HealthCheckManager]).in(Scopes.SINGLETON)
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))
