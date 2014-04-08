@@ -179,7 +179,7 @@ There are some command line options that can influence how Marathon works.
 
 * `--master`: The URL of the Mesos master. The format is a comma-delimited list of
     of hosts like `zk://host1:port,host2:port/mesos`. Pay particular attention to the
-    leading 'zk://' and trailing `/mesos`!
+    leading `zk://` and trailing `/mesos`!
 * `--failover_timeout`: The failover_timeout for mesos in seconds (default: 1 week)
 * `--ha`: Runs Marathon in HA mode with leader election. Allows starting an arbitrary
     number of other Marathons but all need to be started in HA mode. This mode
