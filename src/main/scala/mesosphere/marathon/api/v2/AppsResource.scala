@@ -140,7 +140,7 @@ class AppsResource @Inject()(
     def isPrefix(a: String, b: String): Boolean =
       b.toLowerCase contains a.toLowerCase
 
-    service.listApps().filterNot { app =>
+    service.listApps().filter { app =>
       val appMatchesCmd = cmd != null && cmd.nonEmpty && isPrefix(cmd, app.cmd)
       val appMatchesId = id != null && id.nonEmpty && isPrefix(id, app.id)
 
