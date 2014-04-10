@@ -13,6 +13,8 @@ import scala.concurrent.duration.FiniteDuration
 import scala.collection.JavaConverters._
 import java.util.concurrent.TimeUnit.SECONDS
 
+import java.lang.{Integer => JInt, Double => JDouble}
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class HealthCheck(
 
@@ -25,10 +27,10 @@ case class HealthCheck(
 
   @FieldNotEmpty
   @FieldJsonInclude(Include.NON_NULL)
-  val acceptableResponses: Option[Set[Int]] = HealthCheck.DEFAULT_ACCEPTABLE_RESPONSES,
+  val acceptableResponses: Option[Set[JInt]] = HealthCheck.DEFAULT_ACCEPTABLE_RESPONSES,
 
   @FieldNotEmpty
-  val portIndex: Integer = HealthCheck.DEFAULT_PORT_INDEX,
+  val portIndex: JInt = HealthCheck.DEFAULT_PORT_INDEX,
 
   @FieldJsonProperty("initialDelaySeconds")
   val initialDelay: FiniteDuration = HealthCheck.DEFAULT_INITIAL_DELAY,
@@ -41,9 +43,6 @@ case class HealthCheck(
 
 ) extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
-  // for interop with automatic (de)serializers
-  def this() = this(path = None)
-
   def toProto: Protos.HealthCheckDefinition = {
     val builder = Protos.HealthCheckDefinition.newBuilder
       .setProtocol(this.protocol)
@@ -53,7 +52,7 @@ case class HealthCheck(
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
 
     acceptableResponses foreach { value =>
-      builder addAllAcceptableResponses value.map(new Integer(_)).asJava
+      builder addAllAcceptableResponses value.asJava
     }
 
     path foreach { builder.setPath(_) }
@@ -67,7 +66,7 @@ case class HealthCheck(
       acceptableResponses = {
         val list = proto.getAcceptableResponsesList
         if (list.isEmpty) None
-        else Some((list.asScala.map(_.toInt).toSet))
+        else Some((list.asScala.toSet))
       },
       portIndex = proto.getPortIndex,
       initialDelay = FiniteDuration(proto.getInitialDelaySeconds, SECONDS),

@@ -68,7 +68,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     }
 
     get(url).map { response =>
-      val okStatusCodes = check.acceptableResponses.getOrElse(Set[Int]())
+      val okStatusCodes = check.acceptableResponses.getOrElse(Set[Integer]()).map(_.toInt)
       if (okStatusCodes contains response.status.intValue)
         Healthy(task.getId, Timestamp.now)
       else
