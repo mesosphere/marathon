@@ -1,8 +1,8 @@
 # Marathon [![Build Status](https://travis-ci.org/mesosphere/marathon.png?branch=master)](https://travis-ci.org/mesosphere/marathon)
 
-Marathon is a [Mesos][Mesos] framework for long-running applications. Given that
+Marathon is an [Apache Mesos][Mesos] framework for long-running applications. Given that
 you have Mesos running as the kernel for your datacenter, Marathon is the
-[init][init] or [upstart][upstart] daemon.
+[`init`][init] or [`upstart`][upstart] daemon.
 
 Marathon provides a
 [REST API](https://github.com/mesosphere/marathon/blob/master/REST.md) for
@@ -10,9 +10,9 @@ starting, stopping, and scaling applications. Marathon is written in Scala and
 can run in highly-available mode by running multiple copies of Marathon. The
 state of running tasks gets stored in the Mesos state abstraction.
 
-Try Marathon now on [Elastic Mesos](http://elastic.mesosphere.io).
-
-Go to the [interactive Marathon tutorial](http://mesosphere.io/learn/run-services-with-marathon/)
+Try Marathon now on [Elastic Mesos](http://elastic.mesosphere.io) and learn how
+to use it in Mesosphere's interactive
+[Marathon tutorial](http://mesosphere.io/learn/run-services-with-marathon/)
 that can be personalized for your cluster.
 
 Marathon is a *meta framework*: you can start other Mesos frameworks such as
@@ -179,7 +179,7 @@ There are some command line options that can influence how Marathon works.
 
 * `--master`: The URL of the Mesos master. The format is a comma-delimited list of
     of hosts like `zk://host1:port,host2:port/mesos`. Pay particular attention to the
-    leading 'zk://' and trailing `/mesos`!
+    leading `zk://` and trailing `/mesos`!
 * `--failover_timeout`: The failover_timeout for mesos in seconds (default: 1 week)
 * `--ha`: Runs Marathon in HA mode with leader election. Allows starting an arbitrary
     number of other Marathons but all need to be started in HA mode. This mode
@@ -229,7 +229,7 @@ Marathon API can do.
     # Scale the app to 2 instances
     curl -X PUT -H "Accept: application/json" -H "Content-Type: application/json" \
         localhost:8080/v2/apps/app_123 \
-        -d '{"instances": 2}'
+        -d '{"id": "app_123", "cmd": "sleep 600", "instances": 2, "mem": 128, "cpus": 1}'
 
     # Stop the app
     curl -X DELETE localhost:8080/v2/apps/app_123
@@ -282,7 +282,7 @@ to answer any questions.
 
 Marathon was created by [Tobias Knaup](https://github.com/guenter) and
 [Florian Leibert](https://github.com/florianleibert) and continues to be
-developed by the team at [Mesosphere][Mesosphere] and by many contributors from
+developed by the team at Mesosphere and by many contributors from
 the community.
 
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
