@@ -15,7 +15,6 @@
 
         <!-- runtime deps versions -->
         <chaos.version>0.5.3</chaos.version>
-        <jersey.version>1.18.1</jersey.version>
         <jackson-ccm.version>0.1.0</jackson-ccm.version>
         <mesos.version>0.17.0</mesos.version>
         <protobuf.version>2.5.0</protobuf.version>
@@ -120,21 +119,6 @@
             <groupId>mesosphere</groupId>
             <artifactId>chaos</artifactId>
             <version>${chaos.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-core</artifactId>
-            <version>${jersey.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-server</artifactId>
-            <version>${jersey.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.jersey.contribs</groupId>
-            <artifactId>jersey-guice</artifactId>
-            <version>${jersey.version}</version>
         </dependency>
         <dependency>
             <groupId>mesosphere</groupId>
