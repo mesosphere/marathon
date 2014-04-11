@@ -26,7 +26,6 @@ import mesosphere.marathon.api.Responses
  */
 
 @Path("v2/apps")
-@Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject()(
     @Named(EventModule.busName) eventBus: Option[EventBus],
@@ -37,6 +36,7 @@ class AppsResource @Inject()(
 
   @GET
   @Timed
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@QueryParam("cmd") cmd: String,
             @QueryParam("id") id: String) = {
     val apps = if (cmd != null || id != null) {
@@ -50,6 +50,7 @@ class AppsResource @Inject()(
 
   @POST
   @Timed
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def create(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     validateContainerOpts(app)
 
@@ -61,6 +62,7 @@ class AppsResource @Inject()(
   @GET
   @Path("{id}")
   @Timed
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def show(@PathParam("id") id: String): Response = service.getApp(id) match {
     case Some(app) => {
       Response.ok(Map("app" -> app.withTasks(taskTracker))).build
@@ -85,7 +87,7 @@ class AppsResource @Inject()(
           case Some(appDef) => AppUpdate.fromAppDefinition(appDef)
           case None => throw new NotFoundException(
           	"Rollback version does not exist"
-          ) 
+          )
         }
       }
 
@@ -100,7 +102,7 @@ class AppsResource @Inject()(
       case _ => Responses.unknownApp(id)
     }
   }
-  
+
   @DELETE
   @Path("{id}")
   @Timed
@@ -112,9 +114,11 @@ class AppsResource @Inject()(
   }
 
   @Path("{appId}/tasks")
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def appTasksResource() = new AppTasksResource(service, taskTracker)
 
   @Path("{appId}/versions")
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def appVersionsResource() = new AppVersionsResource(service)
 
   /**
