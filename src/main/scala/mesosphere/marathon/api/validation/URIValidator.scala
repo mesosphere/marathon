@@ -9,7 +9,7 @@ import scala.util.Try
 class URIValidator extends ConstraintValidator[URI, CharSequence] {
 
   override def isValid(value: CharSequence, context: ConstraintValidatorContext): Boolean = {
-    Try(new java.net.URI(value.toString)).map(ignore => true).getOrElse(false)
+    Try(new java.net.URI(value.toString)).isSuccess
   }
 
   override def initialize(constraintAnnotation: URI) {} //no initialization needed
