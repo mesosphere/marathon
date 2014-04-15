@@ -56,7 +56,7 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf)
   @Singleton
   def provideMesosState(): State = {
     new ZooKeeperState(
-      conf.zooKeeperHostString(),
+      conf.zkHosts,
       conf.zooKeeperTimeout.get.get,
       TimeUnit.MILLISECONDS,
       conf.zooKeeperStatePath
