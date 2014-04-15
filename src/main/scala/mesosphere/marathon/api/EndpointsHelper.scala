@@ -19,12 +19,21 @@ object EndpointsHelper {
     for (app <- apps) {
       val cleanId = app.id.replaceAll("\\s+", "_")
       val tasks = taskTracker.get(app.id)
-      for ((port, i) <- app.ports.zipWithIndex) {
-        sb.append(s"$cleanId$delimiter$port$delimiter")
-        for (task <- tasks) {
-          sb.append(s"${task.getHost}:${task.getPorts(i)}$delimiter")
+
+      if (app.ports.isEmpty) {
+        sb.append(s"${cleanId}$delimiter $delimiter")
+        tasks.foreach { task =>
+          sb.append(s"${task.getHost} ")
         }
-        sb.append("\n")
+        sb.append(s"\n")
+      } else {
+        for ((port, i) <- app.ports.zipWithIndex) {
+          sb.append(s"$cleanId$delimiter$port$delimiter")
+          for (task <- tasks) {
+            sb.append(s"${task.getHost}:${task.getPorts(i)}$delimiter")
+          }
+          sb.append("\n")
+        }
       }
     }
     sb.toString()
