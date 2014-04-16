@@ -13,7 +13,6 @@ class URIValidatorTest extends MockitoSugar {
 
   @Test
   def validAbsoluteURICanBeParsed() {
-    assertTrue(validate(""))
     assertTrue(validate("http://www.test.org"))
     assertTrue(validate("http://www.test.org:9000"))
     assertTrue(validate("http://www.test.org:9000/context/asset.mfe"))
@@ -24,6 +23,12 @@ class URIValidatorTest extends MockitoSugar {
     assertTrue(validate("//cmd"))
     assertTrue(validate("test"))
     assertTrue(validate("context/asset.mfe"))
+    assertTrue(validate("/some/absolute/path"))
+  }
+
+  @Test
+  def emptyStringIsValid() {
+    assertTrue(validate(""))
   }
 
   @Test
