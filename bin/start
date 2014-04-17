@@ -14,13 +14,9 @@ fi
 
 echo "MESOS_NATIVE_LIBRARY is set to $MESOS_NATIVE_LIBRARY"
 
-addJava () {
-  	java_args=( "${java_args[@]}" "$1" )
-}
-addApplication () {
-	app_args=( "${app_args[@]}" "$1" )
-}
-addDebugger () {
+addJava() { java_args=( "${java_args[@]}" "$1" ); }
+addApplication() { app_args=( "${app_args[@]}" "$1" ); }
+addDebugger() {
   addJava "-Xdebug"
   addJava "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=$1"
 }
@@ -28,25 +24,22 @@ die() {
   echo "Aborting: $@"
   exit 1
 }
-
-require_arg () {
-	local type="$1"
-	local opt="$2"
-	local arg="$3"
-
-	if [[ -z "$arg" ]] || [[ "${arg:0:1}" == "-" ]]; then
-		die "$opt requires <$type> argument"
-	fi
+require_arg() {
+  local type="$1"
+  local opt="$2"
+  local arg="$3"
+  if [[ -z "$arg" ]] || [[ "${arg:0:1}" == "-" ]]; then
+    die "$opt requires <$type> argument"
+  fi
 }
 
 while [[ $# -gt 0 ]]; do
-	case "$1" in
-		-D*) addJava "$1" && shift ;;
-		--jvm-debug) require_arg port "$1" "$2"; addDebugger "$2" && shift 2;;
- 		  *) addApplication "$1" && shift ;;
-	esac
+  case "$1" in
+    -D*) addJava "$1" && shift ;;
+    --jvm-debug) require_arg port "$1" "$2"; addDebugger "$2" && shift 2;;
+    *) addApplication "$1" && shift ;;
+  esac
 done
- 
 
 # Start Marathon
 java "${java_args[@]}" -jar "$FRAMEWORK_HOME"/target/marathon-*-jar-with-dependencies.jar "${app_args[@]}"
