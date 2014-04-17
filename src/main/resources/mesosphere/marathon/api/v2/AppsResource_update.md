@@ -1,4 +1,4 @@
-## PUT `/v2/apps/{appId}`
+## PATCH `/v2/apps/{appId}`
 
 Change parameters of a running application.  The new application parameters
 apply only to subsequently created tasks, and currently running tasks are
@@ -50,7 +50,7 @@ If the `version` key is supplied in the JSON body, the rest of the object is ign
 **Request:**
 
 ```
-PUT /v2/apps/myApp HTTP/1.1
+PATCH /v2/apps/myApp HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 39
