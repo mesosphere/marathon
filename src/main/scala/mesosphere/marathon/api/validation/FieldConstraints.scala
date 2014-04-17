@@ -23,5 +23,4 @@ object FieldConstraints {
   type FieldJsonProperty = JsonProperty @field
   type FieldJsonValue = JsonValue @field
   type FieldMin = Min @field
-  type FieldURI = URI @field
 }

@@ -36,7 +36,7 @@ case class AppDefinition(
 
   mem: JDouble = AppDefinition.DEFAULT_MEM,
 
-  @FieldURI
+  @FieldPattern(regexp="^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
   executor: String = "",
 
   constraints: Set[Constraint] = Set(),
