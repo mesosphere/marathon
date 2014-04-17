@@ -5,10 +5,6 @@ import org.junit.Test
 import org.junit.Assert._
 import scala.util.Try
 
-/**
- * Date: 14.04.14
- * Time: 10:44
- */
 class ZookeeperConfTest {
 
   @Test
@@ -35,7 +31,7 @@ class ZookeeperConfTest {
   @Test
   def urlParameterGetParsed() {
     val url = "zk://host1:123,host2,host3:312/path"
-    val opts = conf("--zk_marathon", url)
+    val opts = conf("--zk", url)
     assertEquals(opts.zkURL, url)
     assertEquals(opts.zkHosts, "host1:123,host2,host3:312")
     assertEquals(opts.zkPath, "/path")
@@ -43,8 +39,8 @@ class ZookeeperConfTest {
 
   @Test
   def wrongURLIsNotParsed() {
-    assertFalse("No port number",  Try(conf("--zk_marathon", "zk://host1:foo/path")).isSuccess)
-    assertFalse("No path", Try(conf("--zk_marathon", "zk://host1")).isSuccess)
+    assertFalse("No port number",  Try(conf("--zk", "zk://host1:foo/path")).isSuccess)
+    assertFalse("No path", Try(conf("--zk", "zk://host1")).isSuccess)
   }
 
   def conf(args:String *) = {
