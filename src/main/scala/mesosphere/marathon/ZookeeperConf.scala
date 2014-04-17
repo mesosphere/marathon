@@ -11,7 +11,7 @@ trait ZookeeperConf extends ScallopConf {
 
   private val hostAndPort = """[A-z0-9-.]+(?::\d+)?"""
   private val zkNode = """[^/]+"""
-  private val zkURLPattern = s"""^zk://($hostAndPort(?:,$hostAndPort?)*)(/$zkNode(?:/$zkNode)*)$$""".r
+  private val zkURLPattern = s"""^zk://($hostAndPort(?:,$hostAndPort)*)(/$zkNode(?:/$zkNode)*)$$""".r
 
   @Deprecated
   val zooKeeperHostString = opt[String]("zk_hosts",
