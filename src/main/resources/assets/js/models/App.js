@@ -56,7 +56,12 @@ define([
       options || (options = {});
 
       var allAttrs = _.extend({}, this.attributes, attrs);
-      var allowedAttrs = _.pick(allAttrs, EDITABLE_ATTRIBUTES);
+      // filter out null values
+      var filteredAttributes = _.filter(EDITABLE_ATTRIBUTES, function(attr) {
+        return allAttrs[attr] != null;
+      });
+      console.debug(filteredAttributes);
+      var allowedAttrs = _.pick(allAttrs, filteredAttributes);
 
       /* When `options.data` is supplied, Backbone does not attempt to infer its
        * content type. It must be explicitly set for the content to be
