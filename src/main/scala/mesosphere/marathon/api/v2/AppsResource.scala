@@ -6,7 +6,7 @@ import javax.ws.rs.core.{Response, Context, MediaType}
 import javax.inject.{Named, Inject}
 import mesosphere.marathon.event.EventModule
 import com.google.common.eventbus.EventBus
-import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.{MarathonSchedulerService, BadRequestException}
 import mesosphere.marathon.tasks.TaskTracker
 import java.util.logging.Logger
 import com.codahale.metrics.annotation.Timed
@@ -16,10 +16,8 @@ import javax.validation.Valid
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
-import mesosphere.marathon.BadRequestException
-import javax.ws.rs.core.Response.Status
 import java.net.URI
-import mesosphere.marathon.api.Responses
+import mesosphere.marathon.api.{PATCH, Responses}
 
 /**
  * @author Tobi Knaup
@@ -69,6 +67,27 @@ class AppsResource @Inject()(
   }
 
   @PUT
+  @Path("{id}")
+  @Timed
+  def replace(
+    @Context req: HttpServletRequest,
+    @PathParam("id") id: String,
+    @Valid appUpdate: AppUpdate
+  ): Response = {
+    val updatedApp = appUpdate.apply(AppDefinition(id))
+
+    service.getApp(id) match {
+      case Some(app) =>
+        validateContainerOpts(updatedApp)
+        maybePostEvent(req, updatedApp)
+        Await.result(service.updateApp(id, appUpdate), service.defaultWait)
+        Response.noContent.build
+
+      case None => create(req, updatedApp)
+    }
+  }
+
+  @PATCH
   @Path("{id}")
   @Timed
   def update(

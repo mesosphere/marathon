@@ -11,7 +11,9 @@
   * [GET /v2/apps/{appId}](#get-v2appsappid): List the app `appId`
   * [GET /v2/apps/{appId}/versions](#get-v2appsappidversions): List the versions of the application with id `appId`.
   * [GET /v2/apps/{appId}/versions/{version}](#get-v2appsappidversionsversion): List the configuration of the application with id `appId` at version `version`.
-  * [PUT /v2/apps/{appId}](#put-v2appsappid): Change config of the app
+  * [PATCH /v2/apps/{appId}](#put-v2appsappid): Replace config of the app
+    `appId`
+  * [PATCH /v2/apps/{appId}](#put-v2appsappid): Change config of the app
     `appId`
   * [DELETE /v2/apps/{appId}](#delete-v2appsappid): Destroy app `appId`
   * [GET /v2/apps/{appId}/tasks](#get-v2appsappidtasks): List running tasks
@@ -415,11 +417,17 @@ Transfer-Encoding: chunked
 }
 ```
 
+#203 Add PATCH support for updating app instances
+
 #### PUT `/v2/apps/{appId}`
 
-Change parameters of a running application.  The new application parameters
-apply only to subsequently created tasks, and currently running tasks are
-__not__ pre-emptively restarted.
+Change parameters of a running application. The new application
+parameters
+apply only to subsequently created tasks, and currently running tasks
+are
+__not__ pre-emptively restarted. If no application with the given id
+exists,
+it will be created.
 
 ##### Example
 
@@ -427,6 +435,55 @@ __not__ pre-emptively restarted.
 
 ```
 PUT /v2/apps/myApp HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Length: 126
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+{
+    "cmd": "sleep 55",
+    "constraints": [
+        [
+            "hostname",
+            "UNIQUE",
+            ""
+        ]
+    ],
+    "cpus": "0.3",
+    "instances": "2",
+    "mem": "9",
+    "ports": [
+        9000
+    ]
+}
+```
+
+**Response:**
+
+```
+HTTP/1.1 204 No Content
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
+
+```
+
+#### PATCH `/v2/apps/{appId}`
+
+Change parameters of a running application.  The new application
+parameters
+apply only to subsequently created tasks, and currently running tasks
+are
+__not__ pre-emptively restarted.
+
+##### Example
+
+**Request:**
+
+```
+PATCH /v2/apps/myApp HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 126
@@ -462,7 +519,6 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 ```
 
-
 ##### Example (version rollback)
 
 If the `version` key is supplied in the JSON body, the rest of the object is ignored.  If the supplied version is known, then the app is updated (a new version is created) with those parameters.  Otherwise, if the supplied version is not known Marathon responds with a 404.
@@ -470,7 +526,7 @@ If the `version` key is supplied in the JSON body, the rest of the object is ign
 **Request:**
 
 ```
-PUT /v2/apps/myApp HTTP/1.1
+PATCH /v2/apps/myApp HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 39

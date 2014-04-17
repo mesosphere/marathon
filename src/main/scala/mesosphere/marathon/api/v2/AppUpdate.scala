@@ -4,14 +4,10 @@ import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.validation.FieldConstraints.{
-  FieldJsonDeserialize,
-  FieldPortsArray
-}
+import mesosphere.marathon.api.validation.FieldConstraints.FieldPortsArray
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import scala.collection.mutable
 import java.lang.{Integer => JInt, Double => JDouble}
-
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 // TODO: Accept a task restart strategy as a constructor parameter here, to be
 //       used in MarathonScheduler.
@@ -59,7 +55,7 @@ case class AppUpdate(
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
 
-    updated.copy(container = this.container, version = Timestamp.now)
+    updated.copy(container = this.container.orElse(app.container), version = Timestamp.now)
   }
 
 }
