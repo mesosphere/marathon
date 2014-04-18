@@ -131,10 +131,9 @@ To launch Marathon in *production mode*, you need to have both
 Marathon on Mesos in *production mode*. Point your web browser to
 `localhost:8080` and you should see the Marathon UI.
 
-    ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk_hosts zk1.foo.bar:2181,zk2.foo.bar:2181
+    ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
 
-Note the different format of the `--master` and `--zk_hosts` options. Marathon
-uses `--master` to find the Mesos masters, and `--zk_hosts` to find Zookeepers
+Marathon uses `--master` to find the Mesos masters, and `--zk` to find Zookeepers
 for storing state. They are separate options because Mesos masters can be
 discovered in other ways as well.
 
@@ -146,7 +145,7 @@ use. Note that you still need to run Zookeeper for storing state. The following
 command launches Marathon on Mesos in *local mode*. Point your web browser to
 `http://localhost:8080`, and you should see the Marathon UI.
 
-    ./bin/start --master local --zk_hosts localhost:2181
+    ./bin/start --master local --zk zk://localhost:2181/marathon
 
 #### Working on assets
 
@@ -154,7 +153,7 @@ When editing assets like CSS and JavaScript locally, they are loaded from the
 packaged JAR by default and are not editable. To load them from a directory for
 easy editing, set the `assets_path` flag when running Marathon:
 
-    ./bin/start --master local --zk_hosts localhost:2181 --assets_path src/main/resources/assets/
+    ./bin/start --master local --zk zk://localhost:2181/marathon --assets_path src/main/resources/assets/
 
 #### Compiling Assets
 
@@ -210,7 +209,7 @@ There are some command line options that can influence how Marathon works.
 
   For example:
 
-      MESOS_NATIVE_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk_hosts localhost:2181
+      MESOS_NATIVE_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
 
 Run `./bin/start --help` for a full list of configuration options.
 
