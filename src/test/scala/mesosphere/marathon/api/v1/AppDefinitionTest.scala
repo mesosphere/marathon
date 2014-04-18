@@ -107,6 +107,43 @@ class AppDefinitionTest {
       "Elements must be unique"
     )
 
+    val correct = AppDefinition(id = "test")
+
+    shouldNotViolate(
+      correct.copy(executor = "//cmd"),
+      "executor",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldNotViolate(
+      correct.copy(executor = "some/relative/path.mte"),
+      "executor",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldNotViolate(
+      correct.copy(executor = "/some/absolute/path"),
+      "executor",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldNotViolate(
+      correct.copy(executor = ""),
+      "executor",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldViolate(
+      correct.copy(executor = "/test/"),
+      "executor",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldViolate(
+      correct.copy(executor = "/test//path"),
+      "executor",
+      "{javax.validation.constraints.Pattern.message}"
+    )
   }
 
   @Test
