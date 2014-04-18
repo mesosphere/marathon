@@ -8,6 +8,7 @@ import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.chaos.AppConfiguration
 import mesosphere.marathon.event.{EventModule, EventConfiguration}
 import mesosphere.marathon.event.http.{HttpEventModule, HttpEventConfiguration}
+import mesosphere.marathon.event.exec.{ExecEventModule, ExecEventConfiguration}
 import com.google.inject.AbstractModule
 import java.util.logging.Logger
 import java.util.Properties
@@ -45,6 +46,11 @@ object Main extends App {
             "notification")
           return Some(new HttpEventModule())
         }
+        case "exec_callback" => {
+          log.warning("Using ExecCallbackEventSubscriber for event" +
+            "notification")
+          return Some(new ExecEventModule())
+        }
         case _ => {
           log.warning("Event notification disabled.")
         }
@@ -57,7 +63,8 @@ object Main extends App {
   //TOOD(FL): Make Events optional / wire up.
   lazy val conf = new ScallopConf(args)
     with HttpConf with MarathonConf with AppConfiguration
-      with EventConfiguration with HttpEventConfiguration with ZookeeperConf
+      with EventConfiguration with HttpEventConfiguration with ExecEventConfiguration
+      with ZookeeperConf
 
   run(
     classOf[HttpService],

@@ -7293,6 +7293,26 @@ public final class Protos {
      */
     com.google.protobuf.ByteString
         getCallbackUrlsBytes(int index);
+
+    // repeated string exec_cmds = 2;
+    /**
+     * <code>repeated string exec_cmds = 2;</code>
+     */
+    java.util.List<java.lang.String>
+    getExecCmdsList();
+    /**
+     * <code>repeated string exec_cmds = 2;</code>
+     */
+    int getExecCmdsCount();
+    /**
+     * <code>repeated string exec_cmds = 2;</code>
+     */
+    java.lang.String getExecCmds(int index);
+    /**
+     * <code>repeated string exec_cmds = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getExecCmdsBytes(int index);
   }
   /**
    * Protobuf type {@code mesosphere.marathon.EventSubscribers}
@@ -7353,6 +7373,14 @@ public final class Protos {
               callbackUrls_.add(input.readBytes());
               break;
             }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                execCmds_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              execCmds_.add(input.readBytes());
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -7363,6 +7391,9 @@ public final class Protos {
       } finally {
         if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
           callbackUrls_ = new com.google.protobuf.UnmodifiableLazyStringList(callbackUrls_);
+        }
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          execCmds_ = new com.google.protobuf.UnmodifiableLazyStringList(execCmds_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -7425,8 +7456,39 @@ public final class Protos {
       return callbackUrls_.getByteString(index);
     }
 
+    // repeated string exec_cmds = 2;
+    public static final int EXEC_CMDS_FIELD_NUMBER = 2;
+    private com.google.protobuf.LazyStringList execCmds_;
+    /**
+     * <code>repeated string exec_cmds = 2;</code>
+     */
+    public java.util.List<java.lang.String>
+        getExecCmdsList() {
+      return execCmds_;
+    }
+    /**
+     * <code>repeated string exec_cmds = 2;</code>
+     */
+    public int getExecCmdsCount() {
+      return execCmds_.size();
+    }
+    /**
+     * <code>repeated string exec_cmds = 2;</code>
+     */
+    public java.lang.String getExecCmds(int index) {
+      return execCmds_.get(index);
+    }
+    /**
+     * <code>repeated string exec_cmds = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getExecCmdsBytes(int index) {
+      return execCmds_.getByteString(index);
+    }
+
     private void initFields() {
       callbackUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      execCmds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -7442,6 +7504,9 @@ public final class Protos {
       getSerializedSize();
       for (int i = 0; i < callbackUrls_.size(); i++) {
         output.writeBytes(1, callbackUrls_.getByteString(i));
+      }
+      for (int i = 0; i < execCmds_.size(); i++) {
+        output.writeBytes(2, execCmds_.getByteString(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -7460,6 +7525,15 @@ public final class Protos {
         }
         size += dataSize;
         size += 1 * getCallbackUrlsList().size();
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < execCmds_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(execCmds_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getExecCmdsList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -7579,6 +7653,8 @@ public final class Protos {
         super.clear();
         callbackUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000001);
+        execCmds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -7612,6 +7688,12 @@ public final class Protos {
           bitField0_ = (bitField0_ & ~0x00000001);
         }
         result.callbackUrls_ = callbackUrls_;
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          execCmds_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              execCmds_);
+          bitField0_ = (bitField0_ & ~0x00000002);
+        }
+        result.execCmds_ = execCmds_;
         onBuilt();
         return result;
       }
@@ -7634,6 +7716,16 @@ public final class Protos {
           } else {
             ensureCallbackUrlsIsMutable();
             callbackUrls_.addAll(other.callbackUrls_);
+          }
+          onChanged();
+        }
+        if (!other.execCmds_.isEmpty()) {
+          if (execCmds_.isEmpty()) {
+            execCmds_ = other.execCmds_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            ensureExecCmdsIsMutable();
+            execCmds_.addAll(other.execCmds_);
           }
           onChanged();
         }
@@ -7757,6 +7849,99 @@ public final class Protos {
         return this;
       }
 
+      // repeated string exec_cmds = 2;
+      private com.google.protobuf.LazyStringList execCmds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureExecCmdsIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          execCmds_ = new com.google.protobuf.LazyStringArrayList(execCmds_);
+          bitField0_ |= 0x00000002;
+         }
+      }
+      /**
+       * <code>repeated string exec_cmds = 2;</code>
+       */
+      public java.util.List<java.lang.String>
+          getExecCmdsList() {
+        return java.util.Collections.unmodifiableList(execCmds_);
+      }
+      /**
+       * <code>repeated string exec_cmds = 2;</code>
+       */
+      public int getExecCmdsCount() {
+        return execCmds_.size();
+      }
+      /**
+       * <code>repeated string exec_cmds = 2;</code>
+       */
+      public java.lang.String getExecCmds(int index) {
+        return execCmds_.get(index);
+      }
+      /**
+       * <code>repeated string exec_cmds = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getExecCmdsBytes(int index) {
+        return execCmds_.getByteString(index);
+      }
+      /**
+       * <code>repeated string exec_cmds = 2;</code>
+       */
+      public Builder setExecCmds(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureExecCmdsIsMutable();
+        execCmds_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string exec_cmds = 2;</code>
+       */
+      public Builder addExecCmds(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureExecCmdsIsMutable();
+        execCmds_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string exec_cmds = 2;</code>
+       */
+      public Builder addAllExecCmds(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureExecCmdsIsMutable();
+        super.addAll(values, execCmds_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string exec_cmds = 2;</code>
+       */
+      public Builder clearExecCmds() {
+        execCmds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string exec_cmds = 2;</code>
+       */
+      public Builder addExecCmdsBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureExecCmdsIsMutable();
+        execCmds_.add(value);
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.EventSubscribers)
     }
 
@@ -7835,9 +8020,9 @@ public final class Protos {
       "ion\030\010 \001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220" +
       "\n\005tasks\030\002 \003(\0132!.mesosphere.marathon.Mara" +
       "thonTask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014" +
-      ":\000\022\017\n\007options\030\002 \003(\014\")\n\020EventSubscribers\022" +
-      "\025\n\rcallback_urls\030\001 \003(\tB\035\n\023mesosphere.mar" +
-      "athonB\006Protos"
+      ":\000\022\017\n\007options\030\002 \003(\014\"<\n\020EventSubscribers\022" +
+      "\025\n\rcallback_urls\030\001 \003(\t\022\021\n\texec_cmds\030\002 \003(" +
+      "\tB\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -7885,7 +8070,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_EventSubscribers_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_EventSubscribers_descriptor,
-              new java.lang.String[] { "CallbackUrls", });
+              new java.lang.String[] { "CallbackUrls", "ExecCmds", });
           return null;
         }
       };
