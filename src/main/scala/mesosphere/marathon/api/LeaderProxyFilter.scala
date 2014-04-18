@@ -94,23 +94,31 @@ class LeaderProxyFilter @Inject()
           val status = proxy.getResponseCode
           response.setStatus(status)
 
-          val fields = proxy.getHeaderFields
-          // getHeaderNames() and getHeaders() are known to return null, see:
-          // http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
-          if (fields != null) {
-            for ((name, values) <- fields.asScala) {
-              if (name != null && values != null) {
-                for (value <- values.asScala) {
-                  response.setHeader(name, value)
+          val responseOutputStream = response.getOutputStream
+
+          try {
+            val fields = proxy.getHeaderFields
+            // getHeaderNames() and getHeaders() are known to return null, see:
+            // http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
+            if (fields != null) {
+              for ((name, values) <- fields.asScala) {
+                if (name != null && values != null) {
+                  for (value <- values.asScala) {
+                    response.setHeader(name, value)
+                  }
                 }
               }
             }
+            copy(proxy.getInputStream, response.getOutputStream)
+            proxy.getInputStream.close()
+          } catch {
+            case e: Exception =>
+              copy(proxy.getErrorStream, response.getOutputStream)
+              proxy.getErrorStream().close()
+          } finally {
+            responseOutputStream.close()
           }
 
-          val responseOutputStream = response.getOutputStream
-          copy(proxy.getInputStream, response.getOutputStream)
-          proxy.getInputStream.close
-          responseOutputStream.close
         } catch {
           case e: Exception =>
             log.log(Level.WARNING, "Exception while proxying", e)
