@@ -68,7 +68,12 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     }
 
     get(url).map { response =>
-      val okStatusCodes = check.acceptableResponses.getOrElse(Set[Integer]()).map(_.toInt)
+
+      val okStatusCodes = check.acceptableResponses match {
+        case Some(codes) => codes.map(_.toInt)
+        case None => defaultAcceptableResponses
+      }
+
       if (okStatusCodes contains response.status.intValue)
         Healthy(task.getId, Timestamp.now)
       else
@@ -94,6 +99,8 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 }
 
 object HealthCheckWorker {
+
+  protected[health] val defaultAcceptableResponses = (200 until 299).toSet
 
   case class HealthCheckJob(task: MarathonTask, check: HealthCheck)
 
