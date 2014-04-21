@@ -70,7 +70,7 @@ case class HealthCheck(
       },
       portIndex = proto.getPortIndex,
       initialDelay = FiniteDuration(proto.getInitialDelaySeconds, SECONDS),
-      timeout = FiniteDuration(proto.getInitialDelaySeconds, SECONDS),
+      timeout = FiniteDuration(proto.getTimeoutSeconds, SECONDS),
       interval = FiniteDuration(proto.getIntervalSeconds, SECONDS)
     )
 

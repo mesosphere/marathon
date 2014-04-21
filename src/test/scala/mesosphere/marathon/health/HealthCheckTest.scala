@@ -36,6 +36,23 @@ class HealthCheckTest {
   }
 
   @Test
+  def testToProtoTcp() {
+    val healthCheck = HealthCheck(
+      protocol = Protocol.TCP,
+      portIndex = 1,
+      initialDelay = FiniteDuration(7, SECONDS),
+      interval = FiniteDuration(35, SECONDS)
+    )
+
+    val proto = healthCheck.toProto
+
+    assertEquals(Protocol.TCP, proto.getProtocol)
+    assertEquals(1, proto.getPortIndex)
+    assertEquals(7, proto.getInitialDelaySeconds)
+    assertEquals(35, proto.getIntervalSeconds)
+  }
+
+  @Test
   def testMergeFromProto() {
     val proto = Protos.HealthCheckDefinition.newBuilder
       .setPath("/health")
@@ -56,6 +73,30 @@ class HealthCheckTest {
       portIndex = 0,
       initialDelay = FiniteDuration(10, SECONDS),
       interval = FiniteDuration(60, SECONDS),
+      timeout = FiniteDuration(10, SECONDS)
+    )
+
+    assertEquals(mergeResult, expectedResult)
+  }
+
+  @Test
+  def testMergeFromProtoTcp() {
+    val proto = Protos.HealthCheckDefinition.newBuilder
+      .setProtocol(Protocol.TCP)
+      .setPortIndex(1)
+      .setInitialDelaySeconds(7)
+      .setIntervalSeconds(35)
+      .setTimeoutSeconds(10)
+      .build
+
+    val mergeResult = HealthCheck().mergeFromProto(proto)
+
+    val expectedResult = HealthCheck(
+      path = Some(""),
+      protocol = Protocol.TCP,
+      portIndex = 1,
+      initialDelay = FiniteDuration(7, SECONDS),
+      interval = FiniteDuration(35, SECONDS),
       timeout = FiniteDuration(10, SECONDS)
     )
 
