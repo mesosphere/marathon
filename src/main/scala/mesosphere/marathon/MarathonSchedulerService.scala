@@ -121,7 +121,7 @@ class MarathonSchedulerService @Inject()(
   def getApp(appName: String, version: Timestamp) : Option[AppDefinition] = {
     Await.result(appRepository.app(appName, version), defaultWait)
   }
-  
+
   def killTasks(
     appName: String,
     tasks: Iterable[MarathonTask],
@@ -140,6 +140,14 @@ class MarathonSchedulerService @Inject()(
     }
 
     tasks
+  }
+
+  /**
+   * Shutdown hook of guava service interface.
+   */
+  override def shutDown(): Unit = {
+    triggerShutdown()
+    super.shutDown()
   }
 
   //Begin Service interface

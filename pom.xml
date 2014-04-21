@@ -11,10 +11,10 @@
 
         <!-- language versions -->
         <java.abi>1.6</java.abi>
-        <scala.version>2.10.3</scala.version>
+        <scala.version>2.10.4</scala.version>
 
         <!-- runtime deps versions -->
-        <chaos.version>0.5.3</chaos.version>
+        <chaos.version>0.5.4</chaos.version>
         <jackson-ccm.version>0.1.0</jackson-ccm.version>
         <mesos.version>0.17.0</mesos.version>
         <protobuf.version>2.5.0</protobuf.version>

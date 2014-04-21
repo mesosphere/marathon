@@ -3,26 +3,32 @@ package mesosphere.marathon.api.v2.json
 import com.fasterxml.jackson.databind._
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.state.Timestamp
-import com.fasterxml.jackson.core.{JsonToken, JsonParser, JsonGenerator, Version}
+import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind.Module.SetupContext
 import com.fasterxml.jackson.databind.ser.Serializers
 import com.fasterxml.jackson.databind.deser.Deserializers
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS
+import mesosphere.marathon.{EmptyContainerInfo, ContainerInfo}
+import scala.collection.JavaConverters._
+import mesosphere.marathon.api.v2.AppUpdate
+import scala.reflect.ClassTag
+import java.lang.{ Integer => JInt, Double => JDouble}
 
 /**
  * @author Tobi Knaup
  */
 
 class MarathonModule extends Module {
+  import MarathonModule._
 
   private val constraintClass = classOf[Constraint]
   private val marathonTaskClass = classOf[MarathonTask]
   private val enrichedTaskClass = classOf[EnrichedTask]
   private val timestampClass = classOf[Timestamp]
   private val finiteDurationClass = classOf[FiniteDuration]
+  private val containerInfoClass = classOf[ContainerInfo]
+  private val appUpdateClass = classOf[AppUpdate]
 
   def getModuleName: String = "MarathonModule"
 
@@ -40,6 +46,7 @@ class MarathonModule extends Module {
         else if (matches(enrichedTaskClass)) EnrichedTaskSerializer
         else if (matches(timestampClass)) TimestampSerializer
         else if (matches(finiteDurationClass)) FiniteDurationSerializer
+        else if (matches(containerInfoClass)) ContainerInfoSerializer
         else null
       }
     })
@@ -54,6 +61,8 @@ class MarathonModule extends Module {
         else if (matches(marathonTaskClass)) MarathonTaskDeserializer
         else if (matches(timestampClass)) TimestampDeserializer
         else if (matches(finiteDurationClass)) FiniteDurationDeserializer
+        else if (matches(containerInfoClass)) ContainerInfoDeserializer
+        else if (matches(appUpdateClass)) AppUpdateDeserializer
         else null
       }
     })
@@ -148,4 +157,77 @@ class MarathonModule extends Module {
     }
   }
 
+  object ContainerInfoSerializer extends JsonSerializer[ContainerInfo] {
+    def serialize(container: ContainerInfo, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+
+      container match {
+        case EmptyContainerInfo => // nothing to do here
+        case _ =>
+          jgen.writeStringField("image", container.image)
+          jgen.writeObjectField("options", container.options)
+      }
+
+      jgen.writeEndObject()
+    }
+  }
+
+  object ContainerInfoDeserializer extends JsonDeserializer[ContainerInfo] {
+    def deserialize(json: JsonParser, context: DeserializationContext): ContainerInfo = {
+      val oc = json.getCodec
+      val tree: JsonNode = oc.readTree(json)
+
+      if (tree.has("image") && tree.has("options")) {
+        ContainerInfo(
+          image = tree.get("image").asText(),
+          options = tree.get("options").elements().asScala.map(_.asText()).toList)
+      } else {
+        EmptyContainerInfo
+      }
+    }
+  }
+
+  object AppUpdateDeserializer extends JsonDeserializer[AppUpdate] {
+    override def deserialize(json: JsonParser, context: DeserializationContext): AppUpdate = {
+      val oc = json.getCodec
+      val tree: JsonNode = oc.readTree(json)
+
+      val containerInfo = if (tree.has("container")) {
+        val container = tree.get("container")
+
+        if (container.isNull) {
+          Some(EmptyContainerInfo)
+        } else {
+          Option(ContainerInfoDeserializer.deserialize(container.traverse(oc), context))
+        }
+      } else {
+        None
+      }
+
+      AppUpdate(
+        cmd = tree.get("cmd").option[String](oc),
+        instances = tree.get("instances").option[Integer](oc),
+        cpus = tree.get("cpus").option[JDouble](oc),
+        mem = tree.get("mem").option[JDouble](oc),
+        uris = tree.get("uris").option[Seq[String]](oc),
+        ports = tree.get("ports").option[Seq[JInt]](oc),
+        constraints = tree.get("constraints").option[Set[Constraint]](oc),
+        executor = tree.get("executor").option[String](oc),
+        container = containerInfo,
+        version = tree.get("version").option[Timestamp](oc)
+      )
+    }
+  }
+}
+
+object MarathonModule {
+  private implicit class JsonAsOption(val node: JsonNode) extends AnyVal {
+    def option[A](oc: ObjectCodec)(implicit ct: ClassTag[A]): Option[A] = {
+      if ((node eq null) || node.isNull || node.isMissingNode) {
+        None
+      } else {
+        Option(node.traverse(oc).readValueAs(ct.runtimeClass.asInstanceOf[Class[A]]))
+      }
+    }
+  }
 }

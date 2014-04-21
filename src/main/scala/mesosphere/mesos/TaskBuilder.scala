@@ -37,7 +37,7 @@ class TaskBuilder (app: AppDefinition,
         cpuRole = cpu
         memRole = mem
       case _ =>
-        log.info(s"No matching offer (need ${app.cpus} CPUs, ${app.mem} mem, ${app.ports.size} ports) : " + offer)
+        log.info(s"No matching offer for ${app.id} (need ${app.cpus} CPUs, ${app.mem} mem, ${app.ports.size} ports) : " + offer)
         return None
     }
 

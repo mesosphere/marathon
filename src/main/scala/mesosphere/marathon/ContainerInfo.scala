@@ -4,7 +4,7 @@ import com.google.protobuf.ByteString
 import scala.collection.JavaConverters._
 
 
-case class ContainerInfo(image: String = "", options: Seq[String] = Seq()) {
+class ContainerInfo protected (val image: String, val options: Seq[String]) {
   def toProto: Protos.ContainerInfo =
     Protos.ContainerInfo.newBuilder()
       .setImage(ByteString.copyFromUtf8(image))
@@ -12,9 +12,18 @@ case class ContainerInfo(image: String = "", options: Seq[String] = Seq()) {
       .build()
 }
 
+case object EmptyContainerInfo extends ContainerInfo("", Nil)
+
 object ContainerInfo {
   def apply(proto: Protos.ContainerInfo): ContainerInfo = ContainerInfo(
     proto.getImage.toStringUtf8,
     proto.getOptionsList.asScala.map(_.toStringUtf8).toSeq
   )
+
+  def apply(image: String = "", options: Seq[String] = Nil) = {
+    if (image.isEmpty && options.isEmpty)
+      EmptyContainerInfo
+    else
+      new ContainerInfo(image, options)
+  }
 }

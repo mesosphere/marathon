@@ -73,12 +73,21 @@ class EndpointsResource @Inject()(
     for (app <- apps) {
       val cleanId = app.id.replaceAll("\\s+", "_")
       val tasks = taskTracker.get(app.id)
-      for ((port, i) <- app.ports.zipWithIndex) {
-        sb.append(s"${cleanId}_$port $port ")
-        for (task <- tasks) {
-          sb.append(s"${task.getHost}:${task.getPorts(i)} ")
+
+      if (app.ports.isEmpty) {
+        sb.append(s"${cleanId}   ")
+        tasks.foreach { task =>
+          sb.append(s"${task.getHost} ")
         }
-        sb.append("\n")
+        sb.append(s"\n")
+      } else {
+        for ((port, i) <- app.ports.zipWithIndex) {
+          sb.append(s"${cleanId}_$port $port ")
+          for (task <- tasks) {
+            sb.append(s"${task.getHost}:${task.getPorts(i)} ")
+          }
+          sb.append("\n")
+        }
       }
     }
     sb.toString()
