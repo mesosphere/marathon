@@ -1,11 +1,11 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, Props}
 import akka.routing.{RoundRobinRouter, DefaultResizer}
-import mesosphere.marathon.api.validation.FieldConstraints._
-import scala.Some
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 
 class HealthCheckActor(
@@ -99,6 +99,7 @@ object HealthCheckActor {
 
   case class Health(
     taskId: String,
+    firstSuccess: Option[Timestamp] = None,
     lastSuccess: Option[Timestamp] = None,
     lastFailure: Option[Timestamp] = None,
     @FieldJsonInclude(Include.NON_NULL)
@@ -107,8 +108,14 @@ object HealthCheckActor {
   ) {
     import HealthCheckWorker.{HealthResult, Healthy, Unhealthy}
 
+    @JsonProperty
+    def alive(): Boolean = lastSuccess.map { successTime =>
+      lastFailure.isEmpty || successTime > lastFailure.get
+    }.getOrElse(false)
+
     def update(result: HealthResult): Health = result match {
       case Healthy(_, time) => this.copy(
+        firstSuccess = this.firstSuccess.orElse(Some(time)),
         lastSuccess = Some(time),
         consecutiveFailures = 0
       )
