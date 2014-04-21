@@ -2,9 +2,13 @@ package mesosphere.marathon.health
 
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
+
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -13,9 +17,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
-class HealthCheckManager @Singleton @Inject() (system: ActorSystem, taskTracker: TaskTracker) {
+class HealthCheckManager @Singleton @Inject() (
+  system: ActorSystem,
+  taskTracker: TaskTracker
+) {
 
-  import HealthCheckActor.Health
+  import HealthCheckActor.{GetTaskHealth, Health}
 
   protected[this] var appHealthChecks = Map[String, Set[ActiveHealthCheck]]()
 
@@ -84,10 +91,6 @@ class HealthCheckManager @Singleton @Inject() (system: ActorSystem, taskTracker:
       )
       case None => Future { Seq() }
     }
-  }
-
-  def status(appId: String): Map[String, Seq[Option[Health]]] = {
-    ??? // TODO(CD)
   }
 
   protected[this] def deactivate(healthCheck: ActiveHealthCheck): Unit =

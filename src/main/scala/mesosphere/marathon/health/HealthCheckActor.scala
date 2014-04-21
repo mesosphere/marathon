@@ -14,7 +14,7 @@ class HealthCheckActor(
   taskTracker: TaskTracker
 ) extends Actor with ActorLogging {
 
-  import HealthCheckActor.{GetHealth, GetTaskHealth, Health}
+  import HealthCheckActor.{GetTaskHealth, Health}
   import HealthCheckWorker.{HealthCheckJob, HealthResult}
   import context.dispatcher // execution context
 
@@ -77,7 +77,6 @@ class HealthCheckActor(
   }
 
   def receive = {
-    case GetHealth => sender ! taskHealth
     case GetTaskHealth(taskId) => sender ! taskHealth.get(taskId)
     case Tick => {
       purgeStatusOfDoneTasks()
@@ -95,8 +94,6 @@ class HealthCheckActor(
 }
 
 object HealthCheckActor {
-
-  case object GetHealth
 
   case class GetTaskHealth(taskId: String)
 
