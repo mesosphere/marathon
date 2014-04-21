@@ -107,12 +107,14 @@ class MarathonModule extends Module {
       Timestamp(json.getText)
   }
 
+  // Note: loses sub-second resolution
   object FiniteDurationSerializer extends JsonSerializer[FiniteDuration] {
     def serialize(fd: FiniteDuration, jgen: JsonGenerator, provider: SerializerProvider) {
       jgen.writeNumber(fd.toSeconds)
     }
   }
 
+  // Note: loses sub-second resolution
   object FiniteDurationDeserializer extends JsonDeserializer[FiniteDuration] {
     def deserialize(json: JsonParser, context: DeserializationContext): FiniteDuration =
       FiniteDuration(json.getLongValue, SECONDS)
