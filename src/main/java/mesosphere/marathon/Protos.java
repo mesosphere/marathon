@@ -888,13 +888,13 @@ public final class Protos {
      */
     mesosphere.marathon.Protos.HealthCheckDefinition.Protocol getProtocol();
 
-    // required uint32 portIndex = 2;
+    // required uint32 portIndex = 2 [default = 0];
     /**
-     * <code>required uint32 portIndex = 2;</code>
+     * <code>required uint32 portIndex = 2 [default = 0];</code>
      */
     boolean hasPortIndex();
     /**
-     * <code>required uint32 portIndex = 2;</code>
+     * <code>required uint32 portIndex = 2 [default = 0];</code>
      */
     int getPortIndex();
 
@@ -928,9 +928,9 @@ public final class Protos {
      */
     int getTimeoutSeconds();
 
-    // optional string path = 6;
+    // optional string path = 6 [default = "/"];
     /**
-     * <code>optional string path = 6;</code>
+     * <code>optional string path = 6 [default = "/"];</code>
      *
      * <pre>
      * used for HTTP only
@@ -938,7 +938,7 @@ public final class Protos {
      */
     boolean hasPath();
     /**
-     * <code>optional string path = 6;</code>
+     * <code>optional string path = 6 [default = "/"];</code>
      *
      * <pre>
      * used for HTTP only
@@ -946,7 +946,7 @@ public final class Protos {
      */
     java.lang.String getPath();
     /**
-     * <code>optional string path = 6;</code>
+     * <code>optional string path = 6 [default = "/"];</code>
      *
      * <pre>
      * used for HTTP only
@@ -1230,17 +1230,17 @@ public final class Protos {
       return protocol_;
     }
 
-    // required uint32 portIndex = 2;
+    // required uint32 portIndex = 2 [default = 0];
     public static final int PORTINDEX_FIELD_NUMBER = 2;
     private int portIndex_;
     /**
-     * <code>required uint32 portIndex = 2;</code>
+     * <code>required uint32 portIndex = 2 [default = 0];</code>
      */
     public boolean hasPortIndex() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required uint32 portIndex = 2;</code>
+     * <code>required uint32 portIndex = 2 [default = 0];</code>
      */
     public int getPortIndex() {
       return portIndex_;
@@ -1294,11 +1294,11 @@ public final class Protos {
       return timeoutSeconds_;
     }
 
-    // optional string path = 6;
+    // optional string path = 6 [default = "/"];
     public static final int PATH_FIELD_NUMBER = 6;
     private java.lang.Object path_;
     /**
-     * <code>optional string path = 6;</code>
+     * <code>optional string path = 6 [default = "/"];</code>
      *
      * <pre>
      * used for HTTP only
@@ -1308,7 +1308,7 @@ public final class Protos {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>optional string path = 6;</code>
+     * <code>optional string path = 6 [default = "/"];</code>
      *
      * <pre>
      * used for HTTP only
@@ -1329,7 +1329,7 @@ public final class Protos {
       }
     }
     /**
-     * <code>optional string path = 6;</code>
+     * <code>optional string path = 6 [default = "/"];</code>
      *
      * <pre>
      * used for HTTP only
@@ -1390,7 +1390,7 @@ public final class Protos {
       initialDelaySeconds_ = 15;
       intervalSeconds_ = 60;
       timeoutSeconds_ = 15;
-      path_ = "";
+      path_ = "/";
       acceptableResponses_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
@@ -1602,7 +1602,7 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000008);
         timeoutSeconds_ = 15;
         bitField0_ = (bitField0_ & ~0x00000010);
-        path_ = "";
+        path_ = "/";
         bitField0_ = (bitField0_ & ~0x00000020);
         acceptableResponses_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000040);
@@ -1780,22 +1780,22 @@ public final class Protos {
         return this;
       }
 
-      // required uint32 portIndex = 2;
+      // required uint32 portIndex = 2 [default = 0];
       private int portIndex_ ;
       /**
-       * <code>required uint32 portIndex = 2;</code>
+       * <code>required uint32 portIndex = 2 [default = 0];</code>
        */
       public boolean hasPortIndex() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required uint32 portIndex = 2;</code>
+       * <code>required uint32 portIndex = 2 [default = 0];</code>
        */
       public int getPortIndex() {
         return portIndex_;
       }
       /**
-       * <code>required uint32 portIndex = 2;</code>
+       * <code>required uint32 portIndex = 2 [default = 0];</code>
        */
       public Builder setPortIndex(int value) {
         bitField0_ |= 0x00000002;
@@ -1804,7 +1804,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>required uint32 portIndex = 2;</code>
+       * <code>required uint32 portIndex = 2 [default = 0];</code>
        */
       public Builder clearPortIndex() {
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -1912,10 +1912,10 @@ public final class Protos {
         return this;
       }
 
-      // optional string path = 6;
-      private java.lang.Object path_ = "";
+      // optional string path = 6 [default = "/"];
+      private java.lang.Object path_ = "/";
       /**
-       * <code>optional string path = 6;</code>
+       * <code>optional string path = 6 [default = "/"];</code>
        *
        * <pre>
        * used for HTTP only
@@ -1925,7 +1925,7 @@ public final class Protos {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
-       * <code>optional string path = 6;</code>
+       * <code>optional string path = 6 [default = "/"];</code>
        *
        * <pre>
        * used for HTTP only
@@ -1943,7 +1943,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional string path = 6;</code>
+       * <code>optional string path = 6 [default = "/"];</code>
        *
        * <pre>
        * used for HTTP only
@@ -1963,7 +1963,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional string path = 6;</code>
+       * <code>optional string path = 6 [default = "/"];</code>
        *
        * <pre>
        * used for HTTP only
@@ -1980,7 +1980,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional string path = 6;</code>
+       * <code>optional string path = 6 [default = "/"];</code>
        *
        * <pre>
        * used for HTTP only
@@ -1993,7 +1993,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional string path = 6;</code>
+       * <code>optional string path = 6 [default = "/"];</code>
        *
        * <pre>
        * used for HTTP only
@@ -8745,34 +8745,34 @@ public final class Protos {
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\";\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\022\014\n\010GROUP_BY\020\003\"\225\002\n\025HealthCheckDefiniti" +
+      "\020\002\022\014\n\010GROUP_BY\020\003\"\233\002\n\025HealthCheckDefiniti" +
       "on\022E\n\010protocol\030\001 \002(\01623.mesosphere.marath" +
-      "on.HealthCheckDefinition.Protocol\022\021\n\tpor" +
-      "tIndex\030\002 \002(\r\022\037\n\023initialDelaySeconds\030\003 \001(" +
-      "\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00260\022\032\n\016ti",
-      "meoutSeconds\030\005 \001(\r:\00215\022\014\n\004path\030\006 \001(\t\022\033\n\023" +
-      "acceptableResponses\030\007 \003(\r\"\035\n\010Protocol\022\010\n" +
-      "\004HTTP\020\000\022\007\n\003TCP\020\001\"\211\003\n\021ServiceDefinition\022\n" +
-      "\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandI" +
-      "nfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(" +
-      "\0132\017.mesos.Resource\022\023\n\013description\030\005 \001(\t\022" +
-      "\r\n\005ports\030\006 \003(\r\0224\n\013constraints\030\007 \003(\0132\037.me" +
-      "sosphere.marathon.Constraint\022\022\n\010executor" +
-      "\030\010 \002(\t:\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011\0225\n\tco" +
-      "ntainer\030\n \001(\0132\".mesosphere.marathon.Cont",
-      "ainerInfo\022\017\n\007version\030\013 \002(\t\022@\n\014healthChec" +
-      "ks\030\014 \003(\0132*.mesosphere.marathon.HealthChe" +
-      "ckDefinition\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(" +
-      "\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattrib" +
-      "utes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged_a" +
-      "t\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030" +
-      "\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 \001(" +
-      "\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030" +
-      "\002 \003(\0132!.mesosphere.marathon.MarathonTask" +
-      "\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007op",
-      "tions\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcallb" +
-      "ack_urls\030\001 \003(\tB\035\n\023mesosphere.marathonB\006P" +
-      "rotos"
+      "on.HealthCheckDefinition.Protocol\022\024\n\tpor" +
+      "tIndex\030\002 \002(\r:\0010\022\037\n\023initialDelaySeconds\030\003" +
+      " \001(\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00260\022\032\n",
+      "\016timeoutSeconds\030\005 \001(\r:\00215\022\017\n\004path\030\006 \001(\t:" +
+      "\001/\022\033\n\023acceptableResponses\030\007 \003(\r\"\035\n\010Proto" +
+      "col\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\211\003\n\021ServiceDefini" +
+      "tion\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.Co" +
+      "mmandInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresource" +
+      "s\030\004 \003(\0132\017.mesos.Resource\022\023\n\013description\030" +
+      "\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013constraints\030\007 \003(" +
+      "\0132\037.mesosphere.marathon.Constraint\022\022\n\010ex" +
+      "ecutor\030\010 \002(\t:\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011" +
+      "\0225\n\tcontainer\030\n \001(\0132\".mesosphere.maratho",
+      "n.ContainerInfo\022\017\n\007version\030\013 \002(\t\022@\n\014heal" +
+      "thChecks\030\014 \003(\0132*.mesosphere.marathon.Hea" +
+      "lthCheckDefinition\"\272\001\n\014MarathonTask\022\n\n\002i" +
+      "d\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\n" +
+      "attributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tst" +
+      "aged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010sta" +
+      "tuses\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007versio" +
+      "n\030\010 \001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005" +
+      "tasks\030\002 \003(\0132!.mesosphere.marathon.Marath" +
+      "onTask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000",
+      "\022\017\n\007options\030\002 \003(\014\")\n\020EventSubscribers\022\025\n" +
+      "\rcallback_urls\030\001 \003(\tB\035\n\023mesosphere.marat" +
+      "honB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

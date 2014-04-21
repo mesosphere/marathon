@@ -31,12 +31,12 @@ message HealthCheckDefinition {
     TCP = 1;
   }
   required Protocol protocol = 1;
-  required uint32 portIndex = 2;
+  required uint32 portIndex = 2 [default = 0];
   optional uint32 initialDelaySeconds = 3 [default = 15];
   optional uint32 intervalSeconds = 4 [default = 60];
   optional uint32 timeoutSeconds = 5 [default = 15];
-  optional string path = 6;                // used for HTTP only
-  repeated uint32 acceptableResponses = 7; // used for HTTP only
+  optional string path = 6 [default = "/"]; // used for HTTP only
+  repeated uint32 acceptableResponses = 7;  // used for HTTP only
 }
 
 message ServiceDefinition {

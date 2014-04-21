@@ -81,7 +81,7 @@ case class HealthCheck(
 
 object HealthCheck {
 
-  val DEFAULT_PATH                 = None
+  val DEFAULT_PATH                 = Some("/")
   val DEFAULT_PROTOCOL             = Protocol.HTTP
   val DEFAULT_ACCEPTABLE_RESPONSES = None
   val DEFAULT_PORT_INDEX           = 0
