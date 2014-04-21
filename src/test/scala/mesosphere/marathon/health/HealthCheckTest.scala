@@ -92,7 +92,7 @@ class HealthCheckTest {
     val mergeResult = HealthCheck().mergeFromProto(proto)
 
     val expectedResult = HealthCheck(
-      path = Some(""),
+      path = Some("/"),
       protocol = Protocol.TCP,
       portIndex = 1,
       initialDelay = FiniteDuration(7, SECONDS),
@@ -117,11 +117,7 @@ class HealthCheckTest {
     val json = mapper.writeValueAsString(original)
     val readResult = mapper.readValue(json, classOf[HealthCheck])
 
-    println("original [%s]" format original)
-    println("original JSON: %s" format json)
-    println("readResult [%s]" format readResult)
-
-    assertTrue(readResult == original)
+    assertEquals(readResult, original)
   }
 
 }
