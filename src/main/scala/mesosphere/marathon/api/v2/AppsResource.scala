@@ -17,7 +17,6 @@ import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
 import java.net.URI
-import mesosphere.marathon.api.Responses
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.api.{PATCH, Responses}
 

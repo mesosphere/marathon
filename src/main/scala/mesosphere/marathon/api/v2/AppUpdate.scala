@@ -13,6 +13,8 @@ import mesosphere.marathon.api.validation.FieldConstraints.{
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import java.lang.{Integer => JInt, Double => JDouble}
+import java.lang.{Integer => JInt, Double => JDouble}
+
 
 // TODO: Accept a task restart strategy as a constructor parameter here, to be
 //       used in MarathonScheduler.
