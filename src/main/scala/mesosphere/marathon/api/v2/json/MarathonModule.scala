@@ -3,6 +3,7 @@ package mesosphere.marathon.api.v2.json
 import com.fasterxml.jackson.databind._
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.health.HealthCheck
 import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind.Module.SetupContext
 import com.fasterxml.jackson.databind.ser.Serializers
@@ -216,6 +217,7 @@ class MarathonModule extends Module {
         constraints = tree.get("constraints").option[Set[Constraint]](oc),
         executor = tree.get("executor").option[String](oc),
         container = containerInfo,
+        healthChecks = tree.get("healthChecks").option[Set[HealthCheck]](oc),
         version = tree.get("version").option[Timestamp](oc)
       )
     }
