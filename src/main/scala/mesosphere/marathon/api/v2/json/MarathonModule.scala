@@ -10,8 +10,9 @@ import com.fasterxml.jackson.databind.deser.Deserializers
 import mesosphere.marathon.{EmptyContainerInfo, ContainerInfo}
 import scala.collection.JavaConverters._
 import mesosphere.marathon.api.v2.AppUpdate
-import scala.reflect.ClassTag
 import java.lang.{ Integer => JInt, Double => JDouble}
+import mesosphere.marathon.api.validation.FieldConstraints._
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 /**
  * @author Tobi Knaup
@@ -204,30 +205,39 @@ class MarathonModule extends Module {
         None
       }
 
-      AppUpdate(
-        cmd = tree.get("cmd").option[String](oc),
-        instances = tree.get("instances").option[Integer](oc),
-        cpus = tree.get("cpus").option[JDouble](oc),
-        mem = tree.get("mem").option[JDouble](oc),
-        uris = tree.get("uris").option[Seq[String]](oc),
-        ports = tree.get("ports").option[Seq[JInt]](oc),
-        constraints = tree.get("constraints").option[Set[Constraint]](oc),
-        executor = tree.get("executor").option[String](oc),
-        container = containerInfo,
-        version = tree.get("version").option[Timestamp](oc)
-      )
+      val appUpdate = tree.traverse(oc).readValueAs(classOf[AppUpdateBuilder])
+
+      appUpdate.copy(container = containerInfo).build
     }
   }
 }
 
 object MarathonModule {
-  private implicit class JsonAsOption(val node: JsonNode) extends AnyVal {
-    def option[A](oc: ObjectCodec)(implicit ct: ClassTag[A]): Option[A] = {
-      if ((node eq null) || node.isNull || node.isMissingNode) {
-        None
-      } else {
-        Option(node.traverse(oc).readValueAs(ct.runtimeClass.asInstanceOf[Class[A]]))
-      }
-    }
+  // TODO: make @JsonDeserialize work on the 'container' field
+  // of the 'AppUpdate' class and remove this workaround.
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  case class AppUpdateBuilder(
+    cmd: Option[String] = None,
+
+    instances: Option[JInt] = None,
+
+    cpus: Option[JDouble] = None,
+
+    mem: Option[JDouble] = None,
+
+    uris: Option[Seq[String]] = None,
+
+    @FieldPortsArray
+    ports: Option[Seq[JInt]] = None,
+
+    constraints: Option[Set[Constraint]] = None,
+
+    executor: Option[String] = None,
+
+    container: Option[ContainerInfo] = None,
+
+    version: Option[Timestamp] = None
+  ) {
+    def build = AppUpdate(cmd, instances, cpus, mem, uris, ports, constraints, executor, container, version)
   }
 }

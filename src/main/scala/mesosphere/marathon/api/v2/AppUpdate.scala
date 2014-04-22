@@ -7,7 +7,6 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.validation.FieldConstraints.FieldPortsArray
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.lang.{Integer => JInt, Double => JDouble}
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 // TODO: Accept a task restart strategy as a constructor parameter here, to be
 //       used in MarathonScheduler.
