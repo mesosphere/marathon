@@ -18,6 +18,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
+import java.util.concurrent.LinkedBlockingQueue
 
 /**
  * @author Tobi Knaup
@@ -56,11 +57,13 @@ class MarathonSchedulerTest extends AssertionsForJUnit
       ports = Seq(8080),
       version = now
     )
+    val allApps = Vector(app)
 
     when(tracker.newTaskId("testOffers"))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
     when(tracker.checkStagedTasks).thenReturn(Seq())
     when(queue.poll()).thenReturn(app)
+    when(queue.removeAll()).thenReturn(allApps)
 
     scheduler.resourceOffers(driver, offers)
 

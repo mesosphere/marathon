@@ -73,12 +73,16 @@ class MarathonScheduler @Inject()(
       try {
         log.fine("Received offer %s".format(offer))
 
-        // TODO launch multiple tasks if the offer is big enough
-        val app = taskQueue.poll()
+        val apps = taskQueue.removeAll()
+        var i = 0
+        var found = false
 
-        if (app != null) {
+        while (i < apps.size && !found) {
+          // TODO launch multiple tasks if the offer is big enough
+          val app = apps(i)
+
           newTask(app, offer) match {
-            case Some((task, ports)) => {
+            case Some((task, ports)) =>
               val taskInfos = Lists.newArrayList(task)
               log.fine("Launching tasks: " + taskInfos)
 
@@ -87,17 +91,20 @@ class MarathonScheduler @Inject()(
                 offer.getAttributesList.asScala.toList, app.version)
               taskTracker.starting(app.id, marathonTask)
               driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
-            }
-            case None => {
-              log.fine("Offer doesn't match request. Declining.")
-              // Add it back into the queue so the we can try again
+              found = true
+            case None =>
               taskQueue.add(app)
-              driver.declineOffer(offer.getId)
-            }
           }
-        } else {
-          log.fine("Task queue is empty. Declining offer.")
+
+          i += 1
+        }
+
+        if (!found) {
+          log.fine("Offer doesn't match request. Declining.")
+          // Add it back into the queue so the we can try again
           driver.declineOffer(offer.getId)
+        } else {
+          taskQueue.addAll(apps.drop(i))
         }
       } catch {
         case t: Throwable => {
