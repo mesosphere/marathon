@@ -5,29 +5,20 @@ import org.scalatest.mock.MockitoSugar
 import org.junit.Test
 import org.apache.mesos.state.InMemoryState
 import mesosphere.marathon.Protos.MarathonTask
-import org.apache.mesos.Protos.Value.Text
-import org.apache.mesos.Protos.{TaskID, Attribute, TaskStatus, TaskState}
+import org.apache.mesos.Protos.{TaskID, TaskStatus, TaskState}
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
 
 import org.junit.Assert._
 import mesosphere.marathon.tasks.{TaskTracker, TaskIDUtil}
 import com.google.common.collect.Lists
+import mesosphere.mesos.protos.TextAttribute
 
 class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
 
+  import mesosphere.mesos.protos.Implicits._
+
   def makeSampleTask(id: String) = {
-    MarathonTask.newBuilder()
-      .setHost("host")
-      .addAllPorts(Lists.newArrayList(999))
-      .setId(id)
-      .addAttributes(
-        Attribute.newBuilder()
-        .setName("attr1")
-        .setText(Text.newBuilder()
-        .setValue("bar"))
-        .setType(org.apache.mesos.Protos.Value.Type.TEXT)
-        .build())
-      .build()
+    makeTask(id, "host", 999)
   }
 
   def makeTask(id: String, host: String, port: Int) = {
@@ -35,13 +26,7 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       .setHost(host)
       .addAllPorts(Lists.newArrayList(port))
       .setId(id)
-      .addAttributes(
-      Attribute.newBuilder()
-        .setName("attr1")
-        .setText(Text.newBuilder()
-        .setValue("bar"))
-        .setType(org.apache.mesos.Protos.Value.Type.TEXT)
-        .build())
+      .addAttributes(TextAttribute("attr1", "bar"))
       .build()
   }
 

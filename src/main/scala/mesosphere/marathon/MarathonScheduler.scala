@@ -20,6 +20,7 @@ import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTa
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.mesos.protos
 import mesosphere.util.RateLimiters
 
 
@@ -40,6 +41,7 @@ class MarathonScheduler @Inject()(
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
+  import mesosphere.mesos.protos.Implicits._
 
   /**
    * Returns a future containing the optional most recent version
@@ -66,7 +68,7 @@ class MarathonScheduler @Inject()(
       log.warning(s"There are ${toKill.size} tasks stuck in staging which will be killed")
       log.info(s"About to kill these tasks: ${toKill}")
       for (task <- toKill) {
-        driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+        driver.killTask(protos.TaskID(task.getId))
       }
     }
     for (offer <- offers.asScala) {
@@ -143,20 +145,20 @@ class MarathonScheduler @Inject()(
         case Failure(t) => {
           log.log(Level.WARNING, s"Couldn't post event for ${status.getTaskId}", t)
           log.warning(s"Killing task ${status.getTaskId}")
-          driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
+          driver.killTask(status.getTaskId)
         }
       }
     } else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
       log.warning(s"Received status update for unknown app ${appID}")
       log.warning(s"Killing task ${status.getTaskId}")
-      driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
+      driver.killTask(status.getTaskId)
     } else {
       taskTracker.statusUpdate(appID, status).onComplete {
         case Success(t) =>
           t match {
             case None =>
               log.warning(s"Killing task ${status.getTaskId}")
-              driver.killTask(TaskID.newBuilder.setValue(status.getTaskId.getValue).build)
+              driver.killTask(status.getTaskId)
             case _ =>
           }
         case _ =>
@@ -211,7 +213,7 @@ class MarathonScheduler @Inject()(
 
       for (task <- tasks) {
         log.info(s"Killing task ${task.getId}")
-        driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+        driver.killTask(protos.TaskID(task.getId))
       }
       taskQueue.purge(app)
       taskTracker.shutDown(app.id)
@@ -268,7 +270,7 @@ class MarathonScheduler @Inject()(
             val tasks = taskTracker.get(app)
             for (task <- tasks) {
               log.info(s"Killing task ${task.getId}")
-              driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+              driver.killTask(protos.TaskID(task.getId))
             }
             taskTracker.expunge(app)
           }
@@ -284,7 +286,7 @@ class MarathonScheduler @Inject()(
   }
 
   private def newTask(app: AppDefinition,
-                      offer: Offer): Option[(TaskInfo, Seq[Int])] = {
+                      offer: Offer): Option[(TaskInfo, Seq[Long])] = {
     // TODO this should return a MarathonTask
     new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
   }
@@ -332,7 +334,7 @@ class MarathonScheduler @Inject()(
         val toKill = taskTracker.take(app.id, currentCount - targetCount)
         for (task <- toKill) {
           log.info("Killing task " + task.getId)
-          driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+          driver.killTask(protos.TaskID(task.getId))
         }
       }
       else {

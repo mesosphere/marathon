@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class TaskTracker @Inject()(state: State) {
 
   import ExecutionContext.Implicits.global
-  import mesosphere.util.BackToTheFuture._
+  import mesosphere.util.BackToTheFuture.futureToFuture
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
@@ -110,7 +110,7 @@ class TaskTracker @Inject()(state: State) {
           // Are we shutting down this app? If so, expunge
           expunge(appName)
         }
-        None
+        Future.successful(None)
     }
   }
 
@@ -128,7 +128,7 @@ class TaskTracker @Inject()(state: State) {
       }
       case _ => {
         log.warning(s"No task for ID ${taskId}")
-        None
+        Future.successful(None)
       }
     }
   }
@@ -215,7 +215,7 @@ class TaskTracker @Inject()(state: State) {
     state.fetch(prefix + appName).get()
   }
 
-  def store(appName: String) {
+  def store(appName: String) = {
     val oldVar = fetchFromState(appName)
     val bytes = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(bytes)

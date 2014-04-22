@@ -1,10 +1,8 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos._
-import org.apache.mesos.Protos.Value.{Text, Ranges}
-import mesosphere.mesos.TaskBuilder
+import org.apache.mesos.Protos.Offer
 import mesosphere.marathon.api.v1.AppDefinition
-import scala.collection.JavaConverters._
+import mesosphere.mesos.protos._
 
 /**
  * @author Tobi Knaup
@@ -12,15 +10,21 @@ import scala.collection.JavaConverters._
 
 trait MarathonTestHelper {
 
+  import mesosphere.mesos.protos.Implicits._
+
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000,
                      beginPort: Int = 31000, endPort: Int = 32000) = {
-    val portsResource = makePortsResource(Seq((beginPort, endPort)))
-    val cpusResource = TaskBuilder.scalarResource("cpus", cpus)
-    val memResource = TaskBuilder.scalarResource("mem", mem)
+    val cpusResource = ScalarResource(Resource.CPUS, cpus)
+    val memResource = ScalarResource(Resource.MEM, mem)
+    val portsResource = RangesResource(
+      Resource.PORTS,
+      Seq(Range(beginPort, endPort)),
+      "*"
+    )
     Offer.newBuilder
-      .setId(OfferID.newBuilder.setValue("1"))
-      .setFrameworkId(FrameworkID.newBuilder.setValue("marathon"))
-      .setSlaveId(SlaveID.newBuilder.setValue("slave0"))
+      .setId(OfferID("1"))
+      .setFrameworkId(FrameworkID("marathon"))
+      .setSlaveId(SlaveID("slave0"))
       .setHostname("localhost")
       .addResources(cpusResource)
       .addResources(memResource)
@@ -29,39 +33,21 @@ trait MarathonTestHelper {
 
   def makeBasicOfferWithRole(cpus: Double, mem: Double,
                      beginPort: Int, endPort: Int, role: String) = {
-    val portsResource = makePortsResource(Seq((beginPort, endPort)), role)
-    val cpusResource = TaskBuilder.scalarResource("cpus", cpus, role)
-    val memResource = TaskBuilder.scalarResource("mem", mem, role)
+    val portsResource = RangesResource(
+      Resource.PORTS,
+      Seq(Range(beginPort, endPort)),
+      role
+    )
+    val cpusResource = ScalarResource("cpus", cpus, role)
+    val memResource = ScalarResource("mem", mem, role)
     Offer.newBuilder
-      .setId(OfferID.newBuilder.setValue("1"))
-      .setFrameworkId(FrameworkID.newBuilder.setValue("marathon"))
-      .setSlaveId(SlaveID.newBuilder.setValue("slave0"))
+      .setId(OfferID("1"))
+      .setFrameworkId(FrameworkID("marathon"))
+      .setSlaveId(SlaveID("slave0"))
       .setHostname("localhost")
       .addResources(cpusResource)
       .addResources(memResource)
       .addResources(portsResource)
-  }
-
-  def makePortsResource(ranges: Seq[(Int, Int)]): Resource = {
-    makePortsResource(ranges, "*")
-  }
-  def makePortsResource(ranges: Seq[(Int, Int)], role: String) = {
-    val rangeProtos = ranges.map(r => {
-      Value.Range.newBuilder
-        .setBegin(r._1)
-        .setEnd(r._2)
-        .build
-    })
-
-    val rangesProto = Ranges.newBuilder
-      .addAllRange(rangeProtos.asJava)
-      .build
-    Resource.newBuilder
-      .setName(TaskBuilder.portsResourceName)
-      .setType(Value.Type.RANGES)
-      .setRanges(rangesProto)
-      .setRole(role)
-      .build
   }
 
   def makeBasicApp() = AppDefinition(
@@ -70,13 +56,4 @@ trait MarathonTestHelper {
     mem = 64,
     executor = "//cmd"
   )
-
-  def makeAttribute(attr: String, attrVal: String) = {
-    Attribute.newBuilder()
-      .setName(attr)
-      .setText(Text.newBuilder()
-      .setValue(attrVal))
-      .setType(org.apache.mesos.Protos.Value.Type.TEXT)
-      .build()
-  }
 }
