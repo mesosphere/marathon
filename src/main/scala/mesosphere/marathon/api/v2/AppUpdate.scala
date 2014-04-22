@@ -1,20 +1,13 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.marathon.ContainerInfo
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.api.validation.FieldConstraints.FieldPortsArray
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.validation.FieldConstraints.{
-  FieldJsonDeserialize,
-  FieldPortsArray
-}
+import mesosphere.marathon.state.Timestamp
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import java.lang.{Integer => JInt, Double => JDouble}
-import java.lang.{Integer => JInt, Double => JDouble}
-
 
 // TODO: Accept a task restart strategy as a constructor parameter here, to be
 //       used in MarathonScheduler.
