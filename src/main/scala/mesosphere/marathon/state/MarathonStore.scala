@@ -17,7 +17,7 @@ class MarathonStore[S <: MarathonState[_, S]](state: State,
   val defaultWait = Duration(3, "seconds")
 
   import ExecutionContext.Implicits.global
-  import mesosphere.util.BackToTheFuture._
+  import mesosphere.util.BackToTheFuture.futureToFutureOption
 
   def fetch(key: String): Future[Option[S]] = {
     state.fetch(prefix + key) map {
