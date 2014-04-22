@@ -16,6 +16,7 @@ import com.fasterxml.jackson.annotation.{
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
 import java.lang.{Integer => JInt, Double => JDouble}
+import mesosphere.mesos.protos.{Resource, ScalarResource}
 
 
 /**
@@ -67,6 +68,8 @@ case class AppDefinition(
 ) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
   with Timestamped {
 
+  import mesosphere.mesos.protos.Implicits._
+
   assert(
     portIndicesAreValid,
     "Port indices must address an element of this app's ports array."
@@ -85,8 +88,8 @@ case class AppDefinition(
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
-    val cpusResource = TaskBuilder.scalarResource(AppDefinition.CPUS, cpus)
-    val memResource = TaskBuilder.scalarResource(AppDefinition.MEM, mem)
+    val cpusResource = ScalarResource(Resource.CPUS, cpus)
+    val memResource = ScalarResource(Resource.MEM, mem)
 
     val builder = Protos.ServiceDefinition.newBuilder
       .setId(id)
@@ -125,8 +128,8 @@ case class AppDefinition(
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
       constraints = proto.getConstraintsList.asScala.toSet,
-      cpus = resourcesMap.get(AppDefinition.CPUS).getOrElse(this.cpus),
-      mem = resourcesMap.get(AppDefinition.MEM).getOrElse(this.mem),
+      cpus = resourcesMap.get(Resource.CPUS).getOrElse(this.cpus),
+      mem = resourcesMap.get(Resource.MEM).getOrElse(this.mem),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
       container = if (proto.hasContainer) Some(ContainerInfo(proto.getContainer))
@@ -151,10 +154,7 @@ case class AppDefinition(
 }
 
 object AppDefinition {
-  val CPUS = "cpus"
   val DEFAULT_CPUS = 1.0
-
-  val MEM = "mem"
   val DEFAULT_MEM = 128.0
 
   val RANDOM_PORT_VALUE = 0

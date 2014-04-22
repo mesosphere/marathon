@@ -9,14 +9,14 @@ import mesosphere.marathon.state.Timestamp
 object MarathonTasks {
   def makeTask(id: String,
                host: String,
-               ports: Iterable[Int],
+               ports: Iterable[Long],
                attributes: List[Attribute],
                version: Timestamp) = {
     MarathonTask.newBuilder()
       .setId(id)
       .setHost(host)
       .setVersion(version.toString())
-      .addAllPorts(ports.map(i => i: java.lang.Integer).asJava)
+      .addAllPorts(ports.map(i => i.toInt: java.lang.Integer).asJava)
       .addAllAttributes(attributes.asJava)
       .setStagedAt(System.currentTimeMillis)
       .build

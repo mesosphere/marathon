@@ -1,7 +1,5 @@
 package mesosphere.mesos
 
-import org.apache.mesos.Protos._
-import org.apache.mesos.Protos.Value.{Text, Ranges}
 import mesosphere.marathon.api.v1.AppDefinition
 
 import org.junit.Assert._
@@ -17,6 +15,8 @@ import scala.collection.JavaConverters._
 import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.state.Timestamp
+import org.apache.mesos.Protos.{Offer, TaskInfo}
+import mesosphere.mesos.protos._
 
 /**
  * @author Tobi Knaup
@@ -25,14 +25,16 @@ import mesosphere.marathon.state.Timestamp
 class TaskBuilderTest extends AssertionsForJUnit
   with MockitoSugar with MarathonTestHelper {
 
+  import mesosphere.mesos.protos.Implicits._
+
   @Test
   def testBuildIfMatches() {
     val offer = makeBasicOffer(1.0, 128.0, 31000, 32000)
-      .addResources(TaskBuilder.scalarResource("cpus", 1))
-      .addResources(TaskBuilder.scalarResource("mem", 128))
+      .addResources(ScalarResource("cpus", 1))
+      .addResources(ScalarResource("mem", 128))
       .build
 
-    val task: Option[(TaskInfo, Seq[Int])] = buildIfMatches(
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp",
@@ -47,7 +49,7 @@ class TaskBuilderTest extends AssertionsForJUnit
 
     val (taskInfo, taskPorts) = task.get
     val range = taskInfo.getResourcesList.asScala
-      .find(r => r.getName == TaskBuilder.portsResourceName)
+      .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRange(0))
     assertTrue(range.isDefined)
     assertEquals(2, taskPorts.size)
@@ -64,14 +66,14 @@ class TaskBuilderTest extends AssertionsForJUnit
   @Test
   def testBuildIfMatchesWithRole() {
     val offer = makeBasicOfferWithRole(1.0, 128.0, 31000, 32000, "marathon")
-      .addResources(TaskBuilder.scalarResource("cpus", 1, "*"))
-      .addResources(TaskBuilder.scalarResource("mem", 128, "*"))
-      .addResources(TaskBuilder.scalarResource("cpus", 2, "marathon"))
-      .addResources(TaskBuilder.scalarResource("mem", 256, "marathon"))
-      .addResources(makePortsResource(Seq((33000, 34000)), "marathon"))
+      .addResources(ScalarResource("cpus", 1, "*"))
+      .addResources(ScalarResource("mem", 128, "*"))
+      .addResources(ScalarResource("cpus", 2, "marathon"))
+      .addResources(ScalarResource("mem", 256, "marathon"))
+      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(TaskInfo, Seq[Int])] = buildIfMatches(
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp",
@@ -86,7 +88,7 @@ class TaskBuilderTest extends AssertionsForJUnit
 
     val (taskInfo, taskPorts) = task.get
     val range = taskInfo.getResourcesList.asScala
-      .find(r => r.getName == TaskBuilder.portsResourceName)
+      .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRange(0))
     assertTrue(range.isDefined)
     assertEquals(2, taskPorts.size)
@@ -103,14 +105,14 @@ class TaskBuilderTest extends AssertionsForJUnit
   @Test
   def testBuildIfMatchesWithRole2() {
     val offer = makeBasicOfferWithRole(1.0, 128.0, 31000, 32000, "*")
-      .addResources(TaskBuilder.scalarResource("cpus", 1, "*"))
-      .addResources(TaskBuilder.scalarResource("mem", 128, "*"))
-      .addResources(TaskBuilder.scalarResource("cpus", 2, "marathon"))
-      .addResources(TaskBuilder.scalarResource("mem", 256, "marathon"))
-      .addResources(makePortsResource(Seq((33000, 34000)), "marathon"))
+      .addResources(ScalarResource("cpus", 1, "*"))
+      .addResources(ScalarResource("mem", 128, "*"))
+      .addResources(ScalarResource("cpus", 2, "marathon"))
+      .addResources(ScalarResource("mem", 256, "marathon"))
+      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(TaskInfo, Seq[Int])] = buildIfMatches(
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp",
@@ -125,7 +127,7 @@ class TaskBuilderTest extends AssertionsForJUnit
 
     val (taskInfo, taskPorts) = task.get
     val range = taskInfo.getResourcesList.asScala
-      .find(r => r.getName == TaskBuilder.portsResourceName)
+      .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRange(0))
     assertTrue(range.isDefined)
     assertEquals(2, taskPorts.size)
@@ -145,7 +147,7 @@ class TaskBuilderTest extends AssertionsForJUnit
     val taskTracker =  mock[TaskTracker]
 
     val offer = makeBasicOffer(1.0, 128.0, 31000, 32000)
-      .addAttributes(makeAttribute("rackid", "1"))
+      .addAttributes(TextAttribute("rackid", "1"))
       .build
 
     val app = makeBasicApp().copy(
@@ -164,7 +166,7 @@ class TaskBuilderTest extends AssertionsForJUnit
     when(taskTracker.get(app.id)).thenReturn(s)
 
     val builder = new TaskBuilder(app,
-      s => TaskID.newBuilder.setValue(s).build, taskTracker)
+      s => TaskID(s), taskTracker)
     val task = builder.buildIfMatches(offer)
 
     assertTrue(task.isDefined)
@@ -188,7 +190,7 @@ class TaskBuilderTest extends AssertionsForJUnit
     when(taskTracker.get(app.id)).thenReturn(runningTasks)
 
     val builder = new TaskBuilder(app,
-      s => TaskID.newBuilder.setValue(s).build, taskTracker)
+      s => TaskID(s), taskTracker)
 
     def shouldBuildTask(message: String, offer: Offer) {
       val tupleOption = builder.buildIfMatches(offer)
@@ -209,26 +211,26 @@ class TaskBuilderTest extends AssertionsForJUnit
 
     val offerRack1HostA = makeBasicOffer()
       .setHostname("alpha")
-      .addAttributes(makeAttribute("rackid", "1"))
+      .addAttributes(TextAttribute("rackid", "1"))
       .build
     shouldBuildTask("Should take first offer", offerRack1HostA)
 
     val offerRack1HostB = makeBasicOffer()
       .setHostname("beta")
-      .addAttributes(makeAttribute("rackid", "1"))
+      .addAttributes(TextAttribute("rackid", "1"))
       .build
     shouldNotBuildTask("Should not take offer for the same rack", offerRack1HostB)
 
     val offerRack2HostC = makeBasicOffer()
       .setHostname("gamma")
-      .addAttributes(makeAttribute("rackid", "2"))
+      .addAttributes(TextAttribute("rackid", "2"))
       .build
     shouldBuildTask("Should take offer for different rack", offerRack2HostC)
 
     // Nothing prevents having two hosts with the same name in different racks
     val offerRack3HostA = makeBasicOffer()
       .setHostname("alpha")
-      .addAttributes(makeAttribute("rackid", "3"))
+      .addAttributes(TextAttribute("rackid", "3"))
       .build
     shouldNotBuildTask("Should not take offer in different rack with non-unique hostname", offerRack3HostA)
   }
@@ -248,7 +250,7 @@ class TaskBuilderTest extends AssertionsForJUnit
     when(taskTracker.get(app.id)).thenReturn(runningTasks)
 
     val builder = new TaskBuilder(app,
-      s => TaskID.newBuilder.setValue(s).build, taskTracker)
+      s => TaskID(s), taskTracker)
 
     def shouldBuildTask(message: String, offer: Offer) {
       val tupleOption = builder.buildIfMatches(offer)
@@ -268,44 +270,53 @@ class TaskBuilderTest extends AssertionsForJUnit
 
     val offerHostA = makeBasicOffer()
       .setHostname("alpha")
-      .addAttributes(makeAttribute("spark", "disabled"))
+      .addAttributes(TextAttribute("spark", "disabled"))
       .build
     shouldNotBuildTask("Should not take an offer with spark:disabled", offerHostA)
 
     val offerHostB = makeBasicOffer()
       .setHostname("beta")
-      .addAttributes(makeAttribute("spark", "enabled"))
+      .addAttributes(TextAttribute("spark", "enabled"))
       .build
     shouldBuildTask("Should take offer with spark:enabled", offerHostB)
   }
 
   @Test
   def testGetPortsSingleRange() = {
-    val portsResource = makePortsResource(Seq((31000, 32000)))
-    val portRanges = TaskBuilder.getPorts(portsResource, 2).get
+    val offered = RangesResource(
+      Resource.PORTS,
+      Seq(protos.Range(31000, 32000))
+    )
+    val portRanges = TaskBuilder.getPorts(offered, 2).get.ranges
 
     assertEquals(1, portRanges.size)
-    assertEquals(1, portRanges.head._2 - portRanges.head._1)
+    assertEquals(2, portRanges.head.asScala.size)
   }
 
   @Test
   def testGetPortsMultipleRanges() = {
-    val portsResource = makePortsResource(Seq((30000, 30003), (31000, 31009)))
-    val portRanges = TaskBuilder.getPorts(portsResource, 5).get
+    val offered = RangesResource(
+      Resource.PORTS,
+      Seq(protos.Range(30000, 30003), protos.Range(31000, 31009))
+    )
+    val portRanges = TaskBuilder.getPorts(offered, 5).get.ranges
 
     assertEquals(1, portRanges.size)
-    assertEquals(4, portRanges.head._2 - portRanges.head._1)
+    assertEquals(5, portRanges.head.asScala.size)
   }
 
   @Test
   def testGetNoPorts() {
-    val portsResource = makePortsResource(Seq((31000, 32000)))
-    assertEquals(Some(Seq()), TaskBuilder.getPorts(portsResource, 0))
+    val portsResource = RangesResource(Resource.PORTS, Seq(protos.Range(31000, 32000)))
+    assertEquals(
+      Some(RangesResource(Resource.PORTS, Seq())),
+      TaskBuilder.getPorts(portsResource, 0)
+    )
   }
 
   @Test
   def testGetTooManyPorts() {
-    val portsResource = makePortsResource(Seq((31000, 32000)))
+    val portsResource = RangesResource(Resource.PORTS, Seq(protos.Range(31000, 32000)))
     assertEquals(None, TaskBuilder.getPorts(portsResource, 10002))
   }
 
@@ -326,7 +337,7 @@ class TaskBuilderTest extends AssertionsForJUnit
   def buildIfMatches(offer: Offer, app: AppDefinition) = {
     val taskTracker =  mock[TaskTracker]
     val builder = new TaskBuilder(app,
-      s => TaskID.newBuilder.setValue(s).build, taskTracker)
+      s => TaskID(s), taskTracker)
     builder.buildIfMatches(offer)
   }
 
@@ -335,13 +346,7 @@ class TaskBuilderTest extends AssertionsForJUnit
       .setHost("host")
       .addAllPorts(Lists.newArrayList(999))
       .setId(id)
-      .addAttributes(
-      Attribute.newBuilder()
-        .setName(attr)
-        .setText(Text.newBuilder()
-        .setValue(attrVal))
-        .setType(org.apache.mesos.Protos.Value.Type.TEXT)
-        .build())
+      .addAttributes(TextAttribute(attr, attrVal))
       .build()
   }
 }
