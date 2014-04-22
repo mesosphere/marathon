@@ -86,15 +86,13 @@ class AppsResource @Inject()(
     }
   }
 
-  import Implicits._
-
   @GET
   @Path("{appId}/tasks")
   @Timed
   def app(@PathParam("appId") appId: String): Response = {
     if (taskTracker.contains(appId)) {
       val tasks = taskTracker.get(appId)
-      val result = Map(appId -> tasks.map(s => s: Map[String, Object]))
+      val result = Map(appId -> tasks)
       Response.ok(result).build
     } else {
       Responses.unknownApp(appId)

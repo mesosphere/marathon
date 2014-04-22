@@ -5,7 +5,9 @@ import mesosphere.marathon.{ContainerInfo, Protos}
 import mesosphere.marathon.state.{MarathonState, Timestamp, Timestamped}
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.api.validation.FieldConstraints._
+import mesosphere.marathon.api.validation.PortIndices
 import com.fasterxml.jackson.annotation.{
   JsonIgnore,
   JsonIgnoreProperties,
@@ -15,9 +17,12 @@ import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
 import java.lang.{Integer => JInt, Double => JDouble}
 
+
 /**
  * @author Tobi Knaup
  */
+
+@PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppDefinition(
 
@@ -55,10 +60,28 @@ case class AppDefinition(
 
   container: Option[ContainerInfo] = None,
 
+  healthChecks: Set[HealthCheck] = Set(),
+
   version: Timestamp = Timestamp.now
 
 ) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
   with Timestamped {
+
+  assert(
+    portIndicesAreValid,
+    "Port indices must address an element of this app's ports array."
+  )
+
+  /**
+   * Returns true if all health check port index values are in the range
+   * of ths app's ports array.
+   */
+  def portIndicesAreValid(): Boolean = {
+    val validPortIndices = 0 until ports.size
+    healthChecks.forall { hc =>
+      validPortIndices contains hc.portIndex
+    }
+  }
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
@@ -75,6 +98,7 @@ case class AppDefinition(
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
+      .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
       .setVersion(version.toString)
 
     for (c <- container) builder.setContainer(c.toProto)
@@ -101,12 +125,14 @@ case class AppDefinition(
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
       constraints = proto.getConstraintsList.asScala.toSet,
-      container = if (proto.hasContainer) Some(ContainerInfo(proto.getContainer))
-                  else None,
       cpus = resourcesMap.get(AppDefinition.CPUS).getOrElse(this.cpus),
       mem = resourcesMap.get(AppDefinition.MEM).getOrElse(this.mem),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
+      container = if (proto.hasContainer) Some(ContainerInfo(proto.getContainer))
+                  else None,
+      healthChecks =
+        proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion)
     )
   }
@@ -143,7 +169,8 @@ object AppDefinition {
     app: AppDefinition
   ) extends AppDefinition(
     app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
-    app.constraints, app.uris, app.ports, app.taskRateLimit, app.container, app.version
+    app.constraints, app.uris, app.ports, app.taskRateLimit, app.container,
+    app.healthChecks, app.version
   ) {
 
     /**

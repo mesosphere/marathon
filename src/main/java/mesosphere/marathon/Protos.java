@@ -875,53 +875,131 @@ public final class Protos {
     // @@protoc_insertion_point(class_scope:mesosphere.marathon.Constraint)
   }
 
-  public interface AppRepositoryOrBuilder
+  public interface HealthCheckDefinitionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .mesosphere.marathon.ServiceDefinition history = 1;
+    // required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * <code>required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;</code>
      */
-    java.util.List<mesosphere.marathon.Protos.ServiceDefinition> 
-        getHistoryList();
+    boolean hasProtocol();
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * <code>required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;</code>
      */
-    mesosphere.marathon.Protos.ServiceDefinition getHistory(int index);
+    mesosphere.marathon.Protos.HealthCheckDefinition.Protocol getProtocol();
+
+    // required uint32 portIndex = 2 [default = 0];
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * <code>required uint32 portIndex = 2 [default = 0];</code>
      */
-    int getHistoryCount();
+    boolean hasPortIndex();
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * <code>required uint32 portIndex = 2 [default = 0];</code>
      */
-    java.util.List<? extends mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
-        getHistoryOrBuilderList();
+    int getPortIndex();
+
+    // optional uint32 initialDelaySeconds = 3 [default = 15];
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * <code>optional uint32 initialDelaySeconds = 3 [default = 15];</code>
      */
-    mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getHistoryOrBuilder(
-        int index);
+    boolean hasInitialDelaySeconds();
+    /**
+     * <code>optional uint32 initialDelaySeconds = 3 [default = 15];</code>
+     */
+    int getInitialDelaySeconds();
+
+    // optional uint32 intervalSeconds = 4 [default = 60];
+    /**
+     * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+     */
+    boolean hasIntervalSeconds();
+    /**
+     * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+     */
+    int getIntervalSeconds();
+
+    // optional uint32 timeoutSeconds = 5 [default = 15];
+    /**
+     * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+     */
+    boolean hasTimeoutSeconds();
+    /**
+     * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+     */
+    int getTimeoutSeconds();
+
+    // optional string path = 6 [default = "/"];
+    /**
+     * <code>optional string path = 6 [default = "/"];</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    boolean hasPath();
+    /**
+     * <code>optional string path = 6 [default = "/"];</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    java.lang.String getPath();
+    /**
+     * <code>optional string path = 6 [default = "/"];</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    com.google.protobuf.ByteString
+        getPathBytes();
+
+    // repeated uint32 acceptableResponses = 7;
+    /**
+     * <code>repeated uint32 acceptableResponses = 7;</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    java.util.List<java.lang.Integer> getAcceptableResponsesList();
+    /**
+     * <code>repeated uint32 acceptableResponses = 7;</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    int getAcceptableResponsesCount();
+    /**
+     * <code>repeated uint32 acceptableResponses = 7;</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    int getAcceptableResponses(int index);
   }
   /**
-   * Protobuf type {@code mesosphere.marathon.AppRepository}
+   * Protobuf type {@code mesosphere.marathon.HealthCheckDefinition}
    */
-  public static final class AppRepository extends
+  public static final class HealthCheckDefinition extends
       com.google.protobuf.GeneratedMessage
-      implements AppRepositoryOrBuilder {
-    // Use AppRepository.newBuilder() to construct.
-    private AppRepository(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements HealthCheckDefinitionOrBuilder {
+    // Use HealthCheckDefinition.newBuilder() to construct.
+    private HealthCheckDefinition(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private AppRepository(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private HealthCheckDefinition(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final AppRepository defaultInstance;
-    public static AppRepository getDefaultInstance() {
+    private static final HealthCheckDefinition defaultInstance;
+    public static HealthCheckDefinition getDefaultInstance() {
       return defaultInstance;
     }
 
-    public AppRepository getDefaultInstanceForType() {
+    public HealthCheckDefinition getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -931,7 +1009,7 @@ public final class Protos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private AppRepository(
+    private HealthCheckDefinition(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -954,12 +1032,61 @@ public final class Protos {
               }
               break;
             }
-            case 10: {
-              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-                history_ = new java.util.ArrayList<mesosphere.marathon.Protos.ServiceDefinition>();
-                mutable_bitField0_ |= 0x00000001;
+            case 8: {
+              int rawValue = input.readEnum();
+              mesosphere.marathon.Protos.HealthCheckDefinition.Protocol value = mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                protocol_ = value;
               }
-              history_.add(input.readMessage(mesosphere.marathon.Protos.ServiceDefinition.PARSER, extensionRegistry));
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              portIndex_ = input.readUInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              initialDelaySeconds_ = input.readUInt32();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              intervalSeconds_ = input.readUInt32();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              timeoutSeconds_ = input.readUInt32();
+              break;
+            }
+            case 50: {
+              bitField0_ |= 0x00000020;
+              path_ = input.readBytes();
+              break;
+            }
+            case 56: {
+              if (!((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
+                acceptableResponses_ = new java.util.ArrayList<java.lang.Integer>();
+                mutable_bitField0_ |= 0x00000040;
+              }
+              acceptableResponses_.add(input.readUInt32());
+              break;
+            }
+            case 58: {
+              int length = input.readRawVarint32();
+              int limit = input.pushLimit(length);
+              if (!((mutable_bitField0_ & 0x00000040) == 0x00000040) && input.getBytesUntilLimit() > 0) {
+                acceptableResponses_ = new java.util.ArrayList<java.lang.Integer>();
+                mutable_bitField0_ |= 0x00000040;
+              }
+              while (input.getBytesUntilLimit() > 0) {
+                acceptableResponses_.add(input.readUInt32());
+              }
+              input.popLimit(limit);
               break;
             }
           }
@@ -970,8 +1097,8 @@ public final class Protos {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e.getMessage()).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-          history_ = java.util.Collections.unmodifiableList(history_);
+        if (((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
+          acceptableResponses_ = java.util.Collections.unmodifiableList(acceptableResponses_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -979,80 +1106,305 @@ public final class Protos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_AppRepository_descriptor;
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_AppRepository_fieldAccessorTable
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_HealthCheckDefinition_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              mesosphere.marathon.Protos.AppRepository.class, mesosphere.marathon.Protos.AppRepository.Builder.class);
+              mesosphere.marathon.Protos.HealthCheckDefinition.class, mesosphere.marathon.Protos.HealthCheckDefinition.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<AppRepository> PARSER =
-        new com.google.protobuf.AbstractParser<AppRepository>() {
-      public AppRepository parsePartialFrom(
+    public static com.google.protobuf.Parser<HealthCheckDefinition> PARSER =
+        new com.google.protobuf.AbstractParser<HealthCheckDefinition>() {
+      public HealthCheckDefinition parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new AppRepository(input, extensionRegistry);
+        return new HealthCheckDefinition(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<AppRepository> getParserForType() {
+    public com.google.protobuf.Parser<HealthCheckDefinition> getParserForType() {
       return PARSER;
     }
 
-    // repeated .mesosphere.marathon.ServiceDefinition history = 1;
-    public static final int HISTORY_FIELD_NUMBER = 1;
-    private java.util.List<mesosphere.marathon.Protos.ServiceDefinition> history_;
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * Protobuf enum {@code mesosphere.marathon.HealthCheckDefinition.Protocol}
      */
-    public java.util.List<mesosphere.marathon.Protos.ServiceDefinition> getHistoryList() {
-      return history_;
+    public enum Protocol
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>HTTP = 0;</code>
+       */
+      HTTP(0, 0),
+      /**
+       * <code>TCP = 1;</code>
+       */
+      TCP(1, 1),
+      ;
+
+      /**
+       * <code>HTTP = 0;</code>
+       */
+      public static final int HTTP_VALUE = 0;
+      /**
+       * <code>TCP = 1;</code>
+       */
+      public static final int TCP_VALUE = 1;
+
+
+      public final int getNumber() { return value; }
+
+      public static Protocol valueOf(int value) {
+        switch (value) {
+          case 0: return HTTP;
+          case 1: return TCP;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<Protocol>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<Protocol>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<Protocol>() {
+              public Protocol findValueByNumber(int number) {
+                return Protocol.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.HealthCheckDefinition.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final Protocol[] VALUES = values();
+
+      public static Protocol valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private Protocol(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:mesosphere.marathon.HealthCheckDefinition.Protocol)
+    }
+
+    private int bitField0_;
+    // required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;
+    public static final int PROTOCOL_FIELD_NUMBER = 1;
+    private mesosphere.marathon.Protos.HealthCheckDefinition.Protocol protocol_;
+    /**
+     * <code>required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;</code>
+     */
+    public boolean hasProtocol() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * <code>required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;</code>
      */
-    public java.util.List<? extends mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
-        getHistoryOrBuilderList() {
-      return history_;
+    public mesosphere.marathon.Protos.HealthCheckDefinition.Protocol getProtocol() {
+      return protocol_;
+    }
+
+    // required uint32 portIndex = 2 [default = 0];
+    public static final int PORTINDEX_FIELD_NUMBER = 2;
+    private int portIndex_;
+    /**
+     * <code>required uint32 portIndex = 2 [default = 0];</code>
+     */
+    public boolean hasPortIndex() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * <code>required uint32 portIndex = 2 [default = 0];</code>
      */
-    public int getHistoryCount() {
-      return history_.size();
+    public int getPortIndex() {
+      return portIndex_;
+    }
+
+    // optional uint32 initialDelaySeconds = 3 [default = 15];
+    public static final int INITIALDELAYSECONDS_FIELD_NUMBER = 3;
+    private int initialDelaySeconds_;
+    /**
+     * <code>optional uint32 initialDelaySeconds = 3 [default = 15];</code>
+     */
+    public boolean hasInitialDelaySeconds() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * <code>optional uint32 initialDelaySeconds = 3 [default = 15];</code>
      */
-    public mesosphere.marathon.Protos.ServiceDefinition getHistory(int index) {
-      return history_.get(index);
+    public int getInitialDelaySeconds() {
+      return initialDelaySeconds_;
+    }
+
+    // optional uint32 intervalSeconds = 4 [default = 60];
+    public static final int INTERVALSECONDS_FIELD_NUMBER = 4;
+    private int intervalSeconds_;
+    /**
+     * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+     */
+    public boolean hasIntervalSeconds() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+     * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
      */
-    public mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getHistoryOrBuilder(
-        int index) {
-      return history_.get(index);
+    public int getIntervalSeconds() {
+      return intervalSeconds_;
+    }
+
+    // optional uint32 timeoutSeconds = 5 [default = 15];
+    public static final int TIMEOUTSECONDS_FIELD_NUMBER = 5;
+    private int timeoutSeconds_;
+    /**
+     * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+     */
+    public boolean hasTimeoutSeconds() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+     */
+    public int getTimeoutSeconds() {
+      return timeoutSeconds_;
+    }
+
+    // optional string path = 6 [default = "/"];
+    public static final int PATH_FIELD_NUMBER = 6;
+    private java.lang.Object path_;
+    /**
+     * <code>optional string path = 6 [default = "/"];</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    public boolean hasPath() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional string path = 6 [default = "/"];</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    public java.lang.String getPath() {
+      java.lang.Object ref = path_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          path_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string path = 6 [default = "/"];</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    public com.google.protobuf.ByteString
+        getPathBytes() {
+      java.lang.Object ref = path_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        path_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // repeated uint32 acceptableResponses = 7;
+    public static final int ACCEPTABLERESPONSES_FIELD_NUMBER = 7;
+    private java.util.List<java.lang.Integer> acceptableResponses_;
+    /**
+     * <code>repeated uint32 acceptableResponses = 7;</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    public java.util.List<java.lang.Integer>
+        getAcceptableResponsesList() {
+      return acceptableResponses_;
+    }
+    /**
+     * <code>repeated uint32 acceptableResponses = 7;</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    public int getAcceptableResponsesCount() {
+      return acceptableResponses_.size();
+    }
+    /**
+     * <code>repeated uint32 acceptableResponses = 7;</code>
+     *
+     * <pre>
+     * used for HTTP only
+     * </pre>
+     */
+    public int getAcceptableResponses(int index) {
+      return acceptableResponses_.get(index);
     }
 
     private void initFields() {
-      history_ = java.util.Collections.emptyList();
+      protocol_ = mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.HTTP;
+      portIndex_ = 0;
+      initialDelaySeconds_ = 15;
+      intervalSeconds_ = 60;
+      timeoutSeconds_ = 15;
+      path_ = "/";
+      acceptableResponses_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
 
-      for (int i = 0; i < getHistoryCount(); i++) {
-        if (!getHistory(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
+      if (!hasProtocol()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasPortIndex()) {
+        memoizedIsInitialized = 0;
+        return false;
       }
       memoizedIsInitialized = 1;
       return true;
@@ -1061,8 +1413,26 @@ public final class Protos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      for (int i = 0; i < history_.size(); i++) {
-        output.writeMessage(1, history_.get(i));
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, protocol_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt32(2, portIndex_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt32(3, initialDelaySeconds_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt32(4, intervalSeconds_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt32(5, timeoutSeconds_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(6, getPathBytes());
+      }
+      for (int i = 0; i < acceptableResponses_.size(); i++) {
+        output.writeUInt32(7, acceptableResponses_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -1073,9 +1443,38 @@ public final class Protos {
       if (size != -1) return size;
 
       size = 0;
-      for (int i = 0; i < history_.size(); i++) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, history_.get(i));
+          .computeEnumSize(1, protocol_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(2, portIndex_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(3, initialDelaySeconds_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(4, intervalSeconds_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(5, timeoutSeconds_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, getPathBytes());
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < acceptableResponses_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeUInt32SizeNoTag(acceptableResponses_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getAcceptableResponsesList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1089,53 +1488,53 @@ public final class Protos {
       return super.writeReplace();
     }
 
-    public static mesosphere.marathon.Protos.AppRepository parseFrom(
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static mesosphere.marathon.Protos.AppRepository parseFrom(
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.AppRepository parseFrom(byte[] data)
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static mesosphere.marathon.Protos.AppRepository parseFrom(
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.AppRepository parseFrom(java.io.InputStream input)
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static mesosphere.marathon.Protos.AppRepository parseFrom(
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.AppRepository parseDelimitedFrom(java.io.InputStream input)
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static mesosphere.marathon.Protos.AppRepository parseDelimitedFrom(
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.AppRepository parseFrom(
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static mesosphere.marathon.Protos.AppRepository parseFrom(
+    public static mesosphere.marathon.Protos.HealthCheckDefinition parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -1144,7 +1543,7 @@ public final class Protos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(mesosphere.marathon.Protos.AppRepository prototype) {
+    public static Builder newBuilder(mesosphere.marathon.Protos.HealthCheckDefinition prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -1156,24 +1555,24 @@ public final class Protos {
       return builder;
     }
     /**
-     * Protobuf type {@code mesosphere.marathon.AppRepository}
+     * Protobuf type {@code mesosphere.marathon.HealthCheckDefinition}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements mesosphere.marathon.Protos.AppRepositoryOrBuilder {
+       implements mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_AppRepository_descriptor;
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_AppRepository_fieldAccessorTable
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_HealthCheckDefinition_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                mesosphere.marathon.Protos.AppRepository.class, mesosphere.marathon.Protos.AppRepository.Builder.class);
+                mesosphere.marathon.Protos.HealthCheckDefinition.class, mesosphere.marathon.Protos.HealthCheckDefinition.Builder.class);
       }
 
-      // Construct using mesosphere.marathon.Protos.AppRepository.newBuilder()
+      // Construct using mesosphere.marathon.Protos.HealthCheckDefinition.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -1185,7 +1584,6 @@ public final class Protos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getHistoryFieldBuilder();
         }
       }
       private static Builder create() {
@@ -1194,12 +1592,20 @@ public final class Protos {
 
       public Builder clear() {
         super.clear();
-        if (historyBuilder_ == null) {
-          history_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
-        } else {
-          historyBuilder_.clear();
-        }
+        protocol_ = mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.HTTP;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        portIndex_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        initialDelaySeconds_ = 15;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        intervalSeconds_ = 60;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        timeoutSeconds_ = 15;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        path_ = "/";
+        bitField0_ = (bitField0_ & ~0x00000020);
+        acceptableResponses_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -1209,84 +1615,112 @@ public final class Protos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_AppRepository_descriptor;
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor;
       }
 
-      public mesosphere.marathon.Protos.AppRepository getDefaultInstanceForType() {
-        return mesosphere.marathon.Protos.AppRepository.getDefaultInstance();
+      public mesosphere.marathon.Protos.HealthCheckDefinition getDefaultInstanceForType() {
+        return mesosphere.marathon.Protos.HealthCheckDefinition.getDefaultInstance();
       }
 
-      public mesosphere.marathon.Protos.AppRepository build() {
-        mesosphere.marathon.Protos.AppRepository result = buildPartial();
+      public mesosphere.marathon.Protos.HealthCheckDefinition build() {
+        mesosphere.marathon.Protos.HealthCheckDefinition result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public mesosphere.marathon.Protos.AppRepository buildPartial() {
-        mesosphere.marathon.Protos.AppRepository result = new mesosphere.marathon.Protos.AppRepository(this);
+      public mesosphere.marathon.Protos.HealthCheckDefinition buildPartial() {
+        mesosphere.marathon.Protos.HealthCheckDefinition result = new mesosphere.marathon.Protos.HealthCheckDefinition(this);
         int from_bitField0_ = bitField0_;
-        if (historyBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001)) {
-            history_ = java.util.Collections.unmodifiableList(history_);
-            bitField0_ = (bitField0_ & ~0x00000001);
-          }
-          result.history_ = history_;
-        } else {
-          result.history_ = historyBuilder_.build();
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
         }
+        result.protocol_ = protocol_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.portIndex_ = portIndex_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.initialDelaySeconds_ = initialDelaySeconds_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.intervalSeconds_ = intervalSeconds_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.timeoutSeconds_ = timeoutSeconds_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.path_ = path_;
+        if (((bitField0_ & 0x00000040) == 0x00000040)) {
+          acceptableResponses_ = java.util.Collections.unmodifiableList(acceptableResponses_);
+          bitField0_ = (bitField0_ & ~0x00000040);
+        }
+        result.acceptableResponses_ = acceptableResponses_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof mesosphere.marathon.Protos.AppRepository) {
-          return mergeFrom((mesosphere.marathon.Protos.AppRepository)other);
+        if (other instanceof mesosphere.marathon.Protos.HealthCheckDefinition) {
+          return mergeFrom((mesosphere.marathon.Protos.HealthCheckDefinition)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(mesosphere.marathon.Protos.AppRepository other) {
-        if (other == mesosphere.marathon.Protos.AppRepository.getDefaultInstance()) return this;
-        if (historyBuilder_ == null) {
-          if (!other.history_.isEmpty()) {
-            if (history_.isEmpty()) {
-              history_ = other.history_;
-              bitField0_ = (bitField0_ & ~0x00000001);
-            } else {
-              ensureHistoryIsMutable();
-              history_.addAll(other.history_);
-            }
-            onChanged();
+      public Builder mergeFrom(mesosphere.marathon.Protos.HealthCheckDefinition other) {
+        if (other == mesosphere.marathon.Protos.HealthCheckDefinition.getDefaultInstance()) return this;
+        if (other.hasProtocol()) {
+          setProtocol(other.getProtocol());
+        }
+        if (other.hasPortIndex()) {
+          setPortIndex(other.getPortIndex());
+        }
+        if (other.hasInitialDelaySeconds()) {
+          setInitialDelaySeconds(other.getInitialDelaySeconds());
+        }
+        if (other.hasIntervalSeconds()) {
+          setIntervalSeconds(other.getIntervalSeconds());
+        }
+        if (other.hasTimeoutSeconds()) {
+          setTimeoutSeconds(other.getTimeoutSeconds());
+        }
+        if (other.hasPath()) {
+          bitField0_ |= 0x00000020;
+          path_ = other.path_;
+          onChanged();
+        }
+        if (!other.acceptableResponses_.isEmpty()) {
+          if (acceptableResponses_.isEmpty()) {
+            acceptableResponses_ = other.acceptableResponses_;
+            bitField0_ = (bitField0_ & ~0x00000040);
+          } else {
+            ensureAcceptableResponsesIsMutable();
+            acceptableResponses_.addAll(other.acceptableResponses_);
           }
-        } else {
-          if (!other.history_.isEmpty()) {
-            if (historyBuilder_.isEmpty()) {
-              historyBuilder_.dispose();
-              historyBuilder_ = null;
-              history_ = other.history_;
-              bitField0_ = (bitField0_ & ~0x00000001);
-              historyBuilder_ = 
-                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getHistoryFieldBuilder() : null;
-            } else {
-              historyBuilder_.addAllMessages(other.history_);
-            }
-          }
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
 
       public final boolean isInitialized() {
-        for (int i = 0; i < getHistoryCount(); i++) {
-          if (!getHistory(i).isInitialized()) {
-            
-            return false;
-          }
+        if (!hasProtocol()) {
+          
+          return false;
+        }
+        if (!hasPortIndex()) {
+          
+          return false;
         }
         return true;
       }
@@ -1295,11 +1729,11 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        mesosphere.marathon.Protos.AppRepository parsedMessage = null;
+        mesosphere.marathon.Protos.HealthCheckDefinition parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (mesosphere.marathon.Protos.AppRepository) e.getUnfinishedMessage();
+          parsedMessage = (mesosphere.marathon.Protos.HealthCheckDefinition) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -1310,255 +1744,375 @@ public final class Protos {
       }
       private int bitField0_;
 
-      // repeated .mesosphere.marathon.ServiceDefinition history = 1;
-      private java.util.List<mesosphere.marathon.Protos.ServiceDefinition> history_ =
-        java.util.Collections.emptyList();
-      private void ensureHistoryIsMutable() {
-        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          history_ = new java.util.ArrayList<mesosphere.marathon.Protos.ServiceDefinition>(history_);
-          bitField0_ |= 0x00000001;
+      // required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;
+      private mesosphere.marathon.Protos.HealthCheckDefinition.Protocol protocol_ = mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.HTTP;
+      /**
+       * <code>required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;</code>
+       */
+      public boolean hasProtocol() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;</code>
+       */
+      public mesosphere.marathon.Protos.HealthCheckDefinition.Protocol getProtocol() {
+        return protocol_;
+      }
+      /**
+       * <code>required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;</code>
+       */
+      public Builder setProtocol(mesosphere.marathon.Protos.HealthCheckDefinition.Protocol value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        protocol_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .mesosphere.marathon.HealthCheckDefinition.Protocol protocol = 1;</code>
+       */
+      public Builder clearProtocol() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        protocol_ = mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.HTTP;
+        onChanged();
+        return this;
+      }
+
+      // required uint32 portIndex = 2 [default = 0];
+      private int portIndex_ ;
+      /**
+       * <code>required uint32 portIndex = 2 [default = 0];</code>
+       */
+      public boolean hasPortIndex() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required uint32 portIndex = 2 [default = 0];</code>
+       */
+      public int getPortIndex() {
+        return portIndex_;
+      }
+      /**
+       * <code>required uint32 portIndex = 2 [default = 0];</code>
+       */
+      public Builder setPortIndex(int value) {
+        bitField0_ |= 0x00000002;
+        portIndex_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint32 portIndex = 2 [default = 0];</code>
+       */
+      public Builder clearPortIndex() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        portIndex_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 initialDelaySeconds = 3 [default = 15];
+      private int initialDelaySeconds_ = 15;
+      /**
+       * <code>optional uint32 initialDelaySeconds = 3 [default = 15];</code>
+       */
+      public boolean hasInitialDelaySeconds() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional uint32 initialDelaySeconds = 3 [default = 15];</code>
+       */
+      public int getInitialDelaySeconds() {
+        return initialDelaySeconds_;
+      }
+      /**
+       * <code>optional uint32 initialDelaySeconds = 3 [default = 15];</code>
+       */
+      public Builder setInitialDelaySeconds(int value) {
+        bitField0_ |= 0x00000004;
+        initialDelaySeconds_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 initialDelaySeconds = 3 [default = 15];</code>
+       */
+      public Builder clearInitialDelaySeconds() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        initialDelaySeconds_ = 15;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 intervalSeconds = 4 [default = 60];
+      private int intervalSeconds_ = 60;
+      /**
+       * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+       */
+      public boolean hasIntervalSeconds() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+       */
+      public int getIntervalSeconds() {
+        return intervalSeconds_;
+      }
+      /**
+       * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+       */
+      public Builder setIntervalSeconds(int value) {
+        bitField0_ |= 0x00000008;
+        intervalSeconds_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+       */
+      public Builder clearIntervalSeconds() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        intervalSeconds_ = 60;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 timeoutSeconds = 5 [default = 15];
+      private int timeoutSeconds_ = 15;
+      /**
+       * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+       */
+      public boolean hasTimeoutSeconds() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+       */
+      public int getTimeoutSeconds() {
+        return timeoutSeconds_;
+      }
+      /**
+       * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+       */
+      public Builder setTimeoutSeconds(int value) {
+        bitField0_ |= 0x00000010;
+        timeoutSeconds_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+       */
+      public Builder clearTimeoutSeconds() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        timeoutSeconds_ = 15;
+        onChanged();
+        return this;
+      }
+
+      // optional string path = 6 [default = "/"];
+      private java.lang.Object path_ = "/";
+      /**
+       * <code>optional string path = 6 [default = "/"];</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
+       */
+      public boolean hasPath() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>optional string path = 6 [default = "/"];</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
+       */
+      public java.lang.String getPath() {
+        java.lang.Object ref = path_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          path_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string path = 6 [default = "/"];</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
+       */
+      public com.google.protobuf.ByteString
+          getPathBytes() {
+        java.lang.Object ref = path_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          path_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string path = 6 [default = "/"];</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
+       */
+      public Builder setPath(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        path_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string path = 6 [default = "/"];</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
+       */
+      public Builder clearPath() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        path_ = getDefaultInstance().getPath();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string path = 6 [default = "/"];</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
+       */
+      public Builder setPathBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        path_ = value;
+        onChanged();
+        return this;
+      }
+
+      // repeated uint32 acceptableResponses = 7;
+      private java.util.List<java.lang.Integer> acceptableResponses_ = java.util.Collections.emptyList();
+      private void ensureAcceptableResponsesIsMutable() {
+        if (!((bitField0_ & 0x00000040) == 0x00000040)) {
+          acceptableResponses_ = new java.util.ArrayList<java.lang.Integer>(acceptableResponses_);
+          bitField0_ |= 0x00000040;
          }
       }
-
-      private com.google.protobuf.RepeatedFieldBuilder<
-          mesosphere.marathon.Protos.ServiceDefinition, mesosphere.marathon.Protos.ServiceDefinition.Builder, mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> historyBuilder_;
-
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+       * <code>repeated uint32 acceptableResponses = 7;</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
        */
-      public java.util.List<mesosphere.marathon.Protos.ServiceDefinition> getHistoryList() {
-        if (historyBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(history_);
-        } else {
-          return historyBuilder_.getMessageList();
-        }
+      public java.util.List<java.lang.Integer>
+          getAcceptableResponsesList() {
+        return java.util.Collections.unmodifiableList(acceptableResponses_);
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+       * <code>repeated uint32 acceptableResponses = 7;</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
        */
-      public int getHistoryCount() {
-        if (historyBuilder_ == null) {
-          return history_.size();
-        } else {
-          return historyBuilder_.getCount();
-        }
+      public int getAcceptableResponsesCount() {
+        return acceptableResponses_.size();
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+       * <code>repeated uint32 acceptableResponses = 7;</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
        */
-      public mesosphere.marathon.Protos.ServiceDefinition getHistory(int index) {
-        if (historyBuilder_ == null) {
-          return history_.get(index);
-        } else {
-          return historyBuilder_.getMessage(index);
-        }
+      public int getAcceptableResponses(int index) {
+        return acceptableResponses_.get(index);
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+       * <code>repeated uint32 acceptableResponses = 7;</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
        */
-      public Builder setHistory(
-          int index, mesosphere.marathon.Protos.ServiceDefinition value) {
-        if (historyBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureHistoryIsMutable();
-          history_.set(index, value);
-          onChanged();
-        } else {
-          historyBuilder_.setMessage(index, value);
-        }
+      public Builder setAcceptableResponses(
+          int index, int value) {
+        ensureAcceptableResponsesIsMutable();
+        acceptableResponses_.set(index, value);
+        onChanged();
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+       * <code>repeated uint32 acceptableResponses = 7;</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
        */
-      public Builder setHistory(
-          int index, mesosphere.marathon.Protos.ServiceDefinition.Builder builderForValue) {
-        if (historyBuilder_ == null) {
-          ensureHistoryIsMutable();
-          history_.set(index, builderForValue.build());
-          onChanged();
-        } else {
-          historyBuilder_.setMessage(index, builderForValue.build());
-        }
+      public Builder addAcceptableResponses(int value) {
+        ensureAcceptableResponsesIsMutable();
+        acceptableResponses_.add(value);
+        onChanged();
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+       * <code>repeated uint32 acceptableResponses = 7;</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
        */
-      public Builder addHistory(mesosphere.marathon.Protos.ServiceDefinition value) {
-        if (historyBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureHistoryIsMutable();
-          history_.add(value);
-          onChanged();
-        } else {
-          historyBuilder_.addMessage(value);
-        }
+      public Builder addAllAcceptableResponses(
+          java.lang.Iterable<? extends java.lang.Integer> values) {
+        ensureAcceptableResponsesIsMutable();
+        super.addAll(values, acceptableResponses_);
+        onChanged();
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
+       * <code>repeated uint32 acceptableResponses = 7;</code>
+       *
+       * <pre>
+       * used for HTTP only
+       * </pre>
        */
-      public Builder addHistory(
-          int index, mesosphere.marathon.Protos.ServiceDefinition value) {
-        if (historyBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureHistoryIsMutable();
-          history_.add(index, value);
-          onChanged();
-        } else {
-          historyBuilder_.addMessage(index, value);
-        }
+      public Builder clearAcceptableResponses() {
+        acceptableResponses_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000040);
+        onChanged();
         return this;
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public Builder addHistory(
-          mesosphere.marathon.Protos.ServiceDefinition.Builder builderForValue) {
-        if (historyBuilder_ == null) {
-          ensureHistoryIsMutable();
-          history_.add(builderForValue.build());
-          onChanged();
-        } else {
-          historyBuilder_.addMessage(builderForValue.build());
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public Builder addHistory(
-          int index, mesosphere.marathon.Protos.ServiceDefinition.Builder builderForValue) {
-        if (historyBuilder_ == null) {
-          ensureHistoryIsMutable();
-          history_.add(index, builderForValue.build());
-          onChanged();
-        } else {
-          historyBuilder_.addMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public Builder addAllHistory(
-          java.lang.Iterable<? extends mesosphere.marathon.Protos.ServiceDefinition> values) {
-        if (historyBuilder_ == null) {
-          ensureHistoryIsMutable();
-          super.addAll(values, history_);
-          onChanged();
-        } else {
-          historyBuilder_.addAllMessages(values);
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public Builder clearHistory() {
-        if (historyBuilder_ == null) {
-          history_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
-          onChanged();
-        } else {
-          historyBuilder_.clear();
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public Builder removeHistory(int index) {
-        if (historyBuilder_ == null) {
-          ensureHistoryIsMutable();
-          history_.remove(index);
-          onChanged();
-        } else {
-          historyBuilder_.remove(index);
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public mesosphere.marathon.Protos.ServiceDefinition.Builder getHistoryBuilder(
-          int index) {
-        return getHistoryFieldBuilder().getBuilder(index);
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getHistoryOrBuilder(
-          int index) {
-        if (historyBuilder_ == null) {
-          return history_.get(index);  } else {
-          return historyBuilder_.getMessageOrBuilder(index);
-        }
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public java.util.List<? extends mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
-           getHistoryOrBuilderList() {
-        if (historyBuilder_ != null) {
-          return historyBuilder_.getMessageOrBuilderList();
-        } else {
-          return java.util.Collections.unmodifiableList(history_);
-        }
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public mesosphere.marathon.Protos.ServiceDefinition.Builder addHistoryBuilder() {
-        return getHistoryFieldBuilder().addBuilder(
-            mesosphere.marathon.Protos.ServiceDefinition.getDefaultInstance());
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public mesosphere.marathon.Protos.ServiceDefinition.Builder addHistoryBuilder(
-          int index) {
-        return getHistoryFieldBuilder().addBuilder(
-            index, mesosphere.marathon.Protos.ServiceDefinition.getDefaultInstance());
-      }
-      /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition history = 1;</code>
-       */
-      public java.util.List<mesosphere.marathon.Protos.ServiceDefinition.Builder> 
-           getHistoryBuilderList() {
-        return getHistoryFieldBuilder().getBuilderList();
-      }
-      private com.google.protobuf.RepeatedFieldBuilder<
-          mesosphere.marathon.Protos.ServiceDefinition, mesosphere.marathon.Protos.ServiceDefinition.Builder, mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
-          getHistoryFieldBuilder() {
-        if (historyBuilder_ == null) {
-          historyBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              mesosphere.marathon.Protos.ServiceDefinition, mesosphere.marathon.Protos.ServiceDefinition.Builder, mesosphere.marathon.Protos.ServiceDefinitionOrBuilder>(
-                  history_,
-                  ((bitField0_ & 0x00000001) == 0x00000001),
-                  getParentForChildren(),
-                  isClean());
-          history_ = null;
-        }
-        return historyBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.AppRepository)
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.HealthCheckDefinition)
     }
 
     static {
-      defaultInstance = new AppRepository(true);
+      defaultInstance = new HealthCheckDefinition(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:mesosphere.marathon.AppRepository)
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.HealthCheckDefinition)
   }
 
   public interface ServiceDefinitionOrBuilder
@@ -1735,6 +2289,31 @@ public final class Protos {
      */
     com.google.protobuf.ByteString
         getVersionBytes();
+
+    // repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    java.util.List<mesosphere.marathon.Protos.HealthCheckDefinition> 
+        getHealthChecksList();
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    mesosphere.marathon.Protos.HealthCheckDefinition getHealthChecks(int index);
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    int getHealthChecksCount();
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    java.util.List<? extends mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder> 
+        getHealthChecksOrBuilderList();
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder getHealthChecksOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -1880,6 +2459,14 @@ public final class Protos {
               version_ = input.readBytes();
               break;
             }
+            case 98: {
+              if (!((mutable_bitField0_ & 0x00000800) == 0x00000800)) {
+                healthChecks_ = new java.util.ArrayList<mesosphere.marathon.Protos.HealthCheckDefinition>();
+                mutable_bitField0_ |= 0x00000800;
+              }
+              healthChecks_.add(input.readMessage(mesosphere.marathon.Protos.HealthCheckDefinition.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -1896,6 +2483,9 @@ public final class Protos {
         }
         if (((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
           constraints_ = java.util.Collections.unmodifiableList(constraints_);
+        }
+        if (((mutable_bitField0_ & 0x00000800) == 0x00000800)) {
+          healthChecks_ = java.util.Collections.unmodifiableList(healthChecks_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -2272,6 +2862,42 @@ public final class Protos {
       }
     }
 
+    // repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;
+    public static final int HEALTHCHECKS_FIELD_NUMBER = 12;
+    private java.util.List<mesosphere.marathon.Protos.HealthCheckDefinition> healthChecks_;
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    public java.util.List<mesosphere.marathon.Protos.HealthCheckDefinition> getHealthChecksList() {
+      return healthChecks_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    public java.util.List<? extends mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder> 
+        getHealthChecksOrBuilderList() {
+      return healthChecks_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    public int getHealthChecksCount() {
+      return healthChecks_.size();
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    public mesosphere.marathon.Protos.HealthCheckDefinition getHealthChecks(int index) {
+      return healthChecks_.get(index);
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+     */
+    public mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder getHealthChecksOrBuilder(
+        int index) {
+      return healthChecks_.get(index);
+    }
+
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -2284,6 +2910,7 @@ public final class Protos {
       taskRateLimit_ = 1D;
       container_ = mesosphere.marathon.Protos.ContainerInfo.getDefaultInstance();
       version_ = "";
+      healthChecks_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2332,6 +2959,12 @@ public final class Protos {
           return false;
         }
       }
+      for (int i = 0; i < getHealthChecksCount(); i++) {
+        if (!getHealthChecks(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -2371,6 +3004,9 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         output.writeBytes(11, getVersionBytes());
+      }
+      for (int i = 0; i < healthChecks_.size(); i++) {
+        output.writeMessage(12, healthChecks_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -2429,6 +3065,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(11, getVersionBytes());
+      }
+      for (int i = 0; i < healthChecks_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(12, healthChecks_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2542,6 +3182,7 @@ public final class Protos {
           getResourcesFieldBuilder();
           getConstraintsFieldBuilder();
           getContainerFieldBuilder();
+          getHealthChecksFieldBuilder();
         }
       }
       private static Builder create() {
@@ -2588,6 +3229,12 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000200);
         version_ = "";
         bitField0_ = (bitField0_ & ~0x00000400);
+        if (healthChecksBuilder_ == null) {
+          healthChecks_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000800);
+        } else {
+          healthChecksBuilder_.clear();
+        }
         return this;
       }
 
@@ -2679,6 +3326,15 @@ public final class Protos {
           to_bitField0_ |= 0x00000080;
         }
         result.version_ = version_;
+        if (healthChecksBuilder_ == null) {
+          if (((bitField0_ & 0x00000800) == 0x00000800)) {
+            healthChecks_ = java.util.Collections.unmodifiableList(healthChecks_);
+            bitField0_ = (bitField0_ & ~0x00000800);
+          }
+          result.healthChecks_ = healthChecks_;
+        } else {
+          result.healthChecks_ = healthChecksBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2789,6 +3445,32 @@ public final class Protos {
           version_ = other.version_;
           onChanged();
         }
+        if (healthChecksBuilder_ == null) {
+          if (!other.healthChecks_.isEmpty()) {
+            if (healthChecks_.isEmpty()) {
+              healthChecks_ = other.healthChecks_;
+              bitField0_ = (bitField0_ & ~0x00000800);
+            } else {
+              ensureHealthChecksIsMutable();
+              healthChecks_.addAll(other.healthChecks_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.healthChecks_.isEmpty()) {
+            if (healthChecksBuilder_.isEmpty()) {
+              healthChecksBuilder_.dispose();
+              healthChecksBuilder_ = null;
+              healthChecks_ = other.healthChecks_;
+              bitField0_ = (bitField0_ & ~0x00000800);
+              healthChecksBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getHealthChecksFieldBuilder() : null;
+            } else {
+              healthChecksBuilder_.addAllMessages(other.healthChecks_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -2832,6 +3514,12 @@ public final class Protos {
         }
         if (hasContainer()) {
           if (!getContainer().isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getHealthChecksCount(); i++) {
+          if (!getHealthChecks(i).isInitialized()) {
             
             return false;
           }
@@ -3998,6 +4686,246 @@ public final class Protos {
         version_ = value;
         onChanged();
         return this;
+      }
+
+      // repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;
+      private java.util.List<mesosphere.marathon.Protos.HealthCheckDefinition> healthChecks_ =
+        java.util.Collections.emptyList();
+      private void ensureHealthChecksIsMutable() {
+        if (!((bitField0_ & 0x00000800) == 0x00000800)) {
+          healthChecks_ = new java.util.ArrayList<mesosphere.marathon.Protos.HealthCheckDefinition>(healthChecks_);
+          bitField0_ |= 0x00000800;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.HealthCheckDefinition, mesosphere.marathon.Protos.HealthCheckDefinition.Builder, mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder> healthChecksBuilder_;
+
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public java.util.List<mesosphere.marathon.Protos.HealthCheckDefinition> getHealthChecksList() {
+        if (healthChecksBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(healthChecks_);
+        } else {
+          return healthChecksBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public int getHealthChecksCount() {
+        if (healthChecksBuilder_ == null) {
+          return healthChecks_.size();
+        } else {
+          return healthChecksBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public mesosphere.marathon.Protos.HealthCheckDefinition getHealthChecks(int index) {
+        if (healthChecksBuilder_ == null) {
+          return healthChecks_.get(index);
+        } else {
+          return healthChecksBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public Builder setHealthChecks(
+          int index, mesosphere.marathon.Protos.HealthCheckDefinition value) {
+        if (healthChecksBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureHealthChecksIsMutable();
+          healthChecks_.set(index, value);
+          onChanged();
+        } else {
+          healthChecksBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public Builder setHealthChecks(
+          int index, mesosphere.marathon.Protos.HealthCheckDefinition.Builder builderForValue) {
+        if (healthChecksBuilder_ == null) {
+          ensureHealthChecksIsMutable();
+          healthChecks_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          healthChecksBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public Builder addHealthChecks(mesosphere.marathon.Protos.HealthCheckDefinition value) {
+        if (healthChecksBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureHealthChecksIsMutable();
+          healthChecks_.add(value);
+          onChanged();
+        } else {
+          healthChecksBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public Builder addHealthChecks(
+          int index, mesosphere.marathon.Protos.HealthCheckDefinition value) {
+        if (healthChecksBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureHealthChecksIsMutable();
+          healthChecks_.add(index, value);
+          onChanged();
+        } else {
+          healthChecksBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public Builder addHealthChecks(
+          mesosphere.marathon.Protos.HealthCheckDefinition.Builder builderForValue) {
+        if (healthChecksBuilder_ == null) {
+          ensureHealthChecksIsMutable();
+          healthChecks_.add(builderForValue.build());
+          onChanged();
+        } else {
+          healthChecksBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public Builder addHealthChecks(
+          int index, mesosphere.marathon.Protos.HealthCheckDefinition.Builder builderForValue) {
+        if (healthChecksBuilder_ == null) {
+          ensureHealthChecksIsMutable();
+          healthChecks_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          healthChecksBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public Builder addAllHealthChecks(
+          java.lang.Iterable<? extends mesosphere.marathon.Protos.HealthCheckDefinition> values) {
+        if (healthChecksBuilder_ == null) {
+          ensureHealthChecksIsMutable();
+          super.addAll(values, healthChecks_);
+          onChanged();
+        } else {
+          healthChecksBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public Builder clearHealthChecks() {
+        if (healthChecksBuilder_ == null) {
+          healthChecks_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000800);
+          onChanged();
+        } else {
+          healthChecksBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public Builder removeHealthChecks(int index) {
+        if (healthChecksBuilder_ == null) {
+          ensureHealthChecksIsMutable();
+          healthChecks_.remove(index);
+          onChanged();
+        } else {
+          healthChecksBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public mesosphere.marathon.Protos.HealthCheckDefinition.Builder getHealthChecksBuilder(
+          int index) {
+        return getHealthChecksFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder getHealthChecksOrBuilder(
+          int index) {
+        if (healthChecksBuilder_ == null) {
+          return healthChecks_.get(index);  } else {
+          return healthChecksBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public java.util.List<? extends mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder> 
+           getHealthChecksOrBuilderList() {
+        if (healthChecksBuilder_ != null) {
+          return healthChecksBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(healthChecks_);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public mesosphere.marathon.Protos.HealthCheckDefinition.Builder addHealthChecksBuilder() {
+        return getHealthChecksFieldBuilder().addBuilder(
+            mesosphere.marathon.Protos.HealthCheckDefinition.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public mesosphere.marathon.Protos.HealthCheckDefinition.Builder addHealthChecksBuilder(
+          int index) {
+        return getHealthChecksFieldBuilder().addBuilder(
+            index, mesosphere.marathon.Protos.HealthCheckDefinition.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.HealthCheckDefinition healthChecks = 12;</code>
+       */
+      public java.util.List<mesosphere.marathon.Protos.HealthCheckDefinition.Builder> 
+           getHealthChecksBuilderList() {
+        return getHealthChecksFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.HealthCheckDefinition, mesosphere.marathon.Protos.HealthCheckDefinition.Builder, mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder> 
+          getHealthChecksFieldBuilder() {
+        if (healthChecksBuilder_ == null) {
+          healthChecksBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              mesosphere.marathon.Protos.HealthCheckDefinition, mesosphere.marathon.Protos.HealthCheckDefinition.Builder, mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder>(
+                  healthChecks_,
+                  ((bitField0_ & 0x00000800) == 0x00000800),
+                  getParentForChildren(),
+                  isClean());
+          healthChecks_ = null;
+        }
+        return healthChecksBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
@@ -7774,10 +8702,10 @@ public final class Protos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_mesosphere_marathon_Constraint_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_mesosphere_marathon_AppRepository_descriptor;
+    internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_mesosphere_marathon_AppRepository_fieldAccessorTable;
+      internal_static_mesosphere_marathon_HealthCheckDefinition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_ServiceDefinition_descriptor;
   private static
@@ -7817,27 +8745,34 @@ public final class Protos {
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\";\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\022\014\n\010GROUP_BY\020\003\"H\n\rAppRepository\0227\n\007his" +
-      "tory\030\001 \003(\0132&.mesosphere.marathon.Service" +
-      "Definition\"\307\002\n\021ServiceDefinition\022\n\n\002id\030\001" +
-      " \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n" +
-      "\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.me",
-      "sos.Resource\022\023\n\013description\030\005 \001(\t\022\r\n\005por" +
-      "ts\030\006 \003(\r\0224\n\013constraints\030\007 \003(\0132\037.mesosphe" +
-      "re.marathon.Constraint\022\022\n\010executor\030\010 \002(\t" +
-      ":\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011\0225\n\tcontaine" +
-      "r\030\n \001(\0132\".mesosphere.marathon.ContainerI" +
-      "nfo\022\017\n\007version\030\013 \002(\t\"\272\001\n\014MarathonTask\022\n\n" +
-      "\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$" +
-      "\n\nattributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\t" +
-      "staged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010s" +
-      "tatuses\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007vers",
-      "ion\030\010 \001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220" +
-      "\n\005tasks\030\002 \003(\0132!.mesosphere.marathon.Mara" +
-      "thonTask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014" +
-      ":\000\022\017\n\007options\030\002 \003(\014\")\n\020EventSubscribers\022" +
-      "\025\n\rcallback_urls\030\001 \003(\tB\035\n\023mesosphere.mar" +
-      "athonB\006Protos"
+      "\020\002\022\014\n\010GROUP_BY\020\003\"\233\002\n\025HealthCheckDefiniti" +
+      "on\022E\n\010protocol\030\001 \002(\01623.mesosphere.marath" +
+      "on.HealthCheckDefinition.Protocol\022\024\n\tpor" +
+      "tIndex\030\002 \002(\r:\0010\022\037\n\023initialDelaySeconds\030\003" +
+      " \001(\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00260\022\032\n",
+      "\016timeoutSeconds\030\005 \001(\r:\00215\022\017\n\004path\030\006 \001(\t:" +
+      "\001/\022\033\n\023acceptableResponses\030\007 \003(\r\"\035\n\010Proto" +
+      "col\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\211\003\n\021ServiceDefini" +
+      "tion\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.Co" +
+      "mmandInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresource" +
+      "s\030\004 \003(\0132\017.mesos.Resource\022\023\n\013description\030" +
+      "\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013constraints\030\007 \003(" +
+      "\0132\037.mesosphere.marathon.Constraint\022\022\n\010ex" +
+      "ecutor\030\010 \002(\t:\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011" +
+      "\0225\n\tcontainer\030\n \001(\0132\".mesosphere.maratho",
+      "n.ContainerInfo\022\017\n\007version\030\013 \002(\t\022@\n\014heal" +
+      "thChecks\030\014 \003(\0132*.mesosphere.marathon.Hea" +
+      "lthCheckDefinition\"\272\001\n\014MarathonTask\022\n\n\002i" +
+      "d\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\n" +
+      "attributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tst" +
+      "aged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010sta" +
+      "tuses\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007versio" +
+      "n\030\010 \001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005" +
+      "tasks\030\002 \003(\0132!.mesosphere.marathon.Marath" +
+      "onTask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000",
+      "\022\017\n\007options\030\002 \003(\014\")\n\020EventSubscribers\022\025\n" +
+      "\rcallback_urls\030\001 \003(\tB\035\n\023mesosphere.marat" +
+      "honB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -7850,18 +8785,18 @@ public final class Protos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_Constraint_descriptor,
               new java.lang.String[] { "Field", "Operator", "Value", });
-          internal_static_mesosphere_marathon_AppRepository_descriptor =
+          internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_mesosphere_marathon_AppRepository_fieldAccessorTable = new
+          internal_static_mesosphere_marathon_HealthCheckDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_mesosphere_marathon_AppRepository_descriptor,
-              new java.lang.String[] { "History", });
+              internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor,
+              new java.lang.String[] { "Protocol", "PortIndex", "InitialDelaySeconds", "IntervalSeconds", "TimeoutSeconds", "Path", "AcceptableResponses", });
           internal_static_mesosphere_marathon_ServiceDefinition_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "TaskRateLimit", "Container", "Version", });
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "TaskRateLimit", "Container", "Version", "HealthChecks", });
           internal_static_mesosphere_marathon_MarathonTask_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new

@@ -17,6 +17,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
 import java.net.URI
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.api.{PATCH, Responses}
 
 /**
@@ -28,7 +29,8 @@ import mesosphere.marathon.api.{PATCH, Responses}
 class AppsResource @Inject()(
     @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
-    taskTracker: TaskTracker) {
+    taskTracker: TaskTracker,
+    healthCheckManager: HealthCheckManager) {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -134,7 +136,7 @@ class AppsResource @Inject()(
 
   @Path("{appId}/tasks")
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def appTasksResource() = new AppTasksResource(service, taskTracker)
+  def appTasksResource() = new AppTasksResource(service, taskTracker, healthCheckManager)
 
   @Path("{appId}/versions")
   @Produces(Array(MediaType.APPLICATION_JSON))

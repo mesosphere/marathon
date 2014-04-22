@@ -3,10 +3,13 @@ package mesosphere.marathon.api.v2.json
 import com.fasterxml.jackson.databind._
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.health.HealthCheck
 import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind.Module.SetupContext
 import com.fasterxml.jackson.databind.ser.Serializers
 import com.fasterxml.jackson.databind.deser.Deserializers
+import scala.concurrent.duration.FiniteDuration
+import java.util.concurrent.TimeUnit.SECONDS
 import mesosphere.marathon.{EmptyContainerInfo, ContainerInfo}
 import scala.collection.JavaConverters._
 import mesosphere.marathon.api.v2.AppUpdate
@@ -25,6 +28,7 @@ class MarathonModule extends Module {
   private val marathonTaskClass = classOf[MarathonTask]
   private val enrichedTaskClass = classOf[EnrichedTask]
   private val timestampClass = classOf[Timestamp]
+  private val finiteDurationClass = classOf[FiniteDuration]
   private val containerInfoClass = classOf[ContainerInfo]
   private val appUpdateClass = classOf[AppUpdate]
 
@@ -36,48 +40,32 @@ class MarathonModule extends Module {
     context.addSerializers(new Serializers.Base {
       override def findSerializer(config: SerializationConfig, javaType: JavaType,
                                   beanDesc: BeanDescription): JsonSerializer[_] = {
-        if (constraintClass.isAssignableFrom(javaType.getRawClass)) {
-          ConstraintSerializer
-        }
-        else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
-          MarathonTaskSerializer
-        }
-        else if (enrichedTaskClass.isAssignableFrom(javaType.getRawClass)) {
-          EnrichedTaskSerializer
-        }
-        else if (timestampClass.isAssignableFrom(javaType.getRawClass)) {
-          TimestampSerializer
-        }
-        else if (containerInfoClass.isAssignableFrom(javaType.getRawClass)) {
-          ContainerInfoSerializer
-        }
-        else {
-          null
-        }
+
+        def matches(clazz: Class[_]): Boolean = clazz isAssignableFrom javaType.getRawClass
+
+        if (matches(constraintClass)) ConstraintSerializer
+        else if (matches(marathonTaskClass)) MarathonTaskSerializer
+        else if (matches(enrichedTaskClass)) EnrichedTaskSerializer
+        else if (matches(timestampClass)) TimestampSerializer
+        else if (matches(finiteDurationClass)) FiniteDurationSerializer
+        else if (matches(containerInfoClass)) ContainerInfoSerializer
+        else null
       }
     })
 
     context.addDeserializers(new Deserializers.Base {
       override def findBeanDeserializer(javaType: JavaType, config: DeserializationConfig,
                                         beanDesc: BeanDescription): JsonDeserializer[_] = {
-        if (constraintClass.isAssignableFrom(javaType.getRawClass)) {
-          ConstraintDeserializer
-        }
-        else if (marathonTaskClass.isAssignableFrom(javaType.getRawClass)) {
-          MarathonTaskDeserializer
-        }
-        else if (timestampClass.isAssignableFrom(javaType.getRawClass)) {
-          TimestampDeserializer
-        }
-        else if (containerInfoClass.isAssignableFrom(javaType.getRawClass)) {
-          ContainerInfoDeserializer
-        }
-        else if (appUpdateClass.isAssignableFrom(javaType.getRawClass)) {
-          AppUpdateDeserializer
-        }
-        else {
-          null
-        }
+
+        def matches(clazz: Class[_]): Boolean = clazz isAssignableFrom javaType.getRawClass
+
+        if (matches(constraintClass)) ConstraintDeserializer
+        else if (matches(marathonTaskClass)) MarathonTaskDeserializer
+        else if (matches(timestampClass)) TimestampDeserializer
+        else if (matches(finiteDurationClass)) FiniteDurationDeserializer
+        else if (matches(containerInfoClass)) ContainerInfoDeserializer
+        else if (matches(appUpdateClass)) AppUpdateDeserializer
+        else null
       }
     })
   }
@@ -117,9 +105,21 @@ class MarathonModule extends Module {
   }
 
   object TimestampDeserializer extends JsonDeserializer[Timestamp] {
-    def deserialize(json: JsonParser, context: DeserializationContext): Timestamp = {
+    def deserialize(json: JsonParser, context: DeserializationContext): Timestamp =
       Timestamp(json.getText)
+  }
+
+  // Note: loses sub-second resolution
+  object FiniteDurationSerializer extends JsonSerializer[FiniteDuration] {
+    def serialize(fd: FiniteDuration, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeNumber(fd.toSeconds)
     }
+  }
+
+  // Note: loses sub-second resolution
+  object FiniteDurationDeserializer extends JsonDeserializer[FiniteDuration] {
+    def deserialize(json: JsonParser, context: DeserializationContext): FiniteDuration =
+      FiniteDuration(json.getLongValue, SECONDS)
   }
 
   object MarathonTaskSerializer extends JsonSerializer[MarathonTask] {
@@ -154,6 +154,9 @@ class MarathonModule extends Module {
       jgen.writeStartObject()
       jgen.writeObjectField("appId", enriched.appId)
       MarathonTaskSerializer.writeFieldValues(enriched.task, jgen, provider)
+      if(enriched.healthCheckResults.nonEmpty) {
+        jgen.writeObjectField("healthCheckResults", enriched.healthCheckResults)
+      }
       jgen.writeEndObject()
     }
   }
@@ -236,8 +239,14 @@ object MarathonModule {
 
     container: Option[ContainerInfo] = None,
 
+    healthChecks: Option[Set[HealthCheck]] = None,
+
     version: Option[Timestamp] = None
+
   ) {
-    def build = AppUpdate(cmd, instances, cpus, mem, uris, ports, constraints, executor, container, version)
+    def build = AppUpdate(
+      cmd, instances, cpus, mem, uris, ports, constraints,
+      executor, container, healthChecks, version
+    )
   }
 }

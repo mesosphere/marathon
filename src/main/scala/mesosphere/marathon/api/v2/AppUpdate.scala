@@ -1,10 +1,11 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.marathon.ContainerInfo
-import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.validation.FieldConstraints.FieldPortsArray
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.ContainerInfo
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.state.Timestamp
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.lang.{Integer => JInt, Double => JDouble}
 
@@ -33,6 +34,8 @@ case class AppUpdate(
 
   container: Option[ContainerInfo] = None,
 
+  healthChecks: Option[Set[HealthCheck]] = None,
+
   version: Option[Timestamp] = None
 
 ) {
@@ -53,8 +56,12 @@ case class AppUpdate(
     for (v <- ports) updated = updated.copy(ports = v)
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
+    for (v <- healthChecks) updated = updated.copy(healthChecks = v)
 
-    updated.copy(container = this.container.orElse(app.container), version = Timestamp.now)
+    updated.copy(
+      container = this.container.orElse(app.container),
+      version = Timestamp.now
+    )
   }
 
 }
@@ -74,7 +81,8 @@ object AppUpdate {
       ports = Option(app.ports),
       constraints = Option(app.constraints),
       executor = Option(app.executor),
-      container = app.container
+      container = app.container,
+      healthChecks = Option(app.healthChecks)
     )
 
 }

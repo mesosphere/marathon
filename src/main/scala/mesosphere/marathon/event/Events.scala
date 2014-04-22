@@ -1,6 +1,7 @@
 package mesosphere.marathon.event
 
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.health.HealthCheck
 import org.rogach.scallop.ScallopConf
 import com.google.inject.{Singleton, Provides, AbstractModule}
 import com.google.common.eventbus.{AsyncEventBus, EventBus}
@@ -51,35 +52,59 @@ sealed trait MarathonEvent {
 }
 
 case class ApiPostEvent(
-    clientIp: String,
-    uri: String,
-    appDefinition: AppDefinition,
-    override val eventType: String = "api_post_event")
-  extends MarathonEvent
+  clientIp: String,
+  uri: String,
+  appDefinition: AppDefinition,
+  override val eventType: String = "api_post_event"
+) extends MarathonEvent
 
 case class MesosStatusUpdateEvent(
-    taskId: String,
-    taskStatus: Int,
-    appID: String,
-    host: String,
-    ports: Iterable[Integer],
-    override val eventType: String = "status_update_event")
-  extends MarathonEvent
+  taskId: String,
+  taskStatus: Int,
+  appID: String,
+  host: String,
+  ports: Iterable[Integer],
+  override val eventType: String = "status_update_event"
+) extends MarathonEvent
 
-sealed trait MarathonSubscriptionEvent extends MarathonEvent{
+// event subscriptions
+
+sealed trait MarathonSubscriptionEvent extends MarathonEvent {
   def clientIp: String
   def callbackUrl: String
   override def eventType = "marathon_subscription_event"
 }
 
 case class Subscribe(
-    clientIp: String,
-    callbackUrl: String,
-    override val eventType: String = "subscribe_event")
-  extends MarathonSubscriptionEvent
+  clientIp: String,
+  callbackUrl: String,
+  override val eventType: String = "subscribe_event"
+) extends MarathonSubscriptionEvent
 
 case class Unsubscribe(
-    clientIp: String,
-    callbackUrl: String,
-    override val eventType: String = "unsubscribe_event")
-  extends MarathonSubscriptionEvent
+  clientIp: String,
+  callbackUrl: String,
+  override val eventType: String = "unsubscribe_event"
+) extends MarathonSubscriptionEvent
+
+// health checks
+
+sealed trait MarathonHealthCheckEvent extends MarathonEvent {
+  override def eventType = "marathon_health_check_event"
+}
+
+case class AddHealthCheck(
+  healthCheck: HealthCheck,
+  override val eventType: String = "add_health_check_event"
+) extends MarathonHealthCheckEvent
+
+case class RemoveHealthCheck(
+  appId: String,
+  override val eventType: String = "remove_health_check_event"
+) extends MarathonHealthCheckEvent
+
+case class FailedHealthCheck(
+  appId: String,
+  taskId: String,
+  healthCheck: HealthCheck
+) extends MarathonHealthCheckEvent

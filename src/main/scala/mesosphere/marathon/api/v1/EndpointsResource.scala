@@ -20,9 +20,7 @@ class EndpointsResource @Inject()(
     schedulerService: MarathonSchedulerService,
     taskTracker: TaskTracker) {
 
-  import Implicits._
   import scala.concurrent.ExecutionContext.Implicits.global
-
 
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
@@ -34,7 +32,7 @@ class EndpointsResource @Inject()(
   @Timed
   def endpointsJson() = {
     for (app <- schedulerService.listApps) yield {
-      val instances = taskTracker.get(app.id).map(t => t: Map[String, Object])
+      val instances = taskTracker.get(app.id)
       Map("id" -> app.id, "ports" -> app.ports, "instances" -> instances)
     }
   }
@@ -56,7 +54,7 @@ class EndpointsResource @Inject()(
   def endpointsForAppJson(@PathParam("id") id: String): Response =
     schedulerService.getApp(id) match {
       case Some(app) => {
-        val instances = taskTracker.get(id).map(t => t: Map[String, Object])
+        val instances = taskTracker.get(id)
         val body = Map(
           "id" -> app.id,
           "ports" -> app.ports,
