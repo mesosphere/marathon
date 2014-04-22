@@ -239,8 +239,14 @@ object MarathonModule {
 
     container: Option[ContainerInfo] = None,
 
+    healthChecks: Option[Set[HealthCheck]] = None,
+
     version: Option[Timestamp] = None
+
   ) {
-    def build = AppUpdate(cmd, instances, cpus, mem, uris, ports, constraints, executor, container, version)
+    def build = AppUpdate(
+      cmd, instances, cpus, mem, uris, ports, constraints,
+      executor, container, healthChecks, version
+    )
   }
 }
