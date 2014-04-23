@@ -2,6 +2,7 @@ package mesosphere.marathon.api
 
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.v1.AppDefinition
+import scala.collection.JavaConverters._
 
 object EndpointsHelper {
 
@@ -30,7 +31,8 @@ object EndpointsHelper {
         for ((port, i) <- app.ports.zipWithIndex) {
           sb.append(s"$cleanId$delimiter$port$delimiter")
           for (task <- tasks) {
-            sb.append(s"${task.getHost}:${task.getPorts(i)}$delimiter")
+            val ports = task.getPortsList.asScala.lift
+            sb.append(s"${task.getHost}:${ports(i).getOrElse(0)}$delimiter")
           }
           sb.append("\n")
         }

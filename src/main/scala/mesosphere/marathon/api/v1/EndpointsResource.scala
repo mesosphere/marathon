@@ -6,10 +6,9 @@ import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.state.{MarathonStore, AppRepository}
-import scala.concurrent.Await
 import javax.ws.rs.core.Response.Status
 import mesosphere.marathon.api.Responses
+import scala.collection.JavaConverters._
 
 /**
  * @author Tobi Knaup
@@ -19,8 +18,6 @@ import mesosphere.marathon.api.Responses
 class EndpointsResource @Inject()(
     schedulerService: MarathonSchedulerService,
     taskTracker: TaskTracker) {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
@@ -84,7 +81,8 @@ class EndpointsResource @Inject()(
         for ((port, i) <- app.ports.zipWithIndex) {
           sb.append(s"${cleanId}_$port $port ")
           for (task <- tasks) {
-            sb.append(s"${task.getHost}:${task.getPorts(i)} ")
+            val ports = task.getPortsList.asScala.lift
+            sb.append(s"${task.getHost}:${ports(i).getOrElse(0)} ")
           }
           sb.append("\n")
         }
