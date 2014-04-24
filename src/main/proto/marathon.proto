@@ -50,7 +50,7 @@ message ServiceDefinition {
   required string executor = 8 [default = ""];
   optional double taskRateLimit = 9 [default = 1];
   optional ContainerInfo container = 10;
-  required string version = 11;
+  optional string version = 11 [default = "1970-01-01T00:00:00.000Z"]; //a version is required since version 0.5
   repeated HealthCheckDefinition healthChecks = 12;
 }
 
