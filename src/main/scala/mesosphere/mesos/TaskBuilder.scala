@@ -172,7 +172,7 @@ object TaskBuilder {
   }
 
   def commandInfo(app: AppDefinition, ports: Seq[Int]) = {
-    val envMap = app.env ++ portsEnv(ports)
+    val envMap = app.env ++ app.portsEnv(app.ports) ++ portsEnv(ports)
 
     val builder = CommandInfo.newBuilder()
       .setValue(app.cmd)
