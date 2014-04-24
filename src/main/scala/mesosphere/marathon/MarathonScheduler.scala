@@ -15,7 +15,7 @@ import scala.concurrent.{Future, ExecutionContext}
 import com.google.common.collect.Lists
 import javax.inject.{Named, Inject}
 import com.google.common.eventbus.EventBus
-import mesosphere.marathon.event.{EventModule, MesosStatusUpdateEvent}
+import mesosphere.marathon.event.{FrameworkMessageEvent, EventModule, MesosStatusUpdateEvent}
 import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks}
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
@@ -171,6 +171,7 @@ class MarathonScheduler @Inject()(
 
   def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]) {
     log.info("Received framework message %s %s %s ".format(executor, slave, message))
+    eventBus.map(bus => bus.post(FrameworkMessageEvent(executor.getValue, slave.getValue, message)))
   }
 
   def disconnected(driver: SchedulerDriver) {
