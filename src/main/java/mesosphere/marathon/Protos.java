@@ -2275,17 +2275,29 @@ public final class Protos {
      */
     mesosphere.marathon.Protos.ContainerInfoOrBuilder getContainerOrBuilder();
 
-    // required string version = 11;
+    // optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];
     /**
-     * <code>required string version = 11;</code>
+     * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+     *
+     * <pre>
+     *a version is required since version 0.5
+     * </pre>
      */
     boolean hasVersion();
     /**
-     * <code>required string version = 11;</code>
+     * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+     *
+     * <pre>
+     *a version is required since version 0.5
+     * </pre>
      */
     java.lang.String getVersion();
     /**
-     * <code>required string version = 11;</code>
+     * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+     *
+     * <pre>
+     *a version is required since version 0.5
+     * </pre>
      */
     com.google.protobuf.ByteString
         getVersionBytes();
@@ -2819,17 +2831,25 @@ public final class Protos {
       return container_;
     }
 
-    // required string version = 11;
+    // optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];
     public static final int VERSION_FIELD_NUMBER = 11;
     private java.lang.Object version_;
     /**
-     * <code>required string version = 11;</code>
+     * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+     *
+     * <pre>
+     *a version is required since version 0.5
+     * </pre>
      */
     public boolean hasVersion() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
     /**
-     * <code>required string version = 11;</code>
+     * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+     *
+     * <pre>
+     *a version is required since version 0.5
+     * </pre>
      */
     public java.lang.String getVersion() {
       java.lang.Object ref = version_;
@@ -2846,7 +2866,11 @@ public final class Protos {
       }
     }
     /**
-     * <code>required string version = 11;</code>
+     * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+     *
+     * <pre>
+     *a version is required since version 0.5
+     * </pre>
      */
     public com.google.protobuf.ByteString
         getVersionBytes() {
@@ -2909,7 +2933,7 @@ public final class Protos {
       executor_ = "";
       taskRateLimit_ = 1D;
       container_ = mesosphere.marathon.Protos.ContainerInfo.getDefaultInstance();
-      version_ = "";
+      version_ = "1970-01-01T00:00:00.000Z";
       healthChecks_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
@@ -2930,10 +2954,6 @@ public final class Protos {
         return false;
       }
       if (!hasExecutor()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasVersion()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -3227,7 +3247,7 @@ public final class Protos {
           containerBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000200);
-        version_ = "";
+        version_ = "1970-01-01T00:00:00.000Z";
         bitField0_ = (bitField0_ & ~0x00000400);
         if (healthChecksBuilder_ == null) {
           healthChecks_ = java.util.Collections.emptyList();
@@ -3489,10 +3509,6 @@ public final class Protos {
           return false;
         }
         if (!hasExecutor()) {
-          
-          return false;
-        }
-        if (!hasVersion()) {
           
           return false;
         }
@@ -4614,16 +4630,24 @@ public final class Protos {
         return containerBuilder_;
       }
 
-      // required string version = 11;
-      private java.lang.Object version_ = "";
+      // optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];
+      private java.lang.Object version_ = "1970-01-01T00:00:00.000Z";
       /**
-       * <code>required string version = 11;</code>
+       * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+       *
+       * <pre>
+       *a version is required since version 0.5
+       * </pre>
        */
       public boolean hasVersion() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
       }
       /**
-       * <code>required string version = 11;</code>
+       * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+       *
+       * <pre>
+       *a version is required since version 0.5
+       * </pre>
        */
       public java.lang.String getVersion() {
         java.lang.Object ref = version_;
@@ -4637,7 +4661,11 @@ public final class Protos {
         }
       }
       /**
-       * <code>required string version = 11;</code>
+       * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+       *
+       * <pre>
+       *a version is required since version 0.5
+       * </pre>
        */
       public com.google.protobuf.ByteString
           getVersionBytes() {
@@ -4653,7 +4681,11 @@ public final class Protos {
         }
       }
       /**
-       * <code>required string version = 11;</code>
+       * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+       *
+       * <pre>
+       *a version is required since version 0.5
+       * </pre>
        */
       public Builder setVersion(
           java.lang.String value) {
@@ -4666,7 +4698,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>required string version = 11;</code>
+       * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+       *
+       * <pre>
+       *a version is required since version 0.5
+       * </pre>
        */
       public Builder clearVersion() {
         bitField0_ = (bitField0_ & ~0x00000400);
@@ -4675,7 +4711,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>required string version = 11;</code>
+       * <code>optional string version = 11 [default = "1970-01-01T00:00:00.000Z"];</code>
+       *
+       * <pre>
+       *a version is required since version 0.5
+       * </pre>
        */
       public Builder setVersionBytes(
           com.google.protobuf.ByteString value) {
@@ -8752,7 +8792,7 @@ public final class Protos {
       " \001(\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00260\022\032\n",
       "\016timeoutSeconds\030\005 \001(\r:\00215\022\017\n\004path\030\006 \001(\t:" +
       "\001/\022\033\n\023acceptableResponses\030\007 \003(\r\"\035\n\010Proto" +
-      "col\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\211\003\n\021ServiceDefini" +
+      "col\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\243\003\n\021ServiceDefini" +
       "tion\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.Co" +
       "mmandInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresource" +
       "s\030\004 \003(\0132\017.mesos.Resource\022\023\n\013description\030" +
@@ -8760,19 +8800,19 @@ public final class Protos {
       "\0132\037.mesosphere.marathon.Constraint\022\022\n\010ex" +
       "ecutor\030\010 \002(\t:\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011" +
       "\0225\n\tcontainer\030\n \001(\0132\".mesosphere.maratho",
-      "n.ContainerInfo\022\017\n\007version\030\013 \002(\t\022@\n\014heal" +
-      "thChecks\030\014 \003(\0132*.mesosphere.marathon.Hea" +
-      "lthCheckDefinition\"\272\001\n\014MarathonTask\022\n\n\002i" +
-      "d\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\n" +
-      "attributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tst" +
-      "aged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010sta" +
-      "tuses\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007versio" +
-      "n\030\010 \001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005" +
-      "tasks\030\002 \003(\0132!.mesosphere.marathon.Marath" +
-      "onTask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000",
-      "\022\017\n\007options\030\002 \003(\014\")\n\020EventSubscribers\022\025\n" +
-      "\rcallback_urls\030\001 \003(\tB\035\n\023mesosphere.marat" +
-      "honB\006Protos"
+      "n.ContainerInfo\022)\n\007version\030\013 \001(\t:\0301970-0" +
+      "1-01T00:00:00.000Z\022@\n\014healthChecks\030\014 \003(\013" +
+      "2*.mesosphere.marathon.HealthCheckDefini" +
+      "tion\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004hos" +
+      "t\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004 \003" +
+      "(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001(\003\022" +
+      "\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007 \003(\0132\021." +
+      "mesos.TaskStatus\022\017\n\007version\030\010 \001(\t\"M\n\013Mar" +
+      "athonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!." +
+      "mesosphere.marathon.MarathonTask\"1\n\rCont",
+      "ainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 " +
+      "\003(\014\")\n\020EventSubscribers\022\025\n\rcallback_urls" +
+      "\030\001 \003(\tB\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
