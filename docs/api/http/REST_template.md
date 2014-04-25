@@ -36,19 +36,37 @@ The full JSON format of an application resource is as follows:
 
 ```json
 {
-    "cmd": "(env && sleep 300)",
+    "cmd": "env && sleep 300",
     "constraints": [
         ["attribute", "OPERATOR", "value"]
     ],
     "container": {
-        "image": "docker:///zaiste/postgresql",
-        "options": ["-e", "X=7"]
+        "image": "docker:///dockeruser/oracle-java7",
+        "options": ["-v", "/etc/config:/etc/config:ro"]
     },
     "cpus": 2,
     "env": {
         "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
     },
     "executor": "",
+    "healthChecks": [
+        {
+            "protocol": "HTTP",
+            "acceptableResponses": [200],
+            "path": "/health",
+            "initialDelaySeconds": 3,
+            "intervalSeconds": 10,
+            "portIndex": 0,
+            "timeoutSeconds": 10
+        },
+        {
+            "protocol": "TCP",
+            "initialDelaySeconds": 3,
+            "intervalSeconds": 5,
+            "portIndex": 1,
+            "timeoutSeconds": 5
+        }
+    ],
     "id": "myApp",
     "instances": 3,
     "mem": 256.0,

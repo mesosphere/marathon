@@ -50,6 +50,24 @@ The full JSON format of an application resource is as follows:
         "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
     },
     "executor": "",
+    "healthChecks": [
+        {
+            "protocol": "HTTP",
+            "acceptableResponses": [200],
+            "path": "/health",
+            "initialDelaySeconds": 3,
+            "intervalSeconds": 10,
+            "portIndex": 0,
+            "timeoutSeconds": 10
+        },
+        {
+            "protocol": "TCP",
+            "initialDelaySeconds": 3,
+            "intervalSeconds": 5,
+            "portIndex": 1,
+            "timeoutSeconds": 5
+        }
+    ],
     "id": "myApp",
     "instances": 3,
     "mem": 256.0,
