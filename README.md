@@ -257,6 +257,7 @@ as it did before being deprecated. Details on the V1 API can be found in the
             ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
+* [Python client](https://github.com/thefactory/marathon-python), developed at [The Factory](http://www.thefactory.com)
 
 ## Companies using Marathon
 
