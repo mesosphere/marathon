@@ -60,6 +60,7 @@ case class ApiPostEvent(
 ) extends MarathonEvent
 
 case class MesosStatusUpdateEvent(
+  slaveId: String,
   taskId: String,
   taskStatus: Int,
   appId: String,
