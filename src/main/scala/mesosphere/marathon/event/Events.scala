@@ -62,7 +62,7 @@ case class ApiPostEvent(
 case class MesosStatusUpdateEvent(
   taskId: String,
   taskStatus: Int,
-  appID: String,
+  appId: String,
   host: String,
   ports: Iterable[Integer],
   eventType: String = "status_update_event"
@@ -111,8 +111,8 @@ case class FailedHealthCheck(
 // framework messages
 
 case class FrameworkMessageEvent(
-   executorID: String,
-   slaveID: String,
+   executorId: String,
+   slaveId: String,
    message: Array[Byte],
    eventType: String = "framework_message_event")
 extends MarathonEvent
