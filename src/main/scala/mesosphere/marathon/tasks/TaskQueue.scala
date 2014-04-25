@@ -54,7 +54,7 @@ class TaskQueue {
 }
 
 object TaskQueue {
-  private object AppDefinitionPriority extends Comparator[AppDefinition]{
+  private object AppDefinitionPriority extends Comparator[AppDefinition] {
     override def compare(a1: AppDefinition, a2: AppDefinition): Int = {
       a2.constraints.size - a1.constraints.size
     }

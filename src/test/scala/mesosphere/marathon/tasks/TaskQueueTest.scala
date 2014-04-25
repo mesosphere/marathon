@@ -13,13 +13,11 @@ class TaskQueueTest extends AssertionsForJUnit with MockitoSugar {
   val app3 = AppDefinition(id = "app3", constraints = Set(buildConstraint("hostname", "UNIQUE")))
 
   def buildConstraint(field: String, operator: String, value: String = ""): Constraint = {
-    val constraint = Constraint.newBuilder()
-
-    constraint.setField(field)
-    constraint.setOperator(Constraint.Operator.valueOf(operator))
-    constraint.setValue(value)
-
-    constraint.build()
+    Constraint.newBuilder()
+      .setField(field)
+      .setOperator(Constraint.Operator.valueOf(operator))
+      .setValue(value)
+      .build()
   }
 
   @Test
@@ -56,9 +54,9 @@ class TaskQueueTest extends AssertionsForJUnit with MockitoSugar {
     queue.addAll(Seq(app1, app2, app3))
 
     assertTrue("Queue should contain 3 elements.", queue.queue.size() == 3)
-    assertTrue(s"Queue should contains $app1.", queue.queue.contains(app1))
-    assertTrue(s"Queue should contains $app2.", queue.queue.contains(app2))
-    assertTrue(s"Queue should contains $app3.", queue.queue.contains(app3))
+    assertTrue(s"Queue should contain $app1.", queue.queue.contains(app1))
+    assertTrue(s"Queue should contain $app2.", queue.queue.contains(app2))
+    assertTrue(s"Queue should contain $app3.", queue.queue.contains(app3))
 
     val res = queue.removeAll()
 

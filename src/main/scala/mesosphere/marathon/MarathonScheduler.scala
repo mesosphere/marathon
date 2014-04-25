@@ -92,6 +92,7 @@ class MarathonScheduler @Inject()(
               taskTracker.starting(app.id, marathonTask)
               driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
               found = true
+
             case None =>
               taskQueue.add(app)
           }
