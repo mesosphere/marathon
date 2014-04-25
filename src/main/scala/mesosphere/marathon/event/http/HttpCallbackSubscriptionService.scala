@@ -16,10 +16,11 @@ class HttpCallbackSubscriptionService @Inject()(
   implicit val timeout = HttpEventModule.timeout
 
   def handleSubscriptionEvent(event: MarathonSubscriptionEvent) = {
-    (subscribersKeeper ? event).map{ msg =>
-      // Subscribe and Unsubscribe event should be broadcast.
-      eventBus.map( _.post(event))
-      event
+    (subscribersKeeper ? event).map {
+      msg =>
+        // Subscribe and Unsubscribe event should be broadcast.
+        eventBus.foreach(_.post(event))
+        event
     }
   }
 
