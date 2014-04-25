@@ -153,11 +153,7 @@ class AppsResource @Inject()(
       )
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) {
-    if (eventBus.nonEmpty) {
-      val ip = req.getRemoteAddr
-      val path = req.getRequestURI
-      eventBus.get.post(new ApiPostEvent(ip, path, app))
-    }
+    eventBus.foreach(_.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app)))
   }
 
   private def search(cmd: String, id: String): Iterable[AppDefinition] = {

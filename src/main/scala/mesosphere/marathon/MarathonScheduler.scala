@@ -171,7 +171,7 @@ class MarathonScheduler @Inject()(
 
   def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]) {
     log.info("Received framework message %s %s %s ".format(executor, slave, message))
-    eventBus.map(bus => bus.post(FrameworkMessageEvent(executor.getValue, slave.getValue, message)))
+    eventBus.foreach(_.post(FrameworkMessageEvent(executor.getValue, slave.getValue, message)))
   }
 
   def disconnected(driver: SchedulerDriver) {
@@ -366,17 +366,19 @@ class MarathonScheduler @Inject()(
   }
 
   private def postEvent(status: TaskStatus, task: MarathonTask) {
-    if (eventBus.isEmpty) {
-      return
+    eventBus.foreach {
+      bus => {
+        log.info("Sending event notification.")
+        bus.post(
+          MesosStatusUpdateEvent(
+            status.getTaskId.getValue,
+            status.getState.getNumber,
+            TaskIDUtil.appID(status.getTaskId),
+            task.getHost,
+            task.getPortsList.asScala
+          )
+        )
+      }
     }
-
-    log.info("Sending event notification.")
-    val event = new MesosStatusUpdateEvent(
-      status.getTaskId.getValue,
-      status.getState.getNumber,
-      TaskIDUtil.appID(status.getTaskId),
-      task.getHost,
-      task.getPortsList.asScala)
-    eventBus.get.post(event)
   }
 }
