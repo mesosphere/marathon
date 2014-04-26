@@ -12,13 +12,16 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event.{RemoveHealthCheck, AddHealthCheck, EventModule}
+import org.apache.mesos.MesosSchedulerDriver
+import mesosphere.marathon.MarathonSchedulerDriver
 
 case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
 class HealthCheckManager @Singleton @Inject() (
   system: ActorSystem,
   @Named(EventModule.busName) eventBus: Option[EventBus],
-  taskTracker: TaskTracker
+  taskTracker: TaskTracker,
+  driver: MarathonSchedulerDriver
 ) {
 
   import HealthCheckActor.{GetTaskHealth, Health}

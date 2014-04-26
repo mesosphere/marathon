@@ -8,6 +8,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event._
+import mesosphere.marathon.{MarathonSchedulerDriver, MarathonScheduler}
+import org.apache.mesos.Protos.TaskID
 
 class HealthCheckActor(
   appId: String,
@@ -80,6 +82,24 @@ class HealthCheckActor(
     }
   }
 
+  protected[this] def checkConsecutiveFailures(taskId: String, health: Health): Unit = {
+    val consecutiveF = health.consecutiveFailures
+    val maxF = healthCheck.maxConsecutiveFailures
+
+    if(maxF.isDefined && consecutiveF >= maxF.get){
+      val taskToKill = taskTracker.get(appId).filter( _.getId == taskId ).headOption
+      taskToKill match {
+        case Some(task) =>
+          //log.debug(s"Dispatching kill request for taskId[$taskId], failures[${consecutiveF}}] >= ${maxF.get}")
+          //driver.killTask(appId, task)
+          log.info(f"Killing task ${task.getId} on host ${task.getHost}")
+          driver.driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+        case None =>
+          log.debug(s"Unable to get a task for taskId[$taskId]")
+      }
+    }
+  }
+
   def receive = {
     case GetTaskHealth(taskId) => sender ! taskHealth.get(taskId)
     case Tick =>
@@ -106,6 +126,8 @@ class HealthCheckActor(
       if (!newHealth.alive)
         eventBus.foreach(_.post(FailedHealthCheck(appId, taskId, healthCheck)))
 
+      checkConsecutiveFailures(taskId, health)
+    }
   }
 
 }

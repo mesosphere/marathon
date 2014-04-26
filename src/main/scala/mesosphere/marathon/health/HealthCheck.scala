@@ -36,6 +36,9 @@ case class HealthCheck(
   @FieldJsonProperty("timeoutSeconds")
   timeout: FiniteDuration = HealthCheck.DefaultTimeout
 
+  @FieldNotEmpty
+  maxConsecutiveFailures: Option[Int] = None
+
 ) extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
   def toProto: Protos.HealthCheckDefinition = {
@@ -47,6 +50,12 @@ case class HealthCheck(
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
 
     path foreach builder.setPath
+      this.maxConsecutiveFailures match {
+        case Some(v) =>
+          builder.setMaxConsecutiveFailures(v)
+        case None =>
+      }
+
     builder.build
   }
 
@@ -57,7 +66,8 @@ case class HealthCheck(
       portIndex = proto.getPortIndex,
       initialDelay = FiniteDuration(proto.getInitialDelaySeconds, SECONDS),
       timeout = FiniteDuration(proto.getTimeoutSeconds, SECONDS),
-      interval = FiniteDuration(proto.getIntervalSeconds, SECONDS)
+      interval = FiniteDuration(proto.getIntervalSeconds, SECONDS),
+      maxConsecutiveFailures = Option(proto.getMaxConsecutiveFailures)
     )
 
   def mergeFromProto(bytes: Array[Byte]): HealthCheck =
