@@ -371,6 +371,7 @@ class MarathonScheduler @Inject()(
         log.info("Sending event notification.")
         bus.post(
           MesosStatusUpdateEvent(
+            status.getSlaveId.getValue,
             status.getTaskId.getValue,
             status.getState.getNumber,
             TaskIDUtil.appID(status.getTaskId),
