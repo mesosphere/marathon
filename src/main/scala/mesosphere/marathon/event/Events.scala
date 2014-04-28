@@ -109,6 +109,13 @@ case class FailedHealthCheck(
   eventType: String = "failed_health_check_event"
 ) extends MarathonHealthCheckEvent
 
+case class HealthStatusChanged(
+  appId: String,
+  taskId: String,
+  alive: Boolean,
+  eventType: String = "health_status_changed_event"
+) extends MarathonHealthCheckEvent
+
 // framework messages
 
 case class FrameworkMessageEvent(
