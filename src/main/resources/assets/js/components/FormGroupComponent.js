@@ -7,8 +7,9 @@ define([
     onInputChange: function(event) {
       this.props.model.set(event.target.name, event.target.value);
     },
+
     render: function() {
-      var helpBlock, errors;
+      var errorBlock, errors, helpBlock;
 
       var attribute = this.props.attribute;
       var className = "form-group";
@@ -23,9 +24,13 @@ define([
 
       if (errors != null && errors.length > 0) {
         className += " has-error";
-        helpBlock = errors.map(function(error) {
-          return <div className="help-block">{error.message}</div>;
+        errorBlock = errors.map(function(error) {
+          return <div className="help-block"><strong>{error.message}</strong></div>;
         });
+      }
+
+      if (this.props.help != null) {
+        helpBlock = <div className="help-block">{this.props.help}</div>;
       }
 
       // Assume there is a single child of either <input> or <textarea>, and add
@@ -44,6 +49,7 @@ define([
           <div className="col-md-9">
             {this.props.children}
             {helpBlock}
+            {errorBlock}
           </div>
         </div>
       );

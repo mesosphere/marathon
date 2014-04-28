@@ -98,6 +98,11 @@ define([
           new ValidationError("id", "ID must be a non-empty String"));
       }
 
+      if (!_.every(attrs.ports, function(p) { return _.isNumber(p); })) {
+        errors.push(
+          new ValidationError("ports", "Ports must be a list of Numbers"));
+      }
+
       if (!_.isString(attrs.cmd) || attrs.cmd.length < 1) {
         // Prevent erroring out on UPDATE operations like scale/suspend. 
         // If cmd string is empty, then don't error out if an executor and

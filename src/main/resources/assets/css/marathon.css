@@ -73,6 +73,10 @@ th {
   text-shadow: none;
 }
 
+.help-block {
+  color: #b3b3b3;
+}
+
 .modal {
   display: block;
 }
