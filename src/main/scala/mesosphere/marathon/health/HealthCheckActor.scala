@@ -4,14 +4,16 @@ import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, Props}
-import akka.routing.{RoundRobinRouter, DefaultResizer}
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonInclude.Include
+import com.google.common.eventbus.EventBus
+import mesosphere.marathon.event._
 
 class HealthCheckActor(
   appId: String,
   healthCheck: HealthCheck,
-  taskTracker: TaskTracker
+  taskTracker: TaskTracker,
+  eventBus: Option[EventBus]
 ) extends Actor with ActorLogging {
 
   import HealthCheckActor.{GetTaskHealth, Health}
@@ -71,24 +73,37 @@ class HealthCheckActor(
     log.debug("Dispatching health check jobs to workers")
     taskTracker.get(appId).foreach { task =>
       log.debug("Dispatching health check job for task [{}]", task.getId)
-      val worker: ActorRef = context.actorOf(Props[HealthCheckWorkerActor])
+      val worker: ActorRef = context.actorOf(Props(classOf[HealthCheckWorkerActor], appId, eventBus))
       worker ! HealthCheckJob(task, healthCheck)
     }
   }
 
   def receive = {
     case GetTaskHealth(taskId) => sender ! taskHealth.get(taskId)
-    case Tick => {
+    case Tick =>
       purgeStatusOfDoneTasks()
       dispatchJobs()
       scheduleNextHealthCheck()
-    }
-    case result: HealthResult => {
+
+    case result: HealthResult =>
       log.info("Received health result: [{}]", result)
       val taskId = result.taskId
-      val health = taskHealth.getOrElse(taskId, Health(taskId)).update(result)
-      taskHealth = taskHealth + (taskId -> health)
-    }
+      val health = taskHealth.getOrElse(taskId, Health(taskId))
+      val newHealth = health.update(result)
+      taskHealth += (taskId -> newHealth)
+
+      if (health.alive() != newHealth.alive())
+        eventBus.foreach(_.post(
+          HealthStatusChanged(
+            appId = appId,
+            taskId = taskId,
+            alive = newHealth.alive())
+          )
+        )
+
+      if (!newHealth.alive)
+        eventBus.foreach(_.post(FailedHealthCheck(appId, taskId, healthCheck)))
+
   }
 
 }

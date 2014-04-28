@@ -9,16 +9,19 @@ import akka.util.Timeout
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Named, Inject, Singleton}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.google.common.eventbus.EventBus
+import mesosphere.marathon.event.{RemoveHealthCheck, AddHealthCheck, EventModule}
 
 case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
 class HealthCheckManager @Singleton @Inject() (
   system: ActorSystem,
+  @Named(EventModule.busName) eventBus: Option[EventBus],
   taskTracker: TaskTracker
 ) {
 
@@ -46,18 +49,20 @@ class HealthCheckManager @Singleton @Inject() (
 
     if (! healthChecksForApp.exists { _.healthCheck == healthCheck }) {
       val ref = system.actorOf(
-        Props(new HealthCheckActor(appId, healthCheck, taskTracker))
+        Props(classOf[HealthCheckActor], appId, healthCheck, taskTracker, eventBus)
       )
       val newHealthChecksForApp =
         healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
-      appHealthChecks = appHealthChecks + (appId -> newHealthChecksForApp)
+      appHealthChecks += (appId -> newHealthChecksForApp)
     }
+
+    eventBus.foreach(_.post(AddHealthCheck(healthCheck)))
   }
 
   def addAllFor(app: AppDefinition): Unit =
     for (healthCheck <- app.healthChecks) add(app.id, healthCheck)
 
-  def remove(appId: String, healthCheck: HealthCheck): Unit =
+  def remove(appId: String, healthCheck: HealthCheck): Unit = {
     for (activeHealthChecks <- appHealthChecks.get(appId)) {
       activeHealthChecks.find(_.healthCheck == healthCheck) foreach deactivate
 
@@ -68,6 +73,9 @@ class HealthCheckManager @Singleton @Inject() (
         if (newHealthChecksForApp.isEmpty) appHealthChecks - appId
         else appHealthChecks + (appId -> newHealthChecksForApp)
     }
+
+    eventBus.foreach(_.post(RemoveHealthCheck(appId)))
+  }
 
   def removeAllFor(appId: String): Unit =
     for (activeHealthChecks <- appHealthChecks.get(appId))
