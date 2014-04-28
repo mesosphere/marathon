@@ -56,7 +56,8 @@ define([
       options || (options = {});
 
       var allAttrs = _.extend({}, this.attributes, attrs);
-      // filter out null values
+
+      // Filter out null and undefined values
       var filteredAttributes = _.filter(EDITABLE_ATTRIBUTES, function(attr) {
         return allAttrs[attr] != null;
       });
