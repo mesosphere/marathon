@@ -4,6 +4,11 @@ define([
   "React"
 ], function(React) {
   return React.createClass({
+    propTypes: {
+      children: React.PropTypes.component.isRequired,
+      model: React.PropTypes.object.isRequired
+    },
+
     onInputChange: function(event) {
       this.props.model.set(event.target.name, event.target.value);
     },
@@ -35,11 +40,16 @@ define([
 
       // Assume there is a single child of either <input> or <textarea>, and add
       // the needed props to make it an input for this attribute.
-      this.props.children.props.className = "form-control";
-      this.props.children.props.id = fieldId;
-      this.props.children.props.name = attribute;
-      this.props.children.props.value = this.props.model.get(attribute);
-      this.props.children.props.onChange = this.onInputChange;
+      var formControlChild = React.addons.cloneWithProps(
+        React.Children.only(this.props.children),
+        {
+          className: "form-control",
+          id: fieldId,
+          name: attribute,
+          onChange: this.onInputChange,
+          value: this.props.model.get(attribute)
+        }
+      );
 
       return (
         <div className={className}>
@@ -47,7 +57,7 @@ define([
             {this.props.label}
           </label>
           <div className="col-md-9">
-            {this.props.children}
+            {formControlChild}
             {helpBlock}
             {errorBlock}
           </div>
