@@ -60,7 +60,7 @@ define([
       var filteredAttributes = _.filter(EDITABLE_ATTRIBUTES, function(attr) {
         return allAttrs[attr] != null;
       });
-      console.debug(filteredAttributes);
+
       var allowedAttrs = _.pick(allAttrs, filteredAttributes);
 
       /* When `options.data` is supplied, Backbone does not attempt to infer its
