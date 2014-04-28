@@ -5,7 +5,7 @@ import org.apache.mesos.MesosSchedulerDriver
 import java.util.logging.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.{MarathonStore, AppRepository, Timestamp}
+import mesosphere.marathon.state.{AppRepository, Timestamp}
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import javax.inject.{Named, Inject}
 import java.util.{TimerTask, Timer}
@@ -21,6 +21,7 @@ import scala.util.Random
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
+import scala.concurrent.duration._
 
 /**
  * Wrapper class for the scheduler
@@ -160,11 +161,29 @@ class MarathonSchedulerService @Inject()(
     }
   }
 
+  // FIXME: remove dirty workaround as soon as the twitter code
+  //        has been changed to allow cancellation
   override def triggerShutdown() {
+
+    def kill(): Unit = {
+      System.err.println("Finalization failed, killing JVM.")
+      Runtime.getRuntime.halt(1)
+    }
+
     log.info("Shutting down")
-    abdicateCmd.map(_.execute)
-    stopDriver()
-    reconciliationTimer.cancel
+
+    val f = Future {
+      abdicateCmd.map(_.execute)
+      stopDriver()
+      reconciliationTimer.cancel
+    }
+
+    try {
+      // TODO: How long should we wait? Should it be configurable?
+      Await.result(f, 5.seconds)
+    } catch {
+      case _: Throwable => kill()
+    }
   }
 
   def runDriver() {
