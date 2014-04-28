@@ -373,7 +373,7 @@ class MarathonScheduler @Inject()(
           MesosStatusUpdateEvent(
             status.getSlaveId.getValue,
             status.getTaskId.getValue,
-            status.getState.getNumber,
+            status.getState.name,
             TaskIDUtil.appID(status.getTaskId),
             task.getHost,
             task.getPortsList.asScala

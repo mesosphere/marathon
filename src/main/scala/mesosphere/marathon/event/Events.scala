@@ -62,7 +62,7 @@ case class ApiPostEvent(
 case class MesosStatusUpdateEvent(
   slaveId: String,
   taskId: String,
-  taskStatus: Int,
+  taskStatus: String,
   appId: String,
   host: String,
   ports: Iterable[Integer],
