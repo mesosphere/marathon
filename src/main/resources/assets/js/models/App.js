@@ -56,7 +56,8 @@ define([
       options || (options = {});
 
       var allAttrs = _.extend({}, this.attributes, attrs);
-      // filter out null values
+
+      // Filter out null and undefined values
       var filteredAttributes = _.filter(EDITABLE_ATTRIBUTES, function(attr) {
         return allAttrs[attr] != null;
       });
@@ -95,6 +96,11 @@ define([
       if (!_.isString(attrs.id) || attrs.id.length < 1) {
         errors.push(
           new ValidationError("id", "ID must be a non-empty String"));
+      }
+
+      if (!_.every(attrs.ports, function(p) { return _.isNumber(p); })) {
+        errors.push(
+          new ValidationError("ports", "Ports must be a list of Numbers"));
       }
 
       if (!_.isString(attrs.cmd) || attrs.cmd.length < 1) {
