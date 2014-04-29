@@ -55,7 +55,12 @@ define([
     save: function(attrs, options) {
       options || (options = {});
 
-      var allAttrs = _.extend({}, this.attributes, attrs);
+      var allAttrs;
+      if (options.patch === true) {
+        allAttrs = _.extend({}, this.changedAttributes, attrs);
+      } else {
+        allAttrs = _.extend({}, this.attributes, attrs);
+      }
 
       // Filter out null and undefined values
       var filteredAttributes = _.filter(EDITABLE_ATTRIBUTES, function(attr) {

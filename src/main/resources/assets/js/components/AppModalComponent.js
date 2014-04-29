@@ -209,11 +209,13 @@ define([
       // perform the action only if a value is submitted.
       if (instancesString != null && instancesString !== "") {
         var instances = parseInt(instancesString, 10);
-        model.set({instances: instances}, {validate: true});
-        if (model.validationError == null) {
-          model.save();
-        } else {
-          alert("Not scaling: " + model.validationError[0]);
+        model.save({instances: instances}, {patch: true});
+
+        if (model.validationError != null) {
+          // If the model is not valid, revert the changes to prevent the UI
+          // from showing an invalid state.
+          model.set(model.previousAttributes());
+          alert("Not scaling: " + model.validationError[0].message);
         }
       }
     },
@@ -252,7 +254,7 @@ define([
     },
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
-        this.props.model.save({instances: 0});
+        this.props.model.save({instances: 0}, {patch: true});
       }
     }
   });
