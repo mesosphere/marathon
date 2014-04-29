@@ -108,7 +108,7 @@ class MarathonScheduler @Inject()(
                 task.getTaskId.getValue, offer.getHostname, ports,
                 offer.getAttributesList.asScala.toList, app.version)
               taskTracker.starting(app.id, marathonTask)
-              driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
+              driver.launchTasks(offer.getId, taskInfos)
               found = true
 
             case None =>
