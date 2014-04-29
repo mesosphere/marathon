@@ -4,7 +4,7 @@
 
     <groupId>mesosphere</groupId>
     <artifactId>marathon</artifactId>
-    <version>0.5.2-SNAPSHOT</version>
+    <version>0.5.1_mesos-0.16.0</version>
 
     <properties>
         <encoding>UTF-8</encoding>
@@ -16,8 +16,8 @@
         <!-- runtime deps versions -->
         <chaos.version>0.5.6</chaos.version>
         <jackson-ccm.version>0.1.0</jackson-ccm.version>
-        <mesos.version>0.18.2</mesos.version>
-        <mesos-utils.version>0.18.2-2</mesos-utils.version>
+        <mesos.version>0.16.0</mesos.version>
+        <mesos-utils.version>0.16.0-2</mesos-utils.version>
         <akka.version>2.2.4</akka.version>
         <spray.version>1.2.1</spray.version>
         <json4s.version>3.2.5</json4s.version>
