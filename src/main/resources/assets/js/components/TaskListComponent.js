@@ -12,9 +12,11 @@ define([
     var portsString;
     var ports = task.get("ports");
     if (ports.length > 1) {
-      portsString = ":[" + ports.join(", ") + "]";
+      portsString = ":[" + ports.join(",") + "]";
     } else if (ports.length === 1) {
       portsString = ":" + ports[0];
+    } else {
+      portsString = "";
     }
 
     return task.get("host") + portsString;
