@@ -182,7 +182,7 @@ class MarathonScheduler @Inject()(
       try {
         log.fine("Received offer %s".format(offer))
 
-        val apps = taskQueue.removeAll().toVector // empty queue
+        val apps = taskQueue.removeAll() // empty queue
         val planner = new NeededResourcesPlan(apps)
         val planned = planner.createPlan(offer)
         
