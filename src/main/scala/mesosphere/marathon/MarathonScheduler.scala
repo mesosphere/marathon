@@ -68,7 +68,7 @@ object AvailableOffer {
           r.getRanges.getRangeList.asScala.map(kv => (kv.getBegin.toInt, kv.getEnd.toInt))
       }
     
-    AvailableOffer(offer, cpuAvail.fold(0d)(_.getScalar.getValue), memAvail.fold(0d)(_.getScalar.getValue), ranges)
+    AvailableOffer(offer, cpuAvail.fold(0.0)(_.getScalar.getValue), memAvail.fold(0.0)(_.getScalar.getValue), ranges)
   }
 }
 case class AvailableOffer(offer: Offer, cpu: Double, mem: Double, ports: Seq[(Int, Int)]) extends AvailableResources {
@@ -97,15 +97,6 @@ case class AvailableOffer(offer: Offer, cpu: Double, mem: Double, ports: Seq[(In
   }
 }
 
-object AppDefinitionOfferMatch {
-  def apply(source: AppDefinition, offer: Offer): AppDefinitionOfferMatch = {
-    new AppDefinitionOfferMatch(AppDefinitionNeeds(source), AvailableOffer(offer))
-  }
-}
-case class AppDefinitionOfferMatch(toReserve: AppDefinitionNeeds, available: AvailableOffer) {
-  def remaining = (available - toReserve) map (oa => copy(available = oa))
-}
-
 /*
   An interface to work out which resource to pick
   It allows for filtering
@@ -129,9 +120,11 @@ final class NeededResourcesPlan(var available: Seq[AppDefinition]) {
   }
   
   def createPlan(offer: Offer): Seq[AppDefinition] = {
-    val (builder, _) = sortedWithFreePorts.foldLeft((Vector.newBuilder[AppDefinition], offer)) { (acc, i) =>
-      val remaining = AppDefinitionOfferMatch(i, offer).remaining
-      remaining.fold(acc)(r => (acc._1 += i, r.available.offer))
+    println(s"sorted:\n${sortedWithFreePorts.mkString("\n")}")
+
+    val (builder, _) = sortedWithFreePorts.foldLeft((Vector.newBuilder[AppDefinition], AvailableOffer(offer))) { case (acc @ (b, o), i) =>
+      val remaining = o - AppDefinitionNeeds(i)
+      remaining.fold(acc)(r => (b += i, r))
     }
     builder.result()
   }
