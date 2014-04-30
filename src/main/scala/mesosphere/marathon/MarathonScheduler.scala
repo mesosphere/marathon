@@ -76,7 +76,7 @@ case class AvailableOffer(offer: Offer, cpu: Double, mem: Double, ports: Seq[(In
     val cpuLeft = cpu - needed.cpu
     val memLeft = mem - needed.mem
     val portsLeft = needed.ports.foldLeft(Vector.newBuilder[Seq[(Int, Int)]]) { (acc, p) =>
-      ports.find(minMax => minMax._1 <= p && minMax._2 >= p).fold(acc)({
+      ports.find(minMax => minMax._1 <= p && minMax._2 >= p).fold(acc){
         case (min, max) =>
           // calculate new available port ranges based on the ports needed by the app definition
           val newRange =
@@ -84,7 +84,7 @@ case class AvailableOffer(offer: Offer, cpu: Double, mem: Double, ports: Seq[(In
             else if (max == p) Vector((min, max - 1))
             else Vector((min, p - 1), (p + 1, max))
           acc += newRange
-      })
+      }
     }.result()
     // When these sizes are different we weren't able to reserve all the necessary ports
     if (cpuLeft < 0 || memLeft < 0 || portsLeft.size != needed.ports.size) {
