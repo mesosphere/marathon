@@ -183,8 +183,12 @@ class MarathonScheduler @Inject()(
   }
 
   def disconnected(driver: SchedulerDriver) {
+    // According to the Mesos docs "disconnected" is invoked when the scheduler becomes "disconnected" from the master
+    // (e.g., the master fails and another is taking over).
+    // Thus, when a master fails and another takes over we should be able to survive. I don't think calling suicide is
+    // the correct approach. Let's log that it has been disconnected but wait around in case a new master comes online
+    // or the old master comes back.
     log.warning("Disconnected")
-    suicide()
   }
 
   def slaveLost(driver: SchedulerDriver, slave: SlaveID) {
@@ -196,6 +200,8 @@ class MarathonScheduler @Inject()(
   }
 
   def error(driver: SchedulerDriver, message: String) {
+    // According to the Mesos docs "error" is invoked when there is an unrecoverable error in the scheduler or driver.
+    // The driver will be aborted BEFORE invoking this callback. Thus, in this case Marathon should shutdown cleanly.
     log.warning("Error: %s".format(message))
     suicide()
   }
