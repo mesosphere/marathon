@@ -26,6 +26,117 @@ import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{Try, Success, Failure}
 
+
+sealed trait SysResources {
+  def cpu: Double
+  def mem: Double
+}
+trait AvailableResources  extends SysResources {
+  def offer: Offer
+  def -[T <: NeededResources[_]](needs: T): Option[this.type]
+  def ports: Seq[(Int, Int)]
+}
+
+trait NeededResources[T] extends SysResources {
+  def source: T
+  def ports: Seq[Int]
+}
+
+trait OfferMatch[T] {
+  def toReserve: NeededResources[T]
+  def available: AvailableResources
+  def remaining: Option[OfferMatch[T]]
+}
+
+object AppDefinitionNeeds {
+  def apply(source: AppDefinition): AppDefinitionNeeds = {
+    val cpu = source.cpus
+    val mem = source.mem
+    val ports = source.ports
+    AppDefinitionNeeds(source, cpu, mem, ports.map(a => a:Int))
+  }
+}
+case class AppDefinitionNeeds(source: AppDefinition, cpu: Double, mem: Double, ports: Seq[Int]) extends NeededResources[AppDefinition]
+
+object AvailableOffer {
+  def apply(offer: Offer): AvailableOffer = {
+    val cpuAvail = offer.getResourcesList.asScala.find(_.getName == mesosphere.mesos.protos.Resource.CPUS)
+    val memAvail = offer.getResourcesList.asScala.find(_.getName == mesosphere.mesos.protos.Resource.MEM)
+    val ports = offer.getResourcesList.asScala.find(_.getName == mesosphere.mesos.protos.Resource.PORTS)
+    val ranges = 
+      ports.fold(Seq.empty[(Int, Int)]) { r =>
+          r.getRanges.getRangeList.asScala.map(kv => (kv.getBegin.toInt, kv.getEnd.toInt))
+      }
+    
+    AvailableOffer(offer, cpuAvail.fold(0d)(_.getScalar.getValue), memAvail.fold(0d)(_.getScalar.getValue), ranges)
+  }
+}
+case class AvailableOffer(offer: Offer, cpu: Double, mem: Double, ports: Seq[(Int, Int)]) extends AvailableResources {
+  def -[T <: NeededResources[_]](needed: T): Option[this.type] = {
+    val cpuLeft = cpu - needed.cpu
+    val memLeft = mem - needed.mem
+    val portsLeft = needed.ports.foldLeft(Vector.newBuilder[Seq[(Int, Int)]]) { (acc, p) =>
+      ports.find(minMax => minMax._1 <= p && minMax._2 >= p).fold(acc)({
+        case (min, max) =>
+          // calculate new available port ranges based on the ports needed by the app definition
+          val newRange =
+            if (min == p) Vector((min + 1, max))
+            else if (max == p) Vector((min, max - 1))
+            else Vector((min, p - 1), (p + 1, max))
+          acc += newRange
+      })
+    }.result()
+    // When these sizes are different we weren't able to reserve all the necessary ports
+    if (cpuLeft < 0 || memLeft < 0 || portsLeft.size != needed.ports.size) {
+      None
+    } else {
+      val remainingPorts = portsLeft.flatten.toVector // put lipstick on the pig
+      Some(copy(cpu = cpuLeft, mem = memLeft, ports = remainingPorts).asInstanceOf[this.type])
+    }
+
+  }
+}
+
+object AppDefinitionOfferMatch {
+  def apply(source: AppDefinition, offer: Offer): AppDefinitionOfferMatch = {
+    new AppDefinitionOfferMatch(AppDefinitionNeeds(source), AvailableOffer(offer))
+  }
+}
+case class AppDefinitionOfferMatch(toReserve: AppDefinitionNeeds, available: AvailableOffer) {
+  def remaining = (available - toReserve) map (oa => copy(available = oa))
+}
+
+/*
+  An interface to work out which resource to pick
+  It allows for filtering
+ */
+final class NeededResourcesPlan(var available: Seq[AppDefinition]) {
+
+  private[this] def byConstraintSize(left: AppDefinition, right: AppDefinition): Boolean =
+    left.constraints.size > right.constraints.size
+
+  private[this] def byCpuCountForSize(left: AppDefinition, right: AppDefinition): Boolean =
+    left.constraints.size == right.constraints.size && left.cpus > right.cpus
+
+  private[this] def byMemorySizeForCpu(left: AppDefinition, right: AppDefinition): Boolean =
+    left.constraints.size == right.constraints.size && left.cpus == right.cpus && left.mem > right.mem
+
+  private[this] def sortedWithFreePorts = { // no idea how big these guys get, sticking with a def for now
+    available sortWith {
+      case (left, right) =>
+        byConstraintSize(left, right) || byCpuCountForSize(left, right) || byMemorySizeForCpu(left, right)
+    }
+  }
+  
+  def createPlan(offer: Offer): Seq[AppDefinition] = {
+    val (builder, _) = sortedWithFreePorts.foldLeft((Vector.newBuilder[AppDefinition], offer)) { (acc, i) =>
+      val remaining = AppDefinitionOfferMatch(i, offer).remaining
+      remaining.fold((acc._1, offer))(r => (acc._1 += i, r.available.offer))
+    }
+    builder.result()
+  }
+}
+
 /**
  * @author Tobi Knaup
  */
@@ -40,7 +151,7 @@ class MarathonScheduler @Inject()(
   rateLimiters: RateLimiters
 ) extends Scheduler {
 
-  private val log = Logger.getLogger(getClass.getName)
+  private[this] val log = Logger.getLogger(getClass.getName)
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
@@ -78,14 +189,13 @@ class MarathonScheduler @Inject()(
       try {
         log.fine("Received offer %s".format(offer))
 
-        val apps = taskQueue.removeAll()
-        var i = 0
-        var found = false
-
-        while (i < apps.size && !found) {
-          // TODO launch multiple tasks if the offer is big enough
-          val app = apps(i)
-
+        val apps = taskQueue.removeAll().toVector // empty queue
+        val planner = new NeededResourcesPlan(apps)
+        val planned = planner.createPlan(offer)
+        
+        var found = planned.nonEmpty
+        
+        planned foreach { app =>
           newTask(app, offer) match {
             case Some((task, ports)) =>
               val taskInfos = Lists.newArrayList(task)
@@ -101,8 +211,6 @@ class MarathonScheduler @Inject()(
             case None =>
               taskQueue.add(app)
           }
-
-          i += 1
         }
 
         if (!found) {
@@ -110,7 +218,7 @@ class MarathonScheduler @Inject()(
           // Add it back into the queue so the we can try again
           driver.declineOffer(offer.getId)
         } else {
-          taskQueue.addAll(apps.drop(i))
+          taskQueue.addAll(apps.filterNot(planned.contains))
         }
       } catch {
         case t: Throwable => {
