@@ -131,7 +131,7 @@ final class NeededResourcesPlan(var available: Seq[AppDefinition]) {
   def createPlan(offer: Offer): Seq[AppDefinition] = {
     val (builder, _) = sortedWithFreePorts.foldLeft((Vector.newBuilder[AppDefinition], offer)) { (acc, i) =>
       val remaining = AppDefinitionOfferMatch(i, offer).remaining
-      remaining.fold((acc._1, offer))(r => (acc._1 += i, r.available.offer))
+      remaining.fold(acc)(r => (acc._1 += i, r.available.offer))
     }
     builder.result()
   }
