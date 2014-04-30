@@ -120,8 +120,6 @@ final class NeededResourcesPlan(var available: Seq[AppDefinition]) {
   }
   
   def createPlan(offer: Offer): Seq[AppDefinition] = {
-    println(s"sorted:\n${sortedWithFreePorts.mkString("\n")}")
-
     val (builder, _) = sortedWithFreePorts.foldLeft((Vector.newBuilder[AppDefinition], AvailableOffer(offer))) { case (acc @ (b, o), i) =>
       val remaining = o - AppDefinitionNeeds(i)
       remaining.fold(acc)(r => (b += i, r))
