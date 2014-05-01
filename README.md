@@ -258,6 +258,7 @@ as it did before being deprecated. Details on the V1 API can be found in the
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
 * [Python client](https://github.com/thefactory/marathon-python), developed at [The Factory](http://www.thefactory.com)
+* [Python client](https://github.com/Wizcorp/marathon-client.py), developed at [Wizcorp](http://www.wizcorp.jp)
 
 ## Companies using Marathon
 
