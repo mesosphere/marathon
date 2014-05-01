@@ -13,7 +13,7 @@
   "dependencies": {},
   "devDependencies": {
     "envify": "^1.2.1",
-    "react-tools": "^0.9.0",
-    "requirejs": "^2.1.11"
+    "requirejs": "^2.1.11",
+    "react-tools": "^0.10.0"
   }
 }
