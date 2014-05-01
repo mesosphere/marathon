@@ -6,6 +6,8 @@ import scala.collection.JavaConverters._
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import mesosphere.marathon.StorageException
+import com.google.common.cache.{CacheLoader, CacheBuilder}
+import java.util.concurrent.Semaphore
 
 /**
  * @author Tobi Knaup
@@ -15,6 +17,16 @@ class MarathonStore[S <: MarathonState[_, S]](state: State,
                        newState: () => S, prefix:String = "app:") extends PersistenceStore[S] {
 
   val defaultWait = Duration(3, "seconds")
+  private [this] val locks = {
+    CacheBuilder
+      .newBuilder()
+      .weakValues()
+      .build[String, Semaphore](
+        new CacheLoader[String, Semaphore] {
+          override def load(key: String): Semaphore = new Semaphore(1)
+        }
+      )
+  }
 
   import ExecutionContext.Implicits.global
   import mesosphere.util.BackToTheFuture.futureToFutureOption
@@ -27,7 +39,10 @@ class MarathonStore[S <: MarathonState[_, S]](state: State,
   }
 
   def modify(key: String)(f: (() => S) => S): Future[Option[S]] = {
-    state.fetch(prefix + key) flatMap {
+    val lock = locks.get(key)
+    lock.acquire()
+
+    val res = state.fetch(prefix + key) flatMap {
       case Some(variable) =>
         val deserialize = () => stateFromBytes(variable.value).getOrElse(newState())
         state.store(variable.mutate(f(deserialize).toProtoByteArray)) map {
@@ -36,17 +51,33 @@ class MarathonStore[S <: MarathonState[_, S]](state: State,
         }
       case None => throw new StorageException(s"Failed to read $key")
     }
+
+    res onComplete { _ =>
+      lock.release()
+    }
+
+    res
   }
 
   def expunge(key: String): Future[Boolean] = {
-    state.fetch(prefix + key) flatMap {
+    val lock = locks.get(key)
+    lock.acquire()
+
+    val res = state.fetch(prefix + key) flatMap {
       case Some(variable) =>
         state.expunge(variable) map {
-          case Some(b) => b
+          case Some(b) => b.booleanValue()
           case None => throw new StorageException(s"Failed to expunge $key")
         }
+
       case None => throw new StorageException(s"Failed to read $key")
     }
+
+    res onComplete { _ =>
+      lock.release()
+    }
+
+    res
   }
 
   def names(): Future[Iterator[String]] = {
