@@ -7,11 +7,11 @@ import org.mockito.Mockito._
 import org.mockito.Matchers._
 import org.scalatest.junit.AssertionsForJUnit
 import org.scalatest.mock.MockitoSugar
-import org.apache.mesos.state.{Variable, State}
+import org.apache.mesos.state.{InMemoryState, Variable, State}
 import java.util.concurrent.{Future => JFuture, ExecutionException}
 import java.util.{ Iterator => JIterator }
 import java.lang.{ Boolean => JBoolean }
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import mesosphere.marathon.StorageException
 import scala.collection.JavaConverters._
@@ -180,5 +180,30 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
     val res = store.names()
 
     assertTrue("Should return empty iterator", Await.result(res, 5 seconds).isEmpty)
+  }
+
+  @Test
+  def testConcurrentModifications() {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val state = new InMemoryState
+
+    val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
+
+    Await.ready(store.store("foo", AppDefinition(id = "foo", instances = 0)), 2 seconds)
+
+    def plusOne() = {
+      store.modify("foo") { f =>
+        val appDef = f()
+
+        appDef.copy(instances = appDef.instances + 1)
+      }
+    }
+
+    val results = for (_ <- 0 until 1000) yield plusOne()
+    val res = Future.sequence(results)
+
+    Await.ready(res, 5 seconds)
+
+    assertEquals("Instances of 'foo' should be set to 1000", 1000, Await.result(store.fetch("foo"), 5 seconds).map(_.instances).getOrElse(0))
   }
 }
