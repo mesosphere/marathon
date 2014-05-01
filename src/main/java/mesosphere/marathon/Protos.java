@@ -954,32 +954,6 @@ public final class Protos {
      */
     com.google.protobuf.ByteString
         getPathBytes();
-
-    // repeated uint32 acceptableResponses = 7;
-    /**
-     * <code>repeated uint32 acceptableResponses = 7;</code>
-     *
-     * <pre>
-     * used for HTTP only
-     * </pre>
-     */
-    java.util.List<java.lang.Integer> getAcceptableResponsesList();
-    /**
-     * <code>repeated uint32 acceptableResponses = 7;</code>
-     *
-     * <pre>
-     * used for HTTP only
-     * </pre>
-     */
-    int getAcceptableResponsesCount();
-    /**
-     * <code>repeated uint32 acceptableResponses = 7;</code>
-     *
-     * <pre>
-     * used for HTTP only
-     * </pre>
-     */
-    int getAcceptableResponses(int index);
   }
   /**
    * Protobuf type {@code mesosphere.marathon.HealthCheckDefinition}
@@ -1068,27 +1042,6 @@ public final class Protos {
               path_ = input.readBytes();
               break;
             }
-            case 56: {
-              if (!((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
-                acceptableResponses_ = new java.util.ArrayList<java.lang.Integer>();
-                mutable_bitField0_ |= 0x00000040;
-              }
-              acceptableResponses_.add(input.readUInt32());
-              break;
-            }
-            case 58: {
-              int length = input.readRawVarint32();
-              int limit = input.pushLimit(length);
-              if (!((mutable_bitField0_ & 0x00000040) == 0x00000040) && input.getBytesUntilLimit() > 0) {
-                acceptableResponses_ = new java.util.ArrayList<java.lang.Integer>();
-                mutable_bitField0_ |= 0x00000040;
-              }
-              while (input.getBytesUntilLimit() > 0) {
-                acceptableResponses_.add(input.readUInt32());
-              }
-              input.popLimit(limit);
-              break;
-            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -1097,9 +1050,6 @@ public final class Protos {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e.getMessage()).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
-          acceptableResponses_ = java.util.Collections.unmodifiableList(acceptableResponses_);
-        }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
@@ -1349,41 +1299,6 @@ public final class Protos {
       }
     }
 
-    // repeated uint32 acceptableResponses = 7;
-    public static final int ACCEPTABLERESPONSES_FIELD_NUMBER = 7;
-    private java.util.List<java.lang.Integer> acceptableResponses_;
-    /**
-     * <code>repeated uint32 acceptableResponses = 7;</code>
-     *
-     * <pre>
-     * used for HTTP only
-     * </pre>
-     */
-    public java.util.List<java.lang.Integer>
-        getAcceptableResponsesList() {
-      return acceptableResponses_;
-    }
-    /**
-     * <code>repeated uint32 acceptableResponses = 7;</code>
-     *
-     * <pre>
-     * used for HTTP only
-     * </pre>
-     */
-    public int getAcceptableResponsesCount() {
-      return acceptableResponses_.size();
-    }
-    /**
-     * <code>repeated uint32 acceptableResponses = 7;</code>
-     *
-     * <pre>
-     * used for HTTP only
-     * </pre>
-     */
-    public int getAcceptableResponses(int index) {
-      return acceptableResponses_.get(index);
-    }
-
     private void initFields() {
       protocol_ = mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.HTTP;
       portIndex_ = 0;
@@ -1391,7 +1306,6 @@ public final class Protos {
       intervalSeconds_ = 60;
       timeoutSeconds_ = 15;
       path_ = "/";
-      acceptableResponses_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1431,9 +1345,6 @@ public final class Protos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBytes(6, getPathBytes());
       }
-      for (int i = 0; i < acceptableResponses_.size(); i++) {
-        output.writeUInt32(7, acceptableResponses_.get(i));
-      }
       getUnknownFields().writeTo(output);
     }
 
@@ -1466,15 +1377,6 @@ public final class Protos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(6, getPathBytes());
-      }
-      {
-        int dataSize = 0;
-        for (int i = 0; i < acceptableResponses_.size(); i++) {
-          dataSize += com.google.protobuf.CodedOutputStream
-            .computeUInt32SizeNoTag(acceptableResponses_.get(i));
-        }
-        size += dataSize;
-        size += 1 * getAcceptableResponsesList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1604,8 +1506,6 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000010);
         path_ = "/";
         bitField0_ = (bitField0_ & ~0x00000020);
-        acceptableResponses_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -1658,11 +1558,6 @@ public final class Protos {
           to_bitField0_ |= 0x00000020;
         }
         result.path_ = path_;
-        if (((bitField0_ & 0x00000040) == 0x00000040)) {
-          acceptableResponses_ = java.util.Collections.unmodifiableList(acceptableResponses_);
-          bitField0_ = (bitField0_ & ~0x00000040);
-        }
-        result.acceptableResponses_ = acceptableResponses_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1697,16 +1592,6 @@ public final class Protos {
         if (other.hasPath()) {
           bitField0_ |= 0x00000020;
           path_ = other.path_;
-          onChanged();
-        }
-        if (!other.acceptableResponses_.isEmpty()) {
-          if (acceptableResponses_.isEmpty()) {
-            acceptableResponses_ = other.acceptableResponses_;
-            bitField0_ = (bitField0_ & ~0x00000040);
-          } else {
-            ensureAcceptableResponsesIsMutable();
-            acceptableResponses_.addAll(other.acceptableResponses_);
-          }
           onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
@@ -2006,100 +1891,6 @@ public final class Protos {
   }
   bitField0_ |= 0x00000020;
         path_ = value;
-        onChanged();
-        return this;
-      }
-
-      // repeated uint32 acceptableResponses = 7;
-      private java.util.List<java.lang.Integer> acceptableResponses_ = java.util.Collections.emptyList();
-      private void ensureAcceptableResponsesIsMutable() {
-        if (!((bitField0_ & 0x00000040) == 0x00000040)) {
-          acceptableResponses_ = new java.util.ArrayList<java.lang.Integer>(acceptableResponses_);
-          bitField0_ |= 0x00000040;
-         }
-      }
-      /**
-       * <code>repeated uint32 acceptableResponses = 7;</code>
-       *
-       * <pre>
-       * used for HTTP only
-       * </pre>
-       */
-      public java.util.List<java.lang.Integer>
-          getAcceptableResponsesList() {
-        return java.util.Collections.unmodifiableList(acceptableResponses_);
-      }
-      /**
-       * <code>repeated uint32 acceptableResponses = 7;</code>
-       *
-       * <pre>
-       * used for HTTP only
-       * </pre>
-       */
-      public int getAcceptableResponsesCount() {
-        return acceptableResponses_.size();
-      }
-      /**
-       * <code>repeated uint32 acceptableResponses = 7;</code>
-       *
-       * <pre>
-       * used for HTTP only
-       * </pre>
-       */
-      public int getAcceptableResponses(int index) {
-        return acceptableResponses_.get(index);
-      }
-      /**
-       * <code>repeated uint32 acceptableResponses = 7;</code>
-       *
-       * <pre>
-       * used for HTTP only
-       * </pre>
-       */
-      public Builder setAcceptableResponses(
-          int index, int value) {
-        ensureAcceptableResponsesIsMutable();
-        acceptableResponses_.set(index, value);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>repeated uint32 acceptableResponses = 7;</code>
-       *
-       * <pre>
-       * used for HTTP only
-       * </pre>
-       */
-      public Builder addAcceptableResponses(int value) {
-        ensureAcceptableResponsesIsMutable();
-        acceptableResponses_.add(value);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>repeated uint32 acceptableResponses = 7;</code>
-       *
-       * <pre>
-       * used for HTTP only
-       * </pre>
-       */
-      public Builder addAllAcceptableResponses(
-          java.lang.Iterable<? extends java.lang.Integer> values) {
-        ensureAcceptableResponsesIsMutable();
-        super.addAll(values, acceptableResponses_);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>repeated uint32 acceptableResponses = 7;</code>
-       *
-       * <pre>
-       * used for HTTP only
-       * </pre>
-       */
-      public Builder clearAcceptableResponses() {
-        acceptableResponses_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000040);
         onChanged();
         return this;
       }
@@ -8785,34 +8576,34 @@ public final class Protos {
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\";\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\022\014\n\010GROUP_BY\020\003\"\233\002\n\025HealthCheckDefiniti" +
+      "\020\002\022\014\n\010GROUP_BY\020\003\"\376\001\n\025HealthCheckDefiniti" +
       "on\022E\n\010protocol\030\001 \002(\01623.mesosphere.marath" +
       "on.HealthCheckDefinition.Protocol\022\024\n\tpor" +
       "tIndex\030\002 \002(\r:\0010\022\037\n\023initialDelaySeconds\030\003" +
       " \001(\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00260\022\032\n",
       "\016timeoutSeconds\030\005 \001(\r:\00215\022\017\n\004path\030\006 \001(\t:" +
-      "\001/\022\033\n\023acceptableResponses\030\007 \003(\r\"\035\n\010Proto" +
-      "col\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\243\003\n\021ServiceDefini" +
-      "tion\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.Co" +
-      "mmandInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresource" +
-      "s\030\004 \003(\0132\017.mesos.Resource\022\023\n\013description\030" +
-      "\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013constraints\030\007 \003(" +
-      "\0132\037.mesosphere.marathon.Constraint\022\022\n\010ex" +
-      "ecutor\030\010 \002(\t:\000\022\030\n\rtaskRateLimit\030\t \001(\001:\0011" +
-      "\0225\n\tcontainer\030\n \001(\0132\".mesosphere.maratho",
-      "n.ContainerInfo\022)\n\007version\030\013 \001(\t:\0301970-0" +
-      "1-01T00:00:00.000Z\022@\n\014healthChecks\030\014 \003(\013" +
-      "2*.mesosphere.marathon.HealthCheckDefini" +
-      "tion\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004hos" +
-      "t\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004 \003" +
-      "(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001(\003\022" +
-      "\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007 \003(\0132\021." +
-      "mesos.TaskStatus\022\017\n\007version\030\010 \001(\t\"M\n\013Mar" +
-      "athonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!." +
-      "mesosphere.marathon.MarathonTask\"1\n\rCont",
-      "ainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 " +
-      "\003(\014\")\n\020EventSubscribers\022\025\n\rcallback_urls" +
-      "\030\001 \003(\tB\035\n\023mesosphere.marathonB\006Protos"
+      "\001/\"\035\n\010Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\243\003\n\021Se" +
+      "rviceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\013" +
+      "2\022.mesos.CommandInfo\022\021\n\tinstances\030\003 \002(\r\022" +
+      "\"\n\tresources\030\004 \003(\0132\017.mesos.Resource\022\023\n\013d" +
+      "escription\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013const" +
+      "raints\030\007 \003(\0132\037.mesosphere.marathon.Const" +
+      "raint\022\022\n\010executor\030\010 \002(\t:\000\022\030\n\rtaskRateLim" +
+      "it\030\t \001(\001:\0011\0225\n\tcontainer\030\n \001(\0132\".mesosph" +
+      "ere.marathon.ContainerInfo\022)\n\007version\030\013 ",
+      "\001(\t:\0301970-01-01T00:00:00.000Z\022@\n\014healthC" +
+      "hecks\030\014 \003(\0132*.mesosphere.marathon.Health" +
+      "CheckDefinition\"\272\001\n\014MarathonTask\022\n\n\002id\030\001" +
+      " \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\natt" +
+      "ributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstage" +
+      "d_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010status" +
+      "es\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010" +
+      " \001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tas" +
+      "ks\030\002 \003(\0132!.mesosphere.marathon.MarathonT" +
+      "ask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n",
+      "\007options\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rca" +
+      "llback_urls\030\001 \003(\tB\035\n\023mesosphere.marathon" +
+      "B\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -8830,7 +8621,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_HealthCheckDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor,
-              new java.lang.String[] { "Protocol", "PortIndex", "InitialDelaySeconds", "IntervalSeconds", "TimeoutSeconds", "Path", "AcceptableResponses", });
+              new java.lang.String[] { "Protocol", "PortIndex", "InitialDelaySeconds", "IntervalSeconds", "TimeoutSeconds", "Path", });
           internal_static_mesosphere_marathon_ServiceDefinition_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new

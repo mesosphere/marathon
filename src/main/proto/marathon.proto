@@ -36,7 +36,6 @@ message HealthCheckDefinition {
   optional uint32 intervalSeconds = 4 [default = 60];
   optional uint32 timeoutSeconds = 5 [default = 15];
   optional string path = 6 [default = "/"]; // used for HTTP only
-  repeated uint32 acceptableResponses = 7;  // used for HTTP only
 }
 
 message ServiceDefinition {

@@ -26,10 +26,6 @@ case class HealthCheck(
   val protocol: Protocol = HealthCheck.DEFAULT_PROTOCOL,
 
   @FieldNotEmpty
-  @FieldJsonInclude(Include.NON_NULL)
-  val acceptableResponses: Option[Set[JInt]] = HealthCheck.DEFAULT_ACCEPTABLE_RESPONSES,
-
-  @FieldNotEmpty
   val portIndex: JInt = HealthCheck.DEFAULT_PORT_INDEX,
 
   @FieldJsonProperty("initialDelaySeconds")
@@ -51,10 +47,6 @@ case class HealthCheck(
       .setIntervalSeconds(this.interval.toSeconds.toInt)
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
 
-    acceptableResponses foreach { value =>
-      builder addAllAcceptableResponses value.asJava
-    }
-
     path foreach { builder.setPath(_) }
     builder.build
   }
@@ -63,11 +55,6 @@ case class HealthCheck(
     new HealthCheck(
       path = Option(proto.getPath),
       protocol = proto.getProtocol,
-      acceptableResponses = {
-        val list = proto.getAcceptableResponsesList
-        if (list.isEmpty) None
-        else Some((list.asScala.toSet))
-      },
       portIndex = proto.getPortIndex,
       initialDelay = FiniteDuration(proto.getInitialDelaySeconds, SECONDS),
       timeout = FiniteDuration(proto.getTimeoutSeconds, SECONDS),
