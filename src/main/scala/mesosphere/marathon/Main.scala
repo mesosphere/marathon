@@ -32,8 +32,8 @@ object Main extends App {
       "ZooKeeper timeout too large!"
     )
 
-    val client = new ZooKeeperClient(Amount.of(
-      conf.zooKeeperTimeout().toInt, Time.MILLISECONDS),
+    val client = new ZooKeeperClient(
+      Amount.of(conf.zooKeeperTimeout().toInt, Time.MILLISECONDS),
       conf.zooKeeperHostAddresses.asJavaCollection
     )
 
