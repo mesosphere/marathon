@@ -95,7 +95,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 object HealthCheckWorker {
 
   // Similar to AWS R53, we accept all responses in [200, 399]
-  protected[health] val acceptableResponses = (200 until 399).toSet
+  protected[health] val acceptableResponses = Range(200, 400)
 
   case class HealthCheckJob(task: MarathonTask, check: HealthCheck)
 
