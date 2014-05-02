@@ -68,13 +68,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     }
 
     get(url).map { response =>
-
-      val okStatusCodes = check.acceptableResponses match {
-        case Some(codes) => codes.map(_.toInt)
-        case None => defaultAcceptableResponses
-      }
-
-      if (okStatusCodes contains response.status.intValue)
+      if (acceptableResponses contains response.status.intValue)
         Healthy(task.getId, Timestamp.now)
       else
         Unhealthy(task.getId, Timestamp.now, response.status.toString)
@@ -100,7 +94,8 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
 object HealthCheckWorker {
 
-  protected[health] val defaultAcceptableResponses = (200 until 299).toSet
+  // Similar to AWS R53, we accept all responses in [200, 399]
+  protected[health] val acceptableResponses = Range(200, 400)
 
   case class HealthCheckJob(task: MarathonTask, check: HealthCheck)
 

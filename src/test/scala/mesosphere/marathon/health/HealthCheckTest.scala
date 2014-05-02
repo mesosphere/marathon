@@ -19,7 +19,6 @@ class HealthCheckTest {
     val healthCheck = HealthCheck(
       path = Some("/health"),
       protocol = Protocol.HTTP,
-      acceptableResponses = Some(Set(200)),
       portIndex = 0,
       initialDelay = FiniteDuration(10, SECONDS),
       interval = FiniteDuration(60, SECONDS)
@@ -29,7 +28,6 @@ class HealthCheckTest {
 
     assertEquals("/health", proto.getPath)
     assertEquals(Protocol.HTTP, proto.getProtocol)
-    assertEquals(Set(200), proto.getAcceptableResponsesList.asScala.toSet)
     assertEquals(0, proto.getPortIndex)
     assertEquals(10, proto.getInitialDelaySeconds)
     assertEquals(60, proto.getIntervalSeconds)
@@ -57,7 +55,6 @@ class HealthCheckTest {
     val proto = Protos.HealthCheckDefinition.newBuilder
       .setPath("/health")
       .setProtocol(Protocol.HTTP)
-      .addAllAcceptableResponses(Set(200).map(i => i: Integer).asJava)
       .setPortIndex(0)
       .setInitialDelaySeconds(10)
       .setIntervalSeconds(60)
@@ -69,7 +66,6 @@ class HealthCheckTest {
     val expectedResult = HealthCheck(
       path = Some("/health"),
       protocol = Protocol.HTTP,
-      acceptableResponses = Some(Set(200)),
       portIndex = 0,
       initialDelay = FiniteDuration(10, SECONDS),
       interval = FiniteDuration(60, SECONDS),
