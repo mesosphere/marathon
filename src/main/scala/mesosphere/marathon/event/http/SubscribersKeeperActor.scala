@@ -17,7 +17,7 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
 
   override def receive = {
 
-    case event @ Subscribe(_, callbackUrl, _) =>
+    case event @ Subscribe(_, callbackUrl, _, _) =>
       val addResult: Future[Option[EventSubscribers]] = add(callbackUrl)
 
       val subscription: Future[MarathonSubscriptionEvent] =
@@ -29,7 +29,7 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
 
       subscription pipeTo sender
 
-    case event @ Unsubscribe(_, callbackUrl, _) =>
+    case event @ Unsubscribe(_, callbackUrl, _, _) =>
       val removeResult: Future[Option[EventSubscribers]] = remove(callbackUrl)
 
       val subscription: Future[MarathonSubscriptionEvent] =
