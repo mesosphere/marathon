@@ -9,6 +9,9 @@ import mesosphere.chaos.AppConfiguration
 import mesosphere.marathon.event.{EventModule, EventConfiguration}
 import mesosphere.marathon.event.http.{HttpEventModule, HttpEventConfiguration}
 import com.google.inject.AbstractModule
+import com.twitter.common.quantity.{Time, Amount}
+import com.twitter.common.zookeeper.ZooKeeperClient
+import scala.collection.JavaConverters._
 import java.util.logging.Logger
 import java.util.Properties
 
@@ -23,6 +26,35 @@ object Main extends App {
   val log = Logger.getLogger(getClass.getName)
   log.info(s"Starting Marathon ${properties.getProperty("marathon.version")}")
 
+  lazy val zk: ZooKeeperClient = {
+    require(
+      conf.zooKeeperTimeout() < Integer.MAX_VALUE,
+      "ZooKeeper timeout too large!"
+    )
+
+    val client = new ZooKeeperClient(Amount.of(
+      conf.zooKeeperTimeout().toInt, Time.MILLISECONDS),
+      conf.zooKeeperHostAddresses.asJavaCollection
+    )
+
+    // Marathon can't do anything useful without a ZK connection
+    // so we wait to proceed until one is available
+    var connectedToZk = false
+
+    while (!connectedToZk) {
+      try {
+        log.info("Connecting to Zookeeper...")
+        client.get
+        connectedToZk = true
+      }
+      catch {
+        case t: Throwable =>
+          log.warning("Unable to connect to Zookeeper, retrying...")
+      }
+    }
+    client
+  }
+
   def modules() = {
     Seq(
       new HttpModule(conf) {
@@ -30,7 +62,7 @@ object Main extends App {
         protected override val resourceCacheControlHeader = Some("max-age=0, must-revalidate")
       },
       new MetricsModule,
-      new MarathonModule(conf),
+      new MarathonModule(conf, zk),
       new MarathonRestModule,
       new EventModule(conf)
     ) ++ getEventsModule()
