@@ -5,12 +5,12 @@ import scala.collection.JavaConverters._
 import org.apache.mesos.Protos.{TaskID, TaskStatus}
 import javax.inject.Inject
 import org.apache.mesos.state.State
-import java.util.logging.{Level, Logger}
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.Main
 import java.io._
 import scala.Some
 import scala.concurrent.{ExecutionContext, Future}
+import org.apache.log4j.Logger
 
 /**
  * @author Tobi Knaup
@@ -65,7 +65,7 @@ class TaskTracker @Inject()(state: State) {
           .build
       }
       case _ => {
-        log.warning(s"No staged task for ID ${taskId}")
+        log.warn(s"No staged task for ID ${taskId}")
         // We lost track of the host and port of this task, but still need to keep track of it
         MarathonTask.newBuilder
           .setId(taskId)
@@ -122,7 +122,7 @@ class TaskTracker @Inject()(state: State) {
         store(appName).map(_ => Some(updatedTask))
       }
       case _ => {
-        log.warning(s"No task for ID ${taskId}")
+        log.warn(s"No task for ID ${taskId}")
         Future.successful(None)
       }
     }
@@ -132,7 +132,7 @@ class TaskTracker @Inject()(state: State) {
     val variable = fetchFromState(appName)
     state.expunge(variable)
     apps.remove(appName)
-    log.warning(s"Expunged app ${appName}")
+    log.warn(s"Expunged app ${appName}")
   }
 
   def shutDown(appName: String) {
@@ -177,15 +177,15 @@ class TaskTracker @Inject()(state: State) {
         source.readFully(bytes)
         val app = MarathonApp.parseFrom(bytes)
         if (app.getName != appName) {
-          log.warning(s"App name from task state for ${appName} is wrong!  Got '${app.getName}' Continuing anyway...")
+          log.warn(s"App name from task state for $appName is wrong!  Got '${app.getName}' Continuing anyway...")
         }
         results ++= app.getTasksList.asScala.toSet
       } else {
-        log.warning(s"Unable to deserialize task state for ${appName}")
+        log.warn(s"Unable to deserialize task state for $appName")
       }
     } catch {
       case e: com.google.protobuf.InvalidProtocolBufferException =>
-        log.log(Level.WARNING, "Unable to deserialize task state for ${appName}", e)
+        log.warn(s"Unable to deserialize task state for $appName", e)
     }
     results
   }
@@ -227,7 +227,7 @@ class TaskTracker @Inject()(state: State) {
     }.flatten
 
     toKill.foreach(t => {
-      log.warning(s"Task '${t.getId}' was staged ${(now - t.getStagedAt)/1000}s ago and has not yet started")
+      log.warn(s"Task '${t.getId}' was staged ${(now - t.getStagedAt)/1000}s ago and has not yet started")
     })
     toKill
   }

@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import com.twitter.common.zookeeper.{Group, CandidateImpl, Candidate, ZooKeeperClient}
 import org.apache.zookeeper.ZooDefs
 import com.twitter.common.base.Supplier
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import javax.inject.Named
 import scala.collection.JavaConverters._
 import com.twitter.common.quantity.{Time, Amount}

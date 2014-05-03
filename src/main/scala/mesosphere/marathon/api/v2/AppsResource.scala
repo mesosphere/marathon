@@ -8,7 +8,7 @@ import mesosphere.marathon.event.EventModule
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.{MarathonSchedulerService, BadRequestException}
 import mesosphere.marathon.tasks.TaskTracker
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import com.codahale.metrics.annotation.Timed
 import com.sun.jersey.api.NotFoundException
 import javax.servlet.http.HttpServletRequest

@@ -8,7 +8,7 @@ import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.EndpointsHelper
 import mesosphere.marathon.api.v2.json.EnrichedTask
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.health.HealthCheckActor.Health
 

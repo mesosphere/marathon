@@ -5,7 +5,7 @@ import com.codahale.metrics.annotation.Timed
 import javax.ws.rs.core.{MediaType, Response}
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.state.Timestamp
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import mesosphere.marathon.api.Responses
 
 

@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import java.io.ByteArrayOutputStream
 import scala.collection._
 import scala.collection.JavaConverters._
@@ -66,7 +66,7 @@ class TaskBuilder (app: AppDefinition,
       executor match {
         case CommandExecutor() => {
           if (app.container.nonEmpty) {
-            log.warning("The command executor can not handle container " +
+            log.warn("The command executor can not handle container " +
                         "options. No tasks will be started for this " +
                         "appliction.")
             return None
@@ -124,7 +124,7 @@ class TaskBuilder (app: AppDefinition,
         Constraints.meetsConstraint(runningTasks, offer, _)
       )
       if (!constraintsMet) {
-        log.warning("Did not meet a constraint in an offer." )
+        log.warn("Did not meet a constraint in an offer." )
         return None
       }
       log.info("Met all constraints.")
