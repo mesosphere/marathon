@@ -14,7 +14,7 @@
         <scala.version>2.10.4</scala.version>
 
         <!-- runtime deps versions -->
-        <chaos.version>0.5.5</chaos.version>
+        <chaos.version>0.5.6</chaos.version>
         <jackson-ccm.version>0.1.0</jackson-ccm.version>
         <mesos.version>0.18.0</mesos.version>
         <mesos-utils.version>0.18.0-1</mesos-utils.version>
