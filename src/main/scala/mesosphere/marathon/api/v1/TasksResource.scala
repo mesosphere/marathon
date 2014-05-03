@@ -6,7 +6,7 @@ import mesosphere.marathon.tasks.TaskTracker
 import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
 import com.codahale.metrics.annotation.Timed
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import javax.ws.rs.core.Response.{Status, ResponseBuilder}
 
 @Path("v1/tasks")

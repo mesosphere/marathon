@@ -9,7 +9,7 @@ import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.{Responses, EndpointsHelper}
 import scala.concurrent.{Future, Await}
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.Protos.MarathonTask
 import scala.concurrent.Await

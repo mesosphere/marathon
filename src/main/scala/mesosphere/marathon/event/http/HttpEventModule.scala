@@ -8,7 +8,7 @@ import com.google.inject.name.Named
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import org.rogach.scallop.ScallopConf
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import scala.concurrent.duration._
 import akka.util.Timeout
 import org.apache.mesos.state.State
@@ -57,7 +57,7 @@ class HttpEventModule extends AbstractModule {
           val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
           f.onFailure {
             case th: Throwable =>
-              log.warning(s"Failed to add ${url} to event subscribers. exception message => ${th.getMessage}")
+              log.warn(s"Failed to add ${url} to event subscribers. exception message => ${th.getMessage}")
           }
         }
     }
@@ -78,7 +78,7 @@ class HttpEventModule extends AbstractModule {
 //    val callback = new HttpCallbackEventSubscriber(actor)
 //    if (bus.nonEmpty) {
 //      bus.get.register(callback)
-//      log.warning("Registered HttpCallbackEventSubscriber with Bus." )
+//      log.warn("Registered HttpCallbackEventSubscriber with Bus." )
 //    }
 //    callback
 //  }

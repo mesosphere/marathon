@@ -2,20 +2,18 @@ package mesosphere.marathon
 
 import org.apache.mesos.Protos._
 import org.apache.mesos.{SchedulerDriver, Scheduler}
-import java.util.logging.{Level, Logger}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.HashSet
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.{MarathonStore, AppRepository}
-import scala.util.{Failure, Success}
+import mesosphere.marathon.state.AppRepository
 import scala.concurrent.{Future, ExecutionContext}
 import com.google.common.collect.Lists
 import javax.inject.{Named, Inject}
 import com.google.common.eventbus.EventBus
-import mesosphere.marathon.event.{FrameworkMessageEvent, EventModule, MesosStatusUpdateEvent}
+import mesosphere.marathon.event.{FrameworkMessageEvent, EventModule}
 import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks}
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
@@ -24,7 +22,8 @@ import mesosphere.mesos.protos
 import mesosphere.util.RateLimiters
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
-import scala.util.{Try, Success, Failure}
+import scala.util.{Success, Failure}
+import org.apache.log4j.Logger
 
 /**
  * @author Tobi Knaup
@@ -68,7 +67,7 @@ class MarathonScheduler @Inject()(
     // TODO resourceOffers() doesn't feel like the right place to run this
     val toKill = taskTracker.checkStagedTasks
     if (toKill.nonEmpty) {
-      log.warning(s"There are ${toKill.size} tasks stuck in staging which will be killed")
+      log.warn(s"There are ${toKill.size} tasks stuck in staging which will be killed")
       log.info(s"About to kill these tasks: ${toKill}")
       for (task <- toKill) {
         driver.killTask(protos.TaskID(task.getId))
@@ -76,7 +75,7 @@ class MarathonScheduler @Inject()(
     }
     for (offer <- offers.asScala) {
       try {
-        log.fine("Received offer %s".format(offer))
+        log.debug("Received offer %s".format(offer))
 
         val apps = taskQueue.removeAll()
         var i = 0
@@ -89,7 +88,7 @@ class MarathonScheduler @Inject()(
           newTask(app, offer) match {
             case Some((task, ports)) =>
               val taskInfos = Lists.newArrayList(task)
-              log.fine("Launching tasks: " + taskInfos)
+              log.debug("Launching tasks: " + taskInfos)
 
               val marathonTask = MarathonTasks.makeTask(
                 task.getTaskId.getValue, offer.getHostname, ports,
@@ -106,7 +105,7 @@ class MarathonScheduler @Inject()(
         }
 
         if (!found) {
-          log.fine("Offer doesn't match request. Declining.")
+          log.debug("Offer doesn't match request. Declining.")
           // Add it back into the queue so the we can try again
           driver.declineOffer(offer.getId)
         } else {
@@ -114,7 +113,7 @@ class MarathonScheduler @Inject()(
         }
       } catch {
         case t: Throwable => {
-          log.log(Level.SEVERE, "Caught an exception. Declining offer.", t)
+          log.error("Caught an exception. Declining offer.", t)
           // Ensure that we always respond
           driver.declineOffer(offer.getId)
         }
@@ -141,34 +140,34 @@ class MarathonScheduler @Inject()(
       taskTracker.terminated(appID, status).foreach(taskOption => {
         taskOption match {
           case Some(task) => postEvent(status, task)
-          case None => log.warning(s"Couldn't post event for ${status.getTaskId}")
+          case None => log.warn(s"Couldn't post event for ${status.getTaskId}")
         }
 
         if (rateLimiters.tryAcquire(appID)) {
           scale(driver, appID)
         } else {
-          log.warning(s"Rate limit reached for $appID")
+          log.warn(s"Rate limit reached for $appID")
         }
       })
     } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
       taskTracker.running(appID, status).onComplete {
         case Success(task) => postEvent(status, task)
         case Failure(t) => {
-          log.log(Level.WARNING, s"Couldn't post event for ${status.getTaskId}", t)
-          log.warning(s"Killing task ${status.getTaskId}")
+          log.warn(s"Couldn't post event for ${status.getTaskId}", t)
+          log.warn(s"Killing task ${status.getTaskId}")
           driver.killTask(status.getTaskId)
         }
       }
     } else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
-      log.warning(s"Received status update for unknown app ${appID}")
-      log.warning(s"Killing task ${status.getTaskId}")
+      log.warn(s"Received status update for unknown app $appID")
+      log.warn(s"Killing task ${status.getTaskId}")
       driver.killTask(status.getTaskId)
     } else {
       taskTracker.statusUpdate(appID, status).onComplete {
         case Success(t) =>
           t match {
             case None =>
-              log.warning(s"Killing task ${status.getTaskId}")
+              log.warn(s"Killing task ${status.getTaskId}")
               driver.killTask(status.getTaskId)
             case _ =>
           }
@@ -183,7 +182,7 @@ class MarathonScheduler @Inject()(
   }
 
   def disconnected(driver: SchedulerDriver) {
-    log.warning("Disconnected")
+    log.warn("Disconnected")
     suicide()
   }
 
@@ -196,7 +195,7 @@ class MarathonScheduler @Inject()(
   }
 
   def error(driver: SchedulerDriver, message: String) {
-    log.warning("Error: %s".format(message))
+    log.warn("Error: %s".format(message))
     suicide()
   }
 
@@ -284,7 +283,7 @@ class MarathonScheduler @Inject()(
         }
         for (app <- taskTracker.list.keys) {
           if (!appNames.contains(app)) {
-            log.warning(s"App ${app} exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
+            log.warn(s"App ${app} exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
             val tasks = taskTracker.get(app)
             for (task <- tasks) {
               log.info(s"Killing task ${task.getId}")
@@ -294,11 +293,11 @@ class MarathonScheduler @Inject()(
           }
         }
         log.info("Requesting task reconciliation with the Mesos master")
-        log.finest(s"Tasks to reconcile: $buf")
+        log.debug(s"Tasks to reconcile: $buf")
         driver.reconcileTasks(buf.asJava)
       }
       case Failure(t) => {
-        log.log(Level.WARNING, "Failed to get task names", t)
+        log.warn("Failed to get task names", t)
       }
     }
   }
@@ -364,12 +363,12 @@ class MarathonScheduler @Inject()(
   private def scale(driver: SchedulerDriver, appName: String) {
     currentAppVersion(appName).onSuccess {
       case Some(app) => scale(driver, app)
-      case _ => log.warning("App %s does not exist. Not scaling.".format(appName))
+      case _ => log.warn("App %s does not exist. Not scaling.".format(appName))
     }
   }
 
   private def suicide() {
-    log.severe("Committing suicide")
+    log.fatal("Committing suicide")
     sys.exit(9)
   }
 
