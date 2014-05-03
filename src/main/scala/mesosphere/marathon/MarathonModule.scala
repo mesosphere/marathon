@@ -29,7 +29,7 @@ object ModuleNames {
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
 }
 
-class MarathonModule(conf: MarathonConf with ZookeeperConf)
+class MarathonModule(conf: MarathonConf with ZookeeperConf, zk: ZooKeeperClient)
   extends AbstractModule {
 
   val log = Logger.getLogger(getClass.getName)
@@ -89,14 +89,7 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf)
 
   @Provides
   @Singleton
-  def provideZookeeperClient(): ZooKeeperClient = {
-    require(Main.conf.zooKeeperTimeout() < Integer.MAX_VALUE,
-      "ZooKeeper timeout too large!")
-
-    new ZooKeeperClient(Amount.of(
-      Main.conf.zooKeeperTimeout().toInt, Time.MILLISECONDS),
-      Main.conf.zooKeeperHostAddresses.asJavaCollection)
-  }
+  def provideZookeeperClient(): ZooKeeperClient = zk
 
   @Provides
   @Singleton
