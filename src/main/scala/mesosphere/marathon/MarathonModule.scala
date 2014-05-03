@@ -36,6 +36,7 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf, zk: ZooKeeperClient)
 
   def configure() {
     bind(classOf[MarathonConf]).toInstance(conf)
+    bind(classOf[ZooKeeperClient]).toInstance(zk)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
@@ -86,10 +87,6 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf, zk: ZooKeeperClient)
     }
     None
   }
-
-  @Provides
-  @Singleton
-  def provideZookeeperClient(): ZooKeeperClient = zk
 
   @Provides
   @Singleton
