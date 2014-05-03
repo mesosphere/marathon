@@ -12,8 +12,8 @@ import com.google.inject.AbstractModule
 import com.twitter.common.quantity.{Time, Amount}
 import com.twitter.common.zookeeper.ZooKeeperClient
 import scala.collection.JavaConverters._
-import java.util.logging.Logger
 import java.util.Properties
+import org.apache.log4j.Logger
 
 /**
  * @author Tobi Knaup
@@ -49,7 +49,7 @@ object Main extends App {
       }
       catch {
         case t: Throwable =>
-          log.warning("Unable to connect to Zookeeper, retrying...")
+          log.warn("Unable to connect to Zookeeper, retrying...")
       }
     }
     client
@@ -73,12 +73,12 @@ object Main extends App {
     if (conf.eventSubscriber.isSupplied) {
       conf.eventSubscriber() match {
         case "http_callback" => {
-          log.warning("Using HttpCallbackEventSubscriber for event" +
+          log.warn("Using HttpCallbackEventSubscriber for event" +
             "notification")
           return Some(new HttpEventModule())
         }
         case _ => {
-          log.warning("Event notification disabled.")
+          log.warn("Event notification disabled.")
         }
       }
     }

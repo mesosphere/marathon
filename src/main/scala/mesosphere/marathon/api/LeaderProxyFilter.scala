@@ -5,11 +5,11 @@ import com.google.inject.Inject
 import java.net.{HttpURLConnection, URL}
 import java.io.{OutputStream, InputStream}
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.logging.{Level, Logger}
 import javax.inject.Named
 import javax.servlet._
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import mesosphere.marathon.{MarathonSchedulerService, ModuleNames}
+import org.apache.log4j.Logger
 
 
 /**
@@ -121,7 +121,7 @@ class LeaderProxyFilter @Inject()
 
         } catch {
           case e: Exception =>
-            log.log(Level.WARNING, "Exception while proxying", e)
+            log.warn("Exception while proxying", e)
         }
       }
     }

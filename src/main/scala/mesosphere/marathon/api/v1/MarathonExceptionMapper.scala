@@ -4,11 +4,11 @@ import javax.ws.rs.ext.{Provider, ExceptionMapper}
 import javax.ws.rs.core.{MediaType, Response}
 import scala.concurrent.TimeoutException
 import mesosphere.marathon.{BadRequestException, UnknownAppException}
-import java.util.logging.{Level, Logger}
 import com.sun.jersey.api.NotFoundException
 import com.fasterxml.jackson.core.JsonParseException
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
+import org.apache.log4j.Logger
 
 /**
  * @author Tobi Knaup
@@ -22,7 +22,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
   def toResponse(exception: Exception): Response = {
     // WebApplicationException are things like invalid requests etc, no need to log a stack trace
     if (!exception.isInstanceOf[WebApplicationException]) {
-      log.log(Level.WARNING, "", exception)
+      log.warn("", exception)
     }
 
     Response

@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletRequest
 import com.codahale.metrics.annotation.Timed
 import com.google.common.eventbus.EventBus
 import scala.concurrent.Await
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import mesosphere.marathon.api.Responses
 
 /**

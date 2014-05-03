@@ -6,7 +6,7 @@ import javax.ws.rs._
 import javax.ws.rs.core.{Context, MediaType}
 import com.codahale.metrics.annotation.Timed
 import javax.servlet.http.HttpServletRequest
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import mesosphere.marathon.event.{Unsubscribe, Subscribe}
 import mesosphere.marathon.event.http.{HttpEventModule, HttpCallbackSubscriptionService}
 import scala.concurrent.Await

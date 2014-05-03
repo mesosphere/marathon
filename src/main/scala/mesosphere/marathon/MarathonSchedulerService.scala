@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import org.apache.mesos.Protos.{TaskID, FrameworkInfo}
 import org.apache.mesos.MesosSchedulerDriver
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.{AppRepository, Timestamp}

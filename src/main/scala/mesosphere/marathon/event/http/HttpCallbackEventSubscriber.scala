@@ -3,7 +3,7 @@ package mesosphere.marathon.event.http
 import akka.actor.ActorRef
 import com.google.common.eventbus.{EventBus, Subscribe}
 import mesosphere.marathon.event.{EventModule, EventSubscriber, MarathonEvent}
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import javax.inject.{Named, Inject}
 
 class HttpCallbackEventSubscriber @Inject()(

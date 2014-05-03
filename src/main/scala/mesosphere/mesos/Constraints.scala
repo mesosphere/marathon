@@ -3,7 +3,7 @@ package mesosphere.mesos
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.{MarathonTask, Constraint}
 import mesosphere.marathon.Protos.Constraint.Operator
-import java.util.logging.Logger
+import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Offer
 import scala.util.Try
 
@@ -93,7 +93,7 @@ object Constraints {
           if (value.nonEmpty) {
             attr.get.getText.getValue.matches(value)
           } else {
-            log.warning("Error, value is required for LIKE operation")
+            log.warn("Error, value is required for LIKE operation")
             false
           }
       }
