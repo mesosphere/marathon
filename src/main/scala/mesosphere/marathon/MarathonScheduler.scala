@@ -371,7 +371,9 @@ class MarathonScheduler @Inject()(
 
   private def suicide() {
     log.fatal("Committing suicide")
-    sys.exit(9)
+
+    // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
+    Future(sys.exit(9))
   }
 
   private def postEvent(status: TaskStatus, task: MarathonTask) {
