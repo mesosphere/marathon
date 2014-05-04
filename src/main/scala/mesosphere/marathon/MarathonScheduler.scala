@@ -335,10 +335,11 @@ class MarathonScheduler @Inject()(
         log.info("Need to scale %s from %d up to %d instances".format(app.id, currentCount, targetCount))
 
         val queuedCount = taskQueue.count(app)
+        val toQueue = targetCount - (currentCount + queuedCount)
 
-        if ((currentCount + queuedCount) < targetCount) {
-          for (i <- (currentCount + queuedCount) until targetCount) {
-            log.info(s"Queueing new task for ${app.id} ($queuedCount queued)")
+        if (toQueue > 0) {
+          log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
+          for (i <- 0 until toQueue) {
             taskQueue.add(app)
           }
         } else {
@@ -347,10 +348,11 @@ class MarathonScheduler @Inject()(
       }
       else if (targetCount < currentCount) {
         log.info("Scaling %s from %d down to %d instances".format(app.id, currentCount, targetCount))
+        taskQueue.purge(app)
 
         val toKill = taskTracker.take(app.id, currentCount - targetCount)
+        log.info(s"Killing tasks: ${toKill.map(_.getId)}")
         for (task <- toKill) {
-          log.info("Killing task " + task.getId)
           driver.killTask(protos.TaskID(task.getId))
         }
       }

@@ -10,7 +10,7 @@ object MarathonTasks {
   def makeTask(id: String,
                host: String,
                ports: Iterable[Long],
-               attributes: List[Attribute],
+               attributes: Iterable[Attribute],
                version: Timestamp) = {
     MarathonTask.newBuilder()
       .setId(id)
