@@ -6,15 +6,16 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.state.{Timestamp, AppRepository}
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{MarathonTasks, TaskQueue, TaskTracker}
 import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
 import org.apache.mesos.Protos.{OfferID, TaskID, TaskInfo}
-import org.mockito.ArgumentCaptor
+import org.mockito.{Matchers, ArgumentCaptor}
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
+import scala.collection.mutable
 
 /**
  * @author Tobi Knaup
@@ -87,5 +88,31 @@ class MarathonSchedulerTest extends MarathonSpec {
     assert(taskInfoPortVar.get.getValue == marathonTaskPort.toString)
     val marathonTaskVersion = marathonTaskCaptor.getValue.getVersion
     assert(now.toString() == marathonTaskVersion)
+  }
+
+  test("ScaleDown") {
+    val driver = mock[SchedulerDriver]
+    val app = AppDefinition(
+      id = "down",
+      instances = 1
+    )
+    val task0 = MarathonTasks.makeTask("down_0", "localhost", Seq(), Seq(),
+      Timestamp.now())
+    val task1 = MarathonTasks.makeTask("down_1", "localhost", Seq(), Seq(),
+      Timestamp.now())
+    val tasks = new mutable.HashSet[MarathonTask]()
+    tasks += task0
+    tasks += task1
+    val taken = new mutable.HashSet[MarathonTask]()
+    taken += task0
+
+    when(tracker.get(app.id)).thenReturn(tasks)
+    when(tracker.count(app.id)).thenReturn(2)
+    when(tracker.take(app.id, 1)).thenReturn(taken)
+
+    scheduler.scale(driver, app)
+
+    verify(queue).purge(same(app))
+    verify(driver).killTask(Matchers.eq(TaskID.newBuilder.setValue("down_0").build))
   }
 }
