@@ -1,21 +1,13 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.Protos
+import mesosphere.marathon.{MarathonSpec, Protos}
 import Protos.HealthCheckDefinition.Protocol
-
-import org.junit.Test
-import org.junit.Assert._
-
 import scala.concurrent.duration.FiniteDuration
-import scala.collection.JavaConverters._
-
 import java.util.concurrent.TimeUnit.SECONDS
-import javax.validation.Validation
 
-class HealthCheckTest {
+class HealthCheckTest extends MarathonSpec {
 
-  @Test
-  def testToProto() {
+  test("ToProto") {
     val healthCheck = HealthCheck(
       path = Some("/health"),
       protocol = Protocol.HTTP,
@@ -26,15 +18,14 @@ class HealthCheckTest {
 
     val proto = healthCheck.toProto
 
-    assertEquals("/health", proto.getPath)
-    assertEquals(Protocol.HTTP, proto.getProtocol)
-    assertEquals(0, proto.getPortIndex)
-    assertEquals(10, proto.getInitialDelaySeconds)
-    assertEquals(60, proto.getIntervalSeconds)
+    assert("/health" == proto.getPath)
+    assert(Protocol.HTTP == proto.getProtocol)
+    assert(0 == proto.getPortIndex)
+    assert(10 == proto.getInitialDelaySeconds)
+    assert(60 == proto.getIntervalSeconds)
   }
 
-  @Test
-  def testToProtoTcp() {
+  test("ToProtoTcp") {
     val healthCheck = HealthCheck(
       protocol = Protocol.TCP,
       portIndex = 1,
@@ -44,14 +35,13 @@ class HealthCheckTest {
 
     val proto = healthCheck.toProto
 
-    assertEquals(Protocol.TCP, proto.getProtocol)
-    assertEquals(1, proto.getPortIndex)
-    assertEquals(7, proto.getInitialDelaySeconds)
-    assertEquals(35, proto.getIntervalSeconds)
+    assert(Protocol.TCP == proto.getProtocol)
+    assert(1 == proto.getPortIndex)
+    assert(7 == proto.getInitialDelaySeconds)
+    assert(35 == proto.getIntervalSeconds)
   }
 
-  @Test
-  def testMergeFromProto() {
+  test("MergeFromProto") {
     val proto = Protos.HealthCheckDefinition.newBuilder
       .setPath("/health")
       .setProtocol(Protocol.HTTP)
@@ -72,11 +62,10 @@ class HealthCheckTest {
       timeout = FiniteDuration(10, SECONDS)
     )
 
-    assertEquals(mergeResult, expectedResult)
+    assert(mergeResult == expectedResult)
   }
 
-  @Test
-  def testMergeFromProtoTcp() {
+  test("MergeFromProtoTcp") {
     val proto = Protos.HealthCheckDefinition.newBuilder
       .setProtocol(Protocol.TCP)
       .setPortIndex(1)
@@ -96,11 +85,10 @@ class HealthCheckTest {
       timeout = FiniteDuration(10, SECONDS)
     )
 
-    assertEquals(mergeResult, expectedResult)
+    assert(mergeResult == expectedResult)
   }
 
-  @Test
-  def testSerializationRoundtrip() {
+  test("SerializationRoundtrip") {
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.marathon.api.v2.json.MarathonModule
@@ -113,7 +101,7 @@ class HealthCheckTest {
     val json = mapper.writeValueAsString(original)
     val readResult = mapper.readValue(json, classOf[HealthCheck])
 
-    assertEquals(readResult, original)
+    assert(readResult == original)
   }
 
 }

@@ -1,27 +1,25 @@
 package mesosphere.marathon.api.v2
 
-import org.junit.Test
-import org.junit.Assert._
 import javax.validation.Validation
 import scala.collection.JavaConverters._
+import mesosphere.marathon.MarathonSpec
 
-class AppUpdateTest {
+class AppUpdateTest extends MarathonSpec {
 
-  @Test
-  def testValidation() {
+  test("Validation") {
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
-    def should(assertion: (Boolean) => Unit, update: AppUpdate, path: String, template: String) = {
+    def shouldViolate(update: AppUpdate, path: String, template: String) = {
       val violations = validator.validate(update).asScala
-      assertion(violations.exists(v =>
+      assert(violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
-    def shouldViolate(update: AppUpdate, path: String, template: String) =
-      should(assertTrue, update, path, template)
-
-    def shouldNotViolate(update: AppUpdate, path: String, template: String) =
-      should(assertFalse, update, path, template)
+    def shouldNotViolate(update: AppUpdate, path: String, template: String) = {
+      val violations = validator.validate(update).asScala
+      assert(!violations.exists(v =>
+        v.getPropertyPath.toString == path && v.getMessageTemplate == template))
+    }
 
     val update = AppUpdate()
 

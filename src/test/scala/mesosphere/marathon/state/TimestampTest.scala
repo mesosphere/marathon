@@ -1,15 +1,12 @@
 package mesosphere.marathon.state
 
-import org.junit.Test
-import org.junit.Assert._
+import mesosphere.marathon.MarathonSpec
 
-class TimestampTest {
+class TimestampTest extends MarathonSpec {
 
-  @Test
-  def testOrdering() {
+  test("Ordering") {
     val t1 = Timestamp(1024)
     val t2 = Timestamp(2048)
-    assertTrue(t1.compare(t2) < 0)
+    assert(t1.compare(t2) < 0)
   }
-
 }

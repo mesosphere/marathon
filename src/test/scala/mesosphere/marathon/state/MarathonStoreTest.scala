@@ -1,24 +1,19 @@
 package mesosphere.marathon.state
 
-import org.junit.Test
-import org.junit.Assert._
 import mesosphere.marathon.api.v1.AppDefinition
 import org.mockito.Mockito._
 import org.mockito.Matchers._
-import org.scalatest.junit.AssertionsForJUnit
-import org.scalatest.mock.MockitoSugar
 import org.apache.mesos.state.{InMemoryState, Variable, State}
 import java.util.concurrent.{Future => JFuture, ExecutionException}
 import java.util.{ Iterator => JIterator }
 import java.lang.{ Boolean => JBoolean }
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
-import mesosphere.marathon.StorageException
+import mesosphere.marathon.{MarathonSpec, StorageException}
 import scala.collection.JavaConverters._
 
-class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
-  @Test
-  def testFetch() {
+class MarathonStoreTest extends MarathonSpec {
+  test("Fetch") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
@@ -32,11 +27,10 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
     val res = store.fetch("testApp")
 
     verify(state).fetch("app:testApp")
-    assertEquals("Should return the expected AppDef", Some(appDef), Await.result(res, 5 seconds))
+    assert(Some(appDef) == Await.result(res, 5 seconds), "Should return the expected AppDef")
   }
 
-  @Test
-  def testFetchFail() {
+  test("FetchFail") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
 
@@ -53,8 +47,7 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
     }
   }
 
-  @Test
-  def testModify() {
+  test("Modify") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
@@ -77,13 +70,12 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
       newAppDef
     }
 
-    assertEquals("Should return the new AppDef", Some(newAppDef), Await.result(res, 5 seconds))
+    assert(Some(newAppDef) == Await.result(res, 5 seconds), "Should return the new AppDef")
     verify(state).fetch("app:testApp")
     verify(state).store(newVariable)
   }
 
-  @Test
-  def testModifyFail() {
+  test("ModifyFail") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
@@ -111,8 +103,7 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
     }
   }
 
-  @Test
-  def testExpunge() {
+  test("Expunge") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
@@ -127,13 +118,12 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
 
     val res = store.expunge("testApp")
 
-    assertTrue("Expunging existing variable should return true", Await.result(res, 5 seconds))
+    assert(Await.result(res, 5 seconds), "Expunging existing variable should return true")
     verify(state).fetch("app:testApp")
     verify(state).expunge(variable)
   }
 
-  @Test
-  def testExpungeFail() {
+  test("ExpungeFail") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
@@ -153,8 +143,7 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
     }
   }
 
-  @Test
-  def testNames() {
+  test("Names") {
     val state = mock[State]
     val future = mock[JFuture[JIterator[String]]]
 
@@ -164,12 +153,11 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.names()
 
-    assertEquals("Should return all application keys", Seq("foo", "bar"), Await.result(res, 5 seconds).toSeq)
+    assert(Seq("foo", "bar") == Await.result(res, 5 seconds).toSeq, "Should return all application keys")
     verify(state).names()
   }
 
-  @Test
-  def testNamesFail() {
+  test("NamesFail") {
     val state = mock[State]
     val future = mock[JFuture[JIterator[String]]]
 
@@ -179,11 +167,10 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.names()
 
-    assertTrue("Should return empty iterator", Await.result(res, 5 seconds).isEmpty)
+    assert(Await.result(res, 5 seconds).isEmpty, "Should return empty iterator")
   }
 
-  @Test
-  def testConcurrentModifications() {
+  test("ConcurrentModifications") {
     import scala.concurrent.ExecutionContext.Implicits.global
     val state = new InMemoryState
 
@@ -204,6 +191,7 @@ class MarathonStoreTest extends AssertionsForJUnit with MockitoSugar {
 
     Await.ready(res, 5 seconds)
 
-    assertEquals("Instances of 'foo' should be set to 1000", 1000, Await.result(store.fetch("foo"), 5 seconds).map(_.instances).getOrElse(0))
+    assert(1000 == Await.result(store.fetch("foo"), 5 seconds).map(_.instances)
+      .getOrElse(0), "Instances of 'foo' should be set to 1000")
   }
 }

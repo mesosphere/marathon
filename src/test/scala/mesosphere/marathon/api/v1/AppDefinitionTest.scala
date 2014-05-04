@@ -1,21 +1,19 @@
 package mesosphere.marathon.api.v1
 
-import org.junit.Test
-import org.junit.Assert._
 import com.google.common.collect.Lists
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.CommandInfo
 import javax.validation.Validation
+import mesosphere.marathon.MarathonSpec
 
 /**
  * @author Tobi Knaup
  */
-class AppDefinitionTest {
+class AppDefinitionTest extends MarathonSpec {
 
-  @Test
-  def testToProto() {
+  test("ToProto") {
     val app = AppDefinition(
       id = "play",
       cmd = "bash foo-*/start -Dhttp.port=$PORT",
@@ -27,18 +25,17 @@ class AppDefinitionTest {
     )
 
     val proto = app.toProto
-    assertEquals("play", proto.getId)
-    assertEquals("bash foo-*/start -Dhttp.port=$PORT", proto.getCmd.getValue)
-    assertEquals(5, proto.getInstances)
-    assertEquals(Lists.newArrayList(8080, 8081), proto.getPortsList)
-    assertEquals("//cmd", proto.getExecutor)
-    assertEquals(4, getScalarResourceValue(proto, "cpus"), 1e-6)
-    assertEquals(256, getScalarResourceValue(proto, "mem"), 1e-6)
+    assert("play" == proto.getId)
+    assert("bash foo-*/start -Dhttp.port=$PORT" == proto.getCmd.getValue)
+    assert(5 == proto.getInstances)
+    assert(Lists.newArrayList(8080, 8081) == proto.getPortsList)
+    assert("//cmd" == proto.getExecutor)
+    assert(4 == getScalarResourceValue(proto, "cpus"), 1e-6)
+    assert(256 == getScalarResourceValue(proto, "mem"), 1e-6)
     // TODO test CommandInfo
   }
 
-  @Test
-  def testMergeFromProto() {
+  test("MergeFromProto") {
     val cmd = CommandInfo.newBuilder
       .setValue("bash foo-*/start -Dhttp.port=$PORT")
 
@@ -52,27 +49,26 @@ class AppDefinitionTest {
 
     val mergeResult = AppDefinition().mergeFromProto(proto)
 
-    assertEquals("play", mergeResult.id)
-    assertEquals(3, mergeResult.instances)
-    assertEquals("//cmd", mergeResult.executor)
-    assertEquals("bash foo-*/start -Dhttp.port=$PORT", mergeResult.cmd)
+    assert("play" == mergeResult.id)
+    assert(3 == mergeResult.instances)
+    assert("//cmd" == mergeResult.executor)
+    assert("bash foo-*/start -Dhttp.port=$PORT" == mergeResult.cmd)
   }
 
-  @Test
-  def testValidation() {
+  test("Validation") {
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
-    def should(assertion: (Boolean) => Unit, app: AppDefinition, path: String, template: String) = {
+    def shouldViolate(app: AppDefinition, path: String, template: String) = {
       val violations = validator.validate(app).asScala
-      assertion(violations.exists(v =>
+      assert(violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
-    def shouldViolate(app: AppDefinition, path: String, template: String) =
-      should(assertTrue, app, path, template)
-
-    def shouldNotViolate(app: AppDefinition, path: String, template: String) =
-      should(assertFalse, app, path, template)
+    def shouldNotViolate(app: AppDefinition, path: String, template: String) = {
+      val violations = validator.validate(app).asScala
+      assert(!violations.exists(v =>
+        v.getPropertyPath.toString == path && v.getMessageTemplate == template))
+    }
 
     val app = AppDefinition(id = "a b")
     shouldViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
@@ -146,8 +142,7 @@ class AppDefinitionTest {
     )
   }
 
-  @Test
-  def testSerializationRoundtrip() {
+  test("SerializationRoundtrip") {
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.marathon.api.v2.json.MarathonModule
@@ -162,7 +157,7 @@ class AppDefinitionTest {
     val json = mapper.writeValueAsString(original)
     val readResult = mapper.readValue(json, classOf[AppDefinition])
 
-    assertTrue(readResult == original)
+    assert(readResult == original)
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
