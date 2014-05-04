@@ -1,27 +1,25 @@
 package mesosphere.marathon.api.v1.json
 
-import org.junit.Test
-import org.junit.Assert._
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.json.MarathonModule
+import mesosphere.marathon.MarathonSpec
 
 
 /**
  * @author Tobi Knaup
  */
-class ConstraintTest {
+class ConstraintTest extends MarathonSpec {
 
-  @Test
-  def testDeserialize() {
+  test("Deserialize") {
     val mapper = new ObjectMapper
     mapper.registerModule(new MarathonModule)
 
     def shouldMatch(json: String, field: String, operator: Constraint.Operator, value: String = "") {
       val constraint = mapper.readValue(json, classOf[Constraint])
-      assertEquals(field, constraint.getField)
-      assertEquals(operator, constraint.getOperator)
-      assertEquals(value, constraint.getValue)
+      assert(field == constraint.getField)
+      assert(operator == constraint.getOperator)
+      assert(value == constraint.getValue)
     }
 
     shouldMatch("""["hostname","UNIQUE"]""", "hostname", Constraint.Operator.UNIQUE)
@@ -29,14 +27,13 @@ class ConstraintTest {
     shouldMatch("""["jdk","LIKE","7"]""", "jdk", Constraint.Operator.LIKE, "7")
   }
 
-  @Test
-  def testSerialize() {
+  test("Serialize") {
     val mapper = new ObjectMapper
     mapper.registerModule(new MarathonModule)
 
     def shouldMatch(expected: String, constraint: Constraint) {
       val actual = mapper.writeValueAsString(constraint)
-      assertEquals(expected, actual)
+      assert(expected == actual)
     }
 
     shouldMatch("""["hostname","UNIQUE"]""", Constraint.newBuilder.setField("hostname")

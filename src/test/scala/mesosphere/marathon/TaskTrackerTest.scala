@@ -1,19 +1,14 @@
 package mesosphere.marathon
 
-import org.scalatest.junit.AssertionsForJUnit
-import org.scalatest.mock.MockitoSugar
-import org.junit.Test
 import org.apache.mesos.state.InMemoryState
 import mesosphere.marathon.Protos.MarathonTask
 import org.apache.mesos.Protos.{TaskID, TaskStatus, TaskState}
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
-
-import org.junit.Assert._
 import mesosphere.marathon.tasks.{TaskTracker, TaskIDUtil}
 import com.google.common.collect.Lists
 import mesosphere.mesos.protos.TextAttribute
 
-class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
+class TaskTrackerTest extends MarathonSpec {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -39,14 +34,13 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
       .build
   }
 
-  @Test
-  def testStartingPersistsTasks() {
+  test("StartingPersistsTasks") {
     def shouldContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) {
-      assertTrue(
-        s"Should contain task ${task.getId}",
+      assert(
         tasks.exists(t => t.getId == task.getId
           && t.getHost == task.getHost
-          && t.getPortsList == task.getPortsList)
+          && t.getPortsList == task.getPortsList),
+        s"Should contain task ${task.getId}"
       )
     }
 
@@ -77,14 +71,13 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
     shouldContainTask(results, task3)
   }
 
-  @Test
-  def testStoreFetchTasks() {
+  test("StoreFetchTasks") {
     def shouldContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) {
-      assertTrue(
-        s"Should contain task ${task.getId}",
+      assert(
         tasks.exists(t => t.getId == task.getId
           && t.getHost == task.getHost
-          && t.getPortsList == task.getPortsList)
+          && t.getPortsList == task.getPortsList),
+        s"Should contain task ${task.getId}"
       )
     }
 
@@ -116,8 +109,7 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
     shouldContainTask(results, task3)
   }
 
-  @Test
-  def testSerDe() {
+  test("SerDe") {
     val state = new InMemoryState
     val taskTracker = new TaskTracker(state)
 
@@ -137,7 +129,7 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
 
       val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
       taskTracker.deserialize("app1", ois)
-      assertTrue("Tasks are not properly serialized", taskTracker.count("app1") == 3)
+      assert(taskTracker.count("app1") == 3, "Tasks are not properly serialized")
     }
 
     taskTracker.running("app1", makeTaskStatus("task1"))
@@ -152,7 +144,7 @@ class TaskTrackerTest extends AssertionsForJUnit with MockitoSugar {
 
       val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
       taskTracker.deserialize("app1", ois)
-      assertTrue("Tasks are not properly serialized", taskTracker.count("app1") == 3)
+      assert(taskTracker.count("app1") == 3, "Tasks are not properly serialized")
     }
   }
 }

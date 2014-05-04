@@ -1,19 +1,18 @@
 package mesosphere.mesos
 
-import org.junit.Test
 import mesosphere.marathon.Protos.{Constraint, MarathonTask}
-import org.junit.Assert._
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.Constraint.Operator
 import scala.collection.JavaConverters._
 import scala.util.Random
 import mesosphere.mesos.protos.{FrameworkID, SlaveID, OfferID, TextAttribute}
 import org.apache.mesos.Protos.{Offer, Attribute}
+import mesosphere.marathon.MarathonSpec
 
 /**
  * @author Florian Leibert (flo@leibert.de)
  */
-class ConstraintsTest {
+class ConstraintsTest extends MarathonSpec {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -55,8 +54,7 @@ class ConstraintsTest {
       .build
   }
 
-  @Test
-  def testUniqueHostConstraint() {
+  test("UniqueHostConstraint") {
     val task1_host1 = makeTaskWithHost("task1", "host1")
     val task2_host2 = makeTaskWithHost("task2", "host2")
     val task3_host3 = makeTaskWithHost("task3", "host3")
@@ -71,14 +69,14 @@ class ConstraintsTest {
       makeOffer("foohost", attributes),
       makeConstraint("hostname", Operator.CLUSTER, ""))
 
-    assertTrue("Should meet first task constraint.", firstTaskOnHost)
+    assert(firstTaskOnHost, "Should meet first task constraint.")
 
     val wrongHostName = Constraints.meetsConstraint(
       firstTask,
       makeOffer("wrong.com", attributes),
       makeConstraint("hostname", Operator.CLUSTER, "right.com"))
 
-    assertFalse("Should not accept the wrong hostname.", wrongHostName)
+    assert(!wrongHostName, "Should not accept the wrong hostname.")
 
     val differentHosts = Set(task1_host1, task2_host2, task3_host3)
 
@@ -87,25 +85,24 @@ class ConstraintsTest {
       makeOffer("host4", attributes),
       hostnameUnique)
 
-    assertTrue("Should place host in array", differentHostsDifferentTasks)
+    assert(differentHostsDifferentTasks, "Should place host in array")
 
     val reusingOneHost = Constraints.meetsConstraint(
       differentHosts,
       makeOffer("host2", attributes),
       hostnameUnique)
 
-    assertFalse("Should not place host", reusingOneHost)
+    assert(!reusingOneHost, "Should not place host")
 
     val firstOfferFirstTaskInstance = Constraints.meetsConstraint(
       firstTask,
       makeOffer("host2", attributes),
       hostnameUnique)
 
-    assertTrue("Should not place host", firstOfferFirstTaskInstance)
+    assert(firstOfferFirstTaskInstance, "Should not place host")
   }
 
-  @Test
-  def testRackConstraints() {
+  test("RackConstraints") {
     val task1_rack1 = makeSampleTask("task1", Map("rackid" -> "rack-1"))
     val task2_rack1 = makeSampleTask("task2", Map("rackid" -> "rack-1"))
     val task3_rack2 = makeSampleTask("task3", Map("rackid" -> "rack-2"))
@@ -122,51 +119,44 @@ class ConstraintsTest {
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       clusterByRackId)
 
-    assertTrue("Should be able to schedule in fresh rack.", clusterFreshRackMet)
+    assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
 
     val clusterRackMet = Constraints.meetsConstraint(
       sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       clusterByRackId)
-    assertTrue("Should meet clustered-in-rack constraints.",
-      clusterRackMet)
+    assert(clusterRackMet, "Should meet clustered-in-rack constraints.")
 
     val clusterRackNotMet = Constraints.meetsConstraint(
       sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
       clusterByRackId)
 
-    assertFalse("Should not meet cluster constraint.", clusterRackNotMet)
+    assert(!clusterRackNotMet, "Should not meet cluster constraint.")
 
     val uniqueFreshRackMet = Constraints.meetsConstraint(
       freshRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       uniqueRackId)
 
-    assertTrue(f"Should meet unique constraint for fresh rack." +
-      f"${uniqueFreshRackMet}",
-      uniqueFreshRackMet)
+    assert(uniqueFreshRackMet, "Should meet unique constraint for fresh rack.")
 
     val uniqueRackMet = Constraints.meetsConstraint(
       uniqueRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-3"))),
       uniqueRackId)
 
-    assertTrue(f"Should meet unique constraint for rack: ${uniqueRack}.",
-      uniqueRackMet)
+    assert(uniqueRackMet, "Should meet unique constraint for rack")
 
     val uniqueRackNotMet = Constraints.meetsConstraint(
       sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       uniqueRackId)
 
-    assertFalse(f"Should not meet unique constraint for rack. ${sameRack}",
-      uniqueRackNotMet)
-
+    assert(!uniqueRackNotMet, "Should not meet unique constraint for rack.")
   }
 
-  @Test
-  def testAttributesLikeByConstraints() {
+  test("AttributesLikeByConstraints") {
     val task1_rack1 = makeSampleTask("task1", Map("foo" -> "bar"))
     val task2_rack1 = makeSampleTask("task2", Map("jdk" -> "7"))
     val freshRack = Set(task1_rack1, task2_rack1)
@@ -176,17 +166,16 @@ class ConstraintsTest {
       freshRack, // list of tasks register in the cluster
       makeOffer("foohost", Set(TextAttribute("jdk", "6"))),  // slave attributes
       jdk7Constraint)
-    assertFalse("Should not meet cluster constraints.", clusterNotMet)
+    assert(!clusterNotMet, "Should not meet cluster constraints.")
 
     val clusterMet = Constraints.meetsConstraint(
       freshRack, // list of tasks register in the cluster
       makeOffer("foohost", Set(TextAttribute("jdk", "7"))),  // slave attributes
       jdk7Constraint)
-    assertTrue("Should meet cluster constraints.", clusterMet)
+    assert(clusterMet, "Should meet cluster constraints.")
   }
 
-  @Test
-  def testRackGroupedByConstraints() {
+  test("RackGroupedByConstraints") {
     val task1_rack1 = makeSampleTask("task1", Map("rackid" -> "rack-1"))
     val task2_rack1 = makeSampleTask("task2", Map("rackid" -> "rack-1"))
     val task3_rack2 = makeSampleTask("task3", Map("rackid" -> "rack-2"))
@@ -204,7 +193,7 @@ class ConstraintsTest {
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
-    assertTrue("Should be able to schedule in fresh rack.", clusterFreshRackMet)
+    assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
 
     sameRack ++= Set(task1_rack1)
 
@@ -213,15 +202,14 @@ class ConstraintsTest {
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
-    assertFalse("Should not meet clustered-in-rack constraints.",
-      clusterRackMet)
+    assert(!clusterRackMet, "Should not meet clustered-in-rack constraints.")
 
     val clusterRackMet2 = Constraints.meetsConstraint(
       sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
       group2ByRack)
 
-    assertTrue("Should meet cluster constraint.", clusterRackMet2)
+    assert(clusterRackMet2, "Should meet cluster constraint.")
 
     sameRack ++= Set(task3_rack2)
 
@@ -230,8 +218,7 @@ class ConstraintsTest {
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
-    assertTrue("Should meet clustered-in-rack constraints.",
-      clusterRackMet3)
+    assert(clusterRackMet3, "Should meet clustered-in-rack constraints.")
 
     sameRack ++= Set(task2_rack1)
 
@@ -240,16 +227,14 @@ class ConstraintsTest {
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
-    assertFalse("Should not meet cluster constraint.", clusterRackNotMet)
+    assert(!clusterRackNotMet, "Should not meet cluster constraint.")
 
     val uniqueFreshRackMet = Constraints.meetsConstraint(
       uniqueRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       rackIdUnique)
 
-    assertTrue(f"Should meet unique constraint for fresh rack." +
-      f"${uniqueFreshRackMet}",
-      uniqueFreshRackMet)
+    assert(uniqueFreshRackMet, "Should meet unique constraint for fresh rack.")
 
     uniqueRack ++= Set(task4_rack1)
 
@@ -258,8 +243,7 @@ class ConstraintsTest {
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-3"))),
       rackIdUnique)
 
-    assertTrue(f"Should meet unique constraint for rack: ${uniqueRack}.",
-      uniqueRackMet)
+    assert(uniqueRackMet, "Should meet unique constraint for rack.")
 
     uniqueRack ++= Set(task5_rack3)
 
@@ -268,7 +252,6 @@ class ConstraintsTest {
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       rackIdUnique)
 
-    assertFalse(f"Should not meet unique constraint for rack. ${sameRack}",
-      uniqueRackNotMet)
+    assert(!uniqueRackNotMet, "Should not meet unique constraint for rack.")
   }
 }

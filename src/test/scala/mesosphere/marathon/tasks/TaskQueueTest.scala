@@ -1,13 +1,10 @@
 package mesosphere.marathon.tasks
 
-import org.scalatest.junit.AssertionsForJUnit
-import org.scalatest.mock.MockitoSugar
-import org.junit.Test
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.Constraint
-import org.junit.Assert._
+import mesosphere.marathon.MarathonSpec
 
-class TaskQueueTest extends AssertionsForJUnit with MockitoSugar {
+class TaskQueueTest extends MarathonSpec {
   val app1 = AppDefinition(id = "app1", constraints = Set.empty)
   val app2 = AppDefinition(id = "app2", constraints = Set(buildConstraint("hostname", "UNIQUE"), buildConstraint("rack_id", "CLUSTER", "rack-1")))
   val app3 = AppDefinition(id = "app3", constraints = Set(buildConstraint("hostname", "UNIQUE")))
@@ -20,21 +17,19 @@ class TaskQueueTest extends AssertionsForJUnit with MockitoSugar {
       .build()
   }
 
-  @Test
-  def testPriority() {
+  test("Priority") {
     val queue = new TaskQueue
 
     queue.add(app1)
     queue.add(app2)
     queue.add(app3)
 
-    assertEquals(s"Should return $app2", app2, queue.poll())
-    assertEquals(s"Should return $app3", app3, queue.poll())
-    assertEquals(s"Should return $app1", app1, queue.poll())
+    assert(app2 == queue.poll(), s"Should return $app2")
+    assert(app3 == queue.poll(), s"Should return $app3")
+    assert(app1 == queue.poll(), s"Should return $app1")
   }
 
-  @Test
-  def testRemoveAll() {
+  test("RemoveAll") {
     val queue = new TaskQueue
 
     queue.add(app1)
@@ -43,24 +38,22 @@ class TaskQueueTest extends AssertionsForJUnit with MockitoSugar {
 
     val res = queue.removeAll()
 
-    assertEquals(s"Should return all elements in correct order.", Vector(app2, app3, app1), res)
-    assertTrue("TaskQueue should be empty.", queue.queue.isEmpty)
+    assert(Vector(app2, app3, app1) == res, s"Should return all elements in correct order.")
+    assert(queue.queue.isEmpty, "TaskQueue should be empty.")
   }
 
-  @Test
-  def testAddAll() {
+  test("AddAll") {
     val queue = new TaskQueue
 
     queue.addAll(Seq(app1, app2, app3))
 
-    assertTrue("Queue should contain 3 elements.", queue.queue.size() == 3)
-    assertTrue(s"Queue should contain $app1.", queue.queue.contains(app1))
-    assertTrue(s"Queue should contain $app2.", queue.queue.contains(app2))
-    assertTrue(s"Queue should contain $app3.", queue.queue.contains(app3))
+    assert(queue.queue.size() == 3, "Queue should contain 3 elements.")
+    assert(queue.queue.contains(app1), s"Queue should contain $app1.")
+    assert(queue.queue.contains(app2), s"Queue should contain $app2.")
+    assert(queue.queue.contains(app3), s"Queue should contain $app3.")
 
     val res = queue.removeAll()
 
-    assertEquals(s"Should return all elements in correct order.", Vector(app2, app3, app1), res)
+    assert(Vector(app2, app3, app1) == res, s"Should return all elements in correct order.")
   }
-
 }

@@ -1,19 +1,15 @@
 package mesosphere.marathon.state
 
-import org.junit.Test
-import org.junit.Assert._
 import mesosphere.marathon.api.v1.AppDefinition
 import org.mockito.Mockito._
 import org.mockito.Matchers._
-import org.scalatest.junit.AssertionsForJUnit
-import org.scalatest.mock.MockitoSugar
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import org.joda.time.DateTime
+import mesosphere.marathon.MarathonSpec
 
-class AppRepositoryTest extends AssertionsForJUnit with MockitoSugar {
-  @Test
-  def testApp() {
+class AppRepositoryTest extends MarathonSpec {
+  test("App") {
     val store = mock[MarathonStore[AppDefinition]]
     val timestamp = new Timestamp(DateTime.now())
     val appDef = AppDefinition(id = "testApp", version = timestamp)
@@ -24,12 +20,11 @@ class AppRepositoryTest extends AssertionsForJUnit with MockitoSugar {
     val repo = new AppRepository(store)
     val res = repo.app("testApp", timestamp)
 
-    assertEquals("Should return the correct AppDefinition", Some(appDef), Await.result(res, 5 seconds))
+    assert(Some(appDef) == Await.result(res, 5 seconds), "Should return the correct AppDefinition")
     verify(store).fetch(s"testApp:${timestamp}")
   }
 
-  @Test
-  def testStore() {
+  test("Store") {
     val store = mock[MarathonStore[AppDefinition]]
     val appDef = AppDefinition(id = "testApp")
     val future = Future.successful(Some(appDef))
@@ -41,13 +36,12 @@ class AppRepositoryTest extends AssertionsForJUnit with MockitoSugar {
     val repo = new AppRepository(store)
     val res = repo.store(appDef)
 
-    assertEquals("Should return the correct AppDefinition", Some(appDef), Await.result(res, 5 seconds))
+    assert(Some(appDef) == Await.result(res, 5 seconds), "Should return the correct AppDefinition")
     verify(store).store(versionedKey, appDef)
     verify(store).store(s"testApp", appDef)
   }
 
-  @Test
-  def testAppIds() {
+  test("AppIds") {
     val store = mock[MarathonStore[AppDefinition]]
     val future = Future.successful(Seq("app1", "app2", "app1:version", "app2:version").iterator)
 
@@ -56,12 +50,11 @@ class AppRepositoryTest extends AssertionsForJUnit with MockitoSugar {
     val repo = new AppRepository(store)
     val res = repo.appIds()
 
-    assertEquals("Should return only unversioned names", Seq("app1", "app2"), Await.result(res, 5 seconds))
+    assert(Seq("app1", "app2") == Await.result(res, 5 seconds), "Should return only unversioned names")
     verify(store).names()
   }
 
-  @Test
-  def testApps() {
+  test("Apps") {
     val store = mock[MarathonStore[AppDefinition]]
     val appDef1 = AppDefinition("app1")
     val appDef2 = AppDefinition("app2")
@@ -78,14 +71,13 @@ class AppRepositoryTest extends AssertionsForJUnit with MockitoSugar {
     val repo = new AppRepository(store)
     val res = repo.apps()
 
-    assertEquals("Should return only current versions", Seq(appDef1, appDef2), Await.result(res, 5 seconds))
+    assert(Seq(appDef1, appDef2) == Await.result(res, 5 seconds), "Should return only current versions")
     verify(store).names()
     verify(store).fetch(appDef1.id)
     verify(store).fetch(appDef2.id)
   }
 
-  @Test
-  def testListVersions() {
+  test("ListVersions") {
     val store = mock[MarathonStore[AppDefinition]]
     val appDef1 = AppDefinition("app1")
     val version1 = appDef1.copy(version = Timestamp(appDef1.version.dateTime.minusDays(1)))
@@ -102,12 +94,11 @@ class AppRepositoryTest extends AssertionsForJUnit with MockitoSugar {
     val res = repo.listVersions(appDef1.id)
 
     val expected = Seq(appDef1.version, version1.version, version2.version, version3.version)
-    assertEquals("Should return all versions of given app", expected, Await.result(res, 5 seconds))
+    assert(expected == Await.result(res, 5 seconds), "Should return all versions of given app")
     verify(store).names()
   }
 
-  @Test
-  def testExpunge() {
+  test("Expunge") {
     val store = mock[MarathonStore[AppDefinition]]
     val appDef1 = AppDefinition("app1")
     val version1 = appDef1.copy(version = Timestamp(appDef1.version.dateTime.minusDays(1)))
@@ -124,8 +115,8 @@ class AppRepositoryTest extends AssertionsForJUnit with MockitoSugar {
     val repo = new AppRepository(store)
     val res = Await.result(repo.expunge(appDef1.id), 5 seconds).toSeq
 
-    assertTrue("Should expunge all versions", res.size == 5)
-    assertTrue("Should succeed", res.forall(identity))
+    assert(res.size == 5, "Should expunge all versions")
+    assert(res.forall(identity), "Should succeed")
 
     verify(store).names()
     verify(store).expunge("app1")

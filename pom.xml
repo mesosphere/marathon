@@ -24,9 +24,8 @@
         <twitter-commons.version>0.0.52</twitter-commons.version>
 
         <!-- test deps versions -->
-        <junit.version>4.11</junit.version>
         <mockito.version>1.9.5</mockito.version>
-        <scalatest.version>1.9.2</scalatest.version>
+        <scalatest.version>2.1.5</scalatest.version>
     </properties>
 
     <distributionManagement>
@@ -144,11 +143,6 @@
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.10</artifactId>
             <version>${scalatest.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -260,6 +254,25 @@
                         <jvmArg>-Xmx2G</jvmArg>
                     </jvmArgs>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.scalatest</groupId>
+                <artifactId>scalatest-maven-plugin</artifactId>
+                <version>1.0-RC2</version>
+                <configuration>
+                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                    <junitxml>.</junitxml>
+                    <filereports>WDF TestSuite.txt</filereports>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
         <resources>
