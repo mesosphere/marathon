@@ -65,25 +65,23 @@ object Main extends App {
       new MarathonModule(conf, zk),
       new MarathonRestModule,
       new EventModule(conf)
-    ) ++ getEventsModule()
+    ) ++ getEventsModule
   }
 
   //TODO(*): Rethink how this could be done.
-  def getEventsModule(): Option[AbstractModule] = {
+  def getEventsModule: Option[AbstractModule] = {
     if (conf.eventSubscriber.isSupplied) {
       conf.eventSubscriber() match {
-        case "http_callback" => {
+        case "http_callback" =>
           log.warn("Using HttpCallbackEventSubscriber for event" +
             "notification")
-          return Some(new HttpEventModule())
-        }
-        case _ => {
-          log.warn("Event notification disabled.")
-        }
-      }
-    }
+          Some(new HttpEventModule())
 
-    None
+        case _ =>
+          log.warn("Event notification disabled.")
+          None
+      }
+    } else None
   }
 
   //TOOD(FL): Make Events optional / wire up.

@@ -30,9 +30,11 @@ class HealthCheckActor(
       appId,
       healthCheck
     )
-    context.system.scheduler.scheduleOnce(healthCheck.initialDelay) {
-      self ! Tick
-    }
+    nextScheduledCheck = Some(
+      context.system.scheduler.scheduleOnce(healthCheck.initialDelay) {
+        self ! Tick
+      }
+    )
   }
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit =
@@ -57,7 +59,7 @@ class HealthCheckActor(
   protected[this] def purgeStatusOfDoneTasks(): Unit = {
     log.debug("Purging status of done tasks")
     val activeTaskIds = taskTracker.get(appId).map(_.getId)
-    taskHealth = taskHealth.filterKeys { activeTaskIds contains _ }
+    taskHealth = taskHealth.filterKeys(activeTaskIds)
   }
 
   protected[this] def scheduleNextHealthCheck(): Unit = {
@@ -124,9 +126,9 @@ object HealthCheckActor {
     import HealthCheckWorker.{HealthResult, Healthy, Unhealthy}
 
     @JsonProperty
-    def alive(): Boolean = lastSuccess.map { successTime =>
+    def alive(): Boolean = lastSuccess.exists { successTime =>
       lastFailure.isEmpty || successTime > lastFailure.get
-    }.getOrElse(false)
+    }
 
     def update(result: HealthResult): Health = result match {
       case Healthy(_, time) => this.copy(

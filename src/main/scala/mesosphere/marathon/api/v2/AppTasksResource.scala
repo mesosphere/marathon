@@ -35,9 +35,8 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
   @Timed
   def indexJson(@PathParam("appId") appId: String) = {
     if (taskTracker.contains(appId)) {
-      val tasks = taskTracker.get(appId).map {
-        case task : MarathonTask => EnrichedTask(appId, task,
-          Await.result(healthCheckManager.status(appId, task.getId), Duration(2, SECONDS)))
+      val tasks = taskTracker.get(appId).map { task =>
+        EnrichedTask(appId, task, Await.result(healthCheckManager.status(appId, task.getId), Duration(2, SECONDS)))
       }
       Response.ok(Map("tasks" -> tasks)).build
     } else {
@@ -48,18 +47,16 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
-  def indexTxt(@PathParam("appId") appId: String) = {
-    service.getApp(appId) match {
-      case Some(app) => Response.ok(
+  def indexTxt(@PathParam("appId") appId: String) =
+    service.getApp(appId).fold(Responses.unknownApp(appId)) { app =>
+      Response.ok(
         EndpointsHelper.appsToEndpointString(
           taskTracker,
           Seq(app),
           "\t"
         )
       ).build
-      case None => Responses.unknownApp(appId)
     }
-  }
 
   @DELETE
   @Timed
@@ -69,9 +66,8 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
     if (taskTracker.contains(appId)) {
       val tasks = taskTracker.get(appId)
 
-      val toKill = Option(host) match {
-        case Some(hostname) => tasks.filter(_.getHost == hostname || hostname == "*")
-        case _ => tasks
+      val toKill = Option(host).fold(tasks) { hostname =>
+        tasks.filter(_.getHost == hostname || hostname == "*")
       }
 
       service.killTasks(appId, toKill, scale)
@@ -89,12 +85,9 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
                 @QueryParam("scale") scale: Boolean = false) = {
     if (taskTracker.contains(appId)) {
       val tasks = taskTracker.get(appId)
-      tasks.find(_.getId == id) match {
-        case Some(task) => {
-          service.killTasks(appId, Seq(task), scale)
-          Response.ok(Map("task" -> task)).build
-        }
-        case None => Responses.unknownTask(id)
+      tasks.find(_.getId == id).fold(Responses.unknownTask(id)) { task =>
+        service.killTasks(appId, Seq(task), scale)
+        Response.ok(Map("task" -> task)).build
       }
     } else {
       Responses.unknownApp(appId)

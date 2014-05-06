@@ -8,7 +8,6 @@ import mesosphere.marathon.event.EventModule
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.{MarathonSchedulerService, BadRequestException}
 import mesosphere.marathon.tasks.TaskTracker
-import org.apache.log4j.Logger
 import com.codahale.metrics.annotation.Timed
 import com.sun.jersey.api.NotFoundException
 import javax.servlet.http.HttpServletRequest
@@ -32,8 +31,6 @@ class AppsResource @Inject()(
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager) {
 
-  val log = Logger.getLogger(getClass.getName)
-
   @GET
   @Timed
   @Produces(Array(MediaType.APPLICATION_JSON))
@@ -45,7 +42,7 @@ class AppsResource @Inject()(
       service.listApps()
     }
 
-    Map("apps" -> apps.map { _.withTaskCounts(taskTracker) })
+    Map("apps" -> apps.map(_.withTaskCounts(taskTracker)))
   }
 
   @POST
@@ -64,9 +61,9 @@ class AppsResource @Inject()(
   @Timed
   @Produces(Array(MediaType.APPLICATION_JSON))
   def show(@PathParam("id") id: String): Response = service.getApp(id) match {
-    case Some(app) => {
+    case Some(app) =>
       Response.ok(Map("app" -> app.withTasks(taskTracker))).build
-    }
+
     case None => Responses.unknownApp(id)
   }
 
@@ -104,23 +101,19 @@ class AppsResource @Inject()(
       if (appUpdate.version.isEmpty) appUpdate
       else {
         // lookup the old version, create an AppUpdate from it.
-        service.getApp(id, appUpdate.version.get) match {
-          case Some(appDef) => AppUpdate.fromAppDefinition(appDef)
-          case None => throw new NotFoundException(
-          	"Rollback version does not exist"
-          )
+        service.getApp(id, appUpdate.version.get) map { appDef =>
+          AppUpdate.fromAppDefinition(appDef)
+        } getOrElse {
+          throw new NotFoundException("Rollback version does not exist")
         }
       }
 
-    service.getApp(id) match {
-      case Some(appDef) => {
-        val updatedApp = effectiveUpdate.apply(appDef)
-        validateContainerOpts(updatedApp)
-        maybePostEvent(req, updatedApp)
-        Await.result(service.updateApp(id, effectiveUpdate), service.defaultWait)
-        Response.noContent.build
-      }
-      case _ => Responses.unknownApp(id)
+    service.getApp(id).fold(Responses.unknownApp(id)) { appDef =>
+      val updatedApp = effectiveUpdate.apply(appDef)
+      validateContainerOpts(updatedApp)
+      maybePostEvent(req, updatedApp)
+      Await.result(service.updateApp(id, effectiveUpdate), service.defaultWait)
+      Response.noContent.build
     }
   }
 
@@ -147,14 +140,13 @@ class AppsResource @Inject()(
    * with the default executor
    */
   private def validateContainerOpts(app: AppDefinition): Unit =
-    if ((app.executor == "" || app.executor == "//cmd") && app.container.isDefined)
+    if (app.container.isDefined && (app.executor == "" || app.executor == "//cmd"))
       throw new BadRequestException(
         "Container options are not supported with the default executor"
       )
 
-  private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) {
+  private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.foreach(_.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app)))
-  }
 
   private def search(cmd: String, id: String): Iterable[AppDefinition] = {
     /** Returns true iff `a` is a prefix of `b`, case-insensitively */

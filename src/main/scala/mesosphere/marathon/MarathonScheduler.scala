@@ -68,10 +68,9 @@ class MarathonScheduler @Inject()(
     val toKill = taskTracker.checkStagedTasks
     if (toKill.nonEmpty) {
       log.warn(s"There are ${toKill.size} tasks stuck in staging which will be killed")
-      log.info(s"About to kill these tasks: ${toKill}")
-      for (task <- toKill) {
+      log.info(s"About to kill these tasks: $toKill")
+      for (task <- toKill)
         driver.killTask(protos.TaskID(task.getId))
-      }
     }
     for (offer <- offers.asScala) {
       try {
@@ -112,11 +111,10 @@ class MarathonScheduler @Inject()(
           taskQueue.addAll(apps.drop(i))
         }
       } catch {
-        case t: Throwable => {
+        case t: Throwable =>
           log.error("Caught an exception. Declining offer.", t)
           // Ensure that we always respond
           driver.declineOffer(offer.getId)
-        }
       }
     }
   }
@@ -152,11 +150,10 @@ class MarathonScheduler @Inject()(
     } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
       taskTracker.running(appID, status).onComplete {
         case Success(task) => postEvent(status, task)
-        case Failure(t) => {
+        case Failure(t) =>
           log.warn(s"Couldn't post event for ${status.getTaskId}", t)
           log.warn(s"Killing task ${status.getTaskId}")
           driver.killTask(status.getTaskId)
-        }
       }
     } else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
       log.warn(s"Received status update for unknown app $appID")
@@ -242,7 +239,7 @@ class MarathonScheduler @Inject()(
     appUpdate: AppUpdate
   ): Future[AppDefinition] = {
     appRepository.currentVersion(id).flatMap {
-      case Some(currentVersion) => {
+      case Some(currentVersion) =>
         val updatedApp = appUpdate(currentVersion)
 
         healthCheckManager.reconcileWith(updatedApp)
@@ -251,7 +248,6 @@ class MarathonScheduler @Inject()(
           update(driver, updatedApp, appUpdate)
           updatedApp
         }
-      }
 
       case _ => throw new UnknownAppException(id)
     }
@@ -266,10 +262,10 @@ class MarathonScheduler @Inject()(
    */
   def reconcileTasks(driver: SchedulerDriver) {
     appRepository.appIds().onComplete {
-      case Success(iterator) => {
+      case Success(iterator) =>
         log.info("Syncing tasks for all apps")
         val buf = new ListBuffer[TaskStatus]
-        val appNames = new HashSet[String]
+        val appNames = HashSet.empty[String]
         for (appName <- iterator) {
           appNames += appName
           scale(driver, appName)
@@ -283,7 +279,7 @@ class MarathonScheduler @Inject()(
         }
         for (app <- taskTracker.list.keys) {
           if (!appNames.contains(app)) {
-            log.warn(s"App ${app} exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
+            log.warn(s"App $app exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
             val tasks = taskTracker.get(app)
             for (task <- tasks) {
               log.info(s"Killing task ${task.getId}")
@@ -295,10 +291,9 @@ class MarathonScheduler @Inject()(
         log.info("Requesting task reconciliation with the Mesos master")
         log.debug(s"Tasks to reconcile: $buf")
         driver.reconcileTasks(buf.asJava)
-      }
-      case Failure(t) => {
+
+      case Failure(t) =>
         log.warn("Failed to get task names", t)
-      }
     }
   }
 
@@ -332,22 +327,21 @@ class MarathonScheduler @Inject()(
       val targetCount = app.instances
 
       if (targetCount > currentCount) {
-        log.info("Need to scale %s from %d up to %d instances".format(app.id, currentCount, targetCount))
+        log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
 
         val queuedCount = taskQueue.count(app)
         val toQueue = targetCount - (currentCount + queuedCount)
 
         if (toQueue > 0) {
           log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
-          for (i <- 0 until toQueue) {
+          for (i <- 0 until toQueue)
             taskQueue.add(app)
-          }
         } else {
           log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
         }
       }
       else if (targetCount < currentCount) {
-        log.info("Scaling %s from %d down to %d instances".format(app.id, currentCount, targetCount))
+        log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
         taskQueue.purge(app)
 
         val toKill = taskTracker.take(app.id, currentCount - targetCount)
@@ -357,7 +351,7 @@ class MarathonScheduler @Inject()(
         }
       }
       else {
-        log.info("Already running %d instances. Not scaling.".format(app.instances))
+        log.info(s"Already running ${app.instances} instances. Not scaling.")
       }
     }
   }
@@ -377,20 +371,18 @@ class MarathonScheduler @Inject()(
   }
 
   private def postEvent(status: TaskStatus, task: MarathonTask) {
-    eventBus.foreach {
-      bus => {
-        log.info("Sending event notification.")
-        bus.post(
-          MesosStatusUpdateEvent(
-            status.getSlaveId.getValue,
-            status.getTaskId.getValue,
-            status.getState.name,
-            TaskIDUtil.appID(status.getTaskId),
-            task.getHost,
-            task.getPortsList.asScala
-          )
+    eventBus.foreach { bus =>
+      log.info("Sending event notification.")
+      bus.post(
+        MesosStatusUpdateEvent(
+          status.getSlaveId.getValue,
+          status.getTaskId.getValue,
+          status.getState.name,
+          TaskIDUtil.appID(status.getTaskId),
+          task.getHost,
+          task.getPortsList.asScala
         )
-      }
+      )
     }
   }
 }

@@ -43,7 +43,7 @@ class AppRepository(store: PersistenceStore[AppDefinition]) {
    * Returns the id for all apps.
    */
   def appIds(): Future[Iterable[String]] =
-    this.store.names.map { names =>
+    this.store.names().map { names =>
       names.collect {
         case name: String if !name.contains(ID_DELIMITER) => name
       }.toSeq
@@ -65,7 +65,7 @@ class AppRepository(store: PersistenceStore[AppDefinition]) {
    */
   def listVersions(appId: String): Future[Iterable[Timestamp]] = {
     val appPrefix = appId + ID_DELIMITER
-  	this.store.names.map { names =>
+  	this.store.names().map { names =>
   	  names.collect {
   	    case name: String if name.startsWith(appPrefix) =>
           Timestamp(name.substring(appPrefix.length))

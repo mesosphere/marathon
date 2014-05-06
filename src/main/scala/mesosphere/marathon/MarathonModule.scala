@@ -8,8 +8,6 @@ import org.apache.zookeeper.ZooDefs
 import com.twitter.common.base.Supplier
 import org.apache.log4j.Logger
 import javax.inject.Named
-import scala.collection.JavaConverters._
-import com.twitter.common.quantity.{Time, Amount}
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
 import akka.actor.ActorSystem

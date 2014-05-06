@@ -19,16 +19,12 @@ class DebugResource @Inject()
   @GET
   @Path("isLeader")
   @Timed
-  def isLeader(): Response = {
-    Response.ok().entity(leader.get()).build
-  }
+  def isLeader(): Response = Response.ok().entity(leader.get()).build
 
   @GET
   @Path("leaderUrl")
   @Timed
-  def leaderUrl(): Response = {
+  def leaderUrl(): Response =
     Response.ok()
       .entity(schedulerService.getLeader.getOrElse("not in HA mode.")).build
-  }
-
 }

@@ -10,32 +10,31 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 
 import scala.concurrent.duration.FiniteDuration
-import scala.collection.JavaConverters._
 import java.util.concurrent.TimeUnit.SECONDS
 
-import java.lang.{Integer => JInt, Double => JDouble}
+import java.lang.{Integer => JInt}
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class HealthCheck(
 
   @FieldJsonInclude(Include.NON_NULL)
   @FieldJsonDeserialize(contentAs = classOf[java.lang.String])
-  val path: Option[String] = HealthCheck.DEFAULT_PATH,
+  path: Option[String] = HealthCheck.DefaultPath,
 
   @FieldNotEmpty
-  val protocol: Protocol = HealthCheck.DEFAULT_PROTOCOL,
+  protocol: Protocol = HealthCheck.DefaultProtocol,
 
   @FieldNotEmpty
-  val portIndex: JInt = HealthCheck.DEFAULT_PORT_INDEX,
+  portIndex: JInt = HealthCheck.DefaultPortIndex,
 
   @FieldJsonProperty("initialDelaySeconds")
-  val initialDelay: FiniteDuration = HealthCheck.DEFAULT_INITIAL_DELAY,
+  initialDelay: FiniteDuration = HealthCheck.DefaultInitialDelay,
 
   @FieldJsonProperty("intervalSeconds")
-  val interval: FiniteDuration = HealthCheck.DEFAULT_INTERVAL,
+  interval: FiniteDuration = HealthCheck.DefaultInterval,
 
   @FieldJsonProperty("timeoutSeconds")
-  val timeout: FiniteDuration = HealthCheck.DEFAULT_TIMEOUT
+  timeout: FiniteDuration = HealthCheck.DefaultTimeout
 
 ) extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
@@ -47,12 +46,12 @@ case class HealthCheck(
       .setIntervalSeconds(this.interval.toSeconds.toInt)
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
 
-    path foreach { builder.setPath(_) }
+    path foreach builder.setPath
     builder.build
   }
 
   def mergeFromProto(proto: Protos.HealthCheckDefinition): HealthCheck =
-    new HealthCheck(
+    HealthCheck(
       path = Option(proto.getPath),
       protocol = proto.getProtocol,
       portIndex = proto.getPortIndex,
@@ -68,11 +67,11 @@ case class HealthCheck(
 
 object HealthCheck {
 
-  val DEFAULT_PATH                 = Some("/")
-  val DEFAULT_PROTOCOL             = Protocol.HTTP
-  val DEFAULT_ACCEPTABLE_RESPONSES = None
-  val DEFAULT_PORT_INDEX           = 0
-  val DEFAULT_INITIAL_DELAY        = FiniteDuration(15, SECONDS)
-  val DEFAULT_INTERVAL             = FiniteDuration(60, SECONDS)
-  val DEFAULT_TIMEOUT              = FiniteDuration(15, SECONDS)
+  val DefaultPath                 = Some("/")
+  val DefaultProtocol             = Protocol.HTTP
+  val DefaultAcceptableResponses  = None
+  val DefaultPortIndex            = 0
+  val DefaultInitialDelay         = FiniteDuration(15, SECONDS)
+  val DefaultInterval             = FiniteDuration(60, SECONDS)
+  val DefaultTimeout              = FiniteDuration(15, SECONDS)
 }

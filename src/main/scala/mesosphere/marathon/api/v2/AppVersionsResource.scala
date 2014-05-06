@@ -29,12 +29,8 @@ class AppVersionsResource(service: MarathonSchedulerService) {
   def show(@PathParam("appId") appId: String,
            @PathParam("version") version: String) = {
 
-    val timestampVersion = Timestamp(version)
-    val versions = service.listAppVersions(appId).toSeq
-    
-    service.getApp(appId, Timestamp(version)) match {
-      case Some(appdef) => appdef
-      case None => Responses.unknownApp(appId)
+    service.getApp(appId, Timestamp(version)) getOrElse {
+      Responses.unknownApp(appId)
     }
   }
 

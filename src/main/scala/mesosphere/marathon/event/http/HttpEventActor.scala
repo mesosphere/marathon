@@ -7,9 +7,8 @@ import scala.concurrent.Future
 import spray.httpx.Json4sJacksonSupport
 import org.json4s.{DefaultFormats, FieldSerializer}
 import spray.client.pipelining._
-import mesosphere.marathon.event.{Unsubscribe, Subscribe, MarathonEvent}
+import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.Main
 import spray.http.HttpRequest
 import spray.http.HttpResponse
 import scala.util.Success
@@ -28,9 +27,8 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
   def receive = {
     case event: MarathonEvent =>
       broadcast(event)
-    case _ => {
+    case _ =>
       log.warning("Message not understood!")
-    }
   }
 
   def broadcast(event: MarathonEvent): Unit = {
@@ -46,15 +44,13 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     val response = pipeline(request)
 
     response.onComplete {
-      case Success(res) => {
-        if (res.status.isFailure) {
+      case Success(res) =>
+        if (res.status.isFailure)
           log.warning(s"Failed to post $event to $urlString")
-        }
-      }
-      case Failure(t) => {
+
+      case Failure(t) =>
         log.warning(s"Failed to post $event to $urlString")
         throw t
-      }
     }
   }
 

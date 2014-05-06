@@ -8,7 +8,7 @@ class ContainerInfo protected (val image: String, val options: Seq[String]) {
   def toProto: Protos.ContainerInfo =
     Protos.ContainerInfo.newBuilder()
       .setImage(ByteString.copyFromUtf8(image))
-      .addAllOptions(options.map(ByteString.copyFromUtf8(_)).asJava)
+      .addAllOptions(options.map(ByteString.copyFromUtf8).asJava)
       .build()
 }
 
@@ -20,7 +20,7 @@ object ContainerInfo {
     proto.getOptionsList.asScala.map(_.toStringUtf8).toSeq
   )
 
-  def apply(image: String = "", options: Seq[String] = Nil) = {
+  def apply(image: String = "", options: Seq[String] = Nil): ContainerInfo = {
     if (image.isEmpty && options.isEmpty)
       EmptyContainerInfo
     else

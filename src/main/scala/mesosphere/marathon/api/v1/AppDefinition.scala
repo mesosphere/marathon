@@ -95,7 +95,7 @@ case class AppDefinition(
       .setId(id)
       .setCmd(commandInfo)
       .setInstances(instances)
-      .addAllPorts(ports.map(_.asInstanceOf[Integer]).asJava)
+      .addAllPorts(ports.asJava)
       .setExecutor(executor)
       .setTaskRateLimit(taskRateLimit)
       .addAllConstraints(constraints.asJava)

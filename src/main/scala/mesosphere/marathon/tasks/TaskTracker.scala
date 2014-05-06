@@ -4,7 +4,7 @@ import scala.collection._
 import scala.collection.JavaConverters._
 import org.apache.mesos.Protos.{TaskID, TaskStatus}
 import javax.inject.Inject
-import org.apache.mesos.state.State
+import org.apache.mesos.state.{Variable, State}
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.Main
 import java.io._
@@ -26,30 +26,20 @@ class TaskTracker @Inject()(state: State) {
 
   val prefix = "tasks:"
 
-  private val apps = new mutable.HashMap[String, App] with
+  private[this] val apps = new mutable.HashMap[String, App] with
     mutable.SynchronizedMap[String, App]
 
-  def get(appName: String) = {
-    apps.getOrElseUpdate(appName, fetchApp(appName)).tasks
-  }
+  def get(appName: String): mutable.Set[MarathonTask] = apps.getOrElseUpdate(appName, fetchApp(appName)).tasks
 
-  def list = {
-    apps
-  }
+  def list: mutable.HashMap[String, App] = apps
 
-  def count(appName: String) = {
-    get(appName).size
-  }
+  def count(appName: String): Int = get(appName).size
 
-  def contains(appName: String) = {
-    apps.contains(appName)
-  }
+  def contains(appName: String): Boolean = apps.contains(appName)
 
-  def take(appName: String, n: Int) = {
-    get(appName).take(n)
-  }
+  def take(appName: String, n: Int): Set[MarathonTask] = get(appName).take(n)
 
-  def starting(appName: String, task: MarathonTask) {
+  def starting(appName: String, task: MarathonTask): Unit = {
     // Keep this here so running() can pick it up
     get(appName) += task
   }
@@ -57,14 +47,14 @@ class TaskTracker @Inject()(state: State) {
   def running(appName: String, status: TaskStatus): Future[MarathonTask] = {
     val taskId = status.getTaskId.getValue
     val task = get(appName).find(_.getId == taskId) match {
-      case Some(stagedTask) => {
+      case Some(stagedTask) =>
         get(appName).remove(stagedTask)
         stagedTask.toBuilder
           .setStartedAt(System.currentTimeMillis)
           .addStatuses(status)
           .build
-      }
-      case _ => {
+
+      case _ =>
         log.warn(s"No staged task for ID ${taskId}")
         // We lost track of the host and port of this task, but still need to keep track of it
         MarathonTask.newBuilder
@@ -73,20 +63,17 @@ class TaskTracker @Inject()(state: State) {
           .setStartedAt(System.currentTimeMillis)
           .addStatuses(status)
           .build
-      }
     }
     get(appName) += task
     store(appName).map(_ => task)
   }
 
-  def terminated(appName: String,
-                 status: TaskStatus): Future[Option[MarathonTask]] = {
-    val now = System.currentTimeMillis
+  def terminated(appName: String, status: TaskStatus): Future[Option[MarathonTask]] = {
     val appTasks = get(appName)
     val taskId = status.getTaskId.getValue
 
     appTasks.find(_.getId == taskId) match {
-      case Some(task) => {
+      case Some(task) =>
         apps(appName).tasks = appTasks - task
 
         val ret = store(appName).map(_ => Some(task))
@@ -99,7 +86,7 @@ class TaskTracker @Inject()(state: State) {
         }
 
         ret
-      }
+
       case None =>
         if (apps(appName).shutdown && apps(appName).tasks.isEmpty) {
           // Are we shutting down this app? If so, expunge
@@ -109,37 +96,34 @@ class TaskTracker @Inject()(state: State) {
     }
   }
 
-  def statusUpdate(appName: String,
-                   status: TaskStatus): Future[Option[MarathonTask]] = {
+  def statusUpdate(appName: String, status: TaskStatus): Future[Option[MarathonTask]] = {
     val taskId = status.getTaskId.getValue
     get(appName).find(_.getId == taskId) match {
-      case Some(task) => {
+      case Some(task) =>
         get(appName).remove(task)
         val updatedTask = task.toBuilder
           .addStatuses(status)
           .build
         get(appName) += updatedTask
         store(appName).map(_ => Some(updatedTask))
-      }
-      case _ => {
+
+      case _ =>
         log.warn(s"No task for ID ${taskId}")
         Future.successful(None)
-      }
     }
   }
 
-  def expunge(appName: String) {
+  def expunge(appName: String): Unit = {
     val variable = fetchFromState(appName)
     state.expunge(variable)
     apps.remove(appName)
     log.warn(s"Expunged app ${appName}")
   }
 
-  def shutDown(appName: String) {
+  def shutDown(appName: String): Unit =
     apps.getOrElseUpdate(appName, fetchApp(appName)).shutdown = true
-  }
 
-  def newTaskId(appName: String) = {
+  def newTaskId(appName: String): TaskID = {
     val taskCount = count(appName)
     TaskID.newBuilder()
       .setValue(TaskIDUtil.taskId(appName, taskCount))
@@ -152,23 +136,18 @@ class TaskTracker @Inject()(state: State) {
       val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
       val fetchedTasks = deserialize(appName, source)
       if (fetchedTasks.size > 0) {
-        apps(appName) =
-          new App(appName,
-            fetchedTasks, false)
+        apps(appName) = new App(appName, fetchedTasks, false)
       }
     }
 
     if (apps.contains(appName)) {
       apps(appName)
-      //set.map(map => MarathonTask(map("id"), map("host"), map("port").asInstanceOf[Int], map("attributes"))
     } else {
-      new App(appName,
-        new mutable.HashSet[MarathonTask](), false)
+      new App(appName, new mutable.HashSet[MarathonTask](), false)
     }
   }
 
-  def deserialize(appName: String, source: ObjectInputStream)
-    : mutable.HashSet[MarathonTask] = {
+  def deserialize(appName: String, source: ObjectInputStream): mutable.HashSet[MarathonTask] = {
     var results = mutable.HashSet[MarathonTask]()
     try {
       if (source.available > 0) {
@@ -197,7 +176,7 @@ class TaskTracker @Inject()(state: State) {
       .build
   }
 
-  def serialize(appName: String, tasks: Set[MarathonTask], sink: ObjectOutputStream) {
+  def serialize(appName: String, tasks: Set[MarathonTask], sink: ObjectOutputStream): Unit = {
     val app = getProto(appName, tasks)
 
     val size = app.getSerializedSize
@@ -206,11 +185,9 @@ class TaskTracker @Inject()(state: State) {
     sink.flush
   }
 
-  def fetchFromState(appName: String) = {
-    state.fetch(prefix + appName).get()
-  }
+  def fetchFromState(appName: String) = state.fetch(prefix + appName).get()
 
-  def store(appName: String) = {
+  def store(appName: String): Future[Variable] = {
     val oldVar = fetchFromState(appName)
     val bytes = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(bytes)

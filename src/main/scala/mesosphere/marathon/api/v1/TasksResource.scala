@@ -6,16 +6,11 @@ import mesosphere.marathon.tasks.TaskTracker
 import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
 import com.codahale.metrics.annotation.Timed
-import org.apache.log4j.Logger
-import javax.ws.rs.core.Response.{Status, ResponseBuilder}
+import javax.ws.rs.core.Response.Status
 
 @Path("v1/tasks")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class TasksResource @Inject()(
-    service: MarathonSchedulerService,
-    taskTracker: TaskTracker) {
-
-  val log = Logger.getLogger(getClass.getName)
+class TasksResource @Inject()(service: MarathonSchedulerService, taskTracker: TaskTracker) {
 
   @GET
   @Timed
