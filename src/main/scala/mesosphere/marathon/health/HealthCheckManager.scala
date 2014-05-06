@@ -54,7 +54,8 @@ class HealthCheckManager @Singleton @Inject() (
     eventBus.foreach(_.post(AddHealthCheck(healthCheck)))
   }
 
-  def addAllFor(app: AppDefinition): Unit = app.healthChecks.foreach(add(app.id, _))
+  def addAllFor(app: AppDefinition): Unit =
+    app.healthChecks.foreach(add(app.id, _))
 
   def remove(appId: String, healthCheck: HealthCheck): Unit = {
     for (activeHealthChecks <- appHealthChecks.get(appId)) {

@@ -29,7 +29,8 @@ class TaskTracker @Inject()(state: State) {
   private[this] val apps = new mutable.HashMap[String, App] with
     mutable.SynchronizedMap[String, App]
 
-  def get(appName: String): mutable.Set[MarathonTask] = apps.getOrElseUpdate(appName, fetchApp(appName)).tasks
+  def get(appName: String): mutable.Set[MarathonTask] =
+    apps.getOrElseUpdate(appName, fetchApp(appName)).tasks
 
   def list: mutable.HashMap[String, App] = apps
 
@@ -68,7 +69,8 @@ class TaskTracker @Inject()(state: State) {
     store(appName).map(_ => task)
   }
 
-  def terminated(appName: String, status: TaskStatus): Future[Option[MarathonTask]] = {
+  def terminated(appName: String,
+                 status: TaskStatus): Future[Option[MarathonTask]] = {
     val appTasks = get(appName)
     val taskId = status.getTaskId.getValue
 
@@ -96,7 +98,8 @@ class TaskTracker @Inject()(state: State) {
     }
   }
 
-  def statusUpdate(appName: String, status: TaskStatus): Future[Option[MarathonTask]] = {
+  def statusUpdate(appName: String,
+                   status: TaskStatus): Future[Option[MarathonTask]] = {
     val taskId = status.getTaskId.getValue
     get(appName).find(_.getId == taskId) match {
       case Some(task) =>
@@ -147,7 +150,8 @@ class TaskTracker @Inject()(state: State) {
     }
   }
 
-  def deserialize(appName: String, source: ObjectInputStream): mutable.HashSet[MarathonTask] = {
+  def deserialize(appName: String,
+                  source: ObjectInputStream): mutable.HashSet[MarathonTask] = {
     var results = mutable.HashSet[MarathonTask]()
     try {
       if (source.available > 0) {
@@ -176,7 +180,9 @@ class TaskTracker @Inject()(state: State) {
       .build
   }
 
-  def serialize(appName: String, tasks: Set[MarathonTask], sink: ObjectOutputStream): Unit = {
+  def serialize(appName: String,
+                tasks: Set[MarathonTask],
+                sink: ObjectOutputStream): Unit = {
     val app = getProto(appName, tasks)
 
     val size = app.getSerializedSize

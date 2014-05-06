@@ -43,7 +43,8 @@ class HttpEventModule extends AbstractModule {
 
   @Provides
   @Named(HttpEventModule.SubscribersKeeperActor)
-  def provideSubscribersKeeperActor(system: ActorSystem, store: MarathonStore[EventSubscribers]): ActorRef = {
+  def provideSubscribersKeeperActor(system: ActorSystem,
+                                    store: MarathonStore[EventSubscribers]): ActorRef = {
     implicit val timeout = HttpEventModule.timeout
     implicit val ec = HttpEventModule.executionContext
     val local_ip = java.net.InetAddress.getLocalHost.getHostAddress

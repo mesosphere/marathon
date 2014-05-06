@@ -73,12 +73,12 @@ object Main extends App {
     if (conf.eventSubscriber.isSupplied) {
       conf.eventSubscriber() match {
         case "http_callback" =>
-          log.warn("Using HttpCallbackEventSubscriber for event" +
+          log.info("Using HttpCallbackEventSubscriber for event" +
             "notification")
           Some(new HttpEventModule())
 
         case _ =>
-          log.warn("Event notification disabled.")
+          log.info("Event notification disabled.")
           None
       }
     } else None

@@ -10,7 +10,9 @@ import javax.ws.rs.core.Response.Status
 
 @Path("v1/tasks")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class TasksResource @Inject()(service: MarathonSchedulerService, taskTracker: TaskTracker) {
+class TasksResource @Inject()(
+  service: MarathonSchedulerService,
+  taskTracker: TaskTracker) {
 
   @GET
   @Timed
