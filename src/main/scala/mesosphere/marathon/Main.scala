@@ -68,20 +68,17 @@ object Main extends App {
     ) ++ getEventsModule
   }
 
-  //TODO(*): Rethink how this could be done.
   def getEventsModule: Option[AbstractModule] = {
-    if (conf.eventSubscriber.isSupplied) {
-      conf.eventSubscriber() match {
-        case "http_callback" =>
-          log.info("Using HttpCallbackEventSubscriber for event" +
-            "notification")
-          Some(new HttpEventModule())
+    conf.eventSubscriber.get flatMap {
+      case "http_callback" =>
+        log.info("Using HttpCallbackEventSubscriber for event" +
+          "notification")
+        Some(new HttpEventModule())
 
-        case _ =>
-          log.info("Event notification disabled.")
-          None
-      }
-    } else None
+      case _ =>
+        log.info("Event notification disabled.")
+        None
+    }
   }
 
   //TOOD(FL): Make Events optional / wire up.
