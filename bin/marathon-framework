@@ -34,7 +34,7 @@ function load_options_and_log {
   local cmd=( run_jar )
   if [[ -s /etc/mesos/zk ]]
   then
-    cmd+=( --zk_hosts "$(cut -d / -f 3 /etc/mesos/zk)"
+    cmd+=( --zk "$(cut -d / -f 1-3 /etc/mesos/zk | sed 's/.$//')/marathon"
            --master "$(cat /etc/mesos/zk)" )
   fi
   if [[ -d $conf_dir ]]
