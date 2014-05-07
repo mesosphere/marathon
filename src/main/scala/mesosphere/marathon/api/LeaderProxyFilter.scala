@@ -52,7 +52,8 @@ class LeaderProxyFilter @Inject()
       val request = rawRequest.asInstanceOf[HttpServletRequest]
       val response = rawResponse.asInstanceOf[HttpServletResponse]
 
-      if (schedulerService.isLeader) {
+      // Proxying occurs if we aren't in the leadership position and we know about the other leader (to proxy to).
+      if (schedulerService.isLeader || schedulerService.getLeader.isEmpty) {
         chain.doFilter(request, response)
       } else {
         try {
