@@ -12,7 +12,7 @@ import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS
 import mesosphere.marathon.{ EmptyContainerInfo, ContainerInfo }
 import scala.collection.JavaConverters._
-import mesosphere.marathon.api.v2.AppUpdate
+import mesosphere.marathon.api.v2.{RelativeStepping, AbsoluteStepping, Stepping, AppUpdate}
 import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
@@ -248,5 +248,33 @@ object MarathonModule {
       cmd, instances, cpus, mem, uris, ports, constraints,
       executor, container, healthChecks, version
     )
+  }
+
+  private [this] val Percent = """^(\d+)\%$""".r
+
+  class SteppingSerializer extends JsonSerializer[Stepping] {
+    def serialize(
+        stepping: Stepping,
+        json: JsonGenerator,
+        provider: SerializerProvider): Unit = stepping match {
+
+      case AbsoluteStepping(count) => json.writeNumber(count)
+      case RelativeStepping(factor) => json.writeString(s"${(factor * 100).toInt}%")
+    }
+  }
+
+  class SteppingDeserializer extends JsonDeserializer[Stepping]{
+    override def deserialize(json: JsonParser, context: DeserializationContext): Stepping = {
+      val token = json.getCurrentToken()
+
+      if (token.isNumeric) {
+        AbsoluteStepping(json.getValueAsInt)
+      } else {
+        json.getValueAsString match {
+          case Percent(x) => RelativeStepping(x.toDouble / 100.0)
+          case _ => throw new IllegalArgumentException("Value must be in percent.")
+        }
+      }
+    }
   }
 }
