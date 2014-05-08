@@ -8,7 +8,6 @@ import com.google.common.eventbus.{AsyncEventBus, EventBus}
 import java.util.concurrent.Executors
 import javax.inject.Named
 import org.apache.log4j.Logger
-import org.apache.mesos.Protos.{SlaveID, ExecutorID}
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]

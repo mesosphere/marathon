@@ -26,9 +26,8 @@ class TasksResource @Inject()(service: MarathonSchedulerService,
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
   def indexJson() = {
-    val flatTasksList = taskTracker.list.flatMap {
-      case ((appId, setOfTasks)) =>
-        setOfTasks.tasks.map(EnrichedTask(appId, _, Seq[Option[Health]]()))
+    val flatTasksList = taskTracker.list.flatMap { case (appId, setOfTasks) =>
+      setOfTasks.tasks.map(EnrichedTask(appId, _, Seq[Option[Health]]()))
     }
 
     Map("tasks" -> flatTasksList)

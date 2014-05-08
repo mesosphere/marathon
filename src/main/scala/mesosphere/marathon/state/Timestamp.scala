@@ -1,6 +1,5 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.api.validation.FieldConstraints.FieldJsonValue
 import org.joda.time.{DateTime, DateTimeZone}
 import scala.math.Ordered
 
@@ -18,7 +17,7 @@ case class Timestamp(dateTime: DateTime) extends Ordered[Timestamp] {
 
   def compare(that: Timestamp) = this.time compareTo that.time
 
-  override def toString(): String = time.toString
+  override def toString: String = time.toString
 }
 
 object Timestamp {

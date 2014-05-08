@@ -47,19 +47,18 @@ class HttpEventModule extends AbstractModule {
                                     store: MarathonStore[EventSubscribers]): ActorRef = {
     implicit val timeout = HttpEventModule.timeout
     implicit val ec = HttpEventModule.executionContext
-    val local_ip = java.net.InetAddress.getLocalHost().getHostAddress()
+    val local_ip = java.net.InetAddress.getLocalHost.getHostAddress
 
     val actor = system.actorOf(Props(new SubscribersKeeperActor(store)))
-    Main.conf.httpEventEndpoints.get map {
-      urls =>
-        log.info(s"http_endpoints(${urls}) are specified at startup. Those will be added to subscribers list.")
-        urls.foreach{ url =>
-          val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
-          f.onFailure {
-            case th: Throwable =>
-              log.warn(s"Failed to add ${url} to event subscribers. exception message => ${th.getMessage}")
-          }
+    Main.conf.httpEventEndpoints.get foreach { urls =>
+      log.info(s"http_endpoints($urls) are specified at startup. Those will be added to subscribers list.")
+      urls foreach { url =>
+        val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
+        f.onFailure {
+          case th: Throwable =>
+            log.warn(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")
         }
+      }
     }
 
     actor
@@ -67,21 +66,8 @@ class HttpEventModule extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideCallbackUrlsStore(state: State): MarathonStore[EventSubscribers] = {
+  def provideCallbackUrlsStore(state: State): MarathonStore[EventSubscribers] =
     new MarathonStore[EventSubscribers](state, () => new EventSubscribers(Set.empty[String]), "events:")
-  }
-
-//  @Provides
-//  @Singleton
-//  def provideCallbackSubscriber(@Named(EventModule.busName) bus: Option[EventBus],
-//    @Named(HttpEventModule.StatusUpdateActor) actor : ActorRef): HttpCallbackEventSubscriber = {
-//    val callback = new HttpCallbackEventSubscriber(actor)
-//    if (bus.nonEmpty) {
-//      bus.get.register(callback)
-//      log.warn("Registered HttpCallbackEventSubscriber with Bus." )
-//    }
-//    callback
-//  }
 }
 
 object HttpEventModule {

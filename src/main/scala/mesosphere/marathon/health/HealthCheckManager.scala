@@ -6,13 +6,9 @@ import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 import javax.inject.{Named, Inject, Singleton}
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event.{RemoveHealthCheck, AddHealthCheck, EventModule}
@@ -30,9 +26,8 @@ class HealthCheckManager @Singleton @Inject() (
   protected[this] var appHealthChecks = Map[String, Set[ActiveHealthCheck]]()
 
   def list(appId: String): Set[HealthCheck] =
-    appHealthChecks.get(appId) match {
-      case Some(activeHealthChecks) => activeHealthChecks.map(_.healthCheck)
-      case None => Set[HealthCheck]()
+    appHealthChecks.get(appId).fold(Set[HealthCheck]()) { activeHealthChecks =>
+      activeHealthChecks.map(_.healthCheck)
     }
 
   protected[this] def find(
@@ -47,7 +42,7 @@ class HealthCheckManager @Singleton @Inject() (
     val healthChecksForApp =
       appHealthChecks.get(appId).getOrElse(Set[ActiveHealthCheck]())
 
-    if (! healthChecksForApp.exists { _.healthCheck == healthCheck }) {
+    if (!healthChecksForApp.exists { _.healthCheck == healthCheck }) {
       val ref = system.actorOf(
         Props(classOf[HealthCheckActor], appId, healthCheck, taskTracker, eventBus)
       )
@@ -60,7 +55,7 @@ class HealthCheckManager @Singleton @Inject() (
   }
 
   def addAllFor(app: AppDefinition): Unit =
-    for (healthCheck <- app.healthChecks) add(app.id, healthCheck)
+    app.healthChecks.foreach(add(app.id, _))
 
   def remove(appId: String, healthCheck: HealthCheck): Unit = {
     for (activeHealthChecks <- appHealthChecks.get(appId)) {
@@ -78,8 +73,10 @@ class HealthCheckManager @Singleton @Inject() (
   }
 
   def removeAllFor(appId: String): Unit =
-    for (activeHealthChecks <- appHealthChecks.get(appId))
-      activeHealthChecks.foreach { ahc => remove(appId, ahc.healthCheck) }
+    for {
+      activeHealthChecks <- appHealthChecks.get(appId)
+      ahc <- activeHealthChecks
+    } remove(appId, ahc.healthCheck)
 
   def reconcileWith(app: AppDefinition): Unit = {
     val existingHealthChecks = list(app.id)
@@ -97,7 +94,7 @@ class HealthCheckManager @Singleton @Inject() (
           case ActiveHealthCheck(_, actor) => (actor ? GetTaskHealth(taskId)).mapTo[Option[Health]]
         }
       )
-      case None => Future { Seq() }
+      case None => Future.successful(Nil)
     }
   }
 

@@ -68,17 +68,12 @@ class AppsResource @Inject()(
   @Timed
   def search(@QueryParam("id") id: String,
              @QueryParam("cmd") cmd: String) = {
-    service.listApps.filter {
-      x =>
-        var valid = true
-        if (id != null && !id.isEmpty && !x.id.toLowerCase.contains(id.toLowerCase)) {
-          valid = false
-        }
-        if (cmd != null && !cmd.isEmpty && !x.cmd.toLowerCase.contains(cmd.toLowerCase)) {
-          valid = false
-        }
-        // Maybe add some other query parameters?
-        valid
+    service.listApps.filter { x =>
+      val validId = id == null || id.isEmpty || x.id.toLowerCase.contains(id.toLowerCase)
+      val validCmd = cmd == null || cmd.isEmpty || x.cmd.toLowerCase.contains(cmd.toLowerCase)
+
+      // Maybe add some other query parameters?
+      validId && validCmd
     }
   }
 

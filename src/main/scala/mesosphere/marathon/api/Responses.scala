@@ -9,14 +9,14 @@ import javax.ws.rs.core.Response.Status
 
 object Responses {
 
-  def unknownApp(id: String) = {
+  def unknownApp(id: String): Response = {
     Response
       .status(Status.NOT_FOUND)
       .entity(Map("message" -> s"App '$id' does not exist"))
       .build
   }
 
-  def unknownTask(id: String) = {
+  def unknownTask(id: String): Response = {
     Response
       .status(Status.NOT_FOUND)
       .entity(Map("message" -> s"Task '$id' does not exist"))

@@ -12,7 +12,7 @@ import spray.client.pipelining._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
-import scala.util.{Try, Success, Failure}
+import scala.util.{Success, Failure}
 
 import java.net.{Socket, InetSocketAddress}
 
@@ -25,7 +25,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   import context.dispatcher // execution context for futures
 
   def receive = {
-    case HealthCheckJob(task, check) => {
+    case HealthCheckJob(task, check) =>
       val replyTo = sender // avoids closing over the volatile sender ref
 
       val replyWithHealth = doCheck(task, check)
@@ -34,19 +34,18 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         case Success(result) => replyTo ! result
         case Failure(t) => replyTo ! Unhealthy(
           task.getId,
-          Timestamp.now,
+          Timestamp.now(),
           s"${t.getClass.getSimpleName}: ${t.getMessage}"
         )
-      }
 
-      replyWithHealth andThen { case _ => context stop self }
+      context stop self
     }
   }
 
   def doCheck(task: MarathonTask, check: HealthCheck): Future[HealthResult] =
-    Try(task.getPortsList.asScala(check.portIndex)).toOption match {
+    task.getPortsList.asScala.lift(check.portIndex) match {
       case None =>
-        Future { Unhealthy(task.getId, Timestamp.now, "Invalid port index") }
+        Future { Unhealthy(task.getId, Timestamp.now(), "Invalid port index") }
 
       case Some(port) => check.protocol match {
         case HTTP => http(task, check, port)
@@ -58,7 +57,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     val host = task.getHost
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
-    val url = s"http://${host}:${port}${absolutePath}"
+    val url = s"http://$host:$port$absolutePath"
     log.debug("Checking the health of [{}] via HTTP", url)
 
     def get(url: String): Future[HttpResponse] = {
@@ -69,15 +68,15 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Healthy(task.getId, Timestamp.now)
+        Healthy(task.getId, Timestamp.now())
       else
-        Unhealthy(task.getId, Timestamp.now, response.status.toString)
+        Unhealthy(task.getId, Timestamp.now(), response.status.toString())
     }
   }
 
   def tcp(task: MarathonTask, check: HealthCheck, port: Int): Future[HealthResult] = {
     val host = task.getHost
-    val address = s"${host}:${port}"
+    val address = s"$host:$port"
     val timeoutMillis = check.timeout.toMillis.toInt
     log.debug("Checking the health of [{}] via TCP", address)
 
@@ -85,8 +84,8 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       val address = InetSocketAddress.createUnresolved(host, port)
       val socket = new Socket
       socket.connect(address, timeoutMillis)
-      socket.close
-      Healthy(task.getId, Timestamp.now)
+      socket.close()
+      Healthy(task.getId, Timestamp.now())
     }
   }
 
@@ -106,12 +105,12 @@ object HealthCheckWorker {
 
   case class Healthy(
     taskId: String,
-    time: Timestamp = Timestamp.now
+    time: Timestamp = Timestamp.now()
   ) extends HealthResult
 
   case class Unhealthy(
     taskId: String,
-    time: Timestamp = Timestamp.now,
+    time: Timestamp = Timestamp.now(),
     cause: String
   ) extends HealthResult
 

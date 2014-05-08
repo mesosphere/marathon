@@ -18,11 +18,9 @@ class TaskQueue {
 
   val queue = new PriorityBlockingQueue[AppDefinition](1, AppDefinitionPriority)
 
-  def poll() =
-    queue.poll()
+  def poll(): AppDefinition = queue.poll()
 
-  def add(app: AppDefinition) =
-    queue.add(app)
+  def add(app: AppDefinition): Boolean = queue.add(app)
 
   /**
    * Number of tasks in the queue for the given app
@@ -30,18 +28,14 @@ class TaskQueue {
    * @param app The app
    * @return count
    */
-  def count(app: AppDefinition): Int = {
-    queue.asScala.count(_.id == app.id)
-  }
+  def count(app: AppDefinition): Int = queue.asScala.count(_.id == app.id)
 
-  def purge(app: AppDefinition) {
+  def purge(app: AppDefinition): Unit = {
     val toRemove = queue.asScala.filter(_.id == app.id)
-    for (app <- toRemove) {
-      queue.remove(app)
-    }
+    toRemove foreach queue.remove
   }
 
-  def addAll(xs: Seq[AppDefinition]) = queue.addAll(xs.asJava)
+  def addAll(xs: Seq[AppDefinition]): Boolean = queue.addAll(xs.asJava)
 
   def removeAll(): IndexedSeq[AppDefinition] = {
     val size = queue.size()
