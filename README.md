@@ -59,13 +59,13 @@ email newsletter to all customers via Rake. Meanwhile, Marathon also runs the
 other applications that make up our website, such as JBoss servers, a Jetty
 service, Sinatra, Rails, and so on.
 
-![architecture](https://raw.github.com/mesosphere/marathon/master/docs/architecture.png "Marathon on Mesos")
+![architecture](https://raw.github.com/mesosphere/marathon/master/docs/img/architecture.png "Marathon on Mesos")
 
 The next graphic shows a more application-centric view of Marathon running
 three applications, each with a different number of tasks: Search (1), Jetty
 (3), and Rails (5).
 
-![Marathon1](https://raw.github.com/mesosphere/marathon/master/docs/marathon1.png "Initial Marathon")
+![Marathon1](https://raw.github.com/mesosphere/marathon/master/docs/img/marathon1.png "Initial Marathon")
 
 As the website gains traction and the user base grows, we decide to scale-out
 the search service and our Rails-based application. This is done via a simple
@@ -73,7 +73,7 @@ REST call to the Marathon API to add more tasks. Marathon will take care of
 placing the new tasks on machines with spare capacity, honoring the
 constraints we previously set.
 
-![Marathon2](https://raw.github.com/mesosphere/marathon/master/docs/marathon2.png "Marathon scale-out")
+![Marathon2](https://raw.github.com/mesosphere/marathon/master/docs/img/marathon2.png "Marathon scale-out")
 
 Imagine that one of the datacenter workers trips over a power cord and a server
 gets unplugged. No problem for Marathon, it moves the affected search service
@@ -81,7 +81,7 @@ and Rails tasks to a node that has spare capacity. The engineer may be
 temporarily embarrased, but Marathon saves him from having to explain a
 difficult situation!
 
-![Marathon3](https://raw.github.com/mesosphere/marathon/master/docs/marathon3.png "Marathon recovering an application")
+![Marathon3](https://raw.github.com/mesosphere/marathon/master/docs/img/marathon3.png "Marathon recovering an application")
 
 ## Setting Up And Running Marathon
 
