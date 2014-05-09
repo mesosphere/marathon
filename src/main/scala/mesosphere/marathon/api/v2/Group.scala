@@ -29,5 +29,4 @@ final case class ScalingStrategy(
 final case class Group(
     id: String,
     scaleUpStrategy: ScalingStrategy,
-    scaleDownStrategy: ScalingStrategy,
     apps: Seq[AppDefinition])
