@@ -47,6 +47,9 @@ define([
     isNew: function() {
       return !this.persisted;
     },
+    allInstancesBooted: function() {
+      return this.get("tasksRunning") === this.get("instances");
+    },
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
      * "version" value, which when sent prevents any other attributes from being
