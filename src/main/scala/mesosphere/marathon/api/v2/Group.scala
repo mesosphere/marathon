@@ -3,6 +3,7 @@ package mesosphere.marathon.api.v2
 import mesosphere.marathon.api.v1.AppDefinition
 import com.fasterxml.jackson.databind.annotation.{JsonSerialize, JsonDeserialize}
 import mesosphere.marathon.api.v2.json.MarathonModule.{SteppingSerializer, SteppingDeserializer}
+import mesosphere.marathon.state.Timestamp
 
 @JsonDeserialize(using = classOf[SteppingDeserializer], as = classOf[Stepping])
 @JsonSerialize(using = classOf[SteppingSerializer])
@@ -29,4 +30,5 @@ final case class ScalingStrategy(
 final case class Group(
     id: String,
     scaleUpStrategy: ScalingStrategy,
-    apps: Seq[AppDefinition])
+    apps: Seq[AppDefinition],
+    version: Timestamp = Timestamp.now())
