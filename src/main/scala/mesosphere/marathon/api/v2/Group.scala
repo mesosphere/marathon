@@ -19,16 +19,12 @@ final case class RelativeStepping(factor: Double) extends Stepping {
   def count(app: AppDefinition) = (app.instances * factor).toInt
 }
 
-final case class Staged(steps: Seq[Stepping], stepSeconds: Int)
-
 final case class ScalingStrategy(
-    maxBatchSize: Int,
-    staged: Staged,
-    startupTimeout: Int,
-    watchPeriod: Int)
+  steps: Seq[Stepping],
+  watchPeriod: Int)
 
 final case class Group(
-    id: String,
-    scaleUpStrategy: ScalingStrategy,
+  id: String,
+  scalingStrategy: ScalingStrategy,
     apps: Seq[AppDefinition],
     version: Timestamp = Timestamp.now())

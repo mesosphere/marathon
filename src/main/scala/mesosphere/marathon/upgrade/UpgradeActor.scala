@@ -7,7 +7,6 @@ import mesosphere.marathon.tasks.TaskTracker
 import scala.concurrent.Promise
 import mesosphere.marathon.api.v2.{AppUpdate, Group}
 import scala.concurrent.duration._
-import mesosphere.marathon.api.v1.AppDefinition
 import org.apache.log4j.Logger
 import mesosphere.marathon.upgrade.UpgradeAction._
 
@@ -24,8 +23,8 @@ trait UpgradeAction { this: Actor =>
   def healthCheck: HealthCheckManager
   def promise: Promise[Group]
 
-  def expectedTasksRunning(app: AppDefinition, count: Int): Boolean = {
-    val countReached = taskTracker.count(app.id) == count
+  def expectedTasksRunning(appId: String, count: Int): Boolean = {
+    val countReached = taskTracker.count(appId) == count
     val healthy = true //TODO: health check?
     countReached && healthy
   }
@@ -50,18 +49,20 @@ class InstallActor (
   val healthCheck: HealthCheckManager
 ) extends Actor with UpgradeAction {
 
+  import context.dispatcher
+
   override def preStart(): Unit = self ! Start
 
   def receive: Receive = {
     case Start =>
       product.apps.foreach(scheduler.startApp)
-      //context.system.scheduler.scheduleOnce(product.scaleUpStrategy.startupTimeout seconds, self, WatchTimeout)
+      context.system.scheduler.scheduleOnce(product.scalingStrategy.watchPeriod seconds, self, WatchTimeout)
       context.become(staged)
   }
 
   def staged: Receive = {
     case WatchTimeout =>
-      val expected = product.apps.forall(app => expectedTasksRunning(app, app.instances))
+      val expected = product.apps.forall(app => expectedTasksRunning(app.id, app.instances))
       if (expected) succeed(product) else fail()
   }
 }
@@ -75,6 +76,8 @@ class UpgradeActor (
   val healthCheck: HealthCheckManager
 ) extends Actor with UpgradeAction {
 
+  import context.dispatcher
+
   var plan = DeploymentPlan(oldProduct, newProduct)
 
   override def preStart(): Unit = self ! Start
@@ -86,13 +89,18 @@ class UpgradeActor (
     }
   }
 
-  def currentStepReached: Boolean = ???
+  def currentStepReached: Boolean = plan.current.exists { step =>
+    step.deployments.forall {
+      case DownScaleAction(_, _) => true
+      case UpScaleAction(appId, count) => expectedTasksRunning(appId, count)
+    }
+  }
 
   def nextStep(): Unit = {
     require(plan.hasNext)
     plan = plan.next
     applyCurrentStep()
-    //context.system.scheduler.scheduleOnce(newProduct.scaleUpStrategy.startupTimeout seconds, self, WatchTimeout)
+    context.system.scheduler.scheduleOnce(newProduct.scalingStrategy.watchPeriod seconds, self, WatchTimeout)
     if (!plan.hasNext) context.become(staged)
   }
 

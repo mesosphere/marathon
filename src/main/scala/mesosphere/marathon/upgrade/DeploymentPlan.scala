@@ -31,11 +31,11 @@ case class DeploymentPlan(
 object DeploymentPlan {
   def apply(oldProduct:Group, newProduct:Group) : DeploymentPlan = {
 
-    val strategy = newProduct.scaleUpStrategy.staged.steps.toList
+    val strategy = newProduct.scalingStrategy.steps.toList
     val ups = strategy.map{ step =>
       newProduct.apps.toList.map(app => UpScaleAction(app.id, step.count(app)))
     }
-    val downs = newProduct.scaleUpStrategy.staged.steps.toList.map { step =>
+    val downs = newProduct.scalingStrategy.steps.toList.map { step =>
       oldProduct.apps.toList.map(app => DownScaleAction(app.id, step.count(app)))
     }
     val steps =
