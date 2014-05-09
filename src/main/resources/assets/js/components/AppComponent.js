@@ -10,6 +10,11 @@ define([
     render: function() {
       var model = this.props.model;
 
+      var instancesClassSet = React.addons.classSet({
+        "text-right": true,
+        "text-warning": !model.allInstancesBooted()
+      });
+
       return (
         // Set `title` on cells that potentially overflow so hovering on the
         // cells will reveal their full contents.
@@ -22,7 +27,7 @@ define([
           </td>
           <td className="text-right">{model.get("mem")}</td>
           <td className="text-right">{model.get("cpus")}</td>
-          <td className="text-right">{model.get("instances")}</td>
+          <td className={instancesClassSet}>{model.get("tasksRunning")} / {model.get("instances")}</td>
         </tr>
       );
     }
