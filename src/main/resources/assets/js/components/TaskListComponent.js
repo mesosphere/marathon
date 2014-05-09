@@ -7,6 +7,7 @@ define([
   var STATE_LOADING = 0;
   var STATE_ERROR = 1;
   var STATE_SUCCESS = 2;
+  var UPDATE_INTERVAL = 2000;
 
   function taskHostPortsToString(task) {
     var portsString;
@@ -23,6 +24,12 @@ define([
   }
 
   return React.createClass({
+    componentDidMount: function() {
+      this.startPolling();
+    },
+    componentWillUnmount: function() {
+      this.stopPolling();
+    },
     componentWillMount: function() {
       this.fetchTasks();
     },
@@ -187,6 +194,15 @@ define([
         this.props.collection.setComparator(comparator);
         this.props.collection.sort();
       }
+    },
+    startPolling: function() {
+      if (this._interval == null) {
+        this._interval = setInterval(this.fetchTasks, UPDATE_INTERVAL);
+      }
+    },
+    stopPolling: function() {
+      clearInterval(this._interval);
+      this._interval = null;
     },
     toggleShowTimestamps: function() {
       this.setState({showTimestamps: !this.state.showTimestamps});
