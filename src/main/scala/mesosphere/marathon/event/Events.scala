@@ -9,6 +9,7 @@ import java.util.concurrent.Executors
 import javax.inject.Named
 import org.apache.log4j.Logger
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.api.v2.Group
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]
@@ -62,6 +63,17 @@ case class ApiPostEvent(
   appDefinition: AppDefinition,
   eventType: String = "api_post_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+  eventType: String = "api_post_event"
+) extends MarathonEvent
+
+case class MesosStatusUpdateEvent(
+  slaveId: String,
+  taskId: String,
+  taskStatus: String,
+  appId: String,
+  host: String,
+  ports: Iterable[Integer],
+  eventType: String = "status_update_event"
 
 // event subscriptions
 
@@ -109,6 +121,19 @@ case class HealthStatusChanged(
   alive: Boolean,
   eventType: String = "health_status_changed_event",
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
+
+// upgrade messages
+
+trait UpgradeEvent extends MarathonEvent
+
+case class UpgradeSuccess(group: Group, kind:String) extends UpgradeEvent {
+  override val eventType: String = "upgrade_success"
+}
+
+case class UpgradeFailed(group: Group, kind:String) extends UpgradeEvent {
+  override val eventType: String = "upgrade_failed"
+}
+
 
 // Mesos scheduler
 
