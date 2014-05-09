@@ -36,5 +36,7 @@ require([
     document.getElementById("job-list")
   );
 
-  appCollection.fetch({reset: true});
+  appCollection.fetch({reset: true}).done(function() {
+    appCollection.firstLoadFinished = true;
+  });
 });

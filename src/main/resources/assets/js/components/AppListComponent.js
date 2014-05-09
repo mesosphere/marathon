@@ -32,6 +32,11 @@ define([
       var _this = this;
       var comparator = this.props.collection.comparator;
 
+      var placeholderText = "Loading...";
+      if (this.props.collection.firstLoadFinished) {
+        placeholderText = "No running apps.";
+      }
+
       var appNodes;
       var tableClassName = "table table-fixed";
       if (this.props.collection.length > 0) {
@@ -44,7 +49,7 @@ define([
       } else {
         appNodes =
           <tr>
-            <td className="text-center" colSpan="5">No running apps.</td>
+            <td className="text-center" colSpan="5">{placeholderText}</td>
           </tr>;
       }
 
