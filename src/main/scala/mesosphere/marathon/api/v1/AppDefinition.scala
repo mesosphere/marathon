@@ -53,13 +53,13 @@ case class AppDefinition(
 
   healthChecks: Set[HealthCheck] = Set(),
 
-  version: Timestamp = Timestamp.now) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
+  version: Timestamp = Timestamp.now()
     with Timestamped {
 
   import mesosphere.mesos.protos.Implicits._
 
   assert(
-    portIndicesAreValid,
+    portIndicesAreValid(),
     "Port indices must address an element of this app's ports array."
   )
 
@@ -157,6 +157,8 @@ object AppDefinition {
   val DEFAULT_INSTANCES = 0
 
   val DEFAULT_TASK_RATE_LIMIT = 1.0
+
+  def fromProto(proto: Protos.ServiceDefinition): AppDefinition = AppDefinition().mergeFromProto(proto)
 
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,

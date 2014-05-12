@@ -84,3 +84,24 @@ message StorageVersion {
   required uint32 minor = 2;
   required uint32 patch = 3;
 }
+
+message StepDefinition {
+  enum StepKind {
+    Absolute = 0;
+    Relative = 1;
+  }
+  required double count = 1;
+  required StepKind kind = 2;
+}
+
+message ScalingStrategyDefinition {
+  required uint32 watchPeriod = 1;
+  repeated StepDefinition steps = 2;
+}
+
+message GroupDefinition {
+  required string id = 1;
+  required ScalingStrategyDefinition scalingStrategy = 2;
+  repeated ServiceDefinition apps = 3;
+  required string version = 4;
+}

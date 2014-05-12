@@ -12,7 +12,7 @@ import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS
 import mesosphere.marathon.{ EmptyContainerInfo, ContainerInfo }
 import scala.collection.JavaConverters._
-import mesosphere.marathon.api.v2.{RelativeStepping, AbsoluteStepping, Stepping, AppUpdate}
+import mesosphere.marathon.api.v2.{RelativeStep, AbsoluteStep, Step, AppUpdate}
 import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
@@ -252,26 +252,26 @@ object MarathonModule {
 
   private [this] val Percent = """^(\d+)\%$""".r
 
-  class SteppingSerializer extends JsonSerializer[Stepping] {
+  class StepSerializer extends JsonSerializer[Step] {
     def serialize(
-        stepping: Stepping,
+        stepping: Step,
         json: JsonGenerator,
         provider: SerializerProvider): Unit = stepping match {
 
-      case AbsoluteStepping(count) => json.writeNumber(count)
-      case RelativeStepping(factor) => json.writeString(s"${(factor * 100).toInt}%")
+      case AbsoluteStep(count) => json.writeNumber(count)
+      case RelativeStep(factor) => json.writeString(s"${(factor * 100).toInt}%")
     }
   }
 
-  class SteppingDeserializer extends JsonDeserializer[Stepping]{
-    override def deserialize(json: JsonParser, context: DeserializationContext): Stepping = {
-      val token = json.getCurrentToken()
+  class StepDeserializer extends JsonDeserializer[Step]{
+    override def deserialize(json: JsonParser, context: DeserializationContext): Step = {
+      val token = json.getCurrentToken
 
       if (token.isNumeric) {
-        AbsoluteStepping(json.getValueAsInt)
+        AbsoluteStep(json.getValueAsInt)
       } else {
         json.getValueAsString match {
-          case Percent(x) => RelativeStepping(x.toDouble / 100.0)
+          case Percent(x) => RelativeStep(x.toDouble / 100.0)
           case _ => throw new IllegalArgumentException("Value must be in percent.")
         }
       }

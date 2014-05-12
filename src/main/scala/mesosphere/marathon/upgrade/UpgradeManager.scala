@@ -31,7 +31,7 @@ class UpgradeManager @Singleton @Inject() (
    */
   def install(product: Group): Future[Group] = {
     val promise = eventHandlingPromise(product, "install")
-    Props(classOf[InstallActor], product, promise, scheduler, taskTracker, healthCheck)
+    system.actorOf(Props(classOf[InstallActor], product, promise, scheduler, taskTracker, healthCheck))
     promise.future
   }
 
@@ -41,7 +41,7 @@ class UpgradeManager @Singleton @Inject() (
    */
   def upgrade(oldProduct: Group, newProduct: Group): Future[Group] = {
     val promise = eventHandlingPromise(newProduct, "upgrade")
-    Props(classOf[UpgradeActor], oldProduct, newProduct, promise, scheduler, taskTracker, healthCheck)
+    system.actorOf(Props(classOf[UpgradeActor], oldProduct, newProduct, promise, scheduler, taskTracker, healthCheck))
     promise.future
   }
 
@@ -51,7 +51,7 @@ class UpgradeManager @Singleton @Inject() (
    */
   def delete(product: Group): Future[Group] = {
     val promise = eventHandlingPromise(product, "delete")
-    Props(classOf[DeleteActor], product, promise, scheduler, taskTracker, healthCheck)
+    system.actorOf(Props(classOf[DeleteActor], product, promise, scheduler, taskTracker, healthCheck))
     promise.future
   }
 

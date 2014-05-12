@@ -4,39 +4,33 @@ import javax.ws.rs._
 import javax.ws.rs.core.MediaType
 import javax.inject.Inject
 import javax.validation.Valid
-import mesosphere.marathon.upgrade.UpgradeManager
+import mesosphere.marathon.state.GroupManager
+import scala.concurrent.{Future, Await}
+import scala.concurrent.duration.Duration
 
 @Path("v2/groups")
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MediaType.APPLICATION_JSON))
-class GroupsResource @Inject()(upgradeManager: UpgradeManager) {
+class GroupsResource @Inject()(groupManager: GroupManager) {
 
   @GET
-  def list() = {
-    List(group("1"), group("2"), group("3"))
-  }
+  def list() : Iterable[Group] = groupManager.list()
 
   @GET
   @Path("{id}")
-  def group(@PathParam("id") id: String) = {
-    Group(id, ScalingStrategy(Seq(AbsoluteStepping(13)), 123), Seq.empty)
-  }
+  def group(@PathParam("id") id: String) : Option[Group] = groupManager.group(id)
 
   @POST
-  def install( @Valid group: Group ) = {
-//    upgradeManager.install(group)
-    group
-  }
+  def create( @Valid group: Group ) : Group = groupManager.create(group)
 
   @PUT
   @Path("{id}")
-  def upgrade( @PathParam("id") id: String, @Valid group: Group ) = {
-//    upgradeManager.upgrade(group, group)
-  }
+  def upgrade( @PathParam("id") id: String, @Valid group: Group ) : Group = groupManager.upgrade(id, group)
 
   @DELETE
   @Path("{id}")
-  def delete( @PathParam("id") id: String ) = {
-    //upgradeManager.delete(id)
-  }
+  def delete( @PathParam("id") id: String ) : Boolean = groupManager.expunge(id)
+
+  //map from Future[T] to T since jersey can not handle futures
+  private implicit def result[T](in:Future[T]) : T = Await.result(in, Duration.Inf)
 }

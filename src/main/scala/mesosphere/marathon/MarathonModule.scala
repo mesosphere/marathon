@@ -3,7 +3,7 @@ package mesosphere.marathon
 import com.google.inject._
 import org.apache.mesos.state.{ ZooKeeperState, State }
 import java.util.concurrent.TimeUnit
-import com.twitter.common.zookeeper.{ Group, CandidateImpl, Candidate, ZooKeeperClient }
+import com.twitter.common.zookeeper.{Group=>ZGroup, CandidateImpl, Candidate, ZooKeeperClient}
 import org.apache.zookeeper.ZooDefs
 import com.twitter.common.base.Supplier
 import org.apache.log4j.Logger
@@ -11,13 +11,14 @@ import javax.inject.Named
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
 import akka.actor.ActorSystem
-import mesosphere.marathon.state.{ MarathonStore, AppRepository }
+import mesosphere.marathon.state.{GroupRepository, GroupManager, MarathonStore, AppRepository}
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 import mesosphere.marathon.upgrade.UpgradeManager
+import mesosphere.marathon.api.v2.Group
 
 /**
   * @author Tobi Knaup
@@ -42,6 +43,7 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
     bind(classOf[HealthCheckManager]).in(Scopes.SINGLETON)
     bind(classOf[UpgradeManager]).in(Scopes.SINGLETON)
+    bind(classOf[GroupManager]).in(Scopes.SINGLETON)
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))
@@ -75,7 +77,7 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     if (Main.conf.highlyAvailable()) {
       log.info("Registering in Zookeeper with hostname:"
         + Main.conf.hostname())
-      val candidate = new CandidateImpl(new Group(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+      val candidate = new CandidateImpl(new ZGroup(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE,
         Main.conf.zooKeeperLeaderPath),
         new Supplier[Array[Byte]] {
           def get() = {
@@ -93,6 +95,12 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
   @Singleton
   def provideAppRepository(state: State): AppRepository = new AppRepository(
     new MarathonStore[AppDefinition](state, () => AppDefinition.apply())
+  )
+
+  @Provides
+  @Singleton
+  def provideGroupRepository(state: State) : GroupRepository = new GroupRepository(
+    new MarathonStore[Group](state, () => Group.empty(), "group:")
   )
 
   @Provides
