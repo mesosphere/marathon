@@ -81,6 +81,23 @@ class AppsResource @Inject() (
     }
   }
 
+  @PUT
+  @Path("restart/{id}")
+  @Timed
+  def restart(
+    @Context req: HttpServletRequest,
+    @PathParam("id") id: String,
+    @QueryParam("batchSize") @DefaultValue("2") batchSize: Int
+  ): Response = {
+    service.getApp(id) match {
+      case Some(app) =>
+        service.restartApp(id, batchSize)
+        Response.ok().build()
+
+      case None => Responses.unknownApp(id)
+    }
+  }
+
   @DELETE
   @Path("{id}")
   @Timed
