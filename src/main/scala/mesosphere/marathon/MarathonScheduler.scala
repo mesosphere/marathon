@@ -281,7 +281,16 @@ class MarathonScheduler @Inject() (
                 instances: Seq[MarathonTask]): Future[Boolean] = {
       val promise = Promise[Boolean]()
       val count = math.min(batchSize, instances.size)
-      callbacks.add(appID, TaskState.TASK_KILLED, count)(promise.success(_))
+      callbacks.add(appID, TaskState.TASK_KILLED, count) { res =>
+        promise.success(res)
+        callbacks.remove(appID, TaskState.TASK_FAILED)
+      }
+      callbacks.add(appID, TaskState.TASK_FAILED, 1) { res =>
+        if (res) {
+          callbacks.remove(appID, TaskState.TASK_RUNNING)
+          promise.failure(new TaskRestartFailedException(s"Failed to restart $appID"))
+        }
+      }
 
       val batch = instances.take(count)
 
