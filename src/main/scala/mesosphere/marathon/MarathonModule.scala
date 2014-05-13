@@ -17,7 +17,7 @@ import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
-import mesosphere.marathon.upgrade.UpgradeManager
+import mesosphere.marathon.upgrade.{DeploymentPlan, DeploymentPlanRepository, UpgradeManager}
 import mesosphere.marathon.api.v2.Group
 
 /**
@@ -100,8 +100,14 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideGroupRepository(state: State) : GroupRepository = new GroupRepository(
-    new MarathonStore[Group](state, () => Group.empty(), "group:"),
+    new MarathonStore[Group](state, Group.empty, "group:"),
     provideAppRepository(provideMesosState())
+  )
+
+  @Provides
+  @Singleton
+  def provideDeploymentPlanRepository(state: State) : DeploymentPlanRepository = new DeploymentPlanRepository(
+    new MarathonStore[DeploymentPlan](state, DeploymentPlan.empty, "deployment:")
   )
 
   @Provides

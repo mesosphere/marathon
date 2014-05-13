@@ -30,9 +30,7 @@ class UpgradeManager @Singleton @Inject() (
    * @return a future which gets completed, when the installation has finished
    */
   def install(product: Group): Future[Group] = {
-    val promise = eventHandlingPromise(product, "install")
-    //system.actorOf(Props(classOf[InstallActor], product, promise, scheduler, taskTracker, healthCheck))
-    promise.future
+    Future.sequence(product.apps.map(scheduler.startApp)).map(ignore => product)
   }
 
   /**
@@ -40,9 +38,9 @@ class UpgradeManager @Singleton @Inject() (
    * @return a future that gets completed, when the upgrade has finished
    */
   def upgrade(oldProduct: Group, newProduct: Group): Future[Group] = {
-    val promise = eventHandlingPromise(newProduct, "upgrade")
-    //system.actorOf(Props(classOf[UpgradeActor], oldProduct, newProduct, promise, scheduler, taskTracker, healthCheck))
-    promise.future
+    val runningTasks = oldProduct.apps.map( app => app.id->taskTracker.get(app.id).map(_.getId).toList)
+    val plan = DeploymentPlan.apply(oldProduct, newProduct, runningTasks.toMap)
+    ??? //pass plan to scheduler
   }
 
   /**
@@ -50,9 +48,7 @@ class UpgradeManager @Singleton @Inject() (
    * @return a future that gets completed, when the deletion has finished
    */
   def delete(product: Group): Future[Group] = {
-    val promise = eventHandlingPromise(product, "delete")
-    //system.actorOf(Props(classOf[DeleteActor], product, promise, scheduler, taskTracker, healthCheck))
-    promise.future
+    Future.sequence(product.apps.map(scheduler.stopApp)).map(ignore => product)
   }
 
   /**

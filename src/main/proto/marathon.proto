@@ -85,6 +85,8 @@ message StorageVersion {
   required uint32 patch = 3;
 }
 
+//group messages ------------------------------------------
+
 message StepDefinition {
   enum StepKind {
     Absolute = 0;
@@ -104,4 +106,25 @@ message GroupDefinition {
   required ScalingStrategyDefinition scalingStrategy = 2;
   repeated ServiceDefinition apps = 3;
   required string version = 4;
+}
+
+//deployment messages --------------------------------------
+
+message DeploymentActionDefinition {
+  required string appId = 1;
+  required uint32 scale = 2;
+  repeated string taksIdsToKill = 3;
+}
+
+message DeploymentStepDefinition {
+  required uint32 waitTime = 1;
+  repeated DeploymentActionDefinition deployments = 2;
+}
+
+message DeploymentPlanDefinition {
+  repeated ServiceDefinition orig = 1;
+  repeated ServiceDefinition target = 2;
+  repeated DeploymentStepDefinition steps = 3;
+  optional DeploymentStepDefinition current = 4;
+  optional DeploymentStepDefinition last = 5;
 }
