@@ -40,7 +40,8 @@ case class DeploymentPlan(
   }
 
   override def toProto: DeploymentPlanDefinition = {
-    def action(da:DeploymentAction) : DeploymentActionDefinition = ???
+    def action(da:DeploymentAction) : DeploymentActionDefinition = DeploymentActionDefinition.newBuilder()
+      .setAppId(da.appId).setScale(da.scaleUp).addAllTaksIdsToKill(da.taskIdsToKill).build()
     def step(dd:DeploymentStep) = DeploymentStepDefinition.newBuilder()
       .addAllDeployments(dd.deployments.map(action))
       .setWaitTime(dd.waitTime).build()
