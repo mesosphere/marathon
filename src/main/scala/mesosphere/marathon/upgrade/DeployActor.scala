@@ -89,11 +89,11 @@ class DeployActor(
     case StartTasks(step) =>
       for {
         deployment <- step.deployments
-        _ <- 0 until deployment.scale
+        _ <- 0 until deployment.scaleUp
       } taskQueue.add(AppDefinition(id = deployment.appId))
 
       val instances = step.deployments.map { x =>
-        x.appId -> x.scale
+        x.appId -> x.scaleUp
       }.toMap
       context.become(awaitRunning(instances, step), true)
   }
@@ -138,7 +138,7 @@ class DeployActor(
   }
 
   def rollback() =
-    deploymentPlan.orig.foreach { app =>
+    deploymentPlan.original.foreach { app =>
       scheduler.updateApp(driver, app.id, AppUpdate.fromAppDefinition(app))
     }
 }

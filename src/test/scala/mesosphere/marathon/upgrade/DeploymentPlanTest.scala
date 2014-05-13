@@ -21,10 +21,10 @@ class DeploymentPlanTest extends MarathonSpec with Matchers {
     val second = plan.steps(1)
     val last = plan.steps.last
     first.deployments.head.taskIdsToKill should be('empty)
-    first.deployments.head.scale should be(10)
+    first.deployments.head.scaleUp should be(10)
     second.deployments.head.taskIdsToKill should be(List("0"))
-    second.deployments.head.scale should be(20)
-    last.deployments.head.scale should be(0)
+    second.deployments.head.scaleUp should be(20)
+    last.deployments.head.scaleUp should be(0)
   }
 
   test("plan can be iterated") {

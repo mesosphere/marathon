@@ -2,17 +2,16 @@ package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.Group
-import scala.concurrent.Future
 import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos.{DeploymentActionDefinition, DeploymentStepDefinition, DeploymentPlanDefinition}
 import scala.collection.JavaConversions._
 
-case class DeploymentAction(appId:String, scale:Int, taskIdsToKill:List[String])
+case class DeploymentAction(appId:String, scaleUp:Int, taskIdsToKill:List[String])
 
 case class DeploymentStep(deployments:List[DeploymentAction], waitTime:Int)
 
 case class DeploymentPlan(
-  orig:List[AppDefinition],
+  original:List[AppDefinition],
   target:List[AppDefinition],
   steps:List[DeploymentStep],
   current:Option[DeploymentStep] = None,
@@ -20,7 +19,7 @@ case class DeploymentPlan(
 ) extends MarathonState[DeploymentPlanDefinition, DeploymentPlan] {
 
   def next : DeploymentPlan = steps match {
-    case head :: rest => DeploymentPlan(orig, target, rest, Some(head), current)
+    case head :: rest => DeploymentPlan(original, target, rest, Some(head), current)
     case Nil => throw new NoSuchElementException("empty plan")
   }
 
@@ -46,7 +45,7 @@ case class DeploymentPlan(
       .addAllDeployments(dd.deployments.map(action))
       .setWaitTime(dd.waitTime).build()
     val builder = DeploymentPlanDefinition.newBuilder()
-      .addAllOrig(orig.map(_.toProto))
+      .addAllOrig(original.map(_.toProto))
       .addAllTarget(target.map(_.toProto))
       .addAllSteps(steps.map(step))
     current.map(step).foreach(builder.setCurrent)
@@ -67,7 +66,7 @@ object DeploymentPlan {
         val toKill = runningTasks(app.id).take(count).filterNot(taskTaken(app.id).contains)
         val action = DeploymentAction(app.id, step.count(app) - currentScale(app.id), toKill)
         taskTaken += app.id -> (taskTaken(app.id) ::: action.taskIdsToKill)
-        currentScale += app.id -> (currentScale(app.id) + action.scale)
+        currentScale += app.id -> (currentScale(app.id) + action.scaleUp)
         action
       }
       //store take down actions for next step
