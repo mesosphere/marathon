@@ -21,7 +21,7 @@ import mesosphere.marathon.api.Responses
 @Path("v1/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject() (
-    @Named(EventModule.busName) eventBus: Option[EventBus],
+    @Named(EventModule.busName) eventBus: EventBus,
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     config: MarathonConf) {
@@ -61,7 +61,7 @@ class AppsResource @Inject() (
   }
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) {
-    eventBus.foreach(_.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app)))
+    eventBus.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
   }
 
   @GET

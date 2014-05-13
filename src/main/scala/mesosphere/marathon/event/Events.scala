@@ -33,16 +33,12 @@ class EventModule(conf: EventConfiguration) extends AbstractModule {
   @Named(EventModule.busName)
   @Provides
   @Singleton
-  def provideEventBus(): Option[EventBus] = {
-    if (conf.eventSubscriber.isSupplied) {
-      log.info("Creating Event Bus.")
-      val pool = Executors.newCachedThreadPool()
-      val bus = new AsyncEventBus(pool)
-      Some(bus)
-    }
+  def provideEventBus(): EventBus = {
+    log.info("Creating Event Bus.")
+    val pool = Executors.newCachedThreadPool()
+    val bus = new AsyncEventBus(pool)
+    bus
     else {
-      None
-    }
   }
 }
 

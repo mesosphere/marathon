@@ -41,7 +41,7 @@ object MarathonScheduler {
 }
 
 class MarathonScheduler @Inject() (
-    @Named(EventModule.busName) eventBus: Option[EventBus],
+  @Named(EventModule.busName) eventBus: EventBus,
     @Named("restMapper") mapper: ObjectMapper,
     appRepository: AppRepository,
     healthCheckManager: HealthCheckManager,
@@ -194,7 +194,7 @@ class MarathonScheduler @Inject() (
 
   override def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]) {
     log.info("Received framework message %s %s %s ".format(executor, slave, message))
-    eventBus.foreach(_.post(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message)))
+    eventBus.post(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message))
   }
 
   override def disconnected(driver: SchedulerDriver) {
@@ -462,18 +462,16 @@ class MarathonScheduler @Inject() (
   }
 
   private def postEvent(status: TaskStatus, task: MarathonTask): Unit = {
-    eventBus.foreach { bus =>
-      log.info("Sending event notification.")
-      bus.post(
-        MesosStatusUpdateEvent(
-          status.getSlaveId.getValue,
-          status.getTaskId.getValue,
-          status.getState.name,
-          TaskIDUtil.appID(status.getTaskId),
-          task.getHost,
-          task.getPortsList.asScala
-        )
+    log.info("Sending event notification.")
+    eventBus.post(
+      MesosStatusUpdateEvent(
+        status.getSlaveId.getValue,
+        status.getTaskId.getValue,
+        status.getState.name,
+        TaskIDUtil.appID(status.getTaskId),
+        task.getHost,
+        task.getPortsList.asScala
       )
-    }
+    )
   }
 }

@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 class UpgradeManager @Singleton @Inject() (
   system:ActorSystem,
-  @Named(EventModule.busName) eventBus: Option[EventBus],
+  @Named(EventModule.busName) eventBus: EventBus,
   scheduler: MarathonSchedulerService,
   taskTracker: TaskTracker,
   healthCheck: HealthCheckManager
@@ -68,8 +68,8 @@ class UpgradeManager @Singleton @Inject() (
   private def eventHandlingPromise(group:Group, kind:String) : Promise[Group] = {
     val promise = Promise[Group]()
     promise.future.onComplete {
-      case Success(_) => eventBus.foreach(_.post(UpgradeSuccess(group, kind)))
-      case Failure(_) => eventBus.foreach(_.post(event.UpgradeFailed(group, kind)))
+      case Success(_) => eventBus.post(UpgradeSuccess(group, kind))
+      case Failure(_) => eventBus.post(event.UpgradeFailed(group, kind))
     }
     promise
   }

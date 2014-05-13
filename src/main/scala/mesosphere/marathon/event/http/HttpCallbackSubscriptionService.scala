@@ -9,22 +9,18 @@ import javax.inject.{ Named, Inject }
 
 class HttpCallbackSubscriptionService @Inject() (
     @Named(HttpEventModule.SubscribersKeeperActor) val subscribersKeeper: ActorRef,
-    @Named(EventModule.busName) eventBus: Option[EventBus]) {
+  @Named(EventModule.busName) eventBus: EventBus) {
 
   implicit val ec = HttpEventModule.executionContext
   implicit val timeout = HttpEventModule.timeout
 
-  def handleSubscriptionEvent(event: MarathonSubscriptionEvent) = {
-    (subscribersKeeper ? event).map {
-      msg =>
-        // Subscribe and Unsubscribe event should be broadcast.
-        eventBus.foreach(_.post(event))
-        event
+  def handleSubscriptionEvent(event: MarathonSubscriptionEvent) =
+    (subscribersKeeper ? event).map { msg =>
+      // Subscribe and Unsubscribe event should be broadcast.
+      eventBus.post(event)
+      event
     }
-  }
 
-  def getSubscribers = {
+  def getSubscribers =
     (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers]
-  }
-
 }

@@ -8,12 +8,10 @@ import javax.inject.{ Named, Inject }
 
 class HttpCallbackEventSubscriber @Inject() (
   @Named(HttpEventModule.StatusUpdateActor) val actor: ActorRef,
-  @Named(EventModule.busName) val eventBus: Option[EventBus])
+    @Named(EventModule.busName) val eventBus: EventBus)
     extends EventSubscriber[HttpEventConfiguration, HttpEventModule] {
 
-  require(eventBus.nonEmpty, "Tried to bind HTTP event publishing without " +
-    "event bus.")
-  eventBus.get.register(this)
+  eventBus.register(this)
 
   val log = Logger.getLogger(getClass.getName)
 

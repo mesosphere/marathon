@@ -16,7 +16,7 @@ class HealthCheckActor(
     appId: String,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
-    eventBus: Option[EventBus]) extends Actor with ActorLogging {
+  eventBus: EventBus
 
   import HealthCheckActor.{ GetTaskHealth, Health }
   import HealthCheckWorker.{ HealthCheckJob, HealthResult, Healthy, Unhealthy }
@@ -123,8 +123,7 @@ class HealthCheckActor(
                 // Don't update health
                 health
               }
-              else {
-                eventBus.foreach(_.post(FailedHealthCheck(appId, taskId, healthCheck)))
+                eventBus.post(FailedHealthCheck(appId, taskId, healthCheck))
                 checkConsecutiveFailures(task, health)
                 health.update(result)
               }
@@ -137,12 +136,11 @@ class HealthCheckActor(
       taskHealth += (taskId -> newHealth)
 
       if (health.alive() != newHealth.alive()) {
-        eventBus.foreach(_.post(
+        eventBus.post(
           HealthStatusChanged(
             appId = appId,
             taskId = taskId,
             alive = newHealth.alive())
-        )
         )
       }
   }

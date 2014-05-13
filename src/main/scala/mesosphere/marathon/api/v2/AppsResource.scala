@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject() (
-    @Named(EventModule.busName) eventBus: Option[EventBus],
+    @Named(EventModule.busName) eventBus: EventBus,
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
@@ -93,8 +93,8 @@ class AppsResource @Inject() (
     service.getApp(id) match {
       case Some(app) =>
         service.restartApp(id, batchSize) onComplete {
-          case Success(_) => eventBus.foreach(_.post(RestartSuccess(id)))
-          case _ => eventBus.foreach(_.post(RestartFailed(id)))
+          case Success(_) => eventBus.post(RestartSuccess(id))
+          case _ => eventBus.post(RestartFailed(id))
         }
         Response.ok().build()
 
@@ -121,7 +121,7 @@ class AppsResource @Inject() (
   def appVersionsResource() = new AppVersionsResource(service)
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
-    eventBus.foreach(_.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app)))
+    eventBus.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
   private def search(cmd: String, id: String): Iterable[AppDefinition] = {
     /** Returns true iff `a` is a prefix of `b`, case-insensitively */

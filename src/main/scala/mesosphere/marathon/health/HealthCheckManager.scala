@@ -19,7 +19,7 @@ case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
 class HealthCheckManager @Singleton @Inject() (
     system: ActorSystem,
-    @Named(EventModule.busName) eventBus: Option[EventBus],
+  @Named(EventModule.busName) eventBus: EventBus,
     taskTracker: TaskTracker) {
 
   import HealthCheckActor.{ GetTaskHealth, Health }
@@ -51,7 +51,7 @@ class HealthCheckManager @Singleton @Inject() (
       appHealthChecks += (appId -> newHealthChecksForApp)
     }
 
-    eventBus.foreach(_.post(AddHealthCheck(healthCheck)))
+    eventBus.post(AddHealthCheck(healthCheck))
   }
 
   def addAllFor(app: AppDefinition): Unit =
@@ -69,7 +69,7 @@ class HealthCheckManager @Singleton @Inject() (
         else appHealthChecks + (appId -> newHealthChecksForApp)
     }
 
-    eventBus.foreach(_.post(RemoveHealthCheck(appId)))
+    eventBus.post(RemoveHealthCheck(appId))
   }
 
   def removeAllFor(appId: String): Unit =
