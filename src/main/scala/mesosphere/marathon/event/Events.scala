@@ -134,6 +134,13 @@ case class UpgradeFailed(group: Group, kind:String) extends UpgradeEvent {
   override val eventType: String = "upgrade_failed"
 }
 
+case class RestartSuccess(appId: String) extends UpgradeEvent {
+  override val eventType: String = "restart_success"
+}
+
+case class RestartFailed(appId: String) extends UpgradeEvent {
+  override val eventType: String = "restart_failed"
+}
 
 // Mesos scheduler
 

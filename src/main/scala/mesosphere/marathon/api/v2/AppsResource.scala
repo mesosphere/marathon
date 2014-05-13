@@ -4,7 +4,7 @@ import javax.ws.rs._
 import scala.Array
 import javax.ws.rs.core.{ Response, Context, MediaType }
 import javax.inject.{ Named, Inject }
-import mesosphere.marathon.event.EventModule
+import mesosphere.marathon.event.{RestartFailed, RestartSuccess, EventModule, ApiPostEvent}
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.tasks.TaskTracker
@@ -13,10 +13,11 @@ import javax.servlet.http.HttpServletRequest
 import javax.validation.Valid
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Await
-import mesosphere.marathon.event.ApiPostEvent
 import java.net.URI
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.api.Responses
+import scala.util.Success
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -91,7 +92,10 @@ class AppsResource @Inject() (
   ): Response = {
     service.getApp(id) match {
       case Some(app) =>
-        service.restartApp(id, batchSize)
+        service.restartApp(id, batchSize) onComplete {
+          case Success(_) => eventBus.foreach(_.post(RestartSuccess(id)))
+          case _ => eventBus.foreach(_.post(RestartFailed(id)))
+        }
         Response.ok().build()
 
       case None => Responses.unknownApp(id)
