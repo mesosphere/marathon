@@ -2,15 +2,11 @@ package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.Group
+import scala.concurrent.Future
 
-sealed trait DeploymentAction {
-  def appId:String
-  def count:Int
-}
-case class UpScaleAction(appId:String, count:Int) extends DeploymentAction
-case class DownScaleAction(appId:String, count:Int) extends DeploymentAction
+case class DeploymentAction(appId:String, scale:Int, taskIdsToKill:List[String])
 
-case class DeploymentStep(deployments:List[DeploymentAction])
+case class DeploymentStep(deployments:List[DeploymentAction], waitTime:Int, isValid: () => Future[Boolean] )
 
 case class DeploymentPlan(
   orig:List[AppDefinition],
@@ -29,20 +25,28 @@ case class DeploymentPlan(
 }
 
 object DeploymentPlan {
-  def apply(oldProduct:Group, newProduct:Group) : DeploymentPlan = {
-
-    val strategy = newProduct.scalingStrategy.steps.toList
-    val ups = strategy.map{ step =>
-      newProduct.apps.toList.map(app => UpScaleAction(app.id, step.count(app)))
+  def apply(oldProduct:Group, newProduct:Group, runningTasks:Map[String, List[String]]) : DeploymentPlan = {
+    var takeDown = Map.empty[String, Int].withDefaultValue(0)
+    val steps = newProduct.scalingStrategy.steps.toList.map { step =>
+      //create actions for this step
+      val actions = newProduct.apps.toList.map { app =>
+        val count = takeDown(app.id)
+        val toKill = runningTasks(app.id).take(count)
+        DeploymentAction(app.id, step.count(app), toKill)
+      }
+      //store take down actions for next step
+      oldProduct.apps.foreach( app => takeDown += app.id->step.count(app))
+      DeploymentStep(actions, newProduct.scalingStrategy.watchPeriod, () => Future.successful(true))
     }
-    val downs = newProduct.scalingStrategy.steps.toList.map { step =>
-      oldProduct.apps.toList.map(app => DownScaleAction(app.id, step.count(app)))
-    }
-    val steps =
-      DeploymentStep(ups.head) ::
-      downs.zip(ups.tail).map{ case (d, u) =>  DeploymentStep(d ::: u) } :::
-      List(DeploymentStep(downs.reverse.head))
 
-    DeploymentPlan(oldProduct.apps.toList, newProduct.apps.toList, steps)
+    val lastStep = {
+      val actions = oldProduct.apps.toList.map { app =>
+        val finalCount = newProduct.apps.find(_.id == app.id).fold(0)(_.instances.toInt)
+        DeploymentAction(app.id, finalCount, runningTasks(app.id))
+      }
+      DeploymentStep(actions, newProduct.scalingStrategy.watchPeriod, () => Future.successful(true))
+    }
+
+    DeploymentPlan(oldProduct.apps.toList, newProduct.apps.toList, steps ::: List(lastStep))
   }
 }

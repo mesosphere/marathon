@@ -78,23 +78,17 @@ class UpgradeActor (
 
   import context.dispatcher
 
-  var plan = DeploymentPlan(oldProduct, newProduct)
+  var plan = DeploymentPlan(oldProduct, newProduct, Map.empty[String, List[String]])
 
   override def preStart(): Unit = self ! Start
 
   def applyCurrentStep(): Unit = plan.current.foreach { step =>
-    step.deployments.foreach {
-      case UpScaleAction(appId, count) => scheduler.updateApp(appId, AppUpdate(instances = Some(count)))
-      case DownScaleAction(appId, count) => //TODO: tasktracker
+    step.deployments.foreach { action =>
+      scheduler.updateApp(action.appId, AppUpdate(instances = Some(action.scale)))
     }
   }
 
-  def currentStepReached: Boolean = plan.current.exists { step =>
-    step.deployments.forall {
-      case DownScaleAction(_, _) => true
-      case UpScaleAction(appId, count) => expectedTasksRunning(appId, count)
-    }
-  }
+  def currentStepReached: Boolean = ???
 
   def nextStep(): Unit = {
     require(plan.hasNext)
