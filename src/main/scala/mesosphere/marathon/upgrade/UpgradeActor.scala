@@ -1,143 +1,151 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.Actor
-import mesosphere.marathon.{UpgradeFailed, MarathonSchedulerService}
-import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.TaskTracker
-import scala.concurrent.Promise
-import mesosphere.marathon.api.v2.{AppUpdate, Group}
+import akka.actor.{Cancellable, ActorRef, Actor}
+import mesosphere.marathon.MarathonScheduler
+import mesosphere.marathon.tasks.TaskQueue
+import mesosphere.marathon.api.v2.AppUpdate
 import scala.concurrent.duration._
 import org.apache.log4j.Logger
-import mesosphere.marathon.upgrade.UpgradeAction._
+import com.google.common.eventbus.{Subscribe, EventBus}
+import mesosphere.marathon.event.MesosStatusUpdateEvent
+import org.apache.mesos.SchedulerDriver
+import org.apache.mesos.Protos.TaskID
+import mesosphere.marathon.api.v1.AppDefinition
 
-/**
- * The UpgradeActor
- */
-trait UpgradeAction { this: Actor =>
-
-  private[this] val log = Logger.getLogger(getClass.getName)
-
-  //dependencies
-  def scheduler: MarathonSchedulerService
-  def taskTracker: TaskTracker
-  def healthCheck: HealthCheckManager
-  def promise: Promise[Group]
-
-  def expectedTasksRunning(appId: String, count: Int): Boolean = {
-    val countReached = taskTracker.count(appId) == count
-    val healthy = true //TODO: health check?
-    countReached && healthy
-  }
-
-
-  def succeed(product:Group): Unit = {
-    promise.success(product)
-    context.stop(self)
-  }
-
-  def fail(): Unit = {
-    promise.failure(UpgradeFailed)
-    context.stop(self)
-  }
+class StatusUpdateHandler(receiver: ActorRef) {
+  @Subscribe
+  def handleStatusUpdate(update: MesosStatusUpdateEvent) = receiver ! update
 }
 
-class InstallActor (
-  val product: Group,
-  val promise: Promise[Group],
-  val scheduler: MarathonSchedulerService,
-  val taskTracker: TaskTracker,
-  val healthCheck: HealthCheckManager
-) extends Actor with UpgradeAction {
-
+class DeployActor(
+  scheduler: MarathonScheduler,
+  driver: SchedulerDriver,
+  taskQueue: TaskQueue,
+  eventBus: EventBus,
+  deploymentPlan: DeploymentPlan
+) extends Actor {
+  import DeployActor._
   import context.dispatcher
 
-  override def preStart(): Unit = self ! Start
+  private [this] val log = Logger.getLogger(getClass)
 
-  def receive: Receive = {
-    case Start =>
-      product.apps.foreach(scheduler.startApp)
-      context.system.scheduler.scheduleOnce(product.scalingStrategy.watchPeriod seconds, self, WatchTimeout)
-      context.become(staged)
+  val steps = deploymentPlan.steps.iterator
+  var handler: Option[Any] = None
+  var schedule: Option[Cancellable] = None
+
+  override def preStart() {
+    handler = Some(new StatusUpdateHandler(self))
+    handler.foreach(eventBus.register)
+    self ! NextStep
   }
 
-  def staged: Receive = {
+  override def postStop() {
+    handler.foreach(eventBus.unregister)
+  }
+
+  def receive = initial
+
+  def initial: Receive = {
+    case NextStep =>
+      if(steps.hasNext) {
+        val step = steps.next()
+        self ! KillTasks(step)
+        context.become(kill, true)
+      } else {
+        context.stop(self)
+      }
+  }
+
+  def kill: Receive = {
+    case KillTasks(step) =>
+      val idsToKill = step.deployments.flatMap(_.taskIdsToKill)
+
+      val taskIds = idsToKill.map { taskId =>
+        TaskID.newBuilder()
+          .setValue(taskId)
+          .build()
+      }
+
+      taskIds.foreach(driver.killTask)
+      context.become(awaitKilled(idsToKill.toSet, step))
+  }
+
+  /**
+   * waits for all the tasks to be killed
+   * @param taskIds
+   * @return
+   */
+  def awaitKilled(taskIds: Set[String], step: DeploymentStep): Receive = {
+    case MesosStatusUpdateEvent(_, taskId, "TASK_KILLED", _, _, _, _) if taskIds(taskId) =>
+      val rest = taskIds - taskId
+      if (rest.nonEmpty)
+        context.become(awaitKilled(rest, step), true)
+      else
+        self ! StartTasks(step)
+        context.become(startInstances, true)
+  }
+
+  def startInstances: Receive = {
+    case StartTasks(step) =>
+      for {
+        deployment <- step.deployments
+        _ <- 0 until deployment.scale
+      } taskQueue.add(AppDefinition(id = deployment.appId))
+
+      val instances = step.deployments.map { x =>
+        x.appId -> x.scale
+      }.toMap
+      context.become(awaitRunning(instances, step), true)
+  }
+
+  /**
+   * waits for all the instances to start, fails if any instance
+   * fails to start
+   * @param instances Mapping from appId to nr of instances
+   * @return
+   */
+  def awaitRunning(instances: Map[String, Int], step: DeploymentStep): Receive = {
+    case MesosStatusUpdateEvent(_, _, "TASK_RUNNING", appId, _, _, _) if instances.contains(appId) =>
+      val rest = instances.updated(appId, instances(appId) - 1).filter(_._2 > 0)
+      if (rest.nonEmpty) {
+        context.become(awaitRunning(rest, step), true)
+      } else {
+        if (step.waitTime > 0) {
+          schedule = Some(context.system.scheduler.scheduleOnce(step.waitTime.seconds, self, WatchTimeout))
+          context.become(ensureRunning(step, step.deployments.map(_.appId).toSet), true)
+        } else {
+          self ! NextStep
+          context.become(initial, true)
+        }
+      }
+
+    case MesosStatusUpdateEvent(_, taskId, "TASK_FAILED", appId, _, _, _) if instances.contains(appId) =>
+      log.error(s"$taskId failed to startup, initializing rollback.")
+      rollback()
+      context.stop(self)
+  }
+
+  def ensureRunning(step: DeploymentStep, apps: Set[String]): Receive = {
+    case MesosStatusUpdateEvent(_, taskId, "TASK_FAILED", appId, _, _, _) if apps(appId) =>
+      schedule.foreach(_.cancel())
+      log.error(s"$taskId failed during wait time, initializing rollback.")
+      rollback()
+      context.stop(self)
+
     case WatchTimeout =>
-      val expected = product.apps.forall(app => expectedTasksRunning(app.id, app.instances))
-      if (expected) succeed(product) else fail()
+      self ! NextStep
+      context.become(initial, true)
   }
-}
 
-class UpgradeActor (
-  val oldProduct: Group,
-  val newProduct: Group,
-  val promise: Promise[Group],
-  val scheduler: MarathonSchedulerService,
-  val taskTracker: TaskTracker,
-  val healthCheck: HealthCheckManager
-) extends Actor with UpgradeAction {
-
-  import context.dispatcher
-
-  var plan = DeploymentPlan(oldProduct, newProduct, Map.empty[String, List[String]])
-
-  override def preStart(): Unit = self ! Start
-
-  def applyCurrentStep(): Unit = plan.current.foreach { step =>
-    step.deployments.foreach { action =>
-      scheduler.updateApp(action.appId, AppUpdate(instances = Some(action.scale)))
+  def rollback() =
+    deploymentPlan.orig.foreach { app =>
+      scheduler.updateApp(driver, app.id, AppUpdate.fromAppDefinition(app))
     }
-  }
-
-  def currentStepReached: Boolean = ???
-
-  def nextStep(): Unit = {
-    require(plan.hasNext)
-    plan = plan.next
-    applyCurrentStep()
-    context.system.scheduler.scheduleOnce(newProduct.scalingStrategy.watchPeriod seconds, self, WatchTimeout)
-    if (!plan.hasNext) context.become(staged)
-  }
-
-  override def fail(): Unit = {
-    //TODO: rescale old product to old values
-    super.fail()
-  }
-
-  def receive: Receive = {
-    case Start if plan.hasNext =>
-      plan = plan.next
-      nextStep()
-      context.become(scaling)
-    case Start => succeed(newProduct) //empty plan
-  }
-
-  def scaling: Receive = {
-    case WatchTimeout => if (currentStepReached) nextStep() else fail()
-  }
-
-  def staged: Receive = {
-    case WatchTimeout => if (currentStepReached) succeed(newProduct) else fail()
-  }
 }
 
-class DeleteActor (
-  val product: Group,
-  val promise: Promise[Group],
-  val scheduler: MarathonSchedulerService,
-  val taskTracker: TaskTracker,
-  val healthCheck: HealthCheckManager
-) extends Actor with UpgradeAction {
-
-  override def preStart(): Unit = self ! Start
-  def receive: Receive = {
-    case Start =>
-      product.apps.foreach(scheduler.stopApp)
-      succeed(product)
-  }
-}
-
-object UpgradeAction {
-  sealed trait UpgradeMessage
-  case object WatchTimeout extends UpgradeMessage
-  case object Start
+object DeployActor {
+  private case object NextStep
+  private case object WatchTimeout
+  private case class KillTasks(step: DeploymentStep)
+  private case class StartTasks(step: DeploymentStep)
 }
