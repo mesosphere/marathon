@@ -8,6 +8,7 @@ import com.google.common.eventbus.{AsyncEventBus, EventBus}
 import java.util.concurrent.Executors
 import javax.inject.Named
 import org.apache.log4j.Logger
+import mesosphere.marathon.state.Timestamp
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]
@@ -49,23 +50,17 @@ object EventModule {
 
 sealed trait MarathonEvent {
   val eventType: String
+  val timestamp: String
 }
+
+// api
 
 case class ApiPostEvent(
   clientIp: String,
   uri: String,
   appDefinition: AppDefinition,
-  eventType: String = "api_post_event"
-) extends MarathonEvent
-
-case class MesosStatusUpdateEvent(
-  slaveId: String,
-  taskId: String,
-  taskStatus: String,
-  appId: String,
-  host: String,
-  ports: Iterable[Integer],
-  eventType: String = "status_update_event"
+  eventType: String = "api_post_event",
+  timestamp: String = Timestamp.now().toString
 ) extends MarathonEvent
 
 // event subscriptions
@@ -78,13 +73,15 @@ sealed trait MarathonSubscriptionEvent extends MarathonEvent {
 case class Subscribe(
   clientIp: String,
   callbackUrl: String,
-  eventType: String = "subscribe_event"
+  eventType: String = "subscribe_event",
+  timestamp: String = Timestamp.now().toString
 ) extends MarathonSubscriptionEvent
 
 case class Unsubscribe(
   clientIp: String,
   callbackUrl: String,
-  eventType: String = "unsubscribe_event"
+  eventType: String = "unsubscribe_event",
+  timestamp: String = Timestamp.now().toString
 ) extends MarathonSubscriptionEvent
 
 // health checks
@@ -93,33 +90,49 @@ sealed trait MarathonHealthCheckEvent extends MarathonEvent
 
 case class AddHealthCheck(
   healthCheck: HealthCheck,
-  eventType: String = "add_health_check_event"
+  eventType: String = "add_health_check_event",
+  timestamp: String = Timestamp.now().toString
 ) extends MarathonHealthCheckEvent
 
 case class RemoveHealthCheck(
   appId: String,
-  eventType: String = "remove_health_check_event"
+  eventType: String = "remove_health_check_event",
+  timestamp: String = Timestamp.now().toString
 ) extends MarathonHealthCheckEvent
 
 case class FailedHealthCheck(
   appId: String,
   taskId: String,
   healthCheck: HealthCheck,
-  eventType: String = "failed_health_check_event"
+  eventType: String = "failed_health_check_event",
+  timestamp: String = Timestamp.now().toString
 ) extends MarathonHealthCheckEvent
 
 case class HealthStatusChanged(
   appId: String,
   taskId: String,
   alive: Boolean,
-  eventType: String = "health_status_changed_event"
+  eventType: String = "health_status_changed_event",
+  timestamp: String = Timestamp.now().toString
 ) extends MarathonHealthCheckEvent
 
-// framework messages
+// Mesos scheduler
 
-case class FrameworkMessageEvent(
-   executorId: String,
-   slaveId: String,
-   message: Array[Byte],
-   eventType: String = "framework_message_event")
-extends MarathonEvent
+case class MesosStatusUpdateEvent(
+  slaveId: String,
+  taskId: String,
+  taskStatus: String,
+  appId: String,
+  host: String,
+  ports: Iterable[Integer],
+  eventType: String = "status_update_event",
+  timestamp: String = Timestamp.now().toString
+) extends MarathonEvent
+
+case class MesosFrameworkMessageEvent(
+  executorId: String,
+  slaveId: String,
+  message: Array[Byte],
+  eventType: String = "framework_message_event",
+  timestamp: String = Timestamp.now().toString
+) extends MarathonEvent
