@@ -12,11 +12,12 @@ class GroupRepositoryTest extends MarathonSpec {
     val group = Group("g1", ScalingStrategy(Seq.empty, 23), Seq.empty)
     val future = Future.successful(Some(group))
     val versionedKey = s"g1:${group.version}"
+    val appRepo = mock[AppRepository]
 
     when(store.store(versionedKey, group)).thenReturn(future)
     when(store.store("g1", group)).thenReturn(future)
 
-    val repo = new GroupRepository(store)
+    val repo = new GroupRepository(store, appRepo)
     val res = repo.store(group)
 
     assert(Some(group) == Await.result(res, 5 seconds), "Should return the correct AppDefinition")

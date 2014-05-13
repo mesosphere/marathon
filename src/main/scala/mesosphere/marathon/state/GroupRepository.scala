@@ -5,17 +5,25 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 //TODO: since most methods are copied form AppRepository, factor out a separate trait
-class GroupRepository(store: PersistenceStore[Group]) {
+class GroupRepository(store: PersistenceStore[Group], appRepo:AppRepository) {
 
   private val ID_DELIMITER = ":"
 
-  def currentVersion(id: String): Future[Option[Group]] = this.store.fetch(id)
+  def currentVersion(id: String): Future[Option[Group]] = fetch(id)
 
-  def group(id: String) : Future[Option[Group]] = this.store.fetch(id)
+  def group(id: String) : Future[Option[Group]] = fetch(id)
 
-  def group(id: String, version: Timestamp) : Future[Option[Group]] = {
-    val key = id + ID_DELIMITER + version.toString
-    this.store.fetch(key)
+  def group(id: String, version: Timestamp) : Future[Option[Group]] = fetch(id + ID_DELIMITER + version.toString)
+
+  //fetch group, while fetching latest app definitions from app repository
+  private def fetch(key:String) : Future[Option[Group]] = {
+    this.store.fetch(key).flatMap {
+      case Some(group) =>
+        Future.sequence(group.apps.map(app=>appRepo.currentVersion(app.id))).map { apps =>
+          Some(group.copy(apps = apps.flatten))
+        }
+      case None => Future.successful(None:Option[Group])
+    }
   }
 
   def store(group: Group): Future[Option[Group]] = {
