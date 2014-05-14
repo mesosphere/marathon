@@ -88,11 +88,11 @@ class AppsResource @Inject() (
   def restart(
     @Context req: HttpServletRequest,
     @PathParam("id") id: String,
-    @QueryParam("batchSize") @DefaultValue("2") batchSize: Int
+    @QueryParam("keepAlive") keepAlive: Int
   ): Response = {
     service.getApp(id) match {
       case Some(app) =>
-        service.restartApp(id, batchSize) onComplete {
+        service.restartApp(id, keepAlive) onComplete {
           case Success(_) => eventBus.post(RestartSuccess(id))
           case _ => eventBus.post(RestartFailed(id))
         }

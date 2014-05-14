@@ -24,6 +24,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
 import scala.collection.mutable
+import akka.actor.{Props, ActorSystem}
 
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -49,6 +50,7 @@ class MarathonScheduler @Inject() (
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
     rateLimiters: RateLimiters,
+    system: ActorSystem,
     config: MarathonConf) extends Scheduler {
 
   private [this] val log = Logger.getLogger(getClass.getName)
@@ -275,35 +277,19 @@ class MarathonScheduler @Inject() (
 
   def restartApp(driver: SchedulerDriver,
                  appID: String,
-                 batchSize: Int): Future[Boolean] = {
+                 keepAlive: Int): Future[Boolean] = {
 
-    def restart(app: AppDefinition,
-                instances: Seq[MarathonTask]): Future[Boolean] = {
+    def kill(instances: Seq[MarathonTask]): Future[Boolean] = {
       val promise = Promise[Boolean]()
-      val count = math.min(batchSize, instances.size)
-      callbacks.add(appID, TaskState.TASK_KILLED, count)(promise.success(_))
+      callbacks.add(appID, TaskState.TASK_KILLED, instances.size)(promise.success(_))
 
-      val batch = instances.take(count)
-
-      batch foreach { task =>
+      instances foreach { task =>
         driver.killTask(TaskID.newBuilder()
           .setValue(task.getId)
           .build())
       }
 
-      promise.future flatMap { killed =>
-        if (killed) {
-          start(app, count) flatMap { started =>
-            if (started && instances.size > batchSize) {
-              restart(app, instances.drop(batchSize))
-            } else {
-              Future.successful(started)
-            }
-          }
-        } else {
-          Future.successful(killed)
-        }
-      }
+      promise.future
     }
 
     def start(app: AppDefinition, count: Int): Future[Boolean] = {
@@ -324,10 +310,35 @@ class MarathonScheduler @Inject() (
       promise.future
     }
 
+    def replace(nrToStart: Int, tasks: Seq[MarathonTask]): Future[Boolean] = {
+      val promise = Promise[Boolean]()
+      system.actorOf(
+        Props(
+          classOf[TaskReplaceActor],
+          driver,
+          eventBus,
+          appID,
+          nrToStart,
+          tasks,
+          promise))
+      promise.future
+    }
+
     appRepository.currentVersion(appID).flatMap {
       case Some(app) =>
         scalingApps.add(appID)
-        val res = restart(app, taskTracker.get(app.id).toSeq)
+        val tasks = taskTracker.get(app.id).toSeq.sortBy(_.getStartedAt)
+        val killImmediately = tasks.take(tasks.size - keepAlive)
+        val resKill = kill(killImmediately)
+        val resReplace = replace(app.instances, tasks.drop(tasks.size - keepAlive))
+        val resStart = start(app, app.instances)
+
+        val res = for {
+          killed <- resKill
+          started <- resStart
+          replaced <- resReplace
+        } yield killed && started && replaced
+
         res onComplete { _ =>
           scalingApps -= appID
         }
