@@ -280,6 +280,7 @@ class MarathonScheduler @Inject() (
                  keepAlive: Int): Future[Boolean] = {
 
     def kill(instances: Seq[MarathonTask]): Future[Boolean] = {
+      log.debug(s"Killing $instances")
       val promise = Promise[Boolean]()
       callbacks.add(appID, TaskState.TASK_KILLED, instances.size)(promise.success(_))
 
@@ -293,6 +294,7 @@ class MarathonScheduler @Inject() (
     }
 
     def start(app: AppDefinition, count: Int): Future[Boolean] = {
+      log.debug(s"Starting $count instances of $app")
       val promise = Promise[Boolean]()
       callbacks.add(appID, TaskState.TASK_FAILED, 1) { res =>
         if (res) {
@@ -311,6 +313,7 @@ class MarathonScheduler @Inject() (
     }
 
     def replace(nrToStart: Int, tasks: Seq[MarathonTask]): Future[Boolean] = {
+      log.debug(s"Replacing $tasks with $nrToStart new instances.")
       val promise = Promise[Boolean]()
       system.actorOf(
         Props(
@@ -319,8 +322,9 @@ class MarathonScheduler @Inject() (
           eventBus,
           appID,
           nrToStart,
-          tasks,
+          tasks.toSet,
           promise))
+
       promise.future
     }
 
