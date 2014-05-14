@@ -17,7 +17,7 @@ import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
-import mesosphere.marathon.upgrade.{DeploymentPlan, DeploymentPlanRepository, UpgradeManager}
+import mesosphere.marathon.upgrade.{DeploymentPlan, DeploymentPlanRepository}
 import mesosphere.marathon.api.v2.Group
 
 /**
@@ -42,7 +42,6 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
     bind(classOf[HealthCheckManager]).in(Scopes.SINGLETON)
-    bind(classOf[UpgradeManager]).in(Scopes.SINGLETON)
     bind(classOf[GroupManager]).in(Scopes.SINGLETON)
 
     bind(classOf[String])

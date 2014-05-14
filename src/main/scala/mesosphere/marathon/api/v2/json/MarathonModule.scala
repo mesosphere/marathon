@@ -12,7 +12,7 @@ import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS
 import mesosphere.marathon.{ EmptyContainerInfo, ContainerInfo }
 import scala.collection.JavaConverters._
-import mesosphere.marathon.api.v2.{RelativeStep, AbsoluteStep, Step, AppUpdate}
+import mesosphere.marathon.api.v2._
 import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties

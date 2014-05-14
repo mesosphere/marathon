@@ -97,8 +97,16 @@ message StepDefinition {
 }
 
 message ScalingStrategyDefinition {
-  required uint32 watchPeriod = 1;
-  repeated StepDefinition steps = 2;
+  enum StrategyKind {
+    Rolling = 0;
+    Canary = 1;
+  }
+  required StrategyKind kind = 1;
+  //rolling props
+  optional double minimumHealthCapacity = 2;
+  //canary props
+  optional uint32 watchPeriod = 3;
+  repeated StepDefinition steps = 4;
 }
 
 message GroupDefinition {
@@ -122,9 +130,10 @@ message DeploymentStepDefinition {
 }
 
 message DeploymentPlanDefinition {
-  repeated ServiceDefinition orig = 1;
-  repeated ServiceDefinition target = 2;
-  repeated DeploymentStepDefinition steps = 3;
-  optional DeploymentStepDefinition current = 4;
-  optional DeploymentStepDefinition last = 5;
+  required ScalingStrategyDefinition strategy = 1;
+  repeated ServiceDefinition orig = 2;
+  repeated ServiceDefinition target = 3;
+  repeated DeploymentStepDefinition steps = 4;
+  optional DeploymentStepDefinition current = 5;
+  optional DeploymentStepDefinition last = 6;
 }

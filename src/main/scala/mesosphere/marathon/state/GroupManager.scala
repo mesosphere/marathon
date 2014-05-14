@@ -1,20 +1,22 @@
 package mesosphere.marathon.state
 
 import javax.inject.Inject
-import mesosphere.marathon.upgrade.UpgradeManager
-import mesosphere.marathon.api.v2.Group
+import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.api.v2.{CanaryStrategy, RollingStrategy, Group}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.Singleton
-import mesosphere.marathon.StorageException
+import mesosphere.marathon.{MarathonSchedulerService, StorageException}
 import org.apache.log4j.Logger
+import mesosphere.marathon.tasks.TaskTracker
 
 /**
  * The group manager is the facade for all group related actions.
  * It persists the state of a group and delegates deployments to the UpgradeManager.
  */
 class GroupManager @Singleton @Inject() (
-  upgradeManager:UpgradeManager,
+  scheduler: MarathonSchedulerService,
+  taskTracker: TaskTracker,
   repo:GroupRepository
 ) {
 
@@ -31,7 +33,7 @@ class GroupManager @Singleton @Inject() (
         throw new IllegalArgumentException(s"Can not install group ${group.id}, since there is already a group with this id!")
       case None =>
         log.info(s"Create new Group ${group.id}")
-        storeWith(group) { storedGroup => upgradeManager.install(storedGroup) }
+        storeWith(group) { stored => Future.sequence(stored.apps.map(scheduler.startApp)).map(ignore => stored) }
     }
   }
 
@@ -39,7 +41,14 @@ class GroupManager @Singleton @Inject() (
     repo.currentVersion(id).flatMap {
       case Some(current) =>
         log.info(s"Update existing Group $id with $group")
-        storeWith(group) { storedGroup => upgradeManager.upgrade(current, storedGroup) }
+        storeWith(group) { storedGroup =>
+          val runningTasks = current.apps.map( app => app.id->taskTracker.get(app.id).map(_.getId).toList)
+          val plan = DeploymentPlan.apply(current, storedGroup, runningTasks.toMap)
+          plan.strategy match {
+            case s:RollingStrategy => ???
+            case s:CanaryStrategy => ???
+          }
+        }
       case None =>
         log.warn(s"Can not update group $id, since there is no current version!")
         throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")
@@ -48,7 +57,7 @@ class GroupManager @Singleton @Inject() (
 
   def expunge(id:String) : Future[Boolean] = {
     repo.currentVersion(id).flatMap {
-      case Some(current) => upgradeManager.delete(current).flatMap( ignore => repo.expunge(id).map(_.forall(identity)))
+      case Some(current) => Future.sequence(current.apps.map(scheduler.stopApp)).flatMap(_ => repo.expunge(id).map(_.forall(identity)))
       case None => Future.successful(false)
     }
   }
