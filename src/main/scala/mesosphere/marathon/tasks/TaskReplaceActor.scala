@@ -8,7 +8,7 @@ import mesosphere.marathon.event.HealthStatusChanged
 import org.apache.mesos.SchedulerDriver
 import scala.collection.mutable
 import org.apache.mesos.Protos.TaskID
-import mesosphere.marathon.TaskRestartFailedException
+import mesosphere.marathon.TaskUpgradeFailedException
 import org.slf4j.LoggerFactory
 
 class EventForwarder(receiver: ActorRef) {
@@ -52,7 +52,7 @@ class TaskReplaceActor(
 
     case HealthStatusChanged(_, taskId, false, _) if taskIds(taskId) && healthy(taskId) =>
       val msg = s"Task $taskId went from a healthy to un unhealthy state during replacement"
-      promise.failure(new TaskRestartFailedException(msg))
+      promise.failure(new TaskUpgradeFailedException(msg))
       context.stop(self)
 
     case x: HealthStatusChanged =>

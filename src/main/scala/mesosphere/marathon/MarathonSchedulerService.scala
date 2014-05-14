@@ -92,8 +92,8 @@ class MarathonSchedulerService @Inject() (
       scheduler.scale(driver, updatedApp)
     }
 
-  def restartApp(appName: String, keepAlive: Int): Future[Boolean] =
-    scheduler.restartApp(driver, appName, keepAlive)
+  def upgradeApp(app: AppDefinition, keepAlive: Int): Future[Boolean] =
+    scheduler.upgradeApp(driver, app, keepAlive)
 
   def listApps(): Iterable[AppDefinition] =
     Await.result(appRepository.apps, config.zkTimeoutDuration)

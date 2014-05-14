@@ -8,7 +8,11 @@ class StartupCallbackManager {
   private [tasks] val callbacks = TrieMap[(String, TaskState), (AtomicInteger, Boolean => Unit)]()
 
   def add(appID: String, status: TaskState, count: Int)(f: Boolean => Unit): Unit =
-    callbacks += (appID -> status) -> (new AtomicInteger(count), f)
+    if (count <= 0) {
+      f(true)
+    } else {
+      callbacks += (appID -> status) ->(new AtomicInteger(count), f)
+    }
 
   def countdown(appID: String, status: TaskState): Unit =
     callbacks.get(appID -> status) foreach { case (i, f) =>

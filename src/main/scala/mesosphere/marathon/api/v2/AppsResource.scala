@@ -92,10 +92,7 @@ class AppsResource @Inject() (
   ): Response = {
     service.getApp(id) match {
       case Some(app) =>
-        service.restartApp(id, keepAlive) onComplete {
-          case Success(_) => eventBus.post(RestartSuccess(id))
-          case _ => eventBus.post(RestartFailed(id))
-        }
+        service.upgradeApp(app, keepAlive)
         Response.ok().build()
 
       case None => Responses.unknownApp(id)

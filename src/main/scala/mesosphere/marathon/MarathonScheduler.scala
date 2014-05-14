@@ -25,6 +25,12 @@ import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
 import scala.collection.mutable
 import akka.actor.{Props, ActorSystem}
+import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.event.FrameworkMessageEvent
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
+import mesosphere.marathon.event.RestartSuccess
 
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -275,14 +281,14 @@ class MarathonScheduler @Inject() (
     }
   }
 
-  def restartApp(driver: SchedulerDriver,
-                 appID: String,
+  def upgradeApp(driver: SchedulerDriver,
+                 app: AppDefinition,
                  keepAlive: Int): Future[Boolean] = {
 
     def kill(instances: Seq[MarathonTask]): Future[Boolean] = {
       log.debug(s"Killing $instances")
       val promise = Promise[Boolean]()
-      callbacks.add(appID, TaskState.TASK_KILLED, instances.size)(promise.success(_))
+      callbacks.add(app.id, TaskState.TASK_KILLED, instances.size)(promise.success(_))
 
       instances foreach { task =>
         driver.killTask(TaskID.newBuilder()
@@ -296,15 +302,15 @@ class MarathonScheduler @Inject() (
     def start(app: AppDefinition, count: Int): Future[Boolean] = {
       log.debug(s"Starting $count instances of $app")
       val promise = Promise[Boolean]()
-      callbacks.add(appID, TaskState.TASK_FAILED, 1) { res =>
+      callbacks.add(app.id, TaskState.TASK_FAILED, 1) { res =>
         if (res) {
-          callbacks.remove(appID, TaskState.TASK_RUNNING)
-          promise.failure(new TaskRestartFailedException(s"Failed to restart $appID"))
+          callbacks.remove(app.id, TaskState.TASK_RUNNING)
+          promise.failure(new TaskUpgradeFailedException(s"Failed to restart $app.id"))
         }
       }
-      callbacks.add(appID, TaskState.TASK_RUNNING, count) { success =>
+      callbacks.add(app.id, TaskState.TASK_RUNNING, count) { success =>
         promise.success(success)
-        callbacks.remove(appID, TaskState.TASK_FAILED)
+        callbacks.remove(app.id, TaskState.TASK_FAILED)
       }
 
       for (_ <- 0 until count) taskQueue.add(app)
@@ -315,41 +321,78 @@ class MarathonScheduler @Inject() (
     def replace(nrToStart: Int, tasks: Seq[MarathonTask]): Future[Boolean] = {
       log.debug(s"Replacing $tasks with $nrToStart new instances.")
       val promise = Promise[Boolean]()
-      system.actorOf(
-        Props(
-          classOf[TaskReplaceActor],
-          driver,
-          eventBus,
-          appID,
-          nrToStart,
-          tasks.toSet,
-          promise))
+      if (nrToStart == 0) {
+        system.actorOf(
+          Props(
+            classOf[TaskReplaceActor],
+            driver,
+            eventBus,
+            app.id,
+            nrToStart,
+            tasks.toSet,
+            promise))
+      } else {
+        promise.success(true)
+      }
 
       promise.future
     }
 
-    appRepository.currentVersion(appID).flatMap {
-      case Some(app) =>
-        scalingApps.add(appID)
-        val tasks = taskTracker.get(app.id).toSeq.sortBy(_.getStartedAt)
-        val killImmediately = tasks.take(tasks.size - keepAlive)
-        val resKill = kill(killImmediately)
-        val resReplace = replace(app.instances, tasks.drop(tasks.size - keepAlive))
-        val resStart = start(app, app.instances)
+    def restartWithHealthChecks(app: AppDefinition): Future[Boolean] = {
+      val tasks = taskTracker.get(app.id).toSeq.sortBy(_.getStartedAt)
+      val killImmediately = tasks.take(tasks.size - keepAlive)
+      val resKill = kill(killImmediately)
+      val resReplace = replace(app.instances, tasks.drop(tasks.size - keepAlive))
+      val resStart = start(app, app.instances)
 
-        val res = for {
-          killed <- resKill
-          started <- resStart
-          replaced <- resReplace
-        } yield killed && started && replaced
-
-        res onComplete { _ =>
-          scalingApps -= appID
-        }
-        res
-
-      case None => Future.successful(false)
+      for {
+        killed <- resKill
+        started <- resStart
+        replaced <- resReplace
+      } yield killed && started && replaced
     }
+
+    def immediateRestart(app: AppDefinition): Future[Boolean] = {
+      val killRes = kill(taskTracker.get(app.id).toSeq)
+      val startRes = start(app, app.instances)
+
+      for {
+        killed <- killRes
+        started <- startRes
+      } yield killed && started
+    }
+
+    scalingApps.add(app.id)
+
+    val res = appRepository.store(app) flatMap {
+      case Some(_) =>
+        if (app.healthChecks.size > 0 && keepAlive > 0) {
+          restartWithHealthChecks(app)
+        } else if (keepAlive == 0) {
+          immediateRestart(app)
+        }
+        else {
+          throw new TaskUpgradeFailedException("Keep alive requested, but no health checks configured.")
+        }
+
+      case None => throw new TaskUpgradeFailedException("Failed to store app definition.")
+    }
+
+    res onComplete { _ =>
+      scalingApps -= app.id
+    }
+
+    res onComplete {
+      case Success(_) =>
+        log.info(s"Restart of ${app.id} successful")
+        eventBus.post(RestartSuccess({app.id}))
+
+      case Failure(e) =>
+        log.error(s"Restart of ${app.id} failed", e)
+        eventBus.post(RestartFailed(app.id))
+    }
+
+    res
   }
 
   /**
