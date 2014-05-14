@@ -360,7 +360,7 @@ class MarathonScheduler @Inject() (
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Unit = {
-    appRepository.appIds().onComplete {
+    appRepository.allIds().onComplete {
       case Success(iterator) =>
         log.info("Syncing tasks for all apps")
         val buf = new ListBuffer[TaskStatus]

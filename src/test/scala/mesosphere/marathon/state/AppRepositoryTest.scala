@@ -48,7 +48,7 @@ class AppRepositoryTest extends MarathonSpec {
     when(store.names()).thenReturn(future)
 
     val repo = new AppRepository(store)
-    val res = repo.appIds()
+    val res = repo.allIds()
 
     assert(Seq("app1", "app2") == Await.result(res, 5.seconds), "Should return only unversioned names")
     verify(store).names()

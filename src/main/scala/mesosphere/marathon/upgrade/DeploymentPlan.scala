@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.{RollingStrategy, CanaryStrategy, ScalingStrategy, Group}
-import mesosphere.marathon.state.MarathonState
+import mesosphere.marathon.state.{Timestamp, MarathonState}
 import mesosphere.marathon.Protos.{DeploymentActionDefinition, DeploymentStepDefinition, DeploymentPlanDefinition}
 import scala.collection.JavaConversions._
 
@@ -11,12 +11,14 @@ case class DeploymentAction(appId:String, scaleUp:Int, taskIdsToKill:List[String
 case class DeploymentStep(deployments:List[DeploymentAction], waitTime:Int)
 
 case class DeploymentPlan(
+  id: String,
   strategy: ScalingStrategy,
   original: List[AppDefinition],
   target: List[AppDefinition],
   steps: List[DeploymentStep],
   current: Option[DeploymentStep] = None,
-  last: Option[DeploymentStep] = None
+  last: Option[DeploymentStep] = None,
+  version : Timestamp = Timestamp.now()
 ) extends MarathonState[DeploymentPlanDefinition, DeploymentPlan] {
 
   def next : DeploymentPlan = steps match {
@@ -32,12 +34,14 @@ case class DeploymentPlan(
     def action(da:DeploymentActionDefinition) = DeploymentAction(da.getAppId, da.getScale, da.getTaksIdsToKillList.toList)
     def step(dd:DeploymentStepDefinition) = DeploymentStep(dd.getDeploymentsList.map(action).toList, dd.getWaitTime)
     DeploymentPlan(
+      msg.getId,
       ScalingStrategy.fromProto(msg.getStrategy),
       msg.getOrigList.map(AppDefinition.fromProto).toList,
       msg.getTargetList.map(AppDefinition.fromProto).toList,
       msg.getStepsList.map(step).toList,
       if (msg.hasCurrent) Some(step(msg.getCurrent)) else None,
-      if (msg.hasLast) Some(step(msg.getLast)) else None
+      if (msg.hasLast) Some(step(msg.getLast)) else None,
+      Timestamp(msg.getVersion)
     )
   }
 
@@ -48,6 +52,9 @@ case class DeploymentPlan(
       .addAllDeployments(dd.deployments.map(action))
       .setWaitTime(dd.waitTime).build()
     val builder = DeploymentPlanDefinition.newBuilder()
+      .setId(id)
+      .setVersion(version.toString)
+      .setStrategy(strategy.toProto)
       .addAllOrig(original.map(_.toProto))
       .addAllTarget(target.map(_.toProto))
       .addAllSteps(steps.map(step))
@@ -88,8 +95,8 @@ object DeploymentPlan {
         firstSteps ::: List(lastStep)
       case _ => Nil
     }
-    DeploymentPlan(newProduct.scalingStrategy, oldProduct.apps.toList, newProduct.apps.toList, steps)
+    DeploymentPlan(oldProduct.id, newProduct.scalingStrategy, oldProduct.apps.toList, newProduct.apps.toList, steps)
   }
 
-  def empty() = DeploymentPlan(RollingStrategy(1), Nil, Nil, Nil)
+  def empty() = DeploymentPlan("", RollingStrategy(1), Nil, Nil, Nil)
 }

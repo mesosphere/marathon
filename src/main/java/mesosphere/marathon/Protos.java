@@ -13046,120 +13046,150 @@ public final class Protos {
   public interface DeploymentPlanDefinitionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;
+    // required string id = 1;
     /**
-     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+     * <code>required string id = 1;</code>
+     */
+    boolean hasId();
+    /**
+     * <code>required string id = 1;</code>
+     */
+    java.lang.String getId();
+    /**
+     * <code>required string id = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getIdBytes();
+
+    // required string version = 2;
+    /**
+     * <code>required string version = 2;</code>
+     */
+    boolean hasVersion();
+    /**
+     * <code>required string version = 2;</code>
+     */
+    java.lang.String getVersion();
+    /**
+     * <code>required string version = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getVersionBytes();
+
+    // required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;
+    /**
+     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
      */
     boolean hasStrategy();
     /**
-     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
      */
     mesosphere.marathon.Protos.ScalingStrategyDefinition getStrategy();
     /**
-     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
      */
     mesosphere.marathon.Protos.ScalingStrategyDefinitionOrBuilder getStrategyOrBuilder();
 
-    // repeated .mesosphere.marathon.ServiceDefinition orig = 2;
+    // repeated .mesosphere.marathon.ServiceDefinition orig = 4;
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     java.util.List<mesosphere.marathon.Protos.ServiceDefinition> 
         getOrigList();
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     mesosphere.marathon.Protos.ServiceDefinition getOrig(int index);
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     int getOrigCount();
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     java.util.List<? extends mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
         getOrigOrBuilderList();
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getOrigOrBuilder(
         int index);
 
-    // repeated .mesosphere.marathon.ServiceDefinition target = 3;
+    // repeated .mesosphere.marathon.ServiceDefinition target = 5;
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     java.util.List<mesosphere.marathon.Protos.ServiceDefinition> 
         getTargetList();
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     mesosphere.marathon.Protos.ServiceDefinition getTarget(int index);
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     int getTargetCount();
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     java.util.List<? extends mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
         getTargetOrBuilderList();
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getTargetOrBuilder(
         int index);
 
-    // repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;
+    // repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     java.util.List<mesosphere.marathon.Protos.DeploymentStepDefinition> 
         getStepsList();
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     mesosphere.marathon.Protos.DeploymentStepDefinition getSteps(int index);
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     int getStepsCount();
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     java.util.List<? extends mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder> 
         getStepsOrBuilderList();
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder getStepsOrBuilder(
         int index);
 
-    // optional .mesosphere.marathon.DeploymentStepDefinition current = 5;
+    // optional .mesosphere.marathon.DeploymentStepDefinition current = 7;
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
      */
     boolean hasCurrent();
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
      */
     mesosphere.marathon.Protos.DeploymentStepDefinition getCurrent();
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
      */
     mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder getCurrentOrBuilder();
 
-    // optional .mesosphere.marathon.DeploymentStepDefinition last = 6;
+    // optional .mesosphere.marathon.DeploymentStepDefinition last = 8;
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
      */
     boolean hasLast();
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
      */
     mesosphere.marathon.Protos.DeploymentStepDefinition getLast();
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
      */
     mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder getLastOrBuilder();
   }
@@ -13215,8 +13245,18 @@ public final class Protos {
               break;
             }
             case 10: {
+              bitField0_ |= 0x00000001;
+              id_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              version_ = input.readBytes();
+              break;
+            }
+            case 26: {
               mesosphere.marathon.Protos.ScalingStrategyDefinition.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+              if (((bitField0_ & 0x00000004) == 0x00000004)) {
                 subBuilder = strategy_.toBuilder();
               }
               strategy_ = input.readMessage(mesosphere.marathon.Protos.ScalingStrategyDefinition.PARSER, extensionRegistry);
@@ -13224,36 +13264,36 @@ public final class Protos {
                 subBuilder.mergeFrom(strategy_);
                 strategy_ = subBuilder.buildPartial();
               }
-              bitField0_ |= 0x00000001;
-              break;
-            }
-            case 18: {
-              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
-                orig_ = new java.util.ArrayList<mesosphere.marathon.Protos.ServiceDefinition>();
-                mutable_bitField0_ |= 0x00000002;
-              }
-              orig_.add(input.readMessage(mesosphere.marathon.Protos.ServiceDefinition.PARSER, extensionRegistry));
-              break;
-            }
-            case 26: {
-              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
-                target_ = new java.util.ArrayList<mesosphere.marathon.Protos.ServiceDefinition>();
-                mutable_bitField0_ |= 0x00000004;
-              }
-              target_.add(input.readMessage(mesosphere.marathon.Protos.ServiceDefinition.PARSER, extensionRegistry));
+              bitField0_ |= 0x00000004;
               break;
             }
             case 34: {
               if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
-                steps_ = new java.util.ArrayList<mesosphere.marathon.Protos.DeploymentStepDefinition>();
+                orig_ = new java.util.ArrayList<mesosphere.marathon.Protos.ServiceDefinition>();
                 mutable_bitField0_ |= 0x00000008;
+              }
+              orig_.add(input.readMessage(mesosphere.marathon.Protos.ServiceDefinition.PARSER, extensionRegistry));
+              break;
+            }
+            case 42: {
+              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                target_ = new java.util.ArrayList<mesosphere.marathon.Protos.ServiceDefinition>();
+                mutable_bitField0_ |= 0x00000010;
+              }
+              target_.add(input.readMessage(mesosphere.marathon.Protos.ServiceDefinition.PARSER, extensionRegistry));
+              break;
+            }
+            case 50: {
+              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+                steps_ = new java.util.ArrayList<mesosphere.marathon.Protos.DeploymentStepDefinition>();
+                mutable_bitField0_ |= 0x00000020;
               }
               steps_.add(input.readMessage(mesosphere.marathon.Protos.DeploymentStepDefinition.PARSER, extensionRegistry));
               break;
             }
-            case 42: {
+            case 58: {
               mesosphere.marathon.Protos.DeploymentStepDefinition.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+              if (((bitField0_ & 0x00000008) == 0x00000008)) {
                 subBuilder = current_.toBuilder();
               }
               current_ = input.readMessage(mesosphere.marathon.Protos.DeploymentStepDefinition.PARSER, extensionRegistry);
@@ -13261,12 +13301,12 @@ public final class Protos {
                 subBuilder.mergeFrom(current_);
                 current_ = subBuilder.buildPartial();
               }
-              bitField0_ |= 0x00000002;
+              bitField0_ |= 0x00000008;
               break;
             }
-            case 50: {
+            case 66: {
               mesosphere.marathon.Protos.DeploymentStepDefinition.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000004) == 0x00000004)) {
+              if (((bitField0_ & 0x00000010) == 0x00000010)) {
                 subBuilder = last_.toBuilder();
               }
               last_ = input.readMessage(mesosphere.marathon.Protos.DeploymentStepDefinition.PARSER, extensionRegistry);
@@ -13274,7 +13314,7 @@ public final class Protos {
                 subBuilder.mergeFrom(last_);
                 last_ = subBuilder.buildPartial();
               }
-              bitField0_ |= 0x00000004;
+              bitField0_ |= 0x00000010;
               break;
             }
           }
@@ -13285,13 +13325,13 @@ public final class Protos {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e.getMessage()).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
           orig_ = java.util.Collections.unmodifiableList(orig_);
         }
-        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
           target_ = java.util.Collections.unmodifiableList(target_);
         }
-        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
           steps_ = java.util.Collections.unmodifiableList(steps_);
         }
         this.unknownFields = unknownFields.build();
@@ -13326,181 +13366,269 @@ public final class Protos {
     }
 
     private int bitField0_;
-    // required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;
-    public static final int STRATEGY_FIELD_NUMBER = 1;
-    private mesosphere.marathon.Protos.ScalingStrategyDefinition strategy_;
+    // required string id = 1;
+    public static final int ID_FIELD_NUMBER = 1;
+    private java.lang.Object id_;
     /**
-     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+     * <code>required string id = 1;</code>
      */
-    public boolean hasStrategy() {
+    public boolean hasId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+     * <code>required string id = 1;</code>
+     */
+    public java.lang.String getId() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          id_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string id = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getIdBytes() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        id_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required string version = 2;
+    public static final int VERSION_FIELD_NUMBER = 2;
+    private java.lang.Object version_;
+    /**
+     * <code>required string version = 2;</code>
+     */
+    public boolean hasVersion() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required string version = 2;</code>
+     */
+    public java.lang.String getVersion() {
+      java.lang.Object ref = version_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          version_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string version = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getVersionBytes() {
+      java.lang.Object ref = version_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        version_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;
+    public static final int STRATEGY_FIELD_NUMBER = 3;
+    private mesosphere.marathon.Protos.ScalingStrategyDefinition strategy_;
+    /**
+     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
+     */
+    public boolean hasStrategy() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
      */
     public mesosphere.marathon.Protos.ScalingStrategyDefinition getStrategy() {
       return strategy_;
     }
     /**
-     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+     * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
      */
     public mesosphere.marathon.Protos.ScalingStrategyDefinitionOrBuilder getStrategyOrBuilder() {
       return strategy_;
     }
 
-    // repeated .mesosphere.marathon.ServiceDefinition orig = 2;
-    public static final int ORIG_FIELD_NUMBER = 2;
+    // repeated .mesosphere.marathon.ServiceDefinition orig = 4;
+    public static final int ORIG_FIELD_NUMBER = 4;
     private java.util.List<mesosphere.marathon.Protos.ServiceDefinition> orig_;
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     public java.util.List<mesosphere.marathon.Protos.ServiceDefinition> getOrigList() {
       return orig_;
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     public java.util.List<? extends mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
         getOrigOrBuilderList() {
       return orig_;
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     public int getOrigCount() {
       return orig_.size();
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     public mesosphere.marathon.Protos.ServiceDefinition getOrig(int index) {
       return orig_.get(index);
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
      */
     public mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getOrigOrBuilder(
         int index) {
       return orig_.get(index);
     }
 
-    // repeated .mesosphere.marathon.ServiceDefinition target = 3;
-    public static final int TARGET_FIELD_NUMBER = 3;
+    // repeated .mesosphere.marathon.ServiceDefinition target = 5;
+    public static final int TARGET_FIELD_NUMBER = 5;
     private java.util.List<mesosphere.marathon.Protos.ServiceDefinition> target_;
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     public java.util.List<mesosphere.marathon.Protos.ServiceDefinition> getTargetList() {
       return target_;
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     public java.util.List<? extends mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
         getTargetOrBuilderList() {
       return target_;
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     public int getTargetCount() {
       return target_.size();
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     public mesosphere.marathon.Protos.ServiceDefinition getTarget(int index) {
       return target_.get(index);
     }
     /**
-     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+     * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
      */
     public mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getTargetOrBuilder(
         int index) {
       return target_.get(index);
     }
 
-    // repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;
-    public static final int STEPS_FIELD_NUMBER = 4;
+    // repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;
+    public static final int STEPS_FIELD_NUMBER = 6;
     private java.util.List<mesosphere.marathon.Protos.DeploymentStepDefinition> steps_;
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     public java.util.List<mesosphere.marathon.Protos.DeploymentStepDefinition> getStepsList() {
       return steps_;
     }
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     public java.util.List<? extends mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder> 
         getStepsOrBuilderList() {
       return steps_;
     }
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     public int getStepsCount() {
       return steps_.size();
     }
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     public mesosphere.marathon.Protos.DeploymentStepDefinition getSteps(int index) {
       return steps_.get(index);
     }
     /**
-     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+     * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
      */
     public mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder getStepsOrBuilder(
         int index) {
       return steps_.get(index);
     }
 
-    // optional .mesosphere.marathon.DeploymentStepDefinition current = 5;
-    public static final int CURRENT_FIELD_NUMBER = 5;
+    // optional .mesosphere.marathon.DeploymentStepDefinition current = 7;
+    public static final int CURRENT_FIELD_NUMBER = 7;
     private mesosphere.marathon.Protos.DeploymentStepDefinition current_;
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
      */
     public boolean hasCurrent() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
      */
     public mesosphere.marathon.Protos.DeploymentStepDefinition getCurrent() {
       return current_;
     }
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
      */
     public mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder getCurrentOrBuilder() {
       return current_;
     }
 
-    // optional .mesosphere.marathon.DeploymentStepDefinition last = 6;
-    public static final int LAST_FIELD_NUMBER = 6;
+    // optional .mesosphere.marathon.DeploymentStepDefinition last = 8;
+    public static final int LAST_FIELD_NUMBER = 8;
     private mesosphere.marathon.Protos.DeploymentStepDefinition last_;
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
      */
     public boolean hasLast() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
      */
     public mesosphere.marathon.Protos.DeploymentStepDefinition getLast() {
       return last_;
     }
     /**
-     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+     * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
      */
     public mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder getLastOrBuilder() {
       return last_;
     }
 
     private void initFields() {
+      id_ = "";
+      version_ = "";
       strategy_ = mesosphere.marathon.Protos.ScalingStrategyDefinition.getDefaultInstance();
       orig_ = java.util.Collections.emptyList();
       target_ = java.util.Collections.emptyList();
@@ -13513,6 +13641,14 @@ public final class Protos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
 
+      if (!hasId()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasVersion()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
       if (!hasStrategy()) {
         memoizedIsInitialized = 0;
         return false;
@@ -13559,22 +13695,28 @@ public final class Protos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, strategy_);
-      }
-      for (int i = 0; i < orig_.size(); i++) {
-        output.writeMessage(2, orig_.get(i));
-      }
-      for (int i = 0; i < target_.size(); i++) {
-        output.writeMessage(3, target_.get(i));
-      }
-      for (int i = 0; i < steps_.size(); i++) {
-        output.writeMessage(4, steps_.get(i));
+        output.writeBytes(1, getIdBytes());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeMessage(5, current_);
+        output.writeBytes(2, getVersionBytes());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeMessage(6, last_);
+        output.writeMessage(3, strategy_);
+      }
+      for (int i = 0; i < orig_.size(); i++) {
+        output.writeMessage(4, orig_.get(i));
+      }
+      for (int i = 0; i < target_.size(); i++) {
+        output.writeMessage(5, target_.get(i));
+      }
+      for (int i = 0; i < steps_.size(); i++) {
+        output.writeMessage(6, steps_.get(i));
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeMessage(7, current_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeMessage(8, last_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -13587,27 +13729,35 @@ public final class Protos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, strategy_);
-      }
-      for (int i = 0; i < orig_.size(); i++) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, orig_.get(i));
-      }
-      for (int i = 0; i < target_.size(); i++) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, target_.get(i));
-      }
-      for (int i = 0; i < steps_.size(); i++) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, steps_.get(i));
+          .computeBytesSize(1, getIdBytes());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(5, current_);
+          .computeBytesSize(2, getVersionBytes());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(6, last_);
+          .computeMessageSize(3, strategy_);
+      }
+      for (int i = 0; i < orig_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, orig_.get(i));
+      }
+      for (int i = 0; i < target_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(5, target_.get(i));
+      }
+      for (int i = 0; i < steps_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, steps_.get(i));
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(7, current_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, last_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -13731,27 +13881,31 @@ public final class Protos {
 
       public Builder clear() {
         super.clear();
+        id_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        version_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
         if (strategyBuilder_ == null) {
           strategy_ = mesosphere.marathon.Protos.ScalingStrategyDefinition.getDefaultInstance();
         } else {
           strategyBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = (bitField0_ & ~0x00000004);
         if (origBuilder_ == null) {
           orig_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000008);
         } else {
           origBuilder_.clear();
         }
         if (targetBuilder_ == null) {
           target_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000004);
+          bitField0_ = (bitField0_ & ~0x00000010);
         } else {
           targetBuilder_.clear();
         }
         if (stepsBuilder_ == null) {
           steps_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000008);
+          bitField0_ = (bitField0_ & ~0x00000020);
         } else {
           stepsBuilder_.clear();
         }
@@ -13760,13 +13914,13 @@ public final class Protos {
         } else {
           currentBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000040);
         if (lastBuilder_ == null) {
           last_ = mesosphere.marathon.Protos.DeploymentStepDefinition.getDefaultInstance();
         } else {
           lastBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
@@ -13798,48 +13952,56 @@ public final class Protos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
+        result.id_ = id_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.version_ = version_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
         if (strategyBuilder_ == null) {
           result.strategy_ = strategy_;
         } else {
           result.strategy_ = strategyBuilder_.build();
         }
         if (origBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          if (((bitField0_ & 0x00000008) == 0x00000008)) {
             orig_ = java.util.Collections.unmodifiableList(orig_);
-            bitField0_ = (bitField0_ & ~0x00000002);
+            bitField0_ = (bitField0_ & ~0x00000008);
           }
           result.orig_ = orig_;
         } else {
           result.orig_ = origBuilder_.build();
         }
         if (targetBuilder_ == null) {
-          if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          if (((bitField0_ & 0x00000010) == 0x00000010)) {
             target_ = java.util.Collections.unmodifiableList(target_);
-            bitField0_ = (bitField0_ & ~0x00000004);
+            bitField0_ = (bitField0_ & ~0x00000010);
           }
           result.target_ = target_;
         } else {
           result.target_ = targetBuilder_.build();
         }
         if (stepsBuilder_ == null) {
-          if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          if (((bitField0_ & 0x00000020) == 0x00000020)) {
             steps_ = java.util.Collections.unmodifiableList(steps_);
-            bitField0_ = (bitField0_ & ~0x00000008);
+            bitField0_ = (bitField0_ & ~0x00000020);
           }
           result.steps_ = steps_;
         } else {
           result.steps_ = stepsBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
-          to_bitField0_ |= 0x00000002;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000008;
         }
         if (currentBuilder_ == null) {
           result.current_ = current_;
         } else {
           result.current_ = currentBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000004;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000010;
         }
         if (lastBuilder_ == null) {
           result.last_ = last_;
@@ -13862,6 +14024,16 @@ public final class Protos {
 
       public Builder mergeFrom(mesosphere.marathon.Protos.DeploymentPlanDefinition other) {
         if (other == mesosphere.marathon.Protos.DeploymentPlanDefinition.getDefaultInstance()) return this;
+        if (other.hasId()) {
+          bitField0_ |= 0x00000001;
+          id_ = other.id_;
+          onChanged();
+        }
+        if (other.hasVersion()) {
+          bitField0_ |= 0x00000002;
+          version_ = other.version_;
+          onChanged();
+        }
         if (other.hasStrategy()) {
           mergeStrategy(other.getStrategy());
         }
@@ -13869,7 +14041,7 @@ public final class Protos {
           if (!other.orig_.isEmpty()) {
             if (orig_.isEmpty()) {
               orig_ = other.orig_;
-              bitField0_ = (bitField0_ & ~0x00000002);
+              bitField0_ = (bitField0_ & ~0x00000008);
             } else {
               ensureOrigIsMutable();
               orig_.addAll(other.orig_);
@@ -13882,7 +14054,7 @@ public final class Protos {
               origBuilder_.dispose();
               origBuilder_ = null;
               orig_ = other.orig_;
-              bitField0_ = (bitField0_ & ~0x00000002);
+              bitField0_ = (bitField0_ & ~0x00000008);
               origBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getOrigFieldBuilder() : null;
@@ -13895,7 +14067,7 @@ public final class Protos {
           if (!other.target_.isEmpty()) {
             if (target_.isEmpty()) {
               target_ = other.target_;
-              bitField0_ = (bitField0_ & ~0x00000004);
+              bitField0_ = (bitField0_ & ~0x00000010);
             } else {
               ensureTargetIsMutable();
               target_.addAll(other.target_);
@@ -13908,7 +14080,7 @@ public final class Protos {
               targetBuilder_.dispose();
               targetBuilder_ = null;
               target_ = other.target_;
-              bitField0_ = (bitField0_ & ~0x00000004);
+              bitField0_ = (bitField0_ & ~0x00000010);
               targetBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getTargetFieldBuilder() : null;
@@ -13921,7 +14093,7 @@ public final class Protos {
           if (!other.steps_.isEmpty()) {
             if (steps_.isEmpty()) {
               steps_ = other.steps_;
-              bitField0_ = (bitField0_ & ~0x00000008);
+              bitField0_ = (bitField0_ & ~0x00000020);
             } else {
               ensureStepsIsMutable();
               steps_.addAll(other.steps_);
@@ -13934,7 +14106,7 @@ public final class Protos {
               stepsBuilder_.dispose();
               stepsBuilder_ = null;
               steps_ = other.steps_;
-              bitField0_ = (bitField0_ & ~0x00000008);
+              bitField0_ = (bitField0_ & ~0x00000020);
               stepsBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getStepsFieldBuilder() : null;
@@ -13954,6 +14126,14 @@ public final class Protos {
       }
 
       public final boolean isInitialized() {
+        if (!hasId()) {
+          
+          return false;
+        }
+        if (!hasVersion()) {
+          
+          return false;
+        }
         if (!hasStrategy()) {
           
           return false;
@@ -14014,18 +14194,166 @@ public final class Protos {
       }
       private int bitField0_;
 
-      // required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;
+      // required string id = 1;
+      private java.lang.Object id_ = "";
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public boolean hasId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public java.lang.String getId() {
+        java.lang.Object ref = id_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          id_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getIdBytes() {
+        java.lang.Object ref = id_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          id_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public Builder setId(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        id_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public Builder clearId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        id_ = getDefaultInstance().getId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public Builder setIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        id_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required string version = 2;
+      private java.lang.Object version_ = "";
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public java.lang.String getVersion() {
+        java.lang.Object ref = version_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          version_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getVersionBytes() {
+        java.lang.Object ref = version_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          version_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public Builder setVersion(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public Builder clearVersion() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        version_ = getDefaultInstance().getVersion();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public Builder setVersionBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;
       private mesosphere.marathon.Protos.ScalingStrategyDefinition strategy_ = mesosphere.marathon.Protos.ScalingStrategyDefinition.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           mesosphere.marathon.Protos.ScalingStrategyDefinition, mesosphere.marathon.Protos.ScalingStrategyDefinition.Builder, mesosphere.marathon.Protos.ScalingStrategyDefinitionOrBuilder> strategyBuilder_;
       /**
-       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
        */
       public boolean hasStrategy() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
        */
       public mesosphere.marathon.Protos.ScalingStrategyDefinition getStrategy() {
         if (strategyBuilder_ == null) {
@@ -14035,7 +14363,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
        */
       public Builder setStrategy(mesosphere.marathon.Protos.ScalingStrategyDefinition value) {
         if (strategyBuilder_ == null) {
@@ -14047,11 +14375,11 @@ public final class Protos {
         } else {
           strategyBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000004;
         return this;
       }
       /**
-       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
        */
       public Builder setStrategy(
           mesosphere.marathon.Protos.ScalingStrategyDefinition.Builder builderForValue) {
@@ -14061,15 +14389,15 @@ public final class Protos {
         } else {
           strategyBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000004;
         return this;
       }
       /**
-       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
        */
       public Builder mergeStrategy(mesosphere.marathon.Protos.ScalingStrategyDefinition value) {
         if (strategyBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+          if (((bitField0_ & 0x00000004) == 0x00000004) &&
               strategy_ != mesosphere.marathon.Protos.ScalingStrategyDefinition.getDefaultInstance()) {
             strategy_ =
               mesosphere.marathon.Protos.ScalingStrategyDefinition.newBuilder(strategy_).mergeFrom(value).buildPartial();
@@ -14080,11 +14408,11 @@ public final class Protos {
         } else {
           strategyBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000004;
         return this;
       }
       /**
-       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
        */
       public Builder clearStrategy() {
         if (strategyBuilder_ == null) {
@@ -14093,19 +14421,19 @@ public final class Protos {
         } else {
           strategyBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
       /**
-       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
        */
       public mesosphere.marathon.Protos.ScalingStrategyDefinition.Builder getStrategyBuilder() {
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000004;
         onChanged();
         return getStrategyFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
        */
       public mesosphere.marathon.Protos.ScalingStrategyDefinitionOrBuilder getStrategyOrBuilder() {
         if (strategyBuilder_ != null) {
@@ -14115,7 +14443,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 1;</code>
+       * <code>required .mesosphere.marathon.ScalingStrategyDefinition strategy = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           mesosphere.marathon.Protos.ScalingStrategyDefinition, mesosphere.marathon.Protos.ScalingStrategyDefinition.Builder, mesosphere.marathon.Protos.ScalingStrategyDefinitionOrBuilder> 
@@ -14131,13 +14459,13 @@ public final class Protos {
         return strategyBuilder_;
       }
 
-      // repeated .mesosphere.marathon.ServiceDefinition orig = 2;
+      // repeated .mesosphere.marathon.ServiceDefinition orig = 4;
       private java.util.List<mesosphere.marathon.Protos.ServiceDefinition> orig_ =
         java.util.Collections.emptyList();
       private void ensureOrigIsMutable() {
-        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
           orig_ = new java.util.ArrayList<mesosphere.marathon.Protos.ServiceDefinition>(orig_);
-          bitField0_ |= 0x00000002;
+          bitField0_ |= 0x00000008;
          }
       }
 
@@ -14145,7 +14473,7 @@ public final class Protos {
           mesosphere.marathon.Protos.ServiceDefinition, mesosphere.marathon.Protos.ServiceDefinition.Builder, mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> origBuilder_;
 
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public java.util.List<mesosphere.marathon.Protos.ServiceDefinition> getOrigList() {
         if (origBuilder_ == null) {
@@ -14155,7 +14483,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public int getOrigCount() {
         if (origBuilder_ == null) {
@@ -14165,7 +14493,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinition getOrig(int index) {
         if (origBuilder_ == null) {
@@ -14175,7 +14503,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public Builder setOrig(
           int index, mesosphere.marathon.Protos.ServiceDefinition value) {
@@ -14192,7 +14520,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public Builder setOrig(
           int index, mesosphere.marathon.Protos.ServiceDefinition.Builder builderForValue) {
@@ -14206,7 +14534,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public Builder addOrig(mesosphere.marathon.Protos.ServiceDefinition value) {
         if (origBuilder_ == null) {
@@ -14222,7 +14550,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public Builder addOrig(
           int index, mesosphere.marathon.Protos.ServiceDefinition value) {
@@ -14239,7 +14567,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public Builder addOrig(
           mesosphere.marathon.Protos.ServiceDefinition.Builder builderForValue) {
@@ -14253,7 +14581,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public Builder addOrig(
           int index, mesosphere.marathon.Protos.ServiceDefinition.Builder builderForValue) {
@@ -14267,7 +14595,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public Builder addAllOrig(
           java.lang.Iterable<? extends mesosphere.marathon.Protos.ServiceDefinition> values) {
@@ -14281,12 +14609,12 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public Builder clearOrig() {
         if (origBuilder_ == null) {
           orig_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000008);
           onChanged();
         } else {
           origBuilder_.clear();
@@ -14294,7 +14622,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public Builder removeOrig(int index) {
         if (origBuilder_ == null) {
@@ -14307,14 +14635,14 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinition.Builder getOrigBuilder(
           int index) {
         return getOrigFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getOrigOrBuilder(
           int index) {
@@ -14324,7 +14652,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public java.util.List<? extends mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
            getOrigOrBuilderList() {
@@ -14335,14 +14663,14 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinition.Builder addOrigBuilder() {
         return getOrigFieldBuilder().addBuilder(
             mesosphere.marathon.Protos.ServiceDefinition.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinition.Builder addOrigBuilder(
           int index) {
@@ -14350,7 +14678,7 @@ public final class Protos {
             index, mesosphere.marathon.Protos.ServiceDefinition.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 2;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition orig = 4;</code>
        */
       public java.util.List<mesosphere.marathon.Protos.ServiceDefinition.Builder> 
            getOrigBuilderList() {
@@ -14363,7 +14691,7 @@ public final class Protos {
           origBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               mesosphere.marathon.Protos.ServiceDefinition, mesosphere.marathon.Protos.ServiceDefinition.Builder, mesosphere.marathon.Protos.ServiceDefinitionOrBuilder>(
                   orig_,
-                  ((bitField0_ & 0x00000002) == 0x00000002),
+                  ((bitField0_ & 0x00000008) == 0x00000008),
                   getParentForChildren(),
                   isClean());
           orig_ = null;
@@ -14371,13 +14699,13 @@ public final class Protos {
         return origBuilder_;
       }
 
-      // repeated .mesosphere.marathon.ServiceDefinition target = 3;
+      // repeated .mesosphere.marathon.ServiceDefinition target = 5;
       private java.util.List<mesosphere.marathon.Protos.ServiceDefinition> target_ =
         java.util.Collections.emptyList();
       private void ensureTargetIsMutable() {
-        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+        if (!((bitField0_ & 0x00000010) == 0x00000010)) {
           target_ = new java.util.ArrayList<mesosphere.marathon.Protos.ServiceDefinition>(target_);
-          bitField0_ |= 0x00000004;
+          bitField0_ |= 0x00000010;
          }
       }
 
@@ -14385,7 +14713,7 @@ public final class Protos {
           mesosphere.marathon.Protos.ServiceDefinition, mesosphere.marathon.Protos.ServiceDefinition.Builder, mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> targetBuilder_;
 
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public java.util.List<mesosphere.marathon.Protos.ServiceDefinition> getTargetList() {
         if (targetBuilder_ == null) {
@@ -14395,7 +14723,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public int getTargetCount() {
         if (targetBuilder_ == null) {
@@ -14405,7 +14733,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinition getTarget(int index) {
         if (targetBuilder_ == null) {
@@ -14415,7 +14743,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public Builder setTarget(
           int index, mesosphere.marathon.Protos.ServiceDefinition value) {
@@ -14432,7 +14760,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public Builder setTarget(
           int index, mesosphere.marathon.Protos.ServiceDefinition.Builder builderForValue) {
@@ -14446,7 +14774,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public Builder addTarget(mesosphere.marathon.Protos.ServiceDefinition value) {
         if (targetBuilder_ == null) {
@@ -14462,7 +14790,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public Builder addTarget(
           int index, mesosphere.marathon.Protos.ServiceDefinition value) {
@@ -14479,7 +14807,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public Builder addTarget(
           mesosphere.marathon.Protos.ServiceDefinition.Builder builderForValue) {
@@ -14493,7 +14821,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public Builder addTarget(
           int index, mesosphere.marathon.Protos.ServiceDefinition.Builder builderForValue) {
@@ -14507,7 +14835,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public Builder addAllTarget(
           java.lang.Iterable<? extends mesosphere.marathon.Protos.ServiceDefinition> values) {
@@ -14521,12 +14849,12 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public Builder clearTarget() {
         if (targetBuilder_ == null) {
           target_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000004);
+          bitField0_ = (bitField0_ & ~0x00000010);
           onChanged();
         } else {
           targetBuilder_.clear();
@@ -14534,7 +14862,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public Builder removeTarget(int index) {
         if (targetBuilder_ == null) {
@@ -14547,14 +14875,14 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinition.Builder getTargetBuilder(
           int index) {
         return getTargetFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getTargetOrBuilder(
           int index) {
@@ -14564,7 +14892,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public java.util.List<? extends mesosphere.marathon.Protos.ServiceDefinitionOrBuilder> 
            getTargetOrBuilderList() {
@@ -14575,14 +14903,14 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinition.Builder addTargetBuilder() {
         return getTargetFieldBuilder().addBuilder(
             mesosphere.marathon.Protos.ServiceDefinition.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public mesosphere.marathon.Protos.ServiceDefinition.Builder addTargetBuilder(
           int index) {
@@ -14590,7 +14918,7 @@ public final class Protos {
             index, mesosphere.marathon.Protos.ServiceDefinition.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 3;</code>
+       * <code>repeated .mesosphere.marathon.ServiceDefinition target = 5;</code>
        */
       public java.util.List<mesosphere.marathon.Protos.ServiceDefinition.Builder> 
            getTargetBuilderList() {
@@ -14603,7 +14931,7 @@ public final class Protos {
           targetBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               mesosphere.marathon.Protos.ServiceDefinition, mesosphere.marathon.Protos.ServiceDefinition.Builder, mesosphere.marathon.Protos.ServiceDefinitionOrBuilder>(
                   target_,
-                  ((bitField0_ & 0x00000004) == 0x00000004),
+                  ((bitField0_ & 0x00000010) == 0x00000010),
                   getParentForChildren(),
                   isClean());
           target_ = null;
@@ -14611,13 +14939,13 @@ public final class Protos {
         return targetBuilder_;
       }
 
-      // repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;
+      // repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;
       private java.util.List<mesosphere.marathon.Protos.DeploymentStepDefinition> steps_ =
         java.util.Collections.emptyList();
       private void ensureStepsIsMutable() {
-        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
+        if (!((bitField0_ & 0x00000020) == 0x00000020)) {
           steps_ = new java.util.ArrayList<mesosphere.marathon.Protos.DeploymentStepDefinition>(steps_);
-          bitField0_ |= 0x00000008;
+          bitField0_ |= 0x00000020;
          }
       }
 
@@ -14625,7 +14953,7 @@ public final class Protos {
           mesosphere.marathon.Protos.DeploymentStepDefinition, mesosphere.marathon.Protos.DeploymentStepDefinition.Builder, mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder> stepsBuilder_;
 
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public java.util.List<mesosphere.marathon.Protos.DeploymentStepDefinition> getStepsList() {
         if (stepsBuilder_ == null) {
@@ -14635,7 +14963,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public int getStepsCount() {
         if (stepsBuilder_ == null) {
@@ -14645,7 +14973,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinition getSteps(int index) {
         if (stepsBuilder_ == null) {
@@ -14655,7 +14983,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public Builder setSteps(
           int index, mesosphere.marathon.Protos.DeploymentStepDefinition value) {
@@ -14672,7 +15000,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public Builder setSteps(
           int index, mesosphere.marathon.Protos.DeploymentStepDefinition.Builder builderForValue) {
@@ -14686,7 +15014,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public Builder addSteps(mesosphere.marathon.Protos.DeploymentStepDefinition value) {
         if (stepsBuilder_ == null) {
@@ -14702,7 +15030,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public Builder addSteps(
           int index, mesosphere.marathon.Protos.DeploymentStepDefinition value) {
@@ -14719,7 +15047,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public Builder addSteps(
           mesosphere.marathon.Protos.DeploymentStepDefinition.Builder builderForValue) {
@@ -14733,7 +15061,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public Builder addSteps(
           int index, mesosphere.marathon.Protos.DeploymentStepDefinition.Builder builderForValue) {
@@ -14747,7 +15075,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public Builder addAllSteps(
           java.lang.Iterable<? extends mesosphere.marathon.Protos.DeploymentStepDefinition> values) {
@@ -14761,12 +15089,12 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public Builder clearSteps() {
         if (stepsBuilder_ == null) {
           steps_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000008);
+          bitField0_ = (bitField0_ & ~0x00000020);
           onChanged();
         } else {
           stepsBuilder_.clear();
@@ -14774,7 +15102,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public Builder removeSteps(int index) {
         if (stepsBuilder_ == null) {
@@ -14787,14 +15115,14 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinition.Builder getStepsBuilder(
           int index) {
         return getStepsFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder getStepsOrBuilder(
           int index) {
@@ -14804,7 +15132,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public java.util.List<? extends mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder> 
            getStepsOrBuilderList() {
@@ -14815,14 +15143,14 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinition.Builder addStepsBuilder() {
         return getStepsFieldBuilder().addBuilder(
             mesosphere.marathon.Protos.DeploymentStepDefinition.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinition.Builder addStepsBuilder(
           int index) {
@@ -14830,7 +15158,7 @@ public final class Protos {
             index, mesosphere.marathon.Protos.DeploymentStepDefinition.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 4;</code>
+       * <code>repeated .mesosphere.marathon.DeploymentStepDefinition steps = 6;</code>
        */
       public java.util.List<mesosphere.marathon.Protos.DeploymentStepDefinition.Builder> 
            getStepsBuilderList() {
@@ -14843,7 +15171,7 @@ public final class Protos {
           stepsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               mesosphere.marathon.Protos.DeploymentStepDefinition, mesosphere.marathon.Protos.DeploymentStepDefinition.Builder, mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder>(
                   steps_,
-                  ((bitField0_ & 0x00000008) == 0x00000008),
+                  ((bitField0_ & 0x00000020) == 0x00000020),
                   getParentForChildren(),
                   isClean());
           steps_ = null;
@@ -14851,18 +15179,18 @@ public final class Protos {
         return stepsBuilder_;
       }
 
-      // optional .mesosphere.marathon.DeploymentStepDefinition current = 5;
+      // optional .mesosphere.marathon.DeploymentStepDefinition current = 7;
       private mesosphere.marathon.Protos.DeploymentStepDefinition current_ = mesosphere.marathon.Protos.DeploymentStepDefinition.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           mesosphere.marathon.Protos.DeploymentStepDefinition, mesosphere.marathon.Protos.DeploymentStepDefinition.Builder, mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder> currentBuilder_;
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
        */
       public boolean hasCurrent() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return ((bitField0_ & 0x00000040) == 0x00000040);
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinition getCurrent() {
         if (currentBuilder_ == null) {
@@ -14872,7 +15200,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
        */
       public Builder setCurrent(mesosphere.marathon.Protos.DeploymentStepDefinition value) {
         if (currentBuilder_ == null) {
@@ -14884,11 +15212,11 @@ public final class Protos {
         } else {
           currentBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000040;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
        */
       public Builder setCurrent(
           mesosphere.marathon.Protos.DeploymentStepDefinition.Builder builderForValue) {
@@ -14898,15 +15226,15 @@ public final class Protos {
         } else {
           currentBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000040;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
        */
       public Builder mergeCurrent(mesosphere.marathon.Protos.DeploymentStepDefinition value) {
         if (currentBuilder_ == null) {
-          if (((bitField0_ & 0x00000010) == 0x00000010) &&
+          if (((bitField0_ & 0x00000040) == 0x00000040) &&
               current_ != mesosphere.marathon.Protos.DeploymentStepDefinition.getDefaultInstance()) {
             current_ =
               mesosphere.marathon.Protos.DeploymentStepDefinition.newBuilder(current_).mergeFrom(value).buildPartial();
@@ -14917,11 +15245,11 @@ public final class Protos {
         } else {
           currentBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000040;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
        */
       public Builder clearCurrent() {
         if (currentBuilder_ == null) {
@@ -14930,19 +15258,19 @@ public final class Protos {
         } else {
           currentBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinition.Builder getCurrentBuilder() {
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000040;
         onChanged();
         return getCurrentFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder getCurrentOrBuilder() {
         if (currentBuilder_ != null) {
@@ -14952,7 +15280,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 5;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition current = 7;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           mesosphere.marathon.Protos.DeploymentStepDefinition, mesosphere.marathon.Protos.DeploymentStepDefinition.Builder, mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder> 
@@ -14968,18 +15296,18 @@ public final class Protos {
         return currentBuilder_;
       }
 
-      // optional .mesosphere.marathon.DeploymentStepDefinition last = 6;
+      // optional .mesosphere.marathon.DeploymentStepDefinition last = 8;
       private mesosphere.marathon.Protos.DeploymentStepDefinition last_ = mesosphere.marathon.Protos.DeploymentStepDefinition.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           mesosphere.marathon.Protos.DeploymentStepDefinition, mesosphere.marathon.Protos.DeploymentStepDefinition.Builder, mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder> lastBuilder_;
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
        */
       public boolean hasLast() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return ((bitField0_ & 0x00000080) == 0x00000080);
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinition getLast() {
         if (lastBuilder_ == null) {
@@ -14989,7 +15317,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
        */
       public Builder setLast(mesosphere.marathon.Protos.DeploymentStepDefinition value) {
         if (lastBuilder_ == null) {
@@ -15001,11 +15329,11 @@ public final class Protos {
         } else {
           lastBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000080;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
        */
       public Builder setLast(
           mesosphere.marathon.Protos.DeploymentStepDefinition.Builder builderForValue) {
@@ -15015,15 +15343,15 @@ public final class Protos {
         } else {
           lastBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000080;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
        */
       public Builder mergeLast(mesosphere.marathon.Protos.DeploymentStepDefinition value) {
         if (lastBuilder_ == null) {
-          if (((bitField0_ & 0x00000020) == 0x00000020) &&
+          if (((bitField0_ & 0x00000080) == 0x00000080) &&
               last_ != mesosphere.marathon.Protos.DeploymentStepDefinition.getDefaultInstance()) {
             last_ =
               mesosphere.marathon.Protos.DeploymentStepDefinition.newBuilder(last_).mergeFrom(value).buildPartial();
@@ -15034,11 +15362,11 @@ public final class Protos {
         } else {
           lastBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000080;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
        */
       public Builder clearLast() {
         if (lastBuilder_ == null) {
@@ -15047,19 +15375,19 @@ public final class Protos {
         } else {
           lastBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinition.Builder getLastBuilder() {
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000080;
         onChanged();
         return getLastFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
        */
       public mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder getLastOrBuilder() {
         if (lastBuilder_ != null) {
@@ -15069,7 +15397,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 6;</code>
+       * <code>optional .mesosphere.marathon.DeploymentStepDefinition last = 8;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           mesosphere.marathon.Protos.DeploymentStepDefinition, mesosphere.marathon.Protos.DeploymentStepDefinition.Builder, mesosphere.marathon.Protos.DeploymentStepDefinitionOrBuilder> 
@@ -15220,17 +15548,18 @@ public final class Protos {
       "\rtaksIdsToKill\030\003 \003(\t\"r\n\030DeploymentStepDe" +
       "finition\022\020\n\010waitTime\030\001 \002(\r\022D\n\013deployment" +
       "s\030\002 \003(\0132/.mesosphere.marathon.Deployment",
-      "ActionDefinition\"\205\003\n\030DeploymentPlanDefin" +
-      "ition\022@\n\010strategy\030\001 \002(\0132..mesosphere.mar" +
-      "athon.ScalingStrategyDefinition\0224\n\004orig\030" +
-      "\002 \003(\0132&.mesosphere.marathon.ServiceDefin" +
-      "ition\0226\n\006target\030\003 \003(\0132&.mesosphere.marat" +
-      "hon.ServiceDefinition\022<\n\005steps\030\004 \003(\0132-.m" +
-      "esosphere.marathon.DeploymentStepDefinit" +
-      "ion\022>\n\007current\030\005 \001(\0132-.mesosphere.marath" +
-      "on.DeploymentStepDefinition\022;\n\004last\030\006 \001(" +
-      "\0132-.mesosphere.marathon.DeploymentStepDe",
-      "finitionB\035\n\023mesosphere.marathonB\006Protos"
+      "ActionDefinition\"\242\003\n\030DeploymentPlanDefin" +
+      "ition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022@\n\010st" +
+      "rategy\030\003 \002(\0132..mesosphere.marathon.Scali" +
+      "ngStrategyDefinition\0224\n\004orig\030\004 \003(\0132&.mes" +
+      "osphere.marathon.ServiceDefinition\0226\n\006ta" +
+      "rget\030\005 \003(\0132&.mesosphere.marathon.Service" +
+      "Definition\022<\n\005steps\030\006 \003(\0132-.mesosphere.m" +
+      "arathon.DeploymentStepDefinition\022>\n\007curr" +
+      "ent\030\007 \001(\0132-.mesosphere.marathon.Deployme" +
+      "ntStepDefinition\022;\n\004last\030\010 \001(\0132-.mesosph",
+      "ere.marathon.DeploymentStepDefinitionB\035\n" +
+      "\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -15314,7 +15643,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_DeploymentPlanDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_DeploymentPlanDefinition_descriptor,
-              new java.lang.String[] { "Strategy", "Orig", "Target", "Steps", "Current", "Last", });
+              new java.lang.String[] { "Id", "Version", "Strategy", "Orig", "Target", "Steps", "Current", "Last", });
           return null;
         }
       };

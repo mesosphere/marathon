@@ -130,10 +130,12 @@ message DeploymentStepDefinition {
 }
 
 message DeploymentPlanDefinition {
-  required ScalingStrategyDefinition strategy = 1;
-  repeated ServiceDefinition orig = 2;
-  repeated ServiceDefinition target = 3;
-  repeated DeploymentStepDefinition steps = 4;
-  optional DeploymentStepDefinition current = 5;
-  optional DeploymentStepDefinition last = 6;
+  required string id = 1;
+  required string version = 2;
+  required ScalingStrategyDefinition strategy = 3;
+  repeated ServiceDefinition orig = 4;
+  repeated ServiceDefinition target = 5;
+  repeated DeploymentStepDefinition steps = 6;
+  optional DeploymentStepDefinition current = 7;
+  optional DeploymentStepDefinition last = 8;
 }

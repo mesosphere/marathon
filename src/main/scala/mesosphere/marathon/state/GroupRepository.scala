@@ -3,13 +3,9 @@ package mesosphere.marathon.state
 import mesosphere.marathon.api.v2.Group
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import mesosphere.marathon.StorageException
 
-//TODO: since most methods are copied form AppRepository, factor out a separate trait
-class GroupRepository(store: PersistenceStore[Group], appRepo:AppRepository) {
-
-  private val ID_DELIMITER = ":"
-
-  def currentVersion(id: String): Future[Option[Group]] = fetch(id)
+class GroupRepository(val store: PersistenceStore[Group], appRepo:AppRepository) extends EntityRepository[Group] {
 
   def group(id: String) : Future[Option[Group]] = fetch(id)
 
@@ -26,38 +22,12 @@ class GroupRepository(store: PersistenceStore[Group], appRepo:AppRepository) {
     }
   }
 
-  def store(group: Group): Future[Option[Group]] = {
+  def store(group: Group): Future[Group] = {
     val key = group.id + ID_DELIMITER + group.version.toString
     this.store.store(group.id, group)
-    this.store.store(key, group)
-  }
-
-  def groupIds: Future[Iterable[String]] = this.store.names().map { names =>
-    names.collect {
-      case name: String if !name.contains(ID_DELIMITER) => name
-    }.toSeq
-  }
-
-  def groups(): Future[Iterable[Group]] = groupIds.flatMap { names =>
-    Future.sequence(names.map( currentVersion )).map( _.flatten )
-  }
-
-  def listVersions(id: String): Future[Iterable[Timestamp]] = {
-    val appPrefix = id + ID_DELIMITER
-    this.store.names().map { names =>
-      names.collect {
-        case name: String if name.startsWith(appPrefix) => Timestamp(name.substring(appPrefix.length))
-      }.toSeq
+    this.store.store(key, group).map {
+      case Some(value) => value
+      case None => throw new StorageException(s"Can not persist group: $group")
     }
   }
-
-  def expunge(id: String): Future[Iterable[Boolean]] =
-    listVersions(id).flatMap { timestamps =>
-      val versionsDeleteResult = timestamps.map { timestamp =>
-        val key = id + ID_DELIMITER + timestamp.toString
-        store.expunge(key)
-      }
-      val currentDeleteResult = store.expunge(id)
-      Future.sequence(currentDeleteResult +: versionsDeleteResult.toSeq)
-    }
 }

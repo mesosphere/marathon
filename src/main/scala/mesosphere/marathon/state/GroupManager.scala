@@ -1,12 +1,12 @@
 package mesosphere.marathon.state
 
 import javax.inject.Inject
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.upgrade.{DeploymentPlanRepository, DeploymentPlan}
 import mesosphere.marathon.api.v2.{CanaryStrategy, RollingStrategy, Group}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.Singleton
-import mesosphere.marathon.{MarathonSchedulerService, StorageException}
+import mesosphere.marathon.MarathonSchedulerService
 import org.apache.log4j.Logger
 import mesosphere.marathon.tasks.TaskTracker
 
@@ -17,36 +17,40 @@ import mesosphere.marathon.tasks.TaskTracker
 class GroupManager @Singleton @Inject() (
   scheduler: MarathonSchedulerService,
   taskTracker: TaskTracker,
-  repo:GroupRepository
+  groupRepo: GroupRepository,
+  planRepo: DeploymentPlanRepository
 ) {
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
-  def list() : Future[Iterable[Group]] = repo.groups()
+  def list() : Future[Iterable[Group]] = groupRepo.current()
 
-  def group(id:String) : Future[Option[Group]] = repo.group(id)
+  def group(id:String) : Future[Option[Group]] = groupRepo.group(id)
 
   def create(group:Group) : Future[Group] = {
-    repo.currentVersion(group.id).flatMap {
+    groupRepo.currentVersion(group.id).flatMap {
       case Some(current) =>
         log.warn(s"There is already an group with this id: ${group.id}")
         throw new IllegalArgumentException(s"Can not install group ${group.id}, since there is already a group with this id!")
       case None =>
         log.info(s"Create new Group ${group.id}")
-        storeWith(group) { stored => Future.sequence(stored.apps.map(scheduler.startApp)).map(ignore => stored) }
+        groupRepo.store(group).flatMap( stored => Future.sequence(stored.apps.map(scheduler.startApp)).map(ignore => stored))
     }
   }
 
   def upgrade(id:String, group:Group) : Future[Group] = {
-    repo.currentVersion(id).flatMap {
+    groupRepo.currentVersion(id).flatMap {
       case Some(current) =>
         log.info(s"Update existing Group $id with $group")
-        storeWith(group) { storedGroup =>
-          val runningTasks = current.apps.map( app => app.id->taskTracker.get(app.id).map(_.getId).toList)
-          val plan = DeploymentPlan.apply(current, storedGroup, runningTasks.toMap)
+        for {
+          storedGroup <- groupRepo.store(group)
+          runningTasks = current.apps.map( app => app.id->taskTracker.get(app.id).map(_.getId).toList)
+          plan <- planRepo.store(DeploymentPlan.apply(current, storedGroup, runningTasks.toMap))
+        } yield {
+          //TODO: we need a trigger to remove the plan, when finished
           plan.strategy match {
-            case s:RollingStrategy => ???
-            case s:CanaryStrategy => ???
+            case s: RollingStrategy => group //TODO: delegate to scheduler
+            case s: CanaryStrategy => group  //TODO: delegate to scheduler
           }
         }
       case None =>
@@ -56,16 +60,9 @@ class GroupManager @Singleton @Inject() (
   }
 
   def expunge(id:String) : Future[Boolean] = {
-    repo.currentVersion(id).flatMap {
-      case Some(current) => Future.sequence(current.apps.map(scheduler.stopApp)).flatMap(_ => repo.expunge(id).map(_.forall(identity)))
+    groupRepo.currentVersion(id).flatMap {
+      case Some(current) => Future.sequence(current.apps.map(scheduler.stopApp)).flatMap(_ => groupRepo.expunge(id).map(_.forall(identity)))
       case None => Future.successful(false)
-    }
-  }
-
-  private[this] def storeWith[T](group:Group)(action:Group=>Future[T]) : Future[T] = {
-    repo.store(group).flatMap {
-      case Some(storedGroup) => action(storedGroup)
-      case None => throw new StorageException(s"Can not store group $group")
     }
   }
 }
