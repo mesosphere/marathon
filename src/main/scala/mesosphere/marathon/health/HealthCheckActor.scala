@@ -75,7 +75,7 @@ class HealthCheckActor(
     log.debug("Dispatching health check jobs to workers")
     taskTracker.get(appId).foreach { task =>
       log.debug("Dispatching health check job for task [{}]", task.getId)
-      val worker: ActorRef = context.actorOf(Props(classOf[HealthCheckWorkerActor], appId, eventBus))
+      val worker: ActorRef = context.actorOf(Props[HealthCheckWorkerActor])
       worker ! HealthCheckJob(task, healthCheck)
     }
   }
