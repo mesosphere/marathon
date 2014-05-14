@@ -24,6 +24,22 @@ import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{Success, Failure}
 import org.apache.log4j.Logger
 
+
+trait SchedulerCallbacks {
+  def disconnected(): Unit
+}
+
+object MarathonScheduler {
+  private class MarathonSchedulerCallbacksImpl(serviceOption: Option[MarathonSchedulerService]) extends SchedulerCallbacks {
+    override def disconnected(): Unit = {
+      // Abdicate leadership when we become disconnected from the Mesos master.
+      serviceOption.foreach(_.abdicateLeadership())
+    }
+  }
+
+  val callbacks: SchedulerCallbacks = new MarathonSchedulerCallbacksImpl(Some(Main.injector.getInstance(classOf[MarathonSchedulerService])))
+}
+
 /**
  * @author Tobi Knaup
  */
@@ -52,16 +68,16 @@ class MarathonScheduler @Inject()(
     appId: String
   ): Future[Option[AppDefinition]] = appRepository.currentVersion(appId)
 
-  def registered(driver: SchedulerDriver, frameworkId: FrameworkID, master: MasterInfo) {
+  override def registered(driver: SchedulerDriver, frameworkId: FrameworkID, master: MasterInfo) {
     log.info("Registered as %s to master '%s'".format(frameworkId.getValue, master.getId))
     frameworkIdUtil.store(frameworkId)
   }
 
-  def reregistered(driver: SchedulerDriver, master: MasterInfo) {
+  override def reregistered(driver: SchedulerDriver, master: MasterInfo) {
     log.info("Re-registered to %s".format(master))
   }
 
-  def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
+  override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
     // Check for any tasks which were started but never entered TASK_RUNNING
     // TODO resourceOffers() doesn't feel like the right place to run this
     val toKill = taskTracker.checkStagedTasks
@@ -118,11 +134,11 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  def offerRescinded(driver: SchedulerDriver, offer: OfferID) {
+  override def offerRescinded(driver: SchedulerDriver, offer: OfferID) {
     log.info("Offer %s rescinded".format(offer))
   }
 
-  def statusUpdate(driver: SchedulerDriver, status: TaskStatus) {
+  override def statusUpdate(driver: SchedulerDriver, status: TaskStatus) {
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
@@ -172,25 +188,27 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]) {
+  override def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]) {
     log.info("Received framework message %s %s %s ".format(executor, slave, message))
     eventBus.foreach(_.post(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message)))
   }
 
-  def disconnected(driver: SchedulerDriver) {
+  override def disconnected(driver: SchedulerDriver) {
     log.warn("Disconnected")
-    suicide()
+
+    // Disconnection from the Mesos master has occurred. Thus, call the scheduler callbacks.
+    MarathonScheduler.callbacks.disconnected()
   }
 
-  def slaveLost(driver: SchedulerDriver, slave: SlaveID) {
+  override def slaveLost(driver: SchedulerDriver, slave: SlaveID) {
     log.info("Lost slave %s".format(slave))
   }
 
-  def executorLost(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, p4: Int) {
+  override def executorLost(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, p4: Int) {
     log.info("Lost executor %s %s %s ".format(executor, slave, p4))
   }
 
-  def error(driver: SchedulerDriver, message: String) {
+  override def error(driver: SchedulerDriver, message: String) {
     log.warn("Error: %s".format(message))
     suicide()
   }
@@ -366,7 +384,11 @@ class MarathonScheduler @Inject()(
     log.fatal("Committing suicide")
 
     // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
-    Future(sys.exit(9))
+    Future(sys.exit(9)).map {
+      _ => log.info("Committed suicide")
+    }.recover {
+      case e => log.fatal("Exception while committing suicide: " + e.getMessage)
+    }
   }
 
   private def postEvent(status: TaskStatus, task: MarathonTask) {
