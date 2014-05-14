@@ -15,7 +15,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers {
   val currentlyRunning = Map("app1"->List("0","1","2","3","4","5","6","7","8","9"))
 
   test("Deployment plan generation from plan") {
-    val plan = DeploymentPlan(group1_1, group1_2, currentlyRunning)
+    val plan = DeploymentPlan("id", group1_1, group1_2, currentlyRunning)
     plan.steps should have size 5
     val first = plan.steps.head
     val second = plan.steps(1)
@@ -28,7 +28,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers {
   }
 
   test("plan can be iterated") {
-    val plan = DeploymentPlan(group1_1, group1_2, currentlyRunning)
+    val plan = DeploymentPlan("id", group1_1, group1_2, currentlyRunning)
     plan.steps should have size 5
     val end =  Range(0, 4).foldRight(plan){(_, plan) => plan.next}
     end.steps should have size 1

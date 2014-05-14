@@ -6,7 +6,7 @@ import javax.inject.Inject
 import javax.validation.Valid
 import mesosphere.marathon.state.GroupManager
 import scala.concurrent.{Future, Await}
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 @Path("v2/groups")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -32,5 +32,5 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   def delete( @PathParam("id") id: String ) : Boolean = groupManager.expunge(id)
 
   //map from Future[T] to T since jersey can not handle futures
-  private implicit def result[T](in:Future[T]) : T = Await.result(in, Duration.Inf)
+  private implicit def result[T](in:Future[T]) : T = Await.result(in, 30 seconds)
 }

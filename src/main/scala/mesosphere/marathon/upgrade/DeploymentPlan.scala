@@ -5,6 +5,9 @@ import mesosphere.marathon.api.v2.{RollingStrategy, CanaryStrategy, ScalingStrat
 import mesosphere.marathon.state.{Timestamp, MarathonState}
 import mesosphere.marathon.Protos.{DeploymentActionDefinition, DeploymentStepDefinition, DeploymentPlanDefinition}
 import scala.collection.JavaConversions._
+import scala.concurrent.Future
+import mesosphere.marathon.MarathonSchedulerService
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class DeploymentAction(appId:String, scaleUp:Int, taskIdsToKill:List[String])
 
@@ -27,6 +30,10 @@ case class DeploymentPlan(
   }
 
   def hasNext : Boolean = !steps.isEmpty
+
+  def originalIds : Set[String] = original.map(_.id).toSet
+
+  def targetIds : Set[String] = target.map(_.id).toSet
 
   override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan = mergeFromProto(DeploymentPlanDefinition.parseFrom(bytes))
 
@@ -62,10 +69,27 @@ case class DeploymentPlan(
     last.map(step).foreach(builder.setLast)
     builder.build()
   }
+
+  def deploy(scheduler: MarathonSchedulerService) : Future[Boolean] = {
+    def deployRolling(r: RollingStrategy) : Future[Boolean] = {
+      val toRestart = targetIds.intersect(originalIds)
+      val toStart = targetIds.filterNot(toRestart.contains)
+      val toStop = originalIds.filterNot(toRestart.contains)
+      val restartFuture = toRestart.flatMap(id => original.find(_.id==id)).map { app =>
+        scheduler.restartApp(app.id, (app.instances * r.minimumHealthCapacity).toInt)
+      }
+      val startFuture = toStart.flatMap(id => target.find(_.id==id)).map(scheduler.startApp(_).map(_ => true))
+      val stopFuture = toStop.flatMap(id => original.find(_.id==id)).map(scheduler.stopApp(_).map(_ => true))
+      Future.sequence(restartFuture ++ startFuture ++ stopFuture).map(_.forall(identity))
+    }
+    strategy match {
+      case r:RollingStrategy => deployRolling(r)
+    }
+  }
 }
 
 object DeploymentPlan {
-  def apply(oldProduct:Group, newProduct:Group, runningTasks:Map[String, List[String]]) : DeploymentPlan = {
+  def apply(id:String, oldProduct:Group, newProduct:Group, runningTasks:Map[String, List[String]]) : DeploymentPlan = {
     val steps = newProduct.scalingStrategy match {
       case CanaryStrategy(canarySteps, watchPeriod) =>
         var takeDown = Map.empty[String, Int].withDefaultValue(0)
@@ -95,7 +119,7 @@ object DeploymentPlan {
         firstSteps ::: List(lastStep)
       case _ => Nil
     }
-    DeploymentPlan(oldProduct.id, newProduct.scalingStrategy, oldProduct.apps.toList, newProduct.apps.toList, steps)
+    DeploymentPlan(id, newProduct.scalingStrategy, oldProduct.apps.toList, newProduct.apps.toList, steps)
   }
 
   def empty() = DeploymentPlan("", RollingStrategy(1), Nil, Nil, Nil)

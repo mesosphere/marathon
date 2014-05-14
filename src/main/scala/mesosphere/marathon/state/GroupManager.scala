@@ -42,17 +42,14 @@ class GroupManager @Singleton @Inject() (
     groupRepo.currentVersion(id).flatMap {
       case Some(current) =>
         log.info(s"Update existing Group $id with $group")
-        for {
+        val restart = for {
           storedGroup <- groupRepo.store(group)
-          runningTasks = current.apps.map( app => app.id->taskTracker.get(app.id).map(_.getId).toList)
-          plan <- planRepo.store(DeploymentPlan.apply(current, storedGroup, runningTasks.toMap))
-        } yield {
-          //TODO: we need a trigger to remove the plan, when finished
-          plan.strategy match {
-            case s: RollingStrategy => group //TODO: delegate to scheduler
-            case s: CanaryStrategy => group  //TODO: delegate to scheduler
-          }
-        }
+          runningTasks = current.apps.map( app => app.id->taskTracker.get(app.id).map(_.getId).toList).toMap.withDefaultValue(Nil)
+          plan <- planRepo.store(DeploymentPlan.apply(id, current, storedGroup, runningTasks))
+          result <- plan.deploy(scheduler) if result
+        } yield storedGroup
+        //remove the upgrade plan after the task has been finished
+        restart.andThen { case _ => planRepo.expunge(id) }
       case None =>
         log.warn(s"Can not update group $id, since there is no current version!")
         throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")
