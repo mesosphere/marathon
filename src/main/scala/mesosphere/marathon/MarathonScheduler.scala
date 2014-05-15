@@ -396,7 +396,7 @@ class MarathonScheduler @Inject() (
 
       res
     } else {
-      Future.failed(new TaskUpgradeFailedException("Upgrade already in progress."))
+      Future.failed(new ConcurrentTaskUpgradeException("Upgrade already in progress."))
     }
   }
 

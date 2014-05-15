@@ -15,3 +15,5 @@ class BadRequestException(msg: String) extends Exception(msg)
 object UpgradeFailed extends Exception("Upgrade Failed")
 
 class TaskUpgradeFailedException(msg: String) extends Exception(msg)
+
+class ConcurrentTaskUpgradeException(msg: String) extends Exception(msg)
