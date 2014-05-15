@@ -24,7 +24,7 @@ class TaskReplaceActor(
   eventBus: EventBus,
   appId: String,
   nrToStart: Int,
-  tasks: Set[MarathonTask],
+  tasksToKill: Set[MarathonTask],
   promise: Promise[Boolean]
 ) extends Actor {
 
@@ -32,7 +32,7 @@ class TaskReplaceActor(
 
   var forwarder: Option[EventForwarder] = None
   var healthy = Set.empty[String]
-  var taskIds = tasks.map(_.getId)
+  var taskIds = tasksToKill.map(_.getId)
   val toKill = taskIds.to[mutable.Queue]
 
   override def preStart() {

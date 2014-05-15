@@ -318,8 +318,8 @@ class MarathonScheduler @Inject() (
       promise.future
     }
 
-    def replace(nrToStart: Int, tasks: Seq[MarathonTask]): Future[Boolean] = {
-      log.debug(s"Replacing $tasks with $nrToStart new instances.")
+    def replace(nrToStart: Int, tasksToKill: Seq[MarathonTask]): Future[Boolean] = {
+      log.debug(s"Replacing $tasksToKill with $nrToStart new instances.")
       val promise = Promise[Boolean]()
       if (nrToStart > 0) {
         system.actorOf(
@@ -329,7 +329,7 @@ class MarathonScheduler @Inject() (
             eventBus,
             app.id,
             nrToStart,
-            tasks.toSet,
+            tasksToKill.toSet,
             promise))
       } else {
         promise.success(true)
@@ -362,37 +362,42 @@ class MarathonScheduler @Inject() (
       } yield killed && started
     }
 
-    scalingApps.add(app.id)
+    if (scalingApps.add(app.id)) {
 
-    val res = appRepository.store(app) flatMap {
-      case Some(storedApp) =>
-        if (app.healthChecks.size > 0 && keepAlive > 0) {
-          restartWithHealthChecks(storedApp)
-        } else if (keepAlive == 0) {
-          immediateRestart(storedApp)
-        }
-        else {
-          throw new TaskUpgradeFailedException("Keep alive requested, but no health checks configured.")
-        }
+      val res = appRepository.store(app) flatMap {
+        case Some(storedApp) =>
+          if (app.healthChecks.size > 0 && keepAlive > 0) {
+            restartWithHealthChecks(storedApp)
+          } else if (keepAlive == 0) {
+            immediateRestart(storedApp)
+          }
+          else {
+            throw new TaskUpgradeFailedException("Keep alive requested, but no health checks configured.")
+          }
 
-      case None => throw new TaskUpgradeFailedException("Failed to store app definition.")
+        case None => throw new TaskUpgradeFailedException("Failed to store app definition.")
+      }
+
+      res onComplete { _ =>
+        scalingApps -= app.id
+      }
+
+      res onComplete {
+        case Success(_) =>
+          log.info(s"Restart of ${app.id} successful")
+          eventBus.post(RestartSuccess({
+            app.id
+          }))
+
+        case Failure(e) =>
+          log.error(s"Restart of ${app.id} failed", e)
+          eventBus.post(RestartFailed(app.id))
+      }
+
+      res
+    } else {
+      Future.failed(new TaskUpgradeFailedException("Upgrade already in progress."))
     }
-
-    res onComplete { _ =>
-      scalingApps -= app.id
-    }
-
-    res onComplete {
-      case Success(_) =>
-        log.info(s"Restart of ${app.id} successful")
-        eventBus.post(RestartSuccess({app.id}))
-
-      case Failure(e) =>
-        log.error(s"Restart of ${app.id} failed", e)
-        eventBus.post(RestartFailed(app.id))
-    }
-
-    res
   }
 
   /**
