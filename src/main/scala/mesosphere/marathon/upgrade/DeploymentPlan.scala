@@ -45,7 +45,7 @@ case class DeploymentPlan(
     val toRestart = targetIds.intersect(originalIds)
     val toStart = targetIds.filterNot(toRestart.contains)
     val toStop = originalIds.filterNot(toRestart.contains)
-    val restartFuture = toRestart.flatMap(id => original.find(_.id==id)).map { app =>
+    val restartFuture = toRestart.flatMap(id => target.find(_.id==id)).map { app =>
       scheduler.upgradeApp(app, (app.instances * strategy.minimumHealthCapacity).toInt)
     }
     val startFuture = toStart.flatMap(id => target.find(_.id==id)).map(scheduler.startApp(_).map(_ => true))
