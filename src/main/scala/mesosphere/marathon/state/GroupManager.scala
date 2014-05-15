@@ -9,6 +9,10 @@ import mesosphere.marathon.MarathonSchedulerService
 import org.apache.log4j.Logger
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.v2.Group
+import scala.util.{Try, Failure, Success}
+import com.google.inject.name.Named
+import mesosphere.marathon.event.{GroupChangeFailed, GroupChangeSuccess, EventModule}
+import com.google.common.eventbus.EventBus
 
 /**
  * The group manager is the facade for all group related actions.
@@ -18,7 +22,8 @@ class GroupManager @Singleton @Inject() (
   scheduler: MarathonSchedulerService,
   taskTracker: TaskTracker,
   groupRepo: GroupRepository,
-  planRepo: DeploymentPlanRepository
+  planRepo: DeploymentPlanRepository,
+  @Named(EventModule.busName) eventBus: EventBus
 ) {
 
   private[this] val log = Logger.getLogger(getClass.getName)
@@ -34,7 +39,9 @@ class GroupManager @Singleton @Inject() (
         throw new IllegalArgumentException(s"Can not install group ${group.id}, since there is already a group with this id!")
       case None =>
         log.info(s"Create new Group ${group.id}")
-        groupRepo.store(group).flatMap( stored => Future.sequence(stored.apps.map(scheduler.startApp)).map(ignore => stored))
+        groupRepo.store(group).flatMap( stored =>
+          Future.sequence(stored.apps.map(scheduler.startApp)).map(ignore => stored).andThen(postEvent(group))
+        )
     }
   }
 
@@ -66,7 +73,16 @@ class GroupManager @Singleton @Inject() (
       result <- plan.deploy(scheduler) if result
     } yield storedGroup
     //remove the upgrade plan after the task has been finished
-    restart.andThen { case _ => planRepo.expunge(current.id) }
+    restart.andThen(postEvent(group)).andThen(deletePlan(current.id))
+  }
+
+  private def postEvent(group:Group) : PartialFunction[Try[Group], Unit] = {
+    case Success(_) => eventBus.post(GroupChangeSuccess(group.id))
+    case Failure(ex) => eventBus.post(GroupChangeFailed(group.id, ex.getMessage))
+  }
+
+  private def deletePlan(id:String) : PartialFunction[Try[Group], Unit] = {
+    case _ => planRepo.expunge(id)
   }
 
   def expunge(id: String): Future[Boolean] = {

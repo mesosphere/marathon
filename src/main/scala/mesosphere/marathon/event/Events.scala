@@ -121,22 +121,10 @@ case class HealthStatusChanged(
 // upgrade messages
 
 trait UpgradeEvent extends MarathonEvent
-
-case class UpgradeSuccess(group: Group, kind:String) extends UpgradeEvent {
-  override val eventType: String = "upgrade_success"
-}
-
-case class UpgradeFailed(group: Group, kind:String) extends UpgradeEvent {
-  override val eventType: String = "upgrade_failed"
-}
-
-case class RestartSuccess(appId: String) extends UpgradeEvent {
-  override val eventType: String = "restart_success"
-}
-
-case class RestartFailed(appId: String) extends UpgradeEvent {
-  override val eventType: String = "restart_failed"
-}
+case class GroupChangeSuccess(groupId: String, eventType:String = "group_change_success") extends UpgradeEvent
+case class GroupChangeFailed(groupId: String, reason:String, eventType: String = "group_change_failed") extends UpgradeEvent
+case class RestartSuccess(appId: String, eventType: String = "restart_success") extends UpgradeEvent
+case class RestartFailed(appId: String, eventType: String = "restart_failed") extends UpgradeEvent
 
 // Mesos scheduler
 
