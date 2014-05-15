@@ -17,7 +17,7 @@ import com.twitter.common.zookeeper.Group.JoinException
 import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
-import scala.util.Random
+import scala.util.{Failure, Success, Random}
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
@@ -152,14 +152,16 @@ class MarathonSchedulerService @Inject()(
   override def run(): Unit = {
     log.info("Beginning run")
 
-    // The first thing we do is offer our leadership. If using Zookeeper for leadership election than we will wait to be
-    // elected. If we aren't (i.e. no HA) then we take over leadership run the driver immediately.
+    // The first thing we do is offer our leadership. If using Zookeeper for
+    // leadership election then we will wait to be elected. If we aren't (i.e.
+    // no HA) then we take over leadership run the driver immediately.
     offerLeadership()
 
     // Start the timer that handles reconciliation
     scheduleTaskReconciliation()
 
-    // Block on the latch which will be countdown only when shutdown has been triggered. This is to prevent run()
+    // Block on the latch which will be countdown only when shutdown has been
+    // triggered. This is to prevent run()
     // from exiting.
     latch.await()
 
@@ -174,7 +176,7 @@ class MarathonSchedulerService @Inject()(
     stopDriver()
 
     log.info("Cancelling reconciliation timer")
-    reconciliationTimer.cancel
+    reconciliationTimer.cancel()
 
     log.info("Removing the blocking of run()")
 
@@ -188,34 +190,37 @@ class MarathonSchedulerService @Inject()(
     log.info("Running driver")
     listApps foreach healthCheckManager.reconcileWith
 
-    // The following block asynchronously runs the driver. Note that driver.run() blocks until the driver has been
-    // stopped (or aborted).
+    // The following block asynchronously runs the driver. Note that driver.run()
+    // blocks until the driver has been stopped (or aborted).
     Future {
       driver.run()
-    }.map {
-      _ => log.info("Driver stopped normally")
-    }.recover {
-      case e => log.error("Exception while running driver: " + e.getMessage)
-    }.onComplete {
-      _ => {
+    } onComplete {
+      case Success(_) =>
         log.info("Driver future completed. Executing optional abdication command.")
 
-        // If there is an abdication command we need to execute it so that our leadership is given up. Note that executing
-        // the abdication command does a few things:
-        // - It causes onDefeated() to be executed (which is part of the Leader interface).
-        // - It removes us as a leadership candidate. We must offer out leadership candidacy if we ever want to become
-        //   the leader again in the future.
+        // If there is an abdication command we need to execute it so that our
+        // leadership is given up. Note that executing the abdication command
+        // does a few things: - It causes onDefeated() to be executed (which is
+        // part of the Leader interface).  - It removes us as a leadership
+        // candidate. We must offer out leadership candidacy if we ever want to
+        // become the leader again in the future.
         //
-        // If we don't have a abdication command we simply mark ourselves as not the leader
-        abdicateCmdOption.fold(leader.set(false))(_.execute)
+        // If we don't have a abdication command we simply mark ourselves as
+        // not the leader
+        abdicateCmdOption match {
+          case Some(cmd) => cmd.execute()
+          case _ => leader.set(false)
+        }
 
-        // If we are shutting down than don't offer leadership. But if we aren't than the driver was stopped via external
-        // means. For example, our leadership could have been defeated or perhaps it was abdicated. Therfore, for these
-        // cases we offer our leadership again.
+        // If we are shutting down then don't offer leadership. But if we
+        // aren't then the driver was stopped via external means. For example,
+        // our leadership could have been defeated or perhaps it was
+        // abdicated. Therefore, for these cases we offer our leadership again.
         if (isRunning) {
           offerLeadership()
         }
-      }
+      case Failure(t) =>
+        log.error("Exception while running driver", t)
     }
   }
 
@@ -225,8 +230,9 @@ class MarathonSchedulerService @Inject()(
     // Stopping the driver will cause the driver run() method to return.
     driver.stop(true) // failover = true
 
-    // We need to allocate a new driver as drivers can't be reused. Once they are in the stopped state they cannot be
-    // restarted. See the Mesos C++ source code for the MesosScheduleDriver.
+    // We need to allocate a new driver as drivers can't be reused. Once they
+    // are in the stopped state they cannot be restarted. See the Mesos C++
+    // source code for the MesosScheduleDriver.
     driver = newDriver()
   }
 
@@ -235,13 +241,12 @@ class MarathonSchedulerService @Inject()(
   }
 
   def getLeader: Option[String] = {
-    candidate.flatMap {
-      c =>
-        if (c.getLeaderData.isPresent)
-          Some(new String(c.getLeaderData.get))
-        else
-          None
-    }
+    candidate.flatMap(c => {
+      if (c.getLeaderData.isPresent)
+        Some(new String(c.getLeaderData.get))
+      else
+        None
+    })
   }
   //End Service interface
 
@@ -290,16 +295,17 @@ class MarathonSchedulerService @Inject()(
     log.info("Offering leadership")
 
     candidate.synchronized {
-      candidate.fold {
-        // In this case we aren't using Zookeeper for leadership election. Thus, we simply elect ourselves as leader.
-        log.info("Not using HA and therefore electing as leader by default")
-        electLeadership(None)
-      } {
-        c => {
-          // In this case we care using Zookeeper for leadership candidacy. Thus, offer our leadership.
+      candidate match {
+        case Some(c) =>
+          // In this case we care using Zookeeper for leadership candidacy.
+          // Thus, offer our leadership.
           log.info("Using HA and therefore offering leadership")
           c.offerLeadership(this)
-        }
+        case _ =>
+          // In this case we aren't using Zookeeper for leadership election.
+          // Thus, we simply elect ourselves as leader.
+          log.info("Not using HA and therefore electing as leader by default")
+          electLeadership(None)
       }
     }
   }

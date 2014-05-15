@@ -369,7 +369,7 @@ class MarathonScheduler @Inject()(
         }
       }
       else {
-        log.info(s"Already running ${app.instances} instances. Not scaling.")
+        log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")
       }
     }
   }
@@ -385,10 +385,10 @@ class MarathonScheduler @Inject()(
     log.fatal("Committing suicide")
 
     // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
-    Future(sys.exit(9)).map {
-      _ => log.info("Committed suicide")
-    }.recover {
-      case e => log.fatal("Exception while committing suicide: " + e.getMessage)
+    Future {
+      sys.exit(9)
+    } onFailure {
+      case t => log.fatal("Exception while committing suicide", t)
     }
   }
 
