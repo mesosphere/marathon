@@ -1,17 +1,17 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.api.v2.{RollingStrategy, CanaryStrategy, Group}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import org.mockito.Mockito._
 import org.scalatest.Matchers
+import mesosphere.marathon.api.v2.{Group, ScalingStrategy}
 
 class GroupRepositoryTest extends MarathonSpec with Matchers {
 
   test("Store canary strategy") {
     val store = mock[MarathonStore[Group]]
-    val group = Group("g1", CanaryStrategy(Seq.empty, 23), Seq.empty)
+    val group = Group("g1", ScalingStrategy(1), Seq.empty)
     val future = Future.successful(Some(group))
     val versionedKey = s"g1:${group.version}"
     val appRepo = mock[AppRepository]
@@ -27,15 +27,8 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
     verify(store).store(s"g1", group)
   }
 
-  test("group back and forth again with canary strategy") {
-    val group = Group("g1", CanaryStrategy(Seq.empty, 23), Seq.empty)
-    val proto = group.toProto
-    val merged = Group.empty().mergeFromProto(proto)
-    group should be(merged)
-  }
-
   test("group back and forth again with rolling strategy") {
-    val group = Group("g1", RollingStrategy(1), Seq.empty)
+    val group = Group("g1", ScalingStrategy(1), Seq.empty)
     val proto = group.toProto
     val merged = Group.empty().mergeFromProto(proto)
     group should be(merged)

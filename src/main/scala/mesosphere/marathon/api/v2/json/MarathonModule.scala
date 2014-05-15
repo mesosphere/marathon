@@ -249,32 +249,4 @@ object MarathonModule {
       executor, container, healthChecks, version
     )
   }
-
-  private [this] val Percent = """^(\d+)\%$""".r
-
-  class StepSerializer extends JsonSerializer[Step] {
-    def serialize(
-        stepping: Step,
-        json: JsonGenerator,
-        provider: SerializerProvider): Unit = stepping match {
-
-      case AbsoluteStep(count) => json.writeNumber(count)
-      case RelativeStep(factor) => json.writeString(s"${(factor * 100).toInt}%")
-    }
-  }
-
-  class StepDeserializer extends JsonDeserializer[Step]{
-    override def deserialize(json: JsonParser, context: DeserializationContext): Step = {
-      val token = json.getCurrentToken
-
-      if (token.isNumeric) {
-        AbsoluteStep(json.getValueAsInt)
-      } else {
-        json.getValueAsString match {
-          case Percent(x) => RelativeStep(x.toDouble / 100.0)
-          case _ => throw new IllegalArgumentException("Value must be in percent.")
-        }
-      }
-    }
-  }
 }

@@ -2,13 +2,13 @@ package mesosphere.marathon.state
 
 import javax.inject.Inject
 import mesosphere.marathon.upgrade.{DeploymentPlanRepository, DeploymentPlan}
-import mesosphere.marathon.api.v2.{CanaryStrategy, RollingStrategy, Group}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.Singleton
 import mesosphere.marathon.MarathonSchedulerService
 import org.apache.log4j.Logger
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.api.v2.Group
 
 /**
  * The group manager is the facade for all group related actions.

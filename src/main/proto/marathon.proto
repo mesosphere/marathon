@@ -87,47 +87,18 @@ message StorageVersion {
 
 //group messages ------------------------------------------
 
-message StepDefinition {
-  enum StepKind {
-    Absolute = 0;
-    Relative = 1;
-  }
-  required double count = 1;
-  required StepKind kind = 2;
-}
-
 message ScalingStrategyDefinition {
-  enum StrategyKind {
-    Rolling = 0;
-    Canary = 1;
-  }
-  required StrategyKind kind = 1;
-  //rolling props
-  optional double minimumHealthCapacity = 2;
-  //canary props
-  optional uint32 watchPeriod = 3;
-  repeated StepDefinition steps = 4;
+  required double minimumHealthCapacity = 1;
 }
 
 message GroupDefinition {
   required string id = 1;
-  required ScalingStrategyDefinition scalingStrategy = 2;
-  repeated ServiceDefinition apps = 3;
-  required string version = 4;
+  required string version = 2;
+  required ScalingStrategyDefinition scalingStrategy = 3;
+  repeated ServiceDefinition apps = 4;
 }
 
 //deployment messages --------------------------------------
-
-message DeploymentActionDefinition {
-  required string appId = 1;
-  required uint32 scale = 2;
-  repeated string taksIdsToKill = 3;
-}
-
-message DeploymentStepDefinition {
-  required uint32 waitTime = 1;
-  repeated DeploymentActionDefinition deployments = 2;
-}
 
 message DeploymentPlanDefinition {
   required string id = 1;
@@ -135,7 +106,4 @@ message DeploymentPlanDefinition {
   required ScalingStrategyDefinition strategy = 3;
   repeated ServiceDefinition orig = 4;
   repeated ServiceDefinition target = 5;
-  repeated DeploymentStepDefinition steps = 6;
-  optional DeploymentStepDefinition current = 7;
-  optional DeploymentStepDefinition last = 8;
 }
