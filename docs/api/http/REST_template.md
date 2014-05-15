@@ -25,6 +25,8 @@
   * [POST /v2/eventSubscriptions?callbackUrl={url}](#post-v2eventsubscriptionscallbackurlurl): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-v2eventsubscriptions): List all event subscriber callback URLs
   * [DELETE /v2/eventSubscriptions?callbackUrl={url}](#delete-v2eventsubscriptionscallbackurlurl) Unregister a callback URL from the event subscribers list
+* [Queue](#queue)
+  * [GET /v2/queue](#get-v2queue): List content of the staging queue.
 
 ### _Apps_
 
@@ -638,3 +640,19 @@ http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v1/debu
 **Response:**
 
 http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/debug/leaderUrl
+
+### _Queue_
+
+#### GET `/v2/queue`
+
+Show content of the task queue.
+
+##### Example
+
+**Request:**
+
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/queue
+
+**Response:**
+
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/queue
