@@ -4,7 +4,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 
 import mesosphere.util.ThreadPoolContext.context
 import scala.concurrent.Future
-
+import scala.concurrent.ExecutionContext.Implicits.global
 class AppRepository(val store: PersistenceStore[AppDefinition]) extends EntityRepository[AppDefinition] {
 
   /**
@@ -17,8 +17,13 @@ class AppRepository(val store: PersistenceStore[AppDefinition]) extends EntityRe
     */
   def store(appDef: AppDefinition): Future[Option[AppDefinition]] = {
     val key = appDef.id + ID_DELIMITER + appDef.version.toString
-    this.store.store(appDef.id, appDef)
-    this.store.store(key, appDef)
+    val versionedRes = store.store(appDef.id, appDef)
+    val currentRes = store.store(key, appDef)
+
+    for {
+      _ <- versionedRes
+      current <- currentRes
+    } yield current
   }
 
   /**

@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Actor}
 import com.google.common.eventbus.{Subscribe, EventBus}
 import mesosphere.marathon.Protos.MarathonTask
 import scala.concurrent.Promise
-import mesosphere.marathon.event.HealthStatusChanged
+import mesosphere.marathon.event.{MesosStatusUpdateEvent, HealthStatusChanged}
 import org.apache.mesos.SchedulerDriver
 import scala.collection.mutable
 import org.apache.mesos.Protos.TaskID
@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory
 class EventForwarder(receiver: ActorRef) {
   @Subscribe
   def forward(event: HealthStatusChanged) = receiver ! event
+
+  @Subscribe
+  def forward(event: MesosStatusUpdateEvent) = receiver ! event
 }
 
 class TaskReplaceActor(
@@ -44,10 +47,14 @@ class TaskReplaceActor(
   def receive : Receive = {
     case HealthStatusChanged(`appId`, taskId, true, _) =>
       healthy += taskId
-      if (toKill.nonEmpty)
-        driver.killTask(buildTaskId(toKill.dequeue()))
+      if (toKill.nonEmpty) {
+        val killing = toKill.dequeue()
+        log.info(s"Killing old task $killing because $taskId became reachable")
+        driver.killTask(buildTaskId(killing))
+      }
       if (healthy.size == nrToStart) {
         promise.success(true)
+        context.stop(self)
       }
 
     case HealthStatusChanged(_, taskId, false, _) if taskIds(taskId) && healthy(taskId) =>
@@ -55,7 +62,13 @@ class TaskReplaceActor(
       promise.failure(new TaskUpgradeFailedException(msg))
       context.stop(self)
 
-    case x: HealthStatusChanged =>
+    case MesosStatusUpdateEvent(slaveId, taskId, "TASK_FAILED", `appId`, _, _, _) =>
+      val msg = s"Task $taskId failed on slave $slaveId"
+      log.error(msg)
+      promise.failure(new TaskUpgradeFailedException(msg))
+      context.stop(self)
+
+    case x =>
       log.debug(s"Received $x")
   }
 

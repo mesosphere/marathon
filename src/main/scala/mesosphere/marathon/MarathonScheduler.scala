@@ -321,7 +321,7 @@ class MarathonScheduler @Inject() (
     def replace(nrToStart: Int, tasks: Seq[MarathonTask]): Future[Boolean] = {
       log.debug(s"Replacing $tasks with $nrToStart new instances.")
       val promise = Promise[Boolean]()
-      if (nrToStart == 0) {
+      if (nrToStart > 0) {
         system.actorOf(
           Props(
             classOf[TaskReplaceActor],
@@ -339,7 +339,7 @@ class MarathonScheduler @Inject() (
     }
 
     def restartWithHealthChecks(app: AppDefinition): Future[Boolean] = {
-      val tasks = taskTracker.get(app.id).toSeq.sortBy(_.getStartedAt)
+      val tasks = taskTracker.get(app.id).toList.sortBy(_.getStartedAt)
       val killImmediately = tasks.take(tasks.size - keepAlive)
       val resKill = kill(killImmediately)
       val resReplace = replace(app.instances, tasks.drop(tasks.size - keepAlive))
@@ -365,11 +365,11 @@ class MarathonScheduler @Inject() (
     scalingApps.add(app.id)
 
     val res = appRepository.store(app) flatMap {
-      case Some(_) =>
+      case Some(storedApp) =>
         if (app.healthChecks.size > 0 && keepAlive > 0) {
-          restartWithHealthChecks(app)
+          restartWithHealthChecks(storedApp)
         } else if (keepAlive == 0) {
-          immediateRestart(app)
+          immediateRestart(storedApp)
         }
         else {
           throw new TaskUpgradeFailedException("Keep alive requested, but no health checks configured.")
