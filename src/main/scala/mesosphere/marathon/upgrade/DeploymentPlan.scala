@@ -63,7 +63,7 @@ case class DeploymentPlan(
     val promise = Promise[Boolean]()
     result.onComplete {
       case success@Success(true) => promise.complete(success)
-      case failure => DeploymentPlan(id, strategy, target, original)
+      case failure => DeploymentPlan(id, strategy, original, original)
                       .deploy(scheduler, false).map(ignore => promise.complete(failure))
     }
     promise.future
