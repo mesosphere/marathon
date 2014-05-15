@@ -80,11 +80,7 @@ class MarathonSchedulerService @Inject()(
 
   // This is a little ugly as we are using a mutable variable. But drivers can't be reused (i.e. once stopped they can't
   // be started again. Thus, we have to allocate a new driver before each run or after each stop.
-  var driver = new MesosSchedulerDriver(
-    scheduler,
-    frameworkInfo.build,
-    config.mesosMaster()
-  )
+  var driver = newDriver()
 
   def defaultWait = {
     appRepository.defaultWait
@@ -160,6 +156,9 @@ class MarathonSchedulerService @Inject()(
     // elected. If we aren't (i.e. no HA) then we take over leadership run the driver immediately.
     offerLeadership()
 
+    // Start the timer that handles reconciliation
+    scheduleTaskReconciliation()
+
     // Block on the latch which will be countdown only when shutdown has been triggered. This is to prevent run()
     // from exiting.
     latch.await()
@@ -187,7 +186,6 @@ class MarathonSchedulerService @Inject()(
 
   def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = {
     log.info("Running driver")
-    scheduleTaskReconciliation
     listApps foreach healthCheckManager.reconcileWith
 
     // The following block asynchronously runs the driver. Note that driver.run() blocks until the driver has been
@@ -229,11 +227,7 @@ class MarathonSchedulerService @Inject()(
 
     // We need to allocate a new driver as drivers can't be reused. Once they are in the stopped state they cannot be
     // restarted. See the Mesos C++ source code for the MesosScheduleDriver.
-    driver = new MesosSchedulerDriver(
-      scheduler,
-      frameworkInfo.build,
-      config.mesosMaster()
-    )
+    driver = newDriver()
   }
 
   def isLeader = {
@@ -310,7 +304,7 @@ class MarathonSchedulerService @Inject()(
     }
   }
 
-  private def scheduleTaskReconciliation {
+  private def scheduleTaskReconciliation() {
     reconciliationTimer.schedule(
       new TimerTask {
         def run() {
@@ -332,5 +326,13 @@ class MarathonSchedulerService @Inject()(
       port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
     } while (assignedPorts.contains(port))
     port
+  }
+
+  private def newDriver(): MesosSchedulerDriver = {
+    new MesosSchedulerDriver(
+      scheduler,
+      frameworkInfo.build,
+      config.mesosMaster()
+    )
   }
 }
