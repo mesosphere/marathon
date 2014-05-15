@@ -305,12 +305,12 @@ class MarathonScheduler @Inject() (
       callbacks.add(app.id, TaskState.TASK_FAILED, 1) { res =>
         if (res) {
           callbacks.remove(app.id, TaskState.TASK_RUNNING)
-          promise.failure(new TaskUpgradeFailedException(s"Failed to restart $app.id"))
+          promise.tryFailure(new TaskUpgradeFailedException(s"Failed to restart $app.id"))
         }
       }
       callbacks.add(app.id, TaskState.TASK_RUNNING, count) { success =>
-        promise.success(success)
         callbacks.remove(app.id, TaskState.TASK_FAILED)
+        promise.trySuccess(success)
       }
 
       for (_ <- 0 until count) taskQueue.add(app)
