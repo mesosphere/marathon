@@ -11,6 +11,10 @@ class GroupRepository(val store: PersistenceStore[Group], appRepo:AppRepository)
 
   def group(id: String, version: Timestamp) : Future[Option[Group]] = fetch(id + ID_DELIMITER + version.toString)
 
+  override def currentVersion(id: String): Future[Option[Group]] = fetch(id)
+
+  override def entity(id: String, version: Timestamp): Future[Option[Group]] = group(id, version)
+
   //fetch group, while fetching latest app definitions from app repository
   private def fetch(key:String) : Future[Option[Group]] = {
     this.store.fetch(key).flatMap {

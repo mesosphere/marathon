@@ -5,9 +5,10 @@ import mesosphere.marathon.api.v2.{AppUpdate, ScalingStrategy, Group}
 import mesosphere.marathon.state.{Timestamp, MarathonState}
 import mesosphere.marathon.Protos.DeploymentPlanDefinition
 import scala.collection.JavaConversions._
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import mesosphere.marathon.MarathonSchedulerService
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Success
 
 case class DeploymentPlan(
   id: String,
@@ -41,7 +42,7 @@ case class DeploymentPlan(
     builder.build()
   }
 
-  def deploy(scheduler: MarathonSchedulerService) : Future[Boolean] = {
+  def deploy(scheduler: MarathonSchedulerService, rollbackOnFailure:Boolean=true): Future[Boolean] = {
     val isUpdate = targetIds.intersect(originalIds)
     val toStart = targetIds.filterNot(isUpdate.contains)
     val toStop = originalIds.filterNot(isUpdate.contains)
@@ -54,7 +55,18 @@ case class DeploymentPlan(
       .map { case (_, app) => scheduler.upgradeApp(app, (app.instances * strategy.minimumHealthCapacity).toInt)}
     val startFuture = toStart.flatMap(id => target.find(_.id==id)).map(scheduler.startApp(_).map(_ => true))
     val stopFuture = toStop.flatMap(id => original.find(_.id==id)).map(scheduler.stopApp(_).map(_ => true))
-    Future.sequence(startFuture ++ updateFuture ++ restartFuture ++ stopFuture).map(_.forall(identity))
+    val result = Future.sequence(startFuture ++ updateFuture ++ restartFuture ++ stopFuture).map(_.forall(identity))
+    if (rollbackOnFailure) rollback(result, scheduler) else result
+  }
+
+  private def rollback(result:Future[Boolean], scheduler: MarathonSchedulerService) : Future[Boolean] = {
+    val promise = Promise[Boolean]()
+    result.onComplete {
+      case success@Success(true) => promise.complete(success)
+      case failure => DeploymentPlan(id, strategy, target, original)
+                      .deploy(scheduler, false).map(ignore => promise.complete(failure))
+    }
+    promise.future
   }
 }
 

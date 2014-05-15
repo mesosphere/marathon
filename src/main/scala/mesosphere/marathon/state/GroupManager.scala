@@ -16,7 +16,7 @@ import com.google.common.eventbus.EventBus
 
 /**
  * The group manager is the facade for all group related actions.
- * It persists the state of a group and delegates deployments to the UpgradeManager.
+ * It persists the state of a group and initiates deployments.
  */
 class GroupManager @Singleton @Inject() (
   scheduler: MarathonSchedulerService,
@@ -61,7 +61,6 @@ class GroupManager @Singleton @Inject() (
         log.warn(s"Can not update group $id, since there is no current version!")
         throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")
     }
-
   }
 
   private def upgrade(current: Group, group: Group): Future[Group] = {
