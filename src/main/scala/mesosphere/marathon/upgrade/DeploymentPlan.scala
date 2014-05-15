@@ -47,7 +47,7 @@ case class DeploymentPlan(
     val toStop = originalIds.filterNot(isUpdate.contains)
     val origTarget = isUpdate.flatMap(id => original.find(_.id==id)).zip(isUpdate.flatMap(id => target.find(_.id==id)))
     val updateFuture = origTarget
-      .filter{case (from, to) => !from.isOnlyScaleChange(to)}
+      .filter{case (from, to) => from.isOnlyScaleChange(to)}
       .map{ case (_, to) => scheduler.updateApp(to.id, AppUpdate(instances = Some(to.instances))).map(_ => true)}
     val restartFuture = origTarget
       .filter { case (from, to) => from.isUpgrade(to) }
