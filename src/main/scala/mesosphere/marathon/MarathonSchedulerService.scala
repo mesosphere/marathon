@@ -17,11 +17,12 @@ import com.twitter.common.zookeeper.Group.JoinException
 import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
-import scala.util.Random
+import scala.util.{Failure, Success, Random}
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import scala.concurrent.duration._
+import java.util.concurrent.CountDownLatch
 
 /**
  * Wrapper class for the scheduler
@@ -40,6 +41,8 @@ class MarathonSchedulerService @Inject()(
 
   // TODO use a thread pool here
   import ExecutionContext.Implicits.global
+
+  val latch = new CountDownLatch(1)
 
   // Time to wait before trying to reconcile app tasks after driver starts
   val reconciliationInitialDelay =
@@ -61,7 +64,6 @@ class MarathonSchedulerService @Inject()(
     .setUser(config.mesosUser())
     .setCheckpoint(config.checkpoint())
 
-
   // Set the framework ID
   frameworkIdUtil.fetch() match {
     case Some(id) => {
@@ -72,16 +74,13 @@ class MarathonSchedulerService @Inject()(
       log.info("No previous framework ID found")
     }
   }
+
   // Set the role, if provided.
   config.mesosRole.get.map(frameworkInfo.setRole)
 
-  val driver = new MesosSchedulerDriver(
-    scheduler,
-    frameworkInfo.build,
-    config.mesosMaster()
-  )
-
-  var abdicateCmd: Option[ExceptionalCommand[JoinException]] = None
+  // This is a little ugly as we are using a mutable variable. But drivers can't be reused (i.e. once stopped they can't
+  // be started again. Thus, we have to allocate a new driver before each run or after each stop.
+  var driver = newDriver()
 
   def defaultWait = {
     appRepository.defaultWait
@@ -143,106 +142,186 @@ class MarathonSchedulerService @Inject()(
     tasks
   }
 
-  /**
-   * Shutdown hook of guava service interface.
-   */
-  override def shutDown(): Unit = {
-    triggerShutdown()
-    super.shutDown()
-  }
-
   //Begin Service interface
-  def run() {
+
+  override def startUp(): Unit = {
     log.info("Starting up")
-    if (leader.get) {
-      runDriver()
-    } else {
-      offerLeadership()
-    }
+    super.startUp()
   }
 
-  // FIXME: remove dirty workaround as soon as the twitter code
-  //        has been changed to allow cancellation
-  override def triggerShutdown() {
+  override def run(): Unit = {
+    log.info("Beginning run")
 
-    def kill(): Unit = {
-      System.err.println("Finalization failed, killing JVM.")
-      Runtime.getRuntime.halt(1)
-    }
+    // The first thing we do is offer our leadership. If using Zookeeper for
+    // leadership election then we will wait to be elected. If we aren't (i.e.
+    // no HA) then we take over leadership run the driver immediately.
+    offerLeadership()
 
-    log.info("Shutting down")
+    // Start the timer that handles reconciliation
+    scheduleTaskReconciliation()
 
-    val f = Future {
-      abdicateCmd.map(_.execute)
-      stopDriver()
-      reconciliationTimer.cancel
-    }
+    // Block on the latch which will be countdown only when shutdown has been
+    // triggered. This is to prevent run()
+    // from exiting.
+    latch.await()
 
-    try {
-      // TODO: How long should we wait? Should it be configurable?
-      Await.result(f, 5.seconds)
-    } catch {
-      case _: Throwable => kill()
-    }
+    log.info("Completed run")
   }
 
-  def runDriver() {
+  override def triggerShutdown(): Unit = {
+    log.info("Shutdown triggered")
+
+    leader.set(false)
+
+    stopDriver()
+
+    log.info("Cancelling reconciliation timer")
+    reconciliationTimer.cancel()
+
+    log.info("Removing the blocking of run()")
+
+    // The countdown latch blocks run() from exiting. Counting down the latch removes the block.
+    latch.countDown()
+
+    super.triggerShutdown()
+  }
+
+  def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = {
     log.info("Running driver")
-    scheduleTaskReconciliation
     listApps foreach healthCheckManager.reconcileWith
-    driver.run()
+
+    // The following block asynchronously runs the driver. Note that driver.run()
+    // blocks until the driver has been stopped (or aborted).
+    Future {
+      driver.run()
+    } onComplete {
+      case Success(_) =>
+        log.info("Driver future completed. Executing optional abdication command.")
+
+        // If there is an abdication command we need to execute it so that our
+        // leadership is given up. Note that executing the abdication command
+        // does a few things: - It causes onDefeated() to be executed (which is
+        // part of the Leader interface).  - It removes us as a leadership
+        // candidate. We must offer out leadership candidacy if we ever want to
+        // become the leader again in the future.
+        //
+        // If we don't have a abdication command we simply mark ourselves as
+        // not the leader
+        abdicateCmdOption match {
+          case Some(cmd) => cmd.execute()
+          case _ => leader.set(false)
+        }
+
+        // If we are shutting down then don't offer leadership. But if we
+        // aren't then the driver was stopped via external means. For example,
+        // our leadership could have been defeated or perhaps it was
+        // abdicated. Therefore, for these cases we offer our leadership again.
+        if (isRunning) {
+          offerLeadership()
+        }
+      case Failure(t) =>
+        log.error("Exception while running driver", t)
+    }
   }
 
-  def stopDriver() {
+  def stopDriver(): Unit = {
     log.info("Stopping driver")
+
+    // Stopping the driver will cause the driver run() method to return.
     driver.stop(true) // failover = true
+
+    // We need to allocate a new driver as drivers can't be reused. Once they
+    // are in the stopped state they cannot be restarted. See the Mesos C++
+    // source code for the MesosScheduleDriver.
+    driver = newDriver()
   }
 
   def isLeader = {
-    leader.get() || getLeader.isEmpty
+    leader.get()
   }
 
   def getLeader: Option[String] = {
-    if (candidate.nonEmpty && candidate.get.getLeaderData.isPresent) {
-      return Some(new String(candidate.get.getLeaderData.get))
+    candidate.flatMap { c =>
+      if (c.getLeaderData.isPresent)
+        Some(new String(c.getLeaderData.get))
+      else
+        None
     }
-    None
   }
   //End Service interface
 
   //Begin Leader interface, which is required for CandidateImpl.
-  def onDefeated() {
-    log.info("Defeated")
-    leader.set(false)
-    stopDriver()
+  override def onDefeated(): Unit = {
+    log.info("Defeated (Leader Interface)")
 
-    // Don't offer leadership if we're shutting down
-    if (isRunning) {
-      offerLeadership()
-    }
+    // Our leadership has been defeated and thus we call the defeatLeadership() method.
+    defeatLeadership()
   }
 
-  def onElected(abdicate: ExceptionalCommand[JoinException]) {
-    log.info("Elected")
-    abdicateCmd = Some(abdicate)
-    leader.set(true)
-    runDriver()
+  override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
+    log.info("Elected (Leader Interface)")
+
+    // We have been elected. Thus, elect leadership with the abdication command.
+    electLeadership(Some(abdicateCmd))
   }
   //End Leader interface
 
-  private def scheduleTaskReconciliation {
+  private def defeatLeadership(): Unit = {
+    log.info("Defeat leadership")
+
+    // Our leadership has been defeated. Thus, update leadership and stop the driver.
+    // Note that abdication command will be ran upon driver shutdown.
+    leader.set(false)
+
+    stopDriver()
+  }
+
+  private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = {
+    log.info("Elect leadership")
+
+    // We have been elected as leader. Thus, update leadership and run the driver.
+    leader.set(true)
+    runDriver(abdicateOption)
+  }
+
+  def abdicateLeadership(): Unit = {
+    log.info("Abdicating")
+
+    // To abdicate we defeat our leadership
+    defeatLeadership()
+  }
+
+  private def offerLeadership(): Unit = {
+    log.info("Offering leadership")
+
+    candidate.synchronized {
+      candidate match {
+        case Some(c) =>
+          // In this case we care using Zookeeper for leadership candidacy.
+          // Thus, offer our leadership.
+          log.info("Using HA and therefore offering leadership")
+          c.offerLeadership(this)
+        case _ =>
+          // In this case we aren't using Zookeeper for leadership election.
+          // Thus, we simply elect ourselves as leader.
+          log.info("Not using HA and therefore electing as leader by default")
+          electLeadership(None)
+      }
+    }
+  }
+
+  private def scheduleTaskReconciliation(): Unit = {
     reconciliationTimer.schedule(
-      new TimerTask { def run() { scheduler.reconcileTasks(driver) }},
+      new TimerTask {
+        def run() {
+          if (isLeader) {
+            scheduler.reconcileTasks(driver)
+          } else log.info("Not leader therefore not reconciling tasks")
+        }
+      },
       reconciliationInitialDelay.toMillis,
       reconciliationFrequency.toMillis
     )
-  }
-
-  private def offerLeadership() {
-    if (candidate.nonEmpty) {
-      log.info("Offering leadership.")
-      candidate.get.offerLeadership(this)
-    }
   }
 
   private def newAppPort(app: AppDefinition): Integer = {
@@ -253,5 +332,13 @@ class MarathonSchedulerService @Inject()(
       port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
     } while (assignedPorts.contains(port))
     port
+  }
+
+  private def newDriver(): MesosSchedulerDriver = {
+    new MesosSchedulerDriver(
+      scheduler,
+      frameworkInfo.build,
+      config.mesosMaster()
+    )
   }
 }
