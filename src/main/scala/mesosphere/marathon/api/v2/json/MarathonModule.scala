@@ -223,6 +223,9 @@ object MarathonModule {
   // of the 'AppUpdate' class and remove this workaround.
   @JsonIgnoreProperties(ignoreUnknown = true)
   case class AppUpdateBuilder(
+
+    id: Option[String] = None, //needed for updates inside a group
+
       cmd: Option[String] = None,
 
       instances: Option[JInt] = None,
@@ -245,7 +248,7 @@ object MarathonModule {
 
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      cmd, instances, cpus, mem, uris, ports, constraints,
+      id, cmd, instances, cpus, mem, uris, ports, constraints,
       executor, container, healthChecks, version
     )
   }

@@ -1,7 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.api.v2.{ScalingStrategy, Group}
+import mesosphere.marathon.api.v2.{AppUpdate, ScalingStrategy, Group}
 import mesosphere.marathon.state.{Timestamp, MarathonState}
 import mesosphere.marathon.Protos.DeploymentPlanDefinition
 import scala.collection.JavaConversions._
@@ -42,15 +42,19 @@ case class DeploymentPlan(
   }
 
   def deploy(scheduler: MarathonSchedulerService) : Future[Boolean] = {
-    val toRestart = targetIds.intersect(originalIds)
-    val toStart = targetIds.filterNot(toRestart.contains)
-    val toStop = originalIds.filterNot(toRestart.contains)
-    val restartFuture = toRestart.flatMap(id => target.find(_.id==id)).map { app =>
-      scheduler.upgradeApp(app, (app.instances * strategy.minimumHealthCapacity).toInt)
-    }
+    val isUpdate = targetIds.intersect(originalIds)
+    val toStart = targetIds.filterNot(isUpdate.contains)
+    val toStop = originalIds.filterNot(isUpdate.contains)
+    val origTarget = isUpdate.flatMap(id => original.find(_.id==id)).zip(isUpdate.flatMap(id => target.find(_.id==id)))
+    val updateFuture = origTarget
+      .filter{case (from, to) => !from.isOnlyScaleChange(to)}
+      .map{ case (_, to) => scheduler.updateApp(to.id, AppUpdate(instances = Some(to.instances))).map(_ => true)}
+    val restartFuture = origTarget
+      .filter { case (from, to) => from.isUpgrade(to) }
+      .map { case (_, app) => scheduler.upgradeApp(app, (app.instances * strategy.minimumHealthCapacity).toInt)}
     val startFuture = toStart.flatMap(id => target.find(_.id==id)).map(scheduler.startApp(_).map(_ => true))
     val stopFuture = toStop.flatMap(id => original.find(_.id==id)).map(scheduler.stopApp(_).map(_ => true))
-    Future.sequence(restartFuture ++ startFuture ++ stopFuture).map(_.forall(identity))
+    Future.sequence(startFuture ++ updateFuture ++ restartFuture ++ stopFuture).map(_.forall(identity))
   }
 }
 

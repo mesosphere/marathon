@@ -7,6 +7,7 @@ import javax.validation.Valid
 import mesosphere.marathon.state.GroupManager
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
+import mesosphere.marathon.api.PATCH
 
 @Path("v2/groups")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -26,6 +27,11 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   @PUT
   @Path("{id}")
   def upgrade( @PathParam("id") id: String, @Valid group: Group ) : Group = groupManager.upgrade(id, group)
+
+
+  @PATCH
+  @Path("{id}")
+  def patch( @PathParam("id") id:String, @Valid update: GroupUpdate) : Group = groupManager.patch(id, update.apply)
 
   @DELETE
   @Path("{id}")

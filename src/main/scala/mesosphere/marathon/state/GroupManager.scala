@@ -23,11 +23,11 @@ class GroupManager @Singleton @Inject() (
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
-  def list() : Future[Iterable[Group]] = groupRepo.current()
+  def list(): Future[Iterable[Group]] = groupRepo.current()
 
-  def group(id:String) : Future[Option[Group]] = groupRepo.group(id)
+  def group(id: String): Future[Option[Group]] = groupRepo.group(id)
 
-  def create(group:Group) : Future[Group] = {
+  def create(group: Group): Future[Group] = {
     groupRepo.currentVersion(group.id).flatMap {
       case Some(current) =>
         log.warn(s"There is already an group with this id: ${group.id}")
@@ -38,25 +38,38 @@ class GroupManager @Singleton @Inject() (
     }
   }
 
-  def upgrade(id:String, group:Group) : Future[Group] = {
+  def upgrade(id: String, group: Group): Future[Group] = {
     groupRepo.currentVersion(id).flatMap {
-      case Some(current) =>
-        log.info(s"Update existing Group $id with $group")
-        val restart = for {
-          storedGroup <- groupRepo.store(group)
-          runningTasks = current.apps.map( app => app.id->taskTracker.get(app.id).map(_.getId).toList).toMap.withDefaultValue(Nil)
-          plan <- planRepo.store(DeploymentPlan.apply(id, current, storedGroup, runningTasks))
-          result <- plan.deploy(scheduler) if result
-        } yield storedGroup
-        //remove the upgrade plan after the task has been finished
-        restart.andThen { case _ => planRepo.expunge(id) }
+      case Some(current) => upgrade(current, group)
       case None =>
         log.warn(s"Can not update group $id, since there is no current version!")
         throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")
     }
   }
 
-  def expunge(id:String) : Future[Boolean] = {
+  def patch(id: String, fn: Group=>Group): Future[Group] = {
+    groupRepo.currentVersion(id).flatMap {
+      case Some(current) => upgrade(current, fn(current))
+      case None =>
+        log.warn(s"Can not update group $id, since there is no current version!")
+        throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")
+    }
+
+  }
+
+  private def upgrade(current: Group, group: Group): Future[Group] = {
+    log.info(s"Upgrade existing Group ${group.id} with $group")
+    val restart = for {
+      storedGroup <- groupRepo.store(group)
+      runningTasks = current.apps.map( app => app.id->taskTracker.get(app.id).map(_.getId).toList).toMap.withDefaultValue(Nil)
+      plan <- planRepo.store(DeploymentPlan(current.id, current, storedGroup, runningTasks))
+      result <- plan.deploy(scheduler) if result
+    } yield storedGroup
+    //remove the upgrade plan after the task has been finished
+    restart.andThen { case _ => planRepo.expunge(current.id) }
+  }
+
+  def expunge(id: String): Future[Boolean] = {
     groupRepo.currentVersion(id).flatMap {
       case Some(current) => Future.sequence(current.apps.map(scheduler.stopApp)).flatMap(_ => groupRepo.expunge(id).map(_.forall(identity)))
       case None => Future.successful(false)
