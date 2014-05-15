@@ -30,19 +30,9 @@ class TaskReplaceActor(
 
   private [this] val log = LoggerFactory.getLogger(getClass)
 
-  var forwarder: Option[EventForwarder] = None
   var healthy = Set.empty[String]
   var taskIds = tasksToKill.map(_.getId)
   val toKill = taskIds.to[mutable.Queue]
-
-  override def preStart() {
-    forwarder = Some(new EventForwarder(self))
-    forwarder foreach eventBus.register
-  }
-
-  override def postStop() {
-    forwarder foreach eventBus.unregister
-  }
 
   def receive : Receive = {
     case HealthStatusChanged(`appId`, taskId, true, _) =>

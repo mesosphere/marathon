@@ -322,7 +322,7 @@ class MarathonScheduler @Inject() (
       log.debug(s"Replacing $tasksToKill with $nrToStart new instances.")
       val promise = Promise[Boolean]()
       if (nrToStart > 0) {
-        system.actorOf(
+        val ref = system.actorOf(
           Props(
             classOf[TaskReplaceActor],
             driver,
@@ -331,6 +331,13 @@ class MarathonScheduler @Inject() (
             nrToStart,
             tasksToKill.toSet,
             promise))
+        val forwarder = new EventForwarder(ref)
+        eventBus.register(forwarder)
+
+        promise.future onComplete { _ =>
+          eventBus.unregister(forwarder)
+        }
+
       } else {
         promise.success(true)
       }
