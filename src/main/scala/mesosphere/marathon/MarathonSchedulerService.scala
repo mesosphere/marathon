@@ -241,12 +241,12 @@ class MarathonSchedulerService @Inject()(
   }
 
   def getLeader: Option[String] = {
-    candidate.flatMap(c => {
+    candidate.flatMap { c =>
       if (c.getLeaderData.isPresent)
         Some(new String(c.getLeaderData.get))
       else
         None
-    })
+    }
   }
   //End Service interface
 
@@ -266,7 +266,7 @@ class MarathonSchedulerService @Inject()(
   }
   //End Leader interface
 
-  private def defeatLeadership() {
+  private def defeatLeadership(): Unit = {
     log.info("Defeat leadership")
 
     // Our leadership has been defeated. Thus, update leadership and stop the driver.
@@ -276,7 +276,7 @@ class MarathonSchedulerService @Inject()(
     stopDriver()
   }
 
-  private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]) {
+  private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = {
     log.info("Elect leadership")
 
     // We have been elected as leader. Thus, update leadership and run the driver.
@@ -284,7 +284,7 @@ class MarathonSchedulerService @Inject()(
     runDriver(abdicateOption)
   }
 
-  def abdicateLeadership() = {
+  def abdicateLeadership(): Unit = {
     log.info("Abdicating")
 
     // To abdicate we defeat our leadership
@@ -310,7 +310,7 @@ class MarathonSchedulerService @Inject()(
     }
   }
 
-  private def scheduleTaskReconciliation() {
+  private def scheduleTaskReconciliation(): Unit = {
     reconciliationTimer.schedule(
       new TimerTask {
         def run() {

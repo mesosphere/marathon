@@ -278,7 +278,7 @@ class MarathonScheduler @Inject()(
    * to give Mesos enough time to deliver task updates.
    * @param driver scheduler driver
    */
-  def reconcileTasks(driver: SchedulerDriver) {
+  def reconcileTasks(driver: SchedulerDriver): Unit = {
     appRepository.appIds().onComplete {
       case Success(iterator) =>
         log.info("Syncing tasks for all apps")
@@ -330,7 +330,7 @@ class MarathonScheduler @Inject()(
    * @param updatedApp
    * @param appUpdate
    */
-  private def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate) {
+  private def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate): Unit = {
     // TODO: implement app instance restart logic
   }
 
@@ -339,7 +339,7 @@ class MarathonScheduler @Inject()(
    * @param driver
    * @param app
    */
-  def scale(driver: SchedulerDriver, app: AppDefinition) {
+  def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     taskTracker.get(app.id).synchronized {
       val currentCount = taskTracker.count(app.id)
       val targetCount = app.instances
@@ -374,25 +374,25 @@ class MarathonScheduler @Inject()(
     }
   }
 
-  private def scale(driver: SchedulerDriver, appName: String) {
+  private def scale(driver: SchedulerDriver, appName: String): Unit = {
     currentAppVersion(appName).onSuccess {
       case Some(app) => scale(driver, app)
       case _ => log.warn("App %s does not exist. Not scaling.".format(appName))
     }
   }
 
-  private def suicide() {
+  private def suicide(): Unit = {
     log.fatal("Committing suicide")
 
     // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
     Future {
       sys.exit(9)
     } onFailure {
-      case t => log.fatal("Exception while committing suicide", t)
+      case t: Throwable => log.fatal("Exception while committing suicide", t)
     }
   }
 
-  private def postEvent(status: TaskStatus, task: MarathonTask) {
+  private def postEvent(status: TaskStatus, task: MarathonTask): Unit = {
     eventBus.foreach { bus =>
       log.info("Sending event notification.")
       bus.post(
