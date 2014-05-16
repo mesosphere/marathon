@@ -103,7 +103,6 @@ message GroupDefinition {
 message DeploymentPlanDefinition {
   required string id = 1;
   required string version = 2;
-  required ScalingStrategyDefinition strategy = 3;
-  repeated ServiceDefinition orig = 4;
-  repeated ServiceDefinition target = 5;
+  required GroupDefinition originial = 4;
+  required GroupDefinition target = 5;
 }

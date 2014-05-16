@@ -67,17 +67,21 @@ class GroupManager @Singleton @Inject() (
     log.info(s"Upgrade existing Group ${group.id} with $group")
     val restart = for {
       storedGroup <- groupRepo.store(group)
-      runningTasks = current.apps.map( app => app.id->taskTracker.get(app.id).map(_.getId).toList).toMap.withDefaultValue(Nil)
-      plan <- planRepo.store(DeploymentPlan(current.id, current, storedGroup, runningTasks))
+      plan <- planRepo.store(DeploymentPlan(current.id, current, storedGroup))
       result <- plan.deploy(scheduler) if result
     } yield storedGroup
     //remove the upgrade plan after the task has been finished
-    restart.andThen(postEvent(group)).andThen(deletePlan(current.id))
+    restart.andThen(rollbackGroup(current)).andThen(deletePlan(current.id)).andThen(postEvent(group))
   }
 
   private def postEvent(group:Group) : PartialFunction[Try[Group], Unit] = {
     case Success(_) => eventBus.post(GroupChangeSuccess(group.id))
     case Failure(ex) => eventBus.post(GroupChangeFailed(group.id, ex.getMessage))
+  }
+
+  private def rollbackGroup(oldGroup:Group) : PartialFunction[Try[Group], Unit] = {
+    case Failure(_) => groupRepo.store(oldGroup)
+    case Success(_) => //ignore
   }
 
   private def deletePlan(id:String) : PartialFunction[Try[Group], Unit] = {
