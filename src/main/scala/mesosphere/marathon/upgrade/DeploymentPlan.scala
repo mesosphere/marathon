@@ -43,25 +43,25 @@ case class DeploymentPlan(
   lazy val (toStart, toStop, toScale, toRestart) = {
     val isUpdate = targetIds.intersect(originalIds)
     val origTarget = isUpdate.flatMap(id => original.apps.find(_.id==id)).zip(isUpdate.flatMap(id => target.apps.find(_.id==id)))
-    (targetIds.filterNot(isUpdate.contains),
-      originalIds.filterNot(isUpdate.contains),
-      origTarget.filter{case (from, to) => from.isOnlyScaleChange(to)},
-      origTarget.filter { case (from, to) => from.isUpgrade(to) })
+    ( targetIds.filterNot(isUpdate.contains).flatMap(id => target.apps.find(_.id==id)),
+      originalIds.filterNot(isUpdate.contains).flatMap(id => original.apps.find(_.id==id)),
+      origTarget.filter{case (from, to) => from.isOnlyScaleChange(to)}.map(_._2),
+      origTarget.filter { case (from, to) => from.isUpgrade(to) }.map(_._2))
   }
 
   def deploy(scheduler: MarathonSchedulerService, rollbackOnFailure: Boolean = true, isRollback: Boolean = false): Future[Boolean] = {
     val locks = if (isRollback) Nil else targetIds.map(scheduler.appLocks(_))
     locks.foreach(_.acquire())
-    val updateFuture = toScale.map{ case (_, to) => scheduler.updateApp(to.id, AppUpdate(instances = Some(to.instances))).map(_ => true)}
-    val restartFuture = toRestart.map { case (_, app) => scheduler.upgradeApp(app, (app.instances * target.scalingStrategy.minimumHealthCapacity).toInt)}
-    val startFuture = toStart.flatMap(id => target.apps.find(_.id==id)).map(scheduler.startApp(_).map(_ => true))
-    val stopFuture = toStop.flatMap(id => original.apps.find(_.id==id)).map(scheduler.stopApp(_).map(_ => true))
-    val result = Future.sequence(startFuture ++ updateFuture ++ restartFuture ++ stopFuture).map(_.forall(identity))
-    val res = if (rollbackOnFailure) rollback(result, scheduler) else result
 
-    res andThen { case _ =>
-      locks.foreach(_.release())
-    }
+    log.info(s"Deploy group ${target.id}: start:${toStart.map(_.id)}, stop:${toStop.map(_.id)}, scale:${toScale.map(_.id)}, restart:${toRestart.map(_.id)}")
+    val updateFuture = toScale.map(to => scheduler.updateApp(to.id, AppUpdate(instances = Some(to.instances))).map(_ => true))
+    val restartFuture = toRestart.map(app => scheduler.upgradeApp(app, (app.instances * target.scalingStrategy.minimumHealthCapacity).toInt))
+    val startFuture = toStart.map(scheduler.startApp(_).map(_ => true))
+    val stopFuture = toStop.map(scheduler.stopApp(_).map(_ => true))
+    val deployFuture = Future.sequence(startFuture ++ updateFuture ++ restartFuture ++ stopFuture).map(_.forall(identity))
+    val result = if (rollbackOnFailure) rollback(deployFuture, scheduler) else deployFuture
+
+    result andThen { case _ => locks.foreach(_.release()) }
   }
 
   def rollbackPlan : DeploymentPlan = DeploymentPlan(
