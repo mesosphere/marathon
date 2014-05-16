@@ -305,7 +305,7 @@ class MarathonScheduler @Inject() (
       callbacks.add(app.id, TaskState.TASK_FAILED, 1) { res =>
         if (res) {
           callbacks.remove(app.id, TaskState.TASK_RUNNING)
-          promise.tryFailure(new TaskUpgradeFailedException(s"Failed to restart $app.id"))
+          promise.tryFailure(new TaskFailedException(s"Failed to restart $app.id"))
         }
       }
       callbacks.add(app.id, TaskState.TASK_RUNNING, count) { success =>
@@ -378,10 +378,10 @@ class MarathonScheduler @Inject() (
           immediateRestart(storedApp)
         }
         else {
-          throw new TaskUpgradeFailedException("Keep alive requested, but no health checks configured.")
+          throw new MissingHealthCheckException("Keep alive requested, but no health checks configured.")
         }
 
-      case None => throw new TaskUpgradeFailedException("Failed to store app definition.")
+      case None => throw new StorageException("Failed to store app definition.")
     }
 
     res andThen {

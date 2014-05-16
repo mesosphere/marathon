@@ -12,8 +12,12 @@ class UnknownAppException(id: String) extends Exception(s"App '$id' does not exi
 
 class BadRequestException(msg: String) extends Exception(msg)
 
-object UpgradeFailed extends Exception("Upgrade Failed")
+/*
+ * Task upgrade specific exceptions
+ */
+abstract class TaskUpgradeFailedException(msg: String) extends Exception(msg)
 
-class TaskUpgradeFailedException(msg: String) extends Exception(msg)
-
-class ConcurrentTaskUpgradeException(msg: String) extends Exception(msg)
+class HealthCheckFailedException(msg: String) extends TaskUpgradeFailedException(msg)
+class TaskFailedException(msg: String) extends TaskUpgradeFailedException(msg)
+class ConcurrentTaskUpgradeException(msg: String) extends TaskUpgradeFailedException(msg)
+class MissingHealthCheckException(msg: String) extends TaskUpgradeFailedException(msg)
