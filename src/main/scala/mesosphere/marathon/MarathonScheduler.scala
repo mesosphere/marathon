@@ -370,26 +370,25 @@ class MarathonScheduler @Inject() (
       } yield killed && started
     }
 
-    val res = appRepository.store(app) flatMap {
-      case Some(storedApp) =>
-        if (app.healthChecks.size > 0 && keepAlive > 0) {
-          restartWithHealthChecks(storedApp)
-        } else if (keepAlive == 0) {
-          immediateRestart(storedApp)
-        }
-        else {
-          throw new MissingHealthCheckException("Keep alive requested, but no health checks configured.")
-        }
+    val res = if (app.healthChecks.isEmpty && keepAlive > 0) {
+      Future.failed(new MissingHealthCheckException("Keep alive requested, but no health checks configured."))
+    } else {
+      appRepository.store(app) flatMap {
+        case Some(storedApp) =>
+          if (keepAlive > 0) {
+            restartWithHealthChecks(storedApp)
+          } else {
+            immediateRestart(storedApp)
+          }
 
-      case None => throw new StorageException("Failed to store app definition.")
+        case None => throw new StorageException("Failed to store app definition.")
+      }
     }
 
     res andThen {
       case Success(_) =>
         log.info(s"Restart of ${app.id} successful")
-        eventBus.post(RestartSuccess({
-          app.id
-        }))
+        eventBus.post(RestartSuccess(app.id))
 
       case Failure(e) =>
         log.error(s"Restart of ${app.id} failed", e)
