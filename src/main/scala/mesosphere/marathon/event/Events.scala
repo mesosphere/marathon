@@ -60,18 +60,6 @@ case class ApiPostEvent(
   appDefinition: AppDefinition,
   eventType: String = "api_post_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
-  eventType: String = "api_post_event"
-) extends MarathonEvent
-
-case class MesosStatusUpdateEvent(
-  slaveId: String,
-  taskId: String,
-  taskStatus: String,
-  appId: String,
-  host: String,
-  ports: Iterable[Integer],
-  version: String,
-  eventType: String = "status_update_event"
 
 // event subscriptions
 
@@ -123,10 +111,31 @@ case class HealthStatusChanged(
 // upgrade messages
 
 trait UpgradeEvent extends MarathonEvent
-case class GroupChangeSuccess(groupId: String, eventType:String = "group_change_success") extends UpgradeEvent
-case class GroupChangeFailed(groupId: String, reason:String, eventType: String = "group_change_failed") extends UpgradeEvent
-case class RestartSuccess(appId: String, eventType: String = "restart_success") extends UpgradeEvent
-case class RestartFailed(appId: String, eventType: String = "restart_failed") extends UpgradeEvent
+
+case class GroupChangeSuccess(
+  groupId: String,
+  eventType:String = "group_change_success",
+  timestamp: String = Timestamp.now().toString
+) extends UpgradeEvent
+
+case class GroupChangeFailed(
+  groupId: String,
+  reason:String,
+  eventType: String = "group_change_failed",
+  timestamp: String = Timestamp.now().toString
+) extends UpgradeEvent
+
+case class RestartSuccess(
+  appId: String,
+  eventType: String = "restart_success",
+  timestamp: String = Timestamp.now().toString
+) extends UpgradeEvent
+
+case class RestartFailed(
+  appId: String,
+  eventType: String = "restart_failed",
+  timestamp: String = Timestamp.now().toString
+) extends UpgradeEvent
 
 // Mesos scheduler
 
@@ -137,6 +146,7 @@ case class MesosStatusUpdateEvent(
   appId: String,
   host: String,
   ports: Iterable[Integer],
+  version: String,
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 

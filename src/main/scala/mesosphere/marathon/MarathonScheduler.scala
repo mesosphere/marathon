@@ -23,16 +23,10 @@ import mesosphere.util.{LockManager, ThreadPoolContext, RateLimiters}
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
-import scala.collection.mutable
 import akka.actor.{Props, ActorSystem}
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.event.FrameworkMessageEvent
-import scala.util.Failure
-import scala.Some
-import scala.util.Success
+import mesosphere.marathon.event.MesosFrameworkMessageEvent
 import mesosphere.marathon.event.RestartSuccess
-import scala.collection.concurrent.TrieMap
-import java.util.concurrent.Semaphore
 
 trait SchedulerCallbacks {
   def disconnected(): Unit

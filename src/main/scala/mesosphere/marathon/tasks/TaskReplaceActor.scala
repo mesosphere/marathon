@@ -36,7 +36,7 @@ class TaskReplaceActor(
   val toKill = taskIds.to[mutable.Queue]
 
   def receive : Receive = {
-    case HealthStatusChanged(`appId`, taskId, true, _) =>
+    case HealthStatusChanged(`appId`, taskId, true, _, _) =>
       healthy += taskId
       if (toKill.nonEmpty) {
         val killing = toKill.dequeue()
@@ -48,12 +48,12 @@ class TaskReplaceActor(
         context.stop(self)
       }
 
-    case HealthStatusChanged(`appId`, taskId, false, _) if !taskIds(taskId) && healthy(taskId) =>
+    case HealthStatusChanged(`appId`, taskId, false, _, _) if !taskIds(taskId) && healthy(taskId) =>
       val msg = s"Task $taskId went from a healthy to un unhealthy state during replacement"
       promise.failure(new HealthCheckFailedException(msg))
       context.stop(self)
 
-    case MesosStatusUpdateEvent(slaveId, taskId, "TASK_FAILED", `appId`, _, _, `version`, _) =>
+    case MesosStatusUpdateEvent(slaveId, taskId, "TASK_FAILED", `appId`, _, _, `version`, _, _) =>
       val msg = s"Task $taskId failed on slave $slaveId"
       log.error(msg)
       promise.failure(new TaskFailedException(msg))
