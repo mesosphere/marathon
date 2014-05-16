@@ -33,7 +33,7 @@ class MarathonSchedulerService @Inject()(
     healthCheckManager: HealthCheckManager,
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
-    marathonDriver:MarathonSchedulerDriver,
+    frameworkIdUtil: FrameworkIdUtil,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
     appRepository: AppRepository,
     scheduler: MarathonScheduler)
@@ -56,9 +56,18 @@ class MarathonSchedulerService @Inject()(
 
   val log = Logger.getLogger(getClass.getName)
 
-  // This is a little ugly as we are using a mutable variable. But drivers can't be reused (i.e. once stopped they can't
-  // be started again. Thus, we have to allocate a new driver before each run or after each stop.
-  var driver = newDriver()
+  val frameworkId = frameworkIdUtil.fetch()
+  frameworkId match {
+    case Some(id) =>
+      log.info(s"Setting framework ID to ${id.getValue}")
+    case None =>
+      log.info("No previous framework ID found")
+  }
+
+  // This is a little ugly as we are using a mutable variable. But drivers can't
+  // be reused (i.e. once stopped they can't be started again. Thus,
+  // we have to allocate a new driver before each run or after each stop.
+  var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
 
   def defaultWait = {
     appRepository.defaultWait
@@ -211,7 +220,7 @@ class MarathonSchedulerService @Inject()(
     // We need to allocate a new driver as drivers can't be reused. Once they
     // are in the stopped state they cannot be restarted. See the Mesos C++
     // source code for the MesosScheduleDriver.
-    driver = newDriver()
+    driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
   }
 
   def isLeader = {
@@ -310,13 +319,5 @@ class MarathonSchedulerService @Inject()(
       port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
     } while (assignedPorts.contains(port))
     port
-  }
-
-  private def newDriver(): MesosSchedulerDriver = {
-    new MesosSchedulerDriver(
-      scheduler,
-      frameworkInfo.build,
-      config.mesosMaster()
-    )
   }
 }

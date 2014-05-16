@@ -8,8 +8,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event._
-import mesosphere.marathon.{MarathonSchedulerDriver, MarathonScheduler}
-import org.apache.mesos.Protos.TaskID
+import mesosphere.marathon.MarathonSchedulerDriver
+import mesosphere.mesos.protos.TaskID
 
 class HealthCheckActor(
   appId: String,
@@ -21,6 +21,7 @@ class HealthCheckActor(
   import HealthCheckActor.{GetTaskHealth, Health}
   import HealthCheckWorker.{HealthCheckJob, HealthResult}
   import context.dispatcher // execution context
+  import mesosphere.mesos.protos.Implicits._
 
   protected[this] var nextScheduledCheck: Option[Cancellable] = None
 
@@ -83,19 +84,20 @@ class HealthCheckActor(
   }
 
   protected[this] def checkConsecutiveFailures(taskId: String, health: Health): Unit = {
-    val consecutiveF = health.consecutiveFailures
-    val maxF = healthCheck.maxConsecutiveFailures
+    val consecutiveFailures = health.consecutiveFailures
+    val maxFailures = healthCheck.maxConsecutiveFailures
 
-    if(maxF.isDefined && consecutiveF >= maxF.get){
-      val taskToKill = taskTracker.get(appId).filter( _.getId == taskId ).headOption
+    if (consecutiveFailures >= maxFailures) {
+      val taskToKill = taskTracker.get(appId).find(_.getId == taskId)
       taskToKill match {
         case Some(task) =>
-          //log.debug(s"Dispatching kill request for taskId[$taskId], failures[${consecutiveF}}] >= ${maxF.get}")
-          //driver.killTask(appId, task)
           log.info(f"Killing task ${task.getId} on host ${task.getHost}")
-          driver.driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
+
+          MarathonSchedulerDriver.driver.foreach { driver =>
+            driver.killTask(TaskID(task.getId))
+          }
         case None =>
-          log.debug(s"Unable to get a task for taskId[$taskId]")
+          log.warning(s"Unable to get a task for taskId[$taskId]")
       }
     }
   }
@@ -127,9 +129,7 @@ class HealthCheckActor(
         eventBus.foreach(_.post(FailedHealthCheck(appId, taskId, healthCheck)))
 
       checkConsecutiveFailures(taskId, health)
-    }
   }
-
 }
 
 object HealthCheckActor {

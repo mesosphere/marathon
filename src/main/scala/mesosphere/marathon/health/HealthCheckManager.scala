@@ -20,8 +20,7 @@ case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 class HealthCheckManager @Singleton @Inject() (
   system: ActorSystem,
   @Named(EventModule.busName) eventBus: Option[EventBus],
-  taskTracker: TaskTracker,
-  driver: MarathonSchedulerDriver
+  taskTracker: TaskTracker
 ) {
 
   import HealthCheckActor.{GetTaskHealth, Health}

@@ -14,7 +14,7 @@ class HealthCheckTest extends MarathonSpec {
       portIndex = 0,
       initialDelay = FiniteDuration(10, SECONDS),
       interval = FiniteDuration(60, SECONDS),
-      maxConsecutiveFailures = None
+      maxConsecutiveFailures = 0
     )
 
     val proto = healthCheck.toProto
@@ -33,7 +33,7 @@ class HealthCheckTest extends MarathonSpec {
       portIndex = 1,
       initialDelay = FiniteDuration(7, SECONDS),
       interval = FiniteDuration(35, SECONDS),
-      maxConsecutiveFailures = Option(10)
+      maxConsecutiveFailures = 10
     )
 
     val proto = healthCheck.toProto
@@ -65,7 +65,7 @@ class HealthCheckTest extends MarathonSpec {
       initialDelay = FiniteDuration(10, SECONDS),
       interval = FiniteDuration(60, SECONDS),
       timeout = FiniteDuration(10, SECONDS),
-      maxConsecutiveFailures = Option(10)
+      maxConsecutiveFailures = 10
     )
 
     assert(mergeResult == expectedResult)
@@ -90,7 +90,7 @@ class HealthCheckTest extends MarathonSpec {
       initialDelay = FiniteDuration(7, SECONDS),
       interval = FiniteDuration(35, SECONDS),
       timeout = FiniteDuration(10, SECONDS),
-      maxConsecutiveFailures = Option(10)
+      maxConsecutiveFailures = 10
     )
 
     assert(mergeResult == expectedResult)
