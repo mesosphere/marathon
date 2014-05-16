@@ -10,6 +10,7 @@ import javax.inject.Named
 import org.apache.log4j.Logger
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.api.v2.Group
+import mesosphere.marathon.Protos.MarathonTask
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]
@@ -69,6 +70,7 @@ case class MesosStatusUpdateEvent(
   appId: String,
   host: String,
   ports: Iterable[Integer],
+  version: String,
   eventType: String = "status_update_event"
 
 // event subscriptions

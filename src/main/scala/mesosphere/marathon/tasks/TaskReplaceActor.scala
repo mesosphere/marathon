@@ -23,6 +23,7 @@ class TaskReplaceActor(
   driver: SchedulerDriver,
   eventBus: EventBus,
   appId: String,
+  version: String,
   nrToStart: Int,
   tasksToKill: Set[MarathonTask],
   promise: Promise[Boolean]
@@ -52,7 +53,7 @@ class TaskReplaceActor(
       promise.failure(new TaskUpgradeFailedException(msg))
       context.stop(self)
 
-    case MesosStatusUpdateEvent(slaveId, taskId, "TASK_FAILED", `appId`, _, _, _) =>
+    case MesosStatusUpdateEvent(slaveId, taskId, "TASK_FAILED", `appId`, _, _, `version`, _) =>
       val msg = s"Task $taskId failed on slave $slaveId"
       log.error(msg)
       promise.failure(new TaskUpgradeFailedException(msg))

@@ -5,8 +5,7 @@ import org.apache.mesos.state.State
 import scala.collection.JavaConverters._
 import scala.concurrent._
 import mesosphere.marathon.StorageException
-import com.google.common.cache.{ CacheLoader, CacheBuilder }
-import java.util.concurrent.Semaphore
+import mesosphere.util.LockManager
 import mesosphere.util.{ ThreadPoolContext, BackToTheFuture }
 import mesosphere.marathon.Protos.StorageVersion
 import scala.concurrent.duration.Duration
@@ -23,6 +22,7 @@ class MarathonStore[S <: MarathonState[_, S]](
   import BackToTheFuture.futureToFutureOption
 
   private[this] val log = LoggerFactory.getLogger(getClass)
+  private [this] val locks = LockManager()
 
   val migrationRes = version.flatMap { ver =>
     if (migration.needsMigration(ver)) {
@@ -49,15 +49,6 @@ class MarathonStore[S <: MarathonState[_, S]](
   Await.result(migrationRes, Duration.Inf)
 
   private[this] lazy val locks = {
-    CacheBuilder
-      .newBuilder()
-      .weakValues()
-      .build[String, Semaphore](
-        new CacheLoader[String, Semaphore] {
-          override def load(key: String): Semaphore = new Semaphore(1)
-        }
-      )
-  }
 
   def fetch(key: String): Future[Option[S]] = {
     state.fetch(prefix + key) map {

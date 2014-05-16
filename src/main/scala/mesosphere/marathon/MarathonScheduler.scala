@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
-import mesosphere.util.{ ThreadPoolContext, RateLimiters }
+import mesosphere.util.{LockManager, ThreadPoolContext, RateLimiters}
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
@@ -31,6 +31,8 @@ import scala.util.Failure
 import scala.Some
 import scala.util.Success
 import mesosphere.marathon.event.RestartSuccess
+import scala.collection.concurrent.TrieMap
+import java.util.concurrent.Semaphore
 
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -61,9 +63,7 @@ class MarathonScheduler @Inject() (
 
   private [this] val log = Logger.getLogger(getClass.getName)
   private [this] val callbacks = new StartupCallbackManager
-  private [this] val scalingApps =
-    new mutable.HashSet[String]
-      with mutable.SynchronizedSet[String]
+  val appLocks = LockManager()
 
   import ThreadPoolContext.context
   import mesosphere.mesos.protos.Implicits._
@@ -328,6 +328,7 @@ class MarathonScheduler @Inject() (
             driver,
             eventBus,
             app.id,
+            app.version.toString,
             nrToStart,
             tasksToKill.toSet,
             promise))
@@ -369,41 +370,31 @@ class MarathonScheduler @Inject() (
       } yield killed && started
     }
 
-    if (scalingApps.add(app.id)) {
+    val res = appRepository.store(app) flatMap {
+      case Some(storedApp) =>
+        if (app.healthChecks.size > 0 && keepAlive > 0) {
+          restartWithHealthChecks(storedApp)
+        } else if (keepAlive == 0) {
+          immediateRestart(storedApp)
+        }
+        else {
+          throw new TaskUpgradeFailedException("Keep alive requested, but no health checks configured.")
+        }
 
-      val res = appRepository.store(app) flatMap {
-        case Some(storedApp) =>
-          if (app.healthChecks.size > 0 && keepAlive > 0) {
-            restartWithHealthChecks(storedApp)
-          } else if (keepAlive == 0) {
-            immediateRestart(storedApp)
-          }
-          else {
-            throw new TaskUpgradeFailedException("Keep alive requested, but no health checks configured.")
-          }
+      case None => throw new TaskUpgradeFailedException("Failed to store app definition.")
+    }
 
-        case None => throw new TaskUpgradeFailedException("Failed to store app definition.")
-      }
+    res andThen {
+      case Success(_) =>
+        log.info(s"Restart of ${app.id} successful")
+        eventBus.post(RestartSuccess({
+          app.id
+        }))
 
-      res onComplete { _ =>
-        scalingApps -= app.id
-      }
-
-      res onComplete {
-        case Success(_) =>
-          log.info(s"Restart of ${app.id} successful")
-          eventBus.post(RestartSuccess({
-            app.id
-          }))
-
-        case Failure(e) =>
-          log.error(s"Restart of ${app.id} failed", e)
-          eventBus.post(RestartFailed(app.id))
-      }
-
-      res
-    } else {
-      Future.failed(new ConcurrentTaskUpgradeException("Upgrade already in progress."))
+      case Failure(e) =>
+        log.error(s"Restart of ${app.id} failed", e)
+        taskQueue.purge(app)
+        eventBus.post(RestartFailed(app.id))
     }
   }
 
@@ -476,40 +467,43 @@ class MarathonScheduler @Inject() (
     * @param app
     */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    if (!scalingApps(app.id)) {
-      taskTracker.get(app.id).synchronized {
-        val currentCount = taskTracker.count(app.id)
-        val targetCount = app.instances
+    val lock = appLocks.get(app.id)
+    if (lock.tryAcquire()) {
+      try {
+        taskTracker.get(app.id).synchronized {
+          val currentCount = taskTracker.count(app.id)
+          val targetCount = app.instances
 
-        if (targetCount > currentCount) {
-          log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
+          if (targetCount > currentCount) {
+            log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
 
-          val queuedCount = taskQueue.count(app)
-          val toQueue = targetCount - (currentCount + queuedCount)
+            val queuedCount = taskQueue.count(app)
+            val toQueue = targetCount - (currentCount + queuedCount)
 
-          if (toQueue > 0) {
-            log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
-            for (i <- 0 until toQueue)
-              taskQueue.add(app)
-          } else {
+            if (toQueue > 0) {
+              log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
+              for (i <- 0 until toQueue)
+                taskQueue.add(app)
+            } else {
         else {
-            log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
+              log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
+            }
           }
-        }
-        else if (targetCount < currentCount) {
-          log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
-          taskQueue.purge(app)
+          else if (targetCount < currentCount) {
+            log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
+            taskQueue.purge(app)
 
-          val toKill = taskTracker.take(app.id, currentCount - targetCount)
-          log.info(s"Killing tasks: ${toKill.map(_.getId)}")
-          for (task <- toKill) {
-            driver.killTask(protos.TaskID(task.getId))
+            val toKill = taskTracker.take(app.id, currentCount - targetCount)
+            log.info(s"Killing tasks: ${toKill.map(_.getId)}")
+            for (task <- toKill) {
+              driver.killTask(protos.TaskID(task.getId))
+            }
           }
-        }
-        else {
+          else {
         log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")
+          }
         }
-      }
+      } finally lock.release()
     }
   }
 
@@ -540,7 +534,8 @@ class MarathonScheduler @Inject() (
         status.getState.name,
         TaskIDUtil.appID(status.getTaskId),
         task.getHost,
-        task.getPortsList.asScala
+        task.getPortsList.asScala,
+        task.getVersion
       )
     )
   }
