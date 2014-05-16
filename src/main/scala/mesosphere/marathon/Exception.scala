@@ -19,5 +19,7 @@ abstract class TaskUpgradeFailedException(msg: String) extends Exception(msg)
 
 class HealthCheckFailedException(msg: String) extends TaskUpgradeFailedException(msg)
 class TaskFailedException(msg: String) extends TaskUpgradeFailedException(msg)
-class ConcurrentTaskUpgradeException(msg: String) extends TaskUpgradeFailedException(msg)
-class MissingHealthCheckException(msg: String) extends TaskUpgradeFailedException(msg)
+
+abstract class NoRollbackNeeded(msg:String) extends TaskUpgradeFailedException(msg)
+class ConcurrentTaskUpgradeException(msg: String) extends NoRollbackNeeded(msg)
+class MissingHealthCheckException(msg: String) extends NoRollbackNeeded(msg)

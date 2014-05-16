@@ -4,9 +4,10 @@ import mesosphere.marathon.api.v2.{AppUpdate, Group}
 import mesosphere.marathon.state.{Timestamp, MarathonState}
 import mesosphere.marathon.Protos.DeploymentPlanDefinition
 import scala.concurrent.{Promise, Future}
-import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.{NoRollbackNeeded, MarathonSchedulerService}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Success
+import scala.util.{Failure, Success}
+import org.apache.log4j.Logger
 
 case class DeploymentPlan(
   id: String,
@@ -14,6 +15,8 @@ case class DeploymentPlan(
   target: Group,
   version : Timestamp = Timestamp.now()
 ) extends MarathonState[DeploymentPlanDefinition, DeploymentPlan] {
+
+  private[this] val log = Logger.getLogger(getClass.getName)
 
   def originalIds : Set[String] = original.apps.map(_.id).toSet
 
@@ -72,8 +75,11 @@ case class DeploymentPlan(
   private def rollback(result:Future[Boolean], scheduler: MarathonSchedulerService) : Future[Boolean] = {
     val promise = Promise[Boolean]()
     result.onComplete {
-      case success@Success(true) => promise.complete(success)
-      case failure => rollbackPlan.deploy(scheduler, false, true).map(ignore => promise.complete(failure))
+      case Success(true) => promise.complete(Success(true))
+      case Failure(ex) if ex.isInstanceOf[NoRollbackNeeded] => promise.complete(Success(false))
+      case failure =>
+        log.info(s"Deployment of group ${target.id} failed! Do a rollback")
+        rollbackPlan.deploy(scheduler, rollbackOnFailure = false, isRollback = true).map(ignore => promise.complete(failure))
     }
     promise.future
   }
