@@ -48,7 +48,7 @@ class TaskReplaceActor(
         context.stop(self)
       }
 
-    case HealthStatusChanged(_, taskId, false, _) if taskIds(taskId) && healthy(taskId) =>
+    case HealthStatusChanged(`appId`, taskId, false, _) if !taskIds(taskId) && healthy(taskId) =>
       val msg = s"Task $taskId went from a healthy to un unhealthy state during replacement"
       promise.failure(new HealthCheckFailedException(msg))
       context.stop(self)
