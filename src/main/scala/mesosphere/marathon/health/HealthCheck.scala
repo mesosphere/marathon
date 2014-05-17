@@ -27,8 +27,8 @@ case class HealthCheck(
   @FieldNotEmpty
   portIndex: JInt = HealthCheck.DefaultPortIndex,
 
-  @FieldJsonProperty("initialDelaySeconds")
-  initialDelay: FiniteDuration = HealthCheck.DefaultInitialDelay,
+  @FieldJsonProperty("gracePeriodSeconds")
+  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
 
   @FieldJsonProperty("intervalSeconds")
   interval: FiniteDuration = HealthCheck.DefaultInterval,
@@ -45,7 +45,7 @@ case class HealthCheck(
     val builder = Protos.HealthCheckDefinition.newBuilder
       .setProtocol(this.protocol)
       .setPortIndex(this.portIndex)
-      .setInitialDelaySeconds(this.initialDelay.toSeconds.toInt)
+      .setGracePeriodSeconds(this.gracePeriod.toSeconds.toInt)
       .setIntervalSeconds(this.interval.toSeconds.toInt)
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
       .setMaxConsecutiveFailures(this.maxConsecutiveFailures)
@@ -60,7 +60,7 @@ case class HealthCheck(
       path = Option(proto.getPath),
       protocol = proto.getProtocol,
       portIndex = proto.getPortIndex,
-      initialDelay = FiniteDuration(proto.getInitialDelaySeconds, SECONDS),
+      gracePeriod = FiniteDuration(proto.getGracePeriodSeconds, SECONDS),
       timeout = FiniteDuration(proto.getTimeoutSeconds, SECONDS),
       interval = FiniteDuration(proto.getIntervalSeconds, SECONDS),
       maxConsecutiveFailures = proto.getMaxConsecutiveFailures
@@ -76,8 +76,8 @@ object HealthCheck {
   val DefaultPath                   = Some("/")
   val DefaultProtocol               = Protocol.HTTP
   val DefaultPortIndex              = 0
-  val DefaultInitialDelay           = FiniteDuration(15, SECONDS)
-  val DefaultInterval               = FiniteDuration(60, SECONDS)
-  val DefaultTimeout                = FiniteDuration(15, SECONDS)
+  val DefaultGracePeriod            = FiniteDuration(15, SECONDS)
+  val DefaultInterval               = FiniteDuration(10, SECONDS)
+  val DefaultTimeout                = FiniteDuration(20, SECONDS)
   val DefaultMaxConsecutiveFailures = 3
 }
