@@ -77,7 +77,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
     "type": "http",
     "uri": "/api/health",
     "portIndex": 0,
-    "acceptableStatus": [200]
+    "acceptableStatus": [200],
     "initialDelaySeconds": 30,
     "timeoutSeconds": 30,
     "maxConsecutiveFailures": 0
@@ -227,7 +227,7 @@ PUT /v2/apps/product-a/frontend/play
       "type": "http",
       "uri": "/api/health",
       "portIndex": 0,
-      "acceptableStatus": [200]
+      "acceptableStatus": [200],
       "initialDelaySeconds": 30,
       "timeoutSeconds": 30,
       "maxConsecutiveFailures": 0
@@ -251,7 +251,7 @@ POST /v2/apps/product-a/frontend
       "type": "http",
       "uri": "/api/health",
       "portIndex": 0,
-      "acceptableStatus": [200]
+      "acceptableStatus": [200],
       "initialDelaySeconds": 30,
       "timeoutSeconds": 30,
       "maxConsecutiveFailures": 0
