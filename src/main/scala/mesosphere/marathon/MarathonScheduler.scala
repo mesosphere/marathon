@@ -9,10 +9,10 @@ import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.AppRepository
-import scala.concurrent.{Promise, Future, ExecutionContext}
+import scala.concurrent.{Future, ExecutionContext}
 import com.google.common.collect.Lists
 import javax.inject.{ Named, Inject }
-import com.google.common.eventbus.EventBus
+import akka.event.EventStream
 import mesosphere.marathon.event._
 import mesosphere.marathon.tasks._
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -27,7 +27,11 @@ import akka.actor.{Props, ActorSystem}
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.event.MesosFrameworkMessageEvent
 import mesosphere.marathon.event.RestartSuccess
-
+import mesosphere.marathon.upgrade.AppUpgradeManager
+import mesosphere.marathon.upgrade.AppUpgradeManager.Upgrade
+import akka.pattern.ask
+import scala.concurrent.duration._
+import akka.util.Timeout
 trait SchedulerCallbacks {
   def disconnected(): Unit
 }
@@ -44,7 +48,7 @@ object MarathonScheduler {
 }
 
 class MarathonScheduler @Inject() (
-  @Named(EventModule.busName) eventBus: EventBus,
+  @Named(EventModule.busName) eventBus: EventStream,
     @Named("restMapper") mapper: ObjectMapper,
     appRepository: AppRepository,
     healthCheckManager: HealthCheckManager,
@@ -56,7 +60,8 @@ class MarathonScheduler @Inject() (
     config: MarathonConf) extends Scheduler {
 
   private [this] val log = Logger.getLogger(getClass.getName)
-  private [this] val callbacks = new StartupCallbackManager
+  private [this] val upgradeManager = system.actorOf(
+    Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
   val appLocks = LockManager()
 
   import ThreadPoolContext.context
@@ -190,13 +195,11 @@ class MarathonScheduler @Inject() (
           case _ =>
         }
     }
-
-    callbacks.countdown(appID, status.getState)
   }
 
   override def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]) {
     log.info("Received framework message %s %s %s ".format(executor, slave, message))
-    eventBus.post(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message))
+    eventBus.publish(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message))
   }
 
   override def disconnected(driver: SchedulerDriver) {
@@ -275,119 +278,29 @@ class MarathonScheduler @Inject() (
     }
   }
 
-  def upgradeApp(driver: SchedulerDriver,
-                 app: AppDefinition,
-                 keepAlive: Int): Future[Boolean] = {
+  def upgradeApp(
+    driver: SchedulerDriver,
+    app: AppDefinition,
+    keepAlive: Int
+  ): Future[Boolean] = {
+    appRepository.store(app) flatMap {
+      case Some(appDef) =>
+        // TODO: this should be configurable
+        implicit val timeout = Timeout(12.hours)
+        val res = (upgradeManager ? Upgrade(driver, app, keepAlive)).mapTo[Boolean]
 
-    def kill(instances: Seq[MarathonTask]): Future[Boolean] = {
-      log.debug(s"Killing $instances")
-      val promise = Promise[Boolean]()
-      callbacks.add(app.id, TaskState.TASK_KILLED, instances.size)(promise.success(_))
+        res andThen {
+          case Success(_) =>
+            log.info(s"Restart of ${app.id} successful")
+            eventBus.publish(RestartSuccess(app.id))
 
-      instances foreach { task =>
-        driver.killTask(TaskID.newBuilder()
-          .setValue(task.getId)
-          .build())
-      }
-
-      promise.future
-    }
-
-    def start(app: AppDefinition, count: Int): Future[Boolean] = {
-      log.debug(s"Starting $count instances of $app")
-      val promise = Promise[Boolean]()
-      callbacks.add(app.id, TaskState.TASK_FAILED, 1) { res =>
-        if (res) {
-          callbacks.remove(app.id, TaskState.TASK_RUNNING)
-          promise.tryFailure(new TaskFailedException(s"Failed to restart $app.id"))
-        }
-      }
-      callbacks.add(app.id, TaskState.TASK_RUNNING, count) { success =>
-        callbacks.remove(app.id, TaskState.TASK_FAILED)
-        promise.trySuccess(success)
-      }
-
-      for (_ <- 0 until count) taskQueue.add(app)
-
-      promise.future
-    }
-
-    def replace(nrToStart: Int, tasksToKill: Seq[MarathonTask]): Future[Boolean] = {
-      log.debug(s"Replacing $tasksToKill with $nrToStart new instances.")
-      val promise = Promise[Boolean]()
-      if (nrToStart > 0) {
-        val ref = system.actorOf(
-          Props(
-            classOf[TaskReplaceActor],
-            driver,
-            eventBus,
-            app.id,
-            app.version.toString,
-            nrToStart,
-            tasksToKill.toSet,
-            promise))
-        val forwarder = new EventForwarder(ref)
-        eventBus.register(forwarder)
-
-        promise.future onComplete { _ =>
-          eventBus.unregister(forwarder)
+          case Failure(e) =>
+            log.error(s"Restart of ${app.id} failed", e)
+            taskQueue.purge(app)
+            eventBus.publish(RestartFailed(app.id))
         }
 
-      } else {
-        promise.success(true)
-      }
-
-      promise.future
-    }
-
-    def restartWithHealthChecks(app: AppDefinition): Future[Boolean] = {
-      val tasks = taskTracker.get(app.id).toList.sortBy(_.getStartedAt)
-      val killImmediately = tasks.take(tasks.size - keepAlive)
-      val resKill = kill(killImmediately)
-      val resReplace = replace(app.instances, tasks.drop(tasks.size - keepAlive))
-      val resStart = start(app, app.instances)
-
-      for {
-        killed <- resKill
-        started <- resStart
-        replaced <- resReplace
-      } yield killed && started && replaced
-    }
-
-    def immediateRestart(app: AppDefinition): Future[Boolean] = {
-      val killRes = kill(taskTracker.get(app.id).toSeq)
-      val startRes = start(app, app.instances)
-
-      for {
-        killed <- killRes
-        started <- startRes
-      } yield killed && started
-    }
-
-    val res = if (app.healthChecks.isEmpty && keepAlive > 0) {
-      Future.failed(new MissingHealthCheckException("Keep alive requested, but no health checks configured."))
-    } else {
-      appRepository.store(app) flatMap {
-        case Some(storedApp) =>
-          if (keepAlive > 0) {
-            restartWithHealthChecks(storedApp)
-          } else {
-            immediateRestart(storedApp)
-          }
-
-        case None => throw new StorageException("Failed to store app definition.")
-      }
-    }
-
-    res andThen {
-      case Success(_) =>
-        log.info(s"Restart of ${app.id} successful")
-        eventBus.post(RestartSuccess(app.id))
-
-      case Failure(e) =>
-        log.error(s"Restart of ${app.id} failed", e)
-        taskQueue.purge(app)
-        eventBus.post(RestartFailed(app.id))
+      case None => Future.failed(new StorageException("App could not be stored"))
     }
   }
 
@@ -520,7 +433,7 @@ class MarathonScheduler @Inject() (
 
   private def postEvent(status: TaskStatus, task: MarathonTask): Unit = {
     log.info("Sending event notification.")
-    eventBus.post(
+    eventBus.publish(
       MesosStatusUpdateEvent(
         status.getSlaveId.getValue,
         status.getTaskId.getValue,

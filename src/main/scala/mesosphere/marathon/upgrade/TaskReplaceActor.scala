@@ -1,35 +1,31 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon.upgrade
 
-import akka.actor.{ActorRef, Actor}
-import com.google.common.eventbus.{Subscribe, EventBus}
+import akka.actor.{ActorLogging, Actor}
 import mesosphere.marathon.Protos.MarathonTask
 import scala.concurrent.Promise
 import mesosphere.marathon.event.{MesosStatusUpdateEvent, HealthStatusChanged}
 import org.apache.mesos.SchedulerDriver
 import scala.collection.mutable
 import org.apache.mesos.Protos.TaskID
-import mesosphere.marathon.{TaskFailedException, HealthCheckFailedException, TaskUpgradeFailedException}
-import org.slf4j.LoggerFactory
-
-class EventForwarder(receiver: ActorRef) {
-  @Subscribe
-  def forward(event: HealthStatusChanged) = receiver ! event
-
-  @Subscribe
-  def forward(event: MesosStatusUpdateEvent) = receiver ! event
-}
+import mesosphere.marathon.TaskFailedException
+import akka.event.EventStream
 
 class TaskReplaceActor(
   driver: SchedulerDriver,
-  eventBus: EventBus,
+  eventBus: EventStream,
   appId: String,
   version: String,
   nrToStart: Int,
   tasksToKill: Set[MarathonTask],
   promise: Promise[Boolean]
-) extends Actor {
+) extends Actor with ActorLogging {
 
-  private [this] val log = LoggerFactory.getLogger(getClass)
+  eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
+  eventBus.subscribe(self, classOf[HealthStatusChanged])
+
+  override def postStop(): Unit = {
+    eventBus.unsubscribe(self)
+  }
 
   var healthy = Set.empty[String]
   var taskIds = tasksToKill.map(_.getId)
@@ -48,19 +44,13 @@ class TaskReplaceActor(
         context.stop(self)
       }
 
-    case HealthStatusChanged(`appId`, taskId, false, _, _) if !taskIds(taskId) && healthy(taskId) =>
-      val msg = s"Task $taskId went from a healthy to un unhealthy state during replacement"
-      promise.failure(new HealthCheckFailedException(msg))
-      context.stop(self)
-
     case MesosStatusUpdateEvent(slaveId, taskId, "TASK_FAILED", `appId`, _, _, `version`, _, _) =>
       val msg = s"Task $taskId failed on slave $slaveId"
       log.error(msg)
       promise.failure(new TaskFailedException(msg))
       context.stop(self)
 
-    case x =>
-      log.debug(s"Received $x")
+    case x => log.debug(s"Received $x")
   }
 
   def buildTaskId(id: String): TaskID =

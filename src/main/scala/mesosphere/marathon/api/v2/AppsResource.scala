@@ -4,8 +4,8 @@ import javax.ws.rs._
 import scala.Array
 import javax.ws.rs.core.{ Response, Context, MediaType }
 import javax.inject.{ Named, Inject }
-import mesosphere.marathon.event.{RestartFailed, RestartSuccess, EventModule, ApiPostEvent}
-import com.google.common.eventbus.EventBus
+import mesosphere.marathon.event.{EventModule, ApiPostEvent}
+import akka.event.EventStream
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.tasks.TaskTracker
 import com.codahale.metrics.annotation.Timed
@@ -16,13 +16,11 @@ import scala.concurrent.Await
 import java.net.URI
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.api.Responses
-import scala.util.Success
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject() (
-    @Named(EventModule.busName) eventBus: EventBus,
+    @Named(EventModule.busName) eventBus: EventStream,
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
@@ -118,7 +116,7 @@ class AppsResource @Inject() (
   def appVersionsResource() = new AppVersionsResource(service)
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
-    eventBus.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
+    eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
   private def search(cmd: String, id: String): Iterable[AppDefinition] = {
     /** Returns true iff `a` is a prefix of `b`, case-insensitively */

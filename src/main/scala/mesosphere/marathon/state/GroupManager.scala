@@ -12,7 +12,7 @@ import mesosphere.marathon.api.v2.Group
 import scala.util.{Try, Failure, Success}
 import com.google.inject.name.Named
 import mesosphere.marathon.event.{GroupChangeFailed, GroupChangeSuccess, EventModule}
-import com.google.common.eventbus.EventBus
+import akka.event.EventStream
 
 /**
  * The group manager is the facade for all group related actions.
@@ -23,7 +23,7 @@ class GroupManager @Singleton @Inject() (
   taskTracker: TaskTracker,
   groupRepo: GroupRepository,
   planRepo: DeploymentPlanRepository,
-  @Named(EventModule.busName) eventBus: EventBus
+  @Named(EventModule.busName) eventBus: EventStream
 ) {
 
   private[this] val log = Logger.getLogger(getClass.getName)
@@ -86,8 +86,8 @@ class GroupManager @Singleton @Inject() (
   }
 
   private def postEvent(group:Group) : PartialFunction[Try[Group], Unit] = {
-    case Success(_) => eventBus.post(GroupChangeSuccess(group.id, group.version.toString))
-    case Failure(ex) => eventBus.post(GroupChangeFailed(group.id, group.version.toString,  ex.getMessage))
+    case Success(_) => eventBus.publish(GroupChangeSuccess(group.id))
+    case Failure(ex) => eventBus.publish(GroupChangeFailed(group.id, ex.getMessage))
   }
 
   private def deletePlan(id:String) : PartialFunction[Try[Group], Unit] = {

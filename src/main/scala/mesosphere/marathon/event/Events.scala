@@ -3,12 +3,12 @@ package mesosphere.marathon.event
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheck
 import org.rogach.scallop.ScallopConf
-import com.google.inject.{ Singleton, Provides, AbstractModule }
-import com.google.common.eventbus.{ AsyncEventBus, EventBus }
-import java.util.concurrent.Executors
+import com.google.inject.{Inject, Singleton, Provides, AbstractModule}
+import akka.event.EventStream
 import javax.inject.Named
 import org.apache.log4j.Logger
 import mesosphere.marathon.state.Timestamp
+import akka.actor.ActorSystem
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]
@@ -32,13 +32,9 @@ class EventModule(conf: EventConfiguration) extends AbstractModule {
   @Named(EventModule.busName)
   @Provides
   @Singleton
-  def provideEventBus(): EventBus = {
-    log.info("Creating Event Bus.")
-    val pool = Executors.newCachedThreadPool()
-    val bus = new AsyncEventBus(pool)
-    bus
+  @Inject
+  def provideEventBus(system: ActorSystem): EventStream = system.eventStream
     else {
-  }
 }
 
 object EventModule {

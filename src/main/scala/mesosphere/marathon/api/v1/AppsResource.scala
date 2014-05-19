@@ -10,7 +10,7 @@ import javax.inject.{ Named, Inject }
 import javax.validation.Valid
 import javax.servlet.http.HttpServletRequest
 import com.codahale.metrics.annotation.Timed
-import com.google.common.eventbus.EventBus
+import akka.event.EventStream
 import scala.concurrent.Await
 import org.apache.log4j.Logger
 import mesosphere.marathon.api.Responses
@@ -21,7 +21,7 @@ import mesosphere.marathon.api.Responses
 @Path("v1/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject() (
-    @Named(EventModule.busName) eventBus: EventBus,
+    @Named(EventModule.busName) eventBus: EventStream,
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     config: MarathonConf) {
@@ -61,7 +61,7 @@ class AppsResource @Inject() (
   }
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) {
-    eventBus.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
+    eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
   }
 
   @GET

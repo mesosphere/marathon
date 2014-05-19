@@ -16,8 +16,8 @@ import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 import scala.collection.mutable
-import com.google.common.eventbus.EventBus
 import akka.actor.ActorSystem
+import akka.event.EventStream
 
 /**
   * @author Tobi Knaup
@@ -42,7 +42,7 @@ class MarathonSchedulerTest extends MarathonSpec {
     rateLimiters = mock[RateLimiters]
     config = mock[MarathonConf]
     scheduler = new MarathonScheduler(
-      mock[EventBus],
+      mock[EventStream],
       new ObjectMapper,
       repo,
       hcManager,

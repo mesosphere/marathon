@@ -6,9 +6,9 @@ import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event._
 import mesosphere.marathon.MarathonSchedulerDriver
+import akka.event.EventStream
 import mesosphere.mesos.protos.TaskID
 import mesosphere.marathon.Protos.MarathonTask
 
@@ -16,7 +16,7 @@ class HealthCheckActor(
     appId: String,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
-  eventBus: EventBus
+  eventBus: EventStream
 
   import HealthCheckActor.{ GetTaskHealth, Health }
   import HealthCheckWorker.{ HealthCheckJob, HealthResult, Healthy, Unhealthy }
@@ -123,7 +123,7 @@ class HealthCheckActor(
                 // Don't update health
                 health
               }
-                eventBus.post(FailedHealthCheck(appId, taskId, healthCheck))
+                eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
                 checkConsecutiveFailures(task, health)
                 health.update(result)
               }
@@ -136,7 +136,7 @@ class HealthCheckActor(
       taskHealth += (taskId -> newHealth)
 
       if (health.alive() != newHealth.alive()) {
-        eventBus.post(
+        eventBus.publish(
           HealthStatusChanged(
             appId = appId,
             taskId = taskId,

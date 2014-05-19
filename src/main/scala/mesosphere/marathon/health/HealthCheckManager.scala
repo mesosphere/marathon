@@ -10,7 +10,7 @@ import javax.inject.{ Named, Inject, Singleton }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import mesosphere.util.ThreadPoolContext.context
-import com.google.common.eventbus.EventBus
+import akka.event.EventStream
 import mesosphere.marathon.event.{ RemoveHealthCheck, AddHealthCheck, EventModule }
 import org.apache.mesos.MesosSchedulerDriver
 import mesosphere.marathon.MarathonSchedulerDriver
@@ -19,7 +19,7 @@ case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
 class HealthCheckManager @Singleton @Inject() (
     system: ActorSystem,
-  @Named(EventModule.busName) eventBus: EventBus,
+  @Named(EventModule.busName) eventBus: EventStream,
     taskTracker: TaskTracker) {
 
   import HealthCheckActor.{ GetTaskHealth, Health }
@@ -51,7 +51,7 @@ class HealthCheckManager @Singleton @Inject() (
       appHealthChecks += (appId -> newHealthChecksForApp)
     }
 
-    eventBus.post(AddHealthCheck(healthCheck))
+    eventBus.publish(AddHealthCheck(healthCheck))
   }
 
   def addAllFor(app: AppDefinition): Unit =
@@ -69,7 +69,7 @@ class HealthCheckManager @Singleton @Inject() (
         else appHealthChecks + (appId -> newHealthChecksForApp)
     }
 
-    eventBus.post(RemoveHealthCheck(appId))
+    eventBus.publish(RemoveHealthCheck(appId))
   }
 
   def removeAllFor(appId: String): Unit =
