@@ -4,10 +4,12 @@ import javax.ws.rs._
 import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
 import javax.validation.Valid
-import mesosphere.marathon.state.GroupManager
+import mesosphere.marathon.state.{Timestamp, GroupManager}
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import mesosphere.marathon.api.PATCH
+import javax.ws.rs.core.Response.Status
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @Path("v2/groups")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -40,8 +42,19 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   @PATCH
   @Path("{id}")
   def patch( @PathParam("id") id:String, @Valid update: GroupUpdate) : Response = {
-    groupManager.patch(id, update.apply)
-    Response.noContent().build()
+    //lookup existing version and use as new value, 404 if not found
+    def toVersion(version:Timestamp) = groupManager.group(id, version).map {
+      case Some(versionedGroup) =>
+        groupManager.patch(id, _ => versionedGroup.copy(version = Timestamp.now()))
+        Response.noContent().build()
+      case None =>
+        Response.status(Status.NOT_FOUND).build()
+    }
+    //either use group update or version look up
+    update.version.fold({
+      groupManager.patch(id, update.apply)
+      Response.noContent().build()
+    })(version => result(toVersion(version), defaultWait))
   }
 
   @DELETE

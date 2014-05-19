@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
 import javax.inject.Inject
-import mesosphere.marathon.upgrade.{DeploymentPlanRepository, DeploymentPlan}
+import mesosphere.marathon.upgrade.DeploymentPlan
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.Singleton
@@ -31,6 +31,8 @@ class GroupManager @Singleton @Inject() (
   def list(): Future[Iterable[Group]] = groupRepo.current()
 
   def group(id: String): Future[Option[Group]] = groupRepo.group(id)
+
+  def group(id:String, version:Timestamp) : Future[Option[Group]] = groupRepo.group(id, version)
 
   def create(group: Group): Future[Group] = {
     groupRepo.currentVersion(group.id).flatMap {
@@ -65,23 +67,27 @@ class GroupManager @Singleton @Inject() (
 
   private def upgrade(current: Group, group: Group): Future[Group] = {
     log.info(s"Upgrade existing Group ${group.id} with $group")
+    //checkpoint where to start from
+    //if there is an upgrade in progress
+    val startFromGroup = planRepo.currentVersion(current.id).flatMap {
+      case Some(upgrade) =>
+        //TODO: signal the scheduler to stop the currently running upgrade
+        Future.successful(upgrade.target)
+      case None => Future.successful(current)
+    }
     val restart = for {
+      startGroup  <- startFromGroup
       storedGroup <- groupRepo.store(group)
-      plan <- planRepo.store(DeploymentPlan(current.id, current, storedGroup))
+      plan <- planRepo.store(DeploymentPlan(current.id, startGroup, storedGroup))
       result <- plan.deploy(scheduler) if result
     } yield storedGroup
     //remove the upgrade plan after the task has been finished
-    restart.andThen(rollbackGroup(current)).andThen(deletePlan(current.id)).andThen(postEvent(group))
+    restart.andThen(deletePlan(current.id)).andThen(postEvent(group))
   }
 
   private def postEvent(group:Group) : PartialFunction[Try[Group], Unit] = {
-    case Success(_) => eventBus.post(GroupChangeSuccess(group.id))
-    case Failure(ex) => eventBus.post(GroupChangeFailed(group.id, ex.getMessage))
-  }
-
-  private def rollbackGroup(oldGroup:Group) : PartialFunction[Try[Group], Unit] = {
-    case Failure(_) => groupRepo.store(oldGroup)
-    case Success(_) => //ignore
+    case Success(_) => eventBus.post(GroupChangeSuccess(group.id, group.version.toString))
+    case Failure(ex) => eventBus.post(GroupChangeFailed(group.id, group.version.toString,  ex.getMessage))
   }
 
   private def deletePlan(id:String) : PartialFunction[Try[Group], Unit] = {

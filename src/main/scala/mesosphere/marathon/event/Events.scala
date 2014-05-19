@@ -9,8 +9,6 @@ import java.util.concurrent.Executors
 import javax.inject.Named
 import org.apache.log4j.Logger
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.api.v2.Group
-import mesosphere.marathon.Protos.MarathonTask
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]
@@ -114,12 +112,14 @@ trait UpgradeEvent extends MarathonEvent
 
 case class GroupChangeSuccess(
   groupId: String,
+  version: String,
   eventType:String = "group_change_success",
   timestamp: String = Timestamp.now().toString
 ) extends UpgradeEvent
 
 case class GroupChangeFailed(
   groupId: String,
+  version: String,
   reason:String,
   eventType: String = "group_change_failed",
   timestamp: String = Timestamp.now().toString

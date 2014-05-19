@@ -1,9 +1,9 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon.state
 
-import mesosphere.marathon.state.{EntityRepository, PersistenceStore}
 import scala.concurrent.Future
 import mesosphere.marathon.StorageException
 import scala.concurrent.ExecutionContext.Implicits.global
+import mesosphere.marathon.upgrade.DeploymentPlan
 
 class DeploymentPlanRepository(val store: PersistenceStore[DeploymentPlan]) extends EntityRepository[DeploymentPlan] {
 

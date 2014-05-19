@@ -39,7 +39,32 @@ User-Agent: HTTPie/0.7.2
 
 ```
 HTTP/1.1 204 No Content
-Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 ```
 
+
+### Example (version rollback)
+
+If the `version` key is supplied in the JSON body, the rest of the object is ignored.  
+If the supplied version is known, then the group is updated with the properties of this version (a new version is created). 
+Otherwise, if the supplied version is not known Marathon responds with a 404.
+
+**Request:**
+
+```
+PATCH /v2/groups/product HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Length: 39
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{
+    "version": "2014-03-01T23:17:50.295Z"
+}
+```
+
+```
+HTTP/1.1 204 No Content
+Server: Jetty(8.y.z-SNAPSHOT)
+```

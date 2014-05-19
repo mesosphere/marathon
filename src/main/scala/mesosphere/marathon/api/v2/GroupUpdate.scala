@@ -6,8 +6,9 @@ import mesosphere.marathon.state.Timestamp
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class GroupUpdate(
-  apps : Option[Seq[AppUpdate]],
-  scalingStrategy: Option[ScalingStrategy]
+  apps : Option[Seq[AppUpdate]] = None,
+  scalingStrategy: Option[ScalingStrategy] = None,
+  version: Option[Timestamp] = None
 ) {
 
   def apply(group:Group) : Group = {

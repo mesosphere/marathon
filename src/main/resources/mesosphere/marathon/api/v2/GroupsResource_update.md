@@ -63,7 +63,6 @@ User-Agent: HTTPie/0.7.2
 
 ```
 HTTP/1.1 204 No Content
-Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 ```
 

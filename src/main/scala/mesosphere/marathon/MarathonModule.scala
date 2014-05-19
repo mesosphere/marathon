@@ -11,13 +11,13 @@ import javax.inject.Named
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
 import akka.actor.ActorSystem
-import mesosphere.marathon.state.{GroupRepository, GroupManager, MarathonStore, AppRepository}
+import mesosphere.marathon.state._
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
-import mesosphere.marathon.upgrade.{DeploymentPlan, DeploymentPlanRepository}
+import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.api.v2.Group
 
 /**
