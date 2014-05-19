@@ -86,8 +86,8 @@ class GroupManager @Singleton @Inject() (
   }
 
   private def postEvent(group:Group) : PartialFunction[Try[Group], Unit] = {
-    case Success(_) => eventBus.publish(GroupChangeSuccess(group.id))
-    case Failure(ex) => eventBus.publish(GroupChangeFailed(group.id, ex.getMessage))
+    case Success(_) => eventBus.publish(GroupChangeSuccess(group.id, group.version.toString))
+    case Failure(ex) => eventBus.publish(GroupChangeFailed(group.id, group.version.toString, ex.getMessage))
   }
 
   private def deletePlan(id:String) : PartialFunction[Try[Group], Unit] = {
