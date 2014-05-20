@@ -14,8 +14,9 @@ import org.mockito.{Matchers, ArgumentCaptor}
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.RateLimiters
+import mesosphere.util.{Stats, RateLimiters}
 import scala.collection.mutable
+import com.codahale.metrics.MetricRegistry
 
 /**
  * @author Tobi Knaup
@@ -29,6 +30,9 @@ class MarathonSchedulerTest extends MarathonSpec {
   var scheduler: MarathonScheduler = null
   var frameworkIdUtil: FrameworkIdUtil = null
   var rateLimiters: RateLimiters = null
+
+  val metricRegistry = new MetricRegistry
+  val stats = new Stats(metricRegistry)
 
   before {
     repo = mock[AppRepository]
@@ -45,7 +49,8 @@ class MarathonSchedulerTest extends MarathonSpec {
       tracker,
       queue,
       frameworkIdUtil,
-      rateLimiters
+      rateLimiters,
+      stats
     )
   }
 

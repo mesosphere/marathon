@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
-import mesosphere.util.RateLimiters
+import mesosphere.util.{Stats, RateLimiters}
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{Success, Failure}
 import org.apache.log4j.Logger
@@ -51,7 +51,8 @@ class MarathonScheduler @Inject()(
   taskTracker: TaskTracker,
   taskQueue: TaskQueue,
   frameworkIdUtil: FrameworkIdUtil,
-  rateLimiters: RateLimiters
+  rateLimiters: RateLimiters,
+  stats: Stats
 ) extends Scheduler {
 
   private val log = Logger.getLogger(getClass.getName)
@@ -78,58 +79,60 @@ class MarathonScheduler @Inject()(
   }
 
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
-    // Check for any tasks which were started but never entered TASK_RUNNING
-    // TODO resourceOffers() doesn't feel like the right place to run this
-    val toKill = taskTracker.checkStagedTasks
-    if (toKill.nonEmpty) {
-      log.warn(s"There are ${toKill.size} tasks stuck in staging which will be killed")
-      log.info(s"About to kill these tasks: $toKill")
-      for (task <- toKill)
-        driver.killTask(protos.TaskID(task.getId))
-    }
-    for (offer <- offers.asScala) {
-      try {
-        log.debug("Received offer %s".format(offer))
+    stats.time("MarathonScheduler.resourceOffers") {
+      // Check for any tasks which were started but never entered TASK_RUNNING
+      // TODO resourceOffers() doesn't feel like the right place to run this
+      val toKill = taskTracker.checkStagedTasks
+      if (toKill.nonEmpty) {
+        log.warn(s"There are ${toKill.size} tasks stuck in staging which will be killed")
+        log.info(s"About to kill these tasks: $toKill")
+        for (task <- toKill)
+          driver.killTask(protos.TaskID(task.getId))
+      }
+      for (offer <- offers.asScala) {
+        try {
+          log.debug("Received offer %s".format(offer))
 
-        val apps = taskQueue.removeAll()
-        var i = 0
-        var found = false
+          val apps = taskQueue.removeAll()
+          var i = 0
+          var found = false
 
-        while (i < apps.size && !found) {
-          // TODO launch multiple tasks if the offer is big enough
-          val app = apps(i)
+          while (i < apps.size && !found) {
+            // TODO launch multiple tasks if the offer is big enough
+            val app = apps(i)
 
-          newTask(app, offer) match {
-            case Some((task, ports)) =>
-              val taskInfos = Lists.newArrayList(task)
-              log.debug("Launching tasks: " + taskInfos)
+            newTask(app, offer) match {
+              case Some((task, ports)) =>
+                val taskInfos = Lists.newArrayList(task)
+                log.debug("Launching tasks: " + taskInfos)
 
-              val marathonTask = MarathonTasks.makeTask(
-                task.getTaskId.getValue, offer.getHostname, ports,
-                offer.getAttributesList.asScala.toList, app.version)
-              taskTracker.starting(app.id, marathonTask)
-              driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
-              found = true
+                val marathonTask = MarathonTasks.makeTask(
+                  task.getTaskId.getValue, offer.getHostname, ports,
+                  offer.getAttributesList.asScala.toList, app.version)
+                taskTracker.starting(app.id, marathonTask)
+                driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
+                found = true
 
-            case None =>
-              taskQueue.add(app)
+              case None =>
+                taskQueue.add(app)
+            }
+
+            i += 1
           }
 
-          i += 1
+          if (!found) {
+            log.debug("Offer doesn't match request. Declining.")
+            // Add it back into the queue so the we can try again
+            driver.declineOffer(offer.getId)
+          } else {
+            taskQueue.addAll(apps.drop(i))
+          }
+        } catch {
+          case t: Throwable =>
+            log.error("Caught an exception. Declining offer.", t)
+            // Ensure that we always respond
+            driver.declineOffer(offer.getId)
         }
-
-        if (!found) {
-          log.debug("Offer doesn't match request. Declining.")
-          // Add it back into the queue so the we can try again
-          driver.declineOffer(offer.getId)
-        } else {
-          taskQueue.addAll(apps.drop(i))
-        }
-      } catch {
-        case t: Throwable =>
-          log.error("Caught an exception. Declining offer.", t)
-          // Ensure that we always respond
-          driver.declineOffer(offer.getId)
       }
     }
   }
@@ -139,51 +142,53 @@ class MarathonScheduler @Inject()(
   }
 
   override def statusUpdate(driver: SchedulerDriver, status: TaskStatus) {
-    log.info("Received status update for task %s: %s (%s)"
-      .format(status.getTaskId.getValue, status.getState, status.getMessage))
+    stats.time("MarathonScheduler.statusUpdate") {
+      log.info("Received status update for task %s: %s (%s)"
+        .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
-    val appID = TaskIDUtil.appID(status.getTaskId)
+      val appID = TaskIDUtil.appID(status.getTaskId)
 
-    if (status.getState.eq(TaskState.TASK_FAILED)
-      || status.getState.eq(TaskState.TASK_FINISHED)
-      || status.getState.eq(TaskState.TASK_KILLED)
-      || status.getState.eq(TaskState.TASK_LOST)) {
+      if (status.getState.eq(TaskState.TASK_FAILED)
+        || status.getState.eq(TaskState.TASK_FINISHED)
+        || status.getState.eq(TaskState.TASK_KILLED)
+        || status.getState.eq(TaskState.TASK_LOST)) {
 
-      // Remove from our internal list
-      taskTracker.terminated(appID, status).foreach(taskOption => {
-        taskOption match {
-          case Some(task) => postEvent(status, task)
-          case None => log.warn(s"Couldn't post event for ${status.getTaskId}")
-        }
-
-        if (rateLimiters.tryAcquire(appID)) {
-          scale(driver, appID)
-        } else {
-          log.warn(s"Rate limit reached for $appID")
-        }
-      })
-    } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
-      taskTracker.running(appID, status).onComplete {
-        case Success(task) => postEvent(status, task)
-        case Failure(t) =>
-          log.warn(s"Couldn't post event for ${status.getTaskId}", t)
-          log.warn(s"Killing task ${status.getTaskId}")
-          driver.killTask(status.getTaskId)
-      }
-    } else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
-      log.warn(s"Received status update for unknown app $appID")
-      log.warn(s"Killing task ${status.getTaskId}")
-      driver.killTask(status.getTaskId)
-    } else {
-      taskTracker.statusUpdate(appID, status).onComplete {
-        case Success(t) =>
-          t match {
-            case None =>
-              log.warn(s"Killing task ${status.getTaskId}")
-              driver.killTask(status.getTaskId)
-            case _ =>
+        // Remove from our internal list
+        taskTracker.terminated(appID, status).foreach(taskOption => {
+          taskOption match {
+            case Some(task) => postEvent(status, task)
+            case None => log.warn(s"Couldn't post event for ${status.getTaskId}")
           }
-        case _ =>
+
+          if (rateLimiters.tryAcquire(appID)) {
+            scale(driver, appID)
+          } else {
+            log.warn(s"Rate limit reached for $appID")
+          }
+        })
+      } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
+        taskTracker.running(appID, status).onComplete {
+          case Success(task) => postEvent(status, task)
+          case Failure(t) =>
+            log.warn(s"Couldn't post event for ${status.getTaskId}", t)
+            log.warn(s"Killing task ${status.getTaskId}")
+            driver.killTask(status.getTaskId)
+        }
+      } else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
+        log.warn(s"Received status update for unknown app $appID")
+        log.warn(s"Killing task ${status.getTaskId}")
+        driver.killTask(status.getTaskId)
+      } else {
+        taskTracker.statusUpdate(appID, status).onComplete {
+          case Success(t) =>
+            t match {
+              case None =>
+                log.warn(s"Killing task ${status.getTaskId}")
+                driver.killTask(status.getTaskId)
+              case _ =>
+            }
+          case _ =>
+        }
       }
     }
   }

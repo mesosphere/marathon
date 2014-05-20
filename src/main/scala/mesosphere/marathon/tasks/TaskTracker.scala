@@ -11,12 +11,14 @@ import java.io._
 import scala.Some
 import scala.concurrent.{ExecutionContext, Future}
 import org.apache.log4j.Logger
+import mesosphere.util.Stats
+import com.codahale.metrics.Gauge
 
 /**
  * @author Tobi Knaup
  */
 
-class TaskTracker @Inject()(state: State) {
+class TaskTracker @Inject()(state: State, stats: Stats) {
 
   import TaskTracker.App
   import ExecutionContext.Implicits.global
@@ -28,6 +30,10 @@ class TaskTracker @Inject()(state: State) {
 
   private[this] val apps = new mutable.HashMap[String, App] with
     mutable.SynchronizedMap[String, App]
+
+  stats.register("TaskTracker.taskCount", new Gauge[Int] {
+    override def getValue: Int = apps.values.map(_.tasks.size).sum
+  })
 
   def get(appName: String): mutable.Set[MarathonTask] =
     apps.getOrElseUpdate(appName, fetchApp(appName)).tasks
@@ -134,19 +140,21 @@ class TaskTracker @Inject()(state: State) {
   }
 
   def fetchApp(appName: String): App = {
-    val bytes = fetchFromState(appName).value
-    if (bytes.length > 0) {
-      val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
-      val fetchedTasks = deserialize(appName, source)
-      if (fetchedTasks.size > 0) {
-        apps(appName) = new App(appName, fetchedTasks, false)
+    stats.time("TaskTracker.fetch") {
+      val bytes = fetchFromState(appName).value
+      if (bytes.length > 0) {
+        val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
+        val fetchedTasks = deserialize(appName, source)
+        if (fetchedTasks.size > 0) {
+          apps(appName) = new App(appName, fetchedTasks, false)
+        }
       }
-    }
 
-    if (apps.contains(appName)) {
-      apps(appName)
-    } else {
-      new App(appName, new mutable.HashSet[MarathonTask](), false)
+      if (apps.contains(appName)) {
+        apps(appName)
+      } else {
+        new App(appName, new mutable.HashSet[MarathonTask](), false)
+      }
     }
   }
 
@@ -184,7 +192,6 @@ class TaskTracker @Inject()(state: State) {
                 tasks: Set[MarathonTask],
                 sink: ObjectOutputStream): Unit = {
     val app = getProto(appName, tasks)
-
     val size = app.getSerializedSize
     sink.writeInt(size)
     sink.write(app.toByteArray)
@@ -194,12 +201,14 @@ class TaskTracker @Inject()(state: State) {
   def fetchFromState(appName: String) = state.fetch(prefix + appName).get()
 
   def store(appName: String): Future[Variable] = {
-    val oldVar = fetchFromState(appName)
-    val bytes = new ByteArrayOutputStream()
-    val output = new ObjectOutputStream(bytes)
-    serialize(appName, get(appName), output)
-    val newVar = oldVar.mutate(bytes.toByteArray)
-    state.store(newVar)
+    stats.timeFuture("TaskTracker.store") {
+      val oldVar = fetchFromState(appName)
+      val bytes = new ByteArrayOutputStream()
+      val output = new ObjectOutputStream(bytes)
+      serialize(appName, get(appName), output)
+      val newVar = oldVar.mutate(bytes.toByteArray)
+      state.store(newVar)
+    }
   }
 
   def checkStagedTasks: Iterable[MarathonTask] = {

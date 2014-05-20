@@ -3,11 +3,21 @@ package mesosphere.marathon.tasks
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.MarathonSpec
+import com.codahale.metrics.MetricRegistry
+import mesosphere.util.Stats
 
 class TaskQueueTest extends MarathonSpec {
   val app1 = AppDefinition(id = "app1", constraints = Set.empty)
   val app2 = AppDefinition(id = "app2", constraints = Set(buildConstraint("hostname", "UNIQUE"), buildConstraint("rack_id", "CLUSTER", "rack-1")))
   val app3 = AppDefinition(id = "app3", constraints = Set(buildConstraint("hostname", "UNIQUE")))
+
+  var queue: TaskQueue = null
+
+  before {
+    val metricRegistry = new MetricRegistry
+    val stats = new Stats(metricRegistry)
+    queue = new TaskQueue(stats)
+  }
 
   def buildConstraint(field: String, operator: String, value: String = ""): Constraint = {
     Constraint.newBuilder()
@@ -18,8 +28,6 @@ class TaskQueueTest extends MarathonSpec {
   }
 
   test("Priority") {
-    val queue = new TaskQueue
-
     queue.add(app1)
     queue.add(app2)
     queue.add(app3)
@@ -30,8 +38,6 @@ class TaskQueueTest extends MarathonSpec {
   }
 
   test("RemoveAll") {
-    val queue = new TaskQueue
-
     queue.add(app1)
     queue.add(app2)
     queue.add(app3)
@@ -43,8 +49,6 @@ class TaskQueueTest extends MarathonSpec {
   }
 
   test("AddAll") {
-    val queue = new TaskQueue
-
     queue.addAll(Seq(app1, app2, app3))
 
     assert(queue.queue.size() == 3, "Queue should contain 3 elements.")

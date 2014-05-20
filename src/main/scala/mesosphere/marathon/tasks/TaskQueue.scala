@@ -6,6 +6,9 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.IndexedSeq
 import java.util
 import java.util.Comparator
+import com.codahale.metrics.Gauge
+import javax.inject.Inject
+import mesosphere.util.Stats
 
 /**
  * Utility class to stage tasks before they get scheduled
@@ -13,10 +16,14 @@ import java.util.Comparator
  * @author Tobi Knaup
  */
 
-class TaskQueue {
+class TaskQueue @Inject() (stats: Stats) {
   import TaskQueue._
 
   val queue = new PriorityBlockingQueue[AppDefinition](1, AppDefinitionPriority)
+
+  stats.register("TaskQueue.size", new Gauge[Int] {
+    override def getValue: Int = queue.size()
+  })
 
   def poll(): AppDefinition = queue.poll()
 

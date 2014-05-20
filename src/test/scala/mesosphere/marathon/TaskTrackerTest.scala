@@ -1,16 +1,28 @@
 package mesosphere.marathon
 
-import org.apache.mesos.state.InMemoryState
+import org.apache.mesos.state.{State, InMemoryState}
 import mesosphere.marathon.Protos.MarathonTask
 import org.apache.mesos.Protos.{TaskID, TaskStatus, TaskState}
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import mesosphere.marathon.tasks.{TaskTracker, TaskIDUtil}
 import com.google.common.collect.Lists
 import mesosphere.mesos.protos.TextAttribute
+import mesosphere.util.Stats
+import com.codahale.metrics.MetricRegistry
 
 class TaskTrackerTest extends MarathonSpec {
 
   import mesosphere.mesos.protos.Implicits._
+
+  var taskTracker: TaskTracker = null
+  var state: State = null
+
+  before {
+    val metricRegistry = new MetricRegistry
+    val stats = new Stats(metricRegistry)
+    state = new InMemoryState
+    taskTracker = new TaskTracker(state, stats)
+  }
 
   def makeSampleTask(id: String) = {
     makeTask(id, "host", 999)
@@ -44,8 +56,6 @@ class TaskTrackerTest extends MarathonSpec {
       )
     }
 
-    val state = new InMemoryState
-    val taskTracker = new TaskTracker(state)
     val app = "foo"
     val taskId1 = TaskIDUtil.taskId(app, 1)
     val taskId2 = TaskIDUtil.taskId(app, 2)
@@ -81,8 +91,6 @@ class TaskTrackerTest extends MarathonSpec {
       )
     }
 
-    val state = new InMemoryState
-    val taskTracker1 = new TaskTracker(state)
     val app = "foo"
     val taskId1 = TaskIDUtil.taskId(app, 1)
     val taskId2 = TaskIDUtil.taskId(app, 2)
@@ -92,16 +100,18 @@ class TaskTrackerTest extends MarathonSpec {
     val task2 = makeTask(taskId2, "foo.bar.bam", 200)
     val task3 = makeTask(taskId3, "foo.bar.bam", 300)
 
-    taskTracker1.starting(app, task1)
-    taskTracker1.running(app, makeTaskStatus(taskId1))
+    taskTracker.starting(app, task1)
+    taskTracker.running(app, makeTaskStatus(taskId1))
 
-    taskTracker1.starting(app, task2)
-    taskTracker1.running(app, makeTaskStatus(taskId2))
+    taskTracker.starting(app, task2)
+    taskTracker.running(app, makeTaskStatus(taskId2))
 
-    taskTracker1.starting(app, task3)
-    taskTracker1.running(app, makeTaskStatus(taskId3))
+    taskTracker.starting(app, task3)
+    taskTracker.running(app, makeTaskStatus(taskId3))
 
-    val taskTracker2 = new TaskTracker(state)
+    val metricRegistry2 = new MetricRegistry
+    val stats2 = new Stats(metricRegistry2)
+    val taskTracker2 = new TaskTracker(state, stats2)
     val results = taskTracker2.fetchApp(app).tasks
 
     shouldContainTask(results, task1)
@@ -110,9 +120,6 @@ class TaskTrackerTest extends MarathonSpec {
   }
 
   test("SerDe") {
-    val state = new InMemoryState
-    val taskTracker = new TaskTracker(state)
-
     val task1 = makeSampleTask("task1")
     val task2 = makeSampleTask("task2")
     val task3 = makeSampleTask("task3")
