@@ -6,7 +6,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Promise
 import akka.actor.{ActorLogging, Actor}
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.TaskFailedException
+import mesosphere.marathon.{TaskUpgradeCancelledException, TaskFailedException}
 
 class TaskStartActor(
   taskQueue: TaskQueue,
@@ -27,6 +27,10 @@ class TaskStartActor(
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
+    if (!promise.isCompleted)
+      promise.tryFailure(
+        new TaskUpgradeCancelledException(
+          "The task upgrade has been cancelled"))
   }
 
   def receive = {

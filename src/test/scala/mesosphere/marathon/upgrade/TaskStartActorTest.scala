@@ -8,7 +8,9 @@ import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.TaskFailedException
+import mesosphere.marathon.{TaskUpgradeCancelledException, TaskFailedException}
+import org.apache.mesos.SchedulerDriver
+import mesosphere.marathon.Protos.MarathonTask
 
 class TaskStartActorTest
   extends TestKit(ActorSystem("System"))
@@ -22,7 +24,6 @@ class TaskStartActorTest
   }
 
   test("Start success") {
-
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp", instances = 5)
@@ -46,7 +47,6 @@ class TaskStartActorTest
   }
 
   test("Start failure") {
-
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp", instances = 5)
@@ -68,6 +68,28 @@ class TaskStartActorTest
     }
 
     ex.getMessage should equal("Task failed during start")
+
+    expectTerminated(ref)
+  }
+
+  test("Cancelled") {
+    val taskQueue = new TaskQueue
+    val promise = Promise[Boolean]()
+    val app = AppDefinition("myApp", instances = 5)
+
+    val ref = system.actorOf(Props(classOf[TaskStartActor],
+      taskQueue,
+      system.eventStream,
+      app,
+      promise))
+
+    watch(ref)
+
+    system.stop(ref)
+
+    intercept[TaskUpgradeCancelledException] {
+      Await.result(promise.future, 1.second)
+    }.getMessage should equal("The task upgrade has been cancelled")
 
     expectTerminated(ref)
   }

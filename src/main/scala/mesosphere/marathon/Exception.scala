@@ -21,3 +21,4 @@ class HealthCheckFailedException(msg: String) extends TaskUpgradeFailedException
 class TaskFailedException(msg: String) extends TaskUpgradeFailedException(msg)
 class ConcurrentTaskUpgradeException(msg: String) extends TaskUpgradeFailedException(msg)
 class MissingHealthCheckException(msg: String) extends TaskUpgradeFailedException(msg)
+class TaskUpgradeCancelledException(msg: String) extends TaskUpgradeFailedException(msg)

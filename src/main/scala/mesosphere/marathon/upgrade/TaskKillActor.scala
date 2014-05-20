@@ -7,6 +7,7 @@ import akka.actor.{Actor, ActorLogging}
 import scala.concurrent.Promise
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import org.apache.mesos.Protos.TaskID
+import mesosphere.marathon.TaskUpgradeCancelledException
 
 class TaskKillActor(
   driver: SchedulerDriver,
@@ -27,6 +28,10 @@ class TaskKillActor(
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
+    if (!promise.isCompleted)
+      promise.tryFailure(
+        new TaskUpgradeCancelledException(
+          "The task upgrade has been cancelled"))
   }
 
   def receive = {

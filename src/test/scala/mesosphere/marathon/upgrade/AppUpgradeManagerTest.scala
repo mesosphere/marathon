@@ -12,6 +12,9 @@ import scala.concurrent.Await
 import mesosphere.marathon.tasks.{TaskTracker, TaskQueue}
 import akka.event.EventStream
 import org.apache.mesos.state.InMemoryState
+import akka.pattern.ask
+import akka.util.Timeout
+import mesosphere.marathon.TaskUpgradeCancelledException
 
 class AppUpgradeManagerTest
   extends TestKit(ActorSystem("System"))
@@ -76,5 +79,22 @@ class AppUpgradeManagerTest
     expectTerminated(probe.ref, 1.second)
 
     Await.result(res, 1.second) should be(true)
+  }
+
+  test("Cancel upgrade") {
+    val driver = mock[SchedulerDriver]
+    val eventBus = mock[EventStream]
+    val taskQueue = mock[TaskQueue]
+    val taskTracker = new TaskTracker(new InMemoryState)
+    val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
+
+    implicit val timeout = Timeout(1.minute)
+    val res = (manager ? Upgrade(driver, AppDefinition(id = "testApp"), 10)).mapTo[Boolean]
+
+    manager ! Rollback(driver, AppDefinition(id = "testApp"), 10)
+
+    intercept[TaskUpgradeCancelledException] {
+      Await.result(res, 1.second)
+    }
   }
 }

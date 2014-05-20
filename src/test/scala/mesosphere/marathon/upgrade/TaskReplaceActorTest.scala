@@ -11,6 +11,7 @@ import org.mockito.Mockito._
 import mesosphere.marathon.event.HealthStatusChanged
 import org.apache.mesos.Protos.TaskID
 import scala.concurrent.duration._
+import mesosphere.marathon.TaskUpgradeCancelledException
 
 class TaskReplaceActorTest
   extends TestKit(ActorSystem("System"))
@@ -42,6 +43,27 @@ class TaskReplaceActorTest
     Await.result(promise.future, 1.second) should be(true)
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+
+    expectTerminated(ref)
+  }
+
+  test("Cancelled") {
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+
+    val tasks = Set(taskA, taskB)
+    val promise = Promise[Boolean]()
+
+    val ref = system.actorOf(Props(classOf[TaskReplaceActor], driver, system.eventStream, "myApp", "version1", 5, tasks, promise))
+
+    watch(ref)
+
+    system.stop(ref)
+
+    intercept[TaskUpgradeCancelledException] {
+      Await.result(promise.future, 1.second)
+    }.getMessage should equal("The task upgrade has been cancelled")
 
     expectTerminated(ref)
   }
