@@ -33,9 +33,9 @@ class MarathonSchedulerService @Inject()(
     healthCheckManager: HealthCheckManager,
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
+    frameworkIdUtil: FrameworkIdUtil,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
     appRepository: AppRepository,
-    frameworkIdUtil: FrameworkIdUtil,
     scheduler: MarathonScheduler)
   extends AbstractExecutionThreadService with Leader {
 
@@ -56,31 +56,18 @@ class MarathonSchedulerService @Inject()(
 
   val log = Logger.getLogger(getClass.getName)
 
-  val frameworkName = "marathon-" + Main.properties.getProperty("marathon.version")
-
-  val frameworkInfo = FrameworkInfo.newBuilder()
-    .setName(frameworkName)
-    .setFailoverTimeout(config.mesosFailoverTimeout())
-    .setUser(config.mesosUser())
-    .setCheckpoint(config.checkpoint())
-
-  // Set the framework ID
-  frameworkIdUtil.fetch() match {
-    case Some(id) => {
+  val frameworkId = frameworkIdUtil.fetch()
+  frameworkId match {
+    case Some(id) =>
       log.info(s"Setting framework ID to ${id.getValue}")
-      frameworkInfo.setId(id)
-    }
-    case None => {
+    case None =>
       log.info("No previous framework ID found")
-    }
   }
 
-  // Set the role, if provided.
-  config.mesosRole.get.map(frameworkInfo.setRole)
-
-  // This is a little ugly as we are using a mutable variable. But drivers can't be reused (i.e. once stopped they can't
-  // be started again. Thus, we have to allocate a new driver before each run or after each stop.
-  var driver = newDriver()
+  // This is a little ugly as we are using a mutable variable. But drivers can't
+  // be reused (i.e. once stopped they can't be started again. Thus,
+  // we have to allocate a new driver before each run or after each stop.
+  var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
 
   def defaultWait = {
     appRepository.defaultWait
@@ -233,7 +220,7 @@ class MarathonSchedulerService @Inject()(
     // We need to allocate a new driver as drivers can't be reused. Once they
     // are in the stopped state they cannot be restarted. See the Mesos C++
     // source code for the MesosScheduleDriver.
-    driver = newDriver()
+    driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
   }
 
   def isLeader = {
@@ -332,13 +319,5 @@ class MarathonSchedulerService @Inject()(
       port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
     } while (assignedPorts.contains(port))
     port
-  }
-
-  private def newDriver(): MesosSchedulerDriver = {
-    new MesosSchedulerDriver(
-      scheduler,
-      frameworkInfo.build,
-      config.mesosMaster()
-    )
   }
 }

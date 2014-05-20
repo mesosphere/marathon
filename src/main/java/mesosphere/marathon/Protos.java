@@ -908,23 +908,23 @@ public final class Protos {
      */
     int getInitialDelaySeconds();
 
-    // optional uint32 intervalSeconds = 4 [default = 60];
+    // optional uint32 intervalSeconds = 4 [default = 10];
     /**
-     * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+     * <code>optional uint32 intervalSeconds = 4 [default = 10];</code>
      */
     boolean hasIntervalSeconds();
     /**
-     * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+     * <code>optional uint32 intervalSeconds = 4 [default = 10];</code>
      */
     int getIntervalSeconds();
 
-    // optional uint32 timeoutSeconds = 5 [default = 15];
+    // optional uint32 timeoutSeconds = 5 [default = 20];
     /**
-     * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+     * <code>optional uint32 timeoutSeconds = 5 [default = 20];</code>
      */
     boolean hasTimeoutSeconds();
     /**
-     * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+     * <code>optional uint32 timeoutSeconds = 5 [default = 20];</code>
      */
     int getTimeoutSeconds();
 
@@ -954,6 +954,16 @@ public final class Protos {
      */
     com.google.protobuf.ByteString
         getPathBytes();
+
+    // optional uint32 maxConsecutiveFailures = 7 [default = 3];
+    /**
+     * <code>optional uint32 maxConsecutiveFailures = 7 [default = 3];</code>
+     */
+    boolean hasMaxConsecutiveFailures();
+    /**
+     * <code>optional uint32 maxConsecutiveFailures = 7 [default = 3];</code>
+     */
+    int getMaxConsecutiveFailures();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.HealthCheckDefinition}
@@ -1040,6 +1050,11 @@ public final class Protos {
             case 50: {
               bitField0_ |= 0x00000020;
               path_ = input.readBytes();
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000040;
+              maxConsecutiveFailures_ = input.readUInt32();
               break;
             }
           }
@@ -1212,33 +1227,33 @@ public final class Protos {
       return initialDelaySeconds_;
     }
 
-    // optional uint32 intervalSeconds = 4 [default = 60];
+    // optional uint32 intervalSeconds = 4 [default = 10];
     public static final int INTERVALSECONDS_FIELD_NUMBER = 4;
     private int intervalSeconds_;
     /**
-     * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+     * <code>optional uint32 intervalSeconds = 4 [default = 10];</code>
      */
     public boolean hasIntervalSeconds() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+     * <code>optional uint32 intervalSeconds = 4 [default = 10];</code>
      */
     public int getIntervalSeconds() {
       return intervalSeconds_;
     }
 
-    // optional uint32 timeoutSeconds = 5 [default = 15];
+    // optional uint32 timeoutSeconds = 5 [default = 20];
     public static final int TIMEOUTSECONDS_FIELD_NUMBER = 5;
     private int timeoutSeconds_;
     /**
-     * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+     * <code>optional uint32 timeoutSeconds = 5 [default = 20];</code>
      */
     public boolean hasTimeoutSeconds() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     /**
-     * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+     * <code>optional uint32 timeoutSeconds = 5 [default = 20];</code>
      */
     public int getTimeoutSeconds() {
       return timeoutSeconds_;
@@ -1299,13 +1314,30 @@ public final class Protos {
       }
     }
 
+    // optional uint32 maxConsecutiveFailures = 7 [default = 3];
+    public static final int MAXCONSECUTIVEFAILURES_FIELD_NUMBER = 7;
+    private int maxConsecutiveFailures_;
+    /**
+     * <code>optional uint32 maxConsecutiveFailures = 7 [default = 3];</code>
+     */
+    public boolean hasMaxConsecutiveFailures() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional uint32 maxConsecutiveFailures = 7 [default = 3];</code>
+     */
+    public int getMaxConsecutiveFailures() {
+      return maxConsecutiveFailures_;
+    }
+
     private void initFields() {
       protocol_ = mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.HTTP;
       portIndex_ = 0;
       initialDelaySeconds_ = 15;
-      intervalSeconds_ = 60;
-      timeoutSeconds_ = 15;
+      intervalSeconds_ = 10;
+      timeoutSeconds_ = 20;
       path_ = "/";
+      maxConsecutiveFailures_ = 3;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1345,6 +1377,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBytes(6, getPathBytes());
       }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeUInt32(7, maxConsecutiveFailures_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -1377,6 +1412,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(6, getPathBytes());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(7, maxConsecutiveFailures_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1500,12 +1539,14 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000002);
         initialDelaySeconds_ = 15;
         bitField0_ = (bitField0_ & ~0x00000004);
-        intervalSeconds_ = 60;
+        intervalSeconds_ = 10;
         bitField0_ = (bitField0_ & ~0x00000008);
-        timeoutSeconds_ = 15;
+        timeoutSeconds_ = 20;
         bitField0_ = (bitField0_ & ~0x00000010);
         path_ = "/";
         bitField0_ = (bitField0_ & ~0x00000020);
+        maxConsecutiveFailures_ = 3;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -1558,6 +1599,10 @@ public final class Protos {
           to_bitField0_ |= 0x00000020;
         }
         result.path_ = path_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.maxConsecutiveFailures_ = maxConsecutiveFailures_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1593,6 +1638,9 @@ public final class Protos {
           bitField0_ |= 0x00000020;
           path_ = other.path_;
           onChanged();
+        }
+        if (other.hasMaxConsecutiveFailures()) {
+          setMaxConsecutiveFailures(other.getMaxConsecutiveFailures());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1731,22 +1779,22 @@ public final class Protos {
         return this;
       }
 
-      // optional uint32 intervalSeconds = 4 [default = 60];
-      private int intervalSeconds_ = 60;
+      // optional uint32 intervalSeconds = 4 [default = 10];
+      private int intervalSeconds_ = 10;
       /**
-       * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+       * <code>optional uint32 intervalSeconds = 4 [default = 10];</code>
        */
       public boolean hasIntervalSeconds() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+       * <code>optional uint32 intervalSeconds = 4 [default = 10];</code>
        */
       public int getIntervalSeconds() {
         return intervalSeconds_;
       }
       /**
-       * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+       * <code>optional uint32 intervalSeconds = 4 [default = 10];</code>
        */
       public Builder setIntervalSeconds(int value) {
         bitField0_ |= 0x00000008;
@@ -1755,31 +1803,31 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional uint32 intervalSeconds = 4 [default = 60];</code>
+       * <code>optional uint32 intervalSeconds = 4 [default = 10];</code>
        */
       public Builder clearIntervalSeconds() {
         bitField0_ = (bitField0_ & ~0x00000008);
-        intervalSeconds_ = 60;
+        intervalSeconds_ = 10;
         onChanged();
         return this;
       }
 
-      // optional uint32 timeoutSeconds = 5 [default = 15];
-      private int timeoutSeconds_ = 15;
+      // optional uint32 timeoutSeconds = 5 [default = 20];
+      private int timeoutSeconds_ = 20;
       /**
-       * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+       * <code>optional uint32 timeoutSeconds = 5 [default = 20];</code>
        */
       public boolean hasTimeoutSeconds() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       /**
-       * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+       * <code>optional uint32 timeoutSeconds = 5 [default = 20];</code>
        */
       public int getTimeoutSeconds() {
         return timeoutSeconds_;
       }
       /**
-       * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+       * <code>optional uint32 timeoutSeconds = 5 [default = 20];</code>
        */
       public Builder setTimeoutSeconds(int value) {
         bitField0_ |= 0x00000010;
@@ -1788,11 +1836,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional uint32 timeoutSeconds = 5 [default = 15];</code>
+       * <code>optional uint32 timeoutSeconds = 5 [default = 20];</code>
        */
       public Builder clearTimeoutSeconds() {
         bitField0_ = (bitField0_ & ~0x00000010);
-        timeoutSeconds_ = 15;
+        timeoutSeconds_ = 20;
         onChanged();
         return this;
       }
@@ -1891,6 +1939,39 @@ public final class Protos {
   }
   bitField0_ |= 0x00000020;
         path_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 maxConsecutiveFailures = 7 [default = 3];
+      private int maxConsecutiveFailures_ = 3;
+      /**
+       * <code>optional uint32 maxConsecutiveFailures = 7 [default = 3];</code>
+       */
+      public boolean hasMaxConsecutiveFailures() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional uint32 maxConsecutiveFailures = 7 [default = 3];</code>
+       */
+      public int getMaxConsecutiveFailures() {
+        return maxConsecutiveFailures_;
+      }
+      /**
+       * <code>optional uint32 maxConsecutiveFailures = 7 [default = 3];</code>
+       */
+      public Builder setMaxConsecutiveFailures(int value) {
+        bitField0_ |= 0x00000040;
+        maxConsecutiveFailures_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 maxConsecutiveFailures = 7 [default = 3];</code>
+       */
+      public Builder clearMaxConsecutiveFailures() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        maxConsecutiveFailures_ = 3;
         onChanged();
         return this;
       }
@@ -8576,34 +8657,35 @@ public final class Protos {
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\";\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\022\014\n\010GROUP_BY\020\003\"\376\001\n\025HealthCheckDefiniti" +
+      "\020\002\022\014\n\010GROUP_BY\020\003\"\241\002\n\025HealthCheckDefiniti" +
       "on\022E\n\010protocol\030\001 \002(\01623.mesosphere.marath" +
       "on.HealthCheckDefinition.Protocol\022\024\n\tpor" +
       "tIndex\030\002 \002(\r:\0010\022\037\n\023initialDelaySeconds\030\003" +
-      " \001(\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00260\022\032\n",
-      "\016timeoutSeconds\030\005 \001(\r:\00215\022\017\n\004path\030\006 \001(\t:" +
-      "\001/\"\035\n\010Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\243\003\n\021Se" +
-      "rviceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\013" +
-      "2\022.mesos.CommandInfo\022\021\n\tinstances\030\003 \002(\r\022" +
-      "\"\n\tresources\030\004 \003(\0132\017.mesos.Resource\022\023\n\013d" +
-      "escription\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013const" +
-      "raints\030\007 \003(\0132\037.mesosphere.marathon.Const" +
-      "raint\022\022\n\010executor\030\010 \002(\t:\000\022\030\n\rtaskRateLim" +
-      "it\030\t \001(\001:\0011\0225\n\tcontainer\030\n \001(\0132\".mesosph" +
-      "ere.marathon.ContainerInfo\022)\n\007version\030\013 ",
-      "\001(\t:\0301970-01-01T00:00:00.000Z\022@\n\014healthC" +
-      "hecks\030\014 \003(\0132*.mesosphere.marathon.Health" +
-      "CheckDefinition\"\272\001\n\014MarathonTask\022\n\n\002id\030\001" +
-      " \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\natt" +
-      "ributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstage" +
-      "d_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010status" +
-      "es\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010" +
-      " \001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tas" +
-      "ks\030\002 \003(\0132!.mesosphere.marathon.MarathonT" +
-      "ask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n",
-      "\007options\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rca" +
-      "llback_urls\030\001 \003(\tB\035\n\023mesosphere.marathon" +
-      "B\006Protos"
+      " \001(\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00210\022\032\n",
+      "\016timeoutSeconds\030\005 \001(\r:\00220\022\017\n\004path\030\006 \001(\t:" +
+      "\001/\022!\n\026maxConsecutiveFailures\030\007 \001(\r:\0013\"\035\n" +
+      "\010Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\243\003\n\021Service" +
+      "Definition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.me" +
+      "sos.CommandInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tre" +
+      "sources\030\004 \003(\0132\017.mesos.Resource\022\023\n\013descri" +
+      "ption\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013constraint" +
+      "s\030\007 \003(\0132\037.mesosphere.marathon.Constraint" +
+      "\022\022\n\010executor\030\010 \002(\t:\000\022\030\n\rtaskRateLimit\030\t " +
+      "\001(\001:\0011\0225\n\tcontainer\030\n \001(\0132\".mesosphere.m",
+      "arathon.ContainerInfo\022)\n\007version\030\013 \001(\t:\030" +
+      "1970-01-01T00:00:00.000Z\022@\n\014healthChecks" +
+      "\030\014 \003(\0132*.mesosphere.marathon.HealthCheck" +
+      "Definition\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022" +
+      "\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattribut" +
+      "es\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030" +
+      "\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007 " +
+      "\003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 \001(\t\"" +
+      "M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 " +
+      "\003(\0132!.mesosphere.marathon.MarathonTask\"1",
+      "\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opti" +
+      "ons\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcallbac" +
+      "k_urls\030\001 \003(\tB\035\n\023mesosphere.marathonB\006Pro" +
+      "tos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -8621,7 +8703,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_HealthCheckDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor,
-              new java.lang.String[] { "Protocol", "PortIndex", "InitialDelaySeconds", "IntervalSeconds", "TimeoutSeconds", "Path", });
+              new java.lang.String[] { "Protocol", "PortIndex", "InitialDelaySeconds", "IntervalSeconds", "TimeoutSeconds", "Path", "MaxConsecutiveFailures", });
           internal_static_mesosphere_marathon_ServiceDefinition_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new

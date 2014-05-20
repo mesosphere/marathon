@@ -13,7 +13,8 @@ class HealthCheckTest extends MarathonSpec {
       protocol = Protocol.HTTP,
       portIndex = 0,
       initialDelay = FiniteDuration(10, SECONDS),
-      interval = FiniteDuration(60, SECONDS)
+      interval = FiniteDuration(60, SECONDS),
+      maxConsecutiveFailures = 0
     )
 
     val proto = healthCheck.toProto
@@ -23,6 +24,7 @@ class HealthCheckTest extends MarathonSpec {
     assert(0 == proto.getPortIndex)
     assert(10 == proto.getInitialDelaySeconds)
     assert(60 == proto.getIntervalSeconds)
+    assert(0 == proto.getMaxConsecutiveFailures)
   }
 
   test("ToProtoTcp") {
@@ -30,7 +32,8 @@ class HealthCheckTest extends MarathonSpec {
       protocol = Protocol.TCP,
       portIndex = 1,
       initialDelay = FiniteDuration(7, SECONDS),
-      interval = FiniteDuration(35, SECONDS)
+      interval = FiniteDuration(35, SECONDS),
+      maxConsecutiveFailures = 10
     )
 
     val proto = healthCheck.toProto
@@ -39,6 +42,7 @@ class HealthCheckTest extends MarathonSpec {
     assert(1 == proto.getPortIndex)
     assert(7 == proto.getInitialDelaySeconds)
     assert(35 == proto.getIntervalSeconds)
+    assert(10 == proto.getMaxConsecutiveFailures)
   }
 
   test("MergeFromProto") {
@@ -49,6 +53,7 @@ class HealthCheckTest extends MarathonSpec {
       .setInitialDelaySeconds(10)
       .setIntervalSeconds(60)
       .setTimeoutSeconds(10)
+      .setMaxConsecutiveFailures(10)
       .build
 
     val mergeResult = HealthCheck().mergeFromProto(proto)
@@ -59,7 +64,8 @@ class HealthCheckTest extends MarathonSpec {
       portIndex = 0,
       initialDelay = FiniteDuration(10, SECONDS),
       interval = FiniteDuration(60, SECONDS),
-      timeout = FiniteDuration(10, SECONDS)
+      timeout = FiniteDuration(10, SECONDS),
+      maxConsecutiveFailures = 10
     )
 
     assert(mergeResult == expectedResult)
@@ -72,6 +78,7 @@ class HealthCheckTest extends MarathonSpec {
       .setInitialDelaySeconds(7)
       .setIntervalSeconds(35)
       .setTimeoutSeconds(10)
+      .setMaxConsecutiveFailures(10)
       .build
 
     val mergeResult = HealthCheck().mergeFromProto(proto)
@@ -82,7 +89,8 @@ class HealthCheckTest extends MarathonSpec {
       portIndex = 1,
       initialDelay = FiniteDuration(7, SECONDS),
       interval = FiniteDuration(35, SECONDS),
-      timeout = FiniteDuration(10, SECONDS)
+      timeout = FiniteDuration(10, SECONDS),
+      maxConsecutiveFailures = 10
     )
 
     assert(mergeResult == expectedResult)

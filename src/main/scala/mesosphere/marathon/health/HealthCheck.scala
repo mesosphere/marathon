@@ -34,7 +34,10 @@ case class HealthCheck(
   interval: FiniteDuration = HealthCheck.DefaultInterval,
 
   @FieldJsonProperty("timeoutSeconds")
-  timeout: FiniteDuration = HealthCheck.DefaultTimeout
+  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+
+  @FieldNotEmpty
+  maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures
 
 ) extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
@@ -45,8 +48,10 @@ case class HealthCheck(
       .setInitialDelaySeconds(this.initialDelay.toSeconds.toInt)
       .setIntervalSeconds(this.interval.toSeconds.toInt)
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
+      .setMaxConsecutiveFailures(this.maxConsecutiveFailures)
 
     path foreach builder.setPath
+
     builder.build
   }
 
@@ -57,7 +62,8 @@ case class HealthCheck(
       portIndex = proto.getPortIndex,
       initialDelay = FiniteDuration(proto.getInitialDelaySeconds, SECONDS),
       timeout = FiniteDuration(proto.getTimeoutSeconds, SECONDS),
-      interval = FiniteDuration(proto.getIntervalSeconds, SECONDS)
+      interval = FiniteDuration(proto.getIntervalSeconds, SECONDS),
+      maxConsecutiveFailures = proto.getMaxConsecutiveFailures
     )
 
   def mergeFromProto(bytes: Array[Byte]): HealthCheck =
@@ -67,11 +73,11 @@ case class HealthCheck(
 
 object HealthCheck {
 
-  val DefaultPath                 = Some("/")
-  val DefaultProtocol             = Protocol.HTTP
-  val DefaultAcceptableResponses  = None
-  val DefaultPortIndex            = 0
-  val DefaultInitialDelay         = FiniteDuration(15, SECONDS)
-  val DefaultInterval             = FiniteDuration(60, SECONDS)
-  val DefaultTimeout              = FiniteDuration(15, SECONDS)
+  val DefaultPath                   = Some("/")
+  val DefaultProtocol               = Protocol.HTTP
+  val DefaultPortIndex              = 0
+  val DefaultInitialDelay           = FiniteDuration(15, SECONDS)
+  val DefaultInterval               = FiniteDuration(60, SECONDS)
+  val DefaultTimeout                = FiniteDuration(15, SECONDS)
+  val DefaultMaxConsecutiveFailures = 3
 }
