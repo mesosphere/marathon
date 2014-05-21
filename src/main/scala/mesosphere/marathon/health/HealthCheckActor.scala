@@ -10,6 +10,7 @@ import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event._
 import mesosphere.marathon.MarathonSchedulerDriver
 import mesosphere.mesos.protos.TaskID
+import mesosphere.marathon.Protos.MarathonTask
 
 class HealthCheckActor(
   appId: String,
@@ -19,7 +20,7 @@ class HealthCheckActor(
 ) extends Actor with ActorLogging {
 
   import HealthCheckActor.{GetTaskHealth, Health}
-  import HealthCheckWorker.{HealthCheckJob, HealthResult}
+  import HealthCheckWorker.{HealthCheckJob, HealthResult, Healthy, Unhealthy}
   import context.dispatcher // execution context
   import mesosphere.mesos.protos.Implicits._
 
@@ -33,11 +34,7 @@ class HealthCheckActor(
       appId,
       healthCheck
     )
-    nextScheduledCheck = Some(
-      context.system.scheduler.scheduleOnce(healthCheck.initialDelay) {
-        self ! Tick
-      }
-    )
+    scheduleNextHealthCheck()
   }
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit =
@@ -83,23 +80,26 @@ class HealthCheckActor(
     }
   }
 
-  protected[this] def checkConsecutiveFailures(taskId: String, health: Health): Unit = {
+  protected[this] def checkConsecutiveFailures(task: MarathonTask,
+                                               health: Health): Unit = {
     val consecutiveFailures = health.consecutiveFailures
     val maxFailures = healthCheck.maxConsecutiveFailures
 
     if (consecutiveFailures >= maxFailures) {
-      val taskToKill = taskTracker.get(appId).find(_.getId == taskId)
-      taskToKill match {
-        case Some(task) =>
-          log.info(f"Killing task ${task.getId} on host ${task.getHost}")
+      log.info(f"Killing task ${task.getId} on host ${task.getHost}")
 
-          MarathonSchedulerDriver.driver.foreach { driver =>
-            driver.killTask(TaskID(task.getId))
-          }
-        case None =>
-          log.warning(s"Unable to get a task for taskId[$taskId]")
+      MarathonSchedulerDriver.driver.foreach { driver =>
+        driver.killTask(TaskID(task.getId))
       }
     }
+  }
+
+  protected[this] def ignoreFailures(task: MarathonTask,
+                                     health: Health): Boolean = {
+    // Ignore failures during the grace period, until the task becomes green
+    // for the first time.
+    health.firstSuccess.isEmpty &&
+    task.getStartedAt + healthCheck.gracePeriod.toMillis > System.currentTimeMillis()
   }
 
   def receive = {
@@ -113,10 +113,30 @@ class HealthCheckActor(
       log.info("Received health result: [{}]", result)
       val taskId = result.taskId
       val health = taskHealth.getOrElse(taskId, Health(taskId))
-      val newHealth = health.update(result)
+
+      val newHealth = result match {
+        case Healthy(_, _) =>
+          health.update(result)
+        case Unhealthy(_, _, _) =>
+          taskTracker.get(appId).find(_.getId == taskId) match {
+            case Some(task) =>
+              if (ignoreFailures(task, health)) {
+                // Don't update health
+                health
+              } else {
+                eventBus.foreach(_.post(FailedHealthCheck(appId, taskId, healthCheck)))
+                checkConsecutiveFailures(task, health)
+                health.update(result)
+              }
+            case None =>
+              log.error(s"Couldn't find task $taskId")
+              health.update(result)
+          }
+      }
+
       taskHealth += (taskId -> newHealth)
 
-      if (health.alive() != newHealth.alive())
+      if (health.alive() != newHealth.alive()) {
         eventBus.foreach(_.post(
           HealthStatusChanged(
             appId = appId,
@@ -124,11 +144,7 @@ class HealthCheckActor(
             alive = newHealth.alive())
           )
         )
-
-      if (!newHealth.alive)
-        eventBus.foreach(_.post(FailedHealthCheck(appId, taskId, healthCheck)))
-
-      checkConsecutiveFailures(taskId, health)
+      }
   }
 }
 

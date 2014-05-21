@@ -12,7 +12,7 @@ class HealthCheckTest extends MarathonSpec {
       path = Some("/health"),
       protocol = Protocol.HTTP,
       portIndex = 0,
-      initialDelay = FiniteDuration(10, SECONDS),
+      gracePeriod = FiniteDuration(10, SECONDS),
       interval = FiniteDuration(60, SECONDS),
       maxConsecutiveFailures = 0
     )
@@ -22,7 +22,7 @@ class HealthCheckTest extends MarathonSpec {
     assert("/health" == proto.getPath)
     assert(Protocol.HTTP == proto.getProtocol)
     assert(0 == proto.getPortIndex)
-    assert(10 == proto.getInitialDelaySeconds)
+    assert(10 == proto.getGracePeriodSeconds)
     assert(60 == proto.getIntervalSeconds)
     assert(0 == proto.getMaxConsecutiveFailures)
   }
@@ -31,7 +31,7 @@ class HealthCheckTest extends MarathonSpec {
     val healthCheck = HealthCheck(
       protocol = Protocol.TCP,
       portIndex = 1,
-      initialDelay = FiniteDuration(7, SECONDS),
+      gracePeriod = FiniteDuration(7, SECONDS),
       interval = FiniteDuration(35, SECONDS),
       maxConsecutiveFailures = 10
     )
@@ -40,7 +40,7 @@ class HealthCheckTest extends MarathonSpec {
 
     assert(Protocol.TCP == proto.getProtocol)
     assert(1 == proto.getPortIndex)
-    assert(7 == proto.getInitialDelaySeconds)
+    assert(7 == proto.getGracePeriodSeconds)
     assert(35 == proto.getIntervalSeconds)
     assert(10 == proto.getMaxConsecutiveFailures)
   }
@@ -50,7 +50,7 @@ class HealthCheckTest extends MarathonSpec {
       .setPath("/health")
       .setProtocol(Protocol.HTTP)
       .setPortIndex(0)
-      .setInitialDelaySeconds(10)
+      .setGracePeriodSeconds(10)
       .setIntervalSeconds(60)
       .setTimeoutSeconds(10)
       .setMaxConsecutiveFailures(10)
@@ -62,7 +62,7 @@ class HealthCheckTest extends MarathonSpec {
       path = Some("/health"),
       protocol = Protocol.HTTP,
       portIndex = 0,
-      initialDelay = FiniteDuration(10, SECONDS),
+      gracePeriod = FiniteDuration(10, SECONDS),
       interval = FiniteDuration(60, SECONDS),
       timeout = FiniteDuration(10, SECONDS),
       maxConsecutiveFailures = 10
@@ -75,7 +75,7 @@ class HealthCheckTest extends MarathonSpec {
     val proto = Protos.HealthCheckDefinition.newBuilder
       .setProtocol(Protocol.TCP)
       .setPortIndex(1)
-      .setInitialDelaySeconds(7)
+      .setGracePeriodSeconds(7)
       .setIntervalSeconds(35)
       .setTimeoutSeconds(10)
       .setMaxConsecutiveFailures(10)
@@ -87,7 +87,7 @@ class HealthCheckTest extends MarathonSpec {
       path = Some("/"),
       protocol = Protocol.TCP,
       portIndex = 1,
-      initialDelay = FiniteDuration(7, SECONDS),
+      gracePeriod = FiniteDuration(7, SECONDS),
       interval = FiniteDuration(35, SECONDS),
       timeout = FiniteDuration(10, SECONDS),
       maxConsecutiveFailures = 10
