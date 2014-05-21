@@ -127,9 +127,13 @@ class TaskTracker @Inject()(state: State) {
     apps.getOrElseUpdate(appName, fetchApp(appName)).shutdown = true
 
   def newTaskId(appName: String): TaskID = {
-    val taskCount = count(appName)
+    val tasks = get(appName)
+    var numb=(-1)
+    do{
+       numb+=1
+    }while(  tasks.exists( x =>  x.getId.contains(appName+"_"+numb) ) )
     TaskID.newBuilder()
-      .setValue(TaskIDUtil.taskId(appName, taskCount))
+      .setValue(TaskIDUtil.taskId(appName, numb))
       .build
   }
 
