@@ -12,6 +12,13 @@ class UnknownAppException(id: String) extends Exception(s"App '$id' does not exi
 
 class BadRequestException(msg: String) extends Exception(msg)
 
+class AppLockedException extends Exception("App is locked by another operation")
+
+class PortRangeExhaustedException(
+  minPort: Int,
+  maxPort: Int
+) extends Exception(s"All ports in the range $minPort-$maxPort are already in use")
+
 /*
  * Task upgrade specific exceptions
  */

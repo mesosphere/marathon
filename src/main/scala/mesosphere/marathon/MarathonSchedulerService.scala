@@ -16,7 +16,7 @@ import com.twitter.common.zookeeper.Group.JoinException
 import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
-import scala.util.{ Failure, Success, Random }
+import scala.util.Random
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
@@ -25,6 +25,17 @@ import com.google.common.cache.LoadingCache
 import java.util.concurrent.CountDownLatch
 import mesosphere.util.{ BackToTheFuture, ThreadPoolContext }
 import java.util.concurrent.Semaphore
+import akka.actor.ActorRef
+import mesosphere.marathon.MarathonSchedulerActor._
+import akka.pattern.ask
+import mesosphere.marathon.MarathonSchedulerActor.StopApp
+import scala.util.Failure
+import mesosphere.marathon.MarathonSchedulerActor.UpdateApp
+import scala.Some
+import mesosphere.marathon.MarathonSchedulerActor.StartApp
+import scala.util.Success
+import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
+import akka.util.Timeout
 
 /**
   * Wrapper class for the scheduler
@@ -38,8 +49,9 @@ class MarathonSchedulerService @Inject() (
   frameworkIdUtil: FrameworkIdUtil,
   @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
   appRepository: AppRepository,
-  scheduler: MarathonScheduler)
-    extends AbstractExecutionThreadService with Leader {
+  scheduler: MarathonScheduler,
+  @Named("schedulerActor") schedulerActor: ActorRef
+) extends AbstractExecutionThreadService with Leader {
 
   import ThreadPoolContext.context
 
@@ -73,6 +85,8 @@ class MarathonSchedulerService @Inject() (
   var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
 
 
+  implicit def timeout: Timeout = defaultWait
+
   def appLocks: LoadingCache[String, Semaphore] = scheduler.appLocks
   def startApp(app: AppDefinition): Future[_] = {
     // Backwards compatibility
@@ -84,20 +98,26 @@ class MarathonSchedulerService @Inject() (
       log.info(s"Assigned some ports for ${app.id}: ${asMsg.mkString(" -> ")}")
     }
 
-    scheduler.startApp(driver, app.copy(ports = newPorts))
+    schedulerActor ? StartApp(app.copy(ports = newPorts))
   }
 
   def stopApp(app: AppDefinition): Future[_] = {
-    scheduler.stopApp(driver, app)
+    schedulerActor ? StopApp(app)
   }
 
   def updateApp(appName: String, appUpdate: AppUpdate): Future[_] =
-    scheduler.updateApp(driver, appName, appUpdate).map { updatedApp =>
-      scheduler.scale(driver, updatedApp)
+    (schedulerActor ? UpdateApp(appName, appUpdate)) flatMap { _ =>
+      schedulerActor ? ScaleApp(appName)
     }
 
-  def upgradeApp(app: AppDefinition, keepAlive: Int): Future[Boolean] =
-    scheduler.upgradeApp(driver, app, keepAlive)
+  def upgradeApp(app: AppDefinition, keepAlive: Int): Future[Boolean] = {
+    // TODO: this should be configurable
+    implicit val timeout = Timeout(12.hours)
+    (schedulerActor ? UpgradeApp(app, keepAlive)).map {
+      case CommandFailed(_, reason) => throw reason
+      case _ => true
+    }
+  }
 
   def listApps(): Iterable[AppDefinition] =
     Await.result(appRepository.apps, config.zkTimeoutDuration)
@@ -120,7 +140,7 @@ class MarathonSchedulerService @Inject() (
     if (scale) {
       getApp(appName) foreach { app =>
         val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
-        Await.result(scheduler.updateApp(driver, appName, appUpdate), config.zkTimeoutDuration)
+        Await.result(schedulerActor ? UpdateApp(appName, appUpdate), defaultWait)
       }
     }
 
@@ -305,7 +325,7 @@ class MarathonSchedulerService @Inject() (
       new TimerTask {
         def run() {
           if (isLeader) {
-            scheduler.reconcileTasks(driver)
+            schedulerActor ! ReconcileTasks
           }
           else log.info("Not leader therefore not reconciling tasks")
         }
@@ -317,10 +337,16 @@ class MarathonSchedulerService @Inject() (
 
   private def newAppPort(app: AppDefinition): Integer = {
     // TODO this is pretty expensive, find a better way
-    val assignedPorts = listApps().map(_.ports).flatten.toSeq
+    val assignedPorts = listApps().flatMap(_.ports).toSet
+    val portSum = config.localPortMax() - config.localPortMin()
+
+    // prevent infinite loop if all ports are taken
+    if (assignedPorts.size >= portSum)
+      throw new PortRangeExhaustedException(config.localPortMin(), config.localPortMax())
+
     var port = 0
     do {
-      port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
+      port = config.localPortMin() + Random.nextInt(portSum)
     } while (assignedPorts.contains(port))
     port
   }

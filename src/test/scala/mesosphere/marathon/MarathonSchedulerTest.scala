@@ -18,20 +18,22 @@ import mesosphere.util.RateLimiters
 import scala.collection.mutable
 import akka.actor.ActorSystem
 import akka.event.EventStream
+import akka.testkit.{TestKit, TestProbe}
+import org.scalatest.BeforeAndAfterAll
 
 /**
   * @author Tobi Knaup
   */
-class MarathonSchedulerTest extends MarathonSpec {
+class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with MarathonSpec with BeforeAndAfterAll {
 
-  var repo: AppRepository = null
-  var hcManager: HealthCheckManager = null
-  var tracker: TaskTracker = null
-  var queue: TaskQueue = null
-  var scheduler: MarathonScheduler = null
-  var frameworkIdUtil: FrameworkIdUtil = null
-  var rateLimiters: RateLimiters = null
-  var config: MarathonConf = null
+  var repo: AppRepository = _
+  var hcManager: HealthCheckManager = _
+  var tracker: TaskTracker = _
+  var queue: TaskQueue = _
+  var scheduler: MarathonScheduler = _
+  var frameworkIdUtil: FrameworkIdUtil = _
+  var rateLimiters: RateLimiters = _
+  var probe: TestProbe = _
 
   before {
     repo = mock[AppRepository]
@@ -44,15 +46,18 @@ class MarathonSchedulerTest extends MarathonSpec {
     scheduler = new MarathonScheduler(
       mock[EventStream],
       new ObjectMapper,
-      repo,
-      hcManager,
+      probe.ref,
       tracker,
       queue,
       frameworkIdUtil,
-      rateLimiters,
+      rateLimiters
       mock[ActorSystem],
       config
     )
+  }
+
+  override def afterAll(): Unit = {
+    system.shutdown()
   }
 
   test("ResourceOffers") {
@@ -94,31 +99,5 @@ class MarathonSchedulerTest extends MarathonSpec {
     assert(taskInfoPortVar.get.getValue == marathonTaskPort.toString)
     val marathonTaskVersion = marathonTaskCaptor.getValue.getVersion
     assert(now.toString() == marathonTaskVersion)
-  }
-
-  test("ScaleDown") {
-    val driver = mock[SchedulerDriver]
-    val app = AppDefinition(
-      id = "down",
-      instances = 1
-    )
-    val task0 = MarathonTasks.makeTask("down_0", "localhost", Seq(), Seq(),
-      Timestamp.now())
-    val task1 = MarathonTasks.makeTask("down_1", "localhost", Seq(), Seq(),
-      Timestamp.now())
-    val tasks = new mutable.HashSet[MarathonTask]()
-    tasks += task0
-    tasks += task1
-    val taken = new mutable.HashSet[MarathonTask]()
-    taken += task0
-
-    when(tracker.get(app.id)).thenReturn(tasks)
-    when(tracker.count(app.id)).thenReturn(2)
-    when(tracker.take(app.id, 1)).thenReturn(taken)
-
-    scheduler.scale(driver, app)
-
-    verify(queue).purge(same(app))
-    verify(driver).killTask(Matchers.eq(TaskID.newBuilder.setValue("down_0").build))
   }
 }

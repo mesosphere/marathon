@@ -10,7 +10,7 @@ import org.apache.log4j.Logger
 import javax.inject.Named
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
-import akka.actor.ActorSystem
+import akka.actor.{Props, ActorRef, ActorSystem}
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -19,6 +19,8 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.api.v2.Group
+import akka.event.EventStream
+import mesosphere.marathon.event.EventModule
 
 /**
   * @author Tobi Knaup
@@ -67,6 +69,32 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
       TimeUnit.MILLISECONDS,
       conf.zooKeeperStatePath
     )
+  }
+
+  @Named("schedulerActor")
+  @Provides
+  @Singleton
+  @Inject
+  def provideSchedulerActor(
+    system: ActorSystem,
+    appRepository: AppRepository,
+    healthCheckManager: HealthCheckManager,
+    taskTracker: TaskTracker,
+    taskQueue: TaskQueue,
+    frameworkIdUtil: FrameworkIdUtil,
+    rateLimiters: RateLimiters,
+    @Named(EventModule.busName) eventBus: EventStream
+  ): ActorRef = {
+    system.actorOf(
+      Props(
+        classOf[MarathonSchedulerActor],
+        appRepository,
+        healthCheckManager,
+        taskTracker,
+        taskQueue,
+        frameworkIdUtil,
+        rateLimiters,
+        eventBus))
   }
 
   @Named(ModuleNames.NAMED_CANDIDATE)

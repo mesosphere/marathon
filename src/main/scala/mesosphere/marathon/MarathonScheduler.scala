@@ -23,7 +23,7 @@ import mesosphere.util.{LockManager, ThreadPoolContext, RateLimiters}
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{ActorRef, Props, ActorSystem}
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.event.MesosFrameworkMessageEvent
 import mesosphere.marathon.event.RestartSuccess
@@ -32,6 +32,7 @@ import mesosphere.marathon.upgrade.AppUpgradeManager.Upgrade
 import akka.pattern.ask
 import scala.concurrent.duration._
 import akka.util.Timeout
+import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 trait SchedulerCallbacks {
   def disconnected(): Unit
 }
@@ -50,8 +51,7 @@ object MarathonScheduler {
 class MarathonScheduler @Inject() (
   @Named(EventModule.busName) eventBus: EventStream,
     @Named("restMapper") mapper: ObjectMapper,
-    appRepository: AppRepository,
-    healthCheckManager: HealthCheckManager,
+  @Named("schedulerActor") schedulerActor: ActorRef,
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
@@ -60,21 +60,12 @@ class MarathonScheduler @Inject() (
     config: MarathonConf) extends Scheduler {
 
   private [this] val log = Logger.getLogger(getClass.getName)
-  private [this] val upgradeManager = system.actorOf(
-    Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
   val appLocks = LockManager()
 
   import ThreadPoolContext.context
   import mesosphere.mesos.protos.Implicits._
 
   implicit val zkTimeout = config.zkFutureTimeout
-
-  /**
-    * Returns a future containing the optional most recent version
-    * of the specified app from persistent storage.
-    */
-  protected[marathon] def currentAppVersion(
-    appId: String): Future[Option[AppDefinition]] = appRepository.currentVersion(appId)
 
   override def registered(driver: SchedulerDriver, frameworkId: FrameworkID, master: MasterInfo) {
     log.info("Registered as %s to master '%s'".format(frameworkId.getValue, master.getId))
@@ -95,6 +86,9 @@ class MarathonScheduler @Inject() (
       for (task <- toKill)
         driver.killTask(protos.TaskID(task.getId))
     }
+
+    val toLaunch = Seq.newBuilder[(Seq[OfferID], Seq[TaskInfo])]
+
     for (offer <- offers.asScala) {
       try {
         log.debug("Received offer %s".format(offer))
@@ -109,14 +103,14 @@ class MarathonScheduler @Inject() (
 
           newTask(app, offer) match {
             case Some((task, ports)) =>
-              val taskInfos = Lists.newArrayList(task)
+              val taskInfos = Seq(task)
               log.debug("Launching tasks: " + taskInfos)
 
               val marathonTask = MarathonTasks.makeTask(
                 task.getTaskId.getValue, offer.getHostname, ports,
                 offer.getAttributesList.asScala.toList, app.version)
               taskTracker.starting(app.id, marathonTask)
-              driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
+              toLaunch += Seq(offer.getId) -> taskInfos
               found = true
 
             case None =>
@@ -142,12 +136,18 @@ class MarathonScheduler @Inject() (
           driver.declineOffer(offer.getId)
       }
     }
+
+    // TODO: send off to actor
+    toLaunch.result().foreach { case (id, task) =>
+      driver.launchTasks(id.asJava, task.asJava)
+    }
   }
 
   override def offerRescinded(driver: SchedulerDriver, offer: OfferID) {
     log.info("Offer %s rescinded".format(offer))
   }
 
+  // TODO: send tasks off to actor
   override def statusUpdate(driver: SchedulerDriver, status: TaskStatus) {
     import TaskState._
 
@@ -166,7 +166,7 @@ class MarathonScheduler @Inject() (
           }
 
           if (rateLimiters.tryAcquire(appID)) {
-            scale(driver, appID)
+            schedulerActor ! ScaleApp(appID)
           } else {
         else {
             log.warn(s"Rate limit reached for $appID")
@@ -222,204 +222,7 @@ class MarathonScheduler @Inject() (
     suicide()
   }
 
-  // TODO move stuff below out of the scheduler
-
-  def startApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
-    currentAppVersion(app.id).flatMap { appOption =>
-      require(appOption.isEmpty, s"Already started app '${app.id}'")
-
-      val persistenceResult = appRepository.store(app).map { _ =>
-        log.info(s"Starting app ${app.id}")
-        rateLimiters.setPermits(app.id, app.taskRateLimit)
-        scale(driver, app)
-      }
-
-      persistenceResult.map { _ => healthCheckManager.reconcileWith(app) }
-    }
-  }
-
-  def stopApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
-    appRepository.expunge(app.id).map { successes =>
-      if (!successes.forall(_ == true)) {
-        throw new StorageException("Error expunging " + app.id)
-      }
-
-      healthCheckManager.removeAllFor(app.id)
-
-      log.info(s"Stopping app ${app.id}")
-      val tasks = taskTracker.get(app.id)
-
-      for (task <- tasks) {
-        log.info(s"Killing task ${task.getId}")
-        driver.killTask(protos.TaskID(task.getId))
-      }
-      taskQueue.purge(app)
-      taskTracker.shutDown(app.id)
-      // TODO after all tasks have been killed we should remove the app from taskTracker
-    }
-  }
-
-  def updateApp(
-    driver: SchedulerDriver,
-    id: String,
-    appUpdate: AppUpdate): Future[AppDefinition] = {
-    appRepository.currentVersion(id).flatMap {
-      case Some(currentVersion) =>
-        val updatedApp = appUpdate(currentVersion)
-
-        healthCheckManager.reconcileWith(updatedApp)
-
-        appRepository.store(updatedApp).map { _ =>
-          update(driver, updatedApp, appUpdate)
-          updatedApp
-        }
-
-      case _ => throw new UnknownAppException(id)
-    }
-  }
-
-  def upgradeApp(
-    driver: SchedulerDriver,
-    app: AppDefinition,
-    keepAlive: Int
-  ): Future[Boolean] = {
-    appRepository.store(app) flatMap {
-      case Some(appDef) =>
-        // TODO: this should be configurable
-        implicit val timeout = Timeout(12.hours)
-        val res = (upgradeManager ? Upgrade(driver, app, keepAlive)).mapTo[Boolean]
-
-        res andThen {
-          case Success(_) =>
-            log.info(s"Restart of ${app.id} successful")
-            eventBus.publish(RestartSuccess(app.id))
-
-          case Failure(e) =>
-            log.error(s"Restart of ${app.id} failed", e)
-            taskQueue.purge(app)
-            eventBus.publish(RestartFailed(app.id))
-        }
-
-      case None => Future.failed(new StorageException("App could not be stored"))
-    }
-  }
-
-  /**
-    * Make sure all apps are running the configured amount of tasks.
-    *
-    * Should be called some time after the framework re-registers,
-    * to give Mesos enough time to deliver task updates.
-    * @param driver scheduler driver
-    */
-  def reconcileTasks(driver: SchedulerDriver): Unit = {
-    appRepository.allIds().onComplete {
-      case Success(iterator) =>
-        log.info("Syncing tasks for all apps")
-        val buf = new ListBuffer[TaskStatus]
-        val appNames = HashSet.empty[String]
-        for (appName <- iterator) {
-          appNames += appName
-          scale(driver, appName)
-          val tasks = taskTracker.get(appName)
-          for (task <- tasks) {
-            val statuses = task.getStatusesList.asScala.toList
-            if (statuses.nonEmpty) {
-              buf += statuses.last
-            }
-          }
-        }
-        for (app <- taskTracker.list.keys) {
-          if (!appNames.contains(app)) {
-            log.warn(s"App $app exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
-            val tasks = taskTracker.get(app)
-            for (task <- tasks) {
-              log.info(s"Killing task ${task.getId}")
-              driver.killTask(protos.TaskID(task.getId))
-            }
-            taskTracker.expunge(app)
-          }
-        }
-        log.info("Requesting task reconciliation with the Mesos master")
-        log.debug(s"Tasks to reconcile: $buf")
-        driver.reconcileTasks(buf.asJava)
-
-      case Failure(t) =>
-        log.warn("Failed to get task names", t)
-    }
-  }
-
-  private def newTask(app: AppDefinition,
-                      offer: Offer): Option[(TaskInfo, Seq[Long])] = {
-    // TODO this should return a MarathonTask
-    new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
-  }
-
-  /**
-    * Ensures current application parameters (resource requirements, URLs,
-    * command, and constraints) are applied consistently across running
-    * application instances.
-    *
-    * @param driver
-    * @param updatedApp
-    * @param appUpdate
-    */
-  private def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate): Unit = {
-    // TODO: implement app instance restart logic
-  }
-
-  /**
-    * Make sure the app is running the correct number of instances
-    * @param driver
-    * @param app
-    */
-  def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    val lock = appLocks.get(app.id)
-    if (lock.tryAcquire()) {
-      try {
-        taskTracker.get(app.id).synchronized {
-          val currentCount = taskTracker.count(app.id)
-          val targetCount = app.instances
-
-          if (targetCount > currentCount) {
-            log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
-
-            val queuedCount = taskQueue.count(app)
-            val toQueue = targetCount - (currentCount + queuedCount)
-
-            if (toQueue > 0) {
-              log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
-              for (i <- 0 until toQueue)
-                taskQueue.add(app)
-            } else {
         else {
-              log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
-            }
-          }
-          else if (targetCount < currentCount) {
-            log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
-            taskQueue.purge(app)
-
-            val toKill = taskTracker.take(app.id, currentCount - targetCount)
-            log.info(s"Killing tasks: ${toKill.map(_.getId)}")
-            for (task <- toKill) {
-              driver.killTask(protos.TaskID(task.getId))
-            }
-          }
-          else {
-        log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")
-          }
-        }
-      } finally lock.release()
-    }
-  }
-
-  private def scale(driver: SchedulerDriver, appName: String): Unit = {
-    currentAppVersion(appName).onSuccess {
-      case Some(app) => scale(driver, app)
-      case _         => log.warn("App %s does not exist. Not scaling.".format(appName))
-    }
-  }
-
   private def suicide(): Unit = {
     log.fatal("Committing suicide")
 
@@ -444,5 +247,12 @@ class MarathonScheduler @Inject() (
         task.getVersion
       )
     )
+  }
+
+  private def newTask(
+    app: AppDefinition,
+    offer: Offer): Option[(TaskInfo, Seq[Long])] = {
+    // TODO this should return a MarathonTask
+    new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
   }
 }
