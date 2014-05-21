@@ -88,35 +88,6 @@ class AppsResource @Inject()(
     }
   }
 
-  @PATCH
-  @Path("{id}")
-  @Timed
-  def update(
-    @Context req: HttpServletRequest,
-    @PathParam("id") id: String,
-    @Valid appUpdate: AppUpdate
-  ): Response = {
-
-    val effectiveUpdate =
-      if (appUpdate.version.isEmpty) appUpdate
-      else {
-        // lookup the old version, create an AppUpdate from it.
-        service.getApp(id, appUpdate.version.get) map { appDef =>
-          AppUpdate.fromAppDefinition(appDef)
-        } getOrElse {
-          throw new NotFoundException("Rollback version does not exist")
-        }
-      }
-
-    service.getApp(id).fold(Responses.unknownApp(id)) { appDef =>
-      val updatedApp = effectiveUpdate.apply(appDef)
-      validateContainerOpts(updatedApp)
-      maybePostEvent(req, updatedApp)
-      Await.result(service.updateApp(id, effectiveUpdate), service.defaultWait)
-      Response.noContent.build
-    }
-  }
-
   @DELETE
   @Path("{id}")
   @Timed
