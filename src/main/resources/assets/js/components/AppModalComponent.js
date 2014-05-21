@@ -209,7 +209,7 @@ define([
       // perform the action only if a value is submitted.
       if (instancesString != null && instancesString !== "") {
         var instances = parseInt(instancesString, 10);
-        model.save({instances: instances}, {patch: true});
+        model.save({instances: instances});
 
         if (model.validationError != null) {
           // If the model is not valid, revert the changes to prevent the UI
@@ -254,7 +254,7 @@ define([
     },
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
-        this.props.model.save({instances: 0}, {patch: true});
+        this.props.model.save({instances: 0});
       }
     }
   });
