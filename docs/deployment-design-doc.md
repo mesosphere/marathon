@@ -68,7 +68,9 @@ In the Apache Mesos model, where process placement is typically done dynamically
 - Marathon in turn provides a `health` member of the task resource
   via the _REST_ API.
 
-- Tasks that do not become healthy within a certain time period are killed
+- Health checks begin immediately after the process is up, but failures are ignored within `gracePeriodSeconds`, until a task becomes healthy for the first time.
+
+- Tasks that do not become healthy after `maxConsecutiveFailures` are killed.
 
 - A health check definition looks like this:
 
@@ -77,8 +79,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
     "type": "http",
     "uri": "/api/health",
     "portIndex": 0,
-    "acceptableStatus": [200],
-    "initialDelaySeconds": 30,
+    "gracePeriodSeconds": 30,
     "timeoutSeconds": 30,
     "maxConsecutiveFailures": 0
   }
@@ -90,7 +91,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
   {
     "type": "tcp",
     "portIndex": 0,
-    "initialDelaySeconds": 30,
+    "gracePeriodSeconds": 30,
     "timeoutSeconds": 30,
     "maxConsecutiveFailures": 0
   }
@@ -281,7 +282,7 @@ PUT /v2/apps/product-a/frontend/*
       {
         "type": "tcp",
         "portIndex": 0,
-        "initialDelaySeconds": 30,
+        "gracePeriodSeconds": 30,
         "timeoutSeconds": 30,
         "maxConsecutiveFailures": 0
       }
