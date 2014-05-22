@@ -18,7 +18,8 @@ after_success:
   # Pin to Faraday 0.8.9 due to:
   # https://github.com/travis-ci/travis-artifacts/issues/23
   - gem install --no-rdoc --no-ri --version 0.8.9 faraday
-  - gem install --no-rdoc --no-ri travis-artifacts
+  # Pin to travis-artifacts 0.2.2 to fix hostname mismatch errors with 0.3.0
+  - gem install --no-rdoc --no-ri --version 0.2.2 travis-artifacts
   - bin/build-distribution
   # Prepend a marathon version dir to the tarball elements (requires GNU tar)
   - |
