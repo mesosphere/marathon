@@ -144,7 +144,7 @@ class MarathonFacade(url:String, waitTime:Duration=30.seconds) extends JacksonSp
     result(pipeline(Delete(s"$url/v2/eventSubscriptions?callbackUrl=$callbackUrl")), waitTime)
   }
 
-  //convenien functions -----------------------------------------
+  //convenience functions ---------------------------------------
 
   /**
    * Delete all existing apps, groups and event subscriptions.

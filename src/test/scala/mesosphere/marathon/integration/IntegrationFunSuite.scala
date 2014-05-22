@@ -23,23 +23,58 @@ trait IntegrationFunSuite extends FunSuite {
 }
 
 /**
+ * Configuration used in integration test.
+ * Pass parameter from scala test by command line and create via ConfigMap.
+ * mvn: pass this parameter via command line -DtestConfig="cwd=/tmp,zk=zk://somehost"
+ */
+case class IntegrationTestConfig(
+
+  //current working directory for all processes to span: defaults to .
+  cwd:String,
+
+  //zookeeper url. defaults to zk://localhost:2181/test
+  zk:String,
+
+  //url to mesos master. defaults to local
+  mesos:String,
+
+  //mesosLib: path to the native mesos lib. Defaults to /usr/local/lib/libmesos.dylib
+  mesosLib:String,
+
+  //for single marathon tests, the marathon port to use.
+  singleMarathonPort:Int,
+
+  //the port for the local http interface. Defaults dynamically to a port [11211-11311]
+  httpPort:Int
+)
+
+object IntegrationTestConfig {
+  def apply(config:ConfigMap) : IntegrationTestConfig = {
+    val cwd = config.getOptional[String]("cwd").getOrElse(".")
+    val zk = config.getOptional[String]("zk").getOrElse("zk://localhost:2181/test")
+    val mesos = config.getOptional[String]("mesos").getOrElse("local")
+    val mesosLib = config.getOptional[String]("mesosLib").getOrElse("/usr/local/lib/libmesos.dylib")
+    val httpPort = config.getOptional[Int]("httpPort").getOrElse(11211 + (math.random*100).toInt)
+    val singleMarathonPort = config.getOptional[Int]("httpPort").getOrElse(8080 + (math.random*100).toInt)
+    IntegrationTestConfig(cwd, zk, mesos, mesosLib, singleMarathonPort, httpPort)
+  }
+}
+
+/**
  * Trait for running external marathon instances.
  */
 trait ExternalMarathonIntegrationTest {
 
-  def cwd = new File(".")
-  def config:ConfigMap
-  def env = {
-    if (sys.env.contains("MESOS_NATIVE_LIBRARY")) sys.env
-    else sys.env + ("MESOS_NATIVE_LIBRARY"->config.getOptional("mosos_lib").getOrElse("/usr/local/lib/libmesos.dylib"))
-  }
+  def config:IntegrationTestConfig
 
-  def localPort = config.getOptional[Int]("port").getOrElse(11211)
+  def env = {
+    val envName = "MESOS_NATIVE_LIBRARY"
+    if (sys.env.contains(envName)) sys.env else sys.env + (envName->config.mesosLib)
+  }
 
   def startMarathon(port:Int, args:String*): MarathonFacade = {
     val cwd = new File(".")
-    val zk = config.getOptional[String]("zk").getOrElse("zk://localhost:2181/test")
-    ProcessKeeper.startMarathon(cwd, env, List("--http_port", port.toString, "--zk", zk)++args.toList)
+    ProcessKeeper.startMarathon(cwd, env, List("--http_port", port.toString, "--zk", config.zk) ++ args.toList)
     new MarathonFacade(s"http://localhost:$port")
   }
 
@@ -64,19 +99,18 @@ object ExternalMarathonIntegrationTest {
  */
 trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with BeforeAndAfterAllConfigMap { self:Suite =>
 
-  var config: ConfigMap = ConfigMap.empty
-  lazy val marathonPort = config.getOptional[Int]("marathonPort").getOrElse(8080 + (math.random*100).toInt)
-  lazy val marathon:MarathonFacade = new MarathonFacade(s"http://localhost:$marathonPort")
+  var config = IntegrationTestConfig(ConfigMap.empty)
+  lazy val marathon:MarathonFacade = new MarathonFacade(s"http://localhost:${config.singleMarathonPort}")
   val events = new mutable.SynchronizedQueue[CallbackEvent]()
 
   override protected def beforeAll(configMap:ConfigMap): Unit = {
-    config = configMap
+    config = IntegrationTestConfig(configMap)
     super.beforeAll(configMap)
-    startMarathon(marathonPort, "--master", "local", "--event_subscriber", "http_callback")
-    ProcessKeeper.startHttpService(localPort, cwd.getAbsolutePath)
+    startMarathon(config.singleMarathonPort, "--master", config.mesos, "--event_subscriber", "http_callback")
+    ProcessKeeper.startHttpService(config.httpPort, config.cwd)
     ExternalMarathonIntegrationTest.listener += this
     marathon.cleanUp(withSubscribers = true)
-    marathon.subscribe(s"http://localhost:$localPort/callback")
+    marathon.subscribe(s"http://localhost:${config.httpPort}/callback")
   }
 
   override protected def afterAll(configMap: ConfigMap): Unit = {
@@ -84,6 +118,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     marathon.cleanUp(withSubscribers = true)
     ExternalMarathonIntegrationTest.listener -= this
     ProcessKeeper.stopAllProcesses()
+    ProcessKeeper.stopAllServices()
   }
 
   override def handleEvent(event: CallbackEvent): Unit = events.enqueue(event)
