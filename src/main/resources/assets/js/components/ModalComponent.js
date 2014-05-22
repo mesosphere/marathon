@@ -2,8 +2,9 @@
 
 define([
   "jquery",
+  "Underscore",
   "React"
-], function($, React) {
+], function($, _, React) {
   function modalSizeClassName(size) {
     return (size == null) ? "" : "modal-" + size;
   }
@@ -25,7 +26,13 @@ define([
     destroy: function(event) {
       var domNode = this.getDOMNode();
       this.props.onDestroy();
-      React.unmountComponentAtNode(domNode.parentNode);
+
+      // Let the current call stack clear so ancestor components accessing this
+      // modal can still access it before it is unmounted. Without deferring,
+      // React throws an exception in `ReactMount.findComponentRoot`.
+      _.defer(function() {
+        React.unmountComponentAtNode(domNode.parentNode);
+      });
     },
     getDefaultProps: function() {
       return {
