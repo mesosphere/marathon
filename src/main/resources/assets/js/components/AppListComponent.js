@@ -6,7 +6,10 @@ define([
   "jsx!components/AppModalComponent",
   "mixins/BackboneMixin"
 ], function(React, AppComponent, AppModalComponent, BackboneMixin) {
+  var POLL_INTERVAL = 5000;
+
   return React.createClass({
+    mixins: [BackboneMixin],
     componentDidMount: function() {
       this.startPolling();
     },
@@ -21,13 +24,14 @@ define([
     },
     onAppClick: function(model) {
       React.renderComponent(
-        <AppModalComponent model={model} onDestroy={this.startPolling} />,
+        <AppModalComponent
+          model={model}
+          onDestroy={this.startPolling.bind(this, true)} />,
         document.getElementById("lightbox")
       );
 
       this.stopPolling();
     },
-    mixins: [BackboneMixin],
     render: function() {
       var _this = this;
       var comparator = this.props.collection.comparator;
@@ -87,9 +91,12 @@ define([
       this.props.collection.comparator = attribute;
       this.props.collection.sort();
     },
-    startPolling: function() {
+    startPolling: function(force) {
+      // Allow a forceful refresh before setting up polling.
+      if (force) { this.fetchResource(); }
+
       if (this._interval == null) {
-        this._interval = setInterval(this.fetchResource, 10000);
+        this._interval = setInterval(this.fetchResource, POLL_INTERVAL);
       }
     },
     stopPolling: function() {
