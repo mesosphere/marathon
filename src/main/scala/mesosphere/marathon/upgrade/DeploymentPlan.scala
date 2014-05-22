@@ -60,7 +60,11 @@ case class DeploymentPlan(
     val successFuture = Set(Future.successful(true)) //used, for immediate success, if no action is performed
     val deployFuture =  Future.sequence(startFuture ++ updateFuture ++ restartFuture ++ stopFuture ++ successFuture).map(_.forall(identity))
 
-    deployFuture andThen { case _ => locks.foreach(_.release()) }
+    deployFuture andThen {
+      case result =>
+        log.info(s"Deployment of ${target.id} has been finished $result")
+        locks.foreach(_.release())
+    }
   }
 }
 
