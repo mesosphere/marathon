@@ -6,7 +6,11 @@ define([
   "jsx!components/AppModalComponent",
   "mixins/BackboneMixin"
 ], function(React, AppComponent, AppModalComponent, BackboneMixin) {
-  var POLL_INTERVAL = 5000;
+  var STATE_LOADING = 0;
+  var STATE_ERROR = 1;
+  var STATE_SUCCESS = 2;
+
+  var UPDATE_INTERVAL = 5000;
 
   return React.createClass({
     mixins: [BackboneMixin],
@@ -16,17 +20,30 @@ define([
     componentWillUnmount: function() {
       this.stopPolling();
     },
+    getInitialState: function() {
+      return {
+        fetchState: STATE_LOADING
+      };
+    },
     getResource: function() {
       return this.props.collection;
     },
     fetchResource: function() {
-      this.props.collection.fetch();
+      var _this = this;
+
+      this.props.collection.fetch({
+        error: function() {
+          _this.setState({fetchState: STATE_ERROR});
+        },
+        reset: true,
+        success: function() {
+          _this.setState({fetchState: STATE_SUCCESS});
+        }
+      });
     },
     onAppClick: function(model) {
       React.renderComponent(
-        <AppModalComponent
-          model={model}
-          onDestroy={this.startPolling.bind(this, true)} />,
+        <AppModalComponent model={model} onDestroy={this.startPolling} />,
         document.getElementById("lightbox")
       );
 
@@ -38,20 +55,33 @@ define([
 
       var appNodes;
       var tableClassName = "table table-fixed";
-      if (this.props.collection.length > 0) {
+      if (this.state.fetchState === STATE_LOADING) {
+        appNodes =
+          <tr>
+            <td className="text-center text-muted" colSpan="5">
+              Loading apps...
+            </td>
+          </tr>;
+      } else if (this.state.fetchState === STATE_ERROR) {
+        appNodes =
+          <tr>
+            <td className="text-center text-danger" colSpan="5">
+              Error fetching apps. Refresh to try again.
+            </td>
+          </tr>;
+      } else if (this.props.collection.length === 0) {
+        appNodes =
+          <tr>
+            <td className="text-center" colSpan="5">No running apps.</td>
+          </tr>;
+      } else {
         appNodes = this.props.collection.map(function(model) {
           return <AppComponent key={model.cid} model={model} onClick={_this.onAppClick} />;
         });
 
         // Give rows the selectable look when there are apps to click.
         tableClassName += " table-hover table-selectable";
-      } else {
-        appNodes =
-          <tr>
-            <td className="text-center" colSpan="5">No running apps.</td>
-          </tr>;
       }
-
 
       return (
         <table className={tableClassName}>
@@ -91,12 +121,11 @@ define([
       this.props.collection.comparator = attribute;
       this.props.collection.sort();
     },
-    startPolling: function(force) {
-      // Allow a forceful refresh before setting up polling.
-      if (force) { this.fetchResource(); }
+    startPolling: function() {
+      this.fetchResource();
 
       if (this._interval == null) {
-        this._interval = setInterval(this.fetchResource, POLL_INTERVAL);
+        this._interval = setInterval(this.fetchResource, UPDATE_INTERVAL);
       }
     },
     stopPolling: function() {
