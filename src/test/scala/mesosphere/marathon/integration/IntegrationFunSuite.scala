@@ -5,6 +5,8 @@ import org.scalatest._
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.util.Try
+import java.util.UUID
+import mesosphere.marathon.health.HealthCheck
 
 /**
  * All integration tests should mix in this trait.
@@ -83,6 +85,37 @@ trait ExternalMarathonIntegrationTest {
 
 object ExternalMarathonIntegrationTest {
   val listener = mutable.ListBuffer.empty[ExternalMarathonIntegrationTest]
+  val healthChecks = mutable.ListBuffer.empty[IntegrationHealthCheck]
+}
+
+
+/**
+ * Health check helper to define health behaviour of launched applications
+ */
+class IntegrationHealthCheck(portIndex:Int, private var state: Boolean) {
+
+  case class HealthStatusChange(deadLine:Deadline, state:Boolean)
+  private[this] var changes = List.empty[HealthStatusChange]
+
+  lazy val id:String = UUID.randomUUID().toString
+
+  def afterDelay(delay:FiniteDuration, state: Boolean) {
+    val item = HealthStatusChange(delay.fromNow, state)
+    def insert(ag: List[HealthStatusChange]): List[HealthStatusChange] = {
+      if (ag.isEmpty || item.deadLine < ag.head.deadLine) item :: ag
+      else ag.head :: insert(ag.tail)
+    }
+    changes = insert(changes)
+  }
+
+  def healthy : Boolean = {
+    val (past, future) = changes.partition(_.deadLine.isOverdue())
+    state = past.reverse.headOption.fold(state)(_.state)
+    changes = future
+    state
+  }
+
+  def toHealthCheck: HealthCheck = HealthCheck(path=Some(s"/health/$id"), initialDelay=1.second, interval=1.second, portIndex=portIndex )
 }
 
 /**
@@ -123,20 +156,38 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
 
   override def handleEvent(event: CallbackEvent): Unit = events.enqueue(event)
 
-  def waitForEvent(kind:String, maxWait:FiniteDuration=15.seconds): CallbackEvent = {
+  def waitForEvent(kind:String, maxWait:FiniteDuration=30.seconds): CallbackEvent = {
+    def nextEvent : Option[CallbackEvent] = if (events.isEmpty) None else {
+      val event = events.dequeue()
+      if (event.eventType==kind) Some(event) else None
+    }
+    waitFor(s"event $kind to arrive", nextEvent, maxWait)
+  }
+
+  def waitForTasks(appId:String, num:Int, maxWait:FiniteDuration=30.seconds): List[ITEnrichedTask] = {
+    def checkTasks : Option[List[ITEnrichedTask]] = {
+      val tasks = marathon.tasks(appId).value
+      if (tasks.size==num) Some(tasks) else None
+    }
+    waitFor(s"$num tasks to launch", checkTasks, maxWait)
+  }
+
+  def waitFor[T](description:String, fn: => Option[T],  maxWait:FiniteDuration): T = {
     val deadLine = maxWait.fromNow
-    def next() : CallbackEvent = {
-      if (deadLine.isOverdue()) {
-        throw new AssertionError(s"Waiting for event $kind longer than $maxWait. Give up.")
-      } else if (events.isEmpty) {
-        Thread.sleep(100)
-        next()
-      } else {
-        val head = events.dequeue()
-        if (head.eventType==kind) head else next()
+    def next() : T = {
+      if (deadLine.isOverdue()) throw new AssertionError(s"Waiting for $description took longer than $maxWait. Give up.")
+      fn match {
+        case Some(t) => t
+        case None => Thread.sleep(100); next()
       }
     }
     next()
+  }
+
+  def healthCheck(portIndex:Int, state:Boolean) : IntegrationHealthCheck = {
+    val check = new IntegrationHealthCheck(portIndex, state)
+    ExternalMarathonIntegrationTest.healthChecks += check
+    check
   }
 }
 

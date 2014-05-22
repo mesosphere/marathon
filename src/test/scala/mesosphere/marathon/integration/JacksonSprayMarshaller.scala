@@ -3,7 +3,7 @@ package mesosphere.marathon.integration
 import scala.reflect.ClassTag
 import com.google.inject.Scopes
 import javax.ws.rs._
-import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
 import org.apache.log4j.Logger
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -21,6 +21,7 @@ import mesosphere.marathon.api.v2.Group
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{Unsubscribe, Subscribe}
 import mesosphere.marathon.api.v1.AppDefinition
+import java.util.Date
 
 /**
  * Result of an REST operation.
@@ -60,7 +61,8 @@ trait JacksonSprayMarshaller {
  * Needed for dumb jackson.
  */
 case class ListAppsResult(apps:Seq[AppDefinition])
-
+case class ListTasks(tasks:Seq[ITEnrichedTask])
+case class ITEnrichedTask(appId:String, id:String, host:String, ports:Seq[Integer], startedAt:Date, stagedAt:Date, version:String)
 /**
  * The MarathonFacade offers the REST API of a remote marathon instance
  * with all local domain objects.
@@ -98,6 +100,14 @@ class MarathonFacade(url:String, waitTime:Duration=30.seconds) extends JacksonSp
   def updateApp(app:AppDefinition): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Put(s"$url/v2/apps/${app.id}", app)), waitTime)
+  }
+
+  //apps tasks resource --------------------------------------
+
+  def tasks(appId:String): RestResult[List[ITEnrichedTask]] = {
+    val pipeline = sendReceive ~> read[ListTasks]
+    val res = result(pipeline(Get(s"$url/v2/apps/$appId/tasks")), waitTime)
+    RestResult(res.value.tasks.toList, res.code)
   }
 
   //group resource -------------------------------------------
@@ -177,6 +187,7 @@ class IntegrationTestModule extends RestModule {
   override def configureServlets(): Unit = {
     super.configureServlets()
     bind(classOf[CallbackEventHandler]).in(Scopes.SINGLETON)
+    bind(classOf[ApplicationHealthCheck]).in(Scopes.SINGLETON)
   }
 }
 
@@ -191,21 +202,33 @@ case class CallbackEvent(eventType:String, info:Map[String, Any])
  * Callback
  */
 @Path("callback")
-@Produces(Array(MediaType.APPLICATION_JSON))
 class CallbackEventHandler @Inject() () {
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
   @GET
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def index = List(1, 2, 3, 4, 5)
 
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def handleEvent(map:Map[String, Any]): Unit = {
     val kind = map.getOrElse("eventType", "unknown").asInstanceOf[String]
     log.info(s"Received callback event: $kind with props $map")
     val event = CallbackEvent(kind, map)
     ExternalMarathonIntegrationTest.listener.foreach(_.handleEvent(event))
+  }
+}
+
+@Path("health")
+class ApplicationHealthCheck @Inject() () {
+
+  @GET
+  @Path("{id}")
+  def isApplicationHealthy(@PathParam("id") id:String) : Response = {
+    val state = ExternalMarathonIntegrationTest.healthChecks.find(_.id == id).fold(false)(_.healthy)
+    if (state) Response.ok().build() else Response.serverError().build()
   }
 }
 
