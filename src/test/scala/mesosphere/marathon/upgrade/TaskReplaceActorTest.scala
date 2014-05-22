@@ -40,7 +40,7 @@ class TaskReplaceActorTest
     for (i <- 0 until 5)
       system.eventStream.publish(HealthStatusChanged("myApp", s"task_$i", true))
 
-    Await.result(promise.future, 1.second) should be(true)
+    Await.result(promise.future, 5.seconds) should be(true)
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
 
