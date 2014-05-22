@@ -7,7 +7,7 @@ define([
 ], function(React, App, NewAppModalComponent) {
   return React.createClass({
     saveModel: function() {
-      this.props.collection.create(this.state.model, {wait: true});
+      this.props.collection.create(this.state.model);
     },
     showModal: function(event) {
       var model = new App();
