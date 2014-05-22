@@ -11,6 +11,7 @@ import akka.actor.SupervisorStrategy.Stop
 import akka.pattern.pipe
 import mesosphere.marathon.ConcurrentTaskUpgradeException
 import scala.collection.immutable
+import mesosphere.marathon.event.{HealthStatusChanged, MesosStatusUpdateEvent}
 
 class AppUpgradeManager(
   taskTracker: TaskTracker,
@@ -119,7 +120,7 @@ class AppUpgradeActor(
 
   private def startReplacer(): Unit = {
     if (keepAlive > 0) {
-      replacer = Some(context.actorOf(
+      val ref = context.actorOf(
         Props(
           classOf[TaskReplaceActor],
           driver,
@@ -128,7 +129,8 @@ class AppUpgradeActor(
           app.version.toString,
           app.instances,
           oldInstances.drop(app.instances - keepAlive),
-          replacePromise)))
+          replacePromise))
+      replacer = Some(ref)
     } else {
       replacePromise.success(true)
     }

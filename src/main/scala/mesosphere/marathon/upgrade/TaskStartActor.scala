@@ -34,8 +34,9 @@ class TaskStartActor(
   }
 
   def receive = {
-    case MesosStatusUpdateEvent(_, _, "TASK_RUNNING", AppID, _, _, Version, _, _) =>
+    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", AppID, _, _, Version, _, _) =>
       running += 1
+      log.info(s"Task $taskId is now running. Waiting for ${nrToStart - running} more tasks.")
       if (running == nrToStart) {
         promise.success(true)
         context.stop(self)

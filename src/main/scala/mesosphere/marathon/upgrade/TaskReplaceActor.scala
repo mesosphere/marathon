@@ -44,6 +44,7 @@ class TaskReplaceActor(
         driver.killTask(buildTaskId(killing))
       }
       if (healthy.size == nrToStart) {
+        log.info(s"All tasks for $appId are healthy")
         promise.success(true)
         context.stop(self)
       }

@@ -32,7 +32,7 @@ import mesosphere.marathon.upgrade.AppUpgradeManager.Upgrade
 import akka.pattern.ask
 import scala.concurrent.duration._
 import akka.util.Timeout
-import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
+import mesosphere.marathon.MarathonSchedulerActor.{LaunchTasks, ScaleApp}
 trait SchedulerCallbacks {
   def disconnected(): Unit
 }
@@ -137,9 +137,8 @@ class MarathonScheduler @Inject() (
       }
     }
 
-    // TODO: send off to actor
     toLaunch.result().foreach { case (id, task) =>
-      driver.launchTasks(id.asJava, task.asJava)
+      schedulerActor ! LaunchTasks(id, task)
     }
   }
 
@@ -147,7 +146,6 @@ class MarathonScheduler @Inject() (
     log.info("Offer %s rescinded".format(offer))
   }
 
-  // TODO: send tasks off to actor
   override def statusUpdate(driver: SchedulerDriver, status: TaskStatus) {
     import TaskState._
 

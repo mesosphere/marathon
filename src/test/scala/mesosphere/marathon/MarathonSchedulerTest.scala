@@ -1,25 +1,22 @@
 package mesosphere.marathon
 
 import org.mockito.Mockito._
-import org.mockito.Matchers._
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.state.{ Timestamp, AppRepository }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
 import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
-import org.apache.mesos.Protos.{ OfferID, TaskID, TaskInfo }
-import org.mockito.{ Matchers, ArgumentCaptor }
-import mesosphere.marathon.Protos.MarathonTask
-import scala.collection.JavaConverters._
+import org.apache.mesos.Protos.TaskID
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
-import scala.collection.mutable
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.{TestKit, TestProbe}
 import org.scalatest.BeforeAndAfterAll
+import mesosphere.marathon.MarathonSchedulerActor.LaunchTasks
+import scala.concurrent.duration._
 
 /**
   * @author Tobi Knaup
@@ -81,23 +78,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
 
     scheduler.resourceOffers(driver, offers)
 
-    val offersCaptor = ArgumentCaptor.forClass(classOf[java.util.List[OfferID]])
-    val taskInfosCaptor = ArgumentCaptor.forClass(classOf[java.util.List[TaskInfo]])
-    val marathonTaskCaptor = ArgumentCaptor.forClass(classOf[MarathonTask])
-
-    verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
-    verify(tracker).starting(same(app.id), marathonTaskCaptor.capture())
-
-    assert(1 == offersCaptor.getValue.size())
-    assert(offer.getId == offersCaptor.getValue.get(0))
-
-    assert(1 == taskInfosCaptor.getValue.size())
-    val taskInfoPortVar = taskInfosCaptor.getValue.get(0).getCommand.getEnvironment
-      .getVariablesList.asScala.find(v => v.getName == "PORT")
-    assert(taskInfoPortVar.isDefined)
-    val marathonTaskPort = marathonTaskCaptor.getValue.getPorts(0)
-    assert(taskInfoPortVar.get.getValue == marathonTaskPort.toString)
-    val marathonTaskVersion = marathonTaskCaptor.getValue.getVersion
-    assert(now.toString() == marathonTaskVersion)
+    probe.expectMsgClass(5.seconds, classOf[LaunchTasks])
   }
 }

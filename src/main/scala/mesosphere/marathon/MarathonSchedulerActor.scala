@@ -8,7 +8,7 @@ import mesosphere.mesos.protos
 import mesosphere.marathon.api.v2.AppUpdate
 import akka.util.Timeout
 import scala.collection.mutable.{HashSet, ListBuffer}
-import org.apache.mesos.Protos.TaskStatus
+import org.apache.mesos.Protos.{TaskInfo, TaskStatus}
 import mesosphere.marathon.state.AppRepository
 import mesosphere.util.{LockManager, RateLimiters}
 import mesosphere.marathon.health.HealthCheckManager
@@ -25,6 +25,7 @@ import scala.collection.JavaConverters._
 import akka.pattern.ask
 import scala.concurrent.duration._
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
+import org.apache.mesos.Protos.OfferID
 
 class MarathonSchedulerActor(
   val appRepository: AppRepository,
@@ -40,8 +41,12 @@ class MarathonSchedulerActor(
 
   val appLocks = LockManager()
 
-  val upgradeManager = context.actorOf(
-    Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
+  var upgradeManager: ActorRef = _
+
+  override def preStart(): Unit = {
+    upgradeManager = context.actorOf(
+      Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus), "UpgradeManager")
+  }
 
   def receive = {
     case cmd @ StartApp(app) =>
@@ -77,6 +82,10 @@ class MarathonSchedulerActor(
       locking(appId, origSender, cmd) {
         scale(driver, appId).sendAnswer(origSender, cmd)
       }
+
+    case cmd @ LaunchTasks(offers, tasks) =>
+      driver.launchTasks(offers.asJava, tasks.asJava)
+      sender ! cmd.answer
   }
 
   /**
@@ -135,6 +144,10 @@ object MarathonSchedulerActor {
     def answer = AppScaled(appId)
   }
 
+  case class LaunchTasks(offers: Seq[OfferID], tasks: Seq[TaskInfo]) extends Command {
+    def answer = TasksLaunched(tasks)
+  }
+
   sealed trait Event
   case class AppStarted(app: AppDefinition) extends Event
   case class AppStopped(app: AppDefinition) extends Event
@@ -142,6 +155,7 @@ object MarathonSchedulerActor {
   case class AppUpgraded(app: AppDefinition) extends Event
   case class AppScaled(appId: String) extends Event
   case object TasksReconciled extends Event
+  case class TasksLaunched(tasks: Seq[TaskInfo]) extends Event
 
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 
@@ -306,7 +320,7 @@ trait SchedulerActions { this: Actor with ActorLogging =>
    * @param updatedApp
    * @param appUpdate
    */
-  private def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate): Unit = {
+  def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate): Unit = {
     // TODO: implement app instance restart logic
   }
 
@@ -352,13 +366,13 @@ trait SchedulerActions { this: Actor with ActorLogging =>
     }
   }
 
-  protected def scale(driver: SchedulerDriver, appName: String): Future[Unit] = {
+  def scale(driver: SchedulerDriver, appName: String): Future[Unit] = {
     currentAppVersion(appName) map {
       case Some(app) => scale(driver, app)
       case _ => log.warning("App %s does not exist. Not scaling.".format(appName))
     }
   }
 
-  private def currentAppVersion(appId: String): Future[Option[AppDefinition]] =
+  def currentAppVersion(appId: String): Future[Option[AppDefinition]] =
       appRepository.currentVersion(appId)
 }
