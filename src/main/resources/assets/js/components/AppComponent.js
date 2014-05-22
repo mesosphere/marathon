@@ -7,6 +7,11 @@ define([
     onClick: function() {
       this.props.onClick(this.props.model);
     },
+
+    getRunningTasks: function() {
+      return this.props.model.get("tasksRunning") !== undefined ? this.props.model.get("tasksRunning") : "unknown";
+    },
+
     render: function() {
       var model = this.props.model;
 
@@ -27,7 +32,7 @@ define([
           </td>
           <td className="text-right">{model.get("mem")}</td>
           <td className="text-right">{model.get("cpus")}</td>
-          <td className={instancesClassSet}>{model.get("tasksRunning")} / {model.get("instances")}</td>
+          <td className={instancesClassSet}>{this.getRunningTasks()} / {model.get("instances")}</td>
         </tr>
       );
     }
