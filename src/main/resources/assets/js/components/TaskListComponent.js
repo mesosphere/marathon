@@ -79,8 +79,8 @@ define([
       if (this.state.fetchState === STATE_LOADING) {
         taskNodes =
           <tr>
-            <td className="text-center" colSpan="5">
-              Loading...
+            <td className="text-center text-muted" colSpan="5">
+              Loading tasks...
             </td>
           </tr>;
       } else if (this.state.fetchState === STATE_ERROR) {
