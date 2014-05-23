@@ -95,20 +95,30 @@ define([
           </colgroup>
           <thead>
             <tr>
-              <th onClick={this.sortCollectionBy.bind(this, "id")}>
-                ID {sort_key === "id" ? (sort_reverse ? "▲" : "▼") : null}
+              <th>
+                <span onClick={this.sortCollectionBy.bind(this, "id")} className="clickable">
+                  ID {sort_key === "id" ? (sort_reverse ? "▲" : "▼") : null}
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "cmd")}>
-                Command {sort_key === "cmd" ? (sort_reverse ? "▲" : "▼") : null}
+              <th>
+                <span onClick={this.sortCollectionBy.bind(this, "cmd")} className="clickable">
+                  Command {sort_key === "cmd" ? (sort_reverse ? "▲" : "▼") : null}
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "mem")} className="text-right">
-                {sort_key === "mem" ? (sort_reverse ? "▲" : "▼") : null} Memory (MB)
+              <th>
+                <span onClick={this.sortCollectionBy.bind(this, "mem")} className="text-right clickable">
+                  {sort_key === "mem" ? (sort_reverse ? "▲" : "▼") : null} Memory (MB)
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "cpus")} className="text-right">
-                {sort_key === "cpus" ? (sort_reverse ? "▲" : "▼") : null} CPUs
+              <th>
+                <span onClick={this.sortCollectionBy.bind(this, "cpus")} className="text-right clickable">
+                  {sort_key === "cpus" ? (sort_reverse ? "▲" : "▼") : null} CPUs
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "instances")} className="text-right">
-                {sort_key === "instances" ? (sort_reverse ? "▲" : "▼") : null} Instances
+              <th>
+                <span onClick={this.sortCollectionBy.bind(this, "instances")} className="text-right clickable">
+                  {sort_key === "instances" ? (sort_reverse ? "▲" : "▼") : null} Instances
+                </span>
               </th>
             </tr>
           </thead>
