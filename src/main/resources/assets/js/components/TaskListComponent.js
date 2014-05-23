@@ -2,26 +2,14 @@
 
 define([
   "React",
-  "mixins/BackboneMixin"
-], function(React, BackboneMixin) {
+  "mixins/BackboneMixin",
+  "jsx!components/TaskListItemComponent"
+], function(React, BackboneMixin, TaskListItemComponent) {
   var STATE_LOADING = 0;
   var STATE_ERROR = 1;
   var STATE_SUCCESS = 2;
+
   var UPDATE_INTERVAL = 2000;
-
-  function taskHostPortsToString(task) {
-    var portsString;
-    var ports = task.get("ports");
-    if (ports.length > 1) {
-      portsString = ":[" + ports.join(",") + "]";
-    } else if (ports.length === 1) {
-      portsString = ":" + ports[0];
-    } else {
-      portsString = "";
-    }
-
-    return task.get("host") + portsString;
-  }
 
   return React.createClass({
     componentDidMount: function() {
@@ -54,16 +42,6 @@ define([
     },
     getResource: function() {
       return this.props.collection;
-    },
-    handleCheckboxClick: function(task, event) {
-      this.props.onTaskToggle(task, event.target.checked);
-    },
-    handleTrClick: function(task, event) {
-      // If the click happens on the checkbox, let the checkbox's onchange event
-      // handler handle it and skip handling the event here.
-      if (event.target.nodeName !== "INPUT") {
-        this.props.onTaskToggle(task);
-      }
     },
     mixins: [BackboneMixin],
     render: function() {
@@ -99,55 +77,17 @@ define([
           </tr>;
       } else {
         taskNodes = this.props.collection.map(function(task) {
-          var active = false;
-          var className;
-
           // Expicitly check for Boolean since the key might not exist in the
           // object.
-          if (this.props.selectedTasks[task.id] === true) {
-            active = true;
-            className = "active";
-          } else {
-            allTasksSelected = false;
-          }
-
-          var statusNode;
-          if (task.isStarted()) {
-            statusNode =
-              <span className="badge badge-default">
-                {task.get("status")}
-              </span>;
-          } else if (task.isStaged()) {
-            statusNode =
-              <span className="badge badge-warning">
-                {task.get("status")}
-              </span>;
-          }
-
-          var updatedAtNode;
-          if (task.get("updatedAt") != null) {
-            updatedAtNode =
-              <time timestamp={task.get("updatedAt")}>
-                {task.get("updatedAt").toISOString()}
-              </time>;
-          }
+          var isActive = this.props.selectedTasks[task.id] === true;
+          if (!isActive) { allTasksSelected = false; }
 
           return (
-            <tr key={task.cid} className={className} onClick={this.handleTrClick.bind(this, task)}>
-              <td width="1">
-                <input type="checkbox"
-                  checked={active}
-                  onChange={this.handleCheckboxClick.bind(this, task)} />
-              </td>
-              <td>
-                {task.get("id")}<br />
-                <span className="text-muted">
-                  {taskHostPortsToString(task)}
-                </span>
-              </td>
-              <td>{statusNode}</td>
-              <td className="text-right">{updatedAtNode}</td>
-            </tr>
+            <TaskListItemComponent
+              isActive={isActive}
+              key={task.cid}
+              onToggle={this.props.onTaskToggle}
+              task={task} />
           );
         }, this);
       }
