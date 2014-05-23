@@ -17,7 +17,6 @@ import scala.collection.mutable
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.upgrade.AppUpgradeManager.UpgradeFinished
 import org.apache.mesos.Protos.TaskID
-import akka.pattern.ask
 import scala.concurrent.Await
 
 class AppUpgradeActorTest
@@ -73,8 +72,8 @@ class AppUpgradeActorTest
     system.eventStream.publish(MesosStatusUpdateEvent("", "task_c", "TASK_RUNNING", "MyApp", "", Nil, app.version.toString))
     system.eventStream.publish(MesosStatusUpdateEvent("", "task_d", "TASK_RUNNING", "MyApp", "", Nil, app.version.toString))
 
-    system.eventStream.publish(HealthStatusChanged("MyApp", "task_c", true))
-    system.eventStream.publish(HealthStatusChanged("MyApp", "task_d", true))
+    system.eventStream.publish(HealthStatusChanged("MyApp", "task_c", alive = true))
+    system.eventStream.publish(HealthStatusChanged("MyApp", "task_d", alive = true))
 
     system.eventStream.publish(MesosStatusUpdateEvent("", "task_b", "TASK_KILLED", "MyApp", "", Nil, ""))
 

@@ -16,6 +16,6 @@ class StopActorTest extends TestKit(ActorSystem("System")) with FunSuiteLike wit
     watch(ref)
     expectTerminated(ref)
 
-    Await.result(promise.future, 1.second) should be(true)
+    Await.result(promise.future, 5.seconds) should be(true)
   }
 }

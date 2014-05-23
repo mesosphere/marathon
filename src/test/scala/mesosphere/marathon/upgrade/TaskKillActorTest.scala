@@ -40,7 +40,7 @@ class TaskKillActorTest
     system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", "", Nil, ""))
     system.eventStream.publish(MesosStatusUpdateEvent("", taskB.getId, "TASK_KILLED", "", "", Nil, ""))
 
-    Await.result(promise.future, 1.second) should be(true)
+    Await.result(promise.future, 5.seconds) should be(true)
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
 
@@ -62,7 +62,7 @@ class TaskKillActorTest
     system.stop(ref)
 
     intercept[TaskUpgradeCancelledException] {
-      Await.result(promise.future, 1.second)
+      Await.result(promise.future, 5.seconds)
     }.getMessage should equal("The task upgrade has been cancelled")
 
     expectTerminated(ref)

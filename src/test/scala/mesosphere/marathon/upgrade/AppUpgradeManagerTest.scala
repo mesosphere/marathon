@@ -15,7 +15,6 @@ import org.apache.mesos.state.InMemoryState
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.TaskUpgradeCancelledException
-import scala.collection.mutable
 
 class AppUpgradeManagerTest
   extends TestKit(ActorSystem("System"))
@@ -40,7 +39,7 @@ class AppUpgradeManagerTest
 
     awaitCond(
       manager.underlyingActor.runningUpgrades.contains("testApp"),
-      1.second
+      5.seconds
     )
   }
 
@@ -55,9 +54,9 @@ class AppUpgradeManagerTest
 
     val res = manager.underlyingActor.stopActor(probe.ref)
 
-    expectTerminated(probe.ref, 1.second)
+    expectTerminated(probe.ref, 5.seconds)
 
-    Await.result(res, 1.second) should be(true)
+    Await.result(res, 5.seconds) should be(true)
   }
 
   test("Cancel upgrade") {
@@ -73,7 +72,7 @@ class AppUpgradeManagerTest
     manager ! CancelUpgrade("testApp")
 
     intercept[TaskUpgradeCancelledException] {
-      Await.result(res, 1.second)
+      Await.result(res, 5.seconds)
     }
   }
 }

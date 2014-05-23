@@ -59,12 +59,12 @@ class TaskStartActorTest
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app) == 5, 1.second)
+    awaitCond(taskQueue.count(app) == 5, 5.seconds)
 
     system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", app.id, "", Nil, app.version.toString))
 
     val ex = intercept[TaskFailedException] {
-      Await.result(promise.future, 1.second) should be(true)
+      Await.result(promise.future, 5.seconds) should be(true)
     }
 
     ex.getMessage should equal("Task failed during start")
@@ -88,7 +88,7 @@ class TaskStartActorTest
     system.stop(ref)
 
     intercept[TaskUpgradeCancelledException] {
-      Await.result(promise.future, 1.second)
+      Await.result(promise.future, 5.seconds)
     }.getMessage should equal("The task upgrade has been cancelled")
 
     expectTerminated(ref)

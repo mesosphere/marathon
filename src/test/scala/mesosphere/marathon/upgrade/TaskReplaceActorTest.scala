@@ -62,7 +62,7 @@ class TaskReplaceActorTest
     system.stop(ref)
 
     intercept[TaskUpgradeCancelledException] {
-      Await.result(promise.future, 1.second)
+      Await.result(promise.future, 5.seconds)
     }.getMessage should equal("The task upgrade has been cancelled")
 
     expectTerminated(ref)
