@@ -17,7 +17,7 @@ import mesosphere.marathon.upgrade.AppUpgradeManager
 import akka.event.EventStream
 import mesosphere.mesos.util.FrameworkIdUtil
 import scala.util.Failure
-import mesosphere.marathon.event.{RollbackFailed, RollbackSuccess, RestartFailed, RestartSuccess}
+import mesosphere.marathon.event.{RestartFailed, RestartSuccess}
 import mesosphere.marathon.upgrade.AppUpgradeManager.{CancelUpgrade, Upgrade}
 import scala.util.Success
 import scala.collection.JavaConverters._
@@ -74,12 +74,9 @@ class MarathonSchedulerActor(
 
     case cmd @ RollbackApp(app, keepAlive) =>
       val origSender = sender
-      implicit val timeout: Timeout = 1.minute
-      val res = upgradeManager ? CancelUpgrade(app.id)
-      res andThen { case _ =>
-        locking(app.id, origSender, cmd, true) {
-          upgradeApp(driver, app, keepAlive).sendAnswer(origSender, cmd)
-        }
+      upgradeManager ! CancelUpgrade(app.id)
+      locking(app.id, origSender, cmd, blocking = true) {
+        upgradeApp(driver, app, keepAlive).sendAnswer(origSender, cmd)
       }
 
     case cmd @ ReconcileTasks =>

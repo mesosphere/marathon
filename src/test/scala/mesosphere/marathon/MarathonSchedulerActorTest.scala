@@ -24,8 +24,10 @@ import mesosphere.marathon.MarathonSchedulerActor.AppStarted
 import mesosphere.marathon.MarathonSchedulerActor.StartApp
 import org.apache.mesos.Protos.TaskID
 import mesosphere.marathon.api.v2.AppUpdate
-import akka.testkit.TestActor.{NoAutoPilot, AutoPilot}
-import mesosphere.marathon.upgrade.AppUpgradeManager.Upgrade
+import akka.testkit.TestActor.{KeepRunning, NoAutoPilot, AutoPilot}
+import mesosphere.marathon.upgrade.AppUpgradeManager.{CancelUpgrade, Upgrade}
+import mesosphere.mesos.TaskBuilder
+import scala.collection.JavaConverters._
 
 class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   with MarathonSpec
@@ -141,7 +143,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
         case Upgrade(_, `app`, 1) =>
-          println("foo")
           sender ! true
           NoAutoPilot
         case _ => NoAutoPilot
@@ -151,5 +152,91 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     schedulerActor ! UpgradeApp(app, 1)
 
     expectMsg(5.seconds, AppUpgraded(app))
+  }
+
+  test("RollbackApp") {
+    val app = AppDefinition(id = "testApp", instances = 1)
+    val probe = TestProbe()
+    schedulerActor.underlyingActor.upgradeManager = probe.ref
+
+    val lock = schedulerActor.underlyingActor.appLocks.get("testApp")
+    lock.acquire()
+
+    when(repo.store(app)).thenReturn(Future.successful(Some(app)))
+
+    probe.setAutoPilot(new AutoPilot {
+      def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
+        case CancelUpgrade("testApp") =>
+          lock.release()
+          KeepRunning
+
+        case Upgrade(_, `app`, 1) =>
+          sender ! true
+          NoAutoPilot
+
+        case _ =>
+          KeepRunning
+      }
+    })
+
+    schedulerActor ! RollbackApp(app, 1)
+
+    lock.release()
+
+    expectMsg(5.seconds, AppRolledBack(app))
+  }
+
+  test("ReconcileTasks") {
+    val app = AppDefinition(id = "testApp", instances = 1)
+    val tasks = mutable.Set(MarathonTask.newBuilder().setId("task_a").build())
+
+    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id)))
+    when(tracker.get(app.id)).thenReturn(mutable.Set.empty[MarathonTask])
+    when(tracker.list).thenReturn(
+      mutable.HashMap(
+        "nope" -> new TaskTracker.App(
+          "nope",
+          tasks,
+          false)))
+    when(tracker.get("nope")).thenReturn(tasks)
+    when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
+    when(tracker.count(app.id)).thenReturn(0)
+
+    schedulerActor ! ReconcileTasks
+
+    verify(driver).killTask(TaskID.newBuilder().setValue("task_a").build())
+    verify(tracker).expunge("nope")
+    verify(queue).add(app)
+
+    expectMsg(5.seconds, TasksReconciled)
+  }
+
+  test("ScaleApp") {
+    val app = AppDefinition(id = "testApp", instances = 1)
+
+    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id)))
+    when(tracker.get(app.id)).thenReturn(mutable.Set.empty[MarathonTask])
+
+    when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
+    when(tracker.count(app.id)).thenReturn(0)
+
+    schedulerActor ! ScaleApp("testApp")
+    verify(queue).add(app)
+
+    expectMsg(5.seconds, AppScaled(app.id))
+  }
+
+  test("LaunchTasks") {
+    val app = AppDefinition(id = "testApp", instances = 1, executor = "//cmd")
+    val offer = makeBasicOffer().build()
+    val task = new TaskBuilder(app, x => TaskID.newBuilder().setValue(x).build(), tracker).buildIfMatches(offer)
+    val tasks = Seq(task.get._1)
+    val offers = Seq(offer.getId)
+
+    schedulerActor ! LaunchTasks(offers, tasks)
+
+    expectMsg(TasksLaunched(tasks))
+
+    verify(driver).launchTasks(offers.asJava, tasks.asJava)
   }
 }
