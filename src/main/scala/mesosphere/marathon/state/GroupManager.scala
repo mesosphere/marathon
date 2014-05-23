@@ -5,7 +5,7 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.Singleton
-import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.{UpgradeInProgressException, MarathonSchedulerService}
 import org.apache.log4j.Logger
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.v2.Group
@@ -49,7 +49,7 @@ class GroupManager @Singleton @Inject() (
 
   def upgrade(id: String, group: Group): Future[Group] = {
     groupRepo.currentVersion(id).flatMap {
-      case Some(current) => upgrade(current, group)
+      case Some(current) => upgrade(current, group, force=true)
       case None =>
         log.warn(s"Can not update group $id, since there is no current version!")
         throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")
@@ -58,28 +58,28 @@ class GroupManager @Singleton @Inject() (
 
   def patch(id: String, fn: Group=>Group): Future[Group] = {
     groupRepo.currentVersion(id).flatMap {
-      case Some(current) => upgrade(current, fn(current))
+      case Some(current) => upgrade(current, fn(current), force=true)
       case None =>
         log.warn(s"Can not update group $id, since there is no current version!")
         throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")
     }
   }
 
-  private def upgrade(current: Group, group: Group): Future[Group] = {
+  private def upgrade(current: Group, group: Group, force:Boolean): Future[Group] = {
     log.info(s"Upgrade existing Group ${group.id} with $group")
     //checkpoint where to start from
     //if there is an upgrade in progress
-    val startFromGroup = planRepo.currentVersion(current.id).flatMap {
+    val startFromGroup = planRepo.currentVersion(current.id).map {
       case Some(upgrade) =>
-        //TODO: signal the scheduler to stop the currently running upgrade
-        Future.successful(upgrade.target)
-      case None => Future.successful(current)
+        if (!force) throw UpgradeInProgressException(s"Running upgrade for group ${current.id}. Use force flag to override!")
+        (upgrade.target, true)
+      case None => (current, false)
     }
     val restart = for {
-      startGroup  <- startFromGroup
+      (startGroup, inProgress) <- startFromGroup
       storedGroup <- groupRepo.store(group)
       plan <- planRepo.store(DeploymentPlan(current.id, startGroup, storedGroup))
-      result <- plan.deploy(scheduler) if result
+      result <- plan.deploy(scheduler, inProgress) if result
     } yield storedGroup
     //remove the upgrade plan after the task has been finished
     restart.andThen(deletePlan(current.id)).andThen(postEvent(group))
