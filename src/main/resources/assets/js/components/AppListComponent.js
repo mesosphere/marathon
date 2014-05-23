@@ -51,7 +51,8 @@ define([
     },
     render: function() {
       var _this = this;
-      var comparator = this.props.collection.comparator;
+      var sort_key = this.props.collection.sort_key;
+      var sort_reverse = this.props.collection.sort_reverse;
 
       var appNodes;
       var tableClassName = "table table-fixed";
@@ -95,19 +96,19 @@ define([
           <thead>
             <tr>
               <th onClick={this.sortCollectionBy.bind(this, "id")}>
-                ID {(comparator === "id") ? "▼" : null}
+                ID {sort_key === "id" ? (sort_reverse ? "▲" : "▼") : null}
               </th>
               <th onClick={this.sortCollectionBy.bind(this, "cmd")}>
-                Command {(comparator === "cmd") ? "▼" : null}
+                Command {sort_key === "cmd" ? (sort_reverse ? "▲" : "▼") : null}
               </th>
               <th onClick={this.sortCollectionBy.bind(this, "mem")} className="text-right">
-                {(comparator === "mem") ? "▼" : null} Memory (MB)
+                {sort_key === "mem" ? (sort_reverse ? "▲" : "▼") : null} Memory (MB)
               </th>
               <th onClick={this.sortCollectionBy.bind(this, "cpus")} className="text-right">
-                {(comparator === "cpus") ? "▼" : null} CPUs
+                {sort_key === "cpus" ? (sort_reverse ? "▲" : "▼") : null} CPUs
               </th>
               <th onClick={this.sortCollectionBy.bind(this, "instances")} className="text-right">
-                {(comparator === "instances") ? "▼" : null} Instances
+                {sort_key === "instances" ? (sort_reverse ? "▲" : "▼") : null} Instances
               </th>
             </tr>
           </thead>
@@ -118,8 +119,21 @@ define([
       );
     },
     sortCollectionBy: function(attribute) {
-      this.props.collection.comparator = attribute;
-      this.props.collection.sort();
+      var collection = this.props.collection;
+      collection.sort_reverse = !collection.sort_reverse;
+      if (collection.sort_key != attribute) { // reset on sort_key change
+        collection.sort_reverse = false;
+      }
+      collection.sort_key = attribute;
+      collection.comparator = function(a, b) {
+        // Assuming that the sort_key values can be compared with '>' and '<'
+        a = a.attributes[attribute];
+        b = b.attributes[attribute];
+        return collection.sort_reverse
+                ? b < a ?  1 : b > a ? -1 : 0 // reversed
+                : a < b ?  1 : a > b ? -1 : 0; // regular
+      };
+      collection.sort();
     },
     startPolling: function() {
       this.fetchResource();
