@@ -4,6 +4,7 @@ import org.scalatest._
 import mesosphere.marathon.api.v2.{ScalingStrategy, Group}
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.duration._
+import mesosphere.marathon.integration.setup.{SingleMarathonIntegrationTest, IntegrationFunSuite}
 
 class GroupDeployIntegrationTest
   extends IntegrationFunSuite
@@ -81,7 +82,7 @@ class GroupDeployIntegrationTest
     val app1V1 = AppDefinition(id="app1", executor="//cmd", cmd="sleep 100", instances=2, cpus=0.1, mem=16)
     marathon.createGroup(Group("sleep", ScalingStrategy(0), Seq(app1V1)))
     waitForEvent("group_change_success")
-    waitForTasks(app1V1.id, app1V1.instances) 
+    waitForTasks(app1V1.id, app1V1.instances)
 
     When("The group is updated, with a changed application")
     val app1V2 = AppDefinition(id="app1", executor="//cmd", cmd="sleep 200", instances=1, cpus=0.1, mem=16)

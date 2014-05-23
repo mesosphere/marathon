@@ -1,4 +1,4 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon.integration.setup
 
 import scala.sys.ShutdownHookThread
 import scala.sys.process.{ProcessLogger, Process, ProcessBuilder}
