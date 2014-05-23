@@ -38,14 +38,22 @@ class TaskKillActor(
     case MesosStatusUpdateEvent(_, taskId, "TASK_KILLED", _, _, _, _, _, _) if idsToKill(taskId) =>
       idsToKill.remove(taskId)
       log.info(s"Task $taskId has been killed. Waiting for ${idsToKill.size} more tasks to be killed.")
-      if (idsToKill.size == 0) {
-        log.info("Successfully killed all the tasks")
-        promise.success(true)
-        context.stop(self)
-      }
+      checkFinished()
+
+    case MesosStatusUpdateEvent(_, taskId, "TASK_LOST", _, _, _, _, _, _) if idsToKill(taskId) =>
+      idsToKill.remove(taskId)
+      log.warning(s"Task $taskId should have been killed but was lost, removing it from the list. Waiting for ${idsToKill.size} more tasks to be killed.")
+      checkFinished()
 
     case x: MesosStatusUpdateEvent => log.debug(s"Received $x")
   }
+
+  def checkFinished(): Unit =
+    if (idsToKill.size == 0) {
+      log.info("Successfully killed all the tasks")
+      promise.success(true)
+      context.stop(self)
+    }
 
   private def taskId(id: String) = TaskID.newBuilder().setValue(id).build()
 }

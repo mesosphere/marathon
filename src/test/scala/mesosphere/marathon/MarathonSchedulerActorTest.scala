@@ -24,9 +24,8 @@ import mesosphere.marathon.MarathonSchedulerActor.AppStarted
 import mesosphere.marathon.MarathonSchedulerActor.StartApp
 import org.apache.mesos.Protos.TaskID
 import mesosphere.marathon.api.v2.AppUpdate
-import akka.event.EventStream
 import akka.testkit.TestActor.{NoAutoPilot, AutoPilot}
-import mesosphere.marathon.upgrade.AppUpgradeManager.{UpgradeFinished, Upgrade}
+import mesosphere.marathon.upgrade.AppUpgradeManager.Upgrade
 
 class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   with MarathonSpec
