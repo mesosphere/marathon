@@ -39,6 +39,7 @@ can even start other Marathon instances via Marathon.
     receive notifications. See the
     [wiki page](https://github.com/mesosphere/marathon/wiki/Event-Bus) for
     details.
+* *[Health Checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)* - check your application's health via HTTP or TCP checks.
 
 ## Overview
 
@@ -105,10 +106,19 @@ difficult situation!
     for details. Running `make install` will install Mesos in `/usr/local` in
     the same way as these packages do.
 
-1.  Download and unpack the latest release:
+1.  Download and unpack the latest release.
 
-        curl -O http://downloads.mesosphere.io/marathon/marathon-0.4.1.tgz
-        tar xzf marathon-0.4.1.tgz
+    **For Mesos 0.17.0 and later:**
+
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.0/marathon-0.5.0.tgz
+        tar xzf marathon-0.5.0.tgz
+
+    **For Mesos 0.16.0 and earlier:**
+
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.0_mesos-0.16.0/marathon-0.5.0_mesos-0.16.0.tgz
+        tar xzf marathon-0.5.0_mesos-0.16.0.tgz
+
+    SHA-256 checksums are available by appending `.sha256` to the URLs.
 
 
 #### Building From Source
