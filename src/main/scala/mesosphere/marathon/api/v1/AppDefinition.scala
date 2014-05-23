@@ -194,11 +194,8 @@ object AppDefinition {
       */
     @JsonProperty
     val tasksRunning: Int = appTasks.count { task =>
-      if (statusList.nonEmpty)
-        val statusList = task.getStatusesList.asScala
-        statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
-      else
-        val statusList = null
+      val statusList = task.getStatusesList.asScala
+      statusList.nonEmpty && statusList.last.getState == TaskState.TASK_RUNNING
     }
   }
 
