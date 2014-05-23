@@ -81,7 +81,7 @@ class AppUpgradeActor(
   app: AppDefinition,
   keepAlive: Int,
   receiver: ActorRef
-) extends Actor {
+) extends Actor with ActorLogging {
   import context.dispatcher
   import AppUpgradeManager._
 
@@ -107,6 +107,8 @@ class AppUpgradeActor(
 
     res andThen { case _ =>
       manager ! UpgradeFinished(app.id)
+      log.info(s"Finished upgrade of ${app.id}")
+      context.stop(self)
     } pipeTo receiver
   }
 
