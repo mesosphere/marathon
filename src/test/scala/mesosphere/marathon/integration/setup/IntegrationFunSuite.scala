@@ -5,8 +5,8 @@ import org.scalatest._
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.util.Try
-import java.util.UUID
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.api.v1.AppDefinition
 
 /**
  * All integration tests should mix in this trait.
@@ -58,12 +58,10 @@ object ExternalMarathonIntegrationTest {
 /**
  * Health check helper to define health behaviour of launched applications
  */
-class IntegrationHealthCheck(portIndex:Int, private var state: Boolean) {
+class IntegrationHealthCheck(val appId:String, val versionId:String, val port:Int, var state: Boolean) {
 
   case class HealthStatusChange(deadLine:Deadline, state:Boolean)
   private[this] var changes = List.empty[HealthStatusChange]
-
-  lazy val id:String = UUID.randomUUID().toString
 
   def afterDelay(delay:FiniteDuration, state: Boolean) {
     val item = HealthStatusChange(delay.fromNow, state)
@@ -81,7 +79,11 @@ class IntegrationHealthCheck(portIndex:Int, private var state: Boolean) {
     state
   }
 
-  def toHealthCheck: HealthCheck = HealthCheck(path=Some(s"/health/$id"), initialDelay=1.second, interval=1.second, portIndex=portIndex )
+  def forVersion(versionId:String, state:Boolean) = {
+    val result = new IntegrationHealthCheck(appId, versionId, port, state)
+    ExternalMarathonIntegrationTest.healthChecks += result
+    result
+  }
 }
 
 /**
@@ -116,6 +118,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     super.afterAll(configMap)
     marathon.cleanUp(withSubscribers = true)
     ExternalMarathonIntegrationTest.listener -= this
+    ExternalMarathonIntegrationTest.healthChecks.clear()
     ProcessKeeper.stopAllProcesses()
     ProcessKeeper.stopAllServices()
   }
@@ -132,10 +135,22 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
 
   def waitForTasks(appId:String, num:Int, maxWait:FiniteDuration=30.seconds): List[ITEnrichedTask] = {
     def checkTasks : Option[List[ITEnrichedTask]] = {
-      val tasks = marathon.tasks(appId).value
+      val tasks = Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil)
       if (tasks.size==num) Some(tasks) else None
     }
     waitFor(s"$num tasks to launch", checkTasks, maxWait)
+  }
+
+  def validFor(description:String, until:FiniteDuration)(valid: => Boolean): Boolean = {
+    val deadLine = until.fromNow
+    def checkValid() : Boolean = {
+      if (!valid) throw new IllegalStateException(s"$description not valid for $until. Give up.")
+      if (deadLine.isOverdue()) true else {
+        Thread.sleep(100)
+        checkValid()
+      }
+    }
+    checkValid()
   }
 
   def waitFor[T](description:String, fn: => Option[T],  maxWait:FiniteDuration): T = {
@@ -150,10 +165,22 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     next()
   }
 
-  def healthCheck(portIndex:Int, state:Boolean) : IntegrationHealthCheck = {
-    val check = new IntegrationHealthCheck(portIndex, state)
-    ExternalMarathonIntegrationTest.healthChecks += check
-    check
+  def appProxy(appId:String, versionId:String, instances:Int) : AppDefinition = {
+    val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
+    val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
+    val main = classOf[AppMock].getName
+    val exec = s"""$javaExecutable -classpath $classPath $main http://localhost:${config.httpPort}/health/$appId/$versionId"""
+    val health = HealthCheck(initialDelay=10.second, interval=1.second, maxConsecutiveFailures=5)
+    AppDefinition(appId, exec, executor="//cmd", instances=instances, cpus=0.5, mem=128, healthChecks=Set(health))
+
+  }
+
+  def appProxyChecks(appId:String, versionId:String, state:Boolean) : Seq[IntegrationHealthCheck] = {
+    marathon.app(appId).value.ports.map { port =>
+      val check = new IntegrationHealthCheck(appId, versionId, port, state)
+      ExternalMarathonIntegrationTest.healthChecks += check
+      check
+    }
   }
 }
 

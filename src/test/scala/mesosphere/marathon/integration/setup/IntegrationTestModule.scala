@@ -93,9 +93,11 @@ class CallbackEventHandler @Inject() () {
 class ApplicationHealthCheck @Inject() () {
 
   @GET
-  @Path("{id}")
-  def isApplicationHealthy(@PathParam("id") id:String) : Response = {
-    val state = ExternalMarathonIntegrationTest.healthChecks.find(_.id == id).fold(false)(_.healthy)
+  @Path("{appId}/{versionId}/{port}")
+  def isApplicationHealthy(@PathParam("appId") appId:String, @PathParam("versionId") versionId:String, @PathParam("port") port:Int) : Response = {
+    val state = ExternalMarathonIntegrationTest.healthChecks.find{ c =>
+      c.appId==appId && c.versionId==versionId && c.port==port
+    }.fold(true)(_.healthy)
     if (state) Response.ok().build() else Response.serverError().build()
   }
 }

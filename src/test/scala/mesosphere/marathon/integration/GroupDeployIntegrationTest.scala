@@ -81,7 +81,6 @@ class GroupDeployIntegrationTest
     tasks should have size 2
   }
 
-  //TODO(MV): this test is valid from my point of view, but the event after upgrade is not fired
   test("update a group with applications to restart") {
     Given("A group with one application started")
     val app1V1 = AppDefinition(id="app1", executor="//cmd", cmd="tail -f /dev/null", instances=2, cpus=0.1, mem=16)
@@ -98,22 +97,53 @@ class GroupDeployIntegrationTest
     waitForTasks(app1V2.id, app1V2.instances, 60.seconds)
   }
 
-  ignore("create a group with application with health checks") {
+  test("create a group with application with health checks") {
     Given("A group with one application")
-    val check = healthCheck(0, state = false)
-    check.afterDelay(3.seconds, state = true)
-    val appDef = AppDefinition(id="sleep", executor="//cmd", cmd="sleep 100", instances=3, cpus=0.1, mem=16,
-      ports=Seq(config.httpPort), healthChecks=Set(check.toHealthCheck))
-    val group = Group("sleep", ScalingStrategy(1), Seq(appDef))
+    val name = "proxy"
+    val proxy = appProxy(name, "v1", 1)
+    val group = Group(name, ScalingStrategy(1), Seq(proxy))
 
     When("The group is created")
     marathon.createGroup(group)
-    waitForEvent("group_change_success")
 
     Then("A success event is send and the application has been started")
-    marathon.listApps.value.find(_.id=="sleep") should be('defined)
+    waitForEvent("group_change_success")
   }
 
+  test("upgrade a group with application with health checks") {
+    Given("A group with one application")
+    val name = "proxy"
+    val proxy = appProxy(name, "v1", 1)
+    val group = Group(name, ScalingStrategy(1), Seq(proxy))
+    marathon.createGroup(group)
+    waitForEvent("status_update_event")
+    val check = appProxyChecks("proxy", "v1", state=true).head
 
+    When("The group is updated")
+    check.afterDelay(1.second, state = false)
+    check.afterDelay(3.seconds, state = true)
+    marathon.updateGroup(group.copy(apps=Seq(proxy.copy(cmd=proxy.cmd + " version2"))))
 
+    Then("A success event is send and the application has been started")
+    waitForEvent("group_change_success")
+  }
+
+  ignore("During Deployment the defined minimum health capacity is never undershot") {
+    Given("A group with one application")
+    val name = "proxy"
+    val proxy = appProxy(name, "v1", 2)
+    val group = Group(name, ScalingStrategy(1), Seq(proxy))
+    marathon.createGroup(group)
+    waitForEvent("status_update_event")
+
+    When("The new application is not healthy")
+    appProxyChecks("proxy", "v2", state=false) //will always fail
+    marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v2", 2))))
+
+    Then("A success event is send and the application has been started")
+    validFor("minimum capacity is always available", 60.seconds) {
+      val currentTasks = marathon.tasks(name).value
+      currentTasks.size>=proxy.instances
+    }
+  }
 }

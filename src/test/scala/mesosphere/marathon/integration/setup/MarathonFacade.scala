@@ -11,6 +11,7 @@ import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{Unsubscribe, Subscribe}
 import mesosphere.marathon.api.v1.AppDefinition
 import java.util.Date
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 /**
  * GET /apps will deliver something like Apps instead of List[App]
@@ -18,7 +19,9 @@ import java.util.Date
  */
 case class ListAppsResult(apps:Seq[AppDefinition])
 case class ListTasks(tasks:Seq[ITEnrichedTask])
-case class ITEnrichedTask(appId:String, id:String, host:String, ports:Seq[Integer], startedAt:Date, stagedAt:Date, version:String)
+case class ITHealthCheckResult(taskId:String, firstSuccess:Date, lastSuccess:Date, lastFailure:Date, consecutiveFailures:Int, alive:Boolean)
+@JsonIgnoreProperties(ignoreUnknown = true)
+case class ITEnrichedTask(appId:String, id:String, host:String, ports:Seq[Integer], startedAt:Date, stagedAt:Date, version:String/*, healthCheckResults:Seq[ITHealthCheckResult]*/)
 /**
  * The MarathonFacade offers the REST API of a remote marathon instance
  * with all local domain objects.
