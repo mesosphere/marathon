@@ -50,6 +50,10 @@ define([
     allInstancesBooted: function() {
       return this.get("tasksRunning") === this.get("instances");
     },
+    formatTasksRunning: function() {
+      var tasksRunning = this.get("tasksRunning");
+      return tasksRunning == null ? "-" : tasksRunning;
+    },
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
      * "version" value, which when sent prevents any other attributes from being
