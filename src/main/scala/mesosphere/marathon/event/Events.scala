@@ -133,6 +133,18 @@ case class RestartFailed(
   timestamp: String = Timestamp.now().toString
 ) extends UpgradeEvent
 
+case class RollbackSuccess(
+  appId: String,
+  eventType: String = "rollback_success",
+  timestamp: String = Timestamp.now().toString
+) extends UpgradeEvent
+
+case class RollbackFailed(
+  appId: String,
+  eventType: String = "rollback_failed",
+  timestamp: String = Timestamp.now().toString
+) extends UpgradeEvent
+
 // Mesos scheduler
 
 case class MesosStatusUpdateEvent(

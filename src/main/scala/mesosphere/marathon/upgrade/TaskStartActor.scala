@@ -20,8 +20,9 @@ class TaskStartActor(
   val AppID = app.id
   val Version = app.version.toString
 
+  eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
+
   override def preStart(): Unit = {
-    eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     for (_ <- 0 until nrToStart) taskQueue.add(app)
   }
 

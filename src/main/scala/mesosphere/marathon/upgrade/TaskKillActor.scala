@@ -19,8 +19,9 @@ class TaskKillActor(
 
   val idsToKill = tasksToKill.map(_.getId).to[mutable.Set]
 
+  eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
+
   override def preStart(): Unit = {
-    eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     log.info(s"Killing ${tasksToKill.size} instances")
     for (task <- tasksToKill)
       driver.killTask(taskId(task.getId))

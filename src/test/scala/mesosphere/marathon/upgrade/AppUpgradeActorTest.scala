@@ -1,7 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import akka.testkit.{TestActorRef, TestKit}
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{ActorPath, Props, ActorSystem}
 import mesosphere.marathon.MarathonSpec
 import org.scalatest.{Matchers, BeforeAndAfterAll}
 import org.scalatest.mock.MockitoSugar
@@ -17,6 +17,8 @@ import scala.collection.mutable
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.upgrade.AppUpgradeManager.UpgradeFinished
 import org.apache.mesos.Protos.TaskID
+import akka.pattern.ask
+import scala.concurrent.Await
 
 class AppUpgradeActorTest
   extends TestKit(ActorSystem("System"))
@@ -50,7 +52,7 @@ class AppUpgradeActorTest
 
     when(tracker.get(app.id)).thenReturn(mutable.Set(taskA, taskB))
 
-    val upgradeActor = TestActorRef(Props(new AppUpgradeActor(
+    val ref = TestActorRef(Props(new AppUpgradeActor(
       testActor,
       driver,
       tracker,
@@ -60,6 +62,11 @@ class AppUpgradeActorTest
       1,
       testActor
     )))
+
+    // make sure all the children are running
+    awaitStartup(ref.path / "Replacer")
+    awaitStartup(ref.path / "Stopper")
+    awaitStartup(ref.path / "Starter")
 
     system.eventStream.publish(MesosStatusUpdateEvent("", "task_a", "TASK_KILLED", "MyApp", "", Nil, ""))
 
@@ -71,12 +78,18 @@ class AppUpgradeActorTest
 
     system.eventStream.publish(MesosStatusUpdateEvent("", "task_b", "TASK_KILLED", "MyApp", "", Nil, ""))
 
-    expectMsg(UpgradeFinished(app.id))
+    expectMsg(5.seconds, UpgradeFinished(app.id))
 
     verify(tracker).get(app.id)
     verify(driver).killTask(TaskID.newBuilder().setValue("task_a").build())
     verify(driver).killTask(TaskID.newBuilder().setValue("task_b").build())
 
     verify(queue, times(2)).add(app)
+  }
+
+  def awaitStartup(path: ActorPath): Unit = {
+    val selection = system.actorSelection(path)
+
+    Await.ready(selection.resolveOne(), 5.seconds)
   }
 }

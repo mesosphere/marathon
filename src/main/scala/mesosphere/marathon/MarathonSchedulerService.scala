@@ -13,7 +13,6 @@ import scala.concurrent.duration.MILLISECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Group.JoinException
-import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
 import scala.util.Random
@@ -21,20 +20,12 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import scala.concurrent.duration._
-import com.google.common.cache.LoadingCache
 import java.util.concurrent.CountDownLatch
 import mesosphere.util.{ BackToTheFuture, ThreadPoolContext }
-import java.util.concurrent.Semaphore
 import akka.actor.ActorRef
 import mesosphere.marathon.MarathonSchedulerActor._
 import akka.pattern.ask
-import mesosphere.marathon.MarathonSchedulerActor.StopApp
-import scala.util.Failure
-import mesosphere.marathon.MarathonSchedulerActor.UpdateApp
-import scala.Some
-import mesosphere.marathon.MarathonSchedulerActor.StartApp
-import scala.util.Success
-import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
+import scala.util.{Failure, Success}
 import akka.util.Timeout
 
 /**
@@ -113,6 +104,15 @@ class MarathonSchedulerService @Inject() (
     // TODO: this should be configurable
     implicit val timeout = Timeout(12.hours)
     (schedulerActor ? UpgradeApp(app, keepAlive)).map {
+      case CommandFailed(_, reason) => throw reason
+      case _ => true
+    }
+  }
+
+  def rollback(app: AppDefinition, keepAlive: Int): Future[Boolean] = {
+    // TODO: this should be configurable
+    implicit val timeout = Timeout(12.hours)
+    (schedulerActor ? RollbackApp(app, keepAlive)).map {
       case CommandFailed(_, reason) => throw reason
       case _ => true
     }

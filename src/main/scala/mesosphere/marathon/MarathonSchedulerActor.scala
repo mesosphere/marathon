@@ -17,10 +17,9 @@ import mesosphere.marathon.upgrade.AppUpgradeManager
 import akka.event.EventStream
 import mesosphere.mesos.util.FrameworkIdUtil
 import scala.util.Failure
-import mesosphere.marathon.event.RestartFailed
-import mesosphere.marathon.upgrade.AppUpgradeManager.Upgrade
+import mesosphere.marathon.event.{RollbackFailed, RollbackSuccess, RestartFailed, RestartSuccess}
+import mesosphere.marathon.upgrade.AppUpgradeManager.{CancelUpgrade, Upgrade}
 import scala.util.Success
-import mesosphere.marathon.event.RestartSuccess
 import scala.collection.JavaConverters._
 import akka.pattern.ask
 import scala.concurrent.duration._
@@ -73,6 +72,16 @@ class MarathonSchedulerActor(
         upgradeApp(driver, app, keepAlive).sendAnswer(origSender, cmd)
       }
 
+    case cmd @ RollbackApp(app, keepAlive) =>
+      val origSender = sender
+      implicit val timeout: Timeout = 1.minute
+      val res = upgradeManager ? CancelUpgrade(app.id)
+      res andThen { case _ =>
+        locking(app.id, origSender, cmd, true) {
+          upgradeApp(driver, app, keepAlive).sendAnswer(origSender, cmd)
+        }
+      }
+
     case cmd @ ReconcileTasks =>
       reconcileTasks(driver)
       sender ! cmd.answer
@@ -100,9 +109,15 @@ class MarathonSchedulerActor(
    * @tparam U
    * @return
    */
-  def locking[U](appId: String, origSender: ActorRef, cmd: Command)(f: => Future[U]): Unit = {
+  def locking[U](appId: String, origSender: ActorRef, cmd: Command, blocking: Boolean = false)(f: => Future[U]): Unit = {
     val lock = appLocks.get(appId)
-    if (lock.tryAcquire()) {
+    if (blocking) {
+      lock.acquire()
+      f andThen { case _ =>
+        lock.release()
+      }
+    }
+    else if (lock.tryAcquire()) {
       f andThen { case _ =>
         lock.release()
       }
@@ -148,6 +163,10 @@ object MarathonSchedulerActor {
     def answer = TasksLaunched(tasks)
   }
 
+  case class RollbackApp(app: AppDefinition, keepAlive: Int) extends Command {
+    def answer = AppRolledBack(app)
+  }
+
   sealed trait Event
   case class AppStarted(app: AppDefinition) extends Event
   case class AppStopped(app: AppDefinition) extends Event
@@ -156,6 +175,7 @@ object MarathonSchedulerActor {
   case class AppScaled(appId: String) extends Event
   case object TasksReconciled extends Event
   case class TasksLaunched(tasks: Seq[TaskInfo]) extends Event
+  case class AppRolledBack(app: AppDefinition) extends Event
 
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 

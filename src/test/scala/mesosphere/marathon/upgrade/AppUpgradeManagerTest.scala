@@ -5,7 +5,7 @@ import akka.actor.{Props, ActorSystem}
 import org.scalatest.{FunSuiteLike, BeforeAndAfterAll, Matchers}
 import org.scalatest.mock.MockitoSugar
 import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.upgrade.AppUpgradeManager.{Upgrade, Rollback}
+import mesosphere.marathon.upgrade.AppUpgradeManager.{Upgrade, CancelUpgrade}
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.duration._
 import scala.concurrent.Await
@@ -15,6 +15,7 @@ import org.apache.mesos.state.InMemoryState
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.TaskUpgradeCancelledException
+import scala.collection.mutable
 
 class AppUpgradeManagerTest
   extends TestKit(ActorSystem("System"))
@@ -36,28 +37,6 @@ class AppUpgradeManagerTest
     val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
 
     manager ! Upgrade(driver, AppDefinition(id = "testApp"), 10)
-
-    awaitCond(
-      manager.underlyingActor.runningUpgrades.contains("testApp"),
-      1.second
-    )
-  }
-
-  test("Rollback") {
-    val driver = mock[SchedulerDriver]
-    val eventBus = mock[EventStream]
-    val taskQueue = mock[TaskQueue]
-    val taskTracker = new TaskTracker(new InMemoryState)
-    val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
-    val probe = TestProbe()
-
-    manager.underlyingActor.runningUpgrades = Map("testApp" -> probe.ref)
-
-    watch(probe.ref)
-
-    manager ! Rollback(driver, AppDefinition(id = "testApp"), 10)
-
-    expectTerminated(probe.ref, 1.second)
 
     awaitCond(
       manager.underlyingActor.runningUpgrades.contains("testApp"),
@@ -91,7 +70,7 @@ class AppUpgradeManagerTest
     implicit val timeout = Timeout(1.minute)
     val res = (manager ? Upgrade(driver, AppDefinition(id = "testApp"), 10)).mapTo[Boolean]
 
-    manager ! Rollback(driver, AppDefinition(id = "testApp"), 10)
+    manager ! CancelUpgrade("testApp")
 
     intercept[TaskUpgradeCancelledException] {
       Await.result(res, 1.second)
