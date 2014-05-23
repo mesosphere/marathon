@@ -49,8 +49,6 @@ case class DeploymentPlan(
   }
 
   def deploy(scheduler: MarathonSchedulerService): Future[Boolean] = {
-    val locks = targetIds.map(scheduler.appLocks(_))
-    locks.foreach(_.acquire())
 
     log.info(s"Deploy group ${target.id}: start:${toStart.map(_.id)}, stop:${toStop.map(_.id)}, scale:${toScale.map(_.id)}, restart:${toRestart.map(_.id)}")
     val updateFuture = toScale.map(to => scheduler.updateApp(to.id, AppUpdate(instances = Some(to.instances))).map(_ => true))
@@ -63,7 +61,6 @@ case class DeploymentPlan(
     deployFuture andThen {
       case result =>
         log.info(s"Deployment of ${target.id} has been finished $result")
-        locks.foreach(_.release())
     }
   }
 }

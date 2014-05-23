@@ -85,9 +85,8 @@ class MarathonSchedulerService @Inject() (
   var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
 
 
-  implicit def timeout: Timeout = defaultWait
+  implicit val timeout: Timeout = defaultWait
 
-  def appLocks: LoadingCache[String, Semaphore] = scheduler.appLocks
   def startApp(app: AppDefinition): Future[_] = {
     // Backwards compatibility
     val oldPorts = app.ports

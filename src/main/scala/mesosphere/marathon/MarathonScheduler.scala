@@ -3,14 +3,9 @@ package mesosphere.marathon
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ SchedulerDriver, Scheduler }
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
-import scala.collection.mutable.HashSet
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.AppRepository
 import scala.concurrent.{Future, ExecutionContext}
-import com.google.common.collect.Lists
 import javax.inject.{ Named, Inject }
 import akka.event.EventStream
 import mesosphere.marathon.event._
@@ -19,19 +14,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
-import mesosphere.util.{LockManager, ThreadPoolContext, RateLimiters}
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.util.{ThreadPoolContext, RateLimiters}
 import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
-import akka.actor.{ActorRef, Props, ActorSystem}
+import akka.actor.ActorRef
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.event.MesosFrameworkMessageEvent
-import mesosphere.marathon.event.RestartSuccess
-import mesosphere.marathon.upgrade.AppUpgradeManager
-import mesosphere.marathon.upgrade.AppUpgradeManager.Upgrade
-import akka.pattern.ask
-import scala.concurrent.duration._
-import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor.{LaunchTasks, ScaleApp}
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -60,7 +48,6 @@ class MarathonScheduler @Inject() (
     config: MarathonConf) extends Scheduler {
 
   private [this] val log = Logger.getLogger(getClass.getName)
-  val appLocks = LockManager()
 
   import ThreadPoolContext.context
   import mesosphere.mesos.protos.Implicits._
