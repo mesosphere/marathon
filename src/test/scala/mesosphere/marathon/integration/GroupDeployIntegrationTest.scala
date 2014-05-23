@@ -17,8 +17,13 @@ class GroupDeployIntegrationTest
   before(marathon.cleanUp())
 
   test("create empty group successfully") {
+    Given("A group which does not exist in marathon")
     val group = Group.empty().copy(id="test")
+
+    When("The group gets created")
     val result = marathon.createGroup(group)
+
+    Then("The group is created. A success event for this group is send.")
     result.code should be(204) //no content
     val event = waitForEvent("group_change_success")
     event.info("groupId") should be(group.id)
@@ -79,13 +84,13 @@ class GroupDeployIntegrationTest
   //TODO(MV): this test is valid from my point of view, but the event after upgrade is not fired
   ignore("update a group with applications to restart") {
     Given("A group with one application started")
-    val app1V1 = AppDefinition(id="app1", executor="//cmd", cmd="sleep 100", instances=2, cpus=0.1, mem=16)
+    val app1V1 = AppDefinition(id="app1", executor="//cmd", cmd="tail -f /dev/null", instances=2, cpus=0.1, mem=16)
     marathon.createGroup(Group("sleep", ScalingStrategy(0), Seq(app1V1)))
     waitForEvent("group_change_success")
     waitForTasks(app1V1.id, app1V1.instances)
 
     When("The group is updated, with a changed application")
-    val app1V2 = AppDefinition(id="app1", executor="//cmd", cmd="sleep 200", instances=1, cpus=0.1, mem=16)
+    val app1V2 = AppDefinition(id="app1", executor="//cmd", cmd="tail -F /dev/null", instances=1, cpus=0.1, mem=16)
     marathon.updateGroup(Group("sleep", ScalingStrategy(0), Seq(app1V2)))
     waitForEvent("group_change_success", 120.seconds)
 

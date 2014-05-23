@@ -6,22 +6,12 @@ import javax.ws.rs._
 import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
 import org.apache.log4j.Logger
-import scala.concurrent.ExecutionContext.Implicits.global
-import akka.actor.ActorSystem
-import scala.concurrent.duration._
-import scala.concurrent.Await.result
 import spray.httpx.marshalling.{MarshallingContext, Marshaller}
 import spray.http.{ContentTypes, HttpEntity}
 import spray.httpx.UnsuccessfulResponseException
-import spray.client.pipelining._
 import spray.http.HttpResponse
 import mesosphere.chaos.http.RestModule
 import mesosphere.marathon.api.MarathonRestModule
-import mesosphere.marathon.api.v2.Group
-import mesosphere.marathon.event.http.EventSubscribers
-import mesosphere.marathon.event.{Unsubscribe, Subscribe}
-import mesosphere.marathon.api.v1.AppDefinition
-import java.util.Date
 
 /**
  * Result of an REST operation.

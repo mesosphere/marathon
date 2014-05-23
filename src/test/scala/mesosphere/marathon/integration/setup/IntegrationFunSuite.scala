@@ -7,7 +7,6 @@ import scala.concurrent.duration._
 import scala.util.Try
 import java.util.UUID
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.integration.setup.ProcessKeeper
 
 /**
  * All integration tests should mix in this trait.
@@ -19,7 +18,11 @@ import mesosphere.marathon.integration.setup.ProcessKeeper
  * maven: mvn -Dintegration=true test
  */
 trait IntegrationFunSuite extends FunSuite {
-  private lazy val isIntegration = sys.props.get("integration").flatMap(p=> Try(p.toBoolean).toOption).getOrElse(false)
+  private lazy val isIntegration = {
+    val prop = sys.props.get("integration").flatMap(p=> Try(p.toBoolean).toOption).getOrElse(false)
+    val idea = sys.env.values.exists(_=="org.jetbrains.plugins.scala.testingSupport.scalaTest.ScalaTestRunner")
+    prop || idea
+  }
   override protected def test(testName: String, testTags: Tag*)(testFun: => Unit): Unit = {
     if (isIntegration) super.test(testName, testTags:_*)(testFun)
   }
