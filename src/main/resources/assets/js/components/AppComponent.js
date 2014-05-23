@@ -7,6 +7,7 @@ define([
     onClick: function() {
       this.props.onClick(this.props.model);
     },
+
     render: function() {
       var model = this.props.model;
 
@@ -27,7 +28,7 @@ define([
           </td>
           <td className="text-right">{model.get("mem")}</td>
           <td className="text-right">{model.get("cpus")}</td>
-          <td className={instancesClassSet}>{model.get("tasksRunning")} / {model.get("instances")}</td>
+          <td className={instancesClassSet}>{model.formatTasksRunning()} / {model.get("instances")}</td>
         </tr>
       );
     }
