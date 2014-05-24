@@ -51,8 +51,8 @@ define([
     },
     render: function() {
       var _this = this;
-      var sort_key = this.props.collection.sort_key;
-      var sort_reverse = this.props.collection.sort_reverse;
+      var sortKey = this.props.collection.sortKey;
+      var sortReverse = this.props.collection.sortReverse;
 
       var appNodes;
       var tableClassName = "table table-fixed";
@@ -97,27 +97,27 @@ define([
             <tr>
               <th>
                 <span onClick={this.sortCollectionBy.bind(this, "id")} className="clickable">
-                  ID {sort_key === "id" ? (sort_reverse ? "▲" : "▼") : null}
+                  ID {sortKey === "id" ? (sortReverse ? "▲" : "▼") : null}
                 </span>
               </th>
               <th>
                 <span onClick={this.sortCollectionBy.bind(this, "cmd")} className="clickable">
-                  Command {sort_key === "cmd" ? (sort_reverse ? "▲" : "▼") : null}
+                  Command {sortKey === "cmd" ? (sortReverse ? "▲" : "▼") : null}
                 </span>
               </th>
               <th>
                 <span onClick={this.sortCollectionBy.bind(this, "mem")} className="text-right clickable">
-                  {sort_key === "mem" ? (sort_reverse ? "▲" : "▼") : null} Memory (MB)
+                  {sortKey === "mem" ? (sortReverse ? "▲" : "▼") : null} Memory (MB)
                 </span>
               </th>
               <th>
                 <span onClick={this.sortCollectionBy.bind(this, "cpus")} className="text-right clickable">
-                  {sort_key === "cpus" ? (sort_reverse ? "▲" : "▼") : null} CPUs
+                  {sortKey === "cpus" ? (sortReverse ? "▲" : "▼") : null} CPUs
                 </span>
               </th>
               <th>
                 <span onClick={this.sortCollectionBy.bind(this, "instances")} className="text-right clickable">
-                  {sort_key === "instances" ? (sort_reverse ? "▲" : "▼") : null} Instances
+                  {sortKey === "instances" ? (sortReverse ? "▲" : "▼") : null} Instances
                 </span>
               </th>
             </tr>
@@ -130,16 +130,16 @@ define([
     },
     sortCollectionBy: function(attribute) {
       var collection = this.props.collection;
-      collection.sort_reverse = !collection.sort_reverse;
-      if (collection.sort_key != attribute) { // reset on sort_key change
-        collection.sort_reverse = false;
+      collection.sortReverse = !collection.sortReverse;
+      if (collection.sortKey !== attribute) { // reset on sortKey change
+        collection.sortReverse = false;
       }
-      collection.sort_key = attribute;
+      collection.sortKey = attribute;
       collection.comparator = function(a, b) {
-        // Assuming that the sort_key values can be compared with '>' and '<'
+        // Assuming that the sortKey values can be compared with '>' and '<'
         a = a.attributes[attribute];
         b = b.attributes[attribute];
-        return collection.sort_reverse
+        return collection.sortReverse
                 ? b < a ?  1 : b > a ? -1 : 0 // reversed
                 : a < b ?  1 : a > b ? -1 : 0; // regular
       };
