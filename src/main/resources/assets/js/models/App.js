@@ -52,7 +52,7 @@ define([
     },
     formatTasksRunning: function() {
       var tasksRunning = this.get("tasksRunning");
-      return tasksRunning === undefined ? "-" : tasksRunning;
+      return tasksRunning == null ? "-" : tasksRunning;
     },
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
