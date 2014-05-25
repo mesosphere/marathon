@@ -5,7 +5,7 @@ define([
   var TaskCollection = SortableCollection.extend({
     initialize: function(models, options) {
       this.options = options;
-      this.setComparator("updatedAt");
+      this.setComparator("-updatedAt");
       this.sort();
     },
     model: Task,
