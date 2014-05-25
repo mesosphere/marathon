@@ -137,7 +137,8 @@ define([
         collection.sortKey === comparator && !collection.sortReverse ?
         "-" + comparator :
         comparator;
-      collection.sortByAttr(comparator);
+      collection.setComparator(comparator);
+      collection.sort();
     },
     startPolling: function() {
       this.fetchResource();

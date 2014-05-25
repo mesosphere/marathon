@@ -3,11 +3,11 @@ define([
   "models/App"
 ], function(SortableCollection, App) {
   return SortableCollection.extend({
-    comparator: "id",
     model: App,
     initialize: function(models, options) {
       this.options = options;
-      this.sortByAttr("id");
+      this.setComparator("id");
+      this.sort();
     },
     parse: function(response) {
       return response.apps;
