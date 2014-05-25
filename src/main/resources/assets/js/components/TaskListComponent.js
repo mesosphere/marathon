@@ -152,11 +152,11 @@ define([
         }, this);
       }
 
-      var comparator = this.props.collection.comparatorAttribute;
-      var sortSymbol =
-        (this.props.collection.comparatorString.substr(0, 1) === "-") ?
-        "▼" :
-        "▲";
+      var sortKey = this.props.collection.sortKey;
+      var sortOrder =
+        (this.props.collection.sortReverse) ?
+        "▲" :
+        "▼";
       return (
         <table className="table table-selectable">
           <thead>
@@ -168,13 +168,13 @@ define([
                   onChange={this.props.onAllTasksToggle} />
               </th>
               <th onClick={this.sortCollectionBy.bind(null, "id")}>
-                ID {(comparator === "id") ? sortSymbol : null}
+                ID {(sortKey === "id") ? sortOrder : null}
               </th>
               <th onClick={this.sortCollectionBy.bind(null, "status")}>
-                Status {(comparator === "status") ? sortSymbol : null}
+                Status {(sortKey === "status") ? sortOrder : null}
               </th>
               <th className="text-right" onClick={this.sortCollectionBy.bind(null, "updatedAt")}>
-                {(comparator === "updatedAt") ? sortSymbol : null} Updated
+                {(sortKey === "updatedAt") ? sortOrder : null} Updated
               </th>
             </tr>
           </thead>
@@ -188,12 +188,12 @@ define([
       this.setState({fetched: true});
     },
     sortCollectionBy: function(comparator) {
-      if (comparator === this.props.collection.comparatorAttribute) {
-        this.props.collection.sortReverse();
-      } else {
-        this.props.collection.setComparator(comparator);
-        this.props.collection.sort();
-      }
+      var collection = this.props.collection;
+      comparator =
+        collection.sortKey === comparator && !collection.sortReverse ?
+        "-" + comparator :
+        comparator;
+      collection.sortByAttr(comparator);
     },
     startPolling: function() {
       if (this._interval == null) {

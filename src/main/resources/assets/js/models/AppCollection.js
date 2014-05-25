@@ -1,10 +1,14 @@
 define([
-  "Backbone",
+  "models/SortableCollection",
   "models/App"
-], function(Backbone, App) {
-  return Backbone.Collection.extend({
+], function(SortableCollection, App) {
+  return SortableCollection.extend({
     comparator: "id",
     model: App,
+    initialize: function(models, options) {
+      this.options = options;
+      this.sortByAttr("id");
+    },
     parse: function(response) {
       return response.apps;
     },
