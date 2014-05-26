@@ -30,6 +30,8 @@ class GroupManager @Singleton @Inject() (
 
   def list(): Future[Iterable[Group]] = groupRepo.current()
 
+  def versions(id:String): Future[Iterable[Timestamp]] = groupRepo.listVersions(id)
+
   def group(id: String): Future[Option[Group]] = groupRepo.group(id)
 
   def group(id:String, version:Timestamp) : Future[Option[Group]] = groupRepo.group(id, version)
@@ -59,7 +61,7 @@ class GroupManager @Singleton @Inject() (
   }
 
   private def upgrade(current: Group, group: Group, force:Boolean): Future[Group] = {
-    log.info(s"Upgrade existing Group ${group.id} with $group")
+    log.info(s"Upgrade existing Group ${group.id} with $group force:$force")
     //checkpoint where to start from
     //if there is an upgrade in progress
     val startFromGroup = planRepo.currentVersion(current.id).map {

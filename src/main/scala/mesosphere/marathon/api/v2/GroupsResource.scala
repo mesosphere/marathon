@@ -21,13 +21,23 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   val defaultWait = 3.seconds
 
   @GET
-  @Consumes(Array(MediaType.APPLICATION_JSON))
   def list() : Iterable[Group] = result(groupManager.list(), defaultWait)
 
   @GET
-  @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("{id}")
   def group(@PathParam("id") id: String) : Option[Group] = result(groupManager.group(id), defaultWait)
+
+  @GET
+  @Path("{id}/versions")
+  def listVersions(@PathParam("id") id: String) : Iterable[Timestamp] = {
+    result(groupManager.versions(id), defaultWait)
+  }
+
+  @GET
+  @Path("{id}/versions/{version}")
+  def groupVersion(@PathParam("id") id: String, @PathParam("version") version: String) : Option[Group] = {
+    result(groupManager.group(id, Timestamp(version)), defaultWait)
+  }
 
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
