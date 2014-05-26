@@ -47,18 +47,11 @@ class GroupManager @Singleton @Inject() (
     }
   }
 
-  def upgrade(id: String, group: Group): Future[Group] = {
-    groupRepo.currentVersion(id).flatMap {
-      case Some(current) => upgrade(current, group, force=true)
-      case None =>
-        log.warn(s"Can not update group $id, since there is no current version!")
-        throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")
-    }
-  }
+  def update(id: String, group:Group, force:Boolean): Future[Group] = update(id, _ => group, force)
 
-  def patch(id: String, fn: Group=>Group): Future[Group] = {
+  def update(id: String, fn: Group=>Group, force:Boolean): Future[Group] = {
     groupRepo.currentVersion(id).flatMap {
-      case Some(current) => upgrade(current, fn(current), force=true)
+      case Some(current) => upgrade(current, fn(current), force)
       case None =>
         log.warn(s"Can not update group $id, since there is no current version!")
         throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")

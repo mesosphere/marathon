@@ -9,6 +9,13 @@ import javax.ws.rs.core.Response.Status
 
 object Responses {
 
+  def unknownGroup(id: String): Response = {
+    Response
+      .status(Status.NOT_FOUND)
+      .entity(Map("message" -> s"Group '$id' does not exist"))
+      .build
+  }
+
   def unknownApp(id: String): Response = {
     Response
       .status(Status.NOT_FOUND)
