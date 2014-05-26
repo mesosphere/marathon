@@ -36,7 +36,7 @@ class TaskReplaceActor(
   val toKill = taskIds.to[mutable.Queue]
 
   def receive : Receive = {
-    case HealthStatusChanged(`appId`, taskId, true, _, _) =>
+    case HealthStatusChanged(`appId`, taskId, true, _, _) if !taskIds(taskId) =>
       healthy += taskId
       if (toKill.nonEmpty) {
         val killing = toKill.dequeue()
