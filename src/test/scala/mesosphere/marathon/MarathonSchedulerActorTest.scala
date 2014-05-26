@@ -115,6 +115,39 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     verify(tracker).shutDown(app.id)
   }
 
+  test("StopApp with running Upgrade") {
+    val app = AppDefinition(id = "testApp", instances = 2)
+    val task = MarathonTask.newBuilder().setId("task_1").build()
+    val probe = TestProbe()
+
+    when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
+    when(tracker.get(app.id)).thenReturn(mutable.Set(task))
+
+    val lock = schedulerActor.underlyingActor.appLocks.get("testApp")
+    lock.acquire()
+
+    schedulerActor.underlyingActor.upgradeManager = probe.ref
+
+    probe.setAutoPilot(new AutoPilot {
+      def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
+        case CancelUpgrade("testApp") =>
+          lock.release()
+          NoAutoPilot
+      }
+    })
+
+    schedulerActor ! StopApp(app)
+
+    expectMsg(5.seconds, AppStopped(app))
+
+    verify(repo).expunge(app.id)
+    verify(hcManager).removeAllFor(app.id)
+    verify(tracker).get(app.id)
+    verify(driver).killTask(TaskID.newBuilder().setValue("task_1").build())
+    verify(queue).purge(app)
+    verify(tracker).shutDown(app.id)
+  }
+
   test("UpdateApp") {
     val app = AppDefinition(id = "testApp", instances = 1, version = Timestamp(Timestamp.now().time.minusDays(1)))
     val appUpdate = spy(AppUpdate(instances = Some(2)))

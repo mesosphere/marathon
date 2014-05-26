@@ -56,7 +56,8 @@ class MarathonSchedulerActor(
 
     case cmd @ StopApp(app) =>
       val origSender = sender
-      locking(app.id, origSender, cmd) {
+      upgradeManager ! CancelUpgrade(app.id)
+      locking(app.id, origSender, cmd, blocking = true) {
         stopApp(driver, app).sendAnswer(origSender, cmd)
       }
 
