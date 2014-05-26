@@ -82,6 +82,8 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
     response.build()
   }
 
+  //Note: this is really ugly. It is necessary, since bean validation will not walk into a scala Seq[_] and
+  //can not check scala Double values. So we have to do this by hand.
   val validator = Validation.buildDefaultValidatorFactory().getValidator
   private def checkIsValid(group:Group) {
     val groupErrors = validator.validate(group).asScala

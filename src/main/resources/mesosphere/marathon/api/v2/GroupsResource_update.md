@@ -10,8 +10,14 @@ The new group parameters get applied.
 If there are no changes to the application definition, no restart is triggered.
 During restart marathon keeps track, that the configured amount of minimal running instances are _always_ available.
 
-If the update to the group will result in unhealthy state of the applications, an automatic rollback will take place, 
-where the last configuration of the group will be restarted.
+A deployment can run forever. This is the case, when the new application has a problem and does not become healthy.
+In this case, human interaction is needed with 2 possible choices:
+
+* Rollback to an existing older version (use the rollback endpoint)
+* Update with a newer version of the group which does not have the problems of the old one.
+
+If there is an upgrade process already in progress, a new update will be rejected unless the force flag is set.
+With the force flag given, a running upgrade is terminated and a new one is started.
 
 
 ### Example
