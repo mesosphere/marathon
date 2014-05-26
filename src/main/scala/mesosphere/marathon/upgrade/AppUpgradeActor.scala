@@ -26,7 +26,8 @@ class AppUpgradeActor(
   val replacePromise = Promise[Boolean]()
   val startPromise = Promise[Boolean]()
   val stopPromise = Promise[Boolean]()
-  val oldInstances = taskTracker.get(app.id).to[immutable.Set]
+  // sort by startedAt to kill newer instances first
+  val oldInstances = taskTracker.get(app.id).toList.sortWith(_.getStartedAt > _.getStartedAt)
 
   override def preStart(): Unit = {
     startReplacer()
@@ -64,7 +65,7 @@ class AppUpgradeActor(
           app.id,
           app.version.toString,
           app.instances,
-          oldInstances.drop(app.instances - keepAlive),
+          oldInstances.drop(app.instances - keepAlive).toSet,
           replacePromise), "Replacer")
     } else {
       replacePromise.success(true)
@@ -78,7 +79,7 @@ class AppUpgradeActor(
           classOf[TaskKillActor],
           driver,
           eventBus,
-          oldInstances.take(oldInstances.size - keepAlive),
+          oldInstances.take(oldInstances.size - keepAlive).toSet,
           stopPromise), "Stopper")
     } else {
       stopPromise.success(true)
