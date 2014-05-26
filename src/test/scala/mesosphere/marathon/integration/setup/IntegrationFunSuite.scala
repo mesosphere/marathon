@@ -7,6 +7,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.api.v1.AppDefinition
+import org.joda.time.DateTime
 
 /**
  * All integration tests should mix in this trait.
@@ -58,7 +59,7 @@ object ExternalMarathonIntegrationTest {
 /**
  * Health check helper to define health behaviour of launched applications
  */
-class IntegrationHealthCheck(val appId:String, val versionId:String, val port:Int, var state: Boolean) {
+class IntegrationHealthCheck(val appId:String, val versionId:String, val port:Int, var state: Boolean, var lastUpdate:DateTime=new DateTime(0)) {
 
   case class HealthStatusChange(deadLine:Deadline, state:Boolean)
   private[this] var changes = List.empty[HealthStatusChange]
@@ -76,6 +77,7 @@ class IntegrationHealthCheck(val appId:String, val versionId:String, val port:In
     val (past, future) = changes.partition(_.deadLine.isOverdue())
     state = past.reverse.headOption.fold(state)(_.state)
     changes = future
+    lastUpdate = DateTime.now()
     state
   }
 
@@ -84,6 +86,8 @@ class IntegrationHealthCheck(val appId:String, val versionId:String, val port:In
     ExternalMarathonIntegrationTest.healthChecks += result
     result
   }
+
+  def pingSince(duration:Duration) : Boolean = DateTime.now.minusMillis(duration.toMillis.toInt).isAfter(lastUpdate)
 }
 
 /**
@@ -107,6 +111,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
   override protected def beforeAll(configMap:ConfigMap): Unit = {
     config = IntegrationTestConfig(configMap)
     super.beforeAll(configMap)
+    ProcessKeeper.startMesosLocal()
     startMarathon(config.singleMarathonPort, "--master", config.mesos, "--event_subscriber", "http_callback")
     ProcessKeeper.startHttpService(config.httpPort, config.cwd)
     ExternalMarathonIntegrationTest.listener += this
@@ -119,8 +124,9 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     marathon.cleanUp(withSubscribers = true)
     ExternalMarathonIntegrationTest.listener -= this
     ExternalMarathonIntegrationTest.healthChecks.clear()
-    ProcessKeeper.stopAllProcesses()
     ProcessKeeper.stopAllServices()
+    ProcessKeeper.stopAllProcesses()
+    ProcessKeeper.stopOSProcesses("mesosphere.marathon.integration.setup.AppMock")
   }
 
   override def handleEvent(event: CallbackEvent): Unit = events.enqueue(event)
@@ -130,7 +136,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
       val event = events.dequeue()
       if (event.eventType==kind) Some(event) else None
     }
-    waitFor(s"event $kind to arrive", nextEvent, maxWait)
+    waitFor(s"event $kind to arrive", maxWait)(nextEvent)
   }
 
   def waitForTasks(appId:String, num:Int, maxWait:FiniteDuration=30.seconds): List[ITEnrichedTask] = {
@@ -138,7 +144,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
       val tasks = Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil)
       if (tasks.size==num) Some(tasks) else None
     }
-    waitFor(s"$num tasks to launch", checkTasks, maxWait)
+    waitFor(s"$num tasks to launch", maxWait)(checkTasks )
   }
 
   def validFor(description:String, until:FiniteDuration)(valid: => Boolean): Boolean = {
@@ -153,7 +159,13 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     checkValid()
   }
 
-  def waitFor[T](description:String, fn: => Option[T],  maxWait:FiniteDuration): T = {
+  def waitUntil(description:String, maxWait:FiniteDuration)(fn: => Boolean) = {
+    waitFor(description, maxWait) {
+      if (fn) Some(true) else None
+    }
+  }
+
+  def waitFor[T](description:String,  maxWait:FiniteDuration)(fn: => Option[T]): T = {
     val deadLine = maxWait.fromNow
     def next() : T = {
       if (deadLine.isOverdue()) throw new AssertionError(s"Waiting for $description took longer than $maxWait. Give up.")

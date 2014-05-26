@@ -116,7 +116,7 @@ class GroupDeployIntegrationTest
     val proxy = appProxy(name, "v1", 1)
     val group = Group(name, ScalingStrategy(1), Seq(proxy))
     marathon.createGroup(group)
-    waitForEvent("status_update_event")
+    waitForEvent("group_change_success")
     val check = appProxyChecks("proxy", "v1", state=true).head
 
     When("The group is updated")
@@ -128,22 +128,78 @@ class GroupDeployIntegrationTest
     waitForEvent("group_change_success")
   }
 
-  ignore("During Deployment the defined minimum health capacity is never undershot") {
+  test("rollback from an upgrade of group") {
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 2)
     val group = Group(name, ScalingStrategy(1), Seq(proxy))
     marathon.createGroup(group)
-    waitForEvent("status_update_event")
+    waitForEvent("group_change_success")
+    val v1Checks = appProxyChecks("proxy", "v1", state=true)
+    val v2Checks = appProxyChecks("proxy", "v2", state=false) //will always fail
+
+    When("The group is updated")
+    marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v2", 2))))
+
+    Then("The new version is deployed")
+    waitForEvent("group_change_success")
+    validFor("all v2 apps are available", 10.seconds) { v2Checks.forall(_.pingSince(2.seconds)) }
+
+    When("A rollback to the first version is initiated")
+    marathon.rollbackGroup(name, group.version.toString, force=true)
+
+    Then("The rollback will be performed and the old version is available")
+    waitForEvent("group_change_success")
+    validFor("all v1 apps are available", 10.seconds) { v1Checks.forall(_.pingSince(2.seconds)) }
+  }
+
+  test("during Deployment the defined minimum health capacity is never undershot") {
+    Given("A group with one application")
+    val name = "proxy"
+    val proxy = appProxy(name, "v1", 2)
+    val group = Group(name, ScalingStrategy(1), Seq(proxy))
+    marathon.createGroup(group)
+    waitForEvent("group_change_success")
 
     When("The new application is not healthy")
+    val v1Checks = appProxyChecks("proxy", "v1", state=true)
+    val v2Checks = appProxyChecks("proxy", "v2", state=false) //will always fail
+    marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v2", 2))))
+
+    Then("All v1 applications are kept alive")
+    waitUntil("health check for v1 is initiated", proxy.healthChecks.head.initialDelay) {
+      v1Checks.forall(_.pingSince(2.seconds))
+    }
+    validFor("all v1 apps are always available", 15.seconds) {
+      v1Checks.forall(_.pingSince(2.seconds))
+    }
+
+    When("The new application becomes healthy")
+    v2Checks.foreach(_.state=true) //make v2 healthy, so the app can be cleaned
+    waitForEvent("group_change_success")
+  }
+
+
+  test("An upgrade in progress can not be interrupted without force") {
+    Given("A group with one application with an upgrade in progress")
+    val name = "proxy"
+    val proxy = appProxy(name, "v1", 2)
+    val group = Group(name, ScalingStrategy(1), Seq(proxy))
+    marathon.createGroup(group)
+    waitForEvent("group_change_success")
     appProxyChecks("proxy", "v2", state=false) //will always fail
     marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v2", 2))))
 
-    Then("A success event is send and the application has been started")
-    validFor("minimum capacity is always available", 60.seconds) {
-      val currentTasks = marathon.tasks(name).value
-      currentTasks.size>=proxy.instances
-    }
+    When("Another upgrade is triggered, while the old one is not completed")
+    marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v3", 2))))
+
+    Then("An error is indicated")
+    waitForEvent("group_change_failed")
+
+    When("Another upgrade is triggered with force, while the old one is not completed")
+    marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v4", 2))), force = true)
+
+    Then("The update is performed")
+    waitForEvent("group_change_success")
   }
 }

@@ -1,7 +1,7 @@
 package mesosphere.marathon.integration.setup
 
 import scala.sys.ShutdownHookThread
-import scala.sys.process.{ProcessLogger, Process, ProcessBuilder}
+import scala.sys.process._
 import scala.util.{Failure, Success, Try}
 import com.google.inject.Guice
 import org.rogach.scallop.ScallopConf
@@ -35,6 +35,8 @@ object ProcessKeeper {
     http.start()
   }
 
+  def startMesosLocal() : Process = startProcess(Process("mesos local"), _.contains("Re-registered with master"))
+
   def startMarathon(cwd:File, env:Map[String, String], arguments:List[String]) : Process = {
     log.info(s"Start remote marathon with args: $arguments")
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
@@ -64,6 +66,12 @@ object ProcessKeeper {
         throw new IllegalStateException(s"Process does not came up within time bounds ($timeout). Give up. $processBuilder")
     }
     process
+  }
+
+  def stopOSProcesses(grep:String): Unit = {
+    val PIDRE = """\s*(\d+)\s.*""".r
+    val processes =("ps -x" #| s"grep $grep" !!).split("\n").map { case PIDRE(pid) =>  pid }
+    s"kill -9 ${processes.mkString(" ")}".!
   }
 
   def stopAllProcesses(): Unit = {

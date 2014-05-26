@@ -76,6 +76,11 @@ class MarathonFacade(url:String, waitTime:Duration=30.seconds) extends JacksonSp
     result(pipeline(Get(s"$url/v2/groups")), waitTime)
   }
 
+  def listGroupVersions(id: String): RestResult[List[String]] = {
+    val pipeline = sendReceive ~> read[Array[String]] ~> toList[String]
+    result(pipeline(Get(s"$url/v2/groups/$id/versions")), waitTime)
+  }
+
   def group(id:String): RestResult[Group] = {
     val pipeline = sendReceive ~> read[Group]
     result(pipeline(Get(s"$url/v2/groups/$id")), waitTime)
@@ -91,9 +96,14 @@ class MarathonFacade(url:String, waitTime:Duration=30.seconds) extends JacksonSp
     result(pipeline(Delete(s"$url/v2/groups/$id")), waitTime)
   }
 
-  def updateGroup(group:Group): RestResult[HttpResponse] = {
+  def updateGroup(group:Group, force:Boolean=false): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
-    result(pipeline(Put(s"$url/v2/groups/${group.id}", group)), waitTime)
+    result(pipeline(Put(s"$url/v2/groups/${group.id}?force=$force", group)), waitTime)
+  }
+
+  def rollbackGroup(groupId:String, version:String, force:Boolean=false): RestResult[HttpResponse] = {
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Put(s"$url/v2/groups/$groupId/version/$version?force=$force")), waitTime)
   }
 
   //event resource ---------------------------------------------
