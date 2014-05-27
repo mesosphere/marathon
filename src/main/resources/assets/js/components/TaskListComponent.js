@@ -152,11 +152,11 @@ define([
         }, this);
       }
 
-      var comparator = this.props.collection.comparatorAttribute;
-      var sortSymbol =
-        (this.props.collection.comparatorString.substr(0, 1) === "-") ?
-        "▼" :
-        "▲";
+      var sortKey = this.props.collection.sortKey;
+      var sortOrder =
+        this.props.collection.sortReverse ?
+        "▲" :
+        "▼";
       return (
         <table className="table table-selectable">
           <thead>
@@ -167,14 +167,23 @@ define([
                   disabled={tasksLength === 0}
                   onChange={this.props.onAllTasksToggle} />
               </th>
-              <th onClick={this.sortCollectionBy.bind(null, "id")}>
-                ID {(comparator === "id") ? sortSymbol : null}
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "id")}
+                      className="clickable">
+                  ID {(sortKey === "id") ? sortOrder : null}
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(null, "status")}>
-                Status {(comparator === "status") ? sortSymbol : null}
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "status")}
+                      className="clickable">
+                  Status {(sortKey === "status") ? sortOrder : null}
+                </span>
               </th>
-              <th className="text-right" onClick={this.sortCollectionBy.bind(null, "updatedAt")}>
-                {(comparator === "updatedAt") ? sortSymbol : null} Updated
+              <th className="text-right">
+                <span onClick={this.sortCollectionBy.bind(null, "updatedAt")}
+                      className="clickable">
+                  {(sortKey === "updatedAt") ? sortOrder : null} Updated
+                </span>
               </th>
             </tr>
           </thead>
@@ -188,12 +197,13 @@ define([
       this.setState({fetched: true});
     },
     sortCollectionBy: function(comparator) {
-      if (comparator === this.props.collection.comparatorAttribute) {
-        this.props.collection.sortReverse();
-      } else {
-        this.props.collection.setComparator(comparator);
-        this.props.collection.sort();
-      }
+      var collection = this.props.collection;
+      comparator =
+        collection.sortKey === comparator && !collection.sortReverse ?
+        "-" + comparator :
+        comparator;
+      collection.setComparator(comparator);
+      collection.sort();
     },
     startPolling: function() {
       if (this._interval == null) {

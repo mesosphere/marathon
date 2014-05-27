@@ -270,3 +270,7 @@ th {
 .table-selectable tr > td {
   cursor: pointer;
 }
+
+.clickable {
+  cursor: pointer;
+}

@@ -51,7 +51,11 @@ define([
     },
     render: function() {
       var _this = this;
-      var comparator = this.props.collection.comparator;
+      var sortKey = this.props.collection.sortKey;
+      var sortOrder =
+        this.props.collection.sortReverse ?
+        "▲" :
+        "▼";
 
       var appNodes;
       var tableClassName = "table table-fixed";
@@ -94,20 +98,30 @@ define([
           </colgroup>
           <thead>
             <tr>
-              <th onClick={this.sortCollectionBy.bind(this, "id")}>
-                ID {(comparator === "id") ? "▼" : null}
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "id")} className="clickable">
+                  ID {sortKey === "id" ? sortOrder : null}
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "cmd")}>
-                Command {(comparator === "cmd") ? "▼" : null}
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "cmd")} className="clickable">
+                  Command {sortKey === "cmd" ? sortOrder : null}
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "mem")} className="text-right">
-                {(comparator === "mem") ? "▼" : null} Memory (MB)
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "mem")} className="text-right clickable">
+                  {sortKey === "mem" ? sortOrder : null} Memory (MB)
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "cpus")} className="text-right">
-                {(comparator === "cpus") ? "▼" : null} CPUs
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "cpus")} className="text-right clickable">
+                  {sortKey === "cpus" ? sortOrder : null} CPUs
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(this, "instances")} className="text-right">
-                {(comparator === "instances") ? "▼" : null} Instances
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "instances")} className="text-right clickable">
+                  {sortKey === "instances" ? sortOrder : null} Instances
+                </span>
               </th>
             </tr>
           </thead>
@@ -117,9 +131,14 @@ define([
         </table>
       );
     },
-    sortCollectionBy: function(attribute) {
-      this.props.collection.comparator = attribute;
-      this.props.collection.sort();
+    sortCollectionBy: function(comparator) {
+      var collection = this.props.collection;
+      comparator =
+        collection.sortKey === comparator && !collection.sortReverse ?
+        "-" + comparator :
+        comparator;
+      collection.setComparator(comparator);
+      collection.sort();
     },
     startPolling: function() {
       this.fetchResource();
