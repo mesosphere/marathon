@@ -167,7 +167,7 @@ class GroupDeployIntegrationTest
     marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v2", 2))))
 
     Then("All v1 applications are kept alive")
-    waitUntil("health check for v1 is initiated", proxy.healthChecks.head.initialDelay) {
+    waitUntil("health check for v1 is initiated", proxy.healthChecks.head.gracePeriod) {
       v1Checks.forall(_.pingSince(2.seconds))
     }
     validFor("all v1 apps are always available", 15.seconds) {

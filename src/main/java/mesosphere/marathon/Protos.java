@@ -11608,15 +11608,15 @@ public final class Protos {
       "\rcallback_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r" +
       "\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 " +
       "\002(\rB\035\n\023mesosphere.marathonB\006Protos"
-      "\t\022G\n\017scalingStrategy\030\003 \002(\0132..mesosphere." +
-      "marathon.ScalingStrategyDefinition\0224\n\004ap" +
-      "ps\030\004 \003(\0132&.mesosphere.marathon.ServiceDe" +
-      "finition\"\246\001\n\030DeploymentPlanDefinition\022\n\n" +
-      "\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0227\n\toriginial\030",
-      "\004 \002(\0132$.mesosphere.marathon.GroupDefinit" +
-      "ion\0224\n\006target\030\005 \002(\0132$.mesosphere.maratho" +
-      "n.GroupDefinitionB\035\n\023mesosphere.marathon" +
-      "B\006Protos"
+      "\022G\n\017scalingStrategy\030\003 \002(\0132..mesosphere.m" +
+      "arathon.ScalingStrategyDefinition\0224\n\004app" +
+      "s\030\004 \003(\0132&.mesosphere.marathon.ServiceDef" +
+      "inition\"\246\001\n\030DeploymentPlanDefinition\022\n\n\002" +
+      "id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0227\n\toriginial\030\004",
+      " \002(\0132$.mesosphere.marathon.GroupDefiniti" +
+      "on\0224\n\006target\030\005 \002(\0132$.mesosphere.marathon" +
+      ".GroupDefinitionB\035\n\023mesosphere.marathonB" +
+      "\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
