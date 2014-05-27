@@ -109,7 +109,11 @@ define([
           //
           // it should print "hostname:UNIQUE" instead of "hostname:UNIQUE:", no
           // trailing colon.
-          return <dd>{c.filter(function(s) { return s !== ""; }).join(":")}</dd>;
+          return (
+            <dd key={c}>
+              {c.filter(function(s) { return s !== ""; }).join(":")}
+            </dd>
+          );
         });
       var containerNode = (model.get("container") == null) ?
         <dd className="text-muted">Unspecified</dd> :
@@ -119,7 +123,7 @@ define([
 
         // Print environment variables as key value pairs like "key=value"
         Object.keys(model.get("env")).map(function(k) {
-          return <dd>{k + "=" + model.get("env")[k]}</dd>
+          return <dd key={k}>{k + "=" + model.get("env")[k]}</dd>
         });
       var executorNode = (model.get("executor") === "") ?
         <dd className="text-muted">Unspecified</dd> :
@@ -130,7 +134,7 @@ define([
       var urisNode = (model.get("uris").length === 0) ?
         <dd className="text-muted">Unspecified</dd> :
         model.get("uris").map(function(u) {
-          return <dd>{u}</dd>;
+          return <dd key={u}>{u}</dd>;
         });
 
       return (
@@ -174,14 +178,22 @@ define([
                 {constraintsNode}
                 <dt>Container</dt>
                 {containerNode}
+                <dt>CPUs</dt>
+                <dd>{model.get("cpus")}</dd>
                 <dt>Environment</dt>
                 {envNode}
                 <dt>Executor</dt>
                 {executorNode}
+                <dt>Instances</dt>
+                <dd>{model.get("instances")}</dd>
+                <dt>Memory (MB)</dt>
+                <dd>{model.get("mem")}</dd>
                 <dt>Ports</dt>
                 {portsNode}
                 <dt>URIs</dt>
                 {urisNode}
+                <dt>Version</dt>
+                <dd>{model.get("version").toLocaleString()}</dd>
               </dl>
             </TabPaneComponent>
           </TogglableTabsComponent>
@@ -254,7 +266,7 @@ define([
     },
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
-        this.props.model.save({instances: 0});
+        this.props.model.suspend();
       }
     }
   });

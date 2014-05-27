@@ -86,6 +86,9 @@ define([
       return Backbone.Model.prototype.save.call(
         this, allowedAttrs, options);
     },
+    suspend: function() {
+      this.save({instances: 0});
+    },
     validate: function(attrs, options) {
       var errors = [];
 

@@ -5,19 +5,39 @@ define([
   var STATUS_STAGED = "Staged";
   var STATUS_STARTED = "Started";
 
+  // Model attributes that are parseable as dates.
+  var DATE_ATTRIBUTES = ["stagedAt", "startedAt", "version"];
+
   return Backbone.Model.extend({
+    formatHostPorts: function() {
+      var portsString;
+      var ports = this.get("ports");
+
+      if (ports.length > 1) {
+        portsString = ":[" + ports.join(",") + "]";
+      } else if (ports.length === 1) {
+        portsString = ":" + ports[0];
+      } else {
+        portsString = "";
+      }
+
+      return this.get("host") + portsString;
+    },
+
     isStarted: function() {
       return this.get("status") === STATUS_STARTED;
     },
+
     isStaged: function() {
       return this.get("status") === STATUS_STAGED;
     },
-    parse: function(response) {
-      var parsedStartedAt = Date.parse(response.startedAt);
-      var parsedStagedAt = Date.parse(response.stagedAt);
 
-      if (!isNaN(parsedStartedAt)) response.startedAt = new Date(parsedStartedAt);
-      if (!isNaN(parsedStagedAt)) response.stagedAt = new Date(parsedStagedAt);
+    parse: function(response) {
+      // Parse all known date attributes as real Date objects.
+      DATE_ATTRIBUTES.forEach(function(attr) {
+        var parsedAttr = Date.parse(response[attr]);
+        if (!isNaN(parsedAttr)) { response[attr] = new Date(parsedAttr); }
+      });
 
       if (response.startedAt != null) {
         response.status = STATUS_STARTED;
@@ -29,6 +49,7 @@ define([
 
       return response;
     },
+
     sync: function(method, model, options) {
       var _options = options || {};
       var upperCaseMethod = method.toUpperCase();
