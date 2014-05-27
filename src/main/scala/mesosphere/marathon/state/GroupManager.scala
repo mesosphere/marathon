@@ -5,7 +5,7 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.Singleton
-import mesosphere.marathon.{UpgradeInProgressException, MarathonSchedulerService}
+import mesosphere.marathon.{TaskUpgradeCancelledException, UpgradeInProgressException, MarathonSchedulerService}
 import org.apache.log4j.Logger
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.v2.Group
@@ -86,6 +86,7 @@ class GroupManager @Singleton @Inject() (
   }
 
   private def deletePlan(id:String) : PartialFunction[Try[Group], Unit] = {
+    case Failure(ex:TaskUpgradeCancelledException) => //do not delete the plan, if a rollback is requested
     case _ => planRepo.expunge(id)
   }
 
