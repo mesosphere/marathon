@@ -85,7 +85,7 @@ define([
           return (
             <TaskListItemComponent
               isActive={isActive}
-              key={task.cid}
+              key={task.id}
               onToggle={this.props.onTaskToggle}
               task={task} />
           );
