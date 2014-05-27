@@ -28,7 +28,7 @@ import mesosphere.mesos.protos.{Resource, ScalarResource}
 case class AppDefinition(
 
   @FieldNotEmpty
-  @FieldPattern(regexp = "^[A-Za-z0-9_.-]+$")
+  @FieldPattern(regexp = "^[a-z0-9.-]+$")
   id: String = "",
 
   cmd: String = "",
