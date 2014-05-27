@@ -1,12 +1,12 @@
-define([
-  "models/SortableCollection",
-  "models/App"
+ define([
+  "models/App",
+  "models/SortableCollection"
 ], function(SortableCollection, App) {
   return SortableCollection.extend({
     model: App,
     initialize: function(models, options) {
       this.options = options;
-      this.setComparator("version");
+      this.setComparator("-id");
       this.sort();
     },
     parse: function(response) {
