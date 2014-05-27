@@ -49,7 +49,7 @@ class TaskReplaceActor(
         context.stop(self)
       }
 
-    case MesosStatusUpdateEvent(slaveId, taskId, "TASK_FAILED", `appId`, _, _, `version`, _, _) =>
+    case MesosStatusUpdateEvent(slaveId, taskId, ErrorState(_), `appId`, _, _, `version`, _, _) if !taskIds(taskId) =>
       val msg = s"Task $taskId failed on slave $slaveId"
       log.error(msg)
       promise.failure(new TaskFailedException(msg))
@@ -62,4 +62,11 @@ class TaskReplaceActor(
     TaskID.newBuilder()
       .setValue(id)
       .build()
+}
+
+private object ErrorState {
+  def unapply(state: String): Option[String] = state match {
+    case "TASK_FAILED" | "TASK_KILLED" | "TASK_LOST" => Some(state)
+    case _ => None
+  }
 }
