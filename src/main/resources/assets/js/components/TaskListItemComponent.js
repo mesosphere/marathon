@@ -28,18 +28,11 @@ define([
       var className = (this.props.isActive) ? "active" : "";
       var task = this.props.task;
 
-      var statusNode;
-      if (task.isStarted()) {
-        statusNode =
-          <span className="badge badge-default">
-            {task.get("status")}
-          </span>;
-      } else if (task.isStaged()) {
-        statusNode =
-          <span className="badge badge-warning">
-            {task.get("status")}
-          </span>;
-      }
+      var statusClassSet = React.addons.classSet({
+        "badge": true,
+        "badge-default": task.isStarted(),
+        "badge-warning": task.isStaged()
+      });
 
       var updatedAtNode;
       if (task.get("updatedAt") != null) {
@@ -62,7 +55,11 @@ define([
               {task.formatHostPorts()}
             </span>
           </td>
-          <td>{statusNode}</td>
+          <td>
+            <span className={statusClassSet}>
+              {task.get("status")}
+            </span>
+          </td>
           <td className="text-right">{updatedAtNode}</td>
         </tr>
       );
