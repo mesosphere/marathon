@@ -25,21 +25,14 @@ can even start other Marathon instances via Marathon.
 * *HA* -- run any number of Marathon schedulers, but only one gets elected as
     leader; if you access a non-leader, your request gets proxied to the
     current leader
-* *Basic Auth* and *SSL*
-* *REST API*
+* *[Constraints](https://github.com/mesosphere/marathon/wiki/Constraints)* - e.g., only one instance of an application per rack, node, etc.
+* *[Service Discovery &amp; Load Balancing](https://github.com/mesosphere/marathon/wiki/Service-Discovery-&-Load-Balancing)* via HAProxy or the events API (see below).
+* *[Health Checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)*: check your application's health via HTTP or TCP checks.
+* *[Event Subscription](https://github.com/mesosphere/marathon/wiki/Event-Bus)* lets you supply an HTTP endpoint to receive notifications, for example to integrate with an external load balancer.
 * *Web UI*
-* *Metrics* -- via Coda Hale's [metrics library](http://metrics.codahale.com/)
-* *Constraints* -- e.g., only one instance of an application per rack, node,
-    etc. See the
-    [documentation](https://github.com/mesosphere/marathon/wiki/Constraints)
-    for more info.
-* *Service Discovery* and *Load Balancing* -- see the [documentation](https://github.com/mesosphere/marathon/wiki/Service-Discovery-&-Load-Balancing) for more info.
-* *Event Subscription* -- e.g., if you need to notify an external web service
-    about task updates or state changes, you can supply an HTTP endpoint to
-    receive notifications. See the
-    [wiki page](https://github.com/mesosphere/marathon/wiki/Event-Bus) for
-    details.
-* *[Health Checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)* - check your application's health via HTTP or TCP checks.
+* *JSON/REST API* for easy integration and scriptability
+* *Basic Auth* and *SSL*
+* *Metrics*: available at `/metrics` in JSON format
 
 ## Overview
 
