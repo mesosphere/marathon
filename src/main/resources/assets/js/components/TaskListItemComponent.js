@@ -3,19 +3,6 @@
 define([
   "React",
 ], function(React) {
-  function taskHostPortsToString(task) {
-    var portsString;
-    var ports = task.get("ports");
-    if (ports.length > 1) {
-      portsString = ":[" + ports.join(",") + "]";
-    } else if (ports.length === 1) {
-      portsString = ":" + ports[0];
-    } else {
-      portsString = "";
-    }
-
-    return task.get("host") + portsString;
-  }
 
   return React.createClass({
 
@@ -72,7 +59,7 @@ define([
           <td>
             {task.get("id")}<br />
             <span className="text-muted">
-              {taskHostPortsToString(task)}
+              {task.formatHostPorts()}
             </span>
           </td>
           <td>{statusNode}</td>
