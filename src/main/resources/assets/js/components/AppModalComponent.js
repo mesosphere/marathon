@@ -262,7 +262,7 @@ define([
     },
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
-        this.props.model.save({instances: 0});
+        this.props.model.suspend();
       }
     }
   });
