@@ -154,7 +154,7 @@ define([
 
       var sortKey = this.props.collection.sortKey;
       var sortOrder =
-        (this.props.collection.sortReverse) ?
+        this.props.collection.sortReverse ?
         "▲" :
         "▼";
       return (
@@ -167,14 +167,23 @@ define([
                   disabled={tasksLength === 0}
                   onChange={this.props.onAllTasksToggle} />
               </th>
-              <th onClick={this.sortCollectionBy.bind(null, "id")}>
-                ID {(sortKey === "id") ? sortOrder : null}
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "id")}
+                      className="clickable">
+                  ID {(sortKey === "id") ? sortOrder : null}
+                </span>
               </th>
-              <th onClick={this.sortCollectionBy.bind(null, "status")}>
-                Status {(sortKey === "status") ? sortOrder : null}
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "status")}
+                      className="clickable">
+                  Status {(sortKey === "status") ? sortOrder : null}
+                </span>
               </th>
-              <th className="text-right" onClick={this.sortCollectionBy.bind(null, "updatedAt")}>
-                {(sortKey === "updatedAt") ? sortOrder : null} Updated
+              <th className="text-right">
+                <span onClick={this.sortCollectionBy.bind(null, "updatedAt")}
+                      className="clickable">
+                  {(sortKey === "updatedAt") ? sortOrder : null} Updated
+                </span>
               </th>
             </tr>
           </thead>

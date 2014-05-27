@@ -53,7 +53,7 @@ define([
       var _this = this;
       var sortKey = this.props.collection.sortKey;
       var sortOrder =
-        (this.props.collection.sortReverse) ?
+        this.props.collection.sortReverse ?
         "▲" :
         "▼";
 
