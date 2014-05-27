@@ -95,9 +95,9 @@ class ApplicationHealthCheck @Inject() () {
   @GET
   @Path("{appId}/{versionId}/{port}")
   def isApplicationHealthy(@PathParam("appId") appId:String, @PathParam("versionId") versionId:String, @PathParam("port") port:Int) : Response = {
-    val state = ExternalMarathonIntegrationTest.healthChecks.find{ c =>
-      c.appId==appId && c.versionId==versionId && c.port==port
-    }.fold(true)(_.healthy)
+    def instance = ExternalMarathonIntegrationTest.healthChecks.find{ c => c.appId==appId && c.versionId==versionId && c.port==port }
+    def definition =ExternalMarathonIntegrationTest.healthChecks.find{ c => c.appId==appId && c.versionId==versionId && c.port==0 }
+    val state = instance.orElse(definition).fold(true)(_.healthy)
     if (state) Response.ok().build() else Response.serverError().build()
   }
 }

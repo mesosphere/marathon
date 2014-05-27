@@ -136,7 +136,7 @@ class GroupDeployIntegrationTest
     marathon.createGroup(group)
     waitForEvent("group_change_success")
     val v1Checks = appProxyChecks("proxy", "v1", state=true)
-    val v2Checks = appProxyChecks("proxy", "v2", state=false) //will always fail
+    val v2Checks = appProxyChecks("proxy", "v2", state=true)
 
     When("The group is updated")
     marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v2", 2))))
