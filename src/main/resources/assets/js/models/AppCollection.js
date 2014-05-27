@@ -1,7 +1,7 @@
  define([
   "models/App",
   "models/SortableCollection"
-], function(SortableCollection, App) {
+], function(App, SortableCollection) {
   return SortableCollection.extend({
     model: App,
     initialize: function(models, options) {
