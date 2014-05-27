@@ -108,18 +108,18 @@ define([
                   Command {sortKey === "cmd" ? sortOrder : null}
                 </span>
               </th>
-              <th>
-                <span onClick={this.sortCollectionBy.bind(null, "mem")} className="text-right clickable">
+              <th className="text-right">
+                <span onClick={this.sortCollectionBy.bind(null, "mem")} className="clickable">
                   {sortKey === "mem" ? sortOrder : null} Memory (MB)
                 </span>
               </th>
-              <th>
-                <span onClick={this.sortCollectionBy.bind(null, "cpus")} className="text-right clickable">
+              <th className="text-right">
+                <span onClick={this.sortCollectionBy.bind(null, "cpus")} className="clickable">
                   {sortKey === "cpus" ? sortOrder : null} CPUs
                 </span>
               </th>
-              <th>
-                <span onClick={this.sortCollectionBy.bind(null, "instances")} className="text-right clickable">
+              <th className="text-right">
+                <span onClick={this.sortCollectionBy.bind(null, "instances")} className="clickable">
                   {sortKey === "instances" ? sortOrder : null} Instances
                 </span>
               </th>
