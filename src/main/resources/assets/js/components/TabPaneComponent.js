@@ -10,12 +10,13 @@ define([
       };
     },
     render: function() {
-      var className = this.props.isActive ?
-        "tab-pane active" :
-        "tab-pane";
+      var classSet = React.addons.classSet({
+        "active": this.props.isActive,
+        "tab-pane": true
+      });
 
       return (
-        <div className={className}>
+        <div className={classSet}>
           {this.props.children}
         </div>
       );
