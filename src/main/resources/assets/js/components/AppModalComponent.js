@@ -174,14 +174,22 @@ define([
                 {constraintsNode}
                 <dt>Container</dt>
                 {containerNode}
+                <dt>CPUs</dt>
+                <dd>{model.get("cpus")}</dd>
                 <dt>Environment</dt>
                 {envNode}
                 <dt>Executor</dt>
                 {executorNode}
+                <dt>Instances</dt>
+                <dd>{model.get("instances")}</dd>
+                <dt>Memory (MB)</dt>
+                <dd>{model.get("mem")}</dd>
                 <dt>Ports</dt>
                 {portsNode}
                 <dt>URIs</dt>
                 {urisNode}
+                <dt>Version</dt>
+                <dd>{model.get("version").toLocaleString()}</dd>
               </dl>
             </TabPaneComponent>
           </TogglableTabsComponent>
