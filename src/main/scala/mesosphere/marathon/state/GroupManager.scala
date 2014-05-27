@@ -67,14 +67,14 @@ class GroupManager @Singleton @Inject() (
     val startFromGroup = planRepo.currentVersion(current.id).map {
       case Some(upgrade) =>
         if (!force) throw UpgradeInProgressException(s"Running upgrade for group ${current.id}. Use force flag to override!")
-        (upgrade.target, true)
-      case None => (current, false)
+        upgrade.target
+      case None => current
     }
     val restart = for {
-      (startGroup, inProgress) <- startFromGroup
+      startGroup <- startFromGroup
       storedGroup <- groupRepo.store(group)
       plan <- planRepo.store(DeploymentPlan(current.id, startGroup, storedGroup))
-      result <- plan.deploy(scheduler, inProgress) if result
+      result <- plan.deploy(scheduler, force) if result
     } yield storedGroup
     //remove the upgrade plan after the task has been finished
     restart.andThen(deletePlan(current.id)).andThen(postEvent(group))

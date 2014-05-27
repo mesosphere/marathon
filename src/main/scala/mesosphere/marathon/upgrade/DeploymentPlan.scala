@@ -48,12 +48,11 @@ case class DeploymentPlan(
       origTarget.filter { case (from, to) => from.isUpgrade(to) }.map(_._2))
   }
 
-  def deploy(scheduler: MarathonSchedulerService, inProgress:Boolean): Future[Boolean] = {
+  def deploy(scheduler: MarathonSchedulerService, force:Boolean): Future[Boolean] = {
 
     log.info(s"Deploy group ${target.id}: start:${toStart.map(_.id)}, stop:${toStop.map(_.id)}, scale:${toScale.map(_.id)}, restart:${toRestart.map(_.id)}")
     val updateFuture = toScale.map(to => scheduler.updateApp(to.id, AppUpdate(instances = Some(to.instances))).map(_ => true))
-    val restartFunc = if (inProgress) scheduler.rollback _ else scheduler.upgradeApp _
-    val restartFuture = toRestart.map(app => restartFunc(app, (target.scalingStrategy.minimumHealthCapacity * app.instances).toInt))
+    val restartFuture = toRestart.map(app => scheduler.upgradeApp(app, (target.scalingStrategy.minimumHealthCapacity * app.instances).toInt, force))
     val startFuture = toStart.map(scheduler.startApp(_).map(_ => true))
     val stopFuture = toStop.map(scheduler.stopApp(_).map(_ => true))
     val successFuture = Set(Future.successful(true)) //used, for immediate success, if no action is performed

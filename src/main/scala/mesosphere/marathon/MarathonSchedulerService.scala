@@ -100,19 +100,11 @@ class MarathonSchedulerService @Inject() (
       schedulerActor ? ScaleApp(appName)
     }
 
-  def upgradeApp(app: AppDefinition, keepAlive: Int): Future[Boolean] = {
+  def upgradeApp(app: AppDefinition, keepAlive: Int, force:Boolean=false): Future[Boolean] = {
     // TODO: this should be configurable
     implicit val timeout = Timeout(12.hours)
-    (schedulerActor ? UpgradeApp(app, keepAlive)).map {
-      case CommandFailed(_, reason) => throw reason
-      case _ => true
-    }
-  }
-
-  def rollback(app: AppDefinition, keepAlive: Int): Future[Boolean] = {
-    // TODO: this should be configurable
-    implicit val timeout = Timeout(12.hours)
-    (schedulerActor ? RollbackApp(app, keepAlive)).map {
+    val message = if (force) RollbackApp(app, keepAlive) else UpgradeApp(app, keepAlive)
+    (schedulerActor ? message).map {
       case CommandFailed(_, reason) => throw reason
       case _ => true
     }
