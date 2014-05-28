@@ -57,13 +57,12 @@ class MarathonSchedulerTest extends MarathonSpec {
     val app = AppDefinition(
       id = "testOffers",
       executor = "//cmd",
-      ports = Seq(8080),
+      ports = Seq(31080),
       version = now
     )
     val allApps = Vector(app)
 
-    when(tracker.newTaskId("testOffers"))
-      .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
+    when(tracker.newTaskId("testOffers")).thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
     when(tracker.checkStagedTasks).thenReturn(Seq())
     when(queue.poll()).thenReturn(app)
     when(queue.removeAll()).thenReturn(allApps)
