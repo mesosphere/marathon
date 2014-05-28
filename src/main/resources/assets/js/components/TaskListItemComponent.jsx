@@ -115,6 +115,11 @@ define([
               {task.get("status")}
             </span>
           </td>
+          <td className="text-right">
+            <time dateTime={task.get("version").toISOString()} title={task.get("version").toISOString()}>
+              {task.get("version").toLocaleString()}
+            </time>
+          </td>
           <td className="text-right">{updatedAtNode}</td>
           {
             hasHealth ?

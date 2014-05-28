@@ -98,6 +98,16 @@ define([
       }
       return null;
     },
+    parse: function(data) {
+      // When PUTing the response is a 204 (No content) and should not be
+      // parsed.
+      if (data != null) {
+        var parsedVersion = Date.parse(data.version);
+        if (!isNaN(parsedVersion)) { data.version = new Date(parsedVersion); }
+      }
+
+      return data;
+    },
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
      * "version" value, which when sent prevents any other attributes from being
@@ -129,6 +139,9 @@ define([
 
       return Backbone.Model.prototype.save.call(
         this, allowedAttrs, options);
+    },
+    setAppVersion: function(appVersion) {
+      this.set(_.pick(appVersion.attributes, EDITABLE_ATTRIBUTES));
     },
     suspend: function() {
       this.save({instances: 0});

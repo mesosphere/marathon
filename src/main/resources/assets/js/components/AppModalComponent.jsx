@@ -3,13 +3,16 @@
 define([
   "React",
   "mixins/BackboneMixin",
+  "jsx!components/AppVersionComponent",
+  "jsx!components/AppVersionListComponent",
   "jsx!components/ModalComponent",
   "jsx!components/StackedViewComponent",
   "jsx!components/TabPaneComponent",
   "jsx!components/TaskDetailComponent",
   "jsx!components/TaskViewComponent",
   "jsx!components/TogglableTabsComponent"
-], function(React, BackboneMixin, ModalComponent, StackedViewComponent, TabPaneComponent,
+], function(React, BackboneMixin, AppVersionComponent, AppVersionListComponent,
+    ModalComponent, StackedViewComponent, TabPaneComponent,
     TaskDetailComponent, TaskViewComponent, TogglableTabsComponent) {
 
   var STATES = {
@@ -31,11 +34,29 @@ define([
     componentWillUnmount: function() {
       this.stopPolling();
     },
+    fetchAppVersions: function() {
+      var _this = this;
+      var appVersions = this.state.appVersions;
+
+      if (appVersions == null) {
+        appVersions = new AppVersionCollection({appId: this.props.model.id});
+      }
+
+      appVersions.fetch({
+        success: function() {
+          _this.setState({appVersions: appVersions});
+        }
+      });
+    },
+    getResource: function() {
+      return this.props.model;
+    },
 
     getInitialState: function() {
       return {
         activeTask: null,
         activeViewIndex: 0,
+        appVersions: null,
         fetchState: STATES.STATE_LOADING
       };
     },
@@ -65,7 +86,8 @@ define([
         this.refs.modalComponent.destroy();
       }
     },
-    onTasksKilled:  function(options) {
+
+    onTasksKilled: function(options) {
       var instances;
       var _options = options || {};
       if (_options.scale) {
@@ -76,6 +98,21 @@ define([
       // Force an update since React doesn't know a key was removed from
       // `selectedTasks`.
       this.forceUpdate();
+    },
+
+    refreshTaskList: function() {
+      this.refs.taskList.fetchTasks();
+    },
+
+    rollbackToAppVersion: function(appVersion) {
+      var _this = this;
+
+      appVersion.fetch({
+        success: function() {
+          _this.props.model.setAppVersion(appVersion);
+          _this.props.model.save();
+        }
+      });
     },
 
     render: function() {
@@ -182,31 +219,16 @@ define([
                   task={this.state.activeTask} />
               </StackedViewComponent>
             </TabPaneComponent>
-            <TabPaneComponent id="configuration">
-              <dl className="dl-horizontal">
-                <dt>Command</dt>
-                {cmdNode}
-                <dt>Constraints</dt>
-                {constraintsNode}
-                <dt>Container</dt>
-                {containerNode}
-                <dt>CPUs</dt>
-                <dd>{model.get("cpus")}</dd>
-                <dt>Environment</dt>
-                {envNode}
-                <dt>Executor</dt>
-                {executorNode}
-                <dt>Instances</dt>
-                <dd>{model.get("instances")}</dd>
-                <dt>Memory (MB)</dt>
-                <dd>{model.get("mem")}</dd>
-                <dt>Ports</dt>
-                {portsNode}
-                <dt>URIs</dt>
-                {urisNode}
-                <dt>Version</dt>
-                {versionNode}
-              </dl>
+            <TabPaneComponent
+                id="configuration"
+                onActivate={this.fetchAppVersions}>
+              <h4>Current Version</h4>
+              <AppVersionComponent app={this.props.model} />
+              <h4>Previous Versions</h4>
+              <AppVersionListComponent
+                app={this.props.model}
+                appVersions={this.state.appVersions == null ? null : this.state.appVersions.slice(1)}
+                onRollback={this.rollbackToAppVersion} />
             </TabPaneComponent>
           </TogglableTabsComponent>
         </ModalComponent>
