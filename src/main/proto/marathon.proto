@@ -89,6 +89,7 @@ message StorageVersion {
 
 message ScalingStrategyDefinition {
   required double minimumHealthCapacity = 1;
+  optional double maximumRunningFactor = 2;
 }
 
 message GroupDefinition {

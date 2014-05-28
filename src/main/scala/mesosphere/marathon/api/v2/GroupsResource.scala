@@ -3,16 +3,16 @@ package mesosphere.marathon.api.v2
 import javax.ws.rs._
 import javax.ws.rs.core.{Response, MediaType}
 import javax.inject.Inject
-import javax.validation.{ConstraintViolationException, Validation, Valid}
+import javax.validation.{ConstraintViolationException, Validation}
 import mesosphere.marathon.state.{Timestamp, GroupManager}
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
-import mesosphere.marathon.api.{Responses, PATCH}
+import mesosphere.marathon.api.Responses
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConverters._
-import org.hibernate.validator.internal.engine.{MessageInterpolatorContext, ConstraintViolationImpl}
+import org.hibernate.validator.internal.engine.ConstraintViolationImpl
 import java.lang.annotation.ElementType
-import org.hibernate.validator.internal.engine.path.{NodeImpl, PathImpl}
+import org.hibernate.validator.internal.engine.path.PathImpl
 
 @Path("v2/groups")
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -73,18 +73,6 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
     result(res, defaultWait)
   }
 
-  /* patch support is postponed
-  @PATCH
-  @Consumes(Array(MediaType.APPLICATION_JSON))
-  @Path("{id}")
-  def patch( @PathParam("id") id:String,
-             update: GroupUpdate,
-             @DefaultValue("false") @QueryParam("force") force:Boolean) : Response = {
-    groupManager.update(id, update.apply _, force)
-    Response.noContent().build()
-  }
-  */
-
   @DELETE
   @Path("{id}")
   def delete( @PathParam("id") id: String ) : Response = {
@@ -103,15 +91,36 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
         PathImpl.createPathFromString("apps."+e.getPropertyPath),
         e.getConstraintDescriptor, ElementType.FIELD, e.getExecutableParameters)
     }
-    val min = if (group.scalingStrategy.minimumHealthCapacity<0) Some("is less than 0") else None
-    val max = if (group.scalingStrategy.minimumHealthCapacity>1) Some("is greater than 1") else None
-    val scalingErrors = min orElse max map { msg =>
+    val healthCapacity =
+      if (group.scalingStrategy.minimumHealthCapacity<0)
+        Some("is less than 0")
+      else if (group.scalingStrategy.minimumHealthCapacity>1)
+        Some("is greater than 1")
+      else None
+
+    val runningMin = group.scalingStrategy.maximumRunningFactor.collect {
+      case x if x < 1 =>
+        "is less than 1"
+
+      case x if x <= group.scalingStrategy.minimumHealthCapacity =>
+        "is less than or equal to minimumHealthCapacity"
+    }
+
+    val scalingErrors = healthCapacity map { msg =>
       ConstraintViolationImpl.forParameterValidation[Group](
         msg, msg, classOf[Group], group, group.scalingStrategy, group.scalingStrategy,
         PathImpl.createPathFromString("scalingStrategy.minimumHealthCapacity"),
         null, ElementType.FIELD, Array())
     }
-    val errors = groupErrors ++ appErrors ++ scalingErrors
+
+    val capacityErrors = runningMin map { msg =>
+      ConstraintViolationImpl.forParameterValidation[Group](
+        msg, msg, classOf[Group], group, group.scalingStrategy, group.scalingStrategy,
+        PathImpl.createPathFromString("scalingStrategy.maximumRunningFactor"),
+        null, ElementType.FIELD, Array())
+    }
+
+    val errors = groupErrors ++ appErrors ++ scalingErrors ++ capacityErrors
     if (!errors.isEmpty) throw new ConstraintViolationException("Group is not valid", errors.toSet.asJava)
   }
 }

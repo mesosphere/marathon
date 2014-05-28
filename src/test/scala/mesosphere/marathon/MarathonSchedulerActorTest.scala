@@ -175,7 +175,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
-        case Upgrade(_, `app`, 1) =>
+        case Upgrade(_, `app`, 1, _) =>
           sender ! true
           NoAutoPilot
         case _ => NoAutoPilot
@@ -203,7 +203,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
           lock.release()
           KeepRunning
 
-        case Upgrade(_, `app`, 1) =>
+        case Upgrade(_, `app`, 1, _) =>
           sender ! true
           NoAutoPilot
 

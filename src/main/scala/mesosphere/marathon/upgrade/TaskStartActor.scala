@@ -12,10 +12,10 @@ class TaskStartActor(
   taskQueue: TaskQueue,
   eventBus: EventStream,
   app: AppDefinition,
+  nrToStart: Int,
   promise: Promise[Boolean]
 ) extends Actor with ActorLogging {
 
-  val nrToStart: Int = app.instances
   var running: Int = 0
   val AppID = app.id
   val Version = app.version.toString

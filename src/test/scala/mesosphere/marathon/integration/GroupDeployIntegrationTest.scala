@@ -36,13 +36,13 @@ class GroupDeployIntegrationTest
     waitForEvent("group_change_success")
 
     When("The group gets updated")
-    marathon.updateGroup(group.copy(scalingStrategy=ScalingStrategy(1)))
+    marathon.updateGroup(group.copy(scalingStrategy=ScalingStrategy(1, None)))
     waitForEvent("group_change_success")
 
     Then("The group is updated")
     val result = marathon.group("test2")
     result.code should be(200)
-    result.value.scalingStrategy should be(ScalingStrategy(1))
+    result.value.scalingStrategy should be(ScalingStrategy(1, None))
   }
 
   test("deleting an existing group gives a 200 http response") {
@@ -70,7 +70,7 @@ class GroupDeployIntegrationTest
   test("create a group with applications to start") {
     Given("A group with one application")
     val app = AppDefinition(id="sleep", executor="//cmd", cmd="sleep 100", instances=2, cpus=0.1, mem=16)
-    val group = Group("sleep", ScalingStrategy(0), Seq(app))
+    val group = Group("sleep", ScalingStrategy(0, None), Seq(app))
 
     When("The group is created")
     marathon.createGroup(group)
@@ -84,13 +84,13 @@ class GroupDeployIntegrationTest
   test("update a group with applications to restart") {
     Given("A group with one application started")
     val app1V1 = AppDefinition(id="app1", executor="//cmd", cmd="tail -f /dev/null", instances=2, cpus=0.1, mem=16)
-    marathon.createGroup(Group("sleep", ScalingStrategy(0), Seq(app1V1)))
+    marathon.createGroup(Group("sleep", ScalingStrategy(0, None), Seq(app1V1)))
     waitForEvent("group_change_success")
     waitForTasks(app1V1.id, app1V1.instances)
 
     When("The group is updated, with a changed application")
     val app1V2 = AppDefinition(id="app1", executor="//cmd", cmd="tail -F /dev/null", instances=1, cpus=0.1, mem=16)
-    marathon.updateGroup(Group("sleep", ScalingStrategy(0), Seq(app1V2)))
+    marathon.updateGroup(Group("sleep", ScalingStrategy(0, None), Seq(app1V2)))
     waitForEvent("group_change_success", 60.seconds)
 
     Then("A success event is send and the application has been started")
@@ -101,7 +101,7 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 1)
-    val group = Group(name, ScalingStrategy(1), Seq(proxy))
+    val group = Group(name, ScalingStrategy(1, None), Seq(proxy))
 
     When("The group is created")
     marathon.createGroup(group)
@@ -114,7 +114,7 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 1)
-    val group = Group(name, ScalingStrategy(1), Seq(proxy))
+    val group = Group(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
     val check = appProxyChecks("proxy", "v1", state=true).head
@@ -132,7 +132,7 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 2)
-    val group = Group(name, ScalingStrategy(1), Seq(proxy))
+    val group = Group(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
     val v1Checks = appProxyChecks("proxy", "v1", state=true)
@@ -157,7 +157,7 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 2)
-    val group = Group(name, ScalingStrategy(1), Seq(proxy))
+    val group = Group(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
 
@@ -184,7 +184,7 @@ class GroupDeployIntegrationTest
     Given("A group with one application with an upgrade in progress")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 2)
-    val group = Group(name, ScalingStrategy(1), Seq(proxy))
+    val group = Group(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
     appProxyChecks("proxy", "v2", state=false) //will always fail

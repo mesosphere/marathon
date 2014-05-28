@@ -9,19 +9,25 @@ import scala.collection.mutable
 import org.apache.mesos.Protos.TaskID
 import mesosphere.marathon.{TaskUpgradeCancelledException, TaskFailedException}
 import akka.event.EventStream
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.tasks.TaskQueue
 
 class TaskReplaceActor(
   driver: SchedulerDriver,
+  taskQueue: TaskQueue,
   eventBus: EventStream,
-  appId: String,
-  version: String,
-  nrToStart: Int,
+  app: AppDefinition,
+  var alreadyStarted: Int,
   tasksToKill: Set[MarathonTask],
   promise: Promise[Boolean]
 ) extends Actor with ActorLogging {
 
   eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
   eventBus.subscribe(self, classOf[HealthStatusChanged])
+
+  val appId = app.id
+  val version = app.version.toString
+  val nrToStart = app.instances
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
@@ -42,6 +48,11 @@ class TaskReplaceActor(
         val killing = toKill.dequeue()
         log.info(s"Killing old task $killing because $taskId became reachable")
         driver.killTask(buildTaskId(killing))
+
+        if (alreadyStarted < nrToStart) {
+          log.info(s"Starting new task for app ${app.id}")
+          taskQueue.add(app)
+        }
       }
       if (healthy.size == nrToStart) {
         log.info(s"All tasks for $appId are healthy")

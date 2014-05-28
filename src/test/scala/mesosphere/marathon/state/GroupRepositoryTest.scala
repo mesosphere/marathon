@@ -11,7 +11,7 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
 
   test("Store canary strategy") {
     val store = mock[MarathonStore[Group]]
-    val group = Group("g1", ScalingStrategy(1), Seq.empty)
+    val group = Group("g1", ScalingStrategy(1, None), Seq.empty)
     val future = Future.successful(Some(group))
     val versionedKey = s"g1:${group.version}"
     val appRepo = mock[AppRepository]
@@ -28,7 +28,7 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
   }
 
   test("group back and forth again with rolling strategy") {
-    val group = Group("g1", ScalingStrategy(1), Seq.empty)
+    val group = Group("g1", ScalingStrategy(1, None), Seq.empty)
     val proto = group.toProto
     val merged = Group.empty().mergeFromProto(proto)
     group should be(merged)

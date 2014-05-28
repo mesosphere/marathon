@@ -5,16 +5,19 @@ import mesosphere.marathon.state.{MarathonState, Timestamp}
 import mesosphere.marathon.Protos._
 import scala.collection.JavaConversions._
 import mesosphere.marathon.api.validation.FieldConstraints.{FieldPattern, FieldNotEmpty}
-import javax.validation.Valid
+import java.lang.{Double => JDouble}
 
 case class ScalingStrategy(
-
-  minimumHealthCapacity: java.lang.Double
-
+  minimumHealthCapacity: JDouble,
+  maximumRunningFactor: Option[Double]
 ) {
-
   def toProto : ScalingStrategyDefinition = {
-    ScalingStrategyDefinition.newBuilder().setMinimumHealthCapacity(minimumHealthCapacity).build()
+    val strategy = ScalingStrategyDefinition.newBuilder()
+      .setMinimumHealthCapacity(minimumHealthCapacity)
+
+    maximumRunningFactor.foreach(strategy.setMaximumRunningFactor)
+
+    strategy.build()
   }
 }
 
@@ -23,18 +26,25 @@ case class Group (
   @FieldNotEmpty
   @FieldPattern(regexp = "^[A-Za-z0-9_.-]+$")
   id: String,
-
   scalingStrategy: ScalingStrategy,
-
   apps: Seq[AppDefinition],
-
   version: Timestamp = Timestamp.now()
 ) extends MarathonState[GroupDefinition, Group] {
 
   override def mergeFromProto(msg: GroupDefinition): Group = {
+    val scalingStrategy = msg.getScalingStrategy
+    val maximumRunningFactor =
+      if (scalingStrategy.hasMaximumRunningFactor)
+        Some(msg.getScalingStrategy.getMaximumRunningFactor)
+      else
+        None
+
     Group(
       id = msg.getId,
-      scalingStrategy = ScalingStrategy(msg.getScalingStrategy.getMinimumHealthCapacity),
+      scalingStrategy = ScalingStrategy(
+        scalingStrategy.getMinimumHealthCapacity,
+        maximumRunningFactor
+      ),
       apps = msg.getAppsList.map(AppDefinition.fromProto),
       version = Timestamp(msg.getVersion)
     )
@@ -56,5 +66,5 @@ case class Group (
 }
 
 object Group {
-  def empty() : Group = Group("", ScalingStrategy(0), Seq.empty)
+  def empty() : Group = Group("", ScalingStrategy(0, None), Seq.empty)
 }

@@ -28,10 +28,12 @@ class TaskStartActorTest
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp", instances = 5)
 
-    val ref = system.actorOf(Props(classOf[TaskStartActor],
+    val ref = system.actorOf(Props(
+      classOf[TaskStartActor],
       taskQueue,
       system.eventStream,
       app,
+      app.instances,
       promise))
 
     watch(ref)
@@ -51,10 +53,12 @@ class TaskStartActorTest
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp", instances = 5)
 
-    val ref = system.actorOf(Props(classOf[TaskStartActor],
+    val ref = system.actorOf(Props(
+      classOf[TaskStartActor],
       taskQueue,
       system.eventStream,
       app,
+      app.instances,
       promise))
 
     watch(ref)
@@ -77,10 +81,12 @@ class TaskStartActorTest
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp", instances = 5)
 
-    val ref = system.actorOf(Props(classOf[TaskStartActor],
+    val ref = system.actorOf(Props(
+      classOf[TaskStartActor],
       taskQueue,
       system.eventStream,
       app,
+      app.instances,
       promise))
 
     watch(ref)

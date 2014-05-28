@@ -59,6 +59,7 @@ class AppUpgradeActorTest
       system.eventStream,
       app,
       1,
+      None,
       testActor
     )))
 

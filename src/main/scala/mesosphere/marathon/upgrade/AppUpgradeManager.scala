@@ -22,7 +22,7 @@ class AppUpgradeManager(
   var runningUpgrades: mutable.Map[AppID, ActorRef] = mutable.Map.empty
 
   def receive = {
-    case Upgrade(driver, app, keepAlive) if !runningUpgrades.contains(app.id) =>
+    case Upgrade(driver, app, keepAlive, maxRunning) if !runningUpgrades.contains(app.id) =>
       val ref = context.actorOf(
         Props(
           classOf[AppUpgradeActor],
@@ -33,6 +33,7 @@ class AppUpgradeManager(
           eventBus,
           app,
           keepAlive,
+          maxRunning,
           sender))
       runningUpgrades += app.id -> ref
 
@@ -63,7 +64,7 @@ class AppUpgradeManager(
 }
 
 object AppUpgradeManager {
-  case class Upgrade(driver: SchedulerDriver, app: AppDefinition, keepAlive: Int)
+  case class Upgrade(driver: SchedulerDriver, app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None)
   case class CancelUpgrade(appId: String)
 
   case class UpgradeFinished(appId: String)

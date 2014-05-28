@@ -17,9 +17,9 @@ case class DeploymentPlan(
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
-  def originalIds : Set[String] = original.apps.map(_.id).toSet
+  def originalIds: Set[String] = original.apps.map(_.id).toSet
 
-  def targetIds : Set[String] = target.apps.map(_.id).toSet
+  def targetIds: Set[String] = target.apps.map(_.id).toSet
 
   override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan = mergeFromProto(DeploymentPlanDefinition.parseFrom(bytes))
 
@@ -48,11 +48,19 @@ case class DeploymentPlan(
       origTarget.filter { case (from, to) => from.isUpgrade(to) }.map(_._2))
   }
 
-  def deploy(scheduler: MarathonSchedulerService, force:Boolean): Future[Boolean] = {
-
+  def deploy(scheduler: MarathonSchedulerService, force: Boolean): Future[Boolean] = {
     log.info(s"Deploy group ${target.id}: start:${toStart.map(_.id)}, stop:${toStop.map(_.id)}, scale:${toScale.map(_.id)}, restart:${toRestart.map(_.id)}")
+
     val updateFuture = toScale.map(to => scheduler.updateApp(to.id, AppUpdate(instances = Some(to.instances))).map(_ => true))
-    val restartFuture = toRestart.map(app => scheduler.upgradeApp(app, (target.scalingStrategy.minimumHealthCapacity * app.instances).toInt, force))
+    val restartFuture = toRestart.map { app =>
+      val keepAlive = (target.scalingStrategy.minimumHealthCapacity * app.instances).toInt
+      scheduler.upgradeApp(
+        app,
+        keepAlive,
+        // we need to start at least 1 instance
+        target.scalingStrategy.maximumRunningFactor.map( x => math.max((x * app.instances).toInt, keepAlive + 1)),
+        force = force)
+    }
     val startFuture = toStart.map(scheduler.startApp(_).map(_ => true))
     val stopFuture = toStop.map(scheduler.stopApp(_).map(_ => true))
     val successFuture = Set(Future.successful(true)) //used, for immediate success, if no action is performed

@@ -6,7 +6,6 @@ import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
 import akka.event.EventStream
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Promise
-import scala.collection.immutable
 import akka.actor.SupervisorStrategy.Stop
 import akka.pattern.pipe
 
@@ -18,6 +17,7 @@ class AppUpgradeActor(
   eventBus: EventStream,
   app: AppDefinition,
   keepAlive: Int,
+  maxRunning: Option[Int],
   receiver: ActorRef
 ) extends Actor with ActorLogging {
   import context.dispatcher
@@ -28,6 +28,10 @@ class AppUpgradeActor(
   val stopPromise = Promise[Boolean]()
   // sort by startedAt to kill newer instances first
   val oldInstances = taskTracker.get(app.id).toList.sortWith(_.getStartedAt > _.getStartedAt)
+  val nrToStartImmediately: Int =
+    maxRunning.fold(app.instances) { x =>
+      math.min(app.instances, x - keepAlive)
+    }
 
   override def preStart(): Unit = {
     startReplacer()
@@ -61,10 +65,10 @@ class AppUpgradeActor(
         Props(
           classOf[TaskReplaceActor],
           driver,
+          taskQueue,
           eventBus,
-          app.id,
-          app.version.toString,
-          app.instances,
+          app,
+          nrToStartImmediately,
           oldInstances.drop(app.instances - keepAlive).toSet,
           replacePromise), "Replacer")
     } else {
@@ -94,6 +98,7 @@ class AppUpgradeActor(
           taskQueue,
           eventBus,
           app,
+          nrToStartImmediately,
           startPromise), "Starter")
     } else {
       startPromise.success(true)

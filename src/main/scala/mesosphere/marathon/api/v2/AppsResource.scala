@@ -80,23 +80,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @PUT
-  @Path("restart/{id}")
-  @Timed
-  def restart(
-    @Context req: HttpServletRequest,
-    @PathParam("id") id: String,
-    @QueryParam("keepAlive") keepAlive: Int
-  ): Response = {
-    service.getApp(id) match {
-      case Some(app) =>
-        service.upgradeApp(app, keepAlive)
-        Response.ok().build()
-
-      case None => Responses.unknownApp(id)
-    }
-  }
-
   @DELETE
   @Path("{id}")
   @Timed

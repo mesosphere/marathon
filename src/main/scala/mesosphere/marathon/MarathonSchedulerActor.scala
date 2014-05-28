@@ -67,17 +67,17 @@ class MarathonSchedulerActor(
         updateApp(driver, appId, update).sendAnswer(origSender, cmd)
       }
 
-    case cmd @ UpgradeApp(app, keepAlive) =>
+    case cmd @ UpgradeApp(app, keepAlive, maxRunning) =>
       val origSender = sender
       locking(app.id, origSender, cmd) {
-        upgradeApp(driver, app, keepAlive).sendAnswer(origSender, cmd)
+        upgradeApp(driver, app, keepAlive, maxRunning).sendAnswer(origSender, cmd)
       }
 
-    case cmd @ RollbackApp(app, keepAlive) =>
+    case cmd @ RollbackApp(app, keepAlive, maxRunning) =>
       val origSender = sender
       upgradeManager ! CancelUpgrade(app.id)
       locking(app.id, origSender, cmd, blocking = true) {
-        upgradeApp(driver, app, keepAlive).sendAnswer(origSender, cmd)
+        upgradeApp(driver, app, keepAlive, maxRunning).sendAnswer(origSender, cmd)
       }
 
     case cmd @ ReconcileTasks =>
@@ -145,7 +145,7 @@ object MarathonSchedulerActor {
     def answer = AppUpdated(appId)
   }
 
-  case class UpgradeApp(app: AppDefinition, keepAlive: Int) extends Command {
+  case class UpgradeApp(app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None) extends Command {
     def answer = AppUpgraded(app)
   }
 
@@ -161,7 +161,7 @@ object MarathonSchedulerActor {
     def answer = TasksLaunched(tasks)
   }
 
-  case class RollbackApp(app: AppDefinition, keepAlive: Int) extends Command {
+  case class RollbackApp(app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None) extends Command {
     def answer = AppRolledBack(app)
   }
 
@@ -262,13 +262,14 @@ trait SchedulerActions { this: Actor with ActorLogging =>
   def upgradeApp(
     driver: SchedulerDriver,
     app: AppDefinition,
-    keepAlive: Int
+    keepAlive: Int,
+    maxRunning: Option[Int]
   ): Future[Boolean] = {
     appRepository.store(app) flatMap {
       case Some(appDef) =>
         // TODO: this should be configurable
         implicit val timeout = Timeout(12.hours)
-        val res = (upgradeManager ? Upgrade(driver, app, keepAlive)).mapTo[Boolean]
+        val res = (upgradeManager ? Upgrade(driver, app, keepAlive, maxRunning)).mapTo[Boolean]
 
         res andThen {
           case Success(_) =>
