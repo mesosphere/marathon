@@ -76,7 +76,7 @@ There are following parameters, that can be used to configure the test setup
   Default value is .
 - zk: the url of the zookeeper instance(s). 
   Default is zk://localhost:2181/test.
-- mesos: the mesos url to connect from marathon. 
+- master: the url of the mesos master to connect from marathon. 
   Default is local.
 - mesosLib: the path to the native mesos library. This parameter will only take effect, 
   if the environment variable MESOS_NATIVE_LIBRARY is not set.
@@ -89,7 +89,7 @@ There are following parameters, that can be used to configure the test setup
 The test config can be given via the command line as:
 
 ```
-$> mvn -DtestConfig="cwd=/,mesos=local,httpPort=12345" -Dintegration=true test
+$> mvn -DtestConfig="cwd=/,master=local,httpPort=12345" -Dintegration=true test
 ```
  
 

@@ -112,7 +112,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     config = IntegrationTestConfig(configMap)
     super.beforeAll(configMap)
     ProcessKeeper.startMesosLocal()
-    startMarathon(config.singleMarathonPort, "--master", config.mesos, "--event_subscriber", "http_callback")
+    startMarathon(config.singleMarathonPort, "--master", config.master, "--event_subscriber", "http_callback")
     ProcessKeeper.startHttpService(config.httpPort, config.cwd)
     ExternalMarathonIntegrationTest.listener += this
     marathon.cleanUp(withSubscribers = true)

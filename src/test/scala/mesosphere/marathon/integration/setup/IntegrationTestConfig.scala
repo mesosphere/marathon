@@ -16,7 +16,7 @@ case class IntegrationTestConfig(
   zk:String,
 
   //url to mesos master. defaults to local
-  mesos:String,
+  master:String,
 
   //mesosLib: path to the native mesos lib. Defaults to /usr/local/lib/libmesos.dylib
   mesosLib:String,
@@ -30,13 +30,15 @@ case class IntegrationTestConfig(
 
 object IntegrationTestConfig {
   def apply(config:ConfigMap) : IntegrationTestConfig = {
-    val cwd = config.getOptional[String]("cwd").getOrElse(".")
-    val zk = config.getOptional[String]("zk").getOrElse("zk://localhost:2181/test")
-    val mesos = config.getOptional[String]("mesos").getOrElse("local")
-    val mesosLib = config.getOptional[String]("mesosLib").getOrElse("/usr/local/lib/libmesos.dylib")
-    val httpPort = config.getOptional[Int]("httpPort").getOrElse(11211 + (math.random*100).toInt)
-    val singleMarathonPort = config.getOptional[Int]("httpPort").getOrElse(8080 + (math.random*100).toInt)
-    IntegrationTestConfig(cwd, zk, mesos, mesosLib, singleMarathonPort, httpPort)
+    def string(name:String, default:String) = config.getOptional[String](name).getOrElse(default)
+    def int(name:String, default:Int) = config.getOptional[String](name).fold(default)(_.toInt)
+    val cwd = string("cwd", ".")
+    val zk = string("zk", "zk://localhost:2181/test")
+    val master = string("master", "local")
+    val mesosLib = string("mesosLib", "/usr/local/lib/libmesos.dylib")
+    val httpPort = int("httpPort", 11211 + (math.random*100).toInt)
+    val singleMarathonPort = int("singleMarathonPort", 8080 + (math.random*100).toInt)
+    IntegrationTestConfig(cwd, zk, master, mesosLib, singleMarathonPort, httpPort)
   }
 }
 
