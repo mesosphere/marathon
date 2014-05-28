@@ -53,7 +53,8 @@ case class DeploymentPlan(
 
     val updateFuture = toScale.map(to => scheduler.updateApp(to.id, AppUpdate(instances = Some(to.instances))).map(_ => true))
     val restartFuture = toRestart.map { app =>
-      val keepAlive = (target.scalingStrategy.minimumHealthCapacity * app.instances).toInt
+      // call 'ceil' to ensure that the minimumHealthCapacity is not undershot because of rounding
+      val keepAlive = (target.scalingStrategy.minimumHealthCapacity * app.instances).ceil.toInt
       scheduler.upgradeApp(
         app,
         keepAlive,
