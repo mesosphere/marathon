@@ -44,6 +44,13 @@ define([
     getResource: function() {
       return this.props.collection;
     },
+    handleThToggleClick: function(event) {
+      // If the click happens on the checkbox, let the checkbox's onchange event
+      // handler handle it and skip handling the event here.
+      if (event.target.nodeName !== "INPUT") {
+        this.props.onAllTasksToggle();
+      }
+    },
     render: function() {
       var taskNodes;
       var _this = this;
@@ -101,7 +108,7 @@ define([
         <table className="table">
           <thead>
             <tr>
-              <th style={{width: "1px"}}>
+              <th className="clickable" width="1" onClick={this.handleThToggleClick}>
                 <input type="checkbox"
                   checked={allTasksSelected}
                   disabled={tasksLength === 0}
