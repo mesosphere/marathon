@@ -12,6 +12,7 @@ define([
   var UPDATE_INTERVAL = 2000;
 
   return React.createClass({
+    mixins: [BackboneMixin],
     componentDidMount: function() {
       this.startPolling();
     },
@@ -43,7 +44,6 @@ define([
     getResource: function() {
       return this.props.collection;
     },
-    mixins: [BackboneMixin],
     render: function() {
       var taskNodes;
       var _this = this;
@@ -98,7 +98,7 @@ define([
         "▲" :
         "▼";
       return (
-        <table className="table table-selectable">
+        <table className="table">
           <thead>
             <tr>
               <th style={{width: "1px"}}>

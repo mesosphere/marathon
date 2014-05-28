@@ -48,6 +48,11 @@ th {
   font-weight: 200;
 }
 
+a:hover,
+a:focus {
+  color: #3C729D;
+}
+
 .badge {
   background-color: #B8E8EF;
   color: #333;
