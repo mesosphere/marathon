@@ -10,6 +10,8 @@ define([
 
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
     "executor", "id", "instances", "mem", "ports", "uris"];
+  var VALID_ID_PATTERN = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
+  var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
 
   return Backbone.Model.extend({
     defaults: function() {
@@ -20,7 +22,7 @@ define([
         cpus: 0.1,
         env: {},
         executor: "",
-        id: _.uniqueId("app_"),
+        id: _.uniqueId("app-"),
         instances: 1,
         mem: 16.0,
         ports: [0],
@@ -108,9 +110,14 @@ define([
           new ValidationError("instances", "Instances must be a non-negative Number"));
       }
 
-      if (!_.isString(attrs.id) || attrs.id.length < 1) {
+      if (!_.isString(attrs.id) || attrs.id.length < 1 ||
+          !VALID_ID_REGEX.test(attrs.id)) {
         errors.push(
-          new ValidationError("id", "ID must be a non-empty String"));
+          new ValidationError(
+            "id",
+            "ID must be a valid hostname (may contain only digits, dashes, dots, and lowercase letters)"
+          )
+        );
       }
 
       if (!_.every(attrs.ports, function(p) { return _.isNumber(p); })) {
@@ -136,5 +143,7 @@ define([
 
       if (errors.length > 0) return errors;
     }
+  }, {
+    VALID_ID_PATTERN: VALID_ID_PATTERN
   });
 });

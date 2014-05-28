@@ -5,9 +5,12 @@ define([
   "Underscore",
   "React",
   "mixins/BackboneMixin",
+  "models/App",
   "jsx!components/FormGroupComponent",
   "jsx!components/ModalComponent"
-], function($, _, React, BackboneMixin, FormGroupComponent, ModalComponent) {
+], function($, _, React, BackboneMixin, App, FormGroupComponent,
+      ModalComponent) {
+
   return React.createClass({
     destroy: function() {
       this.refs.modalComponent.destroy();
@@ -71,7 +74,11 @@ define([
                   attribute="id"
                   label="ID"
                   model={model}>
-                <input autoFocus required />
+                <input
+                  autoFocus
+                  pattern={App.VALID_ID_PATTERN}
+                  required
+                  title="Must be a valid hostname (may contain only digits, dashes, dots, and lowercase letters)" />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="cpus"

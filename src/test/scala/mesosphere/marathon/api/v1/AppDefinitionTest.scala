@@ -79,6 +79,24 @@ class AppDefinitionTest extends MarathonSpec {
       "{javax.validation.constraints.Pattern.message}"
     )
 
+    shouldViolate(
+      app.copy(id = "-dash-disallowed-at-start"),
+      "id",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldViolate(
+      app.copy(id = "dash-disallowed-at-end-"),
+      "id",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldViolate(
+      app.copy(id = "uppercaseLettersNoGood"),
+      "id",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
     shouldNotViolate(
       app.copy(id = "ab"),
       "id",

@@ -19,16 +19,12 @@ import java.lang.{Integer => JInt, Double => JDouble}
 import mesosphere.mesos.protos.{Resource, ScalarResource}
 
 
-/**
- * @author Tobi Knaup
- */
-
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppDefinition(
 
   @FieldNotEmpty
-  @FieldPattern(regexp = "^[a-z0-9.-]+$")
+  @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$")
   id: String = "",
 
   cmd: String = "",
