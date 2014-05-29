@@ -62,10 +62,14 @@ define(['JSXTransformer'], function (JSXTransformer) {
             }
         },
  
-        version: '0.1',
+        version: '0.0.2',
  
         load: function (name, parentRequire, load, config) {
-            var path = parentRequire.toUrl(/\.(js)$/.test(name) ? name : name + '.js');
+            config = config.jsx || {};
+            var ext = config.extension || 'js';
+            var regex = new RegExp("\.(" + ext + ")$");
+            var path = parentRequire.toUrl(regex.test(name) ? name : name + '.' + ext);
+
             fetchText(path, function (text) {
                 try {
                     if (-1 === text.indexOf('React.DOM')) {
