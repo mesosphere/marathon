@@ -9,21 +9,6 @@ define([
   var DATE_ATTRIBUTES = ["stagedAt", "startedAt", "version"];
 
   return Backbone.Model.extend({
-    formatHostPorts: function() {
-      var portsString;
-      var ports = this.get("ports");
-
-      if (ports.length > 1) {
-        portsString = ":[" + ports.join(",") + "]";
-      } else if (ports.length === 1) {
-        portsString = ":" + ports[0];
-      } else {
-        portsString = "";
-      }
-
-      return this.get("host") + portsString;
-    },
-
     isStarted: function() {
       return this.get("status") === STATUS_STARTED;
     },

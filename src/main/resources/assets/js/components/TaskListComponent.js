@@ -12,6 +12,7 @@ define([
   var UPDATE_INTERVAL = 2000;
 
   return React.createClass({
+    mixins: [BackboneMixin],
     componentDidMount: function() {
       this.startPolling();
     },
@@ -43,7 +44,13 @@ define([
     getResource: function() {
       return this.props.collection;
     },
-    mixins: [BackboneMixin],
+    handleThToggleClick: function(event) {
+      // If the click happens on the checkbox, let the checkbox's onchange event
+      // handler handle it and skip handling the event here.
+      if (event.target.nodeName !== "INPUT") {
+        this.props.onAllTasksToggle();
+      }
+    },
     render: function() {
       var taskNodes;
       var _this = this;
@@ -98,10 +105,10 @@ define([
         "▲" :
         "▼";
       return (
-        <table className="table table-selectable">
+        <table className="table">
           <thead>
             <tr>
-              <th style={{width: "1px"}}>
+              <th className="clickable" width="1" onClick={this.handleThToggleClick}>
                 <input type="checkbox"
                   checked={allTasksSelected}
                   disabled={tasksLength === 0}
