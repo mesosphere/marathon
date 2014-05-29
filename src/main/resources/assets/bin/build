@@ -32,4 +32,3 @@ rm -rf $BUILD_DIR
 
 # Remove all compiled files but the desired `main.js`
 find $DIST_DIR -not -name 'main.js' -not -name 'dist' | xargs rm -rf
-gzip < $DIST_DIR/main.js > $DIST_DIR/main.js.gz
