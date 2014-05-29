@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd "$(dirname "$0")"/..
+
 BUILD_DIR=js/build
 DIST_DIR=js/dist
 SRC_DIR=js
