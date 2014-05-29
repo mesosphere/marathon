@@ -36,7 +36,7 @@ Create and start a new application.
 
 The full JSON format of an application resource is as follows:
 
-```json
+```
 {
     "cmd": "env && sleep 300",
     "constraints": [
@@ -86,20 +86,20 @@ The full JSON format of an application resource is as follows:
 }
 ```
 
-* _`constraints`:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER",
+* `constraints`: Valid constraint operators are one of ["UNIQUE", "CLUSTER",
   "GROUP_BY"]. For additional information on using placement constraints see
   the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constraints).
-* _`container`:_ Additional data passed to the container on application launch.
+* `container`: Additional data passed to the container on application launch.
   These consist of an "image" and an array of string options. The meaning of
   this data is fully dependent upon the executor. Furthermore, _it is invalid to
   pass container options when using the default command executor_.
-
-* _`id`:_ Unique string identifier for the app. It must be at least 1
+* `id`: Unique string identifier for the app. It must be at least 1
   character and may only contain digits (`0-9`), dashes (`-`), dots (`.`), and
-  lowercase letters (`a-z`). (The allowable characters are represented by the
-  regex `[a-z0-9.-]`.) The name may not begin or end with a dash.
+  lowercase letters (`a-z`). The name may not begin or end with a dash.
 
-* _`ports`:_ An array of required port resources on the host.  To generate one
+  (The allowable format is represented by the regular expression
+  `^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$`.)
+* `ports`: An array of required port resources on the host. To generate one
   or more arbitrary free ports for each application instance, pass zeros as port
   values. Each port value is exposed to the instance via environment variables
   `$PORT0`, `$PORT1`, etc. Ports assigned to running instances are also
