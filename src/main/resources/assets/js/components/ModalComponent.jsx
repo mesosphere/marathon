@@ -3,26 +3,25 @@
 define([
   "jquery",
   "Underscore",
+  "mousetrap",
   "React"
-], function($, _, React) {
+], function($, _, Mousetrap, React) {
   function modalSizeClassName(size) {
     return (size == null) ? "" : "modal-" + size;
   }
 
   return React.createClass({
+    displayName: "ModalComponent",
+
     componentDidMount: function() {
-      var _this = this;
-
-      // Destroy the modal when "ESC" key is pressed.
-      $(document).on("keyup.modalComponent", function(event) {
-        if (event.keyCode === 27) { _this.destroy(); }
-      });
-
+      Mousetrap.bind("esc", this.destroy);
       this.timeout = setTimeout(this.transitionIn, 10);
     },
+
     componentWillUnmount: function() {
-      $(document).off(".modalComponent");
+      Mousetrap.unbind("esc");
     },
+
     destroy: function(event) {
       var domNode = this.getDOMNode();
       this.props.onDestroy();
@@ -34,6 +33,7 @@ define([
         React.unmountComponentAtNode(domNode.parentNode);
       });
     },
+
     getDefaultProps: function() {
       return {
         onDestroy: $.noop,

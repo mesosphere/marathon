@@ -1,25 +1,39 @@
 /** @jsx React.DOM */
 
 define([
+  "mousetrap",
   "React",
   "jsx!components/ModalComponent",
   "jsx!components/TabPaneComponent",
   "jsx!components/TaskListComponent",
   "jsx!components/TogglableTabsComponent",
   "mixins/BackboneMixin"
-], function(React, ModalComponent, TabPaneComponent,
+], function(Mousetrap, React, ModalComponent, TabPaneComponent,
     TaskListComponent, TogglableTabsComponent, BackboneMixin) {
 
   return React.createClass({
+    displayName: "AppModalComponent",
+    mixins: [BackboneMixin],
+
+    componentDidMount: function() {
+      Mousetrap.bind("#", this.destroyApp);
+    },
+
+    componentWillUnmount: function() {
+      Mousetrap.unbind("#");
+    },
+
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
+
     destroyApp: function() {
       if (confirm("Destroy app '" + this.props.model.get("id") + "'?\nThis is irreversible.")) {
         this.props.model.destroy();
         this.refs.modalComponent.destroy();
       }
     },
+
     getResource: function() {
       return this.props.model;
     },
