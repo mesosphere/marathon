@@ -7,7 +7,9 @@ define([
 ], function(React, BackboneMixin, TaskListItemComponent) {
   var STATE_LOADING = 0;
   var STATE_ERROR = 1;
-  var STATE_SUCCESS = 2;
+  var STATE_NO_TASKS = 2;
+  var STATE_SUCCESS = 3;
+  var STATE_DETAIL = 4;
 
   var UPDATE_INTERVAL = 2000;
 
@@ -31,7 +33,11 @@ define([
         },
         reset: true,
         success: function() {
-          _this.setState({fetchState: STATE_SUCCESS});
+          if (_this.props.collection.length > 0) {
+            _this.setState({fetchState: STATE_SUCCESS});
+          } else {
+            _this.setState({fetchState: STATE_NO_TASKS});
+          }
         }
       });
     },
@@ -61,43 +67,48 @@ define([
       // true.
       var allTasksSelected = tasksLength > 0;
 
-      if (this.state.fetchState === STATE_LOADING) {
-        taskNodes =
-          <tr>
-            <td className="text-center text-muted" colSpan="5">
-              Loading tasks...
-            </td>
-          </tr>;
-      } else if (this.state.fetchState === STATE_ERROR) {
-        taskNodes =
-          <tr>
-            <td className="text-center text-danger" colSpan="5">
-              Error fetching tasks. Refresh the list to try again.
-            </td>
-          </tr>;
-      } else if (tasksLength === 0) {
-        taskNodes =
-          <tr>
-            <td className="text-center" colSpan="5">
-              No tasks running.
-            </td>
-          </tr>;
-      } else {
-        taskNodes = this.props.collection.map(function(task) {
-          // Expicitly check for Boolean since the key might not exist in the
-          // object.
-          var isActive = this.props.selectedTasks[task.id] === true;
-          if (!isActive) { allTasksSelected = false; }
+      switch (this.state.fetchState) {
+        case STATE_LOADING:
+          taskNodes =
+            <tr>
+              <td className="text-center text-muted" colSpan="5">
+                Loading tasks...
+              </td>
+            </tr>;
+          break;
+        case STATE_ERROR:
+          taskNodes =
+            <tr>
+              <td className="text-center text-danger" colSpan="5">
+                Error fetching tasks. Refresh the list to try again.
+              </td>
+            </tr>;
+          break;
+        case STATE_NO_TASKS:
+          taskNodes =
+            <tr>
+              <td className="text-center" colSpan="5">
+                No tasks running.
+              </td>
+            </tr>;
+          break;
+        default:
+          taskNodes = this.props.collection.map(function(task) {
+            // Expicitly check for Boolean since the key might not exist in the
+            // object.
+            var isActive = this.props.selectedTasks[task.id] === true;
+            if (!isActive) { allTasksSelected = false; }
 
-          return (
-            <TaskListItemComponent
-              isActive={isActive}
-              key={task.id}
-              onToggle={this.props.onTaskToggle}
-              task={task} />
-          );
-        }, this);
-      }
+            return (
+              <TaskListItemComponent
+                isActive={isActive}
+                key={task.id}
+                onToggle={this.props.onTaskToggle}
+                task={task} />
+            );
+          }, this);
+          break;
+        }
 
       var sortKey = this.props.collection.sortKey;
       var sortOrder =
