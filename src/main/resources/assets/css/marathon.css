@@ -235,9 +235,9 @@ a:focus {
   animation-name: blink;
   animation-timing-function: steps(1, start);
 
-  width: 0.7em;
-  display:inline-block;
+  display: inline-block;
   border-bottom: 1px solid #fff;
+  width: 0.7em;
 }
 
 .overflow-ellipsis {
