@@ -18,6 +18,7 @@ define([
     },
 
     parse: function(response) {
+      var _this = this;
       // Parse all known date attributes as real Date objects.
       DATE_ATTRIBUTES.forEach(function(attr) {
         var parsedAttr = Date.parse(response[attr]);
@@ -31,6 +32,25 @@ define([
         response.status = STATUS_STAGED;
         response.updatedAt = response.stagedAt;
       }
+
+      var isHealthy = true;
+      var healthCheckResults = response["healthCheckResults"];
+      var msg = "";
+      healthCheckResults.forEach(function (hc, index) {
+        if (hc) {
+          isHealthy = hc.alive;
+          if (!isHealthy) {
+            var failedCheck = _this.collection.options.healthChecks[index];
+            msg = "Warning: '" + failedCheck.protocol +
+              ": -p " + response["host"] + failedCheck.path + "'." +
+              "\nHealth check returned with status: " +
+              "'" + hc.lastFailureCause + "'";
+            return;
+          }
+        }
+      });
+      this.set("healthMsg", msg);
+      this.set("health", isHealthy);
 
       return response;
     },

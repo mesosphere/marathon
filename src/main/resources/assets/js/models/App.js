@@ -9,7 +9,7 @@ define([
   }
 
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
-    "executor", "id", "instances", "mem", "ports", "uris"];
+    "executor", "healthChecks", "id", "instances", "mem", "ports", "uris"];
 
   return Backbone.Model.extend({
     defaults: function() {
@@ -20,6 +20,7 @@ define([
         cpus: 0.1,
         env: {},
         executor: "",
+        healthChecks: [],
         id: _.uniqueId("app_"),
         instances: 1,
         mem: 16.0,
@@ -32,7 +33,7 @@ define([
       // already been persisted to the server.
       this.persisted = (this.collection != null);
 
-      this.tasks = new TaskCollection(null, {appId: this.id});
+      this.tasks = new TaskCollection(null, {appId: this.id, healthChecks: this.get("healthChecks")});
       this.on({
         "change:id": function(model, value, options) {
           // Inform TaskCollection of new ID so it can send requests to the new
