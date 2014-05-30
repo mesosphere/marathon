@@ -9,7 +9,7 @@ define([
   }
 
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
-    "executor", "id", "instances", "mem", "ports", "uris"];
+    "executor", "healthChecks", "id", "instances", "mem", "ports", "uris"];
   var VALID_ID_PATTERN = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
   var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
 
@@ -22,6 +22,7 @@ define([
         cpus: 0.1,
         env: {},
         executor: "",
+        healthChecks: [],
         id: _.uniqueId("app-"),
         instances: 1,
         mem: 16.0,
@@ -34,7 +35,7 @@ define([
       // already been persisted to the server.
       this.persisted = (this.collection != null);
 
-      this.tasks = new TaskCollection(null, {appId: this.id});
+      this.tasks = new TaskCollection(null, {appId: this.id, healthChecks: this.get("healthChecks")});
       this.on({
         "change:id": function(model, value, options) {
           // Inform TaskCollection of new ID so it can send requests to the new

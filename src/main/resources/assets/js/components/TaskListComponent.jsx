@@ -132,6 +132,12 @@ define([
                   {(sortKey === "updatedAt") ? sortOrder : null} Updated
                 </span>
               </th>
+              <th className="text-right">
+                <span onClick={this.sortCollectionBy.bind(null, "health")}
+                      className="clickable">
+                  {(sortKey === "health") ? sortOrder : null} Health
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>

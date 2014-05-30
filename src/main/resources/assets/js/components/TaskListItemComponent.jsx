@@ -61,9 +61,15 @@ define([
       this.props.onToggle(this.props.task, event.target.checked);
     },
 
+    showHealth: function(event) {
+      alert(this.props.task.get("healthMsg"));
+    },
+
     render: function() {
       var className = (this.props.isActive) ? "active" : "";
       var task = this.props.task;
+      var healthClassName = task.get("health") ? "text-center healthy" : "text-center unhealthy clickable";
+      var handleHealthClick = task.get("health") ? function (){} : this.showHealth;
 
       var statusClassSet = React.addons.classSet({
         "badge": true,
@@ -97,6 +103,7 @@ define([
             </span>
           </td>
           <td className="text-right">{updatedAtNode}</td>
+          <td className={healthClassName} onClick={handleHealthClick}>●</td>
         </tr>
       );
     }
