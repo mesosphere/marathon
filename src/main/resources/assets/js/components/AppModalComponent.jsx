@@ -15,14 +15,6 @@ define([
     displayName: "AppModalComponent",
     mixins: [BackboneMixin],
 
-    componentDidMount: function() {
-      Mousetrap.bind("#", this.destroyApp);
-    },
-
-    componentWillUnmount: function() {
-      Mousetrap.unbind("#");
-    },
-
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
@@ -37,11 +29,13 @@ define([
     getResource: function() {
       return this.props.model;
     },
+
     getInitialState: function() {
       return {
         selectedTasks: {}
       };
     },
+
     killSelectedTasks: function(options) {
       var _this = this;
       var _options = options || {};

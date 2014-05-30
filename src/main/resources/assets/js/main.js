@@ -38,25 +38,21 @@ require([
     document.getElementById("new-app-button-container")
   );
 
-  React.renderComponent(
+  var appList = React.renderComponent(
     AppListComponent({collection: appCollection}),
     document.getElementById("job-list")
   );
-
-  Mousetrap.bind("c", function() {
-    newAppButton.showModal();
-  }, "keyup");
 
   // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
   // input elements so the new app modal can be closed via "esc".
   var mousetrapOriginalStopCallback = Mousetrap.stopCallback;
   Mousetrap.stopCallback = function(e, element, combo) {
-    if (combo === "esc" || combo === "escape") {
-      return false;
-    }
-
+    if (combo === "esc" || combo === "escape") { return false; }
     return mousetrapOriginalStopCallback.apply(null, arguments);
   };
+
+  Mousetrap.bind("c", function() { newAppButton.showModal(); }, "keyup");
+  Mousetrap.bind("#", function() { appList.destroyActiveApp(); });
 
   appCollection.fetch({reset: true});
 });
