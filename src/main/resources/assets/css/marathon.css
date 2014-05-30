@@ -181,7 +181,7 @@ a:focus {
   background: #28282a;
   border-color: #444;
   color: white;
-  box-shadow: inset 0 4px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 4px 4px rgba(0, 0, 0, 0.2);
 }
 
 .btn {
