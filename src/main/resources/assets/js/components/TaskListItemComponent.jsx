@@ -74,8 +74,9 @@ define([
       var updatedAtNode;
       if (task.get("updatedAt") != null) {
         updatedAtNode =
-          <time timestamp={task.get("updatedAt")}>
-            {task.get("updatedAt").toISOString()}
+          <time dateTime={task.get("updatedAt").toISOString()}
+              title={task.get("updatedAt").toISOString()}>
+            {task.get("updatedAt").toLocaleString()}
           </time>;
       }
 
