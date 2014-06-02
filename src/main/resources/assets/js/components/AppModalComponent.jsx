@@ -1,15 +1,14 @@
 /** @jsx React.DOM */
 
 define([
-  "mousetrap",
   "React",
   "jsx!components/ModalComponent",
   "jsx!components/TabPaneComponent",
   "jsx!components/TaskListComponent",
   "jsx!components/TogglableTabsComponent",
   "mixins/BackboneMixin"
-], function(Mousetrap, React, ModalComponent, TabPaneComponent,
-    TaskListComponent, TogglableTabsComponent, BackboneMixin) {
+], function(React, ModalComponent, TabPaneComponent, TaskListComponent,
+    TogglableTabsComponent, BackboneMixin) {
 
   return React.createClass({
     displayName: "AppModalComponent",
