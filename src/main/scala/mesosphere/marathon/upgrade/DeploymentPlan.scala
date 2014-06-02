@@ -44,7 +44,7 @@ case class DeploymentPlan(
     val origTarget = isUpdate.flatMap(id => original.apps.find(_.id==id)).zip(isUpdate.flatMap(id => target.apps.find(_.id==id)))
     ( targetIds.filterNot(isUpdate.contains).flatMap(id => target.apps.find(_.id==id)),
       originalIds.filterNot(isUpdate.contains).flatMap(id => original.apps.find(_.id==id)),
-      origTarget.filter{case (from, to) => from.isOnlyScaleChange(to)}.map(_._2),
+      origTarget.filter{ case (from, to) => from.isOnlyScaleChange(to)}.map(_._2),
       origTarget.filter { case (from, to) => from.isUpgrade(to) }.map(_._2))
   }
 
