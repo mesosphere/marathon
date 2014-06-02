@@ -15,16 +15,7 @@ class AppRepository(val store: PersistenceStore[AppDefinition]) extends EntityRe
   /**
     * Stores the supplied app, now the current version for that apps's id.
     */
-  def store(appDef: AppDefinition): Future[Option[AppDefinition]] = {
-    val key = appDef.id + ID_DELIMITER + appDef.version.toString
-    val versionedRes = store.store(appDef.id, appDef)
-    val currentRes = store.store(key, appDef)
-
-    for {
-      _ <- versionedRes
-      current <- currentRes
-    } yield current
-  }
+  def store(appDef: AppDefinition): Future[AppDefinition] = storeWithVersion(appDef.id, appDef.version, appDef)
 
   /**
     * Returns the current version for all apps.

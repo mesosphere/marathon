@@ -30,11 +30,11 @@ class GroupManager @Singleton @Inject() (
 
   def list(): Future[Iterable[Group]] = groupRepo.current()
 
-  def versions(id:String): Future[Iterable[Timestamp]] = groupRepo.listVersions(id)
+  def versions(id: String): Future[Iterable[Timestamp]] = groupRepo.listVersions(id)
 
   def group(id: String): Future[Option[Group]] = groupRepo.group(id)
 
-  def group(id:String, version:Timestamp) : Future[Option[Group]] = groupRepo.group(id, version)
+  def group(id: String, version: Timestamp): Future[Option[Group]] = groupRepo.group(id, version)
 
   def create(group: Group): Future[Group] = {
     groupRepo.currentVersion(group.id).flatMap {
@@ -49,9 +49,9 @@ class GroupManager @Singleton @Inject() (
     }
   }
 
-  def update(id: String, group:Group, force:Boolean): Future[Group] = update(id, _ => group, force)
+  def update(id: String, group: Group, force: Boolean): Future[Group] = update(id, _ => group, force)
 
-  def update(id: String, fn: Group=>Group, force:Boolean): Future[Group] = {
+  def update(id: String, fn: Group=>Group, force: Boolean): Future[Group] = {
     groupRepo.currentVersion(id).flatMap {
       case Some(current) => upgrade(current, fn(current), force)
       case None =>
@@ -60,8 +60,8 @@ class GroupManager @Singleton @Inject() (
     }
   }
 
-  private def upgrade(current: Group, group: Group, force:Boolean): Future[Group] = {
-    log.info(s"Upgrade existing Group ${group.id} with $group force:$force")
+  private def upgrade(current: Group, group: Group, force: Boolean): Future[Group] = {
+    log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
     //checkpoint where to start from
     //if there is an upgrade in progress
     val startFromGroup = planRepo.currentVersion(current.id).map {
@@ -80,14 +80,14 @@ class GroupManager @Singleton @Inject() (
     restart.andThen(deletePlan(current.id)).andThen(postEvent(group))
   }
 
-  private def postEvent(group:Group) : PartialFunction[Try[Group], Unit] = {
+  private def postEvent(group: Group): PartialFunction[Try[Group], Unit] = {
     case Success(_) => eventBus.publish(GroupChangeSuccess(group.id, group.version.toString))
     case Failure(ex) => eventBus.publish(GroupChangeFailed(group.id, group.version.toString, ex.getMessage))
   }
 
-  private def deletePlan(id:String) : PartialFunction[Try[Group], Unit] = {
-    case Failure(ex:TaskUpgradeCancelledException) => //do not delete the plan, if a rollback is requested
-    case Failure(ex:UpgradeInProgressException) => //do not delete the plan, if there is an upgrade in progress
+  private def deletePlan(id: String): PartialFunction[Try[Group], Unit] = {
+    case Failure(ex: TaskUpgradeCancelledException) => //do not delete the plan, if a rollback is requested
+    case Failure(ex: UpgradeInProgressException) => //do not delete the plan, if there is an upgrade in progress
     case _ => planRepo.expunge(id)
   }
 

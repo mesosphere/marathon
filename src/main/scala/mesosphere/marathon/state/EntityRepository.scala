@@ -4,6 +4,7 @@ package mesosphere.marathon.state
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import mesosphere.marathon.StorageException
 
 
 trait EntityRepository[T<:MarathonState[_, T]] {
@@ -76,4 +77,11 @@ trait EntityRepository[T<:MarathonState[_, T]] {
       val currentDeleteResult = store.expunge(id)
       Future.sequence(currentDeleteResult +: versionsDeleteResult.toSeq)
     }
+
+  protected def storeWithVersion(id: String, version: Timestamp, t: T): Future[T] = {
+    for {
+      alias <- this.store.store(id, t) if alias.isDefined
+      result <- this.store.store(id + ID_DELIMITER + version, t)
+    } yield result.getOrElse(throw new StorageException(s"Can not persist $t"))
+  }
 }

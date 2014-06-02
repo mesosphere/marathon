@@ -24,12 +24,5 @@ class GroupRepository(val store: PersistenceStore[Group], appRepo:AppRepository)
     }
   }
 
-  def store(group: Group): Future[Group] = {
-    val key = group.id + ID_DELIMITER + group.version.toString
-    this.store.store(group.id, group)
-    this.store.store(key, group).map {
-      case Some(value) => value
-      case None => throw new StorageException(s"Can not persist group: $group")
-    }
-  }
+  def store(group: Group): Future[Group] = storeWithVersion(group.id, group.version, group)
 }

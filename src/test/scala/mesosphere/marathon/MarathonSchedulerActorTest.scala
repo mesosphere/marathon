@@ -81,7 +81,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val app = AppDefinition(id = "testApp", instances = 2)
 
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
-    when(repo.store(app)).thenReturn(Future.successful(Some(app)))
+    when(repo.store(app)).thenReturn(Future.successful(app))
     when(tracker.get(app.id)).thenReturn(mutable.Set.empty[MarathonTask])
     when(tracker.count(app.id)).thenReturn(0)
 
@@ -155,7 +155,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     doReturn(updatedApp).when(appUpdate).apply(app)
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
-    when(repo.store(any())).thenReturn(Future.successful(Some(updatedApp)))
+    when(repo.store(any())).thenReturn(Future.successful(updatedApp))
 
     schedulerActor ! UpdateApp(app.id, appUpdate)
 
@@ -171,7 +171,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val probe = TestProbe()
     schedulerActor.underlyingActor.upgradeManager = probe.ref
 
-    when(repo.store(app)).thenReturn(Future.successful(Some(app)))
+    when(repo.store(app)).thenReturn(Future.successful(app))
 
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
@@ -195,7 +195,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val lock = schedulerActor.underlyingActor.appLocks.get("testApp")
     lock.acquire()
 
-    when(repo.store(app)).thenReturn(Future.successful(Some(app)))
+    when(repo.store(app)).thenReturn(Future.successful(app))
 
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {

@@ -265,24 +265,21 @@ trait SchedulerActions { this: Actor with ActorLogging =>
     keepAlive: Int,
     maxRunning: Option[Int]
   ): Future[Boolean] = {
-    appRepository.store(app) flatMap {
-      case Some(appDef) =>
-        // TODO: this should be configurable
-        implicit val timeout = Timeout(12.hours)
-        val res = (upgradeManager ? Upgrade(driver, app, keepAlive, maxRunning)).mapTo[Boolean]
+    appRepository.store(app) flatMap { appDef =>
+      // TODO: this should be configurable
+      implicit val timeout = Timeout(12.hours)
+      val res = (upgradeManager ? Upgrade(driver, app, keepAlive, maxRunning)).mapTo[Boolean]
 
-        res andThen {
-          case Success(_) =>
-            log.info(s"Restart of ${app.id} successful")
-            eventBus.publish(RestartSuccess(app.id))
+      res andThen {
+        case Success(_) =>
+          log.info(s"Restart of ${app.id} successful")
+          eventBus.publish(RestartSuccess(app.id))
 
-          case Failure(e) =>
-            log.error(s"Restart of ${app.id} failed", e)
-            taskQueue.purge(app)
-            eventBus.publish(RestartFailed(app.id))
-        }
-
-      case None => Future.failed(new StorageException("App could not be stored"))
+        case Failure(e) =>
+          log.error(s"Restart of ${app.id} failed", e)
+          taskQueue.purge(app)
+          eventBus.publish(RestartFailed(app.id))
+      }
     }
   }
 

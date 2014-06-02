@@ -12,7 +12,7 @@ case class DeploymentPlan(
   id: String,
   original: Group,
   target: Group,
-  version : Timestamp = Timestamp.now()
+  version: Timestamp = Timestamp.now()
 ) extends MarathonState[DeploymentPlanDefinition, DeploymentPlan] {
 
   private[this] val log = Logger.getLogger(getClass.getName)
@@ -65,12 +65,14 @@ case class DeploymentPlan(
     val startFuture = toStart.map(scheduler.startApp(_).map(_ => true))
     val stopFuture = toStop.map(scheduler.stopApp(_).map(_ => true))
     val successFuture = Set(Future.successful(true)) //used, for immediate success, if no action is performed
-    val deployFuture =  Future.sequence(startFuture ++ updateFuture ++ restartFuture ++ stopFuture ++ successFuture).map(_.forall(identity))
+    val deployFuture =  Future.sequence(
+        startFuture ++
+        updateFuture ++
+        restartFuture ++
+        stopFuture ++
+        successFuture).map(_.forall(identity))
 
-    deployFuture andThen {
-      case result =>
-        log.info(s"Deployment of ${target.id} has been finished $result")
-    }
+    deployFuture andThen { case result => log.info(s"Deployment of ${target.id} has been finished $result") }
   }
 }
 
