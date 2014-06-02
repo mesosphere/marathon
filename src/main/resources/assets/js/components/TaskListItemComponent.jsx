@@ -20,8 +20,8 @@ define([
         <span className="text-muted">
           {task.get("host")}:[{ports.map(function(p, index) {
             return (
-              <span>
-                <a key={p} className="text-muted" href={buildHref(task.get("host"), p)}>{p}</a>
+              <span key={p}>
+                <a className="text-muted" href={buildHref(task.get("host"), p)}>{p}</a>
                 {index < portsLength - 1 ? ", " : ""}
               </span>
             );
