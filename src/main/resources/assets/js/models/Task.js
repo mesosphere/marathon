@@ -4,6 +4,7 @@ define([
 ], function(Backbone, $, _) {
   var STATUS_STAGED = "Staged";
   var STATUS_STARTED = "Started";
+  var DEFAULT_HEALTH_MSG = "Healthy"
 
   // Model attributes that are parseable as dates.
   var DATE_ATTRIBUTES = ["stagedAt", "startedAt", "version"];
@@ -35,7 +36,7 @@ define([
 
       var isHealthy = true;
       var healthCheckResults = response["healthCheckResults"];
-      var msg = "";
+      var msg = DEFAULT_HEALTH_MSG;
       healthCheckResults.forEach(function (hc, index) {
         if (hc) {
           isHealthy = hc.alive;
@@ -44,7 +45,7 @@ define([
             msg = "Warning: '" + failedCheck.protocol +
               ": -p " + response["host"] + failedCheck.path + "'." +
               "\nHealth check returned with status: " +
-              "'" + hc.lastFailureCause + "'";
+              "'" + hc.lastFailureCause + "'.";
             return;
           }
         }
