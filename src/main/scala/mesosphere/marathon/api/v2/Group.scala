@@ -5,10 +5,9 @@ import mesosphere.marathon.state.{MarathonState, Timestamp}
 import mesosphere.marathon.Protos._
 import scala.collection.JavaConversions._
 import mesosphere.marathon.api.validation.FieldConstraints.{FieldPattern, FieldNotEmpty}
-import java.lang.{Double => JDouble}
 
 case class ScalingStrategy(
-  minimumHealthCapacity: JDouble,
+  minimumHealthCapacity: Double,
   maximumRunningFactor: Option[Double]
 ) {
   def toProto : ScalingStrategyDefinition = {
