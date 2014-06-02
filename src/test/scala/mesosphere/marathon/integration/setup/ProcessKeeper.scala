@@ -71,7 +71,7 @@ object ProcessKeeper {
   def stopOSProcesses(grep:String): Unit = {
     val PIDRE = """\s*(\d+)\s.*""".r
     val processes =("ps -x" #| s"grep $grep" !!).split("\n").map { case PIDRE(pid) =>  pid }
-    s"kill -9 ${processes.mkString(" ")}".!
+    processes.foreach( p => s"kill -9 $p".! )
   }
 
   def stopAllProcesses(): Unit = {
