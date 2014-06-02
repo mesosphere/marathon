@@ -2,7 +2,8 @@
 
 define([
   "React",
-], function(React) {
+  "jsx!components/TaskDetailComponent"
+], function(React, TaskDetailComponent) {
 
   function buildHref(host, port) {
     return "http://" + host + ":" + port;
@@ -42,11 +43,13 @@ define([
   }
 
   return React.createClass({
+    displayName: "TaskListItemComponent",
 
     propTypes: {
+      task: React.PropTypes.object.isRequired,
       isActive: React.PropTypes.bool.isRequired,
       onToggle: React.PropTypes.func.isRequired,
-      task: React.PropTypes.object.isRequired
+      onTaskDetailSelect: React.PropTypes.func.isRequired
     },
 
     handleClick: function(event) {
@@ -61,20 +64,24 @@ define([
       this.props.onToggle(this.props.task, event.target.checked);
     },
 
-    showHealth: function(event) {
-      alert(this.props.task.get("healthMsg"));
+    handleTaskDetailSelect: function(event) {
+      this.props.onTaskDetailSelect(this.props.task);
     },
 
     render: function() {
       var className = (this.props.isActive) ? "active" : "";
       var task = this.props.task;
-      var healthClassName = task.get("health") ? "text-center healthy" : "text-center unhealthy clickable";
-      var handleHealthClick = task.get("health") ? function (){} : this.showHealth;
-
+      
       var statusClassSet = React.addons.classSet({
         "badge": true,
         "badge-default": task.isStarted(),
         "badge-warning": task.isStaged()
+      });
+
+      var healthClassSet = React.addons.classSet({
+        "text-center": true,
+        "healthy": task.get("health"),
+        "unhealthy clickable": !task.get("health")
       });
 
       var updatedAtNode;
@@ -102,7 +109,8 @@ define([
             </span>
           </td>
           <td className="text-right">{updatedAtNode}</td>
-          <td className={healthClassName} onClick={handleHealthClick}>●</td>
+          <td className={healthClassSet}>●</td>
+          <td><a className="clickable" onClick={this.handleTaskDetailSelect}>view details</a></td>
         </tr>
       );
     }
