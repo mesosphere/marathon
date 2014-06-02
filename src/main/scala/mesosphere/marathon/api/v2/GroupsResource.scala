@@ -21,27 +21,27 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   val defaultWait = 3.seconds
 
   @GET
-  def list() : Iterable[Group] = result(groupManager.list(), defaultWait)
+  def list(): Iterable[Group] = result(groupManager.list(), defaultWait)
 
   @GET
   @Path("{id}")
-  def group(@PathParam("id") id: String) : Option[Group] = result(groupManager.group(id), defaultWait)
+  def group(@PathParam("id") id: String): Option[Group] = result(groupManager.group(id), defaultWait)
 
   @GET
   @Path("{id}/versions")
-  def listVersions(@PathParam("id") id: String) : Iterable[Timestamp] = {
+  def listVersions(@PathParam("id") id: String): Iterable[Timestamp] = {
     result(groupManager.versions(id), defaultWait)
   }
 
   @GET
   @Path("{id}/versions/{version}")
-  def groupVersion(@PathParam("id") id: String, @PathParam("version") version: String) : Option[Group] = {
+  def groupVersion(@PathParam("id") id: String, @PathParam("version") version: String): Option[Group] = {
     result(groupManager.group(id, Timestamp(version)), defaultWait)
   }
 
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
-  def create( group: Group ) : Response = {
+  def create(group: Group): Response = {
     checkIsValid(group)
     groupManager.create(group)
     Response.noContent().build()
@@ -52,7 +52,7 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   @Path("{id}")
   def update( @PathParam("id") id: String,
               group: Group,
-              @DefaultValue("false") @QueryParam("force") force:Boolean) : Response = {
+              @DefaultValue("false") @QueryParam("force") force: Boolean): Response = {
     checkIsValid(group)
     groupManager.update(id, group, force)
     Response.noContent().build()
@@ -62,7 +62,7 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   @Path("{id}/version/{version}")
   def rollbackTo( @PathParam("id") id: String,
                   @PathParam("version") version: String,
-                  @DefaultValue("false") @QueryParam("force") force:Boolean) : Response = {
+                  @DefaultValue("false") @QueryParam("force") force: Boolean): Response = {
     val res = groupManager.group(id, Timestamp(version)).map {
       case Some(group) =>
         groupManager.update(id, group, force)
@@ -75,7 +75,7 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
 
   @DELETE
   @Path("{id}")
-  def delete( @PathParam("id") id: String ) : Response = {
+  def delete( @PathParam("id") id: String ): Response = {
     val response = if (result(groupManager.expunge(id), defaultWait)) Response.ok else Response.noContent()
     response.build()
   }
@@ -83,7 +83,7 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   //Note: this is really ugly. It is necessary, since bean validation will not walk into a scala Seq[_] and
   //can not check scala Double values. So we have to do this by hand.
   val validator = Validation.buildDefaultValidatorFactory().getValidator
-  private def checkIsValid(group:Group) {
+  private def checkIsValid(group: Group) {
     val groupErrors = validator.validate(group).asScala
     val appErrors = group.apps.flatMap( app => validator.validate(app).asScala).map { e =>
       ConstraintViolationImpl.forParameterValidation[Group](
