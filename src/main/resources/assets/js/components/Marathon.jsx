@@ -3,11 +3,10 @@
 define([
   "mousetrap",
   "React",
-  "models/App",
   "models/AppCollection",
   "jsx!components/AppListComponent",
   "jsx!components/NewAppModalComponent"
-], function(Mousetrap, React, App, AppCollection, AppListComponent,
+], function(Mousetrap, React, AppCollection, AppListComponent,
     NewAppModalComponent) {
 
   return React.createClass({
@@ -35,9 +34,12 @@ define([
       }.bind(this));
     },
 
-    handleModalCreate: function() {
-      this.state.collection.create(this.state.model);
-      this.setState({modal: null, model: null});
+    handleModalCreate: function(appModel) {
+      this.state.collection.create(appModel);
+    },
+
+    handleModalDestroy: function() {
+      this.setState({modal: null});
     },
 
     showNewAppModal: function(event) {
@@ -50,11 +52,11 @@ define([
         return;
       }
 
-      var model = new App();
       this.setState({
-        model: model,
         modal: React.renderComponent(
-          <NewAppModalComponent model={model} onCreate={this.handleModalCreate} />,
+          <NewAppModalComponent
+            onCreate={this.handleModalCreate}
+            onDestroy={this.handleModalDestroy} />,
           document.getElementById("lightbox")
         )
       });

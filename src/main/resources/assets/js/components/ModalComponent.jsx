@@ -12,6 +12,10 @@ define([
 
   return React.createClass({
     displayName: "ModalComponent",
+    propTypes: {
+      onDestroy: React.PropTypes.func,
+      size: React.PropTypes.string
+    },
 
     componentDidMount: function() {
       Mousetrap.bind("esc", this.destroy);
@@ -40,6 +44,7 @@ define([
         size: null
       };
     },
+
     onClick: function(event) {
       var $target = $(event.target);
 
@@ -47,6 +52,12 @@ define([
         this.destroy();
       }
     },
+
+    transitionIn: function() {
+      this.refs.modal.getDOMNode().className += " in";
+      this.refs.backdrop.getDOMNode().className += " in";
+    },
+
     render: function() {
       var modalClassName =
         "modal-dialog " + modalSizeClassName(this.props.size);
@@ -64,10 +75,6 @@ define([
           <div className="modal-backdrop fade" ref="backdrop"></div>
         </div>
       );
-    },
-    transitionIn: function() {
-      this.refs.modal.getDOMNode().className += " in";
-      this.refs.backdrop.getDOMNode().className += " in";
     }
   });
 });
