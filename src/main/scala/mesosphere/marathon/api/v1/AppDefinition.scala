@@ -146,22 +146,21 @@ case class AppDefinition(
     new AppDefinition.WithTasks(taskTracker, this)
 
 
-  def isOnlyScaleChange(to:AppDefinition) : Boolean = !isUpgrade(to) && instances!=to.instances
+  def isOnlyScaleChange(to: AppDefinition): Boolean = !isUpgrade(to) && (instances != to.instances)
 
-  def isUpgrade(to:AppDefinition) : Boolean = {
-    cmd!=to.cmd ||
-      env!=to.env ||
-      cpus!=to.cpus ||
-      mem!=to.mem ||
-      uris.toSet!=to.uris.toSet ||
-      constraints!=to.constraints ||
-      container!=to.container ||
-      ports.toSet!=to.ports.toSet ||
-      executor!=to.executor ||
-      healthChecks!=to.healthChecks ||
-      taskRateLimit!=to.taskRateLimit
+  def isUpgrade(to: AppDefinition): Boolean = {
+    cmd != to.cmd ||
+    env != to.env ||
+    cpus != to.cpus ||
+    mem != to.mem ||
+    uris.toSet != to.uris.toSet ||
+    constraints != to.constraints ||
+    container != to.container ||
+    ports.toSet != to.ports.toSet ||
+    executor != to.executor ||
+    healthChecks != to.healthChecks ||
+    taskRateLimit != to.taskRateLimit
   }
-
 }
 
 object AppDefinition {
