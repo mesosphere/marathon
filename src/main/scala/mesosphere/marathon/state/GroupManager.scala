@@ -87,6 +87,7 @@ class GroupManager @Singleton @Inject() (
 
   private def deletePlan(id:String) : PartialFunction[Try[Group], Unit] = {
     case Failure(ex:TaskUpgradeCancelledException) => //do not delete the plan, if a rollback is requested
+    case Failure(ex:UpgradeInProgressException) => //do not delete the plan, if there is an upgrade in progress
     case _ => planRepo.expunge(id)
   }
 
