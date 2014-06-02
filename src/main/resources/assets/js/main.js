@@ -24,35 +24,10 @@ require.config({
 
 require([
   "React",
-  "mousetrap",
-  "models/AppCollection",
-  "jsx!components/AppListComponent",
-  "jsx!components/NewAppButtonComponent"
-], function(React, Mousetrap, AppCollection, AppListComponent,
-    NewAppButtonComponent) {
-
-  var appCollection = new AppCollection();
-
-  var newAppButton = React.renderComponent(
-    NewAppButtonComponent({collection: appCollection}),
-    document.getElementById("new-app-button-container")
+  "jsx!components/Marathon"
+], function(React, Marathon) {
+  React.renderComponent(
+    Marathon(),
+    document.getElementById("marathon")
   );
-
-  var appList = React.renderComponent(
-    AppListComponent({collection: appCollection}),
-    document.getElementById("job-list")
-  );
-
-  // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
-  // input elements so the new app modal can be closed via "esc".
-  var mousetrapOriginalStopCallback = Mousetrap.stopCallback;
-  Mousetrap.stopCallback = function(e, element, combo) {
-    if (combo === "esc" || combo === "escape") { return false; }
-    return mousetrapOriginalStopCallback.apply(null, arguments);
-  };
-
-  Mousetrap.bind("c", function() { newAppButton.showModal(); }, "keyup");
-  Mousetrap.bind("#", function() { appList.destroyActiveApp(); });
-
-  appCollection.fetch({reset: true});
 });
