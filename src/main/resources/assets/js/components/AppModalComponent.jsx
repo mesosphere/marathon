@@ -64,13 +64,15 @@ define([
         });
       });
     },
+
     killSelectedTasksAndScale: function() {
       this.killSelectedTasks({scale: true});
     },
-    mixins: [BackboneMixin],
+
     refreshTaskList: function() {
       this.refs.taskList.fetchTasks();
     },
+
     render: function() {
       var buttons;
       var model = this.props.model;
@@ -222,6 +224,7 @@ define([
         </ModalComponent>
       );
     },
+
     scaleApp: function() {
       var model = this.props.model;
       var instancesString = prompt("Scale to how many instances?",
@@ -241,6 +244,7 @@ define([
         }
       }
     },
+
     toggleAllTasks: function() {
       var newSelectedTasks = {};
       var modelTasks = this.props.model.tasks;
@@ -256,6 +260,7 @@ define([
 
       this.setState({selectedTasks: newSelectedTasks});
     },
+
     toggleTask: function(task, value) {
       var selectedTasks = this.state.selectedTasks;
 
@@ -274,6 +279,7 @@ define([
 
       this.setState({selectedTasks: selectedTasks});
     },
+
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
         this.props.model.suspend();
