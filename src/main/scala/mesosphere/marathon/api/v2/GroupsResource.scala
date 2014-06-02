@@ -91,29 +91,24 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
         PathImpl.createPathFromString("apps."+e.getPropertyPath),
         e.getConstraintDescriptor, ElementType.FIELD, e.getExecutableParameters)
     }
-    val healthCapacity =
-      if (group.scalingStrategy.minimumHealthCapacity<0)
-        Some("is less than 0")
-      else if (group.scalingStrategy.minimumHealthCapacity>1)
-        Some("is greater than 1")
+    val healthCapacityNotInRange =
+      if (group.scalingStrategy.minimumHealthCapacity<0) Some("is less than 0")
+      else if (group.scalingStrategy.minimumHealthCapacity>1) Some("is greater than 1")
       else None
 
-    val runningMin = group.scalingStrategy.maximumRunningFactor.collect {
-      case x if x < 1 =>
-        "is less than 1"
-
-      case x if x <= group.scalingStrategy.minimumHealthCapacity =>
-        "is less than or equal to minimumHealthCapacity"
+    val runningMinimumExceeded = group.scalingStrategy.maximumRunningFactor.collect {
+      case x if x < 1 => "is less than 1"
+      case x if x <= group.scalingStrategy.minimumHealthCapacity => "is less than or equal to minimumHealthCapacity"
     }
 
-    val scalingErrors = healthCapacity map { msg =>
+    val scalingErrors = healthCapacityNotInRange map { msg =>
       ConstraintViolationImpl.forParameterValidation[Group](
         msg, msg, classOf[Group], group, group.scalingStrategy, group.scalingStrategy,
         PathImpl.createPathFromString("scalingStrategy.minimumHealthCapacity"),
         null, ElementType.FIELD, Array())
     }
 
-    val capacityErrors = runningMin map { msg =>
+    val capacityErrors = runningMinimumExceeded map { msg =>
       ConstraintViolationImpl.forParameterValidation[Group](
         msg, msg, classOf[Group], group, group.scalingStrategy, group.scalingStrategy,
         PathImpl.createPathFromString("scalingStrategy.maximumRunningFactor"),
