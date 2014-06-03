@@ -15,6 +15,10 @@ define([
     getResource: function() {
       return this.props.task;
     },
+    handleShowTaskList: function (event) {
+      event.preventDefault();
+      this.props.onShowTaskList();
+    },
     render: function() {
       var task = this.props.task;
       var healthClassSet = React.addons.classSet({
@@ -96,15 +100,17 @@ define([
       return (
         <div>
           <p>
-            <button className="btn btn-sm btn-default"
-                onClick={this.props.onShowTaskList}>
-              ◁ Task List
-            </button>
+          <ol class="breadcrumb">
+            <li>
+              <a href="#" class="active" onClick={this.handleShowTaskList}>
+                Task List
+              </a>
+            </li>
+            <li>{task.get("id")}</li>
+          </ol>
           </p>
           <p className="text-right text-muted">Task Details</p>
           <dl className="dl-horizontal">
-            <dt>ID</dt>
-            <dd>{task.get("id")}</dd>
             <dt>Host</dt>
             <dd>{task.get("host")}</dd>
             <dt>Ports</dt>
