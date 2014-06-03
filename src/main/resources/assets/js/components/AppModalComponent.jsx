@@ -86,6 +86,22 @@ define([
           return <dd key={u}>{u}</dd>;
         });
 
+      var footer;
+      if (this.state.activeTask == null) {
+        footer = <div className="modal-footer">
+            <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
+              Destroy
+            </button>
+            <button className="btn btn-sm btn-default"
+                onClick={this.suspendApp} disabled={this.props.model.get("instances") < 1}>
+              Suspend
+            </button>
+            <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
+              Scale
+            </button>
+          </div>;
+      }
+
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy} size="lg">
           <div className="modal-header">
@@ -149,18 +165,7 @@ define([
               </dl>
             </TabPaneComponent>
           </TogglableTabsComponent>
-          <div className="modal-footer">
-            <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
-              Destroy
-            </button>
-            <button className="btn btn-sm btn-default"
-                onClick={this.suspendApp} disabled={this.props.model.get("instances") < 1}>
-              Suspend
-            </button>
-            <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
-              Scale
-            </button>
-          </div>
+          {footer}
         </ModalComponent>
       );
     },
@@ -193,6 +198,7 @@ define([
       this.refs.stackedView.setActiveViewIndex(1);
     },
     showTaskList: function() {
+      this.setState({activeTask: null});
       this.refs.stackedView.popView();
     }
   });
