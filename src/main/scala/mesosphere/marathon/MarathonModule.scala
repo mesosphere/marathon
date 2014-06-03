@@ -127,9 +127,8 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideGroupRepository(state: State) : GroupRepository = new GroupRepository(
-    new MarathonStore[Group](state, Group.empty, "group:"),
-    provideAppRepository(provideMesosState())
+  def provideGroupRepository(state: State, appRepository: AppRepository) : GroupRepository = new GroupRepository(
+    new MarathonStore[Group](state, Group.empty, "group:"), appRepository
   )
 
   @Provides
