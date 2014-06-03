@@ -3,23 +3,22 @@
 define([
   "React"
 ], function(React) {
-  var VIEW_STACK = [];
 
   return React.createClass({
     displayName: "StackedViewComponent",
     getInitialState: function () {
-      VIEW_STACK.push(0);
       return {
-        activeViewIndex: 0
+        activeViewIndex: 0,
+        viewStack: [0]
       };
     },
     setActiveViewIndex: function (index) {
       this.setState({activeViewIndex: index});
-      VIEW_STACK.push(index);
+      this.state.viewStack.push(index);
     },
     popView: function() {
-      VIEW_STACK.pop();
-      this.setState({activeViewIndex: VIEW_STACK[VIEW_STACK.length - 1]});
+      this.state.viewStack.pop();
+      this.setState({activeViewIndex: this.state.viewStack[this.state.viewStack.length - 1]});
     },
 
     render: function() {
