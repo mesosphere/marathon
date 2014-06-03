@@ -2,16 +2,19 @@
 
 define([
   "React",
-], function(React) {
+  "mixins/BackboneMixin",
+], function(React, BackboneMixin) {
 
   return React.createClass({
     displayName: "TaskDetailComponent",
-
+    mixins: [BackboneMixin],
     propTypes: {
       task: React.PropTypes.object.isRequired,
       onShowTaskList: React.PropTypes.func.isRequired
     },
-
+    getResource: function() {
+      return this.props.task;
+    },
     render: function() {
       var task = this.props.task;
       var healthClassSet = React.addons.classSet({
