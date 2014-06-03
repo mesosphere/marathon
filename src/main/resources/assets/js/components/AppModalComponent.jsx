@@ -6,12 +6,11 @@ define([
   "jsx!components/TabPaneComponent",
   "jsx!components/StackedViewComponent",
   "jsx!components/TaskDetailComponent",
-  "jsx!components/TaskListComponent",
-  "jsx!components/TogglableTabsComponent",
-  "mixins/BackboneMixin"
+  "jsx!components/TaskViewComponent",
+  "jsx!components/TogglableTabsComponent"
 ], function(React, ModalComponent, TabPaneComponent,
-    StackedViewComponent, TaskDetailComponent, TaskListComponent,
-    TogglableTabsComponent, BackboneMixin) {
+    StackedViewComponent, TaskDetailComponent, TaskViewComponent,
+    TogglableTabsComponent) {
 
   return React.createClass({
     destroy: function() {
@@ -130,7 +129,7 @@ define([
               ]}>
             <TabPaneComponent id="tasks">
               <StackedViewComponent ref="stackedView">
-                <TaskListComponent
+                <TaskViewComponent
                   collection={model.tasks}
                   onTasksKilled={this.onTasksKilled}
                   onTaskDetailSelect={this.showTaskDetails} />
