@@ -2,17 +2,61 @@
 
 define([
   "React",
+  "mixins/BackboneMixin",
   "jsx!components/ModalComponent",
-  "jsx!components/TabPaneComponent",
   "jsx!components/StackedViewComponent",
+  "jsx!components/TabPaneComponent",
   "jsx!components/TaskDetailComponent",
   "jsx!components/TaskViewComponent",
   "jsx!components/TogglableTabsComponent"
-], function(React, ModalComponent, TabPaneComponent,
-    StackedViewComponent, TaskDetailComponent, TaskViewComponent,
-    TogglableTabsComponent) {
+], function(React, BackboneMixin, ModalComponent, StackedViewComponent, TabPaneComponent,
+    TaskDetailComponent, TaskViewComponent, TogglableTabsComponent) {
+
+  var STATES = {
+      STATE_LOADING: 0,
+      STATE_ERROR: 1,
+      STATE_SUCCESS: 2
+    };
+  var UPDATE_INTERVAL = 2000;
 
   return React.createClass({
+    displayName: "AppModalComponent",
+    statics: {
+      STATES: STATES
+    },
+    mixins:[BackboneMixin],
+    componentWillMount: function() {
+      this.fetchTasks();
+    },
+    componentDidMount: function() {
+      this.startPolling();
+    },
+    componentWillUnmount: function() {
+      this.stopPolling();
+    },
+    getInitialState: function() {
+      return {
+        resource: this.props.model,
+        fetchState: STATES.STATE_LOADING,
+        selectedTasks: {}
+      };
+    },
+    getResource: function () {
+      return this.props.model.tasks;
+    },
+    fetchTasks: function() {
+      var _this = this;
+
+      this.props.model.tasks.fetch({
+        error: function() {
+          _this.setState({fetchState: STATES.STATE_ERROR});
+        },
+        reset: true,
+        success: function() {
+          _this.setState({fetchState: STATES.STATE_SUCCESS});
+        }
+      });
+    },
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
@@ -21,12 +65,6 @@ define([
         this.props.model.destroy();
         this.refs.modalComponent.destroy();
       }
-    },
-    getResource: function() {
-      return this.props.model;
-    },
-    getInitialState: function() {
-      return {};
     },
     onTasksKilled:  function(options) {
       var instances;
@@ -86,7 +124,7 @@ define([
         });
 
       var footer;
-      if (this.state.activeTask == null) {
+      if (this.state.resource == null) {
         footer = <div className="modal-footer">
             <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
               Destroy
@@ -131,9 +169,11 @@ define([
               <StackedViewComponent ref="stackedView">
                 <TaskViewComponent
                   collection={model.tasks}
+                  fetchState={this.state.fetchState}
                   onTasksKilled={this.onTasksKilled}
-                  onTaskDetailSelect={this.showTaskDetails} />
-                <TaskDetailComponent task={this.state.activeTask}
+                  onTaskDetailSelect={this.showTaskDetails}
+                  selectedTasks={this.state.selectedTasks} />
+                <TaskDetailComponent task={this.state.resource}
                   onShowTaskList={this.showTaskList} />
               </StackedViewComponent>
             </TabPaneComponent>
@@ -193,12 +233,26 @@ define([
       }
     },
     showTaskDetails: function(task) {
-      this.setState({activeTask: task});
+      this.setState({ resource: task });
+      // set task detail view as the active
       this.refs.stackedView.setActiveViewIndex(1);
     },
     showTaskList: function() {
-      this.setState({activeTask: null});
+      this.setState({ resource: this.props.model });
+      // pop task detail view
       this.refs.stackedView.popView();
+    },
+    setFetched: function() {
+      this.setState({fetched: true});
+    },
+    startPolling: function() {
+      if (this._interval == null) {
+        this._interval = setInterval(this.fetchTasks, UPDATE_INTERVAL);
+      }
+    },
+    stopPolling: function() {
+      clearInterval(this._interval);
+      this._interval = null;
     }
   });
 });
