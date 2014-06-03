@@ -117,7 +117,7 @@ class GroupDeployIntegrationTest
     val group = Group(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
-    val check = appProxyChecks("proxy", "v1", state=true).head
+    val check = appProxyChecks(name, "v1", state=true).head
 
     When("The group is updated")
     check.afterDelay(1.second, state = false)
@@ -135,8 +135,8 @@ class GroupDeployIntegrationTest
     val group = Group(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
-    val v1Checks = appProxyChecks("proxy", "v1", state=true)
-    val v2Checks = appProxyChecks("proxy", "v2", state=true)
+    val v1Checks = appProxyChecks(name, "v1", state=true)
+    val v2Checks = appProxyChecks(name, "v2", state=true)
 
     When("The group is updated")
     marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v2", 2))))
@@ -162,8 +162,8 @@ class GroupDeployIntegrationTest
     waitForEvent("group_change_success")
 
     When("The new application is not healthy")
-    val v1Checks = appProxyChecks("proxy", "v1", state=true)
-    val v2Checks = appProxyChecks("proxy", "v2", state=false) //will always fail
+    val v1Checks = appProxyChecks(name, "v1", state=true)
+    val v2Checks = appProxyChecks(name, "v2", state=false) //will always fail
     marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v2", 2))))
 
     Then("All v1 applications are kept alive")
@@ -187,7 +187,7 @@ class GroupDeployIntegrationTest
     val group = Group(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
-    appProxyChecks("proxy", "v2", state=false) //will always fail
+    appProxyChecks(name, "v2", state=false) //will always fail
     marathon.updateGroup(group.copy(apps=Seq(appProxy(name, "v2", 2))))
 
     When("Another upgrade is triggered, while the old one is not completed")
