@@ -42,10 +42,14 @@ define([
           isHealthy = hc.alive;
           if (!isHealthy) {
             var failedCheck = _this.collection.options.healthChecks[index];
-            msg = "Warning: '" + failedCheck.protocol +
-              ": -p " + response["host"] + failedCheck.path + "'." +
-              "\nHealth check returned with status: " +
-              "'" + hc.lastFailureCause + "'.";
+            msg = "Warning: Health check '" +
+              (failedCheck.protocol ? failedCheck.protocol + " " : "") +
+              (response["host"] ? response["host"] : "") +
+              (failedCheck.path ? failedCheck.path : "") + "'" +
+              (hc.lastFailureCause ?
+                " returned with status: '" + hc.lastFailureCause + "'" :
+                " failed") +
+              ".";
             return;
           }
         }
