@@ -108,11 +108,11 @@ a:focus {
   color: #F98482;
 }
 
-.healthy {
+.text-healthy {
   color: #0A8;
 }
 
-.unhealthy {
+.text-unhealthy {
   color: #F98482;
 }
 

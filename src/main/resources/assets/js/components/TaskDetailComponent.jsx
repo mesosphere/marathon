@@ -18,8 +18,8 @@ define([
     render: function() {
       var task = this.props.task;
       var healthClassSet = React.addons.classSet({
-        "healthy": task.get("health"),
-        "unhealthy": !task.get("health")
+        "text-healthy": task.get("health"),
+        "text-unhealthy": !task.get("health")
       });
 
       var statusClassSet = React.addons.classSet({

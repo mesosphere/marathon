@@ -81,8 +81,8 @@ define([
 
       var healthClassSet = React.addons.classSet({
         "text-center": true,
-        "healthy": task.get("health"),
-        "unhealthy clickable": !task.get("health")
+        "text-healthy": task.get("health"),
+        "text-unhealthy clickable": !task.get("health")
       });
 
       var updatedAtNode;
