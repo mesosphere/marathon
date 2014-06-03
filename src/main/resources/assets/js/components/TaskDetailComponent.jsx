@@ -76,17 +76,23 @@ define([
               </div>;
             }
         });
-    
-      var updatedAtHead;
-      var updatedAtNode;
-      if (task.get("updatedAt") != null) {
-        updatedAtHead = <dt>Updated</dt>;
-        updatedAtNode =
-          <dd><time timestamp={task.get("updatedAt")}>
-            {task.get("updatedAt").toLocaleString()}
-          </time></dd>;
-      }
 
+      var stagedAtNode =
+        (task.get("stagedAt") == null ?
+          <dd className="text-muted">None</dd> :
+          <dd>
+              <time timestamp={task.get("stagedAt")}>
+                {task.get("stagedAt").toLocaleString()}
+              </time>
+            </dd>);
+      var startedAtNode =
+        (task.get("startedAt") == null ?
+          <dd className="text-muted">None</dd> :
+          <dd>
+              <time timestamp={task.get("startedAt")}>
+                {task.get("startedAt").toLocaleString()}
+              </time>
+            </dd>);
       return (
         <div>
           <p>
@@ -105,8 +111,10 @@ define([
             <dd>[{task.get("ports").toString()}]</dd>
             <dt>Status</dt>
             <dd>{task.get("status")}</dd>
-            {updatedAtHead}
-            {updatedAtNode}
+            <dt>Staged at</dt>
+            {stagedAtNode}
+            <dt>Started at</dt>
+            {startedAtNode}
             <dt>Version</dt>
             <dd>
               <time timestamp={task.get("version")}>
