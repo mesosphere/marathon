@@ -65,6 +65,7 @@ define([
     },
 
     handleTaskDetailSelect: function(event) {
+      event.preventDefault();
       this.props.onTaskDetailSelect(this.props.task);
     },
 
@@ -111,7 +112,7 @@ define([
           </td>
           <td className="text-right">{updatedAtNode}</td>
           <td className={healthClassSet}>●</td>
-          <td><a className="clickable" onClick={this.handleTaskDetailSelect}>view details</a></td>
+          <td><a href="#" className="clickable" onClick={this.handleTaskDetailSelect}>view details</a></td>
         </tr>
       );
     }
