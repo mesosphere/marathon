@@ -9,7 +9,7 @@ import mesosphere.marathon.Protos._
 import mesosphere.marathon.Main
 import java.io._
 import scala.Some
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import org.apache.log4j.Logger
 
 /**
@@ -19,7 +19,7 @@ import org.apache.log4j.Logger
 class TaskTracker @Inject()(state: State) {
 
   import TaskTracker.App
-  import ExecutionContext.Implicits.global
+  import mesosphere.util.ThreadPoolContext.context
   import mesosphere.util.BackToTheFuture.futureToFuture
 
   private[this] val log = Logger.getLogger(getClass.getName)

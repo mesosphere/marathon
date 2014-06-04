@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import mesosphere.marathon.api.v1.AppDefinition
 
 import scala.concurrent.duration.{Duration, SECONDS}
-import scala.concurrent.ExecutionContext.Implicits.global
+import mesosphere.util.ThreadPoolContext.context
 import scala.concurrent.Future
 
 
@@ -11,7 +11,7 @@ class AppRepository(store: PersistenceStore[AppDefinition]) {
 
   protected val ID_DELIMITER = ":"
 
-  val defaultWait = store match { 
+  val defaultWait = store match {
     case m: MarathonStore[_] => m.defaultWait
     case _ => Duration(3, SECONDS)
   }
@@ -53,7 +53,7 @@ class AppRepository(store: PersistenceStore[AppDefinition]) {
    * Returns the current version for all apps.
    */
   def apps(): Future[Iterable[AppDefinition]] =
-    appIds().flatMap { names => 
+    appIds().flatMap { names =>
       Future.sequence(names.map { name =>
       	currentVersion(name)
       }).map { _.flatten }

@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
-import mesosphere.util.RateLimiters
+import mesosphere.util.{ThreadPoolContext, RateLimiters}
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{Success, Failure}
 import org.apache.log4j.Logger
@@ -56,8 +56,7 @@ class MarathonScheduler @Inject()(
 
   private val log = Logger.getLogger(getClass.getName)
 
-  // TODO use a thread pool here
-  import ExecutionContext.Implicits.global
+  import ThreadPoolContext.context
   import mesosphere.mesos.protos.Implicits._
 
   /**
