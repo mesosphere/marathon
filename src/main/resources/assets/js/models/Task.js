@@ -4,6 +4,11 @@ define([
 ], function(Backbone, $, _) {
   var STATUS_STAGED = "Staged";
   var STATUS_STARTED = "Started";
+  var HEALTH = {
+    HEALTHY: 0,
+    UNHEALTHY: 1,
+    UNKNOWN: 2
+  };
 
   // Model attributes that are parseable as dates.
   var DATE_ATTRIBUTES = ["stagedAt", "startedAt", "version"];
@@ -29,10 +34,10 @@ define([
           }
         }
       );
-      if (!health && nullResult) { // null result
-        return null;
+      if (!health && nullResult) { // health check has not returned yet
+        return HEALTH.UNKNOWN;
       } else {
-        return health;
+        return health ? HEALTH.HEALTHY : HEALTH.UNHEALTHY;
       }
     },
 
@@ -69,5 +74,5 @@ define([
 
       return Backbone.sync.call(this, method, model, _options);
     }
-  });
+  }, {HEALTH: HEALTH});
 });

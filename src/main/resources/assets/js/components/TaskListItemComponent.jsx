@@ -2,8 +2,9 @@
 
 define([
   "React",
+  "models/Task",
   "jsx!components/TaskDetailComponent"
-], function(React, TaskDetailComponent) {
+], function(React, Task, TaskDetailComponent) {
 
   function buildHref(host, port) {
     return "http://" + host + ":" + port;
@@ -81,8 +82,8 @@ define([
 
       var healthClassSet = React.addons.classSet({
         "text-center": true,
-        "text-healthy": task.isHealthy(),
-        "text-unhealthy": task.isHealthy() != null && !task.isHealthy()
+        "text-healthy": task.isHealthy() === Task.HEALTH.HEALTHY,
+        "text-unhealthy": task.isHealthy() === Task.HEALTH.UNHEALTHY
       });
 
       var updatedAtNode;

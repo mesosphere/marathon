@@ -3,7 +3,8 @@
 define([
   "React",
   "mixins/BackboneMixin",
-], function(React, BackboneMixin) {
+  "models/Task"
+], function(React, BackboneMixin, Task) {
 
   return React.createClass({
     displayName: "TaskDetailComponent",
@@ -22,8 +23,8 @@ define([
     render: function() {
       var task = this.props.task;
       var healthClassSet = React.addons.classSet({
-        "text-healthy": task.isHealthy(),
-        "text-unhealthy": task.isHealthy() != null && !task.isHealthy()
+        "text-healthy": task.isHealthy() === Task.HEALTH.HEALTHY,
+        "text-unhealthy": task.isHealthy() === Task.HEALTH.UNHEALTHY
       });
 
       var statusClassSet = React.addons.classSet({
