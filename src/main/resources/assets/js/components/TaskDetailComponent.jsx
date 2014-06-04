@@ -38,21 +38,21 @@ define([
             var fSuccessNode = (cResult.firstSuccess == null ?
                 <dd className="text-muted">None</dd> :
                 <dd>
-                  <time timestamp={cResult.firstSuccess}>
+                  <time dateTime={cResult.firstSuccess}>
                     {new Date(cResult.firstSuccess).toLocaleString()}
                   </time>
                 </dd>);
             var lSuccessNode = (cResult.lastSuccess == null ?
                 <dd className="text-muted">None</dd> :
                 <dd>
-                  <time timestamp={cResult.lastSuccess}>
+                  <time dateTime={cResult.lastSuccess}>
                     {new Date(cResult.lastSuccess).toLocaleString()}
                   </time>
                 </dd>);
             var lFailureNode = (cResult.lastFailure == null ?
                 <dd className="text-muted">None</dd> :
                 <dd>
-                  <time timestamp={cResult.lastFailure}>
+                  <time dateTime={cResult.lastFailure}>
                     {new Date(cResult.lastFailure).toLocaleString()}
                   </time>
                 </dd>);
@@ -64,7 +64,7 @@ define([
                 <dd>Yes</dd>);
             return (
                 <div key={index}>
-                  <p className="text-right text-muted">Health Check Result {index+1}</p>
+                  <h5 className="text-right text-muted">Health Check Result {index+1}</h5>
                   <dl className="dl-horizontal">
                     <dt>First Success</dt>
                     {fSuccessNode}
@@ -87,7 +87,7 @@ define([
         (task.get("stagedAt") == null ?
           <dd className="text-muted">None</dd> :
           <dd>
-              <time timestamp={task.get("stagedAt")}>
+              <time dateTime={task.get("stagedAt")}>
                 {task.get("stagedAt").toLocaleString()}
               </time>
             </dd>);
@@ -95,21 +95,19 @@ define([
         (task.get("startedAt") == null ?
           <dd className="text-muted">None</dd> :
           <dd>
-              <time timestamp={task.get("startedAt")}>
+              <time dateTime={task.get("startedAt")}>
                 {task.get("startedAt").toLocaleString()}
               </time>
             </dd>);
       return (
         <div>
-          <p>
           <ol className="breadcrumb">
             <li>
               <a href="#" onClick={this.handleShowTaskList}>Task List</a>
             </li>
             <li className="active">{task.get("id")}</li>
           </ol>
-          </p>
-          <p className="text-right text-muted">Task Details</p>
+          <h5 className="text-right text-muted">Task Details</h5>
           <dl className="dl-horizontal">
             <dt>Host</dt>
             <dd>{task.get("host")}</dd>
@@ -123,7 +121,7 @@ define([
             {startedAtNode}
             <dt>Version</dt>
             <dd>
-              <time timestamp={task.get("version")}>
+              <time dateTime={task.get("version")}>
                 {task.get("version").toLocaleString()}
               </time>
             </dd>
