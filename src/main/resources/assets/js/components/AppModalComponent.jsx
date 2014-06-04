@@ -37,6 +37,7 @@ define([
     getInitialState: function() {
       return {
         activeTask: null,
+        activeViewIndex: 0,
         fetchState: STATES.STATE_LOADING
       };
     },
@@ -123,13 +124,14 @@ define([
         });
 
       var footer;
-      if (this.state.activeTask == null) {
+      if (this.state.activeViewIndex === 1) { // onlys show in TaskViewComponent
         footer = <div className="modal-footer">
             <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
               Destroy
             </button>
             <button className="btn btn-sm btn-default"
-                onClick={this.suspendApp} disabled={this.props.model.get("instances") < 1}>
+                onClick={this.suspendApp}
+                disabled={this.props.model.get("instances") < 1}>
               Suspend
             </button>
             <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
@@ -139,7 +141,8 @@ define([
       }
 
       return (
-        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy} size="lg">
+        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}
+          size="lg">
           <div className="modal-header">
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
@@ -165,7 +168,8 @@ define([
                 {id: "configuration", text: "Configuration"}
               ]}>
             <TabPaneComponent id="tasks">
-              <StackedViewComponent ref="stackedView">
+              <StackedViewComponent
+                activeViewIndex={this.state.activeViewIndex}>
                 <TaskViewComponent
                   collection={model.tasks}
                   fetchState={this.state.fetchState}
@@ -233,14 +237,16 @@ define([
       }
     },
     showTaskDetails: function(task) {
-      this.setState({ activeTask: task });
-      // set task detail view as the active
-      this.refs.stackedView.setActiveViewIndex(1);
+      this.setState({
+        activeTask: task,
+        activeViewIndex: 1
+      });
     },
     showTaskList: function() {
-      this.setState({ activeTask: null });
-      // pop task detail view
-      this.refs.stackedView.popView();
+      this.setState({
+        activeTask: null,
+        activeViewIndex: 0
+      });
     },
     setFetched: function() {
       this.setState({fetched: true});
