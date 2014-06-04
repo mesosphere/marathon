@@ -62,22 +62,24 @@ define([
             var aliveNode = (cResult.alive == null ?
                 <dd>No</dd> :
                 <dd>Yes</dd>);
-            return <div key={index}>
-                <p className="text-right text-muted">Health Check Result {index+1}</p>
-                <dl className="dl-horizontal">
-                  <dt>First Success</dt>
-                  {fSuccessNode}
-                  <dt>Last Success</dt>
-                  {lSuccessNode}
-                  <dt>Last Failure</dt>
-                  {lFailureNode}
-                  <dt>Consecutive Failures</dt>
-                  {cFailuresNode}
-                  <dt>Alive</dt>
-                  {aliveNode}
-                </dl>
-                <hr />
-              </div>;
+            return (
+                <div key={index}>
+                  <p className="text-right text-muted">Health Check Result {index+1}</p>
+                  <dl className="dl-horizontal">
+                    <dt>First Success</dt>
+                    {fSuccessNode}
+                    <dt>Last Success</dt>
+                    {lSuccessNode}
+                    <dt>Last Failure</dt>
+                    {lFailureNode}
+                    <dt>Consecutive Failures</dt>
+                    {cFailuresNode}
+                    <dt>Alive</dt>
+                    {aliveNode}
+                  </dl>
+                  <hr />
+                </div>
+              );
             }
         });
 
