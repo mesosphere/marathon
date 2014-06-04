@@ -36,7 +36,7 @@ define([
     },
     getInitialState: function() {
       return {
-        resource: this.props.model,
+        activeTask: null,
         fetchState: STATES.STATE_LOADING,
         selectedTasks: {}
       };
@@ -124,7 +124,7 @@ define([
         });
 
       var footer;
-      if (this.state.resource == null) {
+      if (this.state.activeTask == null) {
         footer = <div className="modal-footer">
             <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
               Destroy
@@ -173,7 +173,7 @@ define([
                   onTasksKilled={this.onTasksKilled}
                   onTaskDetailSelect={this.showTaskDetails}
                   selectedTasks={this.state.selectedTasks} />
-                <TaskDetailComponent task={this.state.resource}
+                <TaskDetailComponent task={this.state.activeTask}
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   onShowTaskList={this.showTaskList} />
               </StackedViewComponent>
@@ -234,12 +234,12 @@ define([
       }
     },
     showTaskDetails: function(task) {
-      this.setState({ resource: task });
+      this.setState({ activeTask: task });
       // set task detail view as the active
       this.refs.stackedView.setActiveViewIndex(1);
     },
     showTaskList: function() {
-      this.setState({ resource: this.props.model });
+      this.setState({ activeTask: null });
       // pop task detail view
       this.refs.stackedView.popView();
     },
