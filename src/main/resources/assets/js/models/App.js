@@ -32,6 +32,7 @@ define([
       };
     },
     initialize: function(options) {
+      _.bindAll(this, 'formatTaskHealthMessage');
       // If this model belongs to a collection when it is instantiated, it has
       // already been persisted to the server.
       this.persisted = (this.collection != null);
@@ -61,11 +62,10 @@ define([
     formatTaskHealthMessage: function(task) {
       var healthCheckResults = task.get("healthCheckResults");
       var msg = DEFAULT_HEALTH_MSG;
-      healthCheckResults.forEach(function (hc, index) {
+      healthCheckResults.some(function (hc, index) {
         if (hc == null) {
           msg = "Unknown";
-        }
-        if (hc && !hc.alive) {
+        } else if (hc && !hc.alive) {
           var failedCheck = this.get("healthChecks")[index];
           msg = "Warning: Health check '" +
             (failedCheck.protocol ? failedCheck.protocol + " " : "") +
