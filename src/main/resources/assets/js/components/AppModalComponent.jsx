@@ -131,6 +131,9 @@ define([
       var portsNode = (model.get("ports").length === 0 ) ?
         <dd className="text-muted">Unspecified</dd> :
         <dd>{model.get("ports").join(",")}</dd>;
+      var versionNode = (model.get("version") == null) ?
+        <dd className="text-muted">Unspecified</dd> :
+        <dd>{model.get("version").toLocaleString()}</dd>;
       var urisNode = (model.get("uris").length === 0) ?
         <dd className="text-muted">Unspecified</dd> :
         model.get("uris").map(function(u) {
@@ -193,7 +196,7 @@ define([
                 <dt>URIs</dt>
                 {urisNode}
                 <dt>Version</dt>
-                <dd>{model.get("version").toLocaleString()}</dd>
+                {versionNode}
               </dl>
             </TabPaneComponent>
           </TogglableTabsComponent>
