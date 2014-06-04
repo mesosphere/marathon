@@ -25,6 +25,7 @@ import akka.pattern.ask
 import scala.concurrent.duration._
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import org.apache.mesos.Protos.OfferID
+import java.util.concurrent.TimeUnit
 
 class MarathonSchedulerActor(
   val appRepository: AppRepository,
@@ -111,15 +112,18 @@ class MarathonSchedulerActor(
     val lock = appLocks.get(appId)
     if (blocking) {
       lock.acquire()
+      log.debug(s"Acquired lock for app: ${appId}, performing cmd: $cmd")
       f andThen { case _ =>
         lock.release()
       }
     }
-    else if (lock.tryAcquire()) {
+    else if (lock.tryAcquire(1000, TimeUnit.MILLISECONDS)) {
+      log.debug(s"Acquired lock for app: ${appId}, performing cmd: $cmd")
       f andThen { case _ =>
         lock.release()
       }
     } else {
+      log.debug(s"Failed to acquire lock for app: ${appId} to perform cmd: $cmd")
       origSender ! CommandFailed(cmd, new AppLockedException)
     }
   }

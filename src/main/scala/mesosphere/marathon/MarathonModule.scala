@@ -10,7 +10,7 @@ import org.apache.log4j.Logger
 import javax.inject.Named
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
-import akka.actor.{Props, ActorRef, ActorSystem}
+import akka.actor.{OneForOneStrategy, Props, ActorRef, ActorSystem}
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -21,6 +21,8 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.api.v2.Group
 import akka.event.EventStream
 import mesosphere.marathon.event.EventModule
+import akka.routing.RoundRobinRouter
+import akka.actor.SupervisorStrategy.Resume
 
 /**
   * @author Tobi Knaup
@@ -85,6 +87,10 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     rateLimiters: RateLimiters,
     @Named(EventModule.busName) eventBus: EventStream
   ): ActorRef = {
+    val supervision = OneForOneStrategy() {
+      case _ => Resume
+    }
+
     system.actorOf(
       Props(
         classOf[MarathonSchedulerActor],
@@ -94,8 +100,8 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
         taskQueue,
         frameworkIdUtil,
         rateLimiters,
-        eventBus),
-    "MarathonScheduler")
+        eventBus).withRouter(RoundRobinRouter(nrOfInstances = 1, supervisorStrategy = supervision)),
+      "MarathonScheduler")
   }
 
   @Named(ModuleNames.NAMED_CANDIDATE)
