@@ -13,8 +13,10 @@ define([
       };
     },
     setActiveViewIndex: function (index) {
-      this.setState({activeViewIndex: index});
-      this.state.viewStack.push(index);
+      this.setState(React.addons.update(this.state, {
+        activeViewIndex: {$set: index},
+        viewStack: {$push: [index]}
+      }));
     },
     popView: function() {
       this.state.viewStack.pop();
