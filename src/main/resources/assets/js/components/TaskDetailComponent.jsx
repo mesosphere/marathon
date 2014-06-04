@@ -100,13 +100,11 @@ define([
       return (
         <div>
           <p>
-          <ol class="breadcrumb">
+          <ol className="breadcrumb">
             <li>
-              <a href="#" class="active" onClick={this.handleShowTaskList}>
-                Task List
-              </a>
+              <a href="#" onClick={this.handleShowTaskList}>Task List</a>
             </li>
-            <li>{task.get("id")}</li>
+            <li className="active">{task.get("id")}</li>
           </ol>
           </p>
           <p className="text-right text-muted">Task Details</p>
