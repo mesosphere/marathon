@@ -37,8 +37,7 @@ define([
     getInitialState: function() {
       return {
         activeTask: null,
-        fetchState: STATES.STATE_LOADING,
-        selectedTasks: {}
+        fetchState: STATES.STATE_LOADING
       };
     },
     getResource: function () {
@@ -170,9 +169,9 @@ define([
                 <TaskViewComponent
                   collection={model.tasks}
                   fetchState={this.state.fetchState}
+                  fetchTasks={this.fetchTasks}
                   onTasksKilled={this.onTasksKilled}
-                  onTaskDetailSelect={this.showTaskDetails}
-                  selectedTasks={this.state.selectedTasks} />
+                  onTaskDetailSelect={this.showTaskDetails} />
                 <TaskDetailComponent task={this.state.activeTask}
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   onShowTaskList={this.showTaskList} />

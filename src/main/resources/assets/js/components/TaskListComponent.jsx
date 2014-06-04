@@ -91,7 +91,7 @@ define([
           <table className="table">
             <thead>
               <tr>
-                <th className="clickable" width="1" onClick={this.props.handleThToggleClick}>
+                <th className="clickable" width="1" onClick={this.handleThToggleClick}>
                   <input type="checkbox"
                     checked={allTasksSelected}
                     disabled={tasksLength === 0}

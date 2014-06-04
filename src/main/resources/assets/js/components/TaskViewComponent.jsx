@@ -7,6 +7,11 @@ define([
   
   return React.createClass({
     displayName: "TaskViewComponent",
+    getInitialState: function() {
+      return {
+        selectedTasks: {}
+      };
+    },
     getResource: function() {
       return this.props.collection;
     },
@@ -14,7 +19,7 @@ define([
       var _this = this;
       var _options = options || {};
 
-      var selectedTaskIds = Object.keys(this.props.selectedTasks);
+      var selectedTaskIds = Object.keys(this.state.selectedTasks);
       var tasksToKill = this.props.collection.filter(function(task) {
         return selectedTaskIds.indexOf(task.id) >= 0;
       });
@@ -24,7 +29,7 @@ define([
           scale: _options.scale,
           success: function () {
             _this.props.onTasksKilled(_options);
-            delete _this.props.selectedTasks[task.id];
+            delete _this.state.selectedTasks[task.id];
           },
           wait: true
         });
@@ -39,7 +44,7 @@ define([
 
       // Note: not an **exact** check for all tasks being selected but a good
       // enough proxy.
-      var allTasksSelected = Object.keys(this.props.selectedTasks).length ===
+      var allTasksSelected = Object.keys(this.state.selectedTasks).length ===
         modelTasks.length;
 
       if (!allTasksSelected) {
@@ -49,7 +54,7 @@ define([
       this.setState({selectedTasks: newSelectedTasks});
     },
     onTaskToggle: function(task, value) {
-      var selectedTasks = this.props.selectedTasks;
+      var selectedTasks = this.state.selectedTasks;
 
       // If `toggleTask` is used as a callback for an event handler, the second
       // parameter will be an event object. Use it to set the value only if it
@@ -67,12 +72,12 @@ define([
       this.setState({selectedTasks: selectedTasks});
     },
     render: function() {
-      var selectedTasksLength = Object.keys(this.props.selectedTasks).length;
+      var selectedTasksLength = Object.keys(this.state.selectedTasks).length;
 
       if (selectedTasksLength === 0) {
         buttons =
           <p>
-            <button className="btn btn-sm btn-default" onClick={this.fetchTasks}>
+            <button className="btn btn-sm btn-default" onClick={this.props.fetchTasks}>
               ↻ Refresh
             </button>
           </p>;
@@ -99,7 +104,7 @@ define([
           {buttons}
           <TaskListComponent tasks={this.props.collection}
             fetchState={this.props.fetchState}
-            selectedTasks={this.props.selectedTasks}
+            selectedTasks={this.state.selectedTasks}
             onTaskToggle={this.onTaskToggle}
             toggleAllTasks={this.toggleAllTasks}
             onTaskDetailSelect={this.props.onTaskDetailSelect} />
