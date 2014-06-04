@@ -23,7 +23,7 @@ define([
           if (hcr) { // might be null
             return hcr.alive;
           }
-          return true;
+          return null;
         }
       );
     },

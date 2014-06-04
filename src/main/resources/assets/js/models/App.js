@@ -58,6 +58,28 @@ define([
       var tasksRunning = this.get("tasksRunning");
       return tasksRunning == null ? "-" : tasksRunning;
     },
+    formatTaskHealthMessage: function(task) {
+      var healthCheckResults = task.get("healthCheckResults");
+      var msg = DEFAULT_HEALTH_MSG;
+      healthCheckResults.forEach(function (hc, index) {
+        if (hc == null) {
+          msg = "Unknown";
+        }
+        if (hc && !hc.alive) {
+          var failedCheck = this.get("healthChecks")[index];
+          msg = "Warning: Health check '" +
+            (failedCheck.protocol ? failedCheck.protocol + " " : "") +
+            (this.get("host") ? this.get("host") : "") +
+            (failedCheck.path ? failedCheck.path : "") + "'" +
+            (hc.lastFailureCause ?
+              " returned with status: '" + hc.lastFailureCause + "'" :
+              " failed") +
+            ".";
+          return;
+        }
+      }, this);
+      return msg;
+    },
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
      * "version" value, which when sent prevents any other attributes from being
@@ -144,25 +166,6 @@ define([
       }
 
       if (errors.length > 0) return errors;
-    },
-    formatTaskHealthMessage: function(task) {
-      var healthCheckResults = task.get("healthCheckResults");
-      var msg = DEFAULT_HEALTH_MSG;
-      healthCheckResults.forEach(function (hc, index) {
-        if (hc && !hc.alive) {
-          var failedCheck = this.get("healthChecks")[index];
-          msg = "Warning: Health check '" +
-            (failedCheck.protocol ? failedCheck.protocol + " " : "") +
-            (this.get("host") ? this.get("host") : "") +
-            (failedCheck.path ? failedCheck.path : "") + "'" +
-            (hc.lastFailureCause ?
-              " returned with status: '" + hc.lastFailureCause + "'" :
-              " failed") +
-            ".";
-          return;
-        }
-      }, this);
-      return msg;
     }
   }, {
     VALID_ID_PATTERN: VALID_ID_PATTERN
