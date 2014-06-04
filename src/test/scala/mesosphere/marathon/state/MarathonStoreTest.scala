@@ -171,7 +171,7 @@ class MarathonStoreTest extends MarathonSpec {
   }
 
   test("ConcurrentModifications") {
-    import scala.concurrent.ExecutionContext.Implicits.global
+    import mesosphere.util.ThreadPoolContext.context
     val state = new InMemoryState
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())

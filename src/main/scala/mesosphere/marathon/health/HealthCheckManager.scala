@@ -9,7 +9,7 @@ import akka.util.Timeout
 import javax.inject.{Named, Inject, Singleton}
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import mesosphere.util.ThreadPoolContext.context
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event.{RemoveHealthCheck, AddHealthCheck, EventModule}
 import org.apache.mesos.MesosSchedulerDriver

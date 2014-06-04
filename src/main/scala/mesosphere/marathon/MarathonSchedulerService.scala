@@ -23,6 +23,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import scala.concurrent.duration._
 import java.util.concurrent.CountDownLatch
+import mesosphere.util.ThreadPoolContext
 
 /**
  * Wrapper class for the scheduler
@@ -39,8 +40,7 @@ class MarathonSchedulerService @Inject()(
     scheduler: MarathonScheduler)
   extends AbstractExecutionThreadService with Leader {
 
-  // TODO use a thread pool here
-  import ExecutionContext.Implicits.global
+  import ThreadPoolContext.context
 
   val latch = new CountDownLatch(1)
 
