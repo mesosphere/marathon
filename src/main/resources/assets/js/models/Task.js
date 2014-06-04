@@ -4,7 +4,6 @@ define([
 ], function(Backbone, $, _) {
   var STATUS_STAGED = "Staged";
   var STATUS_STARTED = "Started";
-  var DEFAULT_HEALTH_MSG = "Healthy"
 
   // Model attributes that are parseable as dates.
   var DATE_ATTRIBUTES = ["stagedAt", "startedAt", "version"];
@@ -18,8 +17,11 @@ define([
       return this.get("status") === STATUS_STAGED;
     },
 
+    isHealthy: function() {
+      return this.get("healthCheckResults").every(function(hcr) { return hcr.alive; });
+    },
+
     parse: function(response) {
-      var _this = this;
       // Parse all known date attributes as real Date objects.
       DATE_ATTRIBUTES.forEach(function(attr) {
         var parsedAttr = Date.parse(response[attr]);
@@ -33,29 +35,6 @@ define([
         response.status = STATUS_STAGED;
         response.updatedAt = response.stagedAt;
       }
-
-      var isHealthy = true;
-      var healthCheckResults = response["healthCheckResults"];
-      var msg = DEFAULT_HEALTH_MSG;
-      healthCheckResults.forEach(function (hc, index) {
-        if (hc) {
-          isHealthy = hc.alive;
-          if (!isHealthy) {
-            var failedCheck = _this.collection.options.healthChecks[index];
-            msg = "Warning: Health check '" +
-              (failedCheck.protocol ? failedCheck.protocol + " " : "") +
-              (response["host"] ? response["host"] : "") +
-              (failedCheck.path ? failedCheck.path : "") + "'" +
-              (hc.lastFailureCause ?
-                " returned with status: '" + hc.lastFailureCause + "'" :
-                " failed") +
-              ".";
-            return;
-          }
-        }
-      });
-      this.set("healthMsg", msg);
-      this.set("health", isHealthy);
 
       return response;
     },

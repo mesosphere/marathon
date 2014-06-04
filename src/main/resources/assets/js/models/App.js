@@ -8,8 +8,9 @@ define([
     this.message = message;
   }
 
+  var DEFAULT_HEALTH_MSG = "Healthy";
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
-    "executor", "healthChecks", "id", "instances", "mem", "ports", "uris"];
+    "executor", "id", "instances", "mem", "ports", "uris"];
   var VALID_ID_PATTERN = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
   var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
 
@@ -35,7 +36,7 @@ define([
       // already been persisted to the server.
       this.persisted = (this.collection != null);
 
-      this.tasks = new TaskCollection(null, {appId: this.id, healthChecks: this.get("healthChecks")});
+      this.tasks = new TaskCollection(null, {appId: this.id});
       this.on({
         "change:id": function(model, value, options) {
           // Inform TaskCollection of new ID so it can send requests to the new
@@ -143,6 +144,25 @@ define([
       }
 
       if (errors.length > 0) return errors;
+    },
+    formatTaskHealthMessage: function(task) {
+      var healthCheckResults = task.get("healthCheckResults");
+      var msg = DEFAULT_HEALTH_MSG;
+      healthCheckResults.forEach(function (hc, index) {
+        if (hc && !hc.alive) {
+          var failedCheck = this.get("healthChecks")[index];
+          msg = "Warning: Health check '" +
+            (failedCheck.protocol ? failedCheck.protocol + " " : "") +
+            (this.get("host") ? this.get("host") : "") +
+            (failedCheck.path ? failedCheck.path : "") + "'" +
+            (hc.lastFailureCause ?
+              " returned with status: '" + hc.lastFailureCause + "'" :
+              " failed") +
+            ".";
+          return;
+        }
+      }, this);
+      return msg;
     }
   }, {
     VALID_ID_PATTERN: VALID_ID_PATTERN

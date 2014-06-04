@@ -174,6 +174,7 @@ define([
                   onTaskDetailSelect={this.showTaskDetails}
                   selectedTasks={this.state.selectedTasks} />
                 <TaskDetailComponent task={this.state.resource}
+                  formatTaskHealthMessage={model.formatTaskHealthMessage}
                   onShowTaskList={this.showTaskList} />
               </StackedViewComponent>
             </TabPaneComponent>

@@ -22,8 +22,8 @@ define([
     render: function() {
       var task = this.props.task;
       var healthClassSet = React.addons.classSet({
-        "text-healthy": task.get("health"),
-        "text-unhealthy": !task.get("health")
+        "text-healthy": task.isHealthy(),
+        "text-unhealthy": !task.isHealthy()
       });
 
       var statusClassSet = React.addons.classSet({
@@ -126,7 +126,7 @@ define([
               </time>
             </dd>
             <dt>Health</dt>
-            <dd className={healthClassSet}>{task.get("healthMsg")}</dd>
+            <dd className={healthClassSet}>{this.props.formatTaskHealthMessage(task)}</dd>
           </dl>
           <hr />
           {healthNodeList}
