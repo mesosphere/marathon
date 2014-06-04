@@ -36,32 +36,32 @@ define([
         task.get("healthCheckResults").map(function (cResult, index) {
           if (cResult) {
             var fSuccessNode = (cResult.firstSuccess == null ?
-                <dd className="text-muted">None</dd> :
-                <dd>
-                  <time dateTime={cResult.firstSuccess}>
-                    {new Date(cResult.firstSuccess).toLocaleString()}
-                  </time>
-                </dd>);
+              <dd className="text-muted">None</dd> :
+              <dd>
+                <time dateTime={cResult.firstSuccess}>
+                  {new Date(cResult.firstSuccess).toLocaleString()}
+                </time>
+              </dd>);
             var lSuccessNode = (cResult.lastSuccess == null ?
-                <dd className="text-muted">None</dd> :
-                <dd>
-                  <time dateTime={cResult.lastSuccess}>
-                    {new Date(cResult.lastSuccess).toLocaleString()}
-                  </time>
-                </dd>);
+              <dd className="text-muted">None</dd> :
+              <dd>
+                <time dateTime={cResult.lastSuccess}>
+                  {new Date(cResult.lastSuccess).toLocaleString()}
+                </time>
+              </dd>);
             var lFailureNode = (cResult.lastFailure == null ?
-                <dd className="text-muted">None</dd> :
-                <dd>
-                  <time dateTime={cResult.lastFailure}>
-                    {new Date(cResult.lastFailure).toLocaleString()}
-                  </time>
-                </dd>);
+              <dd className="text-muted">None</dd> :
+              <dd>
+                <time dateTime={cResult.lastFailure}>
+                  {new Date(cResult.lastFailure).toLocaleString()}
+                </time>
+              </dd>);
             var cFailuresNode = (cResult.consecutiveFailures == null ?
-                <dd className="text-muted">None</dd> :
-                <dd>{cResult.consecutiveFailures}</dd>);
+              <dd className="text-muted">None</dd> :
+              <dd>{cResult.consecutiveFailures}</dd>);
             var aliveNode = (cResult.alive == null ?
-                <dd>No</dd> :
-                <dd>Yes</dd>);
+              <dd>No</dd> :
+              <dd>Yes</dd>);
             return (
                 <div key={index}>
                   <h5 className="text-right text-muted">Health Check Result {index+1}</h5>
@@ -87,18 +87,18 @@ define([
         (task.get("stagedAt") == null ?
           <dd className="text-muted">None</dd> :
           <dd>
-              <time dateTime={task.get("stagedAt")}>
-                {task.get("stagedAt").toLocaleString()}
-              </time>
-            </dd>);
+            <time dateTime={task.get("stagedAt")}>
+              {task.get("stagedAt").toLocaleString()}
+            </time>
+          </dd>);
       var startedAtNode =
         (task.get("startedAt") == null ?
           <dd className="text-muted">None</dd> :
           <dd>
-              <time dateTime={task.get("startedAt")}>
-                {task.get("startedAt").toLocaleString()}
-              </time>
-            </dd>);
+            <time dateTime={task.get("startedAt")}>
+              {task.get("startedAt").toLocaleString()}
+            </time>
+          </dd>);
       return (
         <div>
           <ol className="breadcrumb">

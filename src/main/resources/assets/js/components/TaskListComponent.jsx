@@ -87,48 +87,46 @@ define([
         "▲" :
         "▼";
       return (
-        <div>
-          <table className="table">
-            <thead>
-              <tr>
-                <th className="clickable" width="1" onClick={this.handleThToggleClick}>
-                  <input type="checkbox"
-                    checked={allTasksSelected}
-                    disabled={tasksLength === 0}
-                    onChange={this.props.toggleAllTasks} />
-                </th>
-                <th>
-                  <span onClick={this.sortCollectionBy.bind(null, "id")}
-                        className="clickable">
-                    ID {(sortKey === "id") ? sortOrder : null}
-                  </span>
-                </th>
-                <th>
-                  <span onClick={this.sortCollectionBy.bind(null, "status")}
-                        className="clickable">
-                    Status {(sortKey === "status") ? sortOrder : null}
-                  </span>
-                </th>
-                <th className="text-right">
-                  <span onClick={this.sortCollectionBy.bind(null, "updatedAt")}
-                        className="clickable">
-                    {(sortKey === "updatedAt") ? sortOrder : null} Updated
-                  </span>
-                </th>
-                <th className="text-center">
-                  <span onClick={this.sortCollectionBy.bind(null, "health")}
-                        className="clickable">
-                    {(sortKey === "health") ? sortOrder : null} Health
-                  </span>
-                </th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {taskNodes}
-            </tbody>
-          </table>
-        </div>
+        <table className="table">
+          <thead>
+            <tr>
+              <th className="clickable" width="1" onClick={this.handleThToggleClick}>
+                <input type="checkbox"
+                  checked={allTasksSelected}
+                  disabled={tasksLength === 0}
+                  onChange={this.props.toggleAllTasks} />
+              </th>
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "id")}
+                      className="clickable">
+                  ID {(sortKey === "id") ? sortOrder : null}
+                </span>
+              </th>
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "status")}
+                      className="clickable">
+                  Status {(sortKey === "status") ? sortOrder : null}
+                </span>
+              </th>
+              <th className="text-right">
+                <span onClick={this.sortCollectionBy.bind(null, "updatedAt")}
+                      className="clickable">
+                  {(sortKey === "updatedAt") ? sortOrder : null} Updated
+                </span>
+              </th>
+              <th className="text-center">
+                <span onClick={this.sortCollectionBy.bind(null, "health")}
+                      className="clickable">
+                  {(sortKey === "health") ? sortOrder : null} Health
+                </span>
+              </th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {taskNodes}
+          </tbody>
+        </table>
       );
     },
     sortCollectionBy: function(comparator) {

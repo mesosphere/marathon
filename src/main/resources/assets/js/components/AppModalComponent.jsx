@@ -125,7 +125,8 @@ define([
 
       var footer;
       if (this.state.activeViewIndex === 1) { // onlys show in TaskViewComponent
-        footer = <div className="modal-footer">
+        footer =
+          <div className="modal-footer">
             <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
               Destroy
             </button>
