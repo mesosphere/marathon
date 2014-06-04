@@ -18,7 +18,14 @@ define([
     },
 
     isHealthy: function() {
-      return this.get("healthCheckResults").every(function(hcr) { return hcr.alive; });
+      return this.get("healthCheckResults").every(
+        function(hcr) {
+          if (hcr) { // might be null
+            return hcr.alive;
+          }
+          return true;
+        }
+      );
     },
 
     parse: function(response) {
