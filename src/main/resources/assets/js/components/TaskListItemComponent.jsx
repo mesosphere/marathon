@@ -82,8 +82,9 @@ define([
       var healthClassSet = React.addons.classSet({
         "text-center": true,
         "text-healthy": task.isHealthy(),
-        "text-unhealthy": task.isHealthy() == null
+        "text-unhealthy": task.isHealthy() != null && !task.isHealthy()
       });
+      console.log(task.isHealthy());
 
       var updatedAtNode;
       if (task.get("updatedAt") != null) {

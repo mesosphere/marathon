@@ -18,14 +18,22 @@ define([
     },
 
     isHealthy: function() {
-      return this.get("healthCheckResults").every(
+      var nullResult = false;
+      var health = this.get("healthCheckResults").every(
         function(hcr) {
-          if (hcr) { // might be null
+          if (hcr == null) { // might be null
+            nullResult = true;
+            return false;
+          } else {
             return hcr.alive;
           }
-          return null;
         }
       );
+      if (!health && nullResult) { // null result
+        return null;
+      } else {
+        return health;
+      }
     },
 
     parse: function(response) {
