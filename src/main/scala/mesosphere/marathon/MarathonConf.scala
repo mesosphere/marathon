@@ -8,7 +8,7 @@ import scala.sys.SystemProperties
  * @author Tobi Knaup
  */
 
-trait MarathonConf extends ScallopConf {
+trait MarathonConf extends ScallopConf with ZookeeperConf {
 
   lazy val mesosMaster = opt[String]("master",
     descr = "The URL of the Mesos master",

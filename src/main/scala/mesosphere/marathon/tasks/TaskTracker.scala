@@ -6,21 +6,24 @@ import org.apache.mesos.Protos.{TaskID, TaskStatus}
 import javax.inject.Inject
 import org.apache.mesos.state.{Variable, State}
 import mesosphere.marathon.Protos._
-import mesosphere.marathon.Main
+import mesosphere.marathon.{MarathonConf, Main}
 import java.io._
 import scala.Some
 import scala.concurrent.Future
 import org.apache.log4j.Logger
+import mesosphere.util.{ThreadPoolContext, BackToTheFuture}
 
 /**
  * @author Tobi Knaup
  */
 
-class TaskTracker @Inject()(state: State) {
+class TaskTracker @Inject()(state: State, config: MarathonConf) {
 
   import TaskTracker.App
-  import mesosphere.util.ThreadPoolContext.context
-  import mesosphere.util.BackToTheFuture.futureToFuture
+  import ThreadPoolContext.context
+  import BackToTheFuture.futureToFuture
+
+  implicit val timeout = config.zkFutureTimeout
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
