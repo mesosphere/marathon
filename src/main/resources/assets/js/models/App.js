@@ -1,14 +1,15 @@
 define([
   "Backbone",
   "Underscore",
+  "models/Task",
   "models/TaskCollection"
-], function(Backbone, _, TaskCollection) {
+], function(Backbone, _, Task, TaskCollection) {
   function ValidationError(attribute, message) {
     this.attribute = attribute;
     this.message = message;
   }
 
-  var DEFAULT_HEALTH_MSG = "Healthy";
+  var DEFAULT_HEALTH_MSG = "Unknown";
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
     "executor", "id", "instances", "mem", "ports", "uris"];
   var VALID_ID_PATTERN = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
@@ -60,24 +61,36 @@ define([
       return tasksRunning == null ? "-" : tasksRunning;
     },
     formatTaskHealthMessage: function(task) {
-      var healthCheckResults = task.get("healthCheckResults");
+      
       var msg = DEFAULT_HEALTH_MSG;
-      healthCheckResults.some(function (hc, index) {
-        if (hc == null) {
-          msg = "Unknown";
-        } else if (hc && !hc.alive) {
-          var failedCheck = this.get("healthChecks")[index];
-          msg = "Warning: Health check '" +
-            (failedCheck.protocol ? failedCheck.protocol + " " : "") +
-            (this.get("host") ? this.get("host") : "") +
-            (failedCheck.path ? failedCheck.path : "") + "'" +
-            (hc.lastFailureCause ?
-              " returned with status: '" + hc.lastFailureCause + "'" :
-              " failed") +
-            ".";
-          return true;
-        }
-      }, this);
+      var taskHealth = task.getHealth();
+      switch(taskHealth) {
+        case Task.HEALTH.HEALTHY:
+           msg = "Healthy";
+          break;
+        case Task.HEALTH.UNHEALTHY:
+          var healthCheckResults = task.get("healthCheckResults");
+          if (healthCheckResults != null) {
+            healthCheckResults.some(function (hc, index) {
+              if (hc && !hc.alive) {
+                var failedCheck = this.get("healthChecks")[index];
+                msg = "Warning: Health check '" +
+                  (failedCheck.protocol ? failedCheck.protocol + " " : "") +
+                  (this.get("host") ? this.get("host") : "") +
+                  (failedCheck.path ? failedCheck.path : "") + "'" +
+                  (hc.lastFailureCause ?
+                    " returned with status: '" + hc.lastFailureCause + "'" :
+                    " failed") +
+                  ".";
+                return true;
+              }
+            }, this);
+          }
+          break;
+        default:
+          msg = DEFAULT_HEALTH_MSG;
+          break;
+      }
       return msg;
     },
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent

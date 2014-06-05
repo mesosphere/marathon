@@ -23,17 +23,19 @@ define([
     },
 
     getHealth: function() {
-      var nullResult = false;
-      var health = this.get("healthCheckResults").every(
-        function(hcr) {
-          if (hcr == null) { // might be null
-            nullResult = true;
-            return false;
-          } else {
+      var nullResult = true;
+      var health = false;
+      var healthCheckResults = this.get("healthCheckResults")
+      if (healthCheckResults != null) {
+        health = healthCheckResults.every(function (hcr) {
+          if (hcr) {
+            nullResult = false;
             return hcr.alive;
+          } else { // might be null
+            return false;
           }
-        }
-      );
+        });
+      }
       if (!health && nullResult) { // health check has not returned yet
         return HEALTH.UNKNOWN;
       } else {
@@ -55,7 +57,6 @@ define([
         response.status = STATUS_STAGED;
         response.updatedAt = response.stagedAt;
       }
-
       return response;
     },
 

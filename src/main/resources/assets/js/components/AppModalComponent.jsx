@@ -53,7 +53,6 @@ define([
         error: function() {
           _this.setState({fetchState: STATES.STATE_ERROR});
         },
-        reset: true,
         success: function() {
           _this.setState({fetchState: STATES.STATE_SUCCESS});
         }
@@ -131,7 +130,7 @@ define([
         });
 
       var footer;
-      if (this.state.activeViewIndex === 1) { // onlys show in TaskViewComponent
+      if (this.state.activeViewIndex === 0) { // onlys show in TaskViewComponent
         footer =
           <div className="modal-footer">
             <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
@@ -185,6 +184,7 @@ define([
                   onTasksKilled={this.onTasksKilled}
                   onTaskDetailSelect={this.showTaskDetails} />
                 <TaskDetailComponent task={this.state.activeTask}
+                  fetchState={this.state.fetchState}
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   onShowTaskList={this.showTaskList} />
               </StackedViewComponent>
