@@ -8,6 +8,7 @@ import mesosphere.marathon.tasks.{TaskTracker, TaskQueue}
 import akka.event.EventStream
 import mesosphere.marathon.ConcurrentTaskUpgradeException
 import scala.collection.mutable
+import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
 
 class AppUpgradeManager(
   taskTracker: TaskTracker,
@@ -40,11 +41,11 @@ class AppUpgradeManager(
     case _: Upgrade =>
       sender ! Status.Failure(new ConcurrentTaskUpgradeException("Upgrade is already in progress"))
 
-    case CancelUpgrade(appId) =>
+    case CancelUpgrade(appId, reason) =>
       val origSender = sender
       runningUpgrades.remove(appId) match {
         case Some(ref) =>
-          stopActor(ref) onComplete {
+          stopActor(ref, reason) onComplete {
             case _ => origSender ! UpgradeCancelled(appId)
           }
 
@@ -56,16 +57,16 @@ class AppUpgradeManager(
       runningUpgrades -= id
   }
 
-  def stopActor(ref: ActorRef): Future[Boolean] = {
+  def stopActor(ref: ActorRef, reason: Throwable): Future[Boolean] = {
     val promise = Promise[Boolean]()
-    context.actorOf(Props(classOf[StopActor], ref, promise))
+    context.actorOf(Props(classOf[StopActor], ref, promise, reason))
     promise.future
   }
 }
 
 object AppUpgradeManager {
   case class Upgrade(driver: SchedulerDriver, app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None)
-  case class CancelUpgrade(appId: String)
+  case class CancelUpgrade(appId: String, reason: Throwable)
 
   case class UpgradeFinished(appId: String)
   case class UpgradeCancelled(appId: String)

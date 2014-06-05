@@ -22,10 +22,12 @@ class AppUpgradeActor(
 ) extends Actor with ActorLogging {
   import context.dispatcher
   import AppUpgradeManager._
+  import AppUpgradeActor._
 
   val replacePromise = Promise[Boolean]()
   val startPromise = Promise[Boolean]()
   val stopPromise = Promise[Boolean]()
+  val resultPromise = Promise[Boolean]()
   // sort by startedAt to kill newer instances first
   val oldInstances = taskTracker.get(app.id).toList.sortWith(_.getStartedAt > _.getStartedAt)
   val nrToStartImmediately: Int =
@@ -44,11 +46,14 @@ class AppUpgradeActor(
       replaced <- replacePromise.future
     } yield stopped && started && replaced
 
-    res andThen { case _ =>
+    res andThen { case x =>
       manager ! UpgradeFinished(app.id)
       log.info(s"Finished upgrade of ${app.id}")
       context.stop(self)
-    } pipeTo receiver
+      resultPromise.tryComplete(x)
+    }
+
+    resultPromise.future pipeTo receiver
   }
 
   // If one of the tasks fails we have to fail all of them
@@ -56,8 +61,11 @@ class AppUpgradeActor(
     case t: Throwable => Stop
   }
 
-  // We only supervise the other tasks, so no need to process messages
-  def receive = PartialFunction.empty
+  def receive = {
+    case Cancel(reason) =>
+      resultPromise.failure(reason)
+      context.stop(self)
+  }
 
   private def startReplacer(): Unit = {
     if (keepAlive > 0) {
@@ -104,4 +112,8 @@ class AppUpgradeActor(
       startPromise.success(true)
     }
   }
+}
+
+object AppUpgradeActor {
+  case class Cancel(reason: Throwable)
 }

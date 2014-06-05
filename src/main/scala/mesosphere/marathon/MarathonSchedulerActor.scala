@@ -57,7 +57,7 @@ class MarathonSchedulerActor(
 
     case cmd @ StopApp(app) =>
       val origSender = sender
-      upgradeManager ! CancelUpgrade(app.id)
+      upgradeManager ! CancelUpgrade(app.id, new AppDeletedException("The app has been deleted"))
       locking(app.id, origSender, cmd, blocking = true) {
         stopApp(driver, app).sendAnswer(origSender, cmd)
       }
@@ -68,15 +68,15 @@ class MarathonSchedulerActor(
         updateApp(driver, appId, update).sendAnswer(origSender, cmd)
       }
 
-    case cmd @ UpgradeApp(app, keepAlive, maxRunning) =>
+    case cmd @ UpgradeApp(app, keepAlive, maxRunning, false) =>
       val origSender = sender
       locking(app.id, origSender, cmd) {
         upgradeApp(driver, app, keepAlive, maxRunning).sendAnswer(origSender, cmd)
       }
 
-    case cmd @ RollbackApp(app, keepAlive, maxRunning) =>
+    case cmd @ UpgradeApp(app, keepAlive, maxRunning, true) =>
       val origSender = sender
-      upgradeManager ! CancelUpgrade(app.id)
+      upgradeManager ! CancelUpgrade(app.id, new TaskUpgradeCancelledException("The upgrade has been cancelled"))
       locking(app.id, origSender, cmd, blocking = true) {
         upgradeApp(driver, app, keepAlive, maxRunning).sendAnswer(origSender, cmd)
       }
@@ -149,7 +149,7 @@ object MarathonSchedulerActor {
     def answer = AppUpdated(appId)
   }
 
-  case class UpgradeApp(app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None) extends Command {
+  case class UpgradeApp(app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None, force: Boolean = false) extends Command {
     def answer = AppUpgraded(app)
   }
 
@@ -165,10 +165,6 @@ object MarathonSchedulerActor {
     def answer = TasksLaunched(tasks)
   }
 
-  case class RollbackApp(app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None) extends Command {
-    def answer = AppRolledBack(app)
-  }
-
   sealed trait Event
   case class AppStarted(app: AppDefinition) extends Event
   case class AppStopped(app: AppDefinition) extends Event
@@ -177,7 +173,6 @@ object MarathonSchedulerActor {
   case class AppScaled(appId: String) extends Event
   case object TasksReconciled extends Event
   case class TasksLaunched(tasks: Seq[TaskInfo]) extends Event
-  case class AppRolledBack(app: AppDefinition) extends Event
 
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 

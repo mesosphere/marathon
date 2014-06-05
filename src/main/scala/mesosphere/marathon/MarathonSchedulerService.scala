@@ -21,8 +21,8 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import scala.concurrent.duration._
 import java.util.concurrent.CountDownLatch
-import mesosphere.util.{ BackToTheFuture, ThreadPoolContext }
-import akka.actor.ActorRef
+import mesosphere.util.{ BackToTheFuture, ThreadPoolContext, PromiseActor }
+import akka.actor.{Props, ActorSystem, ActorRef}
 import mesosphere.marathon.MarathonSchedulerActor._
 import akka.pattern.ask
 import scala.util.{Failure, Success}
@@ -41,6 +41,7 @@ class MarathonSchedulerService @Inject() (
   @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
   appRepository: AppRepository,
   scheduler: MarathonScheduler,
+  system: ActorSystem,
   @Named("schedulerActor") schedulerActor: ActorRef
 ) extends AbstractExecutionThreadService with Leader {
 
@@ -106,10 +107,14 @@ class MarathonSchedulerService @Inject() (
     maxRunning: Option[Int],
     force: Boolean = false
   ): Future[Boolean] = {
-    // TODO: this should be configurable
-    implicit val timeout = Timeout(12.hours)
-    val message = if (force) RollbackApp(app, keepAlive, maxRunning) else UpgradeApp(app, keepAlive, maxRunning)
-    (schedulerActor ? message).map {
+    val promise = Promise[Any]()
+    val receiver = system.actorOf(Props(classOf[PromiseActor], promise))
+
+    // we use this instead of the ask pattern,
+    // because we can't predict the runtime of an upgrade
+    schedulerActor.tell(UpgradeApp(app, keepAlive, maxRunning, force), receiver)
+
+    promise.future.map {
       case CommandFailed(_, reason) => throw reason
       case _ => true
     }

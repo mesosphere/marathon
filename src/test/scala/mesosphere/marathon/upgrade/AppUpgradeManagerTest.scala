@@ -1,7 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import akka.testkit.{TestProbe, TestActorRef, TestKit}
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{ActorRef, Props, ActorSystem}
 import org.scalatest.{FunSuiteLike, BeforeAndAfterAll, Matchers}
 import org.scalatest.mock.MockitoSugar
 import org.apache.mesos.SchedulerDriver
@@ -15,6 +15,8 @@ import org.apache.mesos.state.InMemoryState
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.TaskUpgradeCancelledException
+import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
+import akka.testkit.TestActor.{NoAutoPilot, AutoPilot}
 
 class AppUpgradeManagerTest
   extends TestKit(ActorSystem("System"))
@@ -50,11 +52,18 @@ class AppUpgradeManagerTest
     val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
     val probe = TestProbe()
 
-    watch(probe.ref)
+    probe.setAutoPilot(new AutoPilot {
+      override def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
+        case Cancel(_) =>
+          system.stop(probe.ref)
+          NoAutoPilot
+      }
+    })
 
-    val res = manager.underlyingActor.stopActor(probe.ref)
+    val ex = new Exception
 
-    expectTerminated(probe.ref, 5.seconds)
+    val res = manager.underlyingActor.stopActor(probe.ref, ex)
+
 
     Await.result(res, 5.seconds) should be(true)
   }
@@ -69,9 +78,9 @@ class AppUpgradeManagerTest
     implicit val timeout = Timeout(1.minute)
     val res = (manager ? Upgrade(driver, AppDefinition(id = "testApp"), 10)).mapTo[Boolean]
 
-    manager ! CancelUpgrade("testApp")
+    manager ! CancelUpgrade("testApp", new Exception)
 
-    intercept[TaskUpgradeCancelledException] {
+    intercept[Exception] {
       Await.result(res, 5.seconds)
     }
   }

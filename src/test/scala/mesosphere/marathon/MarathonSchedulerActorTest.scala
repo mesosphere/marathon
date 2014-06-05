@@ -130,7 +130,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
-        case CancelUpgrade("testApp") =>
+        case CancelUpgrade("testApp", _) =>
           lock.release()
           NoAutoPilot
       }
@@ -199,7 +199,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
-        case CancelUpgrade("testApp") =>
+        case CancelUpgrade("testApp", _) =>
           lock.release()
           KeepRunning
 
@@ -212,11 +212,11 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       }
     })
 
-    schedulerActor ! RollbackApp(app, 1)
+    schedulerActor ! UpgradeApp(app, 1, force = true)
 
     lock.release()
 
-    expectMsg(5.seconds, AppRolledBack(app))
+    expectMsg(5.seconds, AppUpgraded(app))
   }
 
   test("ReconcileTasks") {
