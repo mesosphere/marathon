@@ -75,7 +75,7 @@ define([
               " returned with status: '" + hc.lastFailureCause + "'" :
               " failed") +
             ".";
-          return;
+          return true;
         }
       }, this);
       return msg;
