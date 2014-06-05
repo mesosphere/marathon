@@ -82,9 +82,7 @@ object Main extends App {
   }
 
   //TOOD(FL): Make Events optional / wire up.
-  lazy val conf = new ScallopConf(args)
-    with HttpConf with MarathonConf with AppConfiguration
-      with EventConfiguration with HttpEventConfiguration with ZookeeperConf
+  lazy val conf = new ScallopConf(args) with HttpConf with MarathonConf with AppConfiguration with EventConfiguration with HttpEventConfiguration
 
   run(
     classOf[HttpService],

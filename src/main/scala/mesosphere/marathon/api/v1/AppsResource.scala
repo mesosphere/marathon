@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.v1
 
-import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event.{EventModule, ApiPostEvent}
@@ -23,7 +23,8 @@ import mesosphere.marathon.api.Responses
 class AppsResource @Inject()(
     @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
-    taskTracker: TaskTracker) {
+    taskTracker: TaskTracker,
+    config: MarathonConf) {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -36,7 +37,7 @@ class AppsResource @Inject()(
   @Timed
   def start(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    Await.result(service.startApp(app), service.defaultWait)
+    Await.result(service.startApp(app), config.zkTimeoutDuration)
     Response.noContent.build
   }
 
@@ -45,7 +46,7 @@ class AppsResource @Inject()(
   @Timed
   def stop(@Context req: HttpServletRequest, app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    Await.result(service.stopApp(app), service.defaultWait)
+    Await.result(service.stopApp(app), config.zkTimeoutDuration)
     Response.noContent.build
   }
 
@@ -55,7 +56,7 @@ class AppsResource @Inject()(
   def scale(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
     val appUpdate = AppUpdate(instances = Some(app.instances))
-    Await.result(service.updateApp(app.id, appUpdate), service.defaultWait)
+    Await.result(service.updateApp(app.id, appUpdate), config.zkTimeoutDuration)
     Response.noContent.build
   }
 

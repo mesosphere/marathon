@@ -4,20 +4,21 @@ import com.google.protobuf.InvalidProtocolBufferException
 import org.apache.mesos.state.State
 import scala.collection.JavaConverters._
 import scala.concurrent._
-import scala.concurrent.duration.Duration
 import mesosphere.marathon.StorageException
 import com.google.common.cache.{CacheLoader, CacheBuilder}
 import java.util.concurrent.Semaphore
+import mesosphere.util.{ ThreadPoolContext, BackToTheFuture }
 
-/**
- * @author Tobi Knaup
- */
 
 class MarathonStore[S <: MarathonState[_, S]](state: State,
-                       newState: () => S, prefix:String = "app:") extends PersistenceStore[S] {
+                                              newState: () => S,
+                                              prefix: String = "app:",
+                                              implicit val timeout: BackToTheFuture.Timeout = BackToTheFuture.Implicits.defaultTimeout) extends PersistenceStore[S] {
 
-  val defaultWait = Duration(3, "seconds")
-  private [this] val locks = {
+  import ThreadPoolContext.context
+  import BackToTheFuture.futureToFutureOption
+
+  private[this] val locks = {
     CacheBuilder
       .newBuilder()
       .weakValues()
@@ -27,9 +28,6 @@ class MarathonStore[S <: MarathonState[_, S]](state: State,
         }
       )
   }
-
-  import mesosphere.util.ThreadPoolContext.context
-  import mesosphere.util.BackToTheFuture.futureToFutureOption
 
   def fetch(key: String): Future[Option[S]] = {
     state.fetch(prefix + key) map {

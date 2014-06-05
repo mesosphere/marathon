@@ -6,10 +6,9 @@ import javax.ws.rs.core.{Response, Context, MediaType}
 import javax.inject.{Named, Inject}
 import mesosphere.marathon.event.EventModule
 import com.google.common.eventbus.EventBus
-import mesosphere.marathon.{MarathonSchedulerService, BadRequestException}
+import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.tasks.TaskTracker
 import com.codahale.metrics.annotation.Timed
-import com.sun.jersey.api.NotFoundException
 import javax.servlet.http.HttpServletRequest
 import javax.validation.Valid
 import mesosphere.marathon.api.v1.AppDefinition
@@ -17,11 +16,8 @@ import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
 import java.net.URI
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.api.{PATCH, Responses}
+import mesosphere.marathon.api.Responses
 
-/**
- * @author Tobi Knaup
- */
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -29,7 +25,8 @@ class AppsResource @Inject()(
     @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
-    healthCheckManager: HealthCheckManager) {
+    healthCheckManager: HealthCheckManager,
+    config: MarathonConf) {
 
   @GET
   @Timed
@@ -52,7 +49,7 @@ class AppsResource @Inject()(
     validateContainerOpts(app)
 
     maybePostEvent(req, app)
-    Await.result(service.startApp(app), service.defaultWait)
+    Await.result(service.startApp(app), config.zkTimeoutDuration)
     Response.created(new URI(s"${app.id}")).build
   }
 
@@ -81,7 +78,7 @@ class AppsResource @Inject()(
       case Some(app) =>
         validateContainerOpts(updatedApp)
         maybePostEvent(req, updatedApp)
-        Await.result(service.updateApp(id, appUpdate), service.defaultWait)
+        Await.result(service.updateApp(id, appUpdate), config.zkTimeoutDuration)
         Response.noContent.build
 
       case None => create(req, updatedApp)
@@ -94,7 +91,7 @@ class AppsResource @Inject()(
   def delete(@Context req: HttpServletRequest, @PathParam("id") id: String): Response = {
     val app = AppDefinition(id = id)
     maybePostEvent(req, app)
-    Await.result(service.stopApp(app), service.defaultWait)
+    Await.result(service.stopApp(app), config.zkTimeoutDuration)
     Response.noContent.build
   }
 

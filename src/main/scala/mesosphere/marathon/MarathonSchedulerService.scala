@@ -1,16 +1,15 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.{TaskID, FrameworkInfo}
-import org.apache.mesos.MesosSchedulerDriver
+import org.apache.mesos.Protos.TaskID
 import org.apache.log4j.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.{AppRepository, Timestamp}
 import com.google.common.util.concurrent.AbstractExecutionThreadService
-import javax.inject.{Named, Inject}
-import java.util.{TimerTask, Timer}
-import scala.concurrent.{Future, ExecutionContext, Await}
-import scala.concurrent.duration.{Duration, MILLISECONDS}
+import javax.inject.{ Named, Inject }
+import java.util.{ TimerTask, Timer }
+import scala.concurrent.{ Future, Await }
+import scala.concurrent.duration.MILLISECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Group.JoinException
@@ -23,7 +22,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import scala.concurrent.duration._
 import java.util.concurrent.CountDownLatch
-import mesosphere.util.ThreadPoolContext
+import mesosphere.util.{ BackToTheFuture, ThreadPoolContext }
 
 /**
  * Wrapper class for the scheduler
@@ -42,6 +41,8 @@ class MarathonSchedulerService @Inject()(
 
   import ThreadPoolContext.context
 
+  implicit val zkTimeout = config.zkFutureTimeout
+
   val latch = new CountDownLatch(1)
 
   // Time to wait before trying to reconcile app tasks after driver starts
@@ -56,7 +57,7 @@ class MarathonSchedulerService @Inject()(
 
   val log = Logger.getLogger(getClass.getName)
 
-  val frameworkId = frameworkIdUtil.fetch()
+  val frameworkId = frameworkIdUtil.fetch
   frameworkId match {
     case Some(id) =>
       log.info(s"Setting framework ID to ${id.getValue}")
@@ -68,10 +69,6 @@ class MarathonSchedulerService @Inject()(
   // be reused (i.e. once stopped they can't be started again. Thus,
   // we have to allocate a new driver before each run or after each stop.
   var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
-
-  def defaultWait = {
-    appRepository.defaultWait
-  }
 
   def startApp(app: AppDefinition): Future[_] = {
     // Backwards compatibility
@@ -96,17 +93,17 @@ class MarathonSchedulerService @Inject()(
     }
 
   def listApps(): Iterable[AppDefinition] =
-    Await.result(appRepository.apps, defaultWait)
+    Await.result(appRepository.apps, config.zkTimeoutDuration)
 
   def listAppVersions(appName: String): Iterable[Timestamp] =
-    Await.result(appRepository.listVersions(appName), defaultWait)
+    Await.result(appRepository.listVersions(appName), config.zkTimeoutDuration)
 
   def getApp(appName: String): Option[AppDefinition] = {
-    Await.result(appRepository.currentVersion(appName), defaultWait)
+    Await.result(appRepository.currentVersion(appName), config.zkTimeoutDuration)
   }
 
-  def getApp(appName: String, version: Timestamp) : Option[AppDefinition] = {
-    Await.result(appRepository.app(appName, version), defaultWait)
+  def getApp(appName: String, version: Timestamp): Option[AppDefinition] = {
+    Await.result(appRepository.app(appName, version), config.zkTimeoutDuration)
   }
 
   def killTasks(
@@ -117,7 +114,7 @@ class MarathonSchedulerService @Inject()(
     if (scale) {
       getApp(appName) foreach { app =>
         val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
-        Await.result(scheduler.updateApp(driver, appName, appUpdate), defaultWait)
+        Await.result(scheduler.updateApp(driver, appName, appUpdate), config.zkTimeoutDuration)
       }
     }
 
