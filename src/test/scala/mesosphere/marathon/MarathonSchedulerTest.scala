@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.state.{ Timestamp, AppRepository }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
 import org.apache.mesos.Protos.TaskID
@@ -13,7 +13,7 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import akka.testkit.{TestKit, TestProbe}
+import akka.testkit.{ TestKit, TestProbe }
 import org.scalatest.BeforeAndAfterAll
 import mesosphere.marathon.MarathonSchedulerActor.LaunchTasks
 import scala.concurrent.duration._

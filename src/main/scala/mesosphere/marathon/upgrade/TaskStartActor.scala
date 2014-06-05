@@ -4,17 +4,16 @@ import mesosphere.marathon.tasks.TaskQueue
 import akka.event.EventStream
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Promise
-import akka.actor.{ActorLogging, Actor}
+import akka.actor.{ ActorLogging, Actor }
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.{TaskUpgradeCancelledException, TaskFailedException}
+import mesosphere.marathon.{ TaskUpgradeCancelledException, TaskFailedException }
 
 class TaskStartActor(
-  taskQueue: TaskQueue,
-  eventBus: EventStream,
-  app: AppDefinition,
-  nrToStart: Int,
-  promise: Promise[Boolean]
-) extends Actor with ActorLogging {
+    taskQueue: TaskQueue,
+    eventBus: EventStream,
+    app: AppDefinition,
+    nrToStart: Int,
+    promise: Promise[Boolean]) extends Actor with ActorLogging {
 
   var running: Int = 0
   val AppID = app.id

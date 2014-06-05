@@ -1,16 +1,15 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.{MarathonState, Timestamp}
+import mesosphere.marathon.state.{ MarathonState, Timestamp }
 import mesosphere.marathon.Protos._
 import scala.collection.JavaConversions._
-import mesosphere.marathon.api.validation.FieldConstraints.{FieldPattern, FieldNotEmpty}
+import mesosphere.marathon.api.validation.FieldConstraints.{ FieldPattern, FieldNotEmpty }
 
 case class ScalingStrategy(
-  minimumHealthCapacity: Double,
-  maximumRunningFactor: Option[Double]
-) {
-  def toProto : ScalingStrategyDefinition = {
+    minimumHealthCapacity: Double,
+    maximumRunningFactor: Option[Double]) {
+  def toProto: ScalingStrategyDefinition = {
     val strategy = ScalingStrategyDefinition.newBuilder()
       .setMinimumHealthCapacity(minimumHealthCapacity)
 
@@ -20,15 +19,12 @@ case class ScalingStrategy(
   }
 }
 
-case class Group (
+case class Group(
 
-  @FieldNotEmpty
-  @FieldPattern(regexp = "^[A-Za-z0-9_.-]+$")
-  id: String,
-  scalingStrategy: ScalingStrategy,
-  apps: Seq[AppDefinition],
-  version: Timestamp = Timestamp.now()
-) extends MarathonState[GroupDefinition, Group] {
+    @FieldNotEmpty @FieldPattern(regexp = "^[A-Za-z0-9_.-]+$") id: String,
+    scalingStrategy: ScalingStrategy,
+    apps: Seq[AppDefinition],
+    version: Timestamp = Timestamp.now()) extends MarathonState[GroupDefinition, Group] {
 
   override def mergeFromProto(msg: GroupDefinition): Group = {
     val scalingStrategy = msg.getScalingStrategy
@@ -65,5 +61,5 @@ case class Group (
 }
 
 object Group {
-  def empty() : Group = Group("", ScalingStrategy(0, None), Seq.empty)
+  def empty(): Group = Group("", ScalingStrategy(0, None), Seq.empty)
 }

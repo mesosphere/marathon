@@ -3,18 +3,17 @@ package mesosphere.marathon.upgrade
 import akka.actor._
 import mesosphere.marathon.api.v1.AppDefinition
 import org.apache.mesos.SchedulerDriver
-import scala.concurrent.{Future, Promise}
-import mesosphere.marathon.tasks.{TaskTracker, TaskQueue}
+import scala.concurrent.{ Future, Promise }
+import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
 import akka.event.EventStream
 import mesosphere.marathon.ConcurrentTaskUpgradeException
 import scala.collection.mutable
 import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
 
 class AppUpgradeManager(
-  taskTracker: TaskTracker,
-  taskQueue: TaskQueue,
-  eventBus: EventStream
-) extends Actor with ActorLogging {
+    taskTracker: TaskTracker,
+    taskQueue: TaskQueue,
+    eventBus: EventStream) extends Actor with ActorLogging {
   import AppUpgradeManager._
   import context.dispatcher
 

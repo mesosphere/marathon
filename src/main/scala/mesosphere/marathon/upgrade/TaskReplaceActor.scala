@@ -1,26 +1,25 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ActorLogging, Actor}
+import akka.actor.{ ActorLogging, Actor }
 import mesosphere.marathon.Protos.MarathonTask
 import scala.concurrent.Promise
-import mesosphere.marathon.event.{MesosStatusUpdateEvent, HealthStatusChanged}
+import mesosphere.marathon.event.{ MesosStatusUpdateEvent, HealthStatusChanged }
 import org.apache.mesos.SchedulerDriver
 import scala.collection.mutable
 import org.apache.mesos.Protos.TaskID
-import mesosphere.marathon.{TaskUpgradeCancelledException, TaskFailedException}
+import mesosphere.marathon.{ TaskUpgradeCancelledException, TaskFailedException }
 import akka.event.EventStream
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskQueue
 
 class TaskReplaceActor(
-  driver: SchedulerDriver,
-  taskQueue: TaskQueue,
-  eventBus: EventStream,
-  app: AppDefinition,
-  var alreadyStarted: Int,
-  tasksToKill: Set[MarathonTask],
-  promise: Promise[Boolean]
-) extends Actor with ActorLogging {
+    driver: SchedulerDriver,
+    taskQueue: TaskQueue,
+    eventBus: EventStream,
+    app: AppDefinition,
+    var alreadyStarted: Int,
+    tasksToKill: Set[MarathonTask],
+    promise: Promise[Boolean]) extends Actor with ActorLogging {
 
   eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
   eventBus.subscribe(self, classOf[HealthStatusChanged])
@@ -41,7 +40,7 @@ class TaskReplaceActor(
   var taskIds = tasksToKill.map(_.getId)
   val toKill = taskIds.to[mutable.Queue]
 
-  def receive : Receive = {
+  def receive: Receive = {
     case HealthStatusChanged(`appId`, taskId, true, _, _) if !taskIds(taskId) =>
       healthy += taskId
       if (toKill.nonEmpty) {

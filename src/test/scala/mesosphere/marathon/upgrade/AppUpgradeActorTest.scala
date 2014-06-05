@@ -1,18 +1,18 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{TestActorRef, TestKit}
-import akka.actor.{ActorPath, Props, ActorSystem}
+import akka.testkit.{ TestActorRef, TestKit }
+import akka.actor.{ ActorPath, Props, ActorSystem }
 import mesosphere.marathon.MarathonSpec
-import org.scalatest.{Matchers, BeforeAndAfterAll}
+import org.scalatest.{ Matchers, BeforeAndAfterAll }
 import org.scalatest.mock.MockitoSugar
 import mesosphere.marathon.state.AppRepository
-import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import org.apache.mesos.SchedulerDriver
 import akka.util.Timeout
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.duration._
-import mesosphere.marathon.event.{HealthStatusChanged, MesosStatusUpdateEvent}
-import org.mockito.Mockito.{when, verify, times}
+import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
+import org.mockito.Mockito.{ when, verify, times }
 import scala.collection.mutable
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.upgrade.AppUpgradeManager.UpgradeFinished
@@ -20,11 +20,11 @@ import org.apache.mesos.Protos.TaskID
 import scala.concurrent.Await
 
 class AppUpgradeActorTest
-  extends TestKit(ActorSystem("System"))
-  with MarathonSpec
-  with Matchers
-  with BeforeAndAfterAll
-  with MockitoSugar {
+    extends TestKit(ActorSystem("System"))
+    with MarathonSpec
+    with Matchers
+    with BeforeAndAfterAll
+    with MockitoSugar {
 
   var repo: AppRepository = _
   var tracker: TaskTracker = _

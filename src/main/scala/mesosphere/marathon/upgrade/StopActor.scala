@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ActorLogging, Terminated, Actor, ActorRef}
+import akka.actor.{ ActorLogging, Terminated, Actor, ActorRef }
 import scala.concurrent.Promise
 import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
 

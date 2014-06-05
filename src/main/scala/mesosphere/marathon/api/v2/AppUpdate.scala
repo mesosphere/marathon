@@ -15,7 +15,7 @@ import java.lang.{ Integer => JInt, Double => JDouble }
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppUpdate(
 
-  id: Option[String] = None, //needed for updates inside a group
+    id: Option[String] = None, //needed for updates inside a group
 
     cmd: Option[String] = None,
 

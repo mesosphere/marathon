@@ -1,29 +1,29 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{TestProbe, TestActorRef, TestKit}
-import akka.actor.{ActorRef, Props, ActorSystem}
-import org.scalatest.{FunSuiteLike, BeforeAndAfterAll, Matchers}
+import akka.testkit.{ TestProbe, TestActorRef, TestKit }
+import akka.actor.{ ActorRef, Props, ActorSystem }
+import org.scalatest.{ FunSuiteLike, BeforeAndAfterAll, Matchers }
 import org.scalatest.mock.MockitoSugar
 import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.upgrade.AppUpgradeManager.{Upgrade, CancelUpgrade}
+import mesosphere.marathon.upgrade.AppUpgradeManager.{ Upgrade, CancelUpgrade }
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.duration._
 import scala.concurrent.Await
-import mesosphere.marathon.tasks.{TaskTracker, TaskQueue}
+import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
 import akka.event.EventStream
 import org.apache.mesos.state.InMemoryState
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.TaskUpgradeCancelledException
 import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
-import akka.testkit.TestActor.{NoAutoPilot, AutoPilot}
+import akka.testkit.TestActor.{ NoAutoPilot, AutoPilot }
 
 class AppUpgradeManagerTest
-  extends TestKit(ActorSystem("System"))
-  with FunSuiteLike
-  with Matchers
-  with BeforeAndAfterAll
-  with MockitoSugar {
+    extends TestKit(ActorSystem("System"))
+    with FunSuiteLike
+    with Matchers
+    with BeforeAndAfterAll
+    with MockitoSugar {
 
   override protected def afterAll(): Unit = {
     super.afterAll()
@@ -63,7 +63,6 @@ class AppUpgradeManagerTest
     val ex = new Exception
 
     val res = manager.underlyingActor.stopActor(probe.ref, ex)
-
 
     Await.result(res, 5.seconds) should be(true)
   }

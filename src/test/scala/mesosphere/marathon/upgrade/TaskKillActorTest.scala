@@ -1,12 +1,12 @@
 package mesosphere.marathon.upgrade
 
 import akka.testkit.TestKit
-import akka.actor.{Props, ActorSystem}
-import org.scalatest.{BeforeAndAfterAll, Matchers, FunSuiteLike}
+import akka.actor.{ Props, ActorSystem }
+import org.scalatest.{ BeforeAndAfterAll, Matchers, FunSuiteLike }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.mock.MockitoSugar
 import mesosphere.marathon.Protos.MarathonTask
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import org.mockito.Mockito.verify
@@ -14,11 +14,11 @@ import org.apache.mesos.Protos.TaskID
 import mesosphere.marathon.TaskUpgradeCancelledException
 
 class TaskKillActorTest
-  extends TestKit(ActorSystem("System"))
-  with FunSuiteLike
-  with Matchers
-  with BeforeAndAfterAll
-  with MockitoSugar {
+    extends TestKit(ActorSystem("System"))
+    with FunSuiteLike
+    with Matchers
+    with BeforeAndAfterAll
+    with MockitoSugar {
 
   override def afterAll(): Unit = {
     super.afterAll()

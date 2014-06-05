@@ -3,7 +3,7 @@ package mesosphere.marathon.event
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheck
 import org.rogach.scallop.ScallopConf
-import com.google.inject.{Inject, Singleton, Provides, AbstractModule}
+import com.google.inject.{ Inject, Singleton, Provides, AbstractModule }
 import akka.event.EventStream
 import javax.inject.Named
 import org.apache.log4j.Logger
@@ -34,7 +34,6 @@ class EventModule(conf: EventConfiguration) extends AbstractModule {
   @Singleton
   @Inject
   def provideEventBus(system: ActorSystem): EventStream = system.eventStream
-    else {
 }
 
 object EventModule {
@@ -109,41 +108,35 @@ trait UpgradeEvent extends MarathonEvent
 case class GroupChangeSuccess(
   groupId: String,
   version: String,
-  eventType:String = "group_change_success",
-  timestamp: String = Timestamp.now().toString
-) extends UpgradeEvent
+  eventType: String = "group_change_success",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class GroupChangeFailed(
   groupId: String,
   version: String,
-  reason:String,
+  reason: String,
   eventType: String = "group_change_failed",
-  timestamp: String = Timestamp.now().toString
-) extends UpgradeEvent
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class RestartSuccess(
   appId: String,
   eventType: String = "restart_success",
-  timestamp: String = Timestamp.now().toString
-) extends UpgradeEvent
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class RestartFailed(
   appId: String,
   eventType: String = "restart_failed",
-  timestamp: String = Timestamp.now().toString
-) extends UpgradeEvent
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class RollbackSuccess(
   appId: String,
   eventType: String = "rollback_success",
-  timestamp: String = Timestamp.now().toString
-) extends UpgradeEvent
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class RollbackFailed(
   appId: String,
   eventType: String = "rollback_failed",
-  timestamp: String = Timestamp.now().toString
-) extends UpgradeEvent
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 // Mesos scheduler
 

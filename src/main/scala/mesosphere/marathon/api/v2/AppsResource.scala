@@ -4,7 +4,7 @@ import javax.ws.rs._
 import scala.Array
 import javax.ws.rs.core.{ Response, Context, MediaType }
 import javax.inject.{ Named, Inject }
-import mesosphere.marathon.event.{EventModule, ApiPostEvent}
+import mesosphere.marathon.event.{ EventModule, ApiPostEvent }
 import akka.event.EventStream
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.tasks.TaskTracker

@@ -1,11 +1,11 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{TestActor, TestProbe, TestKit}
-import org.scalatest.{Matchers, FunSuiteLike}
-import akka.actor.{ActorRef, Props, ActorSystem}
-import scala.concurrent.{Await, Promise}
+import akka.testkit.{ TestActor, TestProbe, TestKit }
+import org.scalatest.{ Matchers, FunSuiteLike }
+import akka.actor.{ ActorRef, Props, ActorSystem }
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
-import akka.testkit.TestActor.{NoAutoPilot, AutoPilot}
+import akka.testkit.TestActor.{ NoAutoPilot, AutoPilot }
 import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
 
 class StopActorTest extends TestKit(ActorSystem("System")) with FunSuiteLike with Matchers {

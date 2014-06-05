@@ -9,7 +9,7 @@ import javax.inject.{ Named, Inject }
 
 class HttpCallbackSubscriptionService @Inject() (
     @Named(HttpEventModule.SubscribersKeeperActor) val subscribersKeeper: ActorRef,
-  @Named(EventModule.busName) eventBus: EventStream) {
+    @Named(EventModule.busName) eventBus: EventStream) {
 
   implicit val ec = HttpEventModule.executionContext
   implicit val timeout = HttpEventModule.timeout

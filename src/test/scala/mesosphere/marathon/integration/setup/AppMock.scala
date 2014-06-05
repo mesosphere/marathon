@@ -1,21 +1,21 @@
 package mesosphere.marathon.integration.setup
 
-import org.eclipse.jetty.server.{Request, Server}
+import org.eclipse.jetty.server.{ Request, Server }
 import org.eclipse.jetty.server.handler.AbstractHandler
-import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
+import javax.servlet.http.{ HttpServletResponse, HttpServletRequest }
 import akka.actor.ActorSystem
 import spray.client.pipelining._
 import scala.concurrent.Await._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AppMock(url:String) extends AbstractHandler {
+class AppMock(url: String) extends AbstractHandler {
 
   implicit val system = ActorSystem()
   val pipeline = sendReceive
   val waitTime = 30.seconds
 
-  def start(port:Int) {
+  def start(port: Int) {
     val server = new Server(port)
     server.setHandler(this)
     server.start()

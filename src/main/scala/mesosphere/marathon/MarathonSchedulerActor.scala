@@ -3,22 +3,22 @@ package mesosphere.marathon
 import akka.actor._
 import org.apache.mesos.SchedulerDriver
 import mesosphere.marathon.api.v1.AppDefinition
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import mesosphere.mesos.protos
 import mesosphere.marathon.api.v2.AppUpdate
 import akka.util.Timeout
-import scala.collection.mutable.{HashSet, ListBuffer}
-import org.apache.mesos.Protos.{TaskInfo, TaskStatus}
+import scala.collection.mutable.{ HashSet, ListBuffer }
+import org.apache.mesos.Protos.{ TaskInfo, TaskStatus }
 import mesosphere.marathon.state.AppRepository
-import mesosphere.util.{LockManager, RateLimiters}
+import mesosphere.util.{ LockManager, RateLimiters }
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.AppUpgradeManager
 import akka.event.EventStream
 import mesosphere.mesos.util.FrameworkIdUtil
 import scala.util.Failure
-import mesosphere.marathon.event.{RestartFailed, RestartSuccess}
-import mesosphere.marathon.upgrade.AppUpgradeManager.{CancelUpgrade, Upgrade}
+import mesosphere.marathon.event.{ RestartFailed, RestartSuccess }
+import mesosphere.marathon.upgrade.AppUpgradeManager.{ CancelUpgrade, Upgrade }
 import scala.util.Success
 import scala.collection.JavaConverters._
 import akka.pattern.ask
@@ -28,14 +28,13 @@ import org.apache.mesos.Protos.OfferID
 import java.util.concurrent.TimeUnit
 
 class MarathonSchedulerActor(
-  val appRepository: AppRepository,
-  val healthCheckManager: HealthCheckManager,
-  val taskTracker: TaskTracker,
-  val taskQueue: TaskQueue,
-  val frameworkIdUtil: FrameworkIdUtil,
-  val rateLimiters: RateLimiters,
-  val eventBus: EventStream
-) extends Actor with ActorLogging with SchedulerActions {
+    val appRepository: AppRepository,
+    val healthCheckManager: HealthCheckManager,
+    val taskTracker: TaskTracker,
+    val taskQueue: TaskQueue,
+    val frameworkIdUtil: FrameworkIdUtil,
+    val rateLimiters: RateLimiters,
+    val eventBus: EventStream) extends Actor with ActorLogging with SchedulerActions {
   import context.dispatcher
   import MarathonSchedulerActor._
 
@@ -97,32 +96,35 @@ class MarathonSchedulerActor(
   }
 
   /**
-   * Tries to acquire the lock for the given appId.
-   * If it succeeds it executes the given function,
-   * otherwise a [CommandFailed] message is sent to
-   * the original sender.
-   * @param appId
-   * @param origSender
-   * @param cmd
-   * @param f
-   * @tparam U
-   * @return
-   */
+    * Tries to acquire the lock for the given appId.
+    * If it succeeds it executes the given function,
+    * otherwise a [CommandFailed] message is sent to
+    * the original sender.
+    * @param appId
+    * @param origSender
+    * @param cmd
+    * @param f
+    * @tparam U
+    * @return
+    */
   def locking[U](appId: String, origSender: ActorRef, cmd: Command, blocking: Boolean = false)(f: => Future[U]): Unit = {
     val lock = appLocks.get(appId)
     if (blocking) {
       lock.acquire()
       log.debug(s"Acquired lock for app: ${appId}, performing cmd: $cmd")
-      f andThen { case _ =>
-        lock.release()
+      f andThen {
+        case _ =>
+          lock.release()
       }
     }
     else if (lock.tryAcquire(1000, TimeUnit.MILLISECONDS)) {
       log.debug(s"Acquired lock for app: ${appId}, performing cmd: $cmd")
-      f andThen { case _ =>
-        lock.release()
+      f andThen {
+        case _ =>
+          lock.release()
       }
-    } else {
+    }
+    else {
       log.debug(s"Failed to acquire lock for app: ${appId} to perform cmd: $cmd")
       origSender ! CommandFailed(cmd, new AppLockedException)
     }
@@ -220,7 +222,7 @@ trait SchedulerActions { this: Actor with ActorLogging =>
   def stopApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
     appRepository.expunge(app.id).map { successes =>
       if (!successes.forall(_ == true)) {
-        throw new StorageException("Error expunging " + app.id )
+        throw new StorageException("Error expunging " + app.id)
       }
 
       healthCheckManager.removeAllFor(app.id)
@@ -241,8 +243,7 @@ trait SchedulerActions { this: Actor with ActorLogging =>
   def updateApp(
     driver: SchedulerDriver,
     id: String,
-    appUpdate: AppUpdate
-  ): Future[AppDefinition] = {
+    appUpdate: AppUpdate): Future[AppDefinition] = {
     appRepository.currentVersion(id).flatMap {
       case Some(currentVersion) =>
         val updatedApp = appUpdate(currentVersion)
@@ -262,8 +263,7 @@ trait SchedulerActions { this: Actor with ActorLogging =>
     driver: SchedulerDriver,
     app: AppDefinition,
     keepAlive: Int,
-    maxRunning: Option[Int]
-  ): Future[Boolean] = {
+    maxRunning: Option[Int]): Future[Boolean] = {
     appRepository.store(app) flatMap { appDef =>
       // TODO: this should be configurable
       implicit val timeout = Timeout(12.hours)
@@ -283,12 +283,12 @@ trait SchedulerActions { this: Actor with ActorLogging =>
   }
 
   /**
-   * Make sure all apps are running the configured amount of tasks.
-   *
-   * Should be called some time after the framework re-registers,
-   * to give Mesos enough time to deliver task updates.
-   * @param driver scheduler driver
-   */
+    * Make sure all apps are running the configured amount of tasks.
+    *
+    * Should be called some time after the framework re-registers,
+    * to give Mesos enough time to deliver task updates.
+    * @param driver scheduler driver
+    */
   def reconcileTasks(driver: SchedulerDriver): Unit = {
     appRepository.allIds().onComplete {
       case Success(iterator) =>
@@ -327,23 +327,23 @@ trait SchedulerActions { this: Actor with ActorLogging =>
   }
 
   /**
-   * Ensures current application parameters (resource requirements, URLs,
-   * command, and constraints) are applied consistently across running
-   * application instances.
-   *
-   * @param driver
-   * @param updatedApp
-   * @param appUpdate
-   */
+    * Ensures current application parameters (resource requirements, URLs,
+    * command, and constraints) are applied consistently across running
+    * application instances.
+    *
+    * @param driver
+    * @param updatedApp
+    * @param appUpdate
+    */
   def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate): Unit = {
     // TODO: implement app instance restart logic
   }
 
   /**
-   * Make sure the app is running the correct number of instances
-   * @param driver
-   * @param app
-   */
+    * Make sure the app is running the correct number of instances
+    * @param driver
+    * @param app
+    */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     try {
       taskTracker.get(app.id).synchronized {
@@ -360,7 +360,8 @@ trait SchedulerActions { this: Actor with ActorLogging =>
             log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
             for (i <- 0 until toQueue)
               taskQueue.add(app)
-          } else {
+          }
+          else {
             log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
           }
         }
@@ -384,10 +385,10 @@ trait SchedulerActions { this: Actor with ActorLogging =>
   def scale(driver: SchedulerDriver, appName: String): Future[Unit] = {
     currentAppVersion(appName) map {
       case Some(app) => scale(driver, app)
-      case _ => log.warning("App %s does not exist. Not scaling.".format(appName))
+      case _         => log.warning("App %s does not exist. Not scaling.".format(appName))
     }
   }
 
   def currentAppVersion(appId: String): Future[Option[AppDefinition]] =
-      appRepository.currentVersion(appId)
+    appRepository.currentVersion(appId)
 }

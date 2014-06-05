@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import org.scalatest.{FunSuiteLike, FunSuite, BeforeAndAfter}
+import org.scalatest.{ FunSuiteLike, FunSuite, BeforeAndAfter }
 import org.scalatest.mock.MockitoSugar
 
 /**

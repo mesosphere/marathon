@@ -16,7 +16,7 @@ class HealthCheckActor(
     appId: String,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
-  eventBus: EventStream
+    eventBus: EventStream) extends Actor with ActorLogging {
 
   import HealthCheckActor.{ GetTaskHealth, Health }
   import HealthCheckWorker.{ HealthCheckJob, HealthResult, Healthy, Unhealthy }
@@ -123,6 +123,7 @@ class HealthCheckActor(
                 // Don't update health
                 health
               }
+              else {
                 eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
                 checkConsecutiveFailures(task, health)
                 health.update(result)

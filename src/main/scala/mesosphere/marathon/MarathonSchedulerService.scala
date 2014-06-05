@@ -22,10 +22,10 @@ import mesosphere.marathon.health.HealthCheckManager
 import scala.concurrent.duration._
 import java.util.concurrent.CountDownLatch
 import mesosphere.util.{ BackToTheFuture, ThreadPoolContext, PromiseActor }
-import akka.actor.{Props, ActorSystem, ActorRef}
+import akka.actor.{ Props, ActorSystem, ActorRef }
 import mesosphere.marathon.MarathonSchedulerActor._
 import akka.pattern.ask
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 import akka.util.Timeout
 
 /**
@@ -34,16 +34,15 @@ import akka.util.Timeout
   * @author Tobi Knaup
   */
 class MarathonSchedulerService @Inject() (
-  healthCheckManager: HealthCheckManager,
-  @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
-  config: MarathonConf,
-  frameworkIdUtil: FrameworkIdUtil,
-  @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
-  appRepository: AppRepository,
-  scheduler: MarathonScheduler,
-  system: ActorSystem,
-  @Named("schedulerActor") schedulerActor: ActorRef
-) extends AbstractExecutionThreadService with Leader {
+    healthCheckManager: HealthCheckManager,
+    @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
+    config: MarathonConf,
+    frameworkIdUtil: FrameworkIdUtil,
+    @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
+    appRepository: AppRepository,
+    scheduler: MarathonScheduler,
+    system: ActorSystem,
+    @Named("schedulerActor") schedulerActor: ActorRef) extends AbstractExecutionThreadService with Leader {
 
   import ThreadPoolContext.context
 
@@ -105,8 +104,7 @@ class MarathonSchedulerService @Inject() (
     app: AppDefinition,
     keepAlive: Int,
     maxRunning: Option[Int],
-    force: Boolean = false
-  ): Future[Boolean] = {
+    force: Boolean = false): Future[Boolean] = {
     val promise = Promise[Any]()
     val receiver = system.actorOf(Props(classOf[PromiseActor], promise))
 
@@ -116,7 +114,7 @@ class MarathonSchedulerService @Inject() (
 
     promise.future.map {
       case CommandFailed(_, reason) => throw reason
-      case _ => true
+      case _                        => true
     }
   }
 

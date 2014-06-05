@@ -1,22 +1,22 @@
 package mesosphere.marathon.upgrade
 
 import akka.testkit.TestKit
-import org.scalatest.{BeforeAndAfterAll, Matchers, FunSuiteLike}
-import akka.actor.{Props, ActorSystem}
+import org.scalatest.{ BeforeAndAfterAll, Matchers, FunSuiteLike }
+import akka.actor.{ Props, ActorSystem }
 import mesosphere.marathon.tasks.TaskQueue
 import mesosphere.marathon.api.v1.AppDefinition
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.{TaskUpgradeCancelledException, TaskFailedException}
+import mesosphere.marathon.{ TaskUpgradeCancelledException, TaskFailedException }
 import org.apache.mesos.SchedulerDriver
 import mesosphere.marathon.Protos.MarathonTask
 
 class TaskStartActorTest
-  extends TestKit(ActorSystem("System"))
-  with FunSuiteLike
-  with Matchers
-  with BeforeAndAfterAll {
+    extends TestKit(ActorSystem("System"))
+    with FunSuiteLike
+    with Matchers
+    with BeforeAndAfterAll {
 
   override protected def afterAll(): Unit = {
     super.afterAll()

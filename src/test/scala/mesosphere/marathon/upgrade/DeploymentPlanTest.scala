@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.api.v2.{ScalingStrategy, Group}
+import mesosphere.marathon.api.v2.{ ScalingStrategy, Group }
 import org.scalatest.Matchers
 
 class DeploymentPlanTest extends MarathonSpec with Matchers {

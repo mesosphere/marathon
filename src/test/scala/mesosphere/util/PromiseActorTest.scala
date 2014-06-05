@@ -1,17 +1,17 @@
 package mesosphere.util
 
-import akka.testkit.{TestActorRef, TestKit}
-import akka.actor.{Status, Props, ActorSystem}
+import akka.testkit.{ TestActorRef, TestKit }
+import akka.actor.{ Status, Props, ActorSystem }
 import mesosphere.marathon.MarathonSpec
-import org.scalatest.{Matchers, BeforeAndAfterAll}
-import scala.concurrent.{Await, Promise}
+import org.scalatest.{ Matchers, BeforeAndAfterAll }
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 
 class PromiseActorTest
-  extends TestKit(ActorSystem("System"))
-  with MarathonSpec
-  with BeforeAndAfterAll
-  with Matchers {
+    extends TestKit(ActorSystem("System"))
+    with MarathonSpec
+    with BeforeAndAfterAll
+    with Matchers {
 
   override def afterAll(): Unit = {
     super.afterAll()

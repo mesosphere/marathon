@@ -1,11 +1,11 @@
 package mesosphere.marathon
 
-import akka.testkit.{TestProbe, TestActorRef, ImplicitSender, TestKit}
-import akka.actor.{Props, ActorRef, ActorSystem}
-import org.scalatest.{Matchers, BeforeAndAfterAll}
-import mesosphere.marathon.state.{Timestamp, AppRepository}
+import akka.testkit.{ TestProbe, TestActorRef, ImplicitSender, TestKit }
+import akka.actor.{ Props, ActorRef, ActorSystem }
+import org.scalatest.{ Matchers, BeforeAndAfterAll }
+import mesosphere.marathon.state.{ Timestamp, AppRepository }
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 import mesosphere.marathon.MarathonSchedulerActor._
@@ -24,16 +24,16 @@ import mesosphere.marathon.MarathonSchedulerActor.AppStarted
 import mesosphere.marathon.MarathonSchedulerActor.StartApp
 import org.apache.mesos.Protos.TaskID
 import mesosphere.marathon.api.v2.AppUpdate
-import akka.testkit.TestActor.{KeepRunning, NoAutoPilot, AutoPilot}
-import mesosphere.marathon.upgrade.AppUpgradeManager.{CancelUpgrade, Upgrade}
+import akka.testkit.TestActor.{ KeepRunning, NoAutoPilot, AutoPilot }
+import mesosphere.marathon.upgrade.AppUpgradeManager.{ CancelUpgrade, Upgrade }
 import mesosphere.mesos.TaskBuilder
 import scala.collection.JavaConverters._
 
 class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
-  with MarathonSpec
-  with BeforeAndAfterAll
-  with Matchers
-  with ImplicitSender {
+    with MarathonSpec
+    with BeforeAndAfterAll
+    with Matchers
+    with ImplicitSender {
 
   var repo: AppRepository = _
   var hcManager: HealthCheckManager = _

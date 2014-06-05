@@ -19,7 +19,7 @@ case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
 class HealthCheckManager @Singleton @Inject() (
     system: ActorSystem,
-  @Named(EventModule.busName) eventBus: EventStream,
+    @Named(EventModule.busName) eventBus: EventStream,
     taskTracker: TaskTracker) {
 
   import HealthCheckActor.{ GetTaskHealth, Health }

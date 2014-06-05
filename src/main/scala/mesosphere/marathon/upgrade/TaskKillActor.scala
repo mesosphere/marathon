@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import org.apache.mesos.SchedulerDriver
 import akka.event.EventStream
 import mesosphere.marathon.Protos.MarathonTask
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{ Actor, ActorLogging }
 import scala.concurrent.Promise
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import org.apache.mesos.Protos.TaskID
@@ -11,11 +11,10 @@ import mesosphere.marathon.TaskUpgradeCancelledException
 import scala.collection.mutable
 
 class TaskKillActor(
-  driver: SchedulerDriver,
-  eventBus: EventStream,
-  tasksToKill: Set[MarathonTask],
-  promise: Promise[Boolean]
-) extends Actor with ActorLogging {
+    driver: SchedulerDriver,
+    eventBus: EventStream,
+    tasksToKill: Set[MarathonTask],
+    promise: Promise[Boolean]) extends Actor with ActorLogging {
 
   val idsToKill = tasksToKill.map(_.getId).to[mutable.Set]
 

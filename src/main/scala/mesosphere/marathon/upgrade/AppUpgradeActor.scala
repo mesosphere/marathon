@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.actor._
 import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import akka.event.EventStream
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Promise
@@ -10,16 +10,15 @@ import akka.actor.SupervisorStrategy.Stop
 import akka.pattern.pipe
 
 class AppUpgradeActor(
-  manager: ActorRef,
-  driver: SchedulerDriver,
-  taskTracker: TaskTracker,
-  taskQueue: TaskQueue,
-  eventBus: EventStream,
-  app: AppDefinition,
-  keepAlive: Int,
-  maxRunning: Option[Int],
-  receiver: ActorRef
-) extends Actor with ActorLogging {
+    manager: ActorRef,
+    driver: SchedulerDriver,
+    taskTracker: TaskTracker,
+    taskQueue: TaskQueue,
+    eventBus: EventStream,
+    app: AppDefinition,
+    keepAlive: Int,
+    maxRunning: Option[Int],
+    receiver: ActorRef) extends Actor with ActorLogging {
   import context.dispatcher
   import AppUpgradeManager._
   import AppUpgradeActor._
@@ -46,11 +45,12 @@ class AppUpgradeActor(
       replaced <- replacePromise.future
     } yield stopped && started && replaced
 
-    res andThen { case x =>
-      manager ! UpgradeFinished(app.id)
-      log.info(s"Finished upgrade of ${app.id}")
-      context.stop(self)
-      resultPromise.tryComplete(x)
+    res andThen {
+      case x =>
+        manager ! UpgradeFinished(app.id)
+        log.info(s"Finished upgrade of ${app.id}")
+        context.stop(self)
+        resultPromise.tryComplete(x)
     }
 
     resultPromise.future pipeTo receiver
@@ -79,7 +79,8 @@ class AppUpgradeActor(
           nrToStartImmediately,
           oldInstances.drop(app.instances - keepAlive).toSet,
           replacePromise), "Replacer")
-    } else {
+    }
+    else {
       replacePromise.success(true)
     }
   }
@@ -93,7 +94,8 @@ class AppUpgradeActor(
           eventBus,
           oldInstances.take(oldInstances.size - keepAlive).toSet,
           stopPromise), "Stopper")
-    } else {
+    }
+    else {
       stopPromise.success(true)
     }
   }
@@ -108,7 +110,8 @@ class AppUpgradeActor(
           app,
           nrToStartImmediately,
           startPromise), "Starter")
-    } else {
+    }
+    else {
       startPromise.success(true)
     }
   }

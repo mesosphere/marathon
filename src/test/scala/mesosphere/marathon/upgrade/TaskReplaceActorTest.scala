@@ -1,12 +1,12 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{TestActorRef, TestKit}
-import akka.actor.{Props, ActorSystem}
-import org.scalatest.{BeforeAndAfterAll, Matchers, FunSuiteLike}
+import akka.testkit.{ TestActorRef, TestKit }
+import akka.actor.{ Props, ActorSystem }
+import org.scalatest.{ BeforeAndAfterAll, Matchers, FunSuiteLike }
 import org.scalatest.mock.MockitoSugar
 import org.apache.mesos.SchedulerDriver
 import mesosphere.marathon.Protos.MarathonTask
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{ Await, Promise }
 import org.mockito.Mockito._
 import mesosphere.marathon.event.HealthStatusChanged
 import org.apache.mesos.Protos.TaskID
@@ -16,11 +16,11 @@ import mesosphere.marathon.tasks.TaskQueue
 import mesosphere.marathon.api.v1.AppDefinition
 
 class TaskReplaceActorTest
-  extends TestKit(ActorSystem("System"))
-  with FunSuiteLike
-  with Matchers
-  with BeforeAndAfterAll
-  with MockitoSugar {
+    extends TestKit(ActorSystem("System"))
+    with FunSuiteLike
+    with Matchers
+    with BeforeAndAfterAll
+    with MockitoSugar {
 
   override def afterAll(): Unit = {
     super.afterAll()

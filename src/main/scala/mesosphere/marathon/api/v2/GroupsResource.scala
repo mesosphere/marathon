@@ -1,10 +1,10 @@
 package mesosphere.marathon.api.v2
 
 import javax.ws.rs._
-import javax.ws.rs.core.{Response, MediaType}
+import javax.ws.rs.core.{ Response, MediaType }
 import javax.inject.Inject
-import javax.validation.{ConstraintViolationException, Validation}
-import mesosphere.marathon.state.{Timestamp, GroupManager}
+import javax.validation.{ ConstraintViolationException, Validation }
+import mesosphere.marathon.state.{ Timestamp, GroupManager }
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import mesosphere.marathon.api.Responses
@@ -16,7 +16,7 @@ import org.hibernate.validator.internal.engine.path.PathImpl
 
 @Path("v2/groups")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class GroupsResource @Inject()(groupManager: GroupManager) {
+class GroupsResource @Inject() (groupManager: GroupManager) {
 
   val defaultWait = 3.seconds
 
@@ -50,9 +50,9 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   @PUT
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("{id}")
-  def update( @PathParam("id") id: String,
-              group: Group,
-              @DefaultValue("false") @QueryParam("force") force: Boolean): Response = {
+  def update(@PathParam("id") id: String,
+             group: Group,
+             @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     checkIsValid(group)
     groupManager.update(id, group, force)
     Response.noContent().build()
@@ -60,9 +60,9 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
 
   @PUT
   @Path("{id}/version/{version}")
-  def rollbackTo( @PathParam("id") id: String,
-                  @PathParam("version") version: String,
-                  @DefaultValue("false") @QueryParam("force") force: Boolean): Response = {
+  def rollbackTo(@PathParam("id") id: String,
+                 @PathParam("version") version: String,
+                 @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val res = groupManager.group(id, Timestamp(version)).map {
       case Some(group) =>
         groupManager.update(id, group, force)
@@ -75,7 +75,7 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
 
   @DELETE
   @Path("{id}")
-  def delete( @PathParam("id") id: String ): Response = {
+  def delete(@PathParam("id") id: String): Response = {
     val response = if (result(groupManager.expunge(id), defaultWait)) Response.ok else Response.noContent()
     response.build()
   }
@@ -85,15 +85,15 @@ class GroupsResource @Inject()(groupManager: GroupManager) {
   val validator = Validation.buildDefaultValidatorFactory().getValidator
   private def checkIsValid(group: Group) {
     val groupErrors = validator.validate(group).asScala
-    val appErrors = group.apps.flatMap( app => validator.validate(app).asScala).map { e =>
+    val appErrors = group.apps.flatMap(app => validator.validate(app).asScala).map { e =>
       ConstraintViolationImpl.forParameterValidation[Group](
         e.getMessageTemplate, e.getMessage, classOf[Group], group, e.getLeafBean, e.getInvalidValue,
-        PathImpl.createPathFromString("apps."+e.getPropertyPath),
+        PathImpl.createPathFromString("apps." + e.getPropertyPath),
         e.getConstraintDescriptor, ElementType.FIELD, e.getExecutableParameters)
     }
     val healthCapacityNotInRange =
-      if (group.scalingStrategy.minimumHealthCapacity<0) Some("is less than 0")
-      else if (group.scalingStrategy.minimumHealthCapacity>1) Some("is greater than 1")
+      if (group.scalingStrategy.minimumHealthCapacity < 0) Some("is less than 0")
+      else if (group.scalingStrategy.minimumHealthCapacity > 1) Some("is greater than 1")
       else None
 
     val runningMinimumExceeded = group.scalingStrategy.maximumRunningFactor.collect {

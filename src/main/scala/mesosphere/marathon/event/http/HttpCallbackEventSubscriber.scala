@@ -7,7 +7,7 @@ import javax.inject.{ Named, Inject }
 
 class HttpCallbackEventSubscriber @Inject() (
   @Named(HttpEventModule.StatusUpdateActor) val actor: ActorRef,
-    @Named(EventModule.busName) val eventBus: EventStream)
+  @Named(EventModule.busName) val eventBus: EventStream)
     extends EventSubscriber[HttpEventConfiguration, HttpEventModule] {
 
   eventBus.subscribe(actor, classOf[MarathonEvent])

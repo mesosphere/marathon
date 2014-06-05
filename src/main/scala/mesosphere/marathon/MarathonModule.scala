@@ -3,14 +3,14 @@ package mesosphere.marathon
 import com.google.inject._
 import org.apache.mesos.state.{ ZooKeeperState, State }
 import java.util.concurrent.TimeUnit
-import com.twitter.common.zookeeper.{Group=>ZGroup, CandidateImpl, Candidate, ZooKeeperClient}
+import com.twitter.common.zookeeper.{ Group => ZGroup, CandidateImpl, Candidate, ZooKeeperClient }
 import org.apache.zookeeper.ZooDefs
 import com.twitter.common.base.Supplier
 import org.apache.log4j.Logger
 import javax.inject.Named
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
-import akka.actor.{OneForOneStrategy, Props, ActorRef, ActorSystem}
+import akka.actor.{ OneForOneStrategy, Props, ActorRef, ActorSystem }
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -85,8 +85,7 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
     rateLimiters: RateLimiters,
-    @Named(EventModule.busName) eventBus: EventStream
-  ): ActorRef = {
+    @Named(EventModule.busName) eventBus: EventStream): ActorRef = {
     val supervision = OneForOneStrategy() {
       case _ => Resume
     }
@@ -133,13 +132,13 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideGroupRepository(state: State, appRepository: AppRepository) : GroupRepository = new GroupRepository(
+  def provideGroupRepository(state: State, appRepository: AppRepository): GroupRepository = new GroupRepository(
     new MarathonStore[Group](state, Group.empty, "group:"), appRepository
   )
 
   @Provides
   @Singleton
-  def provideDeploymentPlanRepository(state: State) : DeploymentPlanRepository = new DeploymentPlanRepository(
+  def provideDeploymentPlanRepository(state: State): DeploymentPlanRepository = new DeploymentPlanRepository(
     new MarathonStore[DeploymentPlan](state, DeploymentPlan.empty, "deployment:")
   )
 

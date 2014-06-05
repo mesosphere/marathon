@@ -1,6 +1,6 @@
 package mesosphere.util
 
-import com.google.common.cache.{LoadingCache, CacheLoader, CacheBuilder}
+import com.google.common.cache.{ LoadingCache, CacheLoader, CacheBuilder }
 import java.util.concurrent.Semaphore
 
 object LockManager {
