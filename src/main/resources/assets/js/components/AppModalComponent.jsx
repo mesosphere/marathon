@@ -7,27 +7,34 @@ define([
   "jsx!components/TaskListComponent",
   "jsx!components/TogglableTabsComponent",
   "mixins/BackboneMixin"
-], function(React, ModalComponent, TabPaneComponent,
-    TaskListComponent, TogglableTabsComponent, BackboneMixin) {
+], function(React, ModalComponent, TabPaneComponent, TaskListComponent,
+    TogglableTabsComponent, BackboneMixin) {
 
   return React.createClass({
+    displayName: "AppModalComponent",
+    mixins: [BackboneMixin],
+
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
+
     destroyApp: function() {
       if (confirm("Destroy app '" + this.props.model.get("id") + "'?\nThis is irreversible.")) {
         this.props.model.destroy();
         this.refs.modalComponent.destroy();
       }
     },
+
     getResource: function() {
       return this.props.model;
     },
+
     getInitialState: function() {
       return {
         selectedTasks: {}
       };
     },
+
     killSelectedTasks: function(options) {
       var _this = this;
       var _options = options || {};
@@ -57,13 +64,15 @@ define([
         });
       });
     },
+
     killSelectedTasksAndScale: function() {
       this.killSelectedTasks({scale: true});
     },
-    mixins: [BackboneMixin],
+
     refreshTaskList: function() {
       this.refs.taskList.fetchTasks();
     },
+
     render: function() {
       var buttons;
       var model = this.props.model;
@@ -215,6 +224,7 @@ define([
         </ModalComponent>
       );
     },
+
     scaleApp: function() {
       var model = this.props.model;
       var instancesString = prompt("Scale to how many instances?",
@@ -234,6 +244,7 @@ define([
         }
       }
     },
+
     toggleAllTasks: function() {
       var newSelectedTasks = {};
       var modelTasks = this.props.model.tasks;
@@ -249,6 +260,7 @@ define([
 
       this.setState({selectedTasks: newSelectedTasks});
     },
+
     toggleTask: function(task, value) {
       var selectedTasks = this.state.selectedTasks;
 
@@ -267,6 +279,7 @@ define([
 
       this.setState({selectedTasks: selectedTasks});
     },
+
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
         this.props.model.suspend();

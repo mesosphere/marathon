@@ -12,13 +12,35 @@ define([
       ModalComponent) {
 
   return React.createClass({
+    mixins: [BackboneMixin],
+    propTypes: {
+      onCreate: React.PropTypes.func,
+      onDestroy: React.PropTypes.func
+    },
+
+    getDefaultProps: function() {
+      return {
+        onCreate: $.noop,
+        onDestroy: $.noop
+      };
+    },
+
+    getInitialState: function() {
+      return {
+        model: new App()
+      };
+    },
+
     destroy: function() {
+      // This will also call `this.props.onDestroy` since it is passed as the
+      // callback for the modal's `onDestroy` prop.
       this.refs.modalComponent.destroy();
     },
+
     getResource: function() {
-      return this.props.model;
+      return this.state.model;
     },
-    mixins: [BackboneMixin],
+
     onSubmit: function(event) {
       event.preventDefault();
 
@@ -51,18 +73,19 @@ define([
         modelAttrs.instances = parseInt(modelAttrs.instances, 10);
       }
 
-      this.props.model.set(modelAttrs);
+      this.state.model.set(modelAttrs);
 
-      if (this.props.model.isValid()) {
-        this.props.onCreate();
+      if (this.state.model.isValid()) {
+        this.props.onCreate(this.state.model);
         this.destroy();
       }
     },
+
     render: function() {
-      var model = this.props.model;
+      var model = this.state.model;
 
       return (
-        <ModalComponent ref="modalComponent">
+        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
           <form method="post" className="form-horizontal" role="form" onSubmit={this.onSubmit}>
             <div className="modal-header">
               <button type="button" className="close"
