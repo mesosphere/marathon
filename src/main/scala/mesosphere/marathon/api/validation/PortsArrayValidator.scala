@@ -2,15 +2,15 @@ package mesosphere.marathon.api.validation
 
 import mesosphere.marathon.api.v1.AppDefinition.RANDOM_PORT_VALUE
 import scala.collection.JavaConverters._
-import javax.validation.{ConstraintValidator, ConstraintValidatorContext}
+import javax.validation.{ ConstraintValidator, ConstraintValidatorContext }
 
 /**
- * This validator accepts objects of type Iterable[Int] where all of the
- * elements are unique, and Option[Iterable[Int]] where the wrapped collection's
- * elements are unique.
- */
+  * This validator accepts objects of type Iterable[Int] where all of the
+  * elements are unique, and Option[Iterable[Int]] where the wrapped collection's
+  * elements are unique.
+  */
 class PortsArrayValidator
-  extends ConstraintValidator[PortsArray, Any] {
+    extends ConstraintValidator[PortsArray, Any] {
 
   def initialize(annotation: PortsArray): Unit = {}
 

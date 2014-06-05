@@ -3,10 +3,10 @@ package mesosphere.marathon.tasks
 import org.apache.mesos.Protos.TaskID
 
 /**
- * Utility functions for dealing with TaskIDs
- *
- * @author Tobi Knaup
- */
+  * Utility functions for dealing with TaskIDs
+  *
+  * @author Tobi Knaup
+  */
 
 object TaskIDUtil {
 

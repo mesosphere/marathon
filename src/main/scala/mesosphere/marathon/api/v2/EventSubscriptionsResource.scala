@@ -3,12 +3,12 @@ package mesosphere.marathon.api.v2
 import scala.language.postfixOps
 import com.google.inject.Inject
 import javax.ws.rs._
-import javax.ws.rs.core.{Context, MediaType}
+import javax.ws.rs.core.{ Context, MediaType }
 import com.codahale.metrics.annotation.Timed
 import javax.servlet.http.HttpServletRequest
 import org.apache.log4j.Logger
-import mesosphere.marathon.event.{Unsubscribe, Subscribe}
-import mesosphere.marathon.event.http.{HttpEventModule, HttpCallbackSubscriptionService}
+import mesosphere.marathon.event.{ Unsubscribe, Subscribe }
+import mesosphere.marathon.event.http.{ HttpEventModule, HttpCallbackSubscriptionService }
 import scala.concurrent.Await
 import mesosphere.marathon.BadRequestException
 

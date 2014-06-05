@@ -3,16 +3,16 @@ package mesosphere.marathon.api.v1
 import javax.ws.rs._
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
-import javax.ws.rs.core.{Response, MediaType}
+import javax.ws.rs.core.{ Response, MediaType }
 import javax.inject.Inject
 import com.codahale.metrics.annotation.Timed
 import javax.ws.rs.core.Response.Status
 
 @Path("v1/tasks")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class TasksResource @Inject()(
-  service: MarathonSchedulerService,
-  taskTracker: TaskTracker) {
+class TasksResource @Inject() (
+    service: MarathonSchedulerService,
+    taskTracker: TaskTracker) {
 
   @GET
   @Timed
@@ -26,7 +26,7 @@ class TasksResource @Inject()(
                 @QueryParam("id") id: String = "*",
                 @QueryParam("scale") scale: Boolean = false) = {
     val tasks = taskTracker.get(appId)
-    val toKill = tasks.filter( x =>
+    val toKill = tasks.filter(x =>
       x.getHost == host || x.getId == id || host == "*"
     )
 

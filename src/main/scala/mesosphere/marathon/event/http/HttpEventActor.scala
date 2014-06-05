@@ -5,7 +5,7 @@ import akka.pattern.ask
 import spray.client.pipelining.sendReceive
 import scala.concurrent.Future
 import spray.httpx.Json4sJacksonSupport
-import org.json4s.{DefaultFormats, FieldSerializer}
+import org.json4s.{ DefaultFormats, FieldSerializer }
 import spray.client.pipelining._
 import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.api.v1.AppDefinition
@@ -22,7 +22,7 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
 
   val pipeline: HttpRequest => Future[HttpResponse] = (
     addHeader("Accept", "application/json")
-      ~> sendReceive)
+    ~> sendReceive)
 
   def receive = {
     case event: MarathonEvent =>
@@ -34,7 +34,7 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
   def broadcast(event: MarathonEvent): Unit = {
     log.info("POSTing to all endpoints.")
     (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].foreach {
-      _.urls.foreach { post(_,event) }
+      _.urls.foreach { post(_, event) }
     }
   }
 
@@ -54,9 +54,6 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     }
   }
 
-  implicit def json4sJacksonFormats = DefaultFormats + FieldSerializer
-    [AppDefinition]()
+  implicit def json4sJacksonFormats = DefaultFormats + FieldSerializer[AppDefinition]()
 }
-
-
 

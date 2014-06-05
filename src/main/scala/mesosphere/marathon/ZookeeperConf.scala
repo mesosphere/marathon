@@ -4,8 +4,8 @@ import org.rogach.scallop.ScallopConf
 import java.net.InetSocketAddress
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 
 trait ZookeeperConf extends ScallopConf {
 

@@ -1,6 +1,6 @@
 package mesosphere.marathon.event.http
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{ Actor, ActorLogging }
 import akka.pattern.pipe
 import mesosphere.marathon.event.{
   MarathonSubscriptionEvent,
@@ -21,10 +21,11 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
       val addResult: Future[Option[EventSubscribers]] = add(callbackUrl)
 
       val subscription: Future[MarathonSubscriptionEvent] =
-        addResult.collect { case Some(subscribers) =>
-          if (subscribers.urls.contains(callbackUrl))
-            log.info("Callback [%s] subscribed." format callbackUrl)
-          event
+        addResult.collect {
+          case Some(subscribers) =>
+            if (subscribers.urls.contains(callbackUrl))
+              log.info("Callback [%s] subscribed." format callbackUrl)
+            event
         }
 
       subscription pipeTo sender
@@ -33,10 +34,11 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
       val removeResult: Future[Option[EventSubscribers]] = remove(callbackUrl)
 
       val subscription: Future[MarathonSubscriptionEvent] =
-        removeResult.collect { case Some(subscribers) =>
-          if (!subscribers.urls.contains(callbackUrl))
-            log.info("Callback [%s] unsubscribed." format callbackUrl)
-          event
+        removeResult.collect {
+          case Some(subscribers) =>
+            if (!subscribers.urls.contains(callbackUrl))
+              log.info("Callback [%s] unsubscribed." format callbackUrl)
+            event
         }
 
       subscription pipeTo sender

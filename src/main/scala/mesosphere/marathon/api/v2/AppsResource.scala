@@ -2,11 +2,11 @@ package mesosphere.marathon.api.v2
 
 import javax.ws.rs._
 import scala.Array
-import javax.ws.rs.core.{Response, Context, MediaType}
-import javax.inject.{Named, Inject}
+import javax.ws.rs.core.{ Response, Context, MediaType }
+import javax.inject.{ Named, Inject }
 import mesosphere.marathon.event.EventModule
 import com.google.common.eventbus.EventBus
-import mesosphere.marathon.{MarathonSchedulerService, BadRequestException}
+import mesosphere.marathon.{ MarathonSchedulerService, BadRequestException }
 import mesosphere.marathon.tasks.TaskTracker
 import com.codahale.metrics.annotation.Timed
 import com.sun.jersey.api.NotFoundException
@@ -17,15 +17,15 @@ import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
 import java.net.URI
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.api.{PATCH, Responses}
+import mesosphere.marathon.api.{ PATCH, Responses }
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class AppsResource @Inject()(
+class AppsResource @Inject() (
     @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
@@ -38,7 +38,8 @@ class AppsResource @Inject()(
             @QueryParam("id") id: String) = {
     val apps = if (cmd != null || id != null) {
       search(cmd, id)
-    } else {
+    }
+    else {
       service.listApps()
     }
 
@@ -71,8 +72,7 @@ class AppsResource @Inject()(
   def replace(
     @Context req: HttpServletRequest,
     @PathParam("id") id: String,
-    @Valid appUpdate: AppUpdate
-  ): Response = {
+    @Valid appUpdate: AppUpdate): Response = {
     val updatedApp = appUpdate.apply(AppDefinition(id))
 
     service.getApp(id) match {

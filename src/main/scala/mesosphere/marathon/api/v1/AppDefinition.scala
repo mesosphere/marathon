@@ -1,9 +1,9 @@
 package mesosphere.marathon.api.v1
 
 import mesosphere.mesos.TaskBuilder
-import mesosphere.marathon.{ContainerInfo, Protos}
-import mesosphere.marathon.state.{MarathonState, Timestamp, Timestamped}
-import mesosphere.marathon.Protos.{MarathonTask, Constraint}
+import mesosphere.marathon.{ ContainerInfo, Protos }
+import mesosphere.marathon.state.{ MarathonState, Timestamp, Timestamped }
+import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.api.validation.FieldConstraints._
@@ -15,54 +15,46 @@ import com.fasterxml.jackson.annotation.{
 }
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
-import java.lang.{Integer => JInt, Double => JDouble}
-import mesosphere.mesos.protos.{Resource, ScalarResource}
-
+import java.lang.{ Integer => JInt, Double => JDouble }
+import mesosphere.mesos.protos.{ Resource, ScalarResource }
 
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppDefinition(
 
-  @FieldNotEmpty
-  @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$")
-  id: String = "",
+  @FieldNotEmpty @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$") id: String = "",
 
   cmd: String = "",
 
   env: Map[String, String] = Map.empty,
 
-  @FieldMin(0)
-  instances: JInt = AppDefinition.DEFAULT_INSTANCES,
+  @FieldMin(0) instances: JInt = AppDefinition.DEFAULT_INSTANCES,
 
   cpus: JDouble = AppDefinition.DEFAULT_CPUS,
 
   mem: JDouble = AppDefinition.DEFAULT_MEM,
 
-  @FieldPattern(regexp="^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
-  executor: String = "",
+  @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = "",
 
   constraints: Set[Constraint] = Set(),
 
   uris: Seq[String] = Seq(),
 
-  @FieldPortsArray
-  ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
+  @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
   /**
-   * Number of new tasks this app may spawn per second in response to
-   * terminated tasks. This prevents frequently failing apps from spamming
-   * the cluster.
-   */
+  * Number of new tasks this app may spawn per second in response to
+  * terminated tasks. This prevents frequently failing apps from spamming
+  * the cluster.
+  */
   taskRateLimit: JDouble = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
 
   container: Option[ContainerInfo] = None,
 
   healthChecks: Set[HealthCheck] = Set(),
 
-  version: Timestamp = Timestamp.now
-
-) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
-  with Timestamped {
+  version: Timestamp = Timestamp.now) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
+    with Timestamped {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -72,9 +64,9 @@ case class AppDefinition(
   )
 
   /**
-   * Returns true if all health check port index values are in the range
-   * of ths app's ports array.
-   */
+    * Returns true if all health check port index values are in the range
+    * of ths app's ports array.
+    */
   def portIndicesAreValid(): Boolean = {
     val validPortIndices = 0 until ports.size
     healthChecks.forall { hc =>
@@ -129,7 +121,7 @@ case class AppDefinition(
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
       container = if (proto.hasContainer) Some(ContainerInfo(proto.getContainer))
-                  else None,
+      else None,
       healthChecks =
         proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion)
@@ -162,16 +154,15 @@ object AppDefinition {
 
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
-    app: AppDefinition
-  ) extends AppDefinition(
+    app: AppDefinition) extends AppDefinition(
     app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
     app.constraints, app.uris, app.ports, app.taskRateLimit, app.container,
     app.healthChecks, app.version
   ) {
 
     /**
-     * Snapshot of the known tasks for this app
-     */
+      * Snapshot of the known tasks for this app
+      */
     @JsonIgnore
     protected[this] val appTasks: Seq[MarathonTask] =
       taskTracker.get(this.id).toSeq
@@ -196,9 +187,8 @@ object AppDefinition {
   }
 
   protected[marathon] class WithTasks(
-    taskTracker: TaskTracker,
-    app: AppDefinition
-  ) extends WithTaskCounts(taskTracker, app) {
+      taskTracker: TaskTracker,
+      app: AppDefinition) extends WithTaskCounts(taskTracker, app) {
     @JsonProperty
     def tasks = appTasks
   }

@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v1
 
-import javax.ws.rs.{PathParam, GET, Produces, Path}
-import javax.ws.rs.core.{Response, MediaType}
+import javax.ws.rs.{ PathParam, GET, Produces, Path }
+import javax.ws.rs.core.{ Response, MediaType }
 import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
@@ -11,11 +11,11 @@ import mesosphere.marathon.api.Responses
 import scala.collection.JavaConverters._
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 
 @Path("v1/endpoints")
-class EndpointsResource @Inject()(
+class EndpointsResource @Inject() (
     schedulerService: MarathonSchedulerService,
     taskTracker: TaskTracker) {
 
@@ -41,7 +41,7 @@ class EndpointsResource @Inject()(
   def endpointsForApp(@PathParam("id") id: String): Response =
     schedulerService.getApp(id) match {
       case Some(app) => Response.ok(appsToEndpointString(Seq(app))).build
-      case None => Response.status(Status.NOT_FOUND).entity(s"App '$id' does not exist").build
+      case None      => Response.status(Status.NOT_FOUND).entity(s"App '$id' does not exist").build
     }
 
   @GET
@@ -77,7 +77,8 @@ class EndpointsResource @Inject()(
           sb.append(s"${task.getHost} ")
         }
         sb.append(s"\n")
-      } else {
+      }
+      else {
         for ((port, i) <- app.ports.zipWithIndex) {
           sb.append(s"${cleanId}_$port $port ")
           for (task <- tasks) {

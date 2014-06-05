@@ -13,17 +13,16 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
 import scala.util.Random
 import scala.Some
-import mesosphere.mesos.protos.{RangesResource, ScalarResource, Resource}
-
+import mesosphere.mesos.protos.{ RangesResource, ScalarResource, Resource }
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 
-class TaskBuilder (app: AppDefinition,
-                   newTaskId: String => TaskID,
-                   taskTracker: TaskTracker,
-                   mapper: ObjectMapper = new ObjectMapper()) {
+class TaskBuilder(app: AppDefinition,
+                  newTaskId: String => TaskID,
+                  taskTracker: TaskTracker,
+                  mapper: ObjectMapper = new ObjectMapper()) {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -44,7 +43,8 @@ class TaskBuilder (app: AppDefinition,
 
     val executor: Executor = if (app.executor == "") {
       Main.conf.executor
-    } else {
+    }
+    else {
       Executor.dispatch(app.executor)
     }
 
@@ -67,8 +67,8 @@ class TaskBuilder (app: AppDefinition,
         case CommandExecutor() => {
           if (app.container.nonEmpty) {
             log.warn("The command executor can not handle container " +
-                        "options. No tasks will be started for this " +
-                        "appliction.")
+              "options. No tasks will be started for this " +
+              "appliction.")
             return None
           }
           builder.setCommand(TaskBuilder.commandInfo(app, ports))
@@ -124,7 +124,7 @@ class TaskBuilder (app: AppDefinition,
         Constraints.meetsConstraint(runningTasks, offer, _)
       )
       if (!constraintsMet) {
-        log.warn("Did not meet a constraint in an offer." )
+        log.warn("Did not meet a constraint in an offer.")
         return None
       }
       log.info("Met all constraints.")

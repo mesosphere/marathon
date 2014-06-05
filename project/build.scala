@@ -3,12 +3,16 @@ import Keys._
 import sbtassembly.Plugin._
 import AssemblyKeys._
 import sbtrelease.ReleasePlugin._
+import com.typesafe.sbt.SbtScalariform._
+import ohnosequences.sbt.SbtS3Resolver.S3Resolver
+import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
+import scalariform.formatter.preferences._
 
 object MarathonBuild extends Build {
   lazy val root = Project(
     id = "marathon",
     base = file("."),
-    settings = baseSettings ++ assemblySettings ++ releaseSettings ++ Seq(
+    settings = baseSettings ++ assemblySettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ Seq(
       libraryDependencies ++= Dependencies.root
     )
   )
@@ -22,9 +26,34 @@ object MarathonBuild extends Build {
       "Mesosphere Public Repo" at "http://downloads.mesosphere.io/maven",
       "Twitter Maven2 Repository" at "http://maven.twttr.com/",
       "Spray Maven Repository" at "http://repo.spray.io/"
-    ),
-    publishTo := Some("Mesosphere Repository" at "s3://downloads.mesosphere.io/maven")
+    )
   )
+
+  lazy val publishSettings = S3Resolver.defaults ++ Seq(
+    publishTo := Some(s3resolver.value(
+      "Mesosphere Public Repo",
+      s3("downloads.mesosphere.io/maven")
+    ))
+  )
+
+  lazy val formatSettings = scalariformSettings ++ Seq(
+    ScalariformKeys.preferences := FormattingPreferences()
+      .setPreference(IndentWithTabs, false)
+      .setPreference(IndentSpaces, 2)
+      .setPreference(AlignParameters, true)
+      .setPreference(DoubleIndentClassDeclaration, true)
+      .setPreference(MultilineScaladocCommentsStartOnFirstLine, false)
+      .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
+      .setPreference(PreserveDanglingCloseParenthesis, true)
+      .setPreference(CompactControlReadability, true)
+      .setPreference(AlignSingleLineCaseStatements, true)
+      .setPreference(PreserveSpaceBeforeArguments, true)
+      .setPreference(SpaceBeforeColon, false)
+      .setPreference(SpaceInsideBrackets, false)
+      .setPreference(SpaceInsideParentheses, false)
+      .setPreference(SpacesWithinPatternBinders, true)
+      .setPreference(FormatXml, true)
+    )
 }
 
 object Dependencies {

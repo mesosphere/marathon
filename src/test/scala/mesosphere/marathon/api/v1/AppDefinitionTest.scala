@@ -9,8 +9,8 @@ import javax.validation.Validation
 import mesosphere.marathon.MarathonSpec
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 class AppDefinitionTest extends MarathonSpec {
 
   test("ToProto") {

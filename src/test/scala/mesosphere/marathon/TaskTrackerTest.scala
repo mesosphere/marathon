@@ -2,9 +2,9 @@ package mesosphere.marathon
 
 import org.apache.mesos.state.InMemoryState
 import mesosphere.marathon.Protos.MarathonTask
-import org.apache.mesos.Protos.{TaskID, TaskStatus, TaskState}
-import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
-import mesosphere.marathon.tasks.{TaskTracker, TaskIDUtil}
+import org.apache.mesos.Protos.{ TaskID, TaskStatus, TaskState }
+import java.io.{ ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream }
+import mesosphere.marathon.tasks.{ TaskTracker, TaskIDUtil }
 import com.google.common.collect.Lists
 import mesosphere.mesos.protos.TextAttribute
 
