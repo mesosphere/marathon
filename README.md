@@ -85,7 +85,7 @@ difficult situation!
 * [Zookeeper][Zookeeper]
 * JDK 1.6+
 * Scala 2.10+
-* Maven 3.0+
+* sbt 0.13.5
 
 ### Installation
 
@@ -116,11 +116,11 @@ difficult situation!
 
 #### Building From Source
 
-1.  If you want to build Marathon from source, check out this repo and use Maven to build a JAR:
+1.  If you want to build Marathon from source, check out this repo and use sbt to build a JAR:
 
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
-        mvn package
+        sbt assembly
 
 1.  Run `./bin/build-distribution` to package Marathon as an
     [executable JAR](http://mesosphere.io/2013/12/07/executable-jars/)

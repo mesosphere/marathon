@@ -1,7 +1,7 @@
 package mesosphere.marathon
 
 import org.apache.mesos.Protos._
-import org.apache.mesos.{SchedulerDriver, Scheduler}
+import org.apache.mesos.{ SchedulerDriver, Scheduler }
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.HashSet
@@ -9,21 +9,20 @@ import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.AppRepository
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ Future, ExecutionContext }
 import com.google.common.collect.Lists
-import javax.inject.{Named, Inject}
+import javax.inject.{ Named, Inject }
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event._
-import mesosphere.marathon.tasks.{TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks}
+import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks }
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
-import mesosphere.util.{ThreadPoolContext, RateLimiters}
+import mesosphere.util.{ ThreadPoolContext, RateLimiters }
 import mesosphere.marathon.health.HealthCheckManager
-import scala.util.{Success, Failure}
+import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
-
 
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -41,18 +40,17 @@ object MarathonScheduler {
 }
 
 /**
- * @author Tobi Knaup
- */
-class MarathonScheduler @Inject()(
-  @Named(EventModule.busName) eventBus: Option[EventBus],
-  @Named("restMapper") mapper: ObjectMapper,
-  appRepository: AppRepository,
-  healthCheckManager: HealthCheckManager,
-  taskTracker: TaskTracker,
-  taskQueue: TaskQueue,
-  frameworkIdUtil: FrameworkIdUtil,
-  rateLimiters: RateLimiters
-) extends Scheduler {
+  * @author Tobi Knaup
+  */
+class MarathonScheduler @Inject() (
+    @Named(EventModule.busName) eventBus: Option[EventBus],
+    @Named("restMapper") mapper: ObjectMapper,
+    appRepository: AppRepository,
+    healthCheckManager: HealthCheckManager,
+    taskTracker: TaskTracker,
+    taskQueue: TaskQueue,
+    frameworkIdUtil: FrameworkIdUtil,
+    rateLimiters: RateLimiters) extends Scheduler {
 
   private val log = Logger.getLogger(getClass.getName)
 
@@ -60,12 +58,11 @@ class MarathonScheduler @Inject()(
   import mesosphere.mesos.protos.Implicits._
 
   /**
-   * Returns a future containing the optional most recent version
-   * of the specified app from persistent storage.
-   */
+    * Returns a future containing the optional most recent version
+    * of the specified app from persistent storage.
+    */
   protected[marathon] def currentAppVersion(
-    appId: String
-  ): Future[Option[AppDefinition]] = appRepository.currentVersion(appId)
+    appId: String): Future[Option[AppDefinition]] = appRepository.currentVersion(appId)
 
   override def registered(driver: SchedulerDriver, frameworkId: FrameworkID, master: MasterInfo) {
     log.info("Registered as %s to master '%s'".format(frameworkId.getValue, master.getId))
@@ -121,10 +118,12 @@ class MarathonScheduler @Inject()(
           log.debug("Offer doesn't match request. Declining.")
           // Add it back into the queue so the we can try again
           driver.declineOffer(offer.getId)
-        } else {
+        }
+        else {
           taskQueue.addAll(apps.drop(i))
         }
-      } catch {
+      }
+      catch {
         case t: Throwable =>
           log.error("Caught an exception. Declining offer.", t)
           // Ensure that we always respond
@@ -152,16 +151,18 @@ class MarathonScheduler @Inject()(
       taskTracker.terminated(appID, status).foreach(taskOption => {
         taskOption match {
           case Some(task) => postEvent(status, task)
-          case None => log.warn(s"Couldn't post event for ${status.getTaskId}")
+          case None       => log.warn(s"Couldn't post event for ${status.getTaskId}")
         }
 
         if (rateLimiters.tryAcquire(appID)) {
           scale(driver, appID)
-        } else {
+        }
+        else {
           log.warn(s"Rate limit reached for $appID")
         }
       })
-    } else if (status.getState.eq(TaskState.TASK_RUNNING)) {
+    }
+    else if (status.getState.eq(TaskState.TASK_RUNNING)) {
       taskTracker.running(appID, status).onComplete {
         case Success(task) => postEvent(status, task)
         case Failure(t) =>
@@ -169,11 +170,13 @@ class MarathonScheduler @Inject()(
           log.warn(s"Killing task ${status.getTaskId}")
           driver.killTask(status.getTaskId)
       }
-    } else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
+    }
+    else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
       log.warn(s"Received status update for unknown app $appID")
       log.warn(s"Killing task ${status.getTaskId}")
       driver.killTask(status.getTaskId)
-    } else {
+    }
+    else {
       taskTracker.statusUpdate(appID, status).onComplete {
         case Success(t) =>
           t match {
@@ -231,7 +234,7 @@ class MarathonScheduler @Inject()(
   def stopApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
     appRepository.expunge(app.id).map { successes =>
       if (!successes.forall(_ == true)) {
-        throw new StorageException("Error expunging " + app.id )
+        throw new StorageException("Error expunging " + app.id)
       }
 
       healthCheckManager.removeAllFor(app.id)
@@ -252,8 +255,7 @@ class MarathonScheduler @Inject()(
   def updateApp(
     driver: SchedulerDriver,
     id: String,
-    appUpdate: AppUpdate
-  ): Future[AppDefinition] = {
+    appUpdate: AppUpdate): Future[AppDefinition] = {
     appRepository.currentVersion(id).flatMap {
       case Some(currentVersion) =>
         val updatedApp = appUpdate(currentVersion)
@@ -270,12 +272,12 @@ class MarathonScheduler @Inject()(
   }
 
   /**
-   * Make sure all apps are running the configured amount of tasks.
-   *
-   * Should be called some time after the framework re-registers,
-   * to give Mesos enough time to deliver task updates.
-   * @param driver scheduler driver
-   */
+    * Make sure all apps are running the configured amount of tasks.
+    *
+    * Should be called some time after the framework re-registers,
+    * to give Mesos enough time to deliver task updates.
+    * @param driver scheduler driver
+    */
   def reconcileTasks(driver: SchedulerDriver): Unit = {
     appRepository.appIds().onComplete {
       case Success(iterator) =>
@@ -320,23 +322,23 @@ class MarathonScheduler @Inject()(
   }
 
   /**
-   * Ensures current application parameters (resource requirements, URLs,
-   * command, and constraints) are applied consistently across running
-   * application instances.
-   *
-   * @param driver
-   * @param updatedApp
-   * @param appUpdate
-   */
+    * Ensures current application parameters (resource requirements, URLs,
+    * command, and constraints) are applied consistently across running
+    * application instances.
+    *
+    * @param driver
+    * @param updatedApp
+    * @param appUpdate
+    */
   private def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate): Unit = {
     // TODO: implement app instance restart logic
   }
 
   /**
-   * Make sure the app is running the correct number of instances
-   * @param driver
-   * @param app
-   */
+    * Make sure the app is running the correct number of instances
+    * @param driver
+    * @param app
+    */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     taskTracker.get(app.id).synchronized {
       val currentCount = taskTracker.count(app.id)
@@ -352,7 +354,8 @@ class MarathonScheduler @Inject()(
           log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
           for (i <- 0 until toQueue)
             taskQueue.add(app)
-        } else {
+        }
+        else {
           log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
         }
       }
@@ -375,7 +378,7 @@ class MarathonScheduler @Inject()(
   private def scale(driver: SchedulerDriver, appName: String): Unit = {
     currentAppVersion(appName).onSuccess {
       case Some(app) => scale(driver, app)
-      case _ => log.warn("App %s does not exist. Not scaling.".format(appName))
+      case _         => log.warn("App %s does not exist. Not scaling.".format(appName))
     }
   }
 

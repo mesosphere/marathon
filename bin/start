@@ -42,4 +42,4 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Start Marathon
-java "${java_args[@]}" -jar "$FRAMEWORK_HOME"/target/marathon-*-jar-with-dependencies.jar "${app_args[@]}"
+java "${java_args[@]}" -jar "$FRAMEWORK_HOME"/target/scala-2.10/marathon-assembly-*.jar "${app_args[@]}"

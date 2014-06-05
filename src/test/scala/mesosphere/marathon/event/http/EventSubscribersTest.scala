@@ -1,6 +1,6 @@
 package mesosphere.marathon.event.http
 
-import mesosphere.marathon.{MarathonSpec, Protos}
+import mesosphere.marathon.{ MarathonSpec, Protos }
 
 class EventSubscribersTest extends MarathonSpec {
 

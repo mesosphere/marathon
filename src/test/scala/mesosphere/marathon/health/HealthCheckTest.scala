@@ -1,6 +1,6 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.{MarathonSpec, Protos}
+import mesosphere.marathon.{ MarathonSpec, Protos }
 import Protos.HealthCheckDefinition.Protocol
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS

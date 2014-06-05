@@ -2,9 +2,9 @@ package mesosphere.marathon.health
 
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{HTTP, TCP}
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{ HTTP, TCP }
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{ Actor, ActorLogging }
 import akka.util.Timeout
 
 import spray.http._
@@ -12,10 +12,9 @@ import spray.client.pipelining._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
-import scala.util.{Success, Failure}
+import scala.util.{ Success, Failure }
 
-import java.net.{Socket, InetSocketAddress}
-
+import java.net.{ Socket, InetSocketAddress }
 
 class HealthCheckWorkerActor extends Actor with ActorLogging {
 
@@ -32,14 +31,15 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
       replyWithHealth.onComplete {
         case Success(result) => replyTo ! result
-        case Failure(t) => replyTo ! Unhealthy(
-          task.getId,
-          Timestamp.now(),
-          s"${t.getClass.getSimpleName}: ${t.getMessage}"
-        )
+        case Failure(t) =>
+          replyTo ! Unhealthy(
+            task.getId,
+            Timestamp.now(),
+            s"${t.getClass.getSimpleName}: ${t.getMessage}"
+          )
 
-      context stop self
-    }
+          context stop self
+      }
   }
 
   def doCheck(task: MarathonTask, check: HealthCheck): Future[HealthResult] =
@@ -105,13 +105,11 @@ object HealthCheckWorker {
 
   case class Healthy(
     taskId: String,
-    time: Timestamp = Timestamp.now()
-  ) extends HealthResult
+    time: Timestamp = Timestamp.now()) extends HealthResult
 
   case class Unhealthy(
     taskId: String,
     time: Timestamp = Timestamp.now(),
-    cause: String
-  ) extends HealthResult
+    cause: String) extends HealthResult
 
 }

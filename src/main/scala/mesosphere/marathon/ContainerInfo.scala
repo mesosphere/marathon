@@ -3,7 +3,6 @@ package mesosphere.marathon
 import com.google.protobuf.ByteString
 import scala.collection.JavaConverters._
 
-
 class ContainerInfo protected (val image: String, val options: Seq[String]) {
   def toProto: Protos.ContainerInfo =
     Protos.ContainerInfo.newBuilder()

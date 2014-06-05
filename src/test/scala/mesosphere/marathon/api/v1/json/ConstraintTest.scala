@@ -5,10 +5,9 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.json.MarathonModule
 import mesosphere.marathon.MarathonSpec
 
-
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 class ConstraintTest extends MarathonSpec {
 
   test("Deserialize") {

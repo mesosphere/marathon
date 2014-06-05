@@ -5,8 +5,8 @@ import java.net.InetSocketAddress
 import scala.sys.SystemProperties
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 
 trait MarathonConf extends ScallopConf {
 
@@ -56,24 +56,24 @@ trait MarathonConf extends ScallopConf {
 
   lazy val taskLaunchTimeout = opt[Long]("task_launch_timeout",
     descr = "Time, in milliseconds, to wait for a task to enter " +
-    "the TASK_RUNNING state before killing it",
+      "the TASK_RUNNING state before killing it",
     default = Some(60000L)) // 60 seconds
 
   lazy val taskRateLimit = opt[Long]("task_rate_limit",
     descr = "This is the time window within which instances may be launched " +
-    "for a given app.  For example, if an app has 5 instances, it will " +
-    "only launch 5 instances within 60s regardless of " +
-    "whether they succeed or fail.",
+      "for a given app.  For example, if an app has 5 instances, it will " +
+      "only launch 5 instances within 60s regardless of " +
+      "whether they succeed or fail.",
     default = Some(60000L)) // 60 seconds
 
   lazy val reconciliationInitialDelay = opt[Long]("reconciliation_initial_delay",
     descr = "This is the length of time, in milliseconds, before Marathon " +
-    "begins to periodically perform task reconciliation operations",
+      "begins to periodically perform task reconciliation operations",
     default = Some(30000L)) // 30 seconds
 
   lazy val reconciliationFrequency = opt[Long]("reconciliation_frequency",
     descr = "This is the length of time, in milliseconds, between task " +
-    "reconciliation operations.",
+      "reconciliation operations.",
     default = Some(30000L)) // 30 seconds
 
   lazy val mesosUser = opt[String]("mesos_user",

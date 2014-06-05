@@ -4,10 +4,10 @@ import mesosphere.marathon.Protos.MarathonTask
 import scala.language.implicitConversions
 
 /**
- * Implicits for the API
- *
- * @author Tobi Knaup
- */
+  * Implicits for the API
+  *
+  * @author Tobi Knaup
+  */
 
 object Implicits {
 
@@ -16,7 +16,7 @@ object Implicits {
       "id" -> task.getId,
       "host" -> task.getHost,
       "ports" -> task.getPortsList
-      // TODO attributes
+    // TODO attributes
     )
   }
 }

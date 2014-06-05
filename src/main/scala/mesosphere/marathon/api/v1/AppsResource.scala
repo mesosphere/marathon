@@ -3,10 +3,10 @@ package mesosphere.marathon.api.v1
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.event.{EventModule, ApiPostEvent}
+import mesosphere.marathon.event.{ EventModule, ApiPostEvent }
 import javax.ws.rs._
-import javax.ws.rs.core.{Context, Response, MediaType}
-import javax.inject.{Named, Inject}
+import javax.ws.rs.core.{ Context, Response, MediaType }
+import javax.inject.{ Named, Inject }
 import javax.validation.Valid
 import javax.servlet.http.HttpServletRequest
 import com.codahale.metrics.annotation.Timed
@@ -16,11 +16,11 @@ import org.apache.log4j.Logger
 import mesosphere.marathon.api.Responses
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 @Path("v1/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class AppsResource @Inject()(
+class AppsResource @Inject() (
     @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
     taskTracker: TaskTracker) {
@@ -85,7 +85,8 @@ class AppsResource @Inject()(
       val tasks = taskTracker.get(appId)
       val result = Map(appId -> tasks)
       Response.ok(result).build
-    } else {
+    }
+    else {
       Responses.unknownApp(appId)
     }
   }

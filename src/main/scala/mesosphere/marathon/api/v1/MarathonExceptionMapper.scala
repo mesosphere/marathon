@@ -1,9 +1,9 @@
 package mesosphere.marathon.api.v1
 
-import javax.ws.rs.ext.{Provider, ExceptionMapper}
-import javax.ws.rs.core.{MediaType, Response}
+import javax.ws.rs.ext.{ Provider, ExceptionMapper }
+import javax.ws.rs.core.{ MediaType, Response }
 import scala.concurrent.TimeoutException
-import mesosphere.marathon.{BadRequestException, UnknownAppException}
+import mesosphere.marathon.{ BadRequestException, UnknownAppException }
 import com.sun.jersey.api.NotFoundException
 import com.fasterxml.jackson.core.JsonParseException
 import javax.ws.rs.WebApplicationException
@@ -11,8 +11,8 @@ import javax.ws.rs.core.Response.Status
 import org.apache.log4j.Logger
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 
 @Provider
 class MarathonExceptionMapper extends ExceptionMapper[Exception] {
@@ -34,12 +34,12 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
 
   private def statusCode(exception: Exception): Int = exception match {
     case e: IllegalArgumentException => 422 // Unprocessable entity
-    case e: TimeoutException => 504 // Gateway timeout
-    case e: UnknownAppException => 404 // Not found
-    case e: BadRequestException => 400 // Bad Request
-    case e: JsonParseException => 400 // Bad Request
-    case e: WebApplicationException => e.getResponse.getStatus
-    case _ => 500 // Internal server error
+    case e: TimeoutException         => 504 // Gateway timeout
+    case e: UnknownAppException      => 404 // Not found
+    case e: BadRequestException      => 400 // Bad Request
+    case e: JsonParseException       => 400 // Bad Request
+    case e: WebApplicationException  => e.getResponse.getStatus
+    case _                           => 500 // Internal server error
   }
 
   private def entity(exception: Exception): Any = exception match {
@@ -50,7 +50,8 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: WebApplicationException =>
       if (e.getResponse.getEntity != null) {
         Map("message" -> e.getResponse.getEntity)
-      } else {
+      }
+      else {
         Map("message" -> Status.fromStatusCode(e.getResponse.getStatus).getReasonPhrase)
       }
     case _ =>

@@ -12,34 +12,24 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS
 
-import java.lang.{Integer => JInt}
+import java.lang.{ Integer => JInt }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class HealthCheck(
 
-  @FieldJsonInclude(Include.NON_NULL)
-  @FieldJsonDeserialize(contentAs = classOf[java.lang.String])
-  path: Option[String] = HealthCheck.DefaultPath,
+    @FieldJsonInclude(Include.NON_NULL)@FieldJsonDeserialize(contentAs = classOf[java.lang.String]) path: Option[String] = HealthCheck.DefaultPath,
 
-  @FieldNotEmpty
-  protocol: Protocol = HealthCheck.DefaultProtocol,
+    @FieldNotEmpty protocol: Protocol = HealthCheck.DefaultProtocol,
 
-  @FieldNotEmpty
-  portIndex: JInt = HealthCheck.DefaultPortIndex,
+    @FieldNotEmpty portIndex: JInt = HealthCheck.DefaultPortIndex,
 
-  @FieldJsonProperty("gracePeriodSeconds")
-  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+    @FieldJsonProperty("gracePeriodSeconds") gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
 
-  @FieldJsonProperty("intervalSeconds")
-  interval: FiniteDuration = HealthCheck.DefaultInterval,
+    @FieldJsonProperty("intervalSeconds") interval: FiniteDuration = HealthCheck.DefaultInterval,
 
-  @FieldJsonProperty("timeoutSeconds")
-  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+    @FieldJsonProperty("timeoutSeconds") timeout: FiniteDuration = HealthCheck.DefaultTimeout,
 
-  @FieldNotEmpty
-  maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures
-
-) extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
+    @FieldNotEmpty maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures) extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
   def toProto: Protos.HealthCheckDefinition = {
     val builder = Protos.HealthCheckDefinition.newBuilder
@@ -73,11 +63,11 @@ case class HealthCheck(
 
 object HealthCheck {
 
-  val DefaultPath                   = Some("/")
-  val DefaultProtocol               = Protocol.HTTP
-  val DefaultPortIndex              = 0
-  val DefaultGracePeriod            = FiniteDuration(15, SECONDS)
-  val DefaultInterval               = FiniteDuration(10, SECONDS)
-  val DefaultTimeout                = FiniteDuration(20, SECONDS)
+  val DefaultPath = Some("/")
+  val DefaultProtocol = Protocol.HTTP
+  val DefaultPortIndex = 0
+  val DefaultGracePeriod = FiniteDuration(15, SECONDS)
+  val DefaultInterval = FiniteDuration(10, SECONDS)
+  val DefaultTimeout = FiniteDuration(20, SECONDS)
   val DefaultMaxConsecutiveFailures = 3
 }

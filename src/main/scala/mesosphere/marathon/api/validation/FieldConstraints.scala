@@ -7,13 +7,13 @@ import com.fasterxml.jackson.annotation.{
   JsonValue
 }
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import javax.validation.constraints.{Min, Pattern}
+import javax.validation.constraints.{ Min, Pattern }
 import scala.annotation.meta.field
 
 /**
- * Provides type aliases for constraint annotations that target fields
- * associated with Scala class constructor arguments.
- */
+  * Provides type aliases for constraint annotations that target fields
+  * associated with Scala class constructor arguments.
+  */
 object FieldConstraints {
   type FieldPortsArray = PortsArray @field
   type FieldNotEmpty = NotEmpty @field
