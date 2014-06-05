@@ -13,6 +13,6 @@ file, `dist/main.js`.
 
 3. Check in the compiled JS
 
-        git add dist/main.js
+        git add js/dist/main.js
 
 [node]: http://nodejs.org/download/
