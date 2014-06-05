@@ -9,7 +9,7 @@ import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.AppRepository
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.Future
 import com.google.common.collect.Lists
 import javax.inject.{ Named, Inject }
 import com.google.common.eventbus.EventBus
@@ -39,9 +39,6 @@ object MarathonScheduler {
   val callbacks: SchedulerCallbacks = new MarathonSchedulerCallbacksImpl(Some(Main.injector.getInstance(classOf[MarathonSchedulerService])))
 }
 
-/**
-  * @author Tobi Knaup
-  */
 class MarathonScheduler @Inject() (
     @Named(EventModule.busName) eventBus: Option[EventBus],
     @Named("restMapper") mapper: ObjectMapper,
@@ -50,12 +47,15 @@ class MarathonScheduler @Inject() (
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
-    rateLimiters: RateLimiters) extends Scheduler {
+    rateLimiters: RateLimiters,
+    config: MarathonConf) extends Scheduler {
 
   private val log = Logger.getLogger(getClass.getName)
 
   import ThreadPoolContext.context
   import mesosphere.mesos.protos.Implicits._
+
+  implicit val zkTimeout = config.zkFutureTimeout
 
   /**
     * Returns a future containing the optional most recent version

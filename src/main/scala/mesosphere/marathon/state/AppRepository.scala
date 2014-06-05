@@ -10,11 +10,6 @@ class AppRepository(store: PersistenceStore[AppDefinition]) {
 
   protected val ID_DELIMITER = ":"
 
-  val defaultWait = store match {
-    case m: MarathonStore[_] => m.defaultWait
-    case _                   => Duration(3, SECONDS)
-  }
-
   /**
     * Returns the most recently stored app with the supplied id.
     */

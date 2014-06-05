@@ -2,6 +2,8 @@ package mesosphere.marathon
 
 import org.rogach.scallop.ScallopConf
 import java.net.InetSocketAddress
+import mesosphere.util.BackToTheFuture
+import scala.concurrent.duration._
 
 /**
   * @author Tobi Knaup
@@ -51,4 +53,6 @@ trait ZookeeperConf extends ScallopConf {
   def zkURL = zooKeeperUrl.get.getOrElse(s"zk://${zooKeeperHostString()}${zooKeeperPath()}")
   lazy val zkHosts = zkURL match { case zkURLPattern(server, _) => server }
   lazy val zkPath = zkURL match { case zkURLPattern(_, path) => path }
+  lazy val zkTimeoutDuration = Duration(zooKeeperTimeout(), MILLISECONDS)
+  lazy val zkFutureTimeout = BackToTheFuture.Timeout(zkTimeoutDuration)
 }
