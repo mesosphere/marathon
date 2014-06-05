@@ -7,6 +7,7 @@ import com.typesafe.sbt.SbtScalariform._
 import ohnosequences.sbt.SbtS3Resolver.S3Resolver
 import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
 import scalariform.formatter.preferences._
+import sbtbuildinfo.Plugin._
 
 object MarathonBuild extends Build {
   lazy val root = Project(
@@ -17,7 +18,7 @@ object MarathonBuild extends Build {
     )
   )
 
-  lazy val baseSettings = Defaults.defaultSettings ++ Seq (
+  lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
     organization := "mesosphere",
     scalaVersion := "2.10.4",
     scalacOptions in Compile ++= Seq("-encoding", "UTF-8", "-target:jvm-1.6", "-deprecation", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint"),
@@ -26,7 +27,10 @@ object MarathonBuild extends Build {
       "Mesosphere Public Repo" at "http://downloads.mesosphere.io/maven",
       "Twitter Maven2 Repository" at "http://maven.twttr.com/",
       "Spray Maven Repository" at "http://repo.spray.io/"
-    )
+    ),
+    sourceGenerators in Compile <+= buildInfo,
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
+    buildInfoPackage := "mesosphere.marathon"
   )
 
   lazy val publishSettings = S3Resolver.defaults ++ Seq(

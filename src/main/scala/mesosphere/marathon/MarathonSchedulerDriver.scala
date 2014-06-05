@@ -10,7 +10,7 @@ object MarathonSchedulerDriver {
 
   var driver: Option[SchedulerDriver] = None
 
-  val frameworkName = "marathon-" + Main.properties.getProperty("marathon.version")
+  val frameworkName = s"marathon-${BuildInfo.version}"
 
   def newDriver(config: MarathonConf,
                 scheduler: MarathonScheduler,
