@@ -103,13 +103,13 @@ difficult situation!
 
     **For Mesos 0.17.0 and later:**
 
-        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.0/marathon-0.5.0.tgz
-        tar xzf marathon-0.5.0.tgz
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz
+        tar xzf marathon-0.5.1.tgz
 
     **For Mesos 0.16.0 and earlier:**
 
-        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.0_mesos-0.16.0/marathon-0.5.0_mesos-0.16.0.tgz
-        tar xzf marathon-0.5.0_mesos-0.16.0.tgz
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1_mesos-0.16.0/marathon-0.5.1_mesos-0.16.0.tgz
+        tar xzf marathon-0.5.1_mesos-0.16.0.tgz
 
     SHA-256 checksums are available by appending `.sha256` to the URLs.
 
