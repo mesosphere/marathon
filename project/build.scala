@@ -74,6 +74,7 @@ object Dependencies {
     twitterZkClient % "compile",
     jodaTime % "compile",
     jodaConvert % "compile",
+    jerseyServlet % "compile",
 
     // test
     Test.scalatest % "test",
@@ -93,6 +94,7 @@ object Dependency {
     val Json4s = "3.2.5"
     val TwitterCommons = "0.0.52"
     val TwitterZkCLient = "0.0.43"
+    val Jersey = "1.18.1"
     val JodaTime = "2.3"
     val JodaConvert = "1.5"
 
@@ -109,6 +111,7 @@ object Dependency {
   val chaos = "mesosphere" % "chaos" % V.Chaos
   val mesosUtils = "mesosphere" % "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
+  val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
   val mesos = "org.apache.mesos" % "mesos" % V.Mesos
