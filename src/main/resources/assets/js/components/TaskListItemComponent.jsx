@@ -80,10 +80,12 @@ define([
         "badge-warning": task.isStaged()
       });
 
+      var taskHealth = task.getHealth();
       var healthClassSet = React.addons.classSet({
         "text-center": true,
-        "text-healthy": task.getHealth() === Task.HEALTH.HEALTHY,
-        "text-unhealthy": task.getHealth() === Task.HEALTH.UNHEALTHY
+        "text-healthy": taskHealth === Task.HEALTH.HEALTHY,
+        "text-unhealthy": taskHealth === Task.HEALTH.UNHEALTHY,
+        "text-muted": taskHealth === Task.HEALTH.UNKNOWN
       });
 
       var updatedAtNode;
