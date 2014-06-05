@@ -2,32 +2,31 @@ package mesosphere.marathon.tasks
 
 import scala.collection._
 import scala.collection.JavaConverters._
-import org.apache.mesos.Protos.{TaskID, TaskStatus}
+import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 import javax.inject.Inject
-import org.apache.mesos.state.{Variable, State}
+import org.apache.mesos.state.{ Variable, State }
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.Main
 import java.io._
 import scala.Some
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import org.apache.log4j.Logger
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 
-class TaskTracker @Inject()(state: State) {
+class TaskTracker @Inject() (state: State) {
 
   import TaskTracker.App
-  import ExecutionContext.Implicits.global
+  import mesosphere.util.ThreadPoolContext.context
   import mesosphere.util.BackToTheFuture.futureToFuture
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
   val prefix = "tasks:"
 
-  private[this] val apps = new mutable.HashMap[String, App] with
-    mutable.SynchronizedMap[String, App]
+  private[this] val apps = new mutable.HashMap[String, App] with mutable.SynchronizedMap[String, App]
 
   def get(appName: String): mutable.Set[MarathonTask] =
     apps.getOrElseUpdate(appName, fetchApp(appName)).tasks
@@ -145,7 +144,8 @@ class TaskTracker @Inject()(state: State) {
 
     if (apps.contains(appName)) {
       apps(appName)
-    } else {
+    }
+    else {
       new App(appName, new mutable.HashSet[MarathonTask](), false)
     }
   }
@@ -163,10 +163,12 @@ class TaskTracker @Inject()(state: State) {
           log.warn(s"App name from task state for $appName is wrong!  Got '${app.getName}' Continuing anyway...")
         }
         results ++= app.getTasksList.asScala.toSet
-      } else {
+      }
+      else {
         log.warn(s"Unable to deserialize task state for $appName")
       }
-    } catch {
+    }
+    catch {
       case e: com.google.protobuf.InvalidProtocolBufferException =>
         log.warn(s"Unable to deserialize task state for $appName", e)
     }
@@ -210,7 +212,7 @@ class TaskTracker @Inject()(state: State) {
     }.flatten
 
     toKill.foreach(t => {
-      log.warn(s"Task '${t.getId}' was staged ${(now - t.getStagedAt)/1000}s ago and has not yet started")
+      log.warn(s"Task '${t.getId}' was staged ${(now - t.getStagedAt) / 1000}s ago and has not yet started")
     })
     toKill
   }
@@ -220,6 +222,5 @@ object TaskTracker {
   class App(
     val appName: String,
     var tasks: mutable.Set[MarathonTask],
-    var shutdown: Boolean
-  )
+    var shutdown: Boolean)
 }

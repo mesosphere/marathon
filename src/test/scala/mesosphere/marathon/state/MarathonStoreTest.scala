@@ -3,13 +3,13 @@ package mesosphere.marathon.state
 import mesosphere.marathon.api.v1.AppDefinition
 import org.mockito.Mockito._
 import org.mockito.Matchers._
-import org.apache.mesos.state.{InMemoryState, Variable, State}
-import java.util.concurrent.{Future => JFuture, ExecutionException}
+import org.apache.mesos.state.{ InMemoryState, Variable, State }
+import java.util.concurrent.{ Future => JFuture, ExecutionException }
 import java.util.{ Iterator => JIterator }
 import java.lang.{ Boolean => JBoolean }
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
-import mesosphere.marathon.{MarathonSpec, StorageException}
+import mesosphere.marathon.{ MarathonSpec, StorageException }
 import scala.collection.JavaConverters._
 
 class MarathonStoreTest extends MarathonSpec {
@@ -171,7 +171,7 @@ class MarathonStoreTest extends MarathonSpec {
   }
 
   test("ConcurrentModifications") {
-    import scala.concurrent.ExecutionContext.Implicits.global
+    import mesosphere.util.ThreadPoolContext.context
     val state = new InMemoryState
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())

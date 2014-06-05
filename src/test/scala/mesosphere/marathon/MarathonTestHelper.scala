@@ -5,8 +5,8 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.mesos.protos._
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 
 trait MarathonTestHelper {
 
@@ -32,7 +32,7 @@ trait MarathonTestHelper {
   }
 
   def makeBasicOfferWithRole(cpus: Double, mem: Double,
-                     beginPort: Int, endPort: Int, role: String) = {
+                             beginPort: Int, endPort: Int, role: String) = {
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(Range(beginPort, endPort)),

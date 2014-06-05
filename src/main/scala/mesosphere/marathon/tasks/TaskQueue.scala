@@ -8,10 +8,10 @@ import java.util
 import java.util.Comparator
 
 /**
- * Utility class to stage tasks before they get scheduled
- *
- * @author Tobi Knaup
- */
+  * Utility class to stage tasks before they get scheduled
+  *
+  * @author Tobi Knaup
+  */
 
 class TaskQueue {
   import TaskQueue._
@@ -23,11 +23,11 @@ class TaskQueue {
   def add(app: AppDefinition): Boolean = queue.add(app)
 
   /**
-   * Number of tasks in the queue for the given app
-   *
-   * @param app The app
-   * @return count
-   */
+    * Number of tasks in the queue for the given app
+    *
+    * @param app The app
+    * @return count
+    */
   def count(app: AppDefinition): Int = queue.asScala.count(_.id == app.id)
 
   def purge(app: AppDefinition): Unit = {

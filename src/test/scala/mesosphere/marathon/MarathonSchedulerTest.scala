@@ -3,14 +3,14 @@ package mesosphere.marathon
 import org.mockito.Mockito._
 import org.mockito.Matchers._
 import com.fasterxml.jackson.databind.ObjectMapper
-import mesosphere.marathon.state.{Timestamp, AppRepository}
+import mesosphere.marathon.state.{ Timestamp, AppRepository }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.{MarathonTasks, TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
 import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
-import org.apache.mesos.Protos.{OfferID, TaskID, TaskInfo}
-import org.mockito.{Matchers, ArgumentCaptor}
+import org.apache.mesos.Protos.{ OfferID, TaskID, TaskInfo }
+import org.mockito.{ Matchers, ArgumentCaptor }
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
@@ -18,8 +18,8 @@ import mesosphere.util.RateLimiters
 import scala.collection.mutable
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 class MarathonSchedulerTest extends MarathonSpec {
 
   var repo: AppRepository = null

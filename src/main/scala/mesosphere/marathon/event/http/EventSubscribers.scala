@@ -7,9 +7,7 @@ import collection.JavaConversions._
 import mesosphere.marathon.api.validation.FieldConstraints.FieldJsonProperty
 
 case class EventSubscribers(
-  @FieldJsonProperty("callbackUrls")
-  urls: Set[String] = Set.empty[String]
-) extends MarathonState[Protos.EventSubscribers, EventSubscribers]{
+    @FieldJsonProperty("callbackUrls") urls: Set[String] = Set.empty[String]) extends MarathonState[Protos.EventSubscribers, EventSubscribers] {
 
   override def mergeFromProto(message: Protos.EventSubscribers): EventSubscribers =
     EventSubscribers(Set(message.getCallbackUrlsList: _*))

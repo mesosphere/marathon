@@ -1,46 +1,46 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.{TaskID, FrameworkInfo}
+import org.apache.mesos.Protos.{ TaskID, FrameworkInfo }
 import org.apache.mesos.MesosSchedulerDriver
 import org.apache.log4j.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.{AppRepository, Timestamp}
+import mesosphere.marathon.state.{ AppRepository, Timestamp }
 import com.google.common.util.concurrent.AbstractExecutionThreadService
-import javax.inject.{Named, Inject}
-import java.util.{TimerTask, Timer}
-import scala.concurrent.{Future, ExecutionContext, Await}
-import scala.concurrent.duration.{Duration, MILLISECONDS}
+import javax.inject.{ Named, Inject }
+import java.util.{ TimerTask, Timer }
+import scala.concurrent.{ Future, ExecutionContext, Await }
+import scala.concurrent.duration.{ Duration, MILLISECONDS }
 import java.util.concurrent.atomic.AtomicBoolean
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Group.JoinException
 import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
-import scala.util.{Failure, Success, Random}
+import scala.util.{ Failure, Success, Random }
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import scala.concurrent.duration._
 import java.util.concurrent.CountDownLatch
+import mesosphere.util.ThreadPoolContext
 
 /**
- * Wrapper class for the scheduler
- *
- * @author Tobi Knaup
- */
-class MarathonSchedulerService @Inject()(
-    healthCheckManager: HealthCheckManager,
-    @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
-    config: MarathonConf,
-    frameworkIdUtil: FrameworkIdUtil,
-    @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
-    appRepository: AppRepository,
-    scheduler: MarathonScheduler)
-  extends AbstractExecutionThreadService with Leader {
+  * Wrapper class for the scheduler
+  *
+  * @author Tobi Knaup
+  */
+class MarathonSchedulerService @Inject() (
+  healthCheckManager: HealthCheckManager,
+  @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
+  config: MarathonConf,
+  frameworkIdUtil: FrameworkIdUtil,
+  @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
+  appRepository: AppRepository,
+  scheduler: MarathonScheduler)
+    extends AbstractExecutionThreadService with Leader {
 
-  // TODO use a thread pool here
-  import ExecutionContext.Implicits.global
+  import ThreadPoolContext.context
 
   val latch = new CountDownLatch(1)
 
@@ -105,15 +105,14 @@ class MarathonSchedulerService @Inject()(
     Await.result(appRepository.currentVersion(appName), defaultWait)
   }
 
-  def getApp(appName: String, version: Timestamp) : Option[AppDefinition] = {
+  def getApp(appName: String, version: Timestamp): Option[AppDefinition] = {
     Await.result(appRepository.app(appName, version), defaultWait)
   }
 
   def killTasks(
     appName: String,
     tasks: Iterable[MarathonTask],
-    scale: Boolean
-  ): Iterable[MarathonTask] = {
+    scale: Boolean): Iterable[MarathonTask] = {
     if (scale) {
       getApp(appName) foreach { app =>
         val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
@@ -196,7 +195,7 @@ class MarathonSchedulerService @Inject()(
         // not the leader
         abdicateCmdOption match {
           case Some(cmd) => cmd.execute()
-          case _ => leader.set(false)
+          case _         => leader.set(false)
         }
 
         // If we are shutting down then don't offer leadership. But if we
@@ -303,7 +302,8 @@ class MarathonSchedulerService @Inject()(
         def run() {
           if (isLeader) {
             scheduler.reconcileTasks(driver)
-          } else log.info("Not leader therefore not reconciling tasks")
+          }
+          else log.info("Not leader therefore not reconciling tasks")
         }
       },
       reconciliationInitialDelay.toMillis,

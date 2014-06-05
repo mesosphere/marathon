@@ -1,16 +1,15 @@
 package mesosphere.marathon.event.http
 
-
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
 import akka.actor.ActorRef
 import akka.pattern.ask
 import com.google.common.eventbus.EventBus
-import javax.inject.{Named, Inject}
+import javax.inject.{ Named, Inject }
 
-class HttpCallbackSubscriptionService @Inject()(
-  @Named(HttpEventModule.SubscribersKeeperActor) val subscribersKeeper: ActorRef,
-  @Named(EventModule.busName) eventBus: Option[EventBus]) {
+class HttpCallbackSubscriptionService @Inject() (
+    @Named(HttpEventModule.SubscribersKeeperActor) val subscribersKeeper: ActorRef,
+    @Named(EventModule.busName) eventBus: Option[EventBus]) {
 
   implicit val ec = HttpEventModule.executionContext
   implicit val timeout = HttpEventModule.timeout

@@ -2,13 +2,13 @@ package mesosphere.marathon.api.v2
 
 import javax.ws.rs._
 import com.codahale.metrics.annotation.Timed
-import javax.ws.rs.core.{MediaType, Response}
-import scala.{Array, Some}
+import javax.ws.rs.core.{ MediaType, Response }
+import scala.{ Array, Some }
 import javax.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.{Responses, EndpointsHelper}
-import scala.concurrent.{Future, Await}
+import mesosphere.marathon.api.{ Responses, EndpointsHelper }
+import scala.concurrent.{ Future, Await }
 import org.apache.log4j.Logger
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.Protos.MarathonTask
@@ -17,16 +17,15 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.duration.SECONDS
 import mesosphere.marathon.api.v2.json.EnrichedTask
 
-
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class AppTasksResource @Inject()(service: MarathonSchedulerService,
-                                 taskTracker: TaskTracker,
-                                 healthCheckManager: HealthCheckManager) {
+class AppTasksResource @Inject() (service: MarathonSchedulerService,
+                                  taskTracker: TaskTracker,
+                                  healthCheckManager: HealthCheckManager) {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -39,7 +38,8 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
         EnrichedTask(appId, task, Await.result(healthCheckManager.status(appId, task.getId), Duration(2, SECONDS)))
       }
       Response.ok(Map("tasks" -> tasks)).build
-    } else {
+    }
+    else {
       Responses.unknownApp(appId)
     }
   }
@@ -72,7 +72,8 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
 
       service.killTasks(appId, toKill, scale)
       Response.ok(Map("tasks" -> toKill)).build
-    } else {
+    }
+    else {
       Responses.unknownApp(appId)
     }
   }
@@ -89,7 +90,8 @@ class AppTasksResource @Inject()(service: MarathonSchedulerService,
         service.killTasks(appId, Seq(task), scale)
         Response.ok(Map("task" -> task)).build
       }
-    } else {
+    }
+    else {
       Responses.unknownApp(appId)
     }
   }

@@ -2,22 +2,22 @@ package mesosphere.marathon
 
 import mesosphere.chaos.App
 import org.rogach.scallop.ScallopConf
-import mesosphere.chaos.http.{HttpService, HttpModule, HttpConf}
+import mesosphere.chaos.http.{ HttpService, HttpModule, HttpConf }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.chaos.AppConfiguration
-import mesosphere.marathon.event.{EventModule, EventConfiguration}
-import mesosphere.marathon.event.http.{HttpEventModule, HttpEventConfiguration}
+import mesosphere.marathon.event.{ EventModule, EventConfiguration }
+import mesosphere.marathon.event.http.{ HttpEventModule, HttpEventConfiguration }
 import com.google.inject.AbstractModule
-import com.twitter.common.quantity.{Time, Amount}
+import com.twitter.common.quantity.{ Time, Amount }
 import com.twitter.common.zookeeper.ZooKeeperClient
 import scala.collection.JavaConverters._
 import java.util.Properties
 import org.apache.log4j.Logger
 
 /**
- * @author Tobi Knaup
- */
+  * @author Tobi Knaup
+  */
 object Main extends App {
 
   val properties = new Properties
@@ -82,9 +82,7 @@ object Main extends App {
   }
 
   //TOOD(FL): Make Events optional / wire up.
-  lazy val conf = new ScallopConf(args)
-    with HttpConf with MarathonConf with AppConfiguration
-      with EventConfiguration with HttpEventConfiguration with ZookeeperConf
+  lazy val conf = new ScallopConf(args) with HttpConf with MarathonConf with AppConfiguration with EventConfiguration with HttpEventConfiguration with ZookeeperConf
 
   run(
     classOf[HttpService],

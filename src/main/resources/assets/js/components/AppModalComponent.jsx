@@ -34,6 +34,7 @@ define([
     componentWillUnmount: function() {
       this.stopPolling();
     },
+
     getInitialState: function() {
       return {
         activeTask: null,
@@ -41,8 +42,9 @@ define([
         fetchState: STATES.STATE_LOADING
       };
     },
+
     getResource: function () {
-      return this.props.model.tasks;
+      return this.props.model;
     },
     fetchTasks: function() {
       var _this = this;
@@ -57,6 +59,7 @@ define([
         }
       });
     },
+
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
@@ -78,6 +81,7 @@ define([
       // `selectedTasks`.
       this.forceUpdate();
     },
+
     render: function() {
       var _this = this;
       var model = this.props.model;
@@ -117,6 +121,9 @@ define([
       var portsNode = (model.get("ports").length === 0 ) ?
         <dd className="text-muted">Unspecified</dd> :
         <dd>{model.get("ports").join(",")}</dd>;
+      var versionNode = (model.get("version") == null) ?
+        <dd className="text-muted">Unspecified</dd> :
+        <dd>{model.get("version").toLocaleString()}</dd>;
       var urisNode = (model.get("uris").length === 0) ?
         <dd className="text-muted">Unspecified</dd> :
         model.get("uris").map(function(u) {
@@ -205,7 +212,7 @@ define([
                 <dt>URIs</dt>
                 {urisNode}
                 <dt>Version</dt>
-                <dd>{model.get("version").toLocaleString()}</dd>
+                {versionNode}
               </dl>
             </TabPaneComponent>
           </TogglableTabsComponent>
@@ -213,6 +220,7 @@ define([
         </ModalComponent>
       );
     },
+
     scaleApp: function() {
       var model = this.props.model;
       var instancesString = prompt("Scale to how many instances?",
@@ -232,6 +240,42 @@ define([
         }
       }
     },
+
+    toggleAllTasks: function() {
+      var newSelectedTasks = {};
+      var modelTasks = this.props.model.tasks;
+
+      // Note: not an **exact** check for all tasks being selected but a good
+      // enough proxy.
+      var allTasksSelected = Object.keys(this.state.selectedTasks).length ===
+        modelTasks.length;
+
+      if (!allTasksSelected) {
+        modelTasks.forEach(function(task) { newSelectedTasks[task.id] = true; });
+      }
+
+      this.setState({selectedTasks: newSelectedTasks});
+    },
+
+    toggleTask: function(task, value) {
+      var selectedTasks = this.state.selectedTasks;
+
+      // If `toggleTask` is used as a callback for an event handler, the second
+      // parameter will be an event object. Use it to set the value only if it
+      // is a Boolean.
+      var localValue = (typeof value === Boolean) ?
+        value :
+        !selectedTasks[task.id];
+
+      if (localValue === true) {
+        selectedTasks[task.id] = true;
+      } else {
+        delete selectedTasks[task.id];
+      }
+
+      this.setState({selectedTasks: selectedTasks});
+    },
+
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
         this.props.model.suspend();

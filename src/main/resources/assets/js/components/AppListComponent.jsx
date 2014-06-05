@@ -13,12 +13,19 @@ define([
   var UPDATE_INTERVAL = 5000;
 
   return React.createClass({
+    displayName: "AppListComponent",
     mixins: [BackboneMixin],
+
     componentDidMount: function() {
       this.startPolling();
     },
     componentWillUnmount: function() {
       this.stopPolling();
+    },
+    destroyActiveApp: function() {
+      if (this.modal != null) {
+        this.modal.destroyApp();
+      }
     },
     getInitialState: function() {
       return {
@@ -27,6 +34,10 @@ define([
     },
     getResource: function() {
       return this.props.collection;
+    },
+    handleModalDestroy: function() {
+      this.startPolling();
+      this.modal = null;
     },
     fetchResource: function() {
       var _this = this;
@@ -42,8 +53,8 @@ define([
       });
     },
     onAppClick: function(model) {
-      React.renderComponent(
-        <AppModalComponent model={model} onDestroy={this.startPolling} />,
+      this.modal = React.renderComponent(
+        <AppModalComponent model={model} onDestroy={this.handleModalDestroy} />,
         document.getElementById("lightbox")
       );
 

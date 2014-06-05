@@ -1,8 +1,8 @@
 package mesosphere.marathon.event.http
 
 import scala.language.postfixOps
-import com.google.inject.{Scopes, Singleton, Provides, AbstractModule}
-import akka.actor.{Props, ActorRef, ActorSystem}
+import com.google.inject.{ Scopes, Singleton, Provides, AbstractModule }
+import akka.actor.{ Props, ActorRef, ActorSystem }
 import akka.pattern.ask
 import com.google.inject.name.Named
 import java.util.concurrent.Executors
@@ -14,7 +14,7 @@ import akka.util.Timeout
 import org.apache.mesos.state.State
 import mesosphere.marathon.state.MarathonStore
 import mesosphere.marathon.Main
-import mesosphere.marathon.event.{MarathonSubscriptionEvent, Subscribe}
+import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe }
 
 trait HttpEventConfiguration extends ScallopConf {
 
@@ -36,8 +36,7 @@ class HttpEventModule extends AbstractModule {
   @Provides
   @Named(HttpEventModule.StatusUpdateActor)
   def provideStatusUpdateActor(system: ActorSystem,
-                               @Named(HttpEventModule.SubscribersKeeperActor)
-                               subscribersKeeper: ActorRef): ActorRef = {
+                               @Named(HttpEventModule.SubscribersKeeperActor) subscribersKeeper: ActorRef): ActorRef = {
     system.actorOf(Props(new HttpEventActor(subscribersKeeper)))
   }
 
