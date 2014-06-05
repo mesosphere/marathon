@@ -22,7 +22,7 @@ define([
       return this.get("status") === STATUS_STAGED;
     },
 
-    isHealthy: function() {
+    getHealth: function() {
       var nullResult = false;
       var health = this.get("healthCheckResults").every(
         function(hcr) {
