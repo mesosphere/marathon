@@ -125,9 +125,8 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     apps.getOrElseUpdate(appName, fetchApp(appName)).shutdown = true
 
   def newTaskId(appName: String): TaskID = {
-    val taskCount = count(appName)
     TaskID.newBuilder()
-      .setValue(TaskIDUtil.taskId(appName, taskCount))
+      .setValue(TaskIDUtil.taskId(appName))
       .build
   }
 

@@ -1,19 +1,19 @@
 package mesosphere.marathon.tasks
 
 import org.apache.mesos.Protos.TaskID
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 
 /**
   * Utility functions for dealing with TaskIDs
-  *
-  * @author Tobi Knaup
   */
 
 object TaskIDUtil {
 
   val taskDelimiter = "_"
+  val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
-  def taskId(appName: String, sequence: Int) = {
-    "%s%s%d-%d".format(appName, taskDelimiter, sequence, System.currentTimeMillis())
+  def taskId(appName: String) = {
+    appName + taskDelimiter + uuidGenerator.generate()
   }
 
   def appID(taskId: TaskID) = {
