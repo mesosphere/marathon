@@ -35,16 +35,19 @@ define([
                   time={timeNode.time} />
               );
             });
-            var aliveNode = (cResult.alive == null ?
-              <dd>No</dd> :
-              <dd>Yes</dd>);
             return (
               <div key={index}>
                 <h5 className="text-right text-muted">Health Check Result {index+1}</h5>
                 <dl className="dl-horizontal">
                   {timeFields}
+                  <dt>Consectutive failures</dt>
+                  {cResult.consecutiveFailures == null ?
+                    <dd className="text-muted">None</dd> :
+                    <dd>{cResult.consecutiveFailures}</dd>}
                   <dt>Alive</dt>
-                  {aliveNode}
+                  {cResult.alive == null ?
+                    <dd>No</dd> :
+                    <dd>Yes</dd>}
                 </dl>
                 <hr />
               </div>
