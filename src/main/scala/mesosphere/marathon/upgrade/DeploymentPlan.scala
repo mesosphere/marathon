@@ -1,7 +1,7 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.api.v2.{ AppUpdate, Group }
-import mesosphere.marathon.state.{ Timestamp, MarathonState }
+import mesosphere.marathon.api.v2.AppUpdate
+import mesosphere.marathon.state.{ Group, Timestamp, MarathonState }
 import mesosphere.marathon.Protos.DeploymentPlanDefinition
 import scala.concurrent.Future
 import mesosphere.marathon.MarathonSchedulerService
@@ -16,9 +16,9 @@ case class DeploymentPlan(
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
-  def originalIds: Set[String] = original.apps.map(_.id).toSet
+  def originalIds: Set[String] = original.transitiveApps.map(_.id).toSet
 
-  def targetIds: Set[String] = target.apps.map(_.id).toSet
+  def targetIds: Set[String] = target.transitiveApps.map(_.id).toSet
 
   override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan = mergeFromProto(DeploymentPlanDefinition.parseFrom(bytes))
 
@@ -40,9 +40,10 @@ case class DeploymentPlan(
 
   lazy val (toStart, toStop, toScale, toRestart) = {
     val isUpdate = targetIds.intersect(originalIds)
-    val origTarget = isUpdate.flatMap(id => original.apps.find(_.id == id)).zip(isUpdate.flatMap(id => target.apps.find(_.id == id)))
-    (targetIds.filterNot(isUpdate.contains).flatMap(id => target.apps.find(_.id == id)),
-      originalIds.filterNot(isUpdate.contains).flatMap(id => original.apps.find(_.id == id)),
+    val updateList = isUpdate.toList
+    val origTarget = updateList.flatMap(id => original.transitiveApps.find(_.id == id)).zip(updateList.flatMap(id => target.transitiveApps.find(_.id == id)))
+    (targetIds.filterNot(isUpdate.contains).flatMap(id => target.transitiveApps.find(_.id == id)),
+      originalIds.filterNot(isUpdate.contains).flatMap(id => original.transitiveApps.find(_.id == id)),
       origTarget.filter{ case (from, to) => from.isOnlyScaleChange(to) }.map(_._2),
       origTarget.filter { case (from, to) => from.isUpgrade(to) }.map(_._2))
   }

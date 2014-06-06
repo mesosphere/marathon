@@ -1,33 +1,29 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon.state
 
+import mesosphere.marathon.Protos.{ GroupDefinition, ScalingStrategyDefinition }
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.{ MarathonState, Timestamp }
-import mesosphere.marathon.Protos._
 import scala.collection.JavaConversions._
-import mesosphere.marathon.api.validation.FieldConstraints.{ FieldPattern, FieldNotEmpty }
 
 case class ScalingStrategy(
     minimumHealthCapacity: Double,
     maximumRunningFactor: Option[Double]) {
+
   def toProto: ScalingStrategyDefinition = {
     val strategy = ScalingStrategyDefinition.newBuilder()
       .setMinimumHealthCapacity(minimumHealthCapacity)
-
     maximumRunningFactor.foreach(strategy.setMaximumRunningFactor)
-
     strategy.build()
   }
 }
 
 case class Group(
-    @FieldNotEmpty @FieldPattern(regexp = "^[A-Za-z0-9_.-]+$") id: String,
+    id: GroupId,
     scalingStrategy: ScalingStrategy,
     apps: Seq[AppDefinition] = Seq.empty,
     groups: Seq[Group] = Seq.empty,
     version: Timestamp = Timestamp.now()) extends MarathonState[GroupDefinition, Group] {
 
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
-
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
 
   override def toProto: GroupDefinition = {
@@ -39,10 +35,20 @@ case class Group(
       .addAllGroups(groups.map(_.toProto))
       .build()
   }
+
+  def findGroup(fn: Group => Boolean): Option[Group] = {
+    def in(groups: List[Group]): Option[Group] = groups match {
+      case head :: rest => if (fn(head)) Some(head) else in(rest).orElse(in(head.groups.toList))
+      case Nil          => None
+    }
+    if (fn(this)) Some(this) else in(groups.toList)
+  }
+
+  def transitiveApps: Seq[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
 }
 
 object Group {
-  def empty(): Group = Group("", ScalingStrategy(0, None))
+  def empty(): Group = Group(GroupId(Nil), ScalingStrategy(0, None))
 
   def fromProto(msg: GroupDefinition): Group = {
     val scalingStrategy = msg.getScalingStrategy
@@ -50,7 +56,7 @@ object Group {
       if (scalingStrategy.hasMaximumRunningFactor) Some(msg.getScalingStrategy.getMaximumRunningFactor)
       else None
     }
-    Group (
+    Group(
       id = msg.getId,
       scalingStrategy = ScalingStrategy(
         scalingStrategy.getMinimumHealthCapacity,
@@ -61,5 +67,5 @@ object Group {
       version = Timestamp(msg.getVersion)
     )
   }
-
 }
+

@@ -6,12 +6,13 @@ import scala.concurrent.duration._
 import scala.concurrent.Await.result
 import spray.client.pipelining._
 import spray.http.HttpResponse
-import mesosphere.marathon.api.v2.Group
+import mesosphere.marathon.state.Group
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Unsubscribe, Subscribe }
 import mesosphere.marathon.api.v1.AppDefinition
 import java.util.Date
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import mesosphere.marathon.api.v2.GroupUpdate
 
 /**
   * GET /apps will deliver something like Apps instead of List[App]
@@ -32,6 +33,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
   implicit val system = ActorSystem()
   implicit val appDefMarshaller = marshaller[AppDefinition]
   implicit val groupMarshaller = marshaller[Group]
+  implicit val groupUpdateMarshaller = marshaller[GroupUpdate]
 
   //app resource ----------------------------------------------
 
@@ -86,7 +88,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
     result(pipeline(Get(s"$url/v2/groups/$id")), waitTime)
   }
 
-  def createGroup(group: Group): RestResult[HttpResponse] = {
+  def createGroup(group: GroupUpdate): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Post(s"$url/v2/groups", group)), waitTime)
   }
@@ -96,9 +98,9 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
     result(pipeline(Delete(s"$url/v2/groups/$id")), waitTime)
   }
 
-  def updateGroup(group: Group, force: Boolean = false): RestResult[HttpResponse] = {
+  def updateGroup(id: String, group: GroupUpdate, force: Boolean = false): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
-    result(pipeline(Put(s"$url/v2/groups/${group.id}?force=$force", group)), waitTime)
+    result(pipeline(Put(s"$url/v2/groups/$id?force=$force", group)), waitTime)
   }
 
   def rollbackGroup(groupId: String, version: String, force: Boolean = false): RestResult[HttpResponse] = {
@@ -131,7 +133,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
     */
   def cleanUp(withSubscribers: Boolean = false, maxWait: FiniteDuration = 30.seconds) = {
     val deadline = maxWait.fromNow
-    listGroups.value.map(_.id).foreach(deleteGroup)
+    listGroups.value.map(_.id.toString).foreach(deleteGroup)
     listApps.value.map(_.id).foreach(deleteApp)
     if (withSubscribers) listSubscribers.value.urls.foreach(unsubscribe)
     def waitForReady(): Unit = {

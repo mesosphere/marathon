@@ -18,7 +18,6 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.api.v2.Group
 import akka.event.EventStream
 import mesosphere.marathon.event.EventModule
 import akka.routing.RoundRobinRouter

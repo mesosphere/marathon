@@ -51,8 +51,11 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       if (e.getResponse.getEntity != null) {
         Map("message" -> e.getResponse.getEntity)
       }
-      else {
+      else if (Status.fromStatusCode(e.getResponse.getStatus) != null) {
         Map("message" -> Status.fromStatusCode(e.getResponse.getStatus).getReasonPhrase)
+      }
+      else {
+        Map("message" -> e.getMessage)
       }
     case _ =>
       Map("message" -> exception.getMessage)

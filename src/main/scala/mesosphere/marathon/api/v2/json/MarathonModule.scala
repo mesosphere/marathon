@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import com.fasterxml.jackson.databind._
 import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ GroupId, Timestamp }
 import mesosphere.marathon.health.HealthCheck
 import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind.Module.SetupContext
@@ -31,6 +31,7 @@ class MarathonModule extends Module {
   private val finiteDurationClass = classOf[FiniteDuration]
   private val containerInfoClass = classOf[ContainerInfo]
   private val appUpdateClass = classOf[AppUpdate]
+  private val groupIdClass = classOf[GroupId]
 
   def getModuleName: String = "MarathonModule"
 
@@ -49,6 +50,7 @@ class MarathonModule extends Module {
         else if (matches(timestampClass)) TimestampSerializer
         else if (matches(finiteDurationClass)) FiniteDurationSerializer
         else if (matches(containerInfoClass)) ContainerInfoSerializer
+        else if (matches(groupIdClass)) GroupIdSerializer
         else null
       }
     })
@@ -65,6 +67,7 @@ class MarathonModule extends Module {
         else if (matches(finiteDurationClass)) FiniteDurationDeserializer
         else if (matches(containerInfoClass)) ContainerInfoDeserializer
         else if (matches(appUpdateClass)) AppUpdateDeserializer
+        else if (matches(groupIdClass)) GroupIdDeserializer
         else null
       }
     })
@@ -161,6 +164,12 @@ class MarathonModule extends Module {
     }
   }
 
+  object GroupIdSerializer extends JsonSerializer[GroupId] {
+    def serialize(id: GroupId, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeString(id)
+    }
+  }
+
   object ContainerInfoSerializer extends JsonSerializer[ContainerInfo] {
     def serialize(container: ContainerInfo, jgen: JsonGenerator, provider: SerializerProvider) {
       jgen.writeStartObject()
@@ -214,6 +223,13 @@ class MarathonModule extends Module {
       val appUpdate = tree.traverse(oc).readValueAs(classOf[AppUpdateBuilder])
 
       appUpdate.copy(container = containerInfo).build
+    }
+  }
+
+  object GroupIdDeserializer extends JsonDeserializer[GroupId] {
+    def deserialize(json: JsonParser, context: DeserializationContext): GroupId = {
+      val tree: JsonNode = json.getCodec.readTree(json)
+      tree.textValue()
     }
   }
 }

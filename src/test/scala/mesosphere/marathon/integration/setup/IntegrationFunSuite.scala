@@ -182,12 +182,20 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
 
   }
 
-  def appProxyChecks(appId: String, versionId: String, state: Boolean): Seq[IntegrationHealthCheck] = {
+  def appProxyCheck(appId: String, versionId: String, state: Boolean): IntegrationHealthCheck = {
     //this is used for all instances, as long as there is no specific instance check
     //the specific instance check has also a specific port, which is assigned by mesos
-    ExternalMarathonIntegrationTest.healthChecks += new IntegrationHealthCheck(appId, versionId, 0, state)
-    marathon.app(appId).value.ports.map { port =>
+    val check = new IntegrationHealthCheck(appId, versionId, 0, state)
+    ExternalMarathonIntegrationTest.healthChecks += check
+    check
+  }
+
+  def taskProxyChecks(appId: String, versionId: String, state: Boolean): Seq[IntegrationHealthCheck] = {
+    marathon.tasks(appId).value.flatMap(_.ports).map { port =>
       val check = new IntegrationHealthCheck(appId, versionId, port, state)
+      ExternalMarathonIntegrationTest.healthChecks
+        .filter(c => c.appId == appId && c.versionId == versionId)
+        .foreach(ExternalMarathonIntegrationTest.healthChecks -= _)
       ExternalMarathonIntegrationTest.healthChecks += check
       check
     }

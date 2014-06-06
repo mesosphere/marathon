@@ -1,9 +1,7 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.api.v2.Group
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import mesosphere.marathon.StorageException
 
 class GroupRepository(val store: PersistenceStore[Group], appRepo: AppRepository) extends EntityRepository[Group] {
 
@@ -24,5 +22,5 @@ class GroupRepository(val store: PersistenceStore[Group], appRepo: AppRepository
     }
   }
 
-  def store(group: Group): Future[Group] = storeWithVersion(group.id, group.version, group)
+  def store(group: Group): Future[Group] = storeWithVersion(group.id.safePath, group.version, group)
 }

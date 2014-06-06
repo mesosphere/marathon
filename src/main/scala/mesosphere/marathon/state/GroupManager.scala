@@ -8,7 +8,6 @@ import com.google.inject.Singleton
 import mesosphere.marathon.{ TaskUpgradeCancelledException, UpgradeInProgressException, MarathonSchedulerService }
 import org.apache.log4j.Logger
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.v2.Group
 import scala.util.{ Try, Failure, Success }
 import com.google.inject.name.Named
 import mesosphere.marathon.event.{ GroupChangeFailed, GroupChangeSuccess, EventModule }
@@ -31,7 +30,10 @@ class GroupManager @Singleton @Inject() (
 
   def versions(id: String): Future[Iterable[Timestamp]] = groupRepo.listVersions(id)
 
-  def group(id: String): Future[Option[Group]] = groupRepo.group(id)
+  def group(id: GroupId): Future[Option[Group]] = {
+    require(!id.isEmpty)
+    groupRepo.group(id.root).map(_.flatMap(_.findGroup(_.id == id)))
+  }
 
   def group(id: String, version: Timestamp): Future[Option[Group]] = groupRepo.group(id, version)
 
@@ -43,7 +45,7 @@ class GroupManager @Singleton @Inject() (
       case None =>
         log.info(s"Create new Group ${group.id}")
         groupRepo.store(group).flatMap(stored =>
-          Future.sequence(stored.apps.map(scheduler.startApp)).map(ignore => stored).andThen(postEvent(group))
+          Future.sequence(stored.transitiveApps.map(scheduler.startApp)).map(ignore => stored).andThen(postEvent(group))
         )
     }
   }
@@ -92,7 +94,7 @@ class GroupManager @Singleton @Inject() (
 
   def expunge(id: String): Future[Boolean] = {
     groupRepo.currentVersion(id).flatMap {
-      case Some(current) => Future.sequence(current.apps.map(scheduler.stopApp)).flatMap(_ => groupRepo.expunge(id).map(_.forall(identity)))
+      case Some(current) => Future.sequence(current.transitiveApps.map(scheduler.stopApp)).flatMap(_ => groupRepo.expunge(id).map(_.forall(identity)))
       case None          => Future.successful(false)
     }
   }
