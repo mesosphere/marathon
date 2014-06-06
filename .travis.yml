@@ -1,6 +1,6 @@
 language: scala
 before_script:
-  - export PROJECT_VERSION="`sed -n 's|.*<version>\(.*\)</version>.*|\1|p' pom.xml | awk '{ print $1; exit }'`" && echo Project version is $PROJECT_VERSION
+  - export PROJECT_VERSION="`sed -n 's|version := "\(.*\)"|\1|p' version.sbt | awk '{ print $1; exit }'`" && echo Project version is $PROJECT_VERSION
   - export ARTIFACT="marathon-$PROJECT_VERSION.tgz"
   - pushd src/main/resources/assets/ && npm install && ./bin/build && popd
 jdk:
@@ -25,7 +25,7 @@ after_success:
   - |
     tar -czv -f "$ARTIFACT" --transform "s,,marathon-$PROJECT_VERSION/," \
       Dockerfile README.md REST.md LICENSE bin examples docs \
-      target/marathon-*-jar-with-dependencies.jar
+      target/scala-2.10/marathon-assembly-*.jar
   - shasum --binary --algorithm 256 "$ARTIFACT" > "$ARTIFACT".sha256
   - travis-artifacts upload --path "$ARTIFACT" --target-path marathon/"$TRAVIS_BRANCH"/
   - travis-artifacts upload --path "$ARTIFACT".sha256 --target-path marathon/"$TRAVIS_BRANCH"/
