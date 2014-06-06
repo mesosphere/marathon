@@ -8,11 +8,6 @@ define([
   "jsx!components/TaskHealthComponent"
 ], function(React, BackboneMixin, Task,
   TimeFieldComponent, TaskHealthComponent) {
-  var STATES = {
-      STATE_LOADING: 0,
-      STATE_ERROR: 1,
-      STATE_SUCCESS: 2
-    };
 
   return React.createClass({
     displayName: "TaskDetailComponent",
@@ -30,7 +25,7 @@ define([
     },
     render: function() {
       var task = this.props.task;
-      var hideError = this.props.fetchState !== STATES.STATE_ERROR && task.collection != null;
+      var hideError = this.props.fetchState !== this.props.STATES.STATE_ERROR && task.collection != null;
       var errorClassSet = React.addons.classSet({
         "text-center text-danger": true,
         "hidden" : hideError

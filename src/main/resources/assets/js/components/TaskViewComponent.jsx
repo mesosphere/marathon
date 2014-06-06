@@ -106,7 +106,8 @@ define([
             selectedTasks={this.state.selectedTasks}
             onTaskToggle={this.onTaskToggle}
             toggleAllTasks={this.toggleAllTasks}
-            onTaskDetailSelect={this.props.onTaskDetailSelect} />
+            onTaskDetailSelect={this.props.onTaskDetailSelect}
+            STATES={this.props.STATES} />
         </div>
       );
     }

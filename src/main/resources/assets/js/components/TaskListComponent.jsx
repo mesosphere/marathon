@@ -5,24 +5,17 @@ define([
   "jsx!components/TaskListItemComponent"
 ], function(React, TaskListItemComponent) {
 
-  var STATES = {
-      STATE_LOADING: 0,
-      STATE_ERROR: 1,
-      STATE_SUCCESS: 2
-    };
   return React.createClass({
     displayName: "TaskListComponent",
     propTypes: {
       tasks: React.PropTypes.object.isRequired,
       fetchState: React.PropTypes.number.isRequired,
-      selectedTasks: React.PropTypes.object.isRequired
-    },
-    statics: {
-      STATES: STATES
+      selectedTasks: React.PropTypes.object.isRequired,
+      STATES: React.PropTypes.object.isRequired,
     },
     getInitialState: function() {
       return {
-        fetchState: STATES.STATE_LOADING,
+        fetchState: this.props.STATES.STATE_LOADING,
         showTimestamps: false
       };
     },
@@ -42,14 +35,14 @@ define([
       // true.
       var allTasksSelected = tasksLength > 0;
 
-      if (this.props.fetchState === STATES.STATE_LOADING) {
+      if (this.props.fetchState === this.props.STATES.STATE_LOADING) {
         taskNodes =
           <tr>
             <td className="text-center text-muted" colSpan="5">
               Loading tasks...
             </td>
           </tr>;
-      } else if (this.props.fetchState === STATES.STATE_ERROR) {
+      } else if (this.props.fetchState === this.props.STATES.STATE_ERROR) {
         taskNodes =
           <tr>
             <td className="text-center text-danger" colSpan="5">

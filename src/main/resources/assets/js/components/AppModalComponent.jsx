@@ -21,9 +21,6 @@ define([
 
   return React.createClass({
     displayName: "AppModalComponent",
-    statics: {
-      STATES: STATES
-    },
     mixins:[BackboneMixin],
     componentWillMount: function() {
       this.fetchTasks();
@@ -182,9 +179,11 @@ define([
                   fetchState={this.state.fetchState}
                   fetchTasks={this.fetchTasks}
                   onTasksKilled={this.onTasksKilled}
-                  onTaskDetailSelect={this.showTaskDetails} />
+                  onTaskDetailSelect={this.showTaskDetails}
+                  STATES={STATES} />
                 <TaskDetailComponent task={this.state.activeTask}
                   fetchState={this.state.fetchState}
+                  STATES={STATES}
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   onShowTaskList={this.showTaskList} />
               </StackedViewComponent>
