@@ -15,6 +15,22 @@ define([
   var VALID_ID_PATTERN = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
   var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
 
+  function findHealthCheckMsg(healthCheckResults, context) {
+    return healthCheckResults.map(function (hc, index) {
+      if (hc && !hc.alive) {
+        var failedCheck = this.get("healthChecks")[index];
+        return "Warning: Health check '" +
+          (failedCheck.protocol ? failedCheck.protocol + " " : "") +
+          (this.get("host") ? this.get("host") : "") +
+          (failedCheck.path ? failedCheck.path : "") + "'" +
+          (hc.lastFailureCause ?
+            " returned with status: '" + hc.lastFailureCause + "'" :
+            " failed") +
+          ".";
+      }
+    }, context);
+  }
+
   return Backbone.Model.extend({
     defaults: function() {
       return {
@@ -71,20 +87,7 @@ define([
         case Task.HEALTH.UNHEALTHY:
           var healthCheckResults = task.get("healthCheckResults");
           if (healthCheckResults != null) {
-            healthCheckResults.some(function (hc, index) {
-              if (hc && !hc.alive) {
-                var failedCheck = this.get("healthChecks")[index];
-                msg = "Warning: Health check '" +
-                  (failedCheck.protocol ? failedCheck.protocol + " " : "") +
-                  (this.get("host") ? this.get("host") : "") +
-                  (failedCheck.path ? failedCheck.path : "") + "'" +
-                  (hc.lastFailureCause ?
-                    " returned with status: '" + hc.lastFailureCause + "'" :
-                    " failed") +
-                  ".";
-                return true;
-              }
-            }, this);
+            msg = findHealthCheckMsg(healthCheckResults, this);
           }
           break;
         default:
