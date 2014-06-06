@@ -61,11 +61,10 @@ to be started first, to be able to control the health of a specific instance.
 
 ## Starting the integration tests
 
-The system property integration is used to mark a test run as integration test.
-To launch the integration tests from maven, use
+To launch the integration tests from sbt, use
 
 ```
-$> mvn -Dintegration=true test
+$sbt> integration:test 
 ```
 
 ## Configuration of the integration tests
@@ -89,7 +88,7 @@ There are following parameters, that can be used to configure the test setup
 The test config can be given via the command line as:
 
 ```
-$> mvn -DtestConfig="cwd=/,master=local,httpPort=12345" -Dintegration=true test
+$> integration:testOnly mesosphere.marathon.integration.GroupDeployIntegrationTest -- -Dmaster=local -DhttpPort=12345 -Dcwd=/
 ```
  
 

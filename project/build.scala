@@ -14,9 +14,16 @@ object MarathonBuild extends Build {
     id = "marathon",
     base = file("."),
     settings = baseSettings ++ assemblySettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ Seq(
-      libraryDependencies ++= Dependencies.root
-    )
-  )
+      libraryDependencies ++= Dependencies.root,
+      parallelExecution in Test := false,
+      fork in Test := true
+    ))
+    .configs(IntegrationTest)
+    .settings(inConfig(IntegrationTest)(Defaults.testTasks): _*)
+    .settings(testOptions in Test := Seq(Tests.Argument("-l", "integration")))
+    .settings(testOptions in IntegrationTest := Seq(Tests.Argument("-n", "integration")))
+
+  lazy val IntegrationTest = config("integration") extend Test
 
   lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
     organization := "mesosphere",

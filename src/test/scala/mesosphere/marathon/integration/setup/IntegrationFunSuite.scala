@@ -10,22 +10,18 @@ import mesosphere.marathon.api.v1.AppDefinition
 import org.joda.time.DateTime
 
 /**
-  * All integration tests should mix in this trait.
+  * All integration tests should be marked with this tag.
   * Integration tests need a special set up and can take a long time.
   * So it is not desirable, that these kind of tests run every time all the unit tests run.
-  *
-  * All derived test suites will only run, if the system property integration is set.
-  * You can set it with
-  * maven: mvn -Dintegration=true test
+  */
+object IntegrationTag extends Tag("integration")
+
+/**
+  * Convenience trait, which will mark all test cases as integration tests.
   */
 trait IntegrationFunSuite extends FunSuite {
-  private lazy val isIntegration = {
-    val prop = sys.props.get("integration").flatMap(p => Try(p.toBoolean).toOption).getOrElse(false)
-    val idea = sys.env.values.exists(_ == "org.jetbrains.plugins.scala.testingSupport.scalaTest.ScalaTestRunner")
-    prop || idea
-  }
   override protected def test(testName: String, testTags: Tag*)(testFun: => Unit): Unit = {
-    if (isIntegration) super.test(testName, testTags: _*)(testFun)
+    super.test(testName, IntegrationTag +: testTags: _*)(testFun)
   }
 }
 
