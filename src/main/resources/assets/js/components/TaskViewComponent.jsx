@@ -23,7 +23,7 @@ define([
         return selectedTaskIds.indexOf(task.id) >= 0;
       });
 
-      tasksToKill.map(function(task) {
+      tasksToKill.forEach(function(task) {
         task.destroy({
           scale: _options.scale,
           success: function () {
@@ -47,7 +47,7 @@ define([
         modelTasks.length;
 
       if (!allTasksSelected) {
-        modelTasks.forEach(function(task) { newSelectedTasks[task.id] = true; });
+        modelTasks.map(function(task) { newSelectedTasks[task.id] = true; });
       }
 
       this.setState({selectedTasks: newSelectedTasks});
