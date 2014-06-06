@@ -79,6 +79,7 @@ object Dependencies {
     jodaTime % "compile",
     jodaConvert % "compile",
     jerseyServlet % "compile",
+    uuidGenerator % "compile",
 
     // test
     Test.scalatest % "test",
@@ -101,6 +102,7 @@ object Dependency {
     val Jersey = "1.18.1"
     val JodaTime = "2.3"
     val JodaConvert = "1.5"
+    val UUIDGenerator = "3.1.3"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -121,6 +123,7 @@ object Dependency {
   val mesos = "org.apache.mesos" % "mesos" % V.Mesos
   val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
   val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZkCLient
+  val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
