@@ -1,21 +1,7 @@
 define([
-  "React"
-], function(React) {
-  function createTimeFields(timeNodes) {
-    return timeNodes.map(function(timeField) {
-      var node = [<dt>{timeField.label}</dt>];
-      node.push(
-        timeField.time == null ?
-          <dd className="text-muted">None</dd> :
-          <dd>
-            <time dateTime={timeField.time}>
-              {new Date(timeField.time).toLocaleString()}
-            </time>
-          </dd>
-      );
-      return node;
-    });
-  }
+  "React",
+  "jsx!components/TimeFieldComponent"
+], function(React, TimeFieldComponent) {
 
   return React.createClass({
     displayName: "TaskHealthComponent",
@@ -26,11 +12,10 @@ define([
       var task = this.props.task;
       var healthCheckResults = task.get("healthCheckResults");
       var timeFields;
-      var timeNodes;
       if (healthCheckResults != null) {
         healthNodeList = healthCheckResults.map(function (cResult, index) {
           if (cResult != null) {
-            timeNodes = [
+            var timeNodes = [
               {
                 label: "First success",
                 time: cResult.firstSuccess
@@ -42,7 +27,14 @@ define([
                 time: cResult.lastFailure
               }
             ];
-            timeFields = createTimeFields(timeNodes);
+            timeFields = timeNodes.map(function(timeNode, index) {
+              return (
+                <TimeFieldComponent
+                  key={index}
+                  label={timeNode.label}
+                  time={timeNode.time} />
+              );
+            });
             var aliveNode = (cResult.alive == null ?
               <dd>No</dd> :
               <dd>Yes</dd>);

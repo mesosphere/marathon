@@ -4,29 +4,15 @@ define([
   "React",
   "mixins/BackboneMixin",
   "models/Task",
+  "jsx!components/TimeFieldComponent",
   "jsx!components/TaskHealthComponent"
-], function(React, BackboneMixin, Task, TaskHealthComponent) {
+], function(React, BackboneMixin, Task,
+  TimeFieldComponent, TaskHealthComponent) {
   var STATES = {
       STATE_LOADING: 0,
       STATE_ERROR: 1,
       STATE_SUCCESS: 2
     };
-
-  function createTimeFields(timeNodes) {
-    return timeNodes.map(function(timeField) {
-      var node = [<dt>{timeField.label}</dt>];
-      node.push(
-        timeField.time == null ?
-          <dd className="text-muted">None</dd> :
-          <dd>
-            <time dateTime={timeField.time}>
-              {new Date(timeField.time).toLocaleString()}
-            </time>
-          </dd>
-      );
-      return node;
-    });
-  }
 
   return React.createClass({
     displayName: "TaskDetailComponent",
@@ -60,6 +46,7 @@ define([
         "text-unhealthy": taskHealth === Task.HEALTH.UNHEALTHY,
         "text-muted": taskHealth === Task.HEALTH.UNKNOWN
       });
+
       var timeNodes = [
         {
           label: "Staged at",
@@ -69,7 +56,14 @@ define([
           time: task.get("startedAt")
         }
       ];
-      var timeFields = createTimeFields(timeNodes);
+      timeFields = timeNodes.map(function(timeNode, index) {
+        return (
+          <TimeFieldComponent
+            key={index}
+            label={timeNode.label}
+            time={timeNode.time} />
+        );
+      });
       return (
         <div>
           <ol className="breadcrumb">
