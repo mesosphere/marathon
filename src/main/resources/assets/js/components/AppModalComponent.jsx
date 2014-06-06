@@ -293,9 +293,6 @@ define([
         activeViewIndex: 0
       });
     },
-    setFetched: function() {
-      this.setState({fetched: true});
-    },
     startPolling: function() {
       if (this._interval == null) {
         this._interval = setInterval(this.fetchTasks, UPDATE_INTERVAL);
