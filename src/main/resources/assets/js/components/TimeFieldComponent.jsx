@@ -4,7 +4,7 @@ define([
   return React.createClass({
     displayName: "TimeFieldComponent",
     propTypes: {
-      label: React.PropTypes.string.isRequired, 
+      label: React.PropTypes.string.isRequired,
       time: React.PropTypes.oneOfType([
         React.PropTypes.string,
         React.PropTypes.object
@@ -29,4 +29,4 @@ define([
     }
   });
 });
-        
+

@@ -75,7 +75,7 @@ define([
         instances = this.props.model.get("instances");
         this.props.model.set("instances", instances - 1);
       }
-      
+
       // Force an update since React doesn't know a key was removed from
       // `selectedTasks`.
       this.forceUpdate();

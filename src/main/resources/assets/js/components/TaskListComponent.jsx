@@ -4,7 +4,7 @@ define([
   "React",
   "jsx!components/TaskListItemComponent"
 ], function(React, TaskListItemComponent) {
-  
+
   var STATES = {
       STATE_LOADING: 0,
       STATE_ERROR: 1,

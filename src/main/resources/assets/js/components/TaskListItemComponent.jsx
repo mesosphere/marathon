@@ -73,7 +73,7 @@ define([
     render: function() {
       var className = (this.props.isActive) ? "active" : "";
       var task = this.props.task;
-      
+
       var statusClassSet = React.addons.classSet({
         "badge": true,
         "badge-default": task.isStarted(),
