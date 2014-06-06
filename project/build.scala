@@ -7,6 +7,7 @@ import com.typesafe.sbt.SbtScalariform._
 import ohnosequences.sbt.SbtS3Resolver.S3Resolver
 import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
 import scalariform.formatter.preferences._
+import sbtbuildinfo.Plugin._
 
 object MarathonBuild extends Build {
   lazy val root = Project(
@@ -17,7 +18,7 @@ object MarathonBuild extends Build {
     )
   )
 
-  lazy val baseSettings = Defaults.defaultSettings ++ Seq (
+  lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
     organization := "mesosphere",
     scalaVersion := "2.10.4",
     scalacOptions in Compile ++= Seq("-encoding", "UTF-8", "-target:jvm-1.6", "-deprecation", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint"),
@@ -26,7 +27,10 @@ object MarathonBuild extends Build {
       "Mesosphere Public Repo" at "http://downloads.mesosphere.io/maven",
       "Twitter Maven2 Repository" at "http://maven.twttr.com/",
       "Spray Maven Repository" at "http://repo.spray.io/"
-    )
+    ),
+    sourceGenerators in Compile <+= buildInfo,
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
+    buildInfoPackage := "mesosphere.marathon"
   )
 
   lazy val publishSettings = S3Resolver.defaults ++ Seq(
@@ -74,6 +78,8 @@ object Dependencies {
     twitterZkClient % "compile",
     jodaTime % "compile",
     jodaConvert % "compile",
+    jerseyServlet % "compile",
+    uuidGenerator % "compile",
 
     // test
     Test.scalatest % "test",
@@ -87,14 +93,16 @@ object Dependency {
     val Chaos = "0.5.6"
     val JacksonCCM = "0.1.0"
     val Mesos = "0.18.2"
-    val MesosUtils = "0.18.2-1"
+    val MesosUtils = "0.18.2-2"
     val Akka = "2.2.4"
     val Spray = "1.2.1"
     val Json4s = "3.2.5"
     val TwitterCommons = "0.0.52"
     val TwitterZkCLient = "0.0.43"
+    val Jersey = "1.18.1"
     val JodaTime = "2.3"
     val JodaConvert = "1.5"
+    val UUIDGenerator = "3.1.3"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -109,11 +117,13 @@ object Dependency {
   val chaos = "mesosphere" % "chaos" % V.Chaos
   val mesosUtils = "mesosphere" % "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
+  val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
   val mesos = "org.apache.mesos" % "mesos" % V.Mesos
   val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
   val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZkCLient
+  val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

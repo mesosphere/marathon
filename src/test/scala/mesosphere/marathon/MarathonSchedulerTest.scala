@@ -29,6 +29,7 @@ class MarathonSchedulerTest extends MarathonSpec {
   var scheduler: MarathonScheduler = null
   var frameworkIdUtil: FrameworkIdUtil = null
   var rateLimiters: RateLimiters = null
+  var config: MarathonConf = null
 
   before {
     repo = mock[AppRepository]
@@ -37,6 +38,7 @@ class MarathonSchedulerTest extends MarathonSpec {
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     rateLimiters = mock[RateLimiters]
+    config = mock[MarathonConf]
     scheduler = new MarathonScheduler(
       None,
       new ObjectMapper,
@@ -45,7 +47,8 @@ class MarathonSchedulerTest extends MarathonSpec {
       tracker,
       queue,
       frameworkIdUtil,
-      rateLimiters
+      rateLimiters,
+      config
     )
   }
 

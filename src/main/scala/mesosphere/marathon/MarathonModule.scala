@@ -27,7 +27,7 @@ object ModuleNames {
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
 }
 
-class MarathonModule(conf: MarathonConf with ZookeeperConf, zk: ZooKeeperClient)
+class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     extends AbstractModule {
 
   val log = Logger.getLogger(getClass.getName)
@@ -60,7 +60,7 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf, zk: ZooKeeperClient)
   def provideMesosState(): State = {
     new ZooKeeperState(
       conf.zkHosts,
-      conf.zooKeeperTimeout.get.get,
+      conf.zkTimeoutDuration.toMillis,
       TimeUnit.MILLISECONDS,
       conf.zooKeeperStatePath
     )

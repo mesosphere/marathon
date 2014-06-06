@@ -19,12 +19,8 @@ import org.apache.log4j.Logger
   * @author Tobi Knaup
   */
 object Main extends App {
-
-  val properties = new Properties
-  properties.load(getClass.getClassLoader.getResourceAsStream("marathon.properties"))
-
   val log = Logger.getLogger(getClass.getName)
-  log.info(s"Starting Marathon ${properties.getProperty("marathon.version")}")
+  log.info(s"Starting Marathon ${BuildInfo.version}")
 
   lazy val zk: ZooKeeperClient = {
     require(
@@ -82,7 +78,7 @@ object Main extends App {
   }
 
   //TOOD(FL): Make Events optional / wire up.
-  lazy val conf = new ScallopConf(args) with HttpConf with MarathonConf with AppConfiguration with EventConfiguration with HttpEventConfiguration with ZookeeperConf
+  lazy val conf = new ScallopConf(args) with HttpConf with MarathonConf with AppConfiguration with EventConfiguration with HttpEventConfiguration
 
   run(
     classOf[HttpService],

@@ -12,6 +12,8 @@ class TaskTrackerTest extends MarathonSpec {
 
   import mesosphere.mesos.protos.Implicits._
 
+  val config = mock[MarathonConf]
+
   def makeSampleTask(id: String) = {
     makeTask(id, "host", 999)
   }
@@ -45,11 +47,11 @@ class TaskTrackerTest extends MarathonSpec {
     }
 
     val state = new InMemoryState
-    val taskTracker = new TaskTracker(state)
+    val taskTracker = new TaskTracker(state, config)
     val app = "foo"
-    val taskId1 = TaskIDUtil.taskId(app, 1)
-    val taskId2 = TaskIDUtil.taskId(app, 2)
-    val taskId3 = TaskIDUtil.taskId(app, 3)
+    val taskId1 = TaskIDUtil.taskId(app)
+    val taskId2 = TaskIDUtil.taskId(app)
+    val taskId3 = TaskIDUtil.taskId(app)
 
     val task1 = makeTask(taskId1, "foo.bar.bam", 100)
     val task2 = makeTask(taskId2, "foo.bar.bam", 200)
@@ -82,11 +84,11 @@ class TaskTrackerTest extends MarathonSpec {
     }
 
     val state = new InMemoryState
-    val taskTracker1 = new TaskTracker(state)
+    val taskTracker1 = new TaskTracker(state, config)
     val app = "foo"
-    val taskId1 = TaskIDUtil.taskId(app, 1)
-    val taskId2 = TaskIDUtil.taskId(app, 2)
-    val taskId3 = TaskIDUtil.taskId(app, 3)
+    val taskId1 = TaskIDUtil.taskId(app)
+    val taskId2 = TaskIDUtil.taskId(app)
+    val taskId3 = TaskIDUtil.taskId(app)
 
     val task1 = makeTask(taskId1, "foo.bar.bam", 100)
     val task2 = makeTask(taskId2, "foo.bar.bam", 200)
@@ -101,7 +103,7 @@ class TaskTrackerTest extends MarathonSpec {
     taskTracker1.starting(app, task3)
     taskTracker1.running(app, makeTaskStatus(taskId3))
 
-    val taskTracker2 = new TaskTracker(state)
+    val taskTracker2 = new TaskTracker(state, config)
     val results = taskTracker2.fetchApp(app).tasks
 
     shouldContainTask(results, task1)
@@ -111,7 +113,7 @@ class TaskTrackerTest extends MarathonSpec {
 
   test("SerDe") {
     val state = new InMemoryState
-    val taskTracker = new TaskTracker(state)
+    val taskTracker = new TaskTracker(state, config)
 
     val task1 = makeSampleTask("task1")
     val task2 = makeSampleTask("task2")

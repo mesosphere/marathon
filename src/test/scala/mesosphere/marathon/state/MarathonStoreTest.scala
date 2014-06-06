@@ -20,7 +20,7 @@ class MarathonStoreTest extends MarathonSpec {
     val appDef = AppDefinition(id = "testApp")
 
     when(variable.value()).thenReturn(appDef.toProtoByteArray)
-    when(future.get()).thenReturn(variable)
+    when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
     when(state.fetch("app:testApp")).thenReturn(future)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
@@ -34,7 +34,7 @@ class MarathonStoreTest extends MarathonSpec {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
 
-    when(future.get()).thenReturn(null)
+    when(future.get(anyLong, any[TimeUnit])).thenReturn(null)
     when(state.fetch("app:testApp")).thenReturn(future)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
@@ -58,10 +58,10 @@ class MarathonStoreTest extends MarathonSpec {
     val newFuture = mock[JFuture[Variable]]
 
     when(newVariable.value()).thenReturn(newAppDef.toProtoByteArray)
-    when(newFuture.get()).thenReturn(newVariable)
+    when(newFuture.get(anyLong, any[TimeUnit])).thenReturn(newVariable)
     when(variable.value()).thenReturn(appDef.toProtoByteArray)
     when(variable.mutate(any())).thenReturn(newVariable)
-    when(future.get()).thenReturn(variable)
+    when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
     when(state.fetch("app:testApp")).thenReturn(future)
     when(state.store(newVariable)).thenReturn(newFuture)
 
@@ -86,10 +86,10 @@ class MarathonStoreTest extends MarathonSpec {
     val newFuture = mock[JFuture[Variable]]
 
     when(newVariable.value()).thenReturn(newAppDef.toProtoByteArray)
-    when(newFuture.get()).thenReturn(null)
+    when(newFuture.get(anyLong, any[TimeUnit])).thenReturn(null)
     when(variable.value()).thenReturn(appDef.toProtoByteArray)
     when(variable.mutate(any())).thenReturn(newVariable)
-    when(future.get()).thenReturn(variable)
+    when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
     when(state.fetch("app:testApp")).thenReturn(future)
     when(state.store(newVariable)).thenReturn(newFuture)
 
@@ -109,9 +109,9 @@ class MarathonStoreTest extends MarathonSpec {
     val variable = mock[Variable]
     val resultFuture = mock[JFuture[JBoolean]]
 
-    when(future.get()).thenReturn(variable)
+    when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
     when(state.fetch("app:testApp")).thenReturn(future)
-    when(resultFuture.get()).thenReturn(true)
+    when(resultFuture.get(anyLong, any[TimeUnit])).thenReturn(true)
     when(state.expunge(variable)).thenReturn(resultFuture)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
@@ -129,9 +129,9 @@ class MarathonStoreTest extends MarathonSpec {
     val variable = mock[Variable]
     val resultFuture = mock[JFuture[JBoolean]]
 
-    when(future.get()).thenReturn(variable)
+    when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
     when(state.fetch("app:testApp")).thenReturn(future)
-    when(resultFuture.get()).thenReturn(null)
+    when(resultFuture.get(anyLong, any[TimeUnit])).thenReturn(null)
     when(state.expunge(variable)).thenReturn(resultFuture)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
@@ -144,25 +144,26 @@ class MarathonStoreTest extends MarathonSpec {
   }
 
   test("Names") {
-    val state = mock[State]
-    val future = mock[JFuture[JIterator[String]]]
+    val state = new InMemoryState
 
-    when(future.get()).thenReturn(Seq("app:foo", "app:bar", "no_match").iterator.asJava)
-    when(state.names()).thenReturn(future)
+    def populate(key: String, value: Array[Byte]) = {
+      val variable = state.fetch(key).get().mutate(value)
+      state.store(variable)
+    }
+
+    populate("app:foo", Array())
+    populate("app:bar", Array())
+    populate("no_match", Array())
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.names()
 
     assert(Seq("foo", "bar") == Await.result(res, 5 seconds).toSeq, "Should return all application keys")
-    verify(state).names()
   }
 
   test("NamesFail") {
     val state = mock[State]
-    val future = mock[JFuture[JIterator[String]]]
-
-    when(future.get()).thenThrow(classOf[ExecutionException])
-    when(state.names()).thenReturn(future)
+    when(state.names()).thenThrow(classOf[ExecutionException])
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.names()
