@@ -27,7 +27,7 @@ class MarathonStoreTest extends MarathonSpec {
     val res = store.fetch("testApp")
 
     verify(state).fetch("app:testApp")
-    assert(Some(appDef) == Await.result(res, 5 seconds), "Should return the expected AppDef")
+    assert(Some(appDef) == Await.result(res, 5.seconds), "Should return the expected AppDef")
   }
 
   test("FetchFail") {
@@ -43,7 +43,7 @@ class MarathonStoreTest extends MarathonSpec {
     verify(state).fetch("app:testApp")
 
     intercept[StorageException] {
-      Await.result(res, 5 seconds)
+      Await.result(res, 5.seconds)
     }
   }
 
@@ -70,7 +70,7 @@ class MarathonStoreTest extends MarathonSpec {
       newAppDef
     }
 
-    assert(Some(newAppDef) == Await.result(res, 5 seconds), "Should return the new AppDef")
+    assert(Some(newAppDef) == Await.result(res, 5.seconds), "Should return the new AppDef")
     verify(state).fetch("app:testApp")
     verify(state).store(newVariable)
   }
@@ -99,7 +99,7 @@ class MarathonStoreTest extends MarathonSpec {
     }
 
     intercept[StorageException] {
-      Await.result(res, 5 seconds)
+      Await.result(res, 5.seconds)
     }
   }
 
@@ -118,7 +118,7 @@ class MarathonStoreTest extends MarathonSpec {
 
     val res = store.expunge("testApp")
 
-    assert(Await.result(res, 5 seconds), "Expunging existing variable should return true")
+    assert(Await.result(res, 5.seconds), "Expunging existing variable should return true")
     verify(state).fetch("app:testApp")
     verify(state).expunge(variable)
   }
@@ -139,7 +139,7 @@ class MarathonStoreTest extends MarathonSpec {
     val res = store.expunge("testApp")
 
     intercept[StorageException] {
-      Await.result(res, 5 seconds)
+      Await.result(res, 5.seconds)
     }
   }
 
@@ -158,7 +158,7 @@ class MarathonStoreTest extends MarathonSpec {
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.names()
 
-    assert(Seq("foo", "bar") == Await.result(res, 5 seconds).toSeq, "Should return all application keys")
+    assert(Seq("foo", "bar") == Await.result(res, 5.seconds).toSeq, "Should return all application keys")
   }
 
   test("NamesFail") {
@@ -168,7 +168,7 @@ class MarathonStoreTest extends MarathonSpec {
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.names()
 
-    assert(Await.result(res, 5 seconds).isEmpty, "Should return empty iterator")
+    assert(Await.result(res, 5.seconds).isEmpty, "Should return empty iterator")
   }
 
   test("ConcurrentModifications") {
@@ -177,7 +177,7 @@ class MarathonStoreTest extends MarathonSpec {
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
 
-    Await.ready(store.store("foo", AppDefinition(id = "foo", instances = 0)), 2 seconds)
+    Await.ready(store.store("foo", AppDefinition(id = "foo", instances = 0)), 2.seconds)
 
     def plusOne() = {
       store.modify("foo") { f =>
@@ -190,9 +190,9 @@ class MarathonStoreTest extends MarathonSpec {
     val results = for (_ <- 0 until 1000) yield plusOne()
     val res = Future.sequence(results)
 
-    Await.ready(res, 5 seconds)
+    Await.ready(res, 5.seconds)
 
-    assert(1000 == Await.result(store.fetch("foo"), 5 seconds).map(_.instances)
+    assert(1000 == Await.result(store.fetch("foo"), 5.seconds).map(_.instances)
       .getOrElse(0), "Instances of 'foo' should be set to 1000")
   }
 }

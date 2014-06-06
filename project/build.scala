@@ -35,7 +35,7 @@ object MarathonBuild extends Build {
 
   lazy val publishSettings = S3Resolver.defaults ++ Seq(
     publishTo := Some(s3resolver.value(
-      "Mesosphere Public Repo",
+      "Mesosphere Public Repo (S3)",
       s3("downloads.mesosphere.io/maven")
     ))
   )
@@ -106,7 +106,7 @@ object Dependency {
 
     // test deps versions
     val Mockito = "1.9.5"
-    val ScalaTest = "2.1.5"
+    val ScalaTest = "2.1.7"
   }
 
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
