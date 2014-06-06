@@ -4,7 +4,7 @@ define([
   "React",
   "jsx!components/TaskListComponent"
 ], function(React, TaskListComponent) {
-  
+
   return React.createClass({
     displayName: "TaskViewComponent",
     getInitialState: function() {
@@ -16,7 +16,6 @@ define([
       return this.props.collection;
     },
     killSelectedTasks: function(options) {
-      var _this = this;
       var _options = options || {};
 
       var selectedTaskIds = Object.keys(this.state.selectedTasks);
@@ -28,12 +27,12 @@ define([
         task.destroy({
           scale: _options.scale,
           success: function () {
-            _this.props.onTasksKilled(_options);
-            delete _this.state.selectedTasks[task.id];
-          },
+            this.props.onTasksKilled(_options);
+            delete this.state.selectedTasks[task.id];
+          }.bind(this),
           wait: true
         });
-      });
+      }, this);
     },
     killSelectedTasksAndScale: function() {
       this.killSelectedTasks({scale: true});
