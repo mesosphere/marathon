@@ -23,7 +23,7 @@ define([
         return selectedTaskIds.indexOf(task.id) >= 0;
       });
 
-      tasksToKill.forEach(function(task) {
+      tasksToKill.map(function(task) {
         task.destroy({
           scale: _options.scale,
           success: function () {
