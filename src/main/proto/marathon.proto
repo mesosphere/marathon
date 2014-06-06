@@ -97,6 +97,7 @@ message GroupDefinition {
   required string version = 2;
   required ScalingStrategyDefinition scalingStrategy = 3;
   repeated ServiceDefinition apps = 4;
+  repeated GroupDefinition groups = 5;
 }
 
 //deployment messages --------------------------------------

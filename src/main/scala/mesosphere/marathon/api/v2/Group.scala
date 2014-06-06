@@ -20,35 +20,15 @@ case class ScalingStrategy(
 }
 
 case class Group(
-
     @FieldNotEmpty @FieldPattern(regexp = "^[A-Za-z0-9_.-]+$") id: String,
     scalingStrategy: ScalingStrategy,
-    apps: Seq[AppDefinition],
+    apps: Seq[AppDefinition] = Seq.empty,
+    groups: Seq[Group] = Seq.empty,
     version: Timestamp = Timestamp.now()) extends MarathonState[GroupDefinition, Group] {
 
-  override def mergeFromProto(msg: GroupDefinition): Group = {
-    val scalingStrategy = msg.getScalingStrategy
-    val maximumRunningFactor =
-      if (scalingStrategy.hasMaximumRunningFactor)
-        Some(msg.getScalingStrategy.getMaximumRunningFactor)
-      else
-        None
+  override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
 
-    Group(
-      id = msg.getId,
-      scalingStrategy = ScalingStrategy(
-        scalingStrategy.getMinimumHealthCapacity,
-        maximumRunningFactor
-      ),
-      apps = msg.getAppsList.map(AppDefinition.fromProto),
-      version = Timestamp(msg.getVersion)
-    )
-  }
-
-  override def mergeFromProto(bytes: Array[Byte]): Group = {
-    val proto = GroupDefinition.parseFrom(bytes)
-    mergeFromProto(proto)
-  }
+  override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
 
   override def toProto: GroupDefinition = {
     GroupDefinition.newBuilder
@@ -56,10 +36,30 @@ case class Group(
       .setScalingStrategy(scalingStrategy.toProto)
       .setVersion(version.toString)
       .addAllApps(apps.map(_.toProto))
+      .addAllGroups(groups.map(_.toProto))
       .build()
   }
 }
 
 object Group {
-  def empty(): Group = Group("", ScalingStrategy(0, None), Seq.empty)
+  def empty(): Group = Group("", ScalingStrategy(0, None))
+
+  def fromProto(msg: GroupDefinition): Group = {
+    val scalingStrategy = msg.getScalingStrategy
+    val maximumRunningFactor = {
+      if (scalingStrategy.hasMaximumRunningFactor) Some(msg.getScalingStrategy.getMaximumRunningFactor)
+      else None
+    }
+    Group (
+      id = msg.getId,
+      scalingStrategy = ScalingStrategy(
+        scalingStrategy.getMinimumHealthCapacity,
+        maximumRunningFactor
+      ),
+      apps = msg.getAppsList.map(AppDefinition.fromProto),
+      groups = msg.getGroupsList.map(fromProto),
+      version = Timestamp(msg.getVersion)
+    )
+  }
+
 }

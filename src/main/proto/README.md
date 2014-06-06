@@ -14,6 +14,6 @@ To rebuild the protos, open a terminal where the current working directory is th
 
 ```
 $> cd src/main/proto
-$> protoc --java_out=.. marathon.proto 
+$> protoc --java_out=../java/ marathon.proto 
 ```
  
