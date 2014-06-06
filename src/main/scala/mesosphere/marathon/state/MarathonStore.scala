@@ -22,7 +22,7 @@ class MarathonStore[S <: MarathonState[_, S]](
   import BackToTheFuture.futureToFutureOption
 
   private[this] val log = LoggerFactory.getLogger(getClass)
-  private [this] val locks = LockManager()
+  private[this] val locks = LockManager()
 
   val migrationRes = version.flatMap { ver =>
     if (migration.needsMigration(ver)) {

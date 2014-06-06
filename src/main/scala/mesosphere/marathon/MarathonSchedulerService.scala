@@ -27,6 +27,7 @@ import mesosphere.marathon.MarathonSchedulerActor._
 import akka.pattern.ask
 import scala.util.{ Failure, Success }
 import akka.util.Timeout
+import scala.concurrent.Promise
 
 /**
   * Wrapper class for the scheduler
@@ -75,8 +76,7 @@ class MarathonSchedulerService @Inject() (
   // we have to allocate a new driver before each run or after each stop.
   var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
 
-
-  implicit val timeout: Timeout = defaultWait
+  implicit val timeout: Timeout = 5.seconds
 
   def startApp(app: AppDefinition): Future[_] = {
     // Backwards compatibility
@@ -139,7 +139,7 @@ class MarathonSchedulerService @Inject() (
     if (scale) {
       getApp(appName) foreach { app =>
         val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
-        Await.result(schedulerActor ? UpdateApp(appName, appUpdate), defaultWait)
+        Await.result(schedulerActor ? UpdateApp(appName, appUpdate), timeout.duration)
       }
     }
 

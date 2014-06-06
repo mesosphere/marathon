@@ -21,6 +21,8 @@ import akka.actor.ActorRef
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.event.MesosFrameworkMessageEvent
 import mesosphere.marathon.MarathonSchedulerActor.{ LaunchTasks, ScaleApp }
+import akka.actor.ActorSystem
+
 trait SchedulerCallbacks {
   def disconnected(): Unit
 }

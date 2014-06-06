@@ -17,6 +17,7 @@ import akka.util.Timeout
 import mesosphere.marathon.TaskUpgradeCancelledException
 import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
 import akka.testkit.TestActor.{ NoAutoPilot, AutoPilot }
+import mesosphere.marathon.MarathonConf
 
 class AppUpgradeManagerTest
     extends TestKit(ActorSystem("System"))
@@ -34,7 +35,8 @@ class AppUpgradeManagerTest
     val driver = mock[SchedulerDriver]
     val eventBus = mock[EventStream]
     val taskQueue = mock[TaskQueue]
-    val taskTracker = new TaskTracker(new InMemoryState)
+    val config = mock[MarathonConf]
+    val taskTracker = new TaskTracker(new InMemoryState, config)
     val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
 
     manager ! Upgrade(driver, AppDefinition(id = "testApp"), 10)
@@ -48,7 +50,8 @@ class AppUpgradeManagerTest
   test("StopActor") {
     val eventBus = mock[EventStream]
     val taskQueue = mock[TaskQueue]
-    val taskTracker = new TaskTracker(new InMemoryState)
+    val config = mock[MarathonConf]
+    val taskTracker = new TaskTracker(new InMemoryState, config)
     val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
     val probe = TestProbe()
 
@@ -71,7 +74,8 @@ class AppUpgradeManagerTest
     val driver = mock[SchedulerDriver]
     val eventBus = mock[EventStream]
     val taskQueue = mock[TaskQueue]
-    val taskTracker = new TaskTracker(new InMemoryState)
+    val config = mock[MarathonConf]
+    val taskTracker = new TaskTracker(new InMemoryState, config)
     val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
 
     implicit val timeout = Timeout(1.minute)

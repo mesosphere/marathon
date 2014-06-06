@@ -31,6 +31,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
   var frameworkIdUtil: FrameworkIdUtil = _
   var rateLimiters: RateLimiters = _
   var probe: TestProbe = _
+  var config: MarathonConf = _
 
   before {
     repo = mock[AppRepository]
@@ -40,6 +41,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     frameworkIdUtil = mock[FrameworkIdUtil]
     rateLimiters = mock[RateLimiters]
     config = mock[MarathonConf]
+    probe = TestProbe()
     scheduler = new MarathonScheduler(
       mock[EventStream],
       new ObjectMapper,
@@ -47,7 +49,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       tracker,
       queue,
       frameworkIdUtil,
-      rateLimiters
+      rateLimiters,
       mock[ActorSystem],
       config
     )

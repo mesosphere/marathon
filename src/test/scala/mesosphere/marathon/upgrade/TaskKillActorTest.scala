@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.TestKit
+import akka.testkit.{ TestKit, TestActorRef }
 import akka.actor.{ Props, ActorSystem }
 import org.scalatest.{ BeforeAndAfterAll, Matchers, FunSuiteLike }
 import org.apache.mesos.SchedulerDriver
@@ -33,7 +33,7 @@ class TaskKillActorTest
     val tasks = Set(taskA, taskB)
     val promise = Promise[Boolean]()
 
-    val ref = system.actorOf(Props(classOf[TaskKillActor], driver, system.eventStream, tasks, promise))
+    val ref = TestActorRef(Props(classOf[TaskKillActor], driver, system.eventStream, tasks, promise))
 
     watch(ref)
 
