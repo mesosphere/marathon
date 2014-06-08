@@ -65,12 +65,6 @@ class TaskBuilder(app: AppDefinition,
 
       executor match {
         case CommandExecutor() => {
-          if (app.container.nonEmpty) {
-            log.warn("The command executor can not handle container " +
-              "options. No tasks will be started for this " +
-              "appliction.")
-            return None
-          }
           builder.setCommand(TaskBuilder.commandInfo(app, ports))
         }
 
@@ -141,6 +135,13 @@ object TaskBuilder {
     val builder = CommandInfo.newBuilder()
       .setValue(app.cmd)
       .setEnvironment(environment(envMap))
+
+    for (c <- app.container) {
+      val container = CommandInfo.ContainerInfo.newBuilder()
+        .setImage(c.image)
+        .addAllOptions(c.options.asJava)
+      builder.setContainer(container)
+    }
 
     if (app.uris != null) {
       val uriProtos = app.uris.map(uri => {
