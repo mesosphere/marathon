@@ -55,7 +55,7 @@ define([
           }
         });
         if (healthNodeList.length > 0) {
-          healthNodeList.unshift(<hr key="hr" />);
+          healthNodeList.unshift(<hr key={"hr-" + index} />);
         }
       }
       return (
