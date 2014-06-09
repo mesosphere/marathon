@@ -41,13 +41,12 @@ just-jar: marathon-runnable.jar
 	cp marathon-runnable.jar toor/$(prefix)/bin/marathon
 	chmod 755 toor/$(prefix)/bin/marathon
 
-version: plugin := org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate
 version: marathon-runnable.jar
 	( cd marathon && \
-		mvn $(plugin) -Dexpression=project.version | sed '/^\[/d' ) | \
-		tail -n1 > version
+		cat version.sbt | sed -rn 's/^version := "(.*)"/\1/p' ) > \
+		version
 
 marathon-runnable.jar:
-	cd marathon && mvn package && bin/build-distribution
+	cd marathon && sbt assembly && bin/build-distribution
 	cp marathon/target/$@ $@
 
