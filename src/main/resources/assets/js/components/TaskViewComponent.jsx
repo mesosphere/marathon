@@ -101,13 +101,15 @@ define([
       return (
         <div>
           {buttons}
-          <TaskListComponent tasks={this.props.collection}
+          <TaskListComponent
             fetchState={this.props.fetchState}
-            selectedTasks={this.state.selectedTasks}
+            hasHealth={this.props.hasHealth}
             onTaskToggle={this.onTaskToggle}
-            toggleAllTasks={this.toggleAllTasks}
             onTaskDetailSelect={this.props.onTaskDetailSelect}
-            STATES={this.props.STATES} />
+            selectedTasks={this.state.selectedTasks}
+            STATES={this.props.STATES}
+            tasks={this.props.collection}
+            toggleAllTasks={this.toggleAllTasks} />
         </div>
       );
     }

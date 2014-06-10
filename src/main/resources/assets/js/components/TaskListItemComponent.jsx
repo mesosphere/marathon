@@ -47,10 +47,11 @@ define([
     displayName: "TaskListItemComponent",
 
     propTypes: {
-      task: React.PropTypes.object.isRequired,
+      hasHealth: React.PropTypes.bool,
       isActive: React.PropTypes.bool.isRequired,
       onToggle: React.PropTypes.func.isRequired,
-      onTaskDetailSelect: React.PropTypes.func.isRequired
+      onTaskDetailSelect: React.PropTypes.func.isRequired,
+      task: React.PropTypes.object.isRequired
     },
 
     handleClick: function(event) {
@@ -73,6 +74,7 @@ define([
     render: function() {
       var className = (this.props.isActive) ? "active" : "";
       var task = this.props.task;
+      var hasHealth = !!this.props.hasHealth;
 
       var statusClassSet = React.addons.classSet({
         "badge": true,
@@ -82,7 +84,7 @@ define([
 
       var taskHealth = task.getHealth();
       var healthClassSet = React.addons.classSet({
-        "text-center": true,
+        "text-center clickable": true,
         "text-healthy": taskHealth === Task.HEALTH.HEALTHY,
         "text-unhealthy": taskHealth === Task.HEALTH.UNHEALTHY,
         "text-muted": taskHealth === Task.HEALTH.UNKNOWN
@@ -105,7 +107,13 @@ define([
               onChange={this.handleCheckboxClick} />
           </td>
           <td>
-            {task.get("id")}<br />
+            {
+              hasHealth ?
+                <a href="#"
+                  onClick={this.handleTaskDetailSelect}>{task.get("id")}</a> :
+                <span>{task.get("id")}</span>
+            }
+            <br />
             {buildTaskAnchors(task)}
           </td>
           <td>
@@ -114,8 +122,12 @@ define([
             </span>
           </td>
           <td className="text-right">{updatedAtNode}</td>
-          <td className={healthClassSet}>●</td>
-          <td><a href="#" onClick={this.handleTaskDetailSelect}>view details</a></td>
+          {
+            hasHealth ?
+              <td className={healthClassSet}
+                onClick={this.handleTaskDetailSelect}>●</td> :
+              null
+          }
         </tr>
       );
     }

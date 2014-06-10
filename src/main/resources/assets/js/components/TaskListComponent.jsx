@@ -8,10 +8,11 @@ define([
   return React.createClass({
     displayName: "TaskListComponent",
     propTypes: {
-      tasks: React.PropTypes.object.isRequired,
       fetchState: React.PropTypes.number.isRequired,
+      hasHealth: React.PropTypes.bool,
       selectedTasks: React.PropTypes.object.isRequired,
       STATES: React.PropTypes.object.isRequired,
+      tasks: React.PropTypes.object.isRequired
     },
     getInitialState: function() {
       return {
@@ -29,6 +30,7 @@ define([
     render: function() {
       var taskNodes;
       var tasksLength = this.props.tasks.length;
+      var hasHealth = !!this.props.hasHealth;
 
       // If there are no tasks, they can't all be selected. Otherwise, assume
       // they are all selected and let the iteration below decide if that is
@@ -65,11 +67,12 @@ define([
 
           return (
               <TaskListItemComponent
-                task={task}
                 isActive={isActive}
                 key={task.id}
                 onToggle={this.props.onTaskToggle}
-                onTaskDetailSelect={this.props.onTaskDetailSelect} />
+                onTaskDetailSelect={this.props.onTaskDetailSelect}
+                hasHealth={hasHealth}
+                task={task} />
           );
         }, this);
       }
@@ -107,13 +110,16 @@ define([
                   {(sortKey === "updatedAt") ? sortOrder : null} Updated
                 </span>
               </th>
-              <th className="text-center">
-                <span onClick={this.sortCollectionBy.bind(null, "health")}
-                      className="clickable">
-                  {(sortKey === "health") ? sortOrder : null} Health
-                </span>
-              </th>
-              <th></th>
+              {
+                hasHealth ?
+                  <th className="text-center">
+                    <span onClick={this.sortCollectionBy.bind(null, "health")}
+                          className="clickable">
+                      {(sortKey === "health") ? sortOrder : null} Health
+                    </span>
+                  </th> :
+                  null
+              }
             </tr>
           </thead>
           <tbody>
