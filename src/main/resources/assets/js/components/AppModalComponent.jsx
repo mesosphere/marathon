@@ -127,24 +127,6 @@ define([
           return <dd key={u}>{u}</dd>;
         });
 
-      var footer;
-      if (this.state.activeViewIndex === 0) { // onlys show in TaskViewComponent
-        footer =
-          <div className="modal-footer">
-            <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
-              Destroy
-            </button>
-            <button className="btn btn-sm btn-default"
-                onClick={this.suspendApp}
-                disabled={this.props.model.get("instances") < 1}>
-              Suspend
-            </button>
-            <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
-              Scale
-            </button>
-          </div>;
-      }
-
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}
           size="lg">
@@ -152,20 +134,35 @@ define([
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
             <h3 className="modal-title">{model.get("id")}</h3>
-            <ul className="list-inline">
-              <li>
-                <span className="text-info">Instances </span>
-                <span className="badge">{model.get("instances")}</span>
-              </li>
-              <li>
-                <span className="text-info">CPUs </span>
-                <span className="badge">{model.get("cpus")}</span>
-              </li>
-              <li>
-                <span className="text-info">Memory </span>
-                <span className="badge">{model.get("mem")} MB</span>
-              </li>
-            </ul>
+            <div className="row">
+              <div className="header-btn col-md-6">
+                <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
+                  Destroy
+                </button>
+                <button className="btn btn-sm btn-default"
+                    onClick={this.suspendApp}
+                    disabled={this.props.model.get("instances") < 1}>
+                  Suspend
+                </button>
+                <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
+                  Scale
+                </button>
+              </div>
+              <ul className="header-btn list-inline text-right col-md-6">
+                <li>
+                  <span className="text-info">Instances </span>
+                  <span className="badge">{model.get("instances")}</span>
+                </li>
+                <li>
+                  <span className="text-info">CPUs </span>
+                  <span className="badge">{model.get("cpus")}</span>
+                </li>
+                <li>
+                  <span className="text-info">Memory </span>
+                  <span className="badge">{model.get("mem")} MB</span>
+                </li>
+              </ul>
+            </div>
           </div>
           <TogglableTabsComponent className="modal-body"
               tabs={[
@@ -179,15 +176,16 @@ define([
                   collection={model.tasks}
                   fetchState={this.state.fetchState}
                   fetchTasks={this.fetchTasks}
-                  hasHealth={hasHealth}
                   onTasksKilled={this.onTasksKilled}
                   onTaskDetailSelect={this.showTaskDetails}
                   STATES={STATES} />
-                <TaskDetailComponent task={this.state.activeTask}
+                <TaskDetailComponent
                   fetchState={this.state.fetchState}
-                  STATES={STATES}
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
-                  onShowTaskList={this.showTaskList} />
+                  hasHealth={hasHealth}
+                  STATES={STATES}
+                  onShowTaskList={this.showTaskList}
+                  task={this.state.activeTask} />
               </StackedViewComponent>
             </TabPaneComponent>
             <TabPaneComponent id="configuration">
@@ -217,7 +215,6 @@ define([
               </dl>
             </TabPaneComponent>
           </TogglableTabsComponent>
-          {footer}
         </ModalComponent>
       );
     },
