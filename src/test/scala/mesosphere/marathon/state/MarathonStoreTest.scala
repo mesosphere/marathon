@@ -11,6 +11,8 @@ import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import mesosphere.marathon.{ MarathonSpec, StorageException }
 import scala.collection.JavaConverters._
+import org.mockito.stubbing.Answer
+import org.mockito.invocation.InvocationOnMock
 
 class MarathonStoreTest extends MarathonSpec {
   test("Fetch") {
@@ -22,6 +24,8 @@ class MarathonStoreTest extends MarathonSpec {
     when(variable.value()).thenReturn(appDef.toProtoByteArray)
     when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
     when(state.fetch("app:testApp")).thenReturn(future)
+    when(state.fetch("storage:version")).thenReturn(currentVersionFuture)
+    when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.fetch("testApp")
@@ -36,6 +40,8 @@ class MarathonStoreTest extends MarathonSpec {
 
     when(future.get(anyLong, any[TimeUnit])).thenReturn(null)
     when(state.fetch("app:testApp")).thenReturn(future)
+    when(state.fetch("storage:version")).thenReturn(currentVersionFuture)
+    when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.fetch("testApp")
@@ -64,6 +70,8 @@ class MarathonStoreTest extends MarathonSpec {
     when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
     when(state.fetch("app:testApp")).thenReturn(future)
     when(state.store(newVariable)).thenReturn(newFuture)
+    when(state.fetch("storage:version")).thenReturn(currentVersionFuture)
+    when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.modify("testApp") { _ =>
@@ -92,6 +100,8 @@ class MarathonStoreTest extends MarathonSpec {
     when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
     when(state.fetch("app:testApp")).thenReturn(future)
     when(state.store(newVariable)).thenReturn(newFuture)
+    when(state.fetch("storage:version")).thenReturn(currentVersionFuture)
+    when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.modify("testApp") { _ =>
@@ -113,6 +123,8 @@ class MarathonStoreTest extends MarathonSpec {
     when(state.fetch("app:testApp")).thenReturn(future)
     when(resultFuture.get(anyLong, any[TimeUnit])).thenReturn(true)
     when(state.expunge(variable)).thenReturn(resultFuture)
+    when(state.fetch("storage:version")).thenReturn(currentVersionFuture)
+    when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
 
@@ -133,6 +145,8 @@ class MarathonStoreTest extends MarathonSpec {
     when(state.fetch("app:testApp")).thenReturn(future)
     when(resultFuture.get(anyLong, any[TimeUnit])).thenReturn(null)
     when(state.expunge(variable)).thenReturn(resultFuture)
+    when(state.fetch("storage:version")).thenReturn(currentVersionFuture)
+    when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
 
@@ -154,6 +168,7 @@ class MarathonStoreTest extends MarathonSpec {
     populate("app:foo", Array())
     populate("app:bar", Array())
     populate("no_match", Array())
+    populate("storage:version", StorageVersions.current.toByteArray)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.names()
@@ -164,6 +179,8 @@ class MarathonStoreTest extends MarathonSpec {
   test("NamesFail") {
     val state = mock[State]
     when(state.names()).thenThrow(classOf[ExecutionException])
+    when(state.fetch("storage:version")).thenReturn(currentVersionFuture)
+    when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.names()
@@ -174,6 +191,8 @@ class MarathonStoreTest extends MarathonSpec {
   test("ConcurrentModifications") {
     import mesosphere.util.ThreadPoolContext.context
     val state = new InMemoryState
+    val variable = state.fetch("storage:version").get().mutate(StorageVersions.current.toByteArray)
+    state.store(variable)
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
 
@@ -194,5 +213,19 @@ class MarathonStoreTest extends MarathonSpec {
 
     assert(1000 == Await.result(store.fetch("foo"), 5.seconds).map(_.instances)
       .getOrElse(0), "Instances of 'foo' should be set to 1000")
+  }
+
+  private val currentVersionVariable = {
+    val versionVariable = mock[Variable]
+    when(versionVariable.value()).thenReturn(StorageVersions.current.toByteArray)
+    when(versionVariable.mutate(any[Array[Byte]]())).thenReturn(versionVariable)
+
+    versionVariable
+  }
+
+  private val currentVersionFuture = {
+    val versionFuture = mock[JFuture[Variable]]
+    when(versionFuture.get(anyLong(), any[TimeUnit])).thenReturn(currentVersionVariable)
+    versionFuture
   }
 }

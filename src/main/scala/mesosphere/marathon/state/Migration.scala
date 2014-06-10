@@ -13,24 +13,25 @@ trait Migration[A] {
 object StorageVersions {
   val VersionRegex = """^(\d+)\.(\d+)\.(\d+).*""".r
 
+  def apply(major: Int, minor: Int, patch: Int): StorageVersion = {
+    StorageVersion
+      .newBuilder()
+      .setMajor(major)
+      .setMinor(minor)
+      .setPatch(patch)
+      .build()
+  }
+
   def current: StorageVersion = {
     BuildInfo.version match {
       case VersionRegex(major, minor, patch) =>
-        StorageVersion
-          .newBuilder()
-          .setMajor(major.toInt)
-          .setMinor(minor.toInt)
-          .setPatch(patch.toInt)
-          .build()
+        StorageVersions(
+          major.toInt,
+          minor.toInt,
+          patch.toInt
+        )
     }
   }
 
-  def empty: StorageVersion = {
-    StorageVersion
-      .newBuilder()
-      .setMajor(0)
-      .setMinor(0)
-      .setPatch(0)
-      .build()
-  }
+  def empty: StorageVersion = StorageVersions(0, 0, 0)
 }
