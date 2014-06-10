@@ -12,7 +12,7 @@ define([
     },
     render: function() {
       var timeValue = (
-        this.props.time ?
+        this.props.time != null ?
         <dd>
           <time dateTime={this.props.time}>
             {new Date(this.props.time).toLocaleString()}
