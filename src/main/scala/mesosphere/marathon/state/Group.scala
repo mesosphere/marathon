@@ -44,11 +44,42 @@ case class Group(
     if (fn(this)) Some(this) else in(groups.toList)
   }
 
+  def group(gid: GroupId): Option[Group] = {
+    if (id == gid) Some(this) else {
+      val restPath = gid.restOf(id)
+      groups.find(_.id.restOf(id).root == restPath.root).flatMap(_.group(gid))
+    }
+  }
+
+  def update(timestamp: Timestamp = Timestamp.now())(fn: Group => Group): Group = {
+    def in(groups: List[Group]): List[Group] = groups match {
+      case head :: rest => head.update(timestamp)(fn) :: in(rest)
+      case Nil          => Nil
+    }
+    fn(this.copy(groups = in(groups.toList), version = timestamp))
+  }
+
+  def remove(gid: GroupId, timestamp: Timestamp = Timestamp.now()): Group = {
+    copy(groups = groups.filter(_.id != gid).map(_.remove(gid, timestamp)), version = timestamp)
+  }
+
+  def makeGroup(gid: GroupId): Group = {
+    val restPath = gid.restOf(id)
+    if (gid.isEmpty || restPath.isEmpty) this //group already exists
+    else {
+      val (change, remaining) = groups.partition(_.id.restOf(id).root == restPath.root)
+      val toUpdate = change.headOption.getOrElse(Group.empty.copy(id = id.append(restPath.root)))
+      val nestedUpdate = if (restPath.isEmpty) toUpdate else toUpdate.makeGroup(restPath.child)
+      this.copy(groups = nestedUpdate +: remaining)
+    }
+  }
+
   def transitiveApps: Seq[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
 }
 
 object Group {
-  def empty(): Group = Group(GroupId(Nil), ScalingStrategy(0, None))
+  def empty: Group = Group(GroupId(Nil), ScalingStrategy(1, None))
+  def emptyWithId(id: GroupId) = empty.copy(id = id)
 
   def fromProto(msg: GroupDefinition): Group = {
     val scalingStrategy = msg.getScalingStrategy

@@ -30,7 +30,7 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
   test("group back and forth again with rolling strategy") {
     val group = Group("g1", ScalingStrategy(1, None), Seq.empty)
     val proto = group.toProto
-    val merged = Group.empty().mergeFromProto(proto)
+    val merged = Group.fromProto(proto)
     group should be(merged)
   }
 }

@@ -3,7 +3,6 @@ package mesosphere.marathon.state
 import javax.inject.Inject
 import mesosphere.marathon.upgrade.DeploymentPlan
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.Singleton
 import mesosphere.marathon.{ TaskUpgradeCancelledException, UpgradeInProgressException, MarathonSchedulerService }
 import org.apache.log4j.Logger
@@ -12,6 +11,7 @@ import scala.util.{ Try, Failure, Success }
 import com.google.inject.name.Named
 import mesosphere.marathon.event.{ GroupChangeFailed, GroupChangeSuccess, EventModule }
 import akka.event.EventStream
+import mesosphere.util.ThreadPoolContext.context
 
 /**
   * The group manager is the facade for all group related actions.
@@ -56,14 +56,14 @@ class GroupManager @Singleton @Inject() (
     }
   }
 
-  def update(id: String, group: Group, force: Boolean): Future[Group] = update(id, _ => group, force)
+  //  def update(id: GroupId, version: Timestamp, group: Group, force: Boolean): Future[Group] = update(id, version, _ => group, force)
 
-  def update(id: String, fn: Group => Group, force: Boolean): Future[Group] = {
-    groupRepo.currentVersion(id).flatMap {
-      case Some(current) => upgrade(current, fn(current), force)
-      case None =>
-        log.warn(s"Can not update group $id, since there is no current version!")
-        throw new IllegalArgumentException(s"Can not upgrade group $id, since there is no current version!")
+  def update(id: GroupId, version: Timestamp, fn: Group => Group, force: Boolean): Future[Group] = {
+    groupRepo.currentVersion(id.root).map(_.getOrElse(Group.emptyWithId(id.root))).flatMap { current =>
+      val update = current.makeGroup(id).update(version) {
+        group => if (group.id == id) fn(group) else group
+      }
+      upgrade(current, update, force)
     }
   }
 

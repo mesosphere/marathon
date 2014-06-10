@@ -25,7 +25,7 @@ class GroupDeployIntegrationTest
     val result = marathon.createGroup(group)
 
     Then("The group is created. A success event for this group is send.")
-    result.code should be(204) //no content
+    result.code should be(200) //no content
     val event = waitForEvent("group_change_success")
     event.info("groupId") should be(group.id.get.toString)
   }

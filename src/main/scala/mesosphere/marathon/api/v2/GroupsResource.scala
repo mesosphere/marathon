@@ -4,7 +4,7 @@ import javax.ws.rs._
 import javax.ws.rs.core.{ Request, Response, MediaType }
 import javax.inject.Inject
 import javax.validation.{ ConstraintViolation, ConstraintViolationException, Validation }
-import mesosphere.marathon.state.{ Group, Timestamp, GroupManager }
+import mesosphere.marathon.state.{ GroupId, Group, Timestamp, GroupManager }
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import mesosphere.marathon.api.Responses
@@ -44,9 +44,16 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
   def create(update: GroupUpdate): Response = {
-    checkIsValid(update)
-    groupManager.create(update.toGroup(Timestamp.now()))
-    Response.noContent().build()
+    updateOrCreate(update.id.get, update, force = false)
+  }
+
+  @POST
+  @Consumes(Array(MediaType.APPLICATION_JSON))
+  @Path("""{path:.+}""")
+  def createUpdate(@PathParam("path") path: String,
+                   update: GroupUpdate,
+                   @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    updateOrCreate(path, update, force)
   }
 
   @PUT
@@ -55,9 +62,14 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   def update(@PathParam("path") path: String,
              update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    updateOrCreate(path, update, force)
+  }
+
+  def updateOrCreate(id: GroupId, update: GroupUpdate, force: Boolean): Response = {
     checkIsValid(update)
-    groupManager.update(path, group => update.apply(group, Timestamp.now()), force)
-    Response.noContent().build()
+    val version = Timestamp.now()
+    groupManager.update(id, version, group => update.apply(group, version), force)
+    Response.ok(Map("version" -> version)).build()
   }
 
   //TODO: filter concurrent paths, seems to be a problem with jaxrs
@@ -80,9 +92,18 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
 
   @DELETE
   @Path("""{id:.+}""")
-  def delete(@PathParam("id") id: String): Response = {
-    val response = if (result(groupManager.expunge(id), defaultWait)) Response.ok else Response.noContent()
-    response.build()
+  def delete(@PathParam("id") id: String,
+             @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    val gid = GroupId(id)
+    if (gid.isRoot) {
+      val response = if (result(groupManager.expunge(id), defaultWait)) Response.ok else Response.noContent()
+      response.build()
+    }
+    else {
+      val version = Timestamp.now()
+      groupManager.update(gid.root, version, _.remove(gid, version), force)
+      Response.ok(Map("version" -> version)).build()
+    }
   }
 
   //Note: this is really ugly. It is necessary, since bean validation will not walk into a scala Seq[_] and

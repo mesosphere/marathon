@@ -24,8 +24,8 @@ case class DeploymentPlan(
 
   override def mergeFromProto(msg: DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
     msg.getId,
-    Group.empty().mergeFromProto(msg.getOriginial),
-    Group.empty().mergeFromProto(msg.getTarget),
+    Group.empty.mergeFromProto(msg.getOriginial),
+    Group.empty.mergeFromProto(msg.getTarget),
     Timestamp(msg.getVersion)
   )
 
@@ -77,5 +77,5 @@ case class DeploymentPlan(
 }
 
 object DeploymentPlan {
-  def empty() = DeploymentPlan("", Group.empty(), Group.empty())
+  def empty() = DeploymentPlan("", Group.empty, Group.empty)
 }
