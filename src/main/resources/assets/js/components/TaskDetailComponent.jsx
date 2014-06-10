@@ -45,7 +45,7 @@ define([
             label: "Staged at",
             time: task.get("stagedAt")
           }, {
-            label: "Started success",
+            label: "Started at",
             time: task.get("startedAt")
           }
         ];
