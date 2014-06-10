@@ -13,7 +13,7 @@ define([
       var healthCheckResults = task.get("healthCheckResults");
 
       if (healthCheckResults != null) {
-        healthNodeList = healthCheckResults.map(function (cResult, index) {
+        var healthNodeList = healthCheckResults.map(function (cResult, index) {
           if (cResult != null) {
             var timeNodes = [
               {
@@ -54,7 +54,7 @@ define([
             );
           }
         });
-        if (healthNodeList.length > 0) {
+        if (healthNodeList && healthNodeList.length) {
           healthNodeList.unshift(<hr key={"hr-" + healthNodeList.length-1} />);
         }
       }
