@@ -37,7 +37,7 @@ define([
             });
             return (
               <div key={index}>
-                <h5 className="text-right text-muted">Health Check Result {index+1}</h5>
+                <h5>Health Check Result {index+1}</h5>
                 <dl className="dl-horizontal">
                   {timeFields}
                   <dt>Consectutive failures</dt>

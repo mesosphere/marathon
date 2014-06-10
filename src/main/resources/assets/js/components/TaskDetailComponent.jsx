@@ -65,7 +65,7 @@ define([
             </li>
             <li className="active">{task.get("id")}</li>
           </ol>
-          <h5 className="text-right text-muted">Task Details</h5>
+          <h5>Task Details</h5>
           {
             hasError ?
               <p className="text-center text-danger">
