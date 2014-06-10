@@ -11,7 +11,7 @@ define([
     render: function() {
       var task = this.props.task;
       var healthCheckResults = task.get("healthCheckResults");
-      var timeFields;
+
       if (healthCheckResults != null) {
         healthNodeList = healthCheckResults.map(function (cResult, index) {
           if (cResult != null) {
@@ -27,7 +27,7 @@ define([
                 time: cResult.lastFailure
               }
             ];
-            timeFields = timeNodes.map(function(timeNode, index) {
+            var timeFields = timeNodes.map(function(timeNode, index) {
               return (
                 <TimeFieldComponent
                   key={index}
