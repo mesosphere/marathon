@@ -9,8 +9,9 @@ import com.fasterxml.uuid.{ EthernetAddress, Generators }
 
 object TaskIDUtil {
 
-  val taskDelimiter = "_"
-  val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
+  val taskDelimiter = "."
+  val uuidGenerator =
+    Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
   def taskId(appName: String) = {
     appName + taskDelimiter + uuidGenerator.generate()

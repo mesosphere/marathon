@@ -92,8 +92,6 @@ case class AppDefinition(
       .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
       .setVersion(version.toString)
 
-    for (c <- container) builder.setContainer(c.toProto)
-
     builder.build
   }
 
@@ -120,8 +118,10 @@ case class AppDefinition(
       mem = resourcesMap.get(Resource.MEM).getOrElse(this.mem),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
-      container = if (proto.hasContainer) Some(ContainerInfo(proto.getContainer))
-      else None,
+      container = if (proto.getCmd.hasContainer)
+        Some(ContainerInfo(proto.getCmd.getContainer))
+      else
+        None,
       healthChecks =
         proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion)
