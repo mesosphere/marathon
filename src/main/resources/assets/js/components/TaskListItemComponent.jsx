@@ -107,12 +107,8 @@ define([
               onChange={this.handleCheckboxClick} />
           </td>
           <td>
-            {
-              hasHealth ?
-                <a href="#"
-                  onClick={this.handleTaskDetailSelect}>{task.get("id")}</a> :
-                <span>{task.get("id")}</span>
-            }
+              <a href="#"
+                onClick={this.handleTaskDetailSelect}>{task.get("id")}</a>
             <br />
             {buildTaskAnchors(task)}
           </td>

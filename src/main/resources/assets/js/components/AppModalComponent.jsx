@@ -176,6 +176,7 @@ define([
                   collection={model.tasks}
                   fetchState={this.state.fetchState}
                   fetchTasks={this.fetchTasks}
+                  hasHealth={hasHealth}
                   onTasksKilled={this.onTasksKilled}
                   onTaskDetailSelect={this.showTaskDetails}
                   STATES={STATES} />

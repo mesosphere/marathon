@@ -13,8 +13,9 @@ define([
     displayName: "TaskDetailComponent",
     mixins: [BackboneMixin],
     propTypes: {
-      task: React.PropTypes.object.isRequired,
-      onShowTaskList: React.PropTypes.func.isRequired
+      hasHealth: React.PropTypes.bool,
+      onShowTaskList: React.PropTypes.func.isRequired,
+      task: React.PropTypes.object.isRequired
     },
     getResource: function() {
       return this.props.task;
@@ -25,6 +26,7 @@ define([
     },
     render: function() {
       var task = this.props.task;
+      var hasHealth = !!this.props.hasHealth;
       var hasError = this.props.fetchState === this.props.STATES.STATE_ERROR || task.collection == null;
       var taskHealth = task.getHealth();
       var healthClassSet;
@@ -89,7 +91,11 @@ define([
                   <dt>Health</dt>
                   <dd className={healthClassSet}>{this.props.formatTaskHealthMessage(task)}</dd>
                 </dl>
-                <TaskHealthComponent task={task} />
+                {
+                  hasHealth ?
+                    <TaskHealthComponent task={task} /> :
+                    null
+                }
               </div>
           }
         </div>
