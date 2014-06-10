@@ -41,7 +41,7 @@ define([
                 <h5>Health Check Result {index+1}</h5>
                 <dl className="dl-horizontal">
                   {timeFields}
-                  <dt>Consectutive failures</dt>
+                  <dt>Consecutive failures</dt>
                   {cResult.consecutiveFailures == null ?
                     <dd className="text-muted">None</dd> :
                     <dd>{cResult.consecutiveFailures}</dd>}
