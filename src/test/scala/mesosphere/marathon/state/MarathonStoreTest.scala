@@ -9,6 +9,7 @@ import java.lang.{ Boolean => JBoolean }
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import mesosphere.marathon.{ MarathonSpec, StorageException }
+import scala.language.postfixOps
 
 class MarathonStoreTest extends MarathonSpec {
   test("Fetch") {

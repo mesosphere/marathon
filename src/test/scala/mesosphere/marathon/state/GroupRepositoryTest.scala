@@ -5,7 +5,7 @@ import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import org.mockito.Mockito._
 import org.scalatest.Matchers
-import mesosphere.marathon.state.{ Group, ScalingStrategy }
+import scala.language.postfixOps
 
 class GroupRepositoryTest extends MarathonSpec with Matchers {
 

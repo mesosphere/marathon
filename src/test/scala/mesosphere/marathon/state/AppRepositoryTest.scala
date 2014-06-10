@@ -7,6 +7,7 @@ import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import org.joda.time.DateTime
 import mesosphere.marathon.MarathonSpec
+import scala.language.postfixOps
 
 class AppRepositoryTest extends MarathonSpec {
   test("App") {
@@ -15,13 +16,13 @@ class AppRepositoryTest extends MarathonSpec {
     val appDef = AppDefinition(id = "testApp", version = timestamp)
     val future = Future.successful(Some(appDef))
 
-    when(store.fetch(s"testApp:${timestamp}")).thenReturn(future)
+    when(store.fetch(s"testApp:$timestamp")).thenReturn(future)
 
     val repo = new AppRepository(store)
     val res = repo.app("testApp", timestamp)
 
     assert(Some(appDef) == Await.result(res, 5.seconds), "Should return the correct AppDefinition")
-    verify(store).fetch(s"testApp:${timestamp}")
+    verify(store).fetch(s"testApp:$timestamp")
   }
 
   test("Store") {
