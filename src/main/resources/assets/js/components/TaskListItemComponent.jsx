@@ -120,7 +120,7 @@ define([
           <td className="text-right">{updatedAtNode}</td>
           {
             hasHealth ?
-              <td className={healthClassSet}
+              <td title={this.props.formatTaskHealthMessage(task)} className={healthClassSet}
                 onClick={this.handleTaskDetailSelect}>●</td> :
               null
           }

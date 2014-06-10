@@ -103,6 +103,7 @@ define([
           {buttons}
           <TaskListComponent
             fetchState={this.props.fetchState}
+            formatTaskHealthMessage={this.props.formatTaskHealthMessage}
             hasHealth={this.props.hasHealth}
             onTaskToggle={this.onTaskToggle}
             onTaskDetailSelect={this.props.onTaskDetailSelect}

@@ -81,7 +81,9 @@ define([
     render: function() {
       var _this = this;
       var model = this.props.model;
-      var hasHealth = model.get("healthChecks") && !!model.get("healthChecks").length;
+      var hasHealth =
+        model.get("healthChecks") != null &&
+        model.get("healthChecks").length > 0;
       var cmdNode = (model.get("cmd") == null) ?
         <dd className="text-muted">Unspecified</dd> :
         <dd>{model.get("cmd")}</dd>;
@@ -176,6 +178,7 @@ define([
                   collection={model.tasks}
                   fetchState={this.state.fetchState}
                   fetchTasks={this.fetchTasks}
+                  formatTaskHealthMessage={model.formatTaskHealthMessage}
                   hasHealth={hasHealth}
                   onTasksKilled={this.onTasksKilled}
                   onTaskDetailSelect={this.showTaskDetails}

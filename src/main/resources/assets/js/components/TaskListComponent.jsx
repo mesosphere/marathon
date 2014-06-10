@@ -69,6 +69,7 @@ define([
               <TaskListItemComponent
                 isActive={isActive}
                 key={task.id}
+                formatTaskHealthMessage={this.props.formatTaskHealthMessage}
                 onToggle={this.props.onTaskToggle}
                 onTaskDetailSelect={this.props.onTaskDetailSelect}
                 hasHealth={hasHealth}
