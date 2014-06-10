@@ -28,14 +28,20 @@ class GroupManager @Singleton @Inject() (
 
   def list(): Future[Iterable[Group]] = groupRepo.current()
 
-  def versions(id: String): Future[Iterable[Timestamp]] = groupRepo.listVersions(id)
+  def versions(id: GroupId): Future[Iterable[Timestamp]] = {
+    require(!id.isEmpty, "Empty group id given!")
+    groupRepo.listVersions(id.root)
+  }
 
   def group(id: GroupId): Future[Option[Group]] = {
-    require(!id.isEmpty)
+    require(!id.isEmpty, "Empty group id given!")
     groupRepo.group(id.root).map(_.flatMap(_.findGroup(_.id == id)))
   }
 
-  def group(id: String, version: Timestamp): Future[Option[Group]] = groupRepo.group(id, version)
+  def group(id: GroupId, version: Timestamp): Future[Option[Group]] = {
+    require(!id.isEmpty, "Empty group id given!")
+    groupRepo.group(id.root, version).map(_.flatMap(_.findGroup(_.id == id)))
+  }
 
   def create(group: Group): Future[Group] = {
     groupRepo.currentVersion(group.id).flatMap {
