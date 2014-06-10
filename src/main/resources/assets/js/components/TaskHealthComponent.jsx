@@ -37,6 +37,7 @@ define([
             });
             return (
               <div key={index}>
+                <hr key={"hr-" + index} />
                 <h5>Health Check Result {index+1}</h5>
                 <dl className="dl-horizontal">
                   {timeFields}
@@ -49,14 +50,10 @@ define([
                     <dd>No</dd> :
                     <dd>Yes</dd>}
                 </dl>
-                <hr key={"hr-" + index} />
               </div>
             );
           }
         });
-        if (healthNodeList && healthNodeList.length) {
-          healthNodeList.unshift(<hr key={"hr-" + healthNodeList.length-1} />);
-        }
       }
       return (
         <div className={this.props.className}>
