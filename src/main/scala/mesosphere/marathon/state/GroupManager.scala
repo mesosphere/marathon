@@ -26,25 +26,49 @@ class GroupManager @Singleton @Inject() (
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
+  /**
+    * List all current versions of all top level groups.
+    */
   def list(): Future[Iterable[Group]] = groupRepo.current()
 
+  /**
+    * Get all available versions for given group identifier.
+    * @param id the identifier of the group.
+    * @return the list of versions of this object.
+    */
   def versions(id: GroupId): Future[Iterable[Timestamp]] = {
     require(!id.isEmpty, "Empty group id given!")
     groupRepo.listVersions(id.root)
   }
 
+  /**
+    * Get a specific group by its id.
+    * @param id the id of the group.
+    * @return the group if it is found, otherwise None
+    */
   def group(id: GroupId): Future[Option[Group]] = {
     require(!id.isEmpty, "Empty group id given!")
     groupRepo.group(id.root).map(_.flatMap(_.findGroup(_.id == id)))
   }
 
+  /**
+    * Get a specific group with a specific version.
+    * @param id the idenfifier of the group.
+    * @param version the version of the group.
+    * @return the group if it is found, otherwise None
+    */
   def group(id: GroupId, version: Timestamp): Future[Option[Group]] = {
     require(!id.isEmpty, "Empty group id given!")
     groupRepo.group(id.root, version).map(_.flatMap(_.findGroup(_.id == id)))
   }
 
+  /**
+    * Create a new group.
+    * @param group the group to create.
+    * @return the stored group future.
+    */
   def create(group: Group): Future[Group] = {
-    groupRepo.currentVersion(group.id).flatMap {
+    groupRepo.currentVersion(group.id.root).flatMap {
       case Some(current) =>
         log.warn(s"There is already an group with this id: ${group.id}")
         throw new IllegalArgumentException(s"Can not install group ${group.id}, since there is already a group with this id!")
@@ -56,8 +80,17 @@ class GroupManager @Singleton @Inject() (
     }
   }
 
-  //  def update(id: GroupId, version: Timestamp, group: Group, force: Boolean): Future[Group] = update(id, version, _ => group, force)
-
+  /**
+    * Update a group with given identifier.
+    * The change of the group is defined by a change function.
+    * The complete tree gets the given version.
+    * @param id the id of the group to change.
+    * @param version the new version of the group, after the change has applied.
+    * @param fn the update function, which is applied to the group identified by given id
+    * @param force only one update can be applied to applications at a time. with this flag
+    *              one can control, to stop a current deployment and start a new one.
+    * @return the nw group future, which completes, when the update process has been finished.
+    */
   def update(id: GroupId, version: Timestamp, fn: Group => Group, force: Boolean): Future[Group] = {
     groupRepo.currentVersion(id.root).map(_.getOrElse(Group.emptyWithId(id.root))).flatMap { current =>
       val update = current.makeGroup(id).update(version) {
@@ -98,8 +131,9 @@ class GroupManager @Singleton @Inject() (
     case _ => planRepo.expunge(id)
   }
 
-  def expunge(id: String): Future[Boolean] = {
-    groupRepo.currentVersion(id).flatMap {
+  def expunge(id: GroupId): Future[Boolean] = {
+    log.info(s"Delete group $id")
+    groupRepo.currentVersion(id.root).flatMap {
       case Some(current) => Future.sequence(current.transitiveApps.map(scheduler.stopApp)).flatMap(_ => groupRepo.expunge(id).map(_.forall(identity)))
       case None          => Future.successful(false)
     }

@@ -24,9 +24,18 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   val ListVersionsRE = """^(.+)/versions$""".r
   val GetVersionRE = """^(.+)/versions/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$""".r
 
+  /**
+    * List all available top level groups.
+    * @return all top level groups
+    */
   @GET
   def list(): Iterable[Group] = result(groupManager.list(), defaultWait)
 
+  /**
+    * Get a specific group, optionally with specifc version
+    * @param path the identifier of the group encded as path
+    * @return the group or the group versions.
+    */
   @GET
   @Path("""{path:.+}""")
   def group(@PathParam("path") path: String): Response = {
@@ -41,12 +50,24 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
     }
   }
 
+  /**
+    * Create a new group.
+    * @param update the group is encoded in the update.
+    */
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
   def create(update: GroupUpdate): Response = {
+    require(update.id.isDefined)
     updateOrCreate(update.id.get, update, force = false)
   }
 
+  /**
+    * Create or update a group.
+    * If the path to the group does not exist, it gets created.
+    * @param path is the identifier of the the group to update.
+    * @param update is the update to apply on the group specified by the given path.
+    * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
+    */
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("""{path:.+}""")
@@ -56,6 +77,13 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
     updateOrCreate(path, update, force)
   }
 
+  /**
+    * Create or update a group.
+    * If the path to the group does not exist, it gets created.
+    * @param path is the identifier of the the group to update.
+    * @param update is the update to apply on the group specified by the given path.
+    * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
+    */
   @PUT
   @Consumes(Array(MediaType.APPLICATION_JSON)) //@Path("""{path:(?!.*/version/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$).+}""")
   @Path("""{path:.+}""")
@@ -65,45 +93,54 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
     updateOrCreate(path, update, force)
   }
 
-  def updateOrCreate(id: GroupId, update: GroupUpdate, force: Boolean): Response = {
-    checkIsValid(update)
-    val version = Timestamp.now()
-    groupManager.update(id, version, group => update.apply(group, version), force)
-    Response.ok(Map("version" -> version)).build()
-  }
-
-  //TODO: filter concurrent paths, seems to be a problem with jaxrs
-  /*
+  /**
+   * Rollback to a specific version of a given group.
+   * @param id the identifier of the group to roll back.
+   * @param version the version of the group to roll to.
+   * @param force if there is an upgrade in progress, it can be overriden with the force flag.
+   */
   @PUT
-  @Path("""{id}/version/{version}""")
+  @Path("""{id:.+}/version/{version}""")
   def rollbackTo(@PathParam("id") id: String,
                  @PathParam("version") version: String,
                  @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val res = groupManager.group(id, Timestamp(version)).map {
       case Some(group) =>
-        groupManager.update(id, group, force)
+        groupManager.update(id, group.version, _ => group, force)
         Response.noContent().build()
       case None =>
         Responses.unknownGroup(id)
     }
     result(res, defaultWait)
   }
-  */
 
+  /**
+    * Delete a specific subtree or a complete tree.
+    * @param path the identifier of the group to delete encoded as path
+    * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
+    * @return A version response, which defines the resulting change.
+    */
   @DELETE
-  @Path("""{id:.+}""")
-  def delete(@PathParam("id") id: String,
+  @Path("""{path:.+}""")
+  def delete(@PathParam("path") path: String,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    val gid = GroupId(id)
+    val gid = GroupId(path)
+    val version = Timestamp.now()
     if (gid.isRoot) {
-      val response = if (result(groupManager.expunge(id), defaultWait)) Response.ok else Response.noContent()
-      response.build()
+      if (result(groupManager.expunge(gid), defaultWait)) Response.ok(Map("version" -> version)).build()
+      else Responses.unknownGroup(path)
     }
     else {
-      val version = Timestamp.now()
       groupManager.update(gid.root, version, _.remove(gid, version), force)
       Response.ok(Map("version" -> version)).build()
     }
+  }
+
+  private def updateOrCreate(id: GroupId, update: GroupUpdate, force: Boolean): Response = {
+    checkIsValid(update)
+    val version = Timestamp.now()
+    groupManager.update(id, version, group => update.apply(group, version), force)
+    Response.ok(Map("version" -> version)).build()
   }
 
   //Note: this is really ugly. It is necessary, since bean validation will not walk into a scala Seq[_] and

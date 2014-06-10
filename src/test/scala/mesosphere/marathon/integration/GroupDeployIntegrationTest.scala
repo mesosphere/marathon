@@ -66,7 +66,7 @@ class GroupDeployIntegrationTest
     val missing = marathon.deleteGroup("does_not_exist")
 
     Then("We get a 204 http resonse code")
-    missing.code should be(204)
+    missing.code should be(404)
   }
 
   test("create a group with applications to start") {
@@ -131,8 +131,7 @@ class GroupDeployIntegrationTest
     waitForEvent("group_change_success")
   }
 
-  //TODO: rollback functionality needs a specific path
-  ignore("rollback from an upgrade of group") {
+  test("rollback from an upgrade of group") {
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 2)
@@ -147,8 +146,8 @@ class GroupDeployIntegrationTest
 
     Then("The new version is deployed")
     waitForEvent("group_change_success")
-    val v2Checks = taskProxyChecks(name, "v2", state = true)
-    validFor("all v2 apps are available", 10.seconds) { v2Checks.forall(_.pingSince(2.seconds)) }
+    val v2Checks = appProxyCheck(name, "v2", state = true)
+    validFor("all v2 apps are available", 10.seconds) { v2Checks.pingSince(2.seconds) }
 
     When("A rollback to the first version is initiated")
     val versions = marathon.listGroupVersions(group.id.get)
