@@ -79,6 +79,7 @@ object Constraints {
           (value.isEmpty || value == offer.getHostname) &&
             // All running tasks must have the same hostname as the one in the offer
             tasks.forall(_.getHost == offer.getHostname)
+        case _ => false
       }
 
     private def checkAttribute = {

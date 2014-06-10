@@ -2,8 +2,8 @@ package mesosphere.marathon.api.v1
 
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.{ ContainerInfo, Protos }
-import mesosphere.marathon.state.{ MarathonState, Timestamp, Timestamped }
-import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
+import mesosphere.marathon.state.{ Migration, MarathonState, Timestamp, Timestamped }
+import mesosphere.marathon.Protos.{ StorageVersion, MarathonTask, Constraint }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.api.validation.FieldConstraints._
@@ -118,10 +118,16 @@ case class AppDefinition(
       mem = resourcesMap.get(Resource.MEM).getOrElse(this.mem),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
-      container = if (proto.getCmd.hasContainer)
+      container = if (proto.getCmd.hasContainer) {
         Some(ContainerInfo(proto.getCmd.getContainer))
-      else
-        None,
+      }
+      else if (proto.hasOBSOLETEContainer) {
+        val oldContainer = proto.getOBSOLETEContainer
+        Some(ContainerInfo(oldContainer.getImage.toStringUtf8, oldContainer.getOptionsList.asScala.toSeq.map(_.toStringUtf8)))
+      }
+      else {
+        None
+      },
       healthChecks =
         proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion)
@@ -193,4 +199,26 @@ object AppDefinition {
     def tasks = appTasks
   }
 
+  implicit object AppDefinitionMigration extends Migration[AppDefinition] {
+    override def needsMigration(version: StorageVersion): Boolean = {
+      if (version.getMajor == 0 && version.getMinor < 6) {
+        true
+      }
+      // add other migration cases
+      else {
+        false
+      }
+    }
+
+    override def migrate(version: StorageVersion, obj: AppDefinition): AppDefinition = {
+      if (version.getMajor == 0 && version.getMinor < 6) {
+        // conversion is handled in the AppDefinition fromProto
+        obj
+      }
+      // add other migration cases
+      else {
+        obj
+      }
+    }
+  }
 }
