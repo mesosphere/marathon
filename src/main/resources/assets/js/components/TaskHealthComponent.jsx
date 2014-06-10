@@ -49,13 +49,13 @@ define([
                     <dd>No</dd> :
                     <dd>Yes</dd>}
                 </dl>
-                <hr />
+                <hr key={"hr-" + index} />
               </div>
             );
           }
         });
         if (healthNodeList.length > 0) {
-          healthNodeList.unshift(<hr key={"hr-" + index} />);
+          healthNodeList.unshift(<hr key={"hr-" + healthNodeList.length-1} />);
         }
       }
       return (
