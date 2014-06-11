@@ -56,7 +56,7 @@ marathon-runnable.jar:
 	cp marathon/target/$@ $@
 
 clean:
-	rm -rf marathon-runnable.jar marathon*.deb marathon*.rpm marathon*.pkg toor
+	rm -rf marathon-runnable.jar marathon*.{deb,rpm,pkg} toor
 
 .PHONY: prep-ubuntu
 prep-ubuntu: SBT_URL := http://dl.bintray.com/sbt/debian/sbt-0.13.5.deb
