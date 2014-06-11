@@ -1,17 +1,35 @@
 define([
   "Backbone",
   "Underscore",
+  "models/Task",
   "models/TaskCollection"
-], function(Backbone, _, TaskCollection) {
+], function(Backbone, _, Task, TaskCollection) {
   function ValidationError(attribute, message) {
     this.attribute = attribute;
     this.message = message;
   }
 
+  var DEFAULT_HEALTH_MSG = "Unknown";
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
     "executor", "id", "instances", "mem", "ports", "uris"];
   var VALID_ID_PATTERN = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
   var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
+
+  function findHealthCheckMsg(healthCheckResults, context) {
+    return healthCheckResults.map(function (hc, index) {
+      if (hc && !hc.alive) {
+        var failedCheck = this.get("healthChecks")[index];
+        return "Warning: Health check '" +
+          (failedCheck.protocol ? failedCheck.protocol + " " : "") +
+          (this.get("host") ? this.get("host") : "") +
+          (failedCheck.path ? failedCheck.path : "") + "'" +
+          (hc.lastFailureCause ?
+            " returned with status: '" + hc.lastFailureCause + "'" :
+            " failed") +
+          ".";
+      }
+    }, context);
+  }
 
   return Backbone.Model.extend({
     defaults: function() {
@@ -22,6 +40,7 @@ define([
         cpus: 0.1,
         env: {},
         executor: "",
+        healthChecks: [],
         id: _.uniqueId("app-"),
         instances: 1,
         mem: 16.0,
@@ -30,6 +49,7 @@ define([
       };
     },
     initialize: function(options) {
+      _.bindAll(this, 'formatTaskHealthMessage');
       // If this model belongs to a collection when it is instantiated, it has
       // already been persisted to the server.
       this.persisted = (this.collection != null);
@@ -55,6 +75,26 @@ define([
     formatTasksRunning: function() {
       var tasksRunning = this.get("tasksRunning");
       return tasksRunning == null ? "-" : tasksRunning;
+    },
+    formatTaskHealthMessage: function(task) {
+
+      var msg = DEFAULT_HEALTH_MSG;
+      var taskHealth = task.getHealth();
+      switch(taskHealth) {
+        case Task.HEALTH.HEALTHY:
+           msg = "Healthy";
+          break;
+        case Task.HEALTH.UNHEALTHY:
+          var healthCheckResults = task.get("healthCheckResults");
+          if (healthCheckResults != null) {
+            msg = findHealthCheckMsg(healthCheckResults, this);
+          }
+          break;
+        default:
+          msg = DEFAULT_HEALTH_MSG;
+          break;
+      }
+      return msg;
     },
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
@@ -126,7 +166,7 @@ define([
       }
 
       if (!_.isString(attrs.cmd) || attrs.cmd.length < 1) {
-        // Prevent erroring out on UPDATE operations like scale/suspend. 
+        // Prevent erroring out on UPDATE operations like scale/suspend.
         // If cmd string is empty, then don't error out if an executor and
         // container are provided.
         if (!_.isString(attrs.executor) || attrs.executor.length < 1 ||

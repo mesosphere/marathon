@@ -108,6 +108,18 @@ a:focus {
   color: #F98482;
 }
 
+.text-healthy {
+  color: #0A8;
+}
+
+.text-unhealthy {
+  color: #F98482;
+}
+
+.breadcrumb {
+  background-color: #333;
+}
+
 .nav-tabs {
   border-bottom-color: #555;
   margin-bottom: 20px;

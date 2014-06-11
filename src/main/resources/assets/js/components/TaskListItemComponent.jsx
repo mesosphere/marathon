@@ -2,7 +2,9 @@
 
 define([
   "React",
-], function(React) {
+  "models/Task",
+  "jsx!components/TaskDetailComponent"
+], function(React, Task, TaskDetailComponent) {
 
   function buildHref(host, port) {
     return "http://" + host + ":" + port;
@@ -20,8 +22,8 @@ define([
         <span className="text-muted">
           {task.get("host")}:[{ports.map(function(p, index) {
             return (
-              <span>
-                <a key={p} className="text-muted" href={buildHref(task.get("host"), p)}>{p}</a>
+              <span key={p}>
+                <a className="text-muted" href={buildHref(task.get("host"), p)}>{p}</a>
                 {index < portsLength - 1 ? ", " : ""}
               </span>
             );
@@ -42,10 +44,13 @@ define([
   }
 
   return React.createClass({
+    displayName: "TaskListItemComponent",
 
     propTypes: {
+      hasHealth: React.PropTypes.bool,
       isActive: React.PropTypes.bool.isRequired,
       onToggle: React.PropTypes.func.isRequired,
+      onTaskDetailSelect: React.PropTypes.func.isRequired,
       task: React.PropTypes.object.isRequired
     },
 
@@ -61,14 +66,28 @@ define([
       this.props.onToggle(this.props.task, event.target.checked);
     },
 
+    handleTaskDetailSelect: function(event) {
+      event.preventDefault();
+      this.props.onTaskDetailSelect(this.props.task);
+    },
+
     render: function() {
       var className = (this.props.isActive) ? "active" : "";
       var task = this.props.task;
+      var hasHealth = !!this.props.hasHealth;
 
       var statusClassSet = React.addons.classSet({
         "badge": true,
         "badge-default": task.isStarted(),
         "badge-warning": task.isStaged()
+      });
+
+      var taskHealth = task.getHealth();
+      var healthClassSet = React.addons.classSet({
+        "text-center": true,
+        "text-healthy": taskHealth === Task.HEALTH.HEALTHY,
+        "text-unhealthy": taskHealth === Task.HEALTH.UNHEALTHY,
+        "text-muted": taskHealth === Task.HEALTH.UNKNOWN
       });
 
       var updatedAtNode;
@@ -88,7 +107,9 @@ define([
               onChange={this.handleCheckboxClick} />
           </td>
           <td>
-            {task.get("id")}<br />
+              <a href="#"
+                onClick={this.handleTaskDetailSelect}>{task.get("id")}</a>
+            <br />
             {buildTaskAnchors(task)}
           </td>
           <td>
@@ -97,6 +118,12 @@ define([
             </span>
           </td>
           <td className="text-right">{updatedAtNode}</td>
+          {
+            hasHealth ?
+              <td title={this.props.formatTaskHealthMessage(task)}
+                className={healthClassSet} >●</td> :
+              null
+          }
         </tr>
       );
     }

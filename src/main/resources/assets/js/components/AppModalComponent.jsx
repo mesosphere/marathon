@@ -2,108 +2,88 @@
 
 define([
   "React",
+  "mixins/BackboneMixin",
   "jsx!components/ModalComponent",
+  "jsx!components/StackedViewComponent",
   "jsx!components/TabPaneComponent",
-  "jsx!components/TaskListComponent",
-  "jsx!components/TogglableTabsComponent",
-  "mixins/BackboneMixin"
-], function(React, ModalComponent, TabPaneComponent, TaskListComponent,
-    TogglableTabsComponent, BackboneMixin) {
+  "jsx!components/TaskDetailComponent",
+  "jsx!components/TaskViewComponent",
+  "jsx!components/TogglableTabsComponent"
+], function(React, BackboneMixin, ModalComponent, StackedViewComponent, TabPaneComponent,
+    TaskDetailComponent, TaskViewComponent, TogglableTabsComponent) {
+
+  var STATES = {
+      STATE_LOADING: 0,
+      STATE_ERROR: 1,
+      STATE_SUCCESS: 2
+    };
+  var UPDATE_INTERVAL = 2000;
 
   return React.createClass({
     displayName: "AppModalComponent",
-    mixins: [BackboneMixin],
+    mixins:[BackboneMixin],
+    componentWillMount: function() {
+      this.fetchTasks();
+    },
+    componentDidMount: function() {
+      this.startPolling();
+    },
+    componentWillUnmount: function() {
+      this.stopPolling();
+    },
+
+    getInitialState: function() {
+      return {
+        activeTask: null,
+        activeViewIndex: 0,
+        fetchState: STATES.STATE_LOADING
+      };
+    },
+
+    getResource: function () {
+      return this.props.model;
+    },
+    fetchTasks: function() {
+      var _this = this;
+
+      this.props.model.tasks.fetch({
+        error: function() {
+          _this.setState({fetchState: STATES.STATE_ERROR});
+        },
+        success: function() {
+          _this.setState({fetchState: STATES.STATE_SUCCESS});
+        }
+      });
+    },
 
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
-
     destroyApp: function() {
       if (confirm("Destroy app '" + this.props.model.get("id") + "'?\nThis is irreversible.")) {
         this.props.model.destroy();
         this.refs.modalComponent.destroy();
       }
     },
-
-    getResource: function() {
-      return this.props.model;
-    },
-
-    getInitialState: function() {
-      return {
-        selectedTasks: {}
-      };
-    },
-
-    killSelectedTasks: function(options) {
-      var _this = this;
+    onTasksKilled:  function(options) {
+      var instances;
       var _options = options || {};
+      if (_options.scale) {
+        instances = this.props.model.get("instances");
+        this.props.model.set("instances", instances - 1);
+      }
 
-      var selectedTaskIds = Object.keys(this.state.selectedTasks);
-      var tasksToKill = this.props.model.tasks.filter(function(task) {
-        return selectedTaskIds.indexOf(task.id) >= 0;
-      });
-
-      tasksToKill.forEach(function(task) {
-        task.destroy({
-          scale: _options.scale,
-          success: function() {
-            var instances;
-            if (_options.scale) {
-              instances = _this.props.model.get("instances");
-              _this.props.model.set("instances", instances - 1);
-            }
-
-            delete _this.state.selectedTasks[task.id];
-
-            // Force an update since React doesn't know a key was removed from
-            // `selectedTasks`.
-            _this.forceUpdate();
-          },
-          wait: true
-        });
-      });
-    },
-
-    killSelectedTasksAndScale: function() {
-      this.killSelectedTasks({scale: true});
-    },
-
-    refreshTaskList: function() {
-      this.refs.taskList.fetchTasks();
+      // Force an update since React doesn't know a key was removed from
+      // `selectedTasks`.
+      this.forceUpdate();
     },
 
     render: function() {
-      var buttons;
+      var _this = this;
       var model = this.props.model;
-      var selectedTasksLength = Object.keys(this.state.selectedTasks).length;
-
-      if (selectedTasksLength === 0) {
-        buttons =
-          <p>
-            <button className="btn btn-sm btn-default" onClick={this.refreshTaskList}>
-              ↻ Refresh
-            </button>
-          </p>;
-      } else {
-        // Killing two tasks in quick succession raises an exception. Disable
-        // "Kill & Scale" if more than one task is selected to prevent the
-        // exception from happening.
-        //
-        // TODO(ssorallen): Remove once
-        //   https://github.com/mesosphere/marathon/issues/108 is addressed.
-        buttons =
-          <p class="btn-group">
-            <button className="btn btn-sm btn-default" onClick={this.killSelectedTasks}>
-              Kill
-            </button>
-            <button className="btn btn-sm btn-default" disabled={selectedTasksLength > 1}
-                onClick={this.killSelectedTasksAndScale}>
-              Kill &amp; Scale
-            </button>
-          </p>;
-      }
-
+      var hasHealth =
+        model.get("healthChecks") != null &&
+        model.get("healthChecks").length > 0;
       var cmdNode = (model.get("cmd") == null) ?
         <dd className="text-muted">Unspecified</dd> :
         <dd>{model.get("cmd")}</dd>;
@@ -150,25 +130,41 @@ define([
         });
 
       return (
-        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy} size="lg">
+        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}
+          size="lg">
           <div className="modal-header">
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
             <h3 className="modal-title">{model.get("id")}</h3>
-            <ul className="list-inline">
-              <li>
-                <span className="text-info">Instances </span>
-                <span className="badge">{model.get("instances")}</span>
-              </li>
-              <li>
-                <span className="text-info">CPUs </span>
-                <span className="badge">{model.get("cpus")}</span>
-              </li>
-              <li>
-                <span className="text-info">Memory </span>
-                <span className="badge">{model.get("mem")} MB</span>
-              </li>
-            </ul>
+            <div className="row">
+              <div className="header-btn col-md-6">
+                <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
+                  Destroy
+                </button>
+                <button className="btn btn-sm btn-default"
+                    onClick={this.suspendApp}
+                    disabled={this.props.model.get("instances") < 1}>
+                  Suspend
+                </button>
+                <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
+                  Scale
+                </button>
+              </div>
+              <ul className="header-btn list-inline text-right col-md-6">
+                <li>
+                  <span className="text-info">Instances </span>
+                  <span className="badge">{model.get("instances")}</span>
+                </li>
+                <li>
+                  <span className="text-info">CPUs </span>
+                  <span className="badge">{model.get("cpus")}</span>
+                </li>
+                <li>
+                  <span className="text-info">Memory </span>
+                  <span className="badge">{model.get("mem")} MB</span>
+                </li>
+              </ul>
+            </div>
           </div>
           <TogglableTabsComponent className="modal-body"
               tabs={[
@@ -176,11 +172,25 @@ define([
                 {id: "configuration", text: "Configuration"}
               ]}>
             <TabPaneComponent id="tasks">
-              {buttons}
-              <TaskListComponent collection={model.tasks}
-                ref="taskList" selectedTasks={this.state.selectedTasks}
-                onAllTasksToggle={this.toggleAllTasks}
-                onTaskToggle={this.toggleTask} />
+              <StackedViewComponent
+                activeViewIndex={this.state.activeViewIndex}>
+                <TaskViewComponent
+                  collection={model.tasks}
+                  fetchState={this.state.fetchState}
+                  fetchTasks={this.fetchTasks}
+                  formatTaskHealthMessage={model.formatTaskHealthMessage}
+                  hasHealth={hasHealth}
+                  onTasksKilled={this.onTasksKilled}
+                  onTaskDetailSelect={this.showTaskDetails}
+                  STATES={STATES} />
+                <TaskDetailComponent
+                  fetchState={this.state.fetchState}
+                  formatTaskHealthMessage={model.formatTaskHealthMessage}
+                  hasHealth={hasHealth}
+                  STATES={STATES}
+                  onShowTaskList={this.showTaskList}
+                  task={this.state.activeTask} />
+              </StackedViewComponent>
             </TabPaneComponent>
             <TabPaneComponent id="configuration">
               <dl className="dl-horizontal">
@@ -209,18 +219,6 @@ define([
               </dl>
             </TabPaneComponent>
           </TogglableTabsComponent>
-          <div className="modal-footer">
-            <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
-              Destroy
-            </button>
-            <button className="btn btn-sm btn-default"
-                onClick={this.suspendApp} disabled={this.props.model.get("instances") < 1}>
-              Suspend
-            </button>
-            <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
-              Scale
-            </button>
-          </div>
         </ModalComponent>
       );
     },
@@ -284,6 +282,27 @@ define([
       if (confirm("Suspend app by scaling to 0 instances?")) {
         this.props.model.suspend();
       }
+    },
+    showTaskDetails: function(task) {
+      this.setState({
+        activeTask: task,
+        activeViewIndex: 1
+      });
+    },
+    showTaskList: function() {
+      this.setState({
+        activeTask: null,
+        activeViewIndex: 0
+      });
+    },
+    startPolling: function() {
+      if (this._interval == null) {
+        this._interval = setInterval(this.fetchTasks, UPDATE_INTERVAL);
+      }
+    },
+    stopPolling: function() {
+      clearInterval(this._interval);
+      this._interval = null;
     }
   });
 });
