@@ -124,7 +124,7 @@ class MarathonStore[S <: MarathonState[_, S]](
     }
   }
 
-  def version: Future[StorageVersion] = state.fetch("storage:version").map {
+  def version: Future[StorageVersion] = state.fetch(s"__internal__:${prefix}storage:version").map {
     case Some(variable) =>
       Try(StorageVersion.parseFrom(variable.value())).getOrElse(StorageVersions.empty)
     case None => throw new StorageException("Failed to read storage version")
@@ -140,7 +140,7 @@ class MarathonStore[S <: MarathonState[_, S]](
   }
 
   protected def storeCurrentVersion(): Future[StorageVersion] = {
-    state.fetch("storage:version") flatMap {
+    state.fetch(s"__internal__:${prefix}storage:version") flatMap {
       case Some(variable) =>
         state.store(variable.mutate(StorageVersions.current.toByteArray)) map {
           case Some(newVar) => StorageVersion.parseFrom(newVar.value)
