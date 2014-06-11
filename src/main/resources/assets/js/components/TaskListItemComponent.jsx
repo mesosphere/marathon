@@ -84,7 +84,7 @@ define([
 
       var taskHealth = task.getHealth();
       var healthClassSet = React.addons.classSet({
-        "text-center clickable": true,
+        "text-center": true,
         "text-healthy": taskHealth === Task.HEALTH.HEALTHY,
         "text-unhealthy": taskHealth === Task.HEALTH.UNHEALTHY,
         "text-muted": taskHealth === Task.HEALTH.UNKNOWN
@@ -120,8 +120,8 @@ define([
           <td className="text-right">{updatedAtNode}</td>
           {
             hasHealth ?
-              <td title={this.props.formatTaskHealthMessage(task)} className={healthClassSet}
-                onClick={this.handleTaskDetailSelect}>●</td> :
+              <td title={this.props.formatTaskHealthMessage(task)}
+                className={healthClassSet} >●</td> :
               null
           }
         </tr>
