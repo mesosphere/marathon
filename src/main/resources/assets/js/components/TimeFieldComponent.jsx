@@ -11,19 +11,19 @@ define([
       ])
     },
     render: function() {
-      var timeValue = (
-        this.props.time != null ?
-        <dd>
-          <time dateTime={this.props.time}>
-            {new Date(this.props.time).toLocaleString()}
-          </time>
-        </dd> :
-        <dd className="text-muted">None</dd>
-      );
+      var time = this.props.time;
       return (
         <div>
           <dt>{this.props.label}</dt>
-          {timeValue}
+          {
+            time != null ?
+              <dd>
+                <time dateTime={time}>
+                  {new Date(time).toLocaleString()}
+                </time>
+              </dd> :
+              <dd className="text-muted">None</dd>
+          }
         </div>
       );
     }
