@@ -1,3 +1,5 @@
+/** @jsx React.DOM */
+
 define([
   "React",
   "jsx!components/TimeFieldComponent"
