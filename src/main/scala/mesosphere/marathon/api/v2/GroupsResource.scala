@@ -94,11 +94,11 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   }
 
   /**
-   * Rollback to a specific version of a given group.
-   * @param id the identifier of the group to roll back.
-   * @param version the version of the group to roll to.
-   * @param force if there is an upgrade in progress, it can be overriden with the force flag.
-   */
+    * Rollback to a specific version of a given group.
+    * @param id the identifier of the group to roll back.
+    * @param version the version of the group to roll to.
+    * @param force if there is an upgrade in progress, it can be overriden with the force flag.
+    */
   @PUT
   @Path("""{id:.+}/version/{version}""")
   def rollbackTo(@PathParam("id") id: String,
