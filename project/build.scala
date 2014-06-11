@@ -8,12 +8,13 @@ import ohnosequences.sbt.SbtS3Resolver.S3Resolver
 import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
+import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
 
 object MarathonBuild extends Build {
   lazy val root = Project(
     id = "marathon",
     base = file("."),
-    settings = baseSettings ++ assemblySettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ Seq(
+    settings = baseSettings ++ assemblySettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ revolverSettings ++ Seq(
       libraryDependencies ++= Dependencies.root,
       parallelExecution in Test := false,
       fork in Test := true
