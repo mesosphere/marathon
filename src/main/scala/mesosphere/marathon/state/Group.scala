@@ -16,11 +16,16 @@ case class ScalingStrategy(
   }
 }
 
+object ScalingStrategy {
+  def empty: ScalingStrategy = ScalingStrategy(1, None)
+}
+
 case class Group(
     id: GroupId,
     scalingStrategy: ScalingStrategy,
     apps: Seq[AppDefinition] = Seq.empty,
     groups: Seq[Group] = Seq.empty,
+    dependencies: Seq[GroupId] = Seq.empty,
     version: Timestamp = Timestamp.now()) extends MarathonState[GroupDefinition, Group] {
 
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
@@ -33,6 +38,7 @@ case class Group(
       .setVersion(version.toString)
       .addAllApps(apps.map(_.toProto))
       .addAllGroups(groups.map(_.toProto))
+      .addAllDependencies(dependencies.map(_.toString))
       .build()
   }
 
@@ -78,7 +84,7 @@ case class Group(
 }
 
 object Group {
-  def empty: Group = Group(GroupId(Nil), ScalingStrategy(1, None))
+  def empty: Group = Group(GroupId(Nil), ScalingStrategy.empty)
   def emptyWithId(id: GroupId) = empty.copy(id = id)
 
   def fromProto(msg: GroupDefinition): Group = {
@@ -95,6 +101,7 @@ object Group {
       ),
       apps = msg.getAppsList.map(AppDefinition.fromProto),
       groups = msg.getGroupsList.map(fromProto),
+      dependencies = msg.getDependenciesList.map(GroupId.apply),
       version = Timestamp(msg.getVersion)
     )
   }

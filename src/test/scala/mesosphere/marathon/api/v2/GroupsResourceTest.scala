@@ -19,10 +19,10 @@ class GroupsResourceTest extends FunSuite with GivenWhenThen with Matchers {
     ))
 
     When("A group update is applied")
-    val update = GroupUpdate(None, scaling, groups = Seq(
-      GroupUpdate(Some("test/group1"), scaling, Seq(AppDefinition("app3"))),
-      GroupUpdate(Some("test/group3"), scaling, groups = Seq(
-        GroupUpdate(Some("test/group3/sub1"), scaling, Seq(AppDefinition("app4")))
+    val update = GroupUpdate("test", scaling, Seq.empty, Seq(
+      GroupUpdate("test/group1", scaling, Seq(AppDefinition("app3"))),
+      GroupUpdate("test/group3", scaling, Seq.empty, Seq(
+        GroupUpdate("test/group3/sub1", scaling, Seq(AppDefinition("app4")))
       ))
     ))
     val timestamp = Timestamp.now()

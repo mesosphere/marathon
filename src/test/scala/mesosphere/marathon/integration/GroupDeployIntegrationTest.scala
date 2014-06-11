@@ -38,7 +38,7 @@ class GroupDeployIntegrationTest
     waitForEvent("group_change_success")
 
     When("The group gets updated")
-    marathon.updateGroup(name, group.copy(scalingStrategy = ScalingStrategy(1, None)))
+    marathon.updateGroup(name, group.copy(scalingStrategy = Some(ScalingStrategy(1, None))))
     waitForEvent("group_change_success")
 
     Then("The group is updated")
@@ -72,7 +72,7 @@ class GroupDeployIntegrationTest
   test("create a group with applications to start") {
     Given("A group with one application")
     val app = AppDefinition(id = "sleep", executor = "//cmd", cmd = "sleep 100", instances = 2, cpus = 0.1, mem = 16)
-    val group = GroupUpdate(Some("sleep"), ScalingStrategy(0, None), Seq(app))
+    val group = GroupUpdate("sleep", ScalingStrategy(0, None), Seq(app))
 
     When("The group is created")
     marathon.createGroup(group)
@@ -87,13 +87,13 @@ class GroupDeployIntegrationTest
     Given("A group with one application started")
     val name = "sleep"
     val app1V1 = AppDefinition(id = "app1", executor = "//cmd", cmd = "tail -f /dev/null", instances = 2, cpus = 0.1, mem = 16)
-    marathon.createGroup(GroupUpdate(Some(name), ScalingStrategy(0, None), Seq(app1V1)))
+    marathon.createGroup(GroupUpdate(name, ScalingStrategy(0, None), Seq(app1V1)))
     waitForEvent("group_change_success")
     waitForTasks(app1V1.id, app1V1.instances)
 
     When("The group is updated, with a changed application")
     val app1V2 = AppDefinition(id = "app1", executor = "//cmd", cmd = "tail -F /dev/null", instances = 1, cpus = 0.1, mem = 16)
-    marathon.updateGroup(name, GroupUpdate(Some(name), ScalingStrategy(0, None), Seq(app1V2)))
+    marathon.updateGroup(name, GroupUpdate(name, ScalingStrategy(0, None), Seq(app1V2)))
     waitForEvent("group_change_success", 60.seconds)
 
     Then("A success event is send and the application has been started")
@@ -104,7 +104,7 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 1)
-    val group = GroupUpdate(Some(name), ScalingStrategy(1, None), Seq(proxy))
+    val group = GroupUpdate(name, ScalingStrategy(1, None), Seq(proxy))
 
     When("The group is created")
     marathon.createGroup(group)
@@ -117,7 +117,7 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 1)
-    val group = GroupUpdate(Some(name), ScalingStrategy(1, None), Seq(proxy))
+    val group = GroupUpdate(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
     val check = appProxyCheck(name, "v1", state = true)
@@ -125,7 +125,7 @@ class GroupDeployIntegrationTest
     When("The group is updated")
     check.afterDelay(1.second, state = false)
     check.afterDelay(3.seconds, state = true)
-    marathon.updateGroup(name, group.copy(apps = Seq(proxy.copy(cmd = proxy.cmd + " version2"))))
+    marathon.updateGroup(name, group.copy(apps = Some(Seq(proxy.copy(cmd = proxy.cmd + " version2")))))
 
     Then("A success event is send and the application has been started")
     waitForEvent("group_change_success")
@@ -135,14 +135,14 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 2)
-    val group = GroupUpdate(Some(name), ScalingStrategy(1, None), Seq(proxy))
+    val group = GroupUpdate(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
     waitForTasks(proxy.id, proxy.instances)
     val v1Checks = taskProxyChecks(name, "v1", state = true)
 
     When("The group is updated")
-    marathon.updateGroup(name, group.copy(apps = Seq(appProxy(name, "v2", 2))))
+    marathon.updateGroup(name, group.copy(apps = Some(Seq(appProxy(name, "v2", 2)))))
 
     Then("The new version is deployed")
     waitForEvent("group_change_success")
@@ -162,7 +162,7 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 2)
-    val group = GroupUpdate(Some(name), ScalingStrategy(1, None), Seq(proxy))
+    val group = GroupUpdate(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
     waitForTasks(proxy.id, proxy.instances)
@@ -170,7 +170,7 @@ class GroupDeployIntegrationTest
 
     When("The new application is not healthy")
     val v2Check = appProxyCheck(name, "v2", state = false) //will always fail
-    marathon.updateGroup(name, group.copy(apps = Seq(appProxy(name, "v2", 2))))
+    marathon.updateGroup(name, group.copy(apps = Some(Seq(appProxy(name, "v2", 2)))))
 
     Then("All v1 applications are kept alive")
     validFor("all v1 apps are always available", 15.seconds) {
@@ -186,20 +186,20 @@ class GroupDeployIntegrationTest
     Given("A group with one application with an upgrade in progress")
     val name = "proxy"
     val proxy = appProxy(name, "v1", 2)
-    val group = GroupUpdate(Some(name), ScalingStrategy(1, None), Seq(proxy))
+    val group = GroupUpdate(name, ScalingStrategy(1, None), Seq(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
     appProxyCheck(name, "v2", state = false) //will always fail
-    marathon.updateGroup(name, group.copy(apps = Seq(appProxy(name, "v2", 2))))
+    marathon.updateGroup(name, group.copy(apps = Some(Seq(appProxy(name, "v2", 2)))))
 
     When("Another upgrade is triggered, while the old one is not completed")
-    marathon.updateGroup(name, group.copy(apps = Seq(appProxy(name, "v3", 2))))
+    marathon.updateGroup(name, group.copy(apps = Some(Seq(appProxy(name, "v3", 2)))))
 
     Then("An error is indicated")
     waitForEvent("group_change_failed")
 
     When("Another upgrade is triggered with force, while the old one is not completed")
-    marathon.updateGroup(name, group.copy(apps = Seq(appProxy(name, "v4", 2))), force = true)
+    marathon.updateGroup(name, group.copy(apps = Some(Seq(appProxy(name, "v4", 2)))), force = true)
 
     Then("The update is performed")
     waitForEvent("group_change_success")

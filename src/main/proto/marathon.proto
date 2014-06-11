@@ -98,6 +98,7 @@ message GroupDefinition {
   required ScalingStrategyDefinition scalingStrategy = 3;
   repeated ServiceDefinition apps = 4;
   repeated GroupDefinition groups = 5;
+  repeated string dependencies = 6;
 }
 
 //deployment messages --------------------------------------

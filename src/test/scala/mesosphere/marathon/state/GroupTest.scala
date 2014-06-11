@@ -5,7 +5,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
-  describe("A group") {
+  describe("A Group") {
 
     it("can find a group by its path") {
       Given("an existing group with two subgroups")

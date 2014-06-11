@@ -18,7 +18,7 @@ case class GroupId(path: List[String]) {
 
   def child: GroupId = GroupId(tail)
 
-  def append(name: String): GroupId = GroupId(path ::: List(name))
+  def append(id: GroupId): GroupId = GroupId(path ::: id.path)
 
   def restOf(parent: GroupId): GroupId = {
     def in(currentPath: List[String], parentPath: List[String]): List[String] = {
@@ -27,6 +27,19 @@ case class GroupId(path: List[String]) {
       else in(currentPath.tail, parentPath.tail)
     }
     GroupId(in(path, parent.path))
+  }
+
+  def canonicalPath(base: GroupId): GroupId = {
+    def in(remaining: List[String], result: List[String] = Nil): List[String] = remaining match {
+      case head :: tail if head == "."  => in(tail, result)
+      case head :: tail if head == ".." => in(tail, result.tail)
+      case head :: tail                 => in(tail, head :: result)
+      case Nil                          => result.reverse
+    }
+    if (isEmpty) this
+    else if (root == ".") GroupId(in(base.path ::: path))
+    else if (root == "..") GroupId(in(base.parent.path ::: path))
+    else GroupId(in(path))
   }
 
   override def toString: String = path.mkString("/")

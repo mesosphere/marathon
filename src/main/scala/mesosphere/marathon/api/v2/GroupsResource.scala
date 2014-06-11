@@ -155,32 +155,38 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
     }
     def groupValidation(path: String, group: GroupUpdate): mutable.Set[ConstraintViolation[GroupUpdate]] = {
       val groupErrors = validator.validate(group).asScala.map(withPath(root, _, path))
-      val appErrors = group.apps.flatMap(app => validator.validate(app).asScala).zipWithIndex.map(a => withPath(root, a._1, path + s"apps[${a._2}]."))
-      val nestedGroupErrors = group.groups.zipWithIndex.flatMap(g => groupValidation(path + s"groups[${g._2}].", g._1))
-      val healthCapacityNotInRange =
-        if (group.scalingStrategy.minimumHealthCapacity < 0) Some("is less than 0")
-        else if (group.scalingStrategy.minimumHealthCapacity > 1) Some("is greater than 1")
-        else None
-
-      val runningMinimumExceeded = group.scalingStrategy.maximumRunningFactor.collect {
-        case x if x < 1 => "is less than 1"
-        case x if x <= group.scalingStrategy.minimumHealthCapacity => "is less than or equal to minimumHealthCapacity"
-      }
-
-      val scalingErrors = healthCapacityNotInRange map { msg =>
-        ConstraintViolationImpl.forParameterValidation[GroupUpdate](
-          msg, msg, classOf[GroupUpdate], group, group.scalingStrategy, group.scalingStrategy,
-          PathImpl.createPathFromString(path + "scalingStrategy.minimumHealthCapacity"),
-          null, ElementType.FIELD, Array())
-      }
-
-      val capacityErrors = runningMinimumExceeded.toList map { msg =>
-        ConstraintViolationImpl.forParameterValidation[GroupUpdate](
-          msg, msg, classOf[GroupUpdate], group, group.scalingStrategy, group.scalingStrategy,
-          PathImpl.createPathFromString(path + "scalingStrategy.maximumRunningFactor"),
-          null, ElementType.FIELD, Array())
-      }
-      groupErrors ++ nestedGroupErrors ++ appErrors ++ scalingErrors ++ capacityErrors
+      val appErrors = group.apps
+        .getOrElse(Seq.empty)
+        .flatMap(app => validator.validate(app).asScala)
+        .zipWithIndex
+        .map(a => withPath(root, a._1, path + s"apps[${a._2}]."))
+      val nestedGroupErrors = group.groups
+        .getOrElse(Seq.empty)
+        .zipWithIndex
+        .flatMap(g => groupValidation(path + s"groups[${g._2}].", g._1))
+      val healthErrors = group.scalingStrategy.map { scalingStrategy =>
+        val capacityErrors = {
+          if (scalingStrategy.minimumHealthCapacity < 0) Some("is less than 0")
+          else if (scalingStrategy.minimumHealthCapacity > 1) Some("is greater than 1")
+          else None
+        } map { msg =>
+          ConstraintViolationImpl.forParameterValidation[GroupUpdate](
+            msg, msg, classOf[GroupUpdate], group, group.scalingStrategy, group.scalingStrategy,
+            PathImpl.createPathFromString(path + "scalingStrategy.minimumHealthCapacity"),
+            null, ElementType.FIELD, Array())
+        }
+        val scalingErrors = scalingStrategy.maximumRunningFactor.collect {
+          case x if x < 1                                      => "is less than 1"
+          case x if x <= scalingStrategy.minimumHealthCapacity => "is less than or equal to minimumHealthCapacity"
+        } map { msg =>
+          ConstraintViolationImpl.forParameterValidation[GroupUpdate](
+            msg, msg, classOf[GroupUpdate], group, group.scalingStrategy, group.scalingStrategy,
+            PathImpl.createPathFromString(path + "scalingStrategy.maximumRunningFactor"),
+            null, ElementType.FIELD, Array())
+        }
+        capacityErrors ++ scalingErrors
+      }.getOrElse(Nil)
+      groupErrors ++ nestedGroupErrors ++ appErrors ++ healthErrors
     }
 
     val errors = groupValidation("", root)
