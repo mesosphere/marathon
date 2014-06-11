@@ -1,5 +1,5 @@
 # Note that the prefix affects the init scripts as well.
-prefix := usr/local
+PREFIX := usr/local
 
 .PHONY: rpm
 rpm: version with-upstart
@@ -37,9 +37,9 @@ with-serviced: just-jar marathon.service
 
 .PHONY: just-jar
 just-jar: marathon-runnable.jar
-	mkdir -p toor/$(prefix)/bin
-	cp marathon-runnable.jar toor/$(prefix)/bin/marathon
-	chmod 755 toor/$(prefix)/bin/marathon
+	mkdir -p toor/$(PREFIX)/bin
+	cp marathon-runnable.jar toor/$(PREFIX)/bin/marathon
+	chmod 755 toor/$(PREFIX)/bin/marathon
 
 version: marathon-runnable.jar
 	( cd marathon && \
