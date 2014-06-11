@@ -8,6 +8,9 @@ PERL_CMD := perl -n -e'/^version := "([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
 PKG_VER  := $(shell cd marathon && cat version.sbt | $(PERL_CMD))
 PKG_REL  := 0.1.$(shell date -u +'%Y%m%d%H%M')
 
+.PHONY: all
+all: snapshot
+
 .PHONY: release
 release: PKG_REL := 1
 release: deb rpm
