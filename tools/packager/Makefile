@@ -11,27 +11,23 @@ PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M')
 
 .PHONY: rpm
 rpm: version with-upstart
-	cd toor && \
 	fpm -t rpm -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -p ../marathon.rpm .
+		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
 
 .PHONY: fedora
 fedora: version with-serviced
-	cd toor && \
 	fpm -t rpm -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -p ../marathon.rpm .
+		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
 
 .PHONY: deb
 deb: version with-upstart
-	cd toor && \
 	fpm -t deb -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -p ../marathon.deb .
+		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
 
 .PHONY: osx
 osx: version just-jar
-	cd toor && \
 	fpm -t osxpkg --osxpkg-identifier-prefix io.mesosphere -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -p ../marathon.pkg .
+		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
 
 .PHONY: with-upstart
 with-upstart: just-jar marathon.conf
