@@ -1,12 +1,19 @@
 # Note that the prefix affects the init scripts as well.
-PREFIX   := usr/local
+PREFIX := usr/local
 
-# There appears to be no way to escape () within a shell function, so define
-# the sed command as a variable. Extract only the numeric portion of the
-# version string to ensure snapshots / release version ordering is sane.
-PERL_CMD := perl -n -e'/^version := "([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
-PKG_VER  := $(shell cd marathon && cat version.sbt | $(PERL_CMD))
-PKG_REL  := 0.1.$(shell date -u +'%Y%m%d%H%M')
+# Command to extract from X.X.X-rcX the version (X.X.X) and tag (rcX)
+EXTRACT_VER := perl -n -e\
+	'/^version := "([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
+EXTRACT_TAG := perl -n -e\
+	'/^version := "[0-9]+\.[0-9]+\.[0-9]+-([A-Za-z0-9]+).*"/ && print $$1'
+PKG_VER := $(shell cd marathon && cat version.sbt | $(EXTRACT_VER))
+PKG_TAG := $(shell cd marathon && cat version.sbt | $(EXTRACT_TAG))
+
+ifeq ($(strip $(PKG_TAG)),)
+PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M')
+else
+PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M').$(PKG_TAG)
+endif
 
 .PHONY: all
 all: snapshot
