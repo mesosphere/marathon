@@ -4,7 +4,7 @@ PREFIX   := usr/local
 # There appears to be no way to escape () within a shell function, so define
 # the sed command as a variable. Extract only the numeric portion of the
 # version string to ensure snapshots / release version ordering is sane.
-PERL_CMD := perl -n -e'/^version := "([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $1'
+PERL_CMD := perl -n -e'/^version := "([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
 PKG_VER  := $(shell cd marathon && cat version.sbt | $(PERL_CMD))
 PKG_REL  := 0.1.$(shell date -u +'%Y%m%d%H%M')
 
