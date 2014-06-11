@@ -1,13 +1,12 @@
 # Note that the prefix affects the init scripts as well.
-PREFIX := usr/local
+PREFIX   := usr/local
 
 # There appears to be no way to escape () within a shell function, so define
 # the sed command as a variable. Extract only the numeric portion of the
 # version string to ensure snapshots / release version ordering is sane.
-SED_CMD := sed -rn 's/^version := "([0-9]+\.[0-9]+\.[0-9]+).*"/\1/p'
-PKG_VER := $(shell cd marathon && \
-	cat version.sbt | $(SED_CMD))
-PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M')
+PERL_CMD := perl -n -e'/^version := "([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $1'
+PKG_VER  := $(shell cd marathon && cat version.sbt | $(PERL_CMD))
+PKG_REL  := 0.1.$(shell date -u +'%Y%m%d%H%M')
 
 .PHONY: release
 release: PKG_REL := 1
@@ -61,7 +60,7 @@ clean:
 
 .PHONY: prep-ubuntu
 prep-ubuntu: SBT_URL := http://dl.bintray.com/sbt/debian/sbt-0.13.5.deb
-prep-ubuntu: SBT_TMP := $(shell mktemp)
+prep-ubuntu: SBT_TMP := $(shell mktemp -t XXXXXX)
 prep-ubuntu:
 	wget $(SBT_URL) -qO $(SBT_TMP)
 	sudo dpkg -i $(SBT_TMP)
