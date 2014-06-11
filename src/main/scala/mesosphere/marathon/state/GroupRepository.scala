@@ -15,8 +15,11 @@ class GroupRepository(val store: PersistenceStore[Group], appRepo: AppRepository
   private def fetch(key: String): Future[Option[Group]] = {
     this.store.fetch(key).flatMap {
       case Some(group) =>
-        Future.sequence(group.apps.map(app => appRepo.currentVersion(app.id))).map { apps =>
-          Some(group.copy(apps = apps.flatten))
+        Future.sequence(group.transitiveApps.map(app => appRepo.currentVersion(app.id))).map { apps =>
+          val allApps = apps.flatten.map(app => app.id -> app).toMap
+          Some(group.update(group.version) { g =>
+            if (g.apps.isEmpty) g else g.copy(apps = g.apps.map(_.id).flatMap(allApps.get))
+          })
         }
       case None => Future.successful(None: Option[Group])
     }
