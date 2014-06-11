@@ -9,6 +9,13 @@ PKG_VER := $(shell cd marathon && \
 	cat version.sbt | $(SED_CMD))
 PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M')
 
+.PHONY: release
+release: PKG_REL := 1
+release: deb rpm
+
+.PHONY: snapshot
+snapshot: deb rpm
+
 .PHONY: rpm
 rpm: version with-upstart
 	fpm -t rpm -s dir \
