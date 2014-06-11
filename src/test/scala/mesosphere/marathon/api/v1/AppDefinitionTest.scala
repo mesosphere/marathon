@@ -186,9 +186,9 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     migration.needsMigration(oldVersion) should be(true)
 
-    val migratedApp = migration.migrate(oldVersion, AppDefinition("My-super_Cool-app"))
+    val migratedApp = migration.migrate(oldVersion, AppDefinition("My.super_Cool-app"))
 
-    migratedApp.id should be("my.super.cool.app")
+    migratedApp.id should be("my.super-cool-app")
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {

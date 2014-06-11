@@ -213,7 +213,7 @@ object AppDefinition {
     override def migrate(version: StorageVersion, obj: AppDefinition): AppDefinition = {
       if (version.getMajor == 0 && version.getMinor < 6) {
         // container changes are handled in the AppDefinition object
-        obj.copy(id = obj.id.toLowerCase().replaceAll("[_-]", "."))
+        obj.copy(id = obj.id.toLowerCase().replaceAll("_", "-"))
       }
       // add other migration cases
       else {
