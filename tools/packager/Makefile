@@ -56,3 +56,16 @@ marathon-runnable.jar:
 	cd marathon && sbt assembly && bin/build-distribution
 	cp marathon/target/$@ $@
 
+clean:
+	rm -rf marathon-runnable.jar marathon*.deb marathon*.rpm marathon*.pkg toor
+
+.PHONY: prep-ubuntu
+prep-ubuntu: SBT_URL := http://dl.bintray.com/sbt/debian/sbt-0.13.5.deb
+prep-ubuntu: SBT_TMP := $(shell mktemp)
+prep-ubuntu:
+	wget $(SBT_URL) -qO $(SBT_TMP)
+	sudo dpkg -i $(SBT_TMP)
+	rm $(SBT_TMP)
+	sudo apt-get -y install default-jdk ruby-dev rpm
+	sudo gem install fpm
+
