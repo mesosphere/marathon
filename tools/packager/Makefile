@@ -16,22 +16,22 @@ release: deb rpm
 snapshot: deb rpm
 
 .PHONY: rpm
-rpm: version with-upstart
+rpm: with-upstart
 	fpm -t rpm -s dir \
 		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
 
 .PHONY: fedora
-fedora: version with-serviced
+fedora: with-serviced
 	fpm -t rpm -s dir \
 		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
 
 .PHONY: deb
-deb: version with-upstart
+deb: with-upstart
 	fpm -t deb -s dir \
 		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
 
 .PHONY: osx
-osx: version just-jar
+osx: just-jar
 	fpm -t osxpkg --osxpkg-identifier-prefix io.mesosphere -s dir \
 		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
 
