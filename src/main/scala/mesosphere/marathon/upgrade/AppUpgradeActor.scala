@@ -31,7 +31,7 @@ class AppUpgradeActor(
   val oldInstances = taskTracker.get(app.id).toList.sortWith(_.getStartedAt > _.getStartedAt)
   val nrToStartImmediately: Int =
     maxRunning.fold(app.instances) { x =>
-      math.min(app.instances, x - keepAlive)
+      math.min(app.instances, x - math.min(oldInstances.size, keepAlive))
     }
 
   override def preStart(): Unit = {
@@ -77,7 +77,7 @@ class AppUpgradeActor(
           eventBus,
           app,
           nrToStartImmediately,
-          oldInstances.drop(app.instances - keepAlive).toSet,
+          oldInstances.drop(oldInstances.size - keepAlive).toSet,
           replacePromise), "Replacer")
     }
     else {
