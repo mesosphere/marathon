@@ -1,5 +1,6 @@
 package mesosphere.marathon.upgrade
 
+import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.state.{ Group, Timestamp, MarathonState }
 import mesosphere.marathon.Protos.DeploymentPlanDefinition
@@ -7,6 +8,18 @@ import scala.concurrent.Future
 import mesosphere.marathon.MarathonSchedulerService
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.apache.log4j.Logger
+
+sealed trait DeploymentAction
+//application has not been started before
+case class StartApplication(application: AppDefinition, scaleTo: Int) extends DeploymentAction
+//application is started, but old instances should be killed
+case class KillTasks(application: AppDefinition, scaleTo: Int) extends DeploymentAction
+//application is started, but more instances should be started
+case class ScaleApplication(application: AppDefinition, scaleTo: Int) extends DeploymentAction
+//application is started, but shall be completely stopped
+case class StopApplication(application: AppDefinition) extends DeploymentAction
+
+case class DeploymentStep(actions: List[DeploymentAction])
 
 case class DeploymentPlan(
     id: String,

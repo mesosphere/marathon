@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.api.v1.AppDefinition
-import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
+import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -122,14 +122,14 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     it("can turn a group with dependencies into a dependency graph") {
       Given("a group with subgroups and dependencies")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current:Group = Group("test", scaling, groups = Seq(
+      val current: Group = Group("test", scaling, groups = Seq(
         Group("test/database", scaling, groups = Seq(
           Group("test/database/redis", scaling, Seq(AppDefinition("redis"))),
           Group("test/database/memcache", scaling, Seq(AppDefinition("memcache")), dependencies = Seq("test/database/mongo", "test/database/redis")),
           Group("test/database/mongo", scaling, Seq(AppDefinition("mongo")), dependencies = Seq("test/database/redis"))
         )),
         Group("test/service", scaling, groups = Seq(
-          Group("test/service/service1", scaling, Seq(AppDefinition("srv1")), dependencies = Seq("test/database/mongo")),
+          Group("test/service/service1", scaling, Seq(AppDefinition("srv1")), dependencies = Seq("test/database/memcache")),
           Group("test/service/service2", scaling, Seq(AppDefinition("srv2")), dependencies = Seq("test/database", "test/service/service1"))
         )),
         Group("test/frontend", scaling, groups = Seq(
@@ -143,28 +143,61 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       current.hasNonCyclicDependencies should equal(true)
 
       When("The application dependency list")
-      val dependencies = current.dependencyList
-      val ids = dependencies.map(_.id)
-      val filtered = dependencies.filterNot(_.id == GroupId("test/cache/c1")).map(_.id)
+      val (dependent, independent) = current.dependencyList
+      val ids = dependent.map(_.id)
 
       Then("The dependency list is correct")
-      ids should have size 8
-      ids should contain(GroupId("test/cache/c1"))
-      filtered should have size 7
-      val expected = List[GroupId]("test/database/redis",
+      ids should have size 7
+      ids should not contain GroupId("test/cache/c1")
+      val expected = List[GroupId](
+        "test/database/redis",
         "test/database/mongo",
         "test/database/memcache",
         "test/service/service1",
         "test/service/service2",
         "test/frontend/app1",
         "test/frontend/app2")
-      filtered should be(expected)
+      ids should be(expected)
+      independent should have size 1
+
+    }
+
+    it("can turn a group without dependencies into a single step u") {
+      Given("a group with subgroups and dependencies")
+      val scaling = ScalingStrategy(0.5, Some(1))
+      val current: Group = Group("test", scaling, groups = Seq(
+        Group("test/database", scaling, groups = Seq(
+          Group("test/database/redis", scaling, Seq(AppDefinition("redis"))),
+          Group("test/database/memcache", scaling, Seq(AppDefinition("memcache"))),
+          Group("test/database/mongo", scaling, Seq(AppDefinition("mongo")))
+        )),
+        Group("test/service", scaling, groups = Seq(
+          Group("test/service/service1", scaling, Seq(AppDefinition("srv1"))),
+          Group("test/service/service2", scaling, Seq(AppDefinition("srv2")))
+        )),
+        Group("test/frontend", scaling, groups = Seq(
+          Group("test/frontend/app1", scaling, Seq(AppDefinition("app1"))),
+          Group("test/frontend/app2", scaling, Seq(AppDefinition("app2")))
+        )),
+        Group("test/cache", scaling, groups = Seq(
+          Group("test/cache/c1", scaling, Seq(AppDefinition("cache1")))
+        ))
+      ))
+      current.hasNonCyclicDependencies should equal(true)
+
+      When("The application dependency list")
+      val (dependent, independent) = current.dependencyList
+
+      Then("The dependency list is correct")
+      dependent should have size 0
+      independent should have size 8
+
     }
 
     it("can not compute the dependencies, if the dependency graph is not strictly acyclic") {
       Given("a group with cycled dependencies")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current:Group = Group("test", scaling, groups = Seq(
+      val current: Group = Group("test", scaling, groups = Seq(
         Group("test/database", scaling, groups = Seq(
           Group("test/database/mongo", scaling, Seq(AppDefinition("mongo")), dependencies = Seq("test/service"))
         )),
@@ -174,7 +207,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ))
       current.hasNonCyclicDependencies should equal(false)
 
-      When("The application dependency list ahll be computed")
+      When("The application dependency list can not be computed")
       val exception = intercept[IllegalArgumentException] {
         current.dependencyList
       }

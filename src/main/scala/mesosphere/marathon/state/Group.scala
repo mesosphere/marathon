@@ -88,29 +88,33 @@ case class Group(
 
   def transitiveGroups: Seq[Group] = this +: groups.flatMap(_.transitiveGroups)
 
+  def transitiveAppGroups: Seq[Group] = transitiveGroups.filter(_.apps.nonEmpty)
+
   lazy val dependencyGraph: DirectedGraph[Group, DefaultEdge] = {
     val graph = new DefaultDirectedGraph[Group, DefaultEdge](classOf[DefaultEdge])
     val allGroups = transitiveGroups
-    allGroups.foreach(graph.addVertex)
-    for {
-      group <- allGroups
-      subGroup <- group.groups
-    } graph.addEdge(group, subGroup)
     for {
       group <- allGroups
       dependencyId <- group.dependencies
       dependency <- allGroups.find(_.id == dependencyId)
-    } graph.addEdge(group, dependency)
+      appDependency <- dependency.transitiveAppGroups
+    } {
+      graph.addVertex(group)
+      graph.addVertex(appDependency)
+      graph.addEdge(group, appDependency)
+    }
     graph
   }
 
   /**
-   * Get all dependencies of this group which has applications.
-   * @return The resolved dependency list in topological order.
-   */
-  def dependencyList: List[Group] = {
+    * Get all dependencies of this group which has applications and all non dependant groups.
+    * @return The resolved dependency list in topological order, all non dependant groups.
+    */
+  def dependencyList: (List[Group], Set[Group]) = {
     require(hasNonCyclicDependencies, "dependency graph is not acyclic!")
-    new TopologicalOrderIterator(dependencyGraph).toList.reverse.filter(_.apps.nonEmpty)
+    val dependantGroups = new TopologicalOrderIterator(dependencyGraph).toList.reverse.filter(_.apps.nonEmpty)
+    val independentGroups = transitiveAppGroups.toSet -- dependantGroups
+    (dependantGroups, independentGroups)
   }
 
   def hasNonCyclicDependencies: Boolean = {

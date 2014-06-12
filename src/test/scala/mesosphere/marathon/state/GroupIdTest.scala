@@ -1,6 +1,6 @@
 package mesosphere.marathon.state
 
-import org.scalatest.{Matchers, GivenWhenThen, FunSpec, FunSuite}
+import org.scalatest.{ Matchers, GivenWhenThen, FunSpec, FunSuite }
 
 class GroupIdTest extends FunSpec with GivenWhenThen with Matchers {
 
