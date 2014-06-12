@@ -88,6 +88,7 @@ object Dependencies {
     jodaConvert % "compile",
     jerseyServlet % "compile",
     uuidGenerator % "compile",
+    jGraphT % "compile",
 
     // test
     Test.scalatest % "test",
@@ -112,6 +113,7 @@ object Dependency {
     val JodaTime = "2.3"
     val JodaConvert = "1.5"
     val UUIDGenerator = "3.1.3"
+    val JGraphT = "0.9.1"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -133,6 +135,7 @@ object Dependency {
   val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
   val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZkCLient
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
+  val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

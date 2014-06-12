@@ -2,7 +2,11 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.{ GroupDefinition, ScalingStrategyDefinition }
 import mesosphere.marathon.api.v1.AppDefinition
+import org.jgrapht.DirectedGraph
+import org.jgrapht.alg.CycleDetector
+import org.jgrapht.traverse.TopologicalOrderIterator
 import scala.collection.JavaConversions._
+import org.jgrapht.graph._
 
 case class ScalingStrategy(
     minimumHealthCapacity: Double,
@@ -81,6 +85,37 @@ case class Group(
   }
 
   def transitiveApps: Seq[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
+
+  def transitiveGroups: Seq[Group] = this +: groups.flatMap(_.transitiveGroups)
+
+  lazy val dependencyGraph: DirectedGraph[Group, DefaultEdge] = {
+    val graph = new DefaultDirectedGraph[Group, DefaultEdge](classOf[DefaultEdge])
+    val allGroups = transitiveGroups
+    allGroups.foreach(graph.addVertex)
+    for {
+      group <- allGroups
+      subGroup <- group.groups
+    } graph.addEdge(group, subGroup)
+    for {
+      group <- allGroups
+      dependencyId <- group.dependencies
+      dependency <- allGroups.find(_.id == dependencyId)
+    } graph.addEdge(group, dependency)
+    graph
+  }
+
+  /**
+   * Get all dependencies of this group which has applications.
+   * @return The resolved dependency list in topological order.
+   */
+  def dependencyList: List[Group] = {
+    require(hasNonCyclicDependencies, "dependency graph is not acyclic!")
+    new TopologicalOrderIterator(dependencyGraph).toList.reverse.filter(_.apps.nonEmpty)
+  }
+
+  def hasNonCyclicDependencies: Boolean = {
+    !new CycleDetector[Group, DefaultEdge](dependencyGraph).detectCycles()
+  }
 }
 
 object Group {

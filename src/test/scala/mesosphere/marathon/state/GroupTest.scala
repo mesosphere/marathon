@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
-import org.scalatest.{ FunSpec, Matchers, GivenWhenThen, FunSuite }
 import mesosphere.marathon.api.v1.AppDefinition
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -117,6 +117,69 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("the groups are identical")
       group should equal(current)
+    }
+
+    it("can turn a group with dependencies into a dependency graph") {
+      Given("a group with subgroups and dependencies")
+      val scaling = ScalingStrategy(0.5, Some(1))
+      val current:Group = Group("test", scaling, groups = Seq(
+        Group("test/database", scaling, groups = Seq(
+          Group("test/database/redis", scaling, Seq(AppDefinition("redis"))),
+          Group("test/database/memcache", scaling, Seq(AppDefinition("memcache")), dependencies = Seq("test/database/mongo", "test/database/redis")),
+          Group("test/database/mongo", scaling, Seq(AppDefinition("mongo")), dependencies = Seq("test/database/redis"))
+        )),
+        Group("test/service", scaling, groups = Seq(
+          Group("test/service/service1", scaling, Seq(AppDefinition("srv1")), dependencies = Seq("test/database/mongo")),
+          Group("test/service/service2", scaling, Seq(AppDefinition("srv2")), dependencies = Seq("test/database", "test/service/service1"))
+        )),
+        Group("test/frontend", scaling, groups = Seq(
+          Group("test/frontend/app1", scaling, Seq(AppDefinition("app1")), dependencies = Seq("test/service/service2")),
+          Group("test/frontend/app2", scaling, Seq(AppDefinition("app2")), dependencies = Seq("test/service", "test/database/mongo", "test/frontend/app1"))
+        )),
+        Group("test/cache", scaling, groups = Seq(
+          Group("test/cache/c1", scaling, Seq(AppDefinition("cache1"))) //has no dependencies
+        ))
+      ))
+      current.hasNonCyclicDependencies should equal(true)
+
+      When("The application dependency list")
+      val dependencies = current.dependencyList
+      val ids = dependencies.map(_.id)
+      val filtered = dependencies.filterNot(_.id == GroupId("test/cache/c1")).map(_.id)
+
+      Then("The dependency list is correct")
+      ids should have size 8
+      ids should contain(GroupId("test/cache/c1"))
+      filtered should have size 7
+      val expected = List[GroupId]("test/database/redis",
+        "test/database/mongo",
+        "test/database/memcache",
+        "test/service/service1",
+        "test/service/service2",
+        "test/frontend/app1",
+        "test/frontend/app2")
+      filtered should be(expected)
+    }
+
+    it("can not compute the dependencies, if the dependency graph is not strictly acyclic") {
+      Given("a group with cycled dependencies")
+      val scaling = ScalingStrategy(0.5, Some(1))
+      val current:Group = Group("test", scaling, groups = Seq(
+        Group("test/database", scaling, groups = Seq(
+          Group("test/database/mongo", scaling, Seq(AppDefinition("mongo")), dependencies = Seq("test/service"))
+        )),
+        Group("test/service", scaling, groups = Seq(
+          Group("test/service/service1", scaling, Seq(AppDefinition("srv1")), dependencies = Seq("test/database"))
+        ))
+      ))
+      current.hasNonCyclicDependencies should equal(false)
+
+      When("The application dependency list ahll be computed")
+      val exception = intercept[IllegalArgumentException] {
+        current.dependencyList
+      }
+
+      Then("An exception is thrown")
     }
   }
 }
