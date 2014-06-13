@@ -160,7 +160,7 @@ define([
               </div>
             </div>
           </div>
-          <TogglableTabsComponent className="modal-body"
+          <TogglableTabsComponent className="modal-body modal-body-no-top"
               tabs={[
                 {id: "tasks", text: "Tasks"},
                 {id: "configuration", text: "Configuration"}
