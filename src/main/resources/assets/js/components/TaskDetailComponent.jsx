@@ -35,7 +35,6 @@ define([
       if (!hasError) {
 
         healthClassSet = React.addons.classSet({
-          "text-healthy": taskHealth === Task.HEALTH.HEALTHY,
           "text-unhealthy": taskHealth === Task.HEALTH.UNHEALTHY,
           "text-muted": taskHealth === Task.HEALTH.UNKNOWN
         });
