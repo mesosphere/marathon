@@ -65,12 +65,15 @@ define([
     render: function() {
       return (
         <div className="container-fluid">
-          <div className="row">
+          <div className="row brand-header">
             <div className="col-sm-6">
-              <h1>Marathon / <i className="system-caret"></i></h1>
+              <img className="marathon-logo pull-left" src="../img/marathon-logo.svg" />
+              <h1>
+                Marathon
+              </h1>
             </div>
             <div className="col-sm-6 text-right">
-              <button type="button" className="btn btn-primary header-btn"
+              <button type="button" className="btn btn-success header-btn"
                   onClick={this.showNewAppModal}>
                 + New App
               </button>

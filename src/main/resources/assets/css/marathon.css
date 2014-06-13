@@ -269,6 +269,17 @@ a:focus {
  * Textures
  * ==============
  */
+
+.marathon-logo {
+  margin: 18px 7px;
+  width: 27px;
+  height: 27px;
+}
+
+.brand-header {
+  background-color: #2a2d2f;
+  vertical-align: middle;
+}
 .texture-background {
   background: -webkit-linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
   background: linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
@@ -276,7 +287,7 @@ a:focus {
 }
 
 .header-btn {
-  margin-top: 20px;
+  margin-top: 14px;
 }
 
 .table-fixed {
