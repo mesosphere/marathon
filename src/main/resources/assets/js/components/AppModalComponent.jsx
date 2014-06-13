@@ -143,7 +143,7 @@ define([
               </li>
             </ul>
             <div className="row">
-              <div className="header-btn col-md-6">
+              <div className="header-btn col-md-12">
                 <button className="btn btn-sm btn-default"
                     onClick={this.suspendApp}
                     disabled={this.props.model.get("instances") < 1}>
@@ -152,8 +152,6 @@ define([
                 <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
                   Scale
                 </button>
-              </div>
-              <div className="header-btn col-md-6">
                 <button className="btn btn-sm btn-danger pull-right" onClick={this.destroyApp}>
                   Destroy App
                 </button>
