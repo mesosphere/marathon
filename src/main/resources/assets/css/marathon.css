@@ -50,7 +50,7 @@ h1, .h1 {
 }
 
 hr {
-  border-color: #555;
+  border-color: #2a2d2f;
 }
 
 dt,
@@ -66,13 +66,17 @@ dd {
   color: #f6f6f6;
 }
 
+dt, dd {
+  line-height: 1.728571429;
+}
+
 a {
-  color: #00b482;
+  color: #a0a3a9;
 }
 
 a:hover,
 a:focus {
-  color: #00815d;
+  color: #00b482;
 }
 
 .badge {
@@ -239,14 +243,14 @@ a:focus {
 }
 
 .control-label {
-  color: #B8E8EF;
-  font-weight: 200;
+  color: #b1b6be;
+  font-weight: normal;
 }
 
 .form-control {
-  background: #28282a;
-  border-color: #444;
-  color: white;
+  background: #f6f6f6;
+  border-color: #5e646c;
+  color: #555;
   box-shadow: inset 0 4px 4px rgba(0, 0, 0, 0.2);
 }
 
