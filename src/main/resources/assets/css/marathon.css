@@ -111,8 +111,11 @@ a:focus {
 }
 
 .modal-body {
-  padding-top: 0;
   background-color: #323539;
+}
+
+.modal-body-no-top {
+  padding-top: 0;
 }
 
 .modal-footer {

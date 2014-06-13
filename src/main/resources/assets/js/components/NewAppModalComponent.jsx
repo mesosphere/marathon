@@ -86,7 +86,7 @@ define([
 
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
-          <form method="post" className="form-horizontal" role="form" onSubmit={this.onSubmit}>
+          <form method="post" role="form" onSubmit={this.onSubmit}>
             <div className="modal-header">
               <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
