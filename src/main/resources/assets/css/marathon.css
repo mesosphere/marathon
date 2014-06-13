@@ -58,6 +58,14 @@ th {
   color: #737c84;
 }
 
+dt {
+  font-weight: normal;
+}
+
+dd {
+  color: #f6f6f6;
+}
+
 a {
   color: #00b482;
 }
@@ -140,7 +148,10 @@ a:focus {
 }
 
 .breadcrumb {
-  background-color: #333;
+  background-color: #454a50;
+}
+.breadcrumb > .active {
+  color: #f6f6f6;
 }
 
 .nav-tabs {
