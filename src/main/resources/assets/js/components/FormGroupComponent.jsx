@@ -35,7 +35,7 @@ define([
       }
 
       if (this.props.help != null) {
-        helpBlock = <div className="help-block">{this.props.help}</div>;
+        helpBlock = <div className="text-muted help-block">{this.props.help}</div>;
       }
 
       // Assume there is a single child of either <input> or <textarea>, and add
