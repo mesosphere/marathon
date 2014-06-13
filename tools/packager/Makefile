@@ -28,22 +28,30 @@ snapshot: deb rpm
 .PHONY: rpm
 rpm: with-upstart
 	fpm -t rpm -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
+		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor \
+		--url=https://github.com/mesosphere/marathon --license Apache-2.0 \
+		--vendor Mesosphere --config-files etc/ .
 
 .PHONY: fedora
 fedora: with-serviced
 	fpm -t rpm -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
+		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor \
+		--url=https://github.com/mesosphere/marathon --license Apache-2.0 \
+		--vendor Mesosphere --config-files etc/ .
 
 .PHONY: deb
 deb: with-upstart
 	fpm -t deb -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
+		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor \
+		--url=https://github.com/mesosphere/marathon --license Apache-2.0 \
+		--vendor Mesosphere --config-files etc/ .
 
 .PHONY: osx
 osx: just-jar
 	fpm -t osxpkg --osxpkg-identifier-prefix io.mesosphere -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor .
+		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor \
+		--url=https://github.com/mesosphere/marathon --license Apache-2.0 \
+		--vendor Mesosphere .
 
 .PHONY: with-upstart
 with-upstart: just-jar marathon.conf
