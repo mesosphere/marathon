@@ -135,12 +135,15 @@ define([
           <div className="modal-header">
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
-            <h3 className="modal-title">{model.get("id")}</h3>
+            <span className="h3 modal-title">{model.get("id")}</span>
+            <ul className="list-inline list-inline-subtext text-muted">
+              <li>
+                <strong>Instances </strong>
+                <span className="badge">{model.get("instances")}</span>
+              </li>
+            </ul>
             <div className="row">
               <div className="header-btn col-md-6">
-                <button className="btn btn-sm btn-danger" onClick={this.destroyApp}>
-                  Destroy
-                </button>
                 <button className="btn btn-sm btn-default"
                     onClick={this.suspendApp}
                     disabled={this.props.model.get("instances") < 1}>
@@ -150,20 +153,11 @@ define([
                   Scale
                 </button>
               </div>
-              <ul className="header-btn list-inline text-right col-md-6">
-                <li>
-                  <span className="text-info">Instances </span>
-                  <span className="badge">{model.get("instances")}</span>
-                </li>
-                <li>
-                  <span className="text-info">CPUs </span>
-                  <span className="badge">{model.get("cpus")}</span>
-                </li>
-                <li>
-                  <span className="text-info">Memory </span>
-                  <span className="badge">{model.get("mem")} MB</span>
-                </li>
-              </ul>
+              <div className="header-btn col-md-6">
+                <button className="btn btn-sm btn-danger pull-right" onClick={this.destroyApp}>
+                  Destroy App
+                </button>
+              </div>
             </div>
           </div>
           <TogglableTabsComponent className="modal-body"
