@@ -31,18 +31,22 @@
 
 body {
   background: #111113;
-  color: #ffffff;
+  color: #f6f6f6;
 }
 
 h1, .h1,
 h2, .h2,
 h3, .h3,
 h4, .h4 {
-  font-family: Lato;
+  font-family: OpenSans;
 }
 
 h1, .h1 {
   text-transform: uppercase;
+  font-family: DINNextLT;
+  letter-spacing:1.248px;
+  font-weight: 100;
+  font-size: 24px;
 }
 
 hr {
@@ -51,18 +55,21 @@ hr {
 
 dt,
 th {
-  color: #B8E8EF;
-  font-weight: 200;
+  color: #737c84;
+}
+
+a {
+  color: #00b482;
 }
 
 a:hover,
 a:focus {
-  color: #3C729D;
+  color: #00815d;
 }
 
 .badge {
-  background-color: #B8E8EF;
-  color: #333;
+  background-color: #323539;
+  color: #737c84;
 }
 
 .badge-default {
@@ -77,7 +84,7 @@ a:focus {
 .close,
 .close:focus,
 .close:hover {
-  color: #ffffff;
+  color: #f6f6f6;
   font-weight: 200;
   opacity: 1;
   text-shadow: none;
@@ -91,6 +98,11 @@ a:focus {
   display: block;
 }
 
+.modal-body {
+  padding-top: 0;
+  background-color: #323539;
+}
+
 .modal-footer {
   border-top: none;
   margin-top: 0;
@@ -99,7 +111,11 @@ a:focus {
 
 .modal-header {
   border-bottom: none;
-  padding-bottom: 0;
+}
+
+.modal-header .btn+.btn {
+  margin-left: 5px;
+  margin-bottom: 0;
 }
 
 .modal-content {
@@ -112,15 +128,15 @@ a:focus {
 .has-error .checkbox,
 .has-error .radio-inline,
 .has-error .checkbox-inline {
-  color: #F98482;
+  color: #d9534f;
 }
 
 .text-healthy {
-  color: #0A8;
+  color: #00b482;
 }
 
 .text-unhealthy {
-  color: #F98482;
+  color: #d9534f;
 }
 
 .breadcrumb {
@@ -128,7 +144,7 @@ a:focus {
 }
 
 .nav-tabs {
-  border-bottom-color: #555;
+  border-bottom: 2px solid #2a2d2f;
   margin-bottom: 20px;
   margin-left: -20px;
   margin-right: -20px;
@@ -137,16 +153,27 @@ a:focus {
 }
 
 .nav-tabs > li > a {
-  color: #aaa;
+  color: #f6f6f6;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 3px solid transparent;
   line-height: 1.1;
 }
 
 .nav-tabs > li > a:hover {
-  color: #555;
+  color: #f6f6f6;
+}
+.nav-tabs>li>a:hover {
+  border-color: transparent;
+}
+.nav>li>a:hover, .nav>li>a:focus {
+  text-decoration: none;
+  background-color: #54585f;
 }
 
 .table > thead > tr > th {
-  border-bottom-color: rgba(255, 255, 255, 0.3);
+  border-bottom-color: #3d4045;
 }
 
 .table > thead > tr > th,
@@ -155,7 +182,7 @@ a:focus {
 .table > thead > tr > td,
 .table > tbody > tr > td,
 .table > tfoot > tr > td {
-  border-top-color: rgba(255, 255, 255, 0.3);
+  border-top-color: #3d4045;
 }
 
 .nav-tabs > li.active > a,
@@ -164,7 +191,7 @@ a:focus {
   background-color: transparent;
   border-color: #555;
   border-bottom-color: #222224;
-  color: #FFF;
+  color: #00b482;
 }
 
 .list-inline > li {
@@ -177,6 +204,10 @@ a:focus {
 
 .text-warning {
   color: #EBDE53;
+}
+
+.text-muted {
+  color: #737c84;
 }
 
 /* ==============
@@ -204,7 +235,11 @@ a:focus {
 }
 
 .btn {
-  border-radius: 0;
+  font-weight: 700;
+}
+
+.btn-sm {
+  padding: 5px 14px;
 }
 
 .btn-link {
@@ -220,13 +255,13 @@ a:focus {
 .btn-primary:active,
 .btn-primary:hover {
   background-color: #3C729D;
-  color: #fff;
+  color: #f6f6f6;
 }
 
 .btn-default {
   background-color: transparent;
-  border-color: #FFFFFF;
-  color: #FFFFFF;
+  border-color: #f6f6f6;
+  color: #f6f6f6;
 }
 
 .btn-default.disabled,
@@ -234,29 +269,75 @@ a:focus {
   background-color: transparent;
 }
 
-.system-caret {
-  /* Force a new stacking context to prevent this animation from making the page
-   * flicker in Chrome 31.
-   */
-  -webkit-transform: translatez(0);
-  -moz-transform: translatez(0);
-  -ms-transform: translatez(0);
-  -o-transform: translatez(0);
-  transform: translatez(0);
+.btn-default:hover,
+.btn-default:focus,
+.btn-default:active,
+.btn-default.active,
+.open .dropdown-toggle.btn-default {
+  background-color: #f6f6f6;
+  color: #323539;
+}
 
-  -webkit-animation-duration: 1.2s;
-  -webkit-animation-iteration-count: infinite;
-  -webkit-animation-name: blink;
-  -webkit-animation-timing-function: steps(1, start);
+.btn-success {
+  background-color: #00b482;
+  border-color: #00b482;
+}
 
-  animation-duration: 1.2s;
-  animation-iteration-count: infinite;
-  animation-name: blink;
-  animation-timing-function: steps(1, start);
+.btn-success:hover,
+.btn-success:focus,
+.btn-success:active,
+.btn-success.active,
+.open .dropdown-toggle.btn-success {
+  background-color: #00815d;
+  border-color: #007756;
+}
 
-  display: inline-block;
-  border-bottom: 1px solid #fff;
-  width: 0.7em;
+.btn-danger {
+  background-color: transparent;
+  border-color: #d9534f;
+  color: #d9534f;
+}
+
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-danger:active,
+.btn-danger.active,
+.open .dropdown-toggle.btn-danger {
+  background-color: #d9534f;
+  border-color: #d9534f;
+}
+
+.btn-info {
+  background-color: #5b6067;
+  border-color: #323539;
+}
+
+.btn-info:hover,
+.btn-info:focus,
+.btn-info:active,
+.btn-info.active,
+.open .dropdown-toggle.btn-info {
+  background-color: #54585f; /* darken 5% */
+  border-color: #323539;
+}
+
+.btn-info.disabled,
+.btn-info[disabled],
+fieldset[disabled] .btn-info,
+.btn-info.disabled:hover,
+.btn-info[disabled]:hover,
+fieldset[disabled] .btn-info:hover,
+.btn-info.disabled:focus,
+.btn-info[disabled]:focus,
+fieldset[disabled] .btn-info:focus,
+.btn-info.disabled:active,
+.btn-info[disabled]:active,
+fieldset[disabled] .btn-info:active,
+.btn-info.disabled.active,
+.btn-info[disabled].active,
+fieldset[disabled] .btn-info.active {
+  background-color: #5b6067;
+  border-color: #323539;
 }
 
 .overflow-ellipsis {
@@ -281,9 +362,22 @@ a:focus {
   vertical-align: middle;
 }
 .texture-background {
-  background: -webkit-linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
-  background: linear-gradient(rgba(28,54,69,0.8) 0%, rgba(0,0,0,0) 100%);
+  background-color: #323539;
   z-index: -1;
+}
+
+.nav-tabs>li.active>a,
+.nav-tabs>li.active>a:hover,
+.nav-tabs>li.active>a:focus {
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 3px solid;
+  border-color: #00b482;
+}
+
+.nav-tabs>li>a {
+  border-radius: 0;
 }
 
 .header-btn {
@@ -296,8 +390,7 @@ a:focus {
 
 .table > tbody > tr.active > td,
 .table-hover > tbody > tr:hover > td {
-  background-color: #B8E8EF;
-  color: #111113;
+  background-color: #454a50;
 }
 
 .table-selectable tr > td {
