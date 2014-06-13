@@ -151,10 +151,12 @@ define([
               </FormGroupComponent>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-link" type="button" onClick={this.destroy}>
-                Cancel
-              </button>
-              <input type="submit" className="btn btn-primary" value="Create" />
+              <div className="pull-left">
+                <input type="submit" className="btn btn-success" value="+ Create" />
+                <button className="btn btn-link" type="button" onClick={this.destroy}>
+                  Cancel
+                </button>
+              </div>
             </div>
           </form>
         </ModalComponent>
