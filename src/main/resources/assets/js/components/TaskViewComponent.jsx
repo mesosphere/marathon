@@ -76,7 +76,7 @@ define([
       if (selectedTasksLength === 0) {
         buttons =
           <p>
-            <button className="btn btn-sm btn-default" onClick={this.props.fetchTasks}>
+            <button className="btn btn-sm btn-info" onClick={this.props.fetchTasks}>
               ↻ Refresh
             </button>
           </p>;
@@ -88,11 +88,11 @@ define([
         // TODO(ssorallen): Remove once
         //   https://github.com/mesosphere/marathon/issues/108 is addressed.
         buttons =
-          <p class="btn-group">
-            <button className="btn btn-sm btn-default" onClick={this.killSelectedTasks}>
+          <p className="btn-group">
+            <button className="btn btn-sm btn-info" onClick={this.killSelectedTasks}>
               Kill
             </button>
-            <button className="btn btn-sm btn-default" disabled={selectedTasksLength > 1}
+            <button className="btn btn-sm btn-info" disabled={selectedTasksLength > 1}
                 onClick={this.killSelectedTasksAndScale}>
               Kill &amp; Scale
             </button>
