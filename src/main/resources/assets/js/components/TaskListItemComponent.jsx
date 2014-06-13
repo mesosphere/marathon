@@ -77,9 +77,9 @@ define([
       var hasHealth = !!this.props.hasHealth;
 
       var statusClassSet = React.addons.classSet({
-        "badge": true,
-        "badge-default": task.isStarted(),
-        "badge-warning": task.isStaged()
+        // "": true,
+        // "badge-default": task.isStarted(),
+        "badge badge-circlet": task.isStaged()
       });
 
       var taskHealth = task.getHealth();
@@ -121,7 +121,7 @@ define([
           {
             hasHealth ?
               <td title={this.props.formatTaskHealthMessage(task)}
-                className={healthClassSet} >●</td> :
+                className={healthClassSet}>●</td> :
               null
           }
         </tr>

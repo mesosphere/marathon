@@ -402,6 +402,30 @@ fieldset[disabled] .btn-info.active {
   cursor: pointer;
 }
 
+.badge-circlet {
+  padding: 7px 9px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: normal;
+  background-color: #3b3e43;
+  color: #f6f6f6;
+}
+
+.badge-circlet:before {
+  content: "\00a0";
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
+  border: solid 2px #51565d;
+  background-color: #faef66;
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  vertical-align: bottom;
+  margin-right: 5px;
+  margin-bottom: 2px;
+}
+
 .clickable {
   cursor: pointer;
 }
