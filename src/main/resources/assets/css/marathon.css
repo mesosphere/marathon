@@ -121,6 +121,7 @@ a:focus {
 .modal-footer {
   border-top: none;
   margin-top: 0;
+  padding-top: 0;
   background-color: #323539;
 }
 
@@ -257,6 +258,10 @@ a:focus {
   box-shadow: inset 0 4px 4px rgba(0, 0, 0, 0.2);
 }
 
+.text-align-top {
+   vertical-align: text-top;
+}
+
 .btn {
   font-weight: 700;
 }
@@ -375,14 +380,13 @@ fieldset[disabled] .btn-info.active {
  */
 
 .marathon-logo {
-  margin: 18px 7px;
+  margin: 17px 7px;
   width: 27px;
   height: 27px;
 }
 
 .brand-header {
   background-color: #2a2d2f;
-  vertical-align: middle;
 }
 .texture-background {
   background-color: #323539;

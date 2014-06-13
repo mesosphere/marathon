@@ -65,18 +65,18 @@ define([
     render: function() {
       return (
         <div className="container-fluid">
-          <div className="row brand-header">
-            <div className="col-sm-6">
-              <img className="marathon-logo pull-left" src="../img/marathon-logo.svg" />
-              <h1>
+          <div className="brand-header row">
+            <div className="col-sm-12">
+              <img className="marathon-logo" src="../img/marathon-logo.svg" />
+              <span className="h1 text-align-top">
                 Marathon
-              </h1>
-            </div>
-            <div className="col-sm-6 text-right">
-              <button type="button" className="btn btn-success header-btn"
-                  onClick={this.showNewAppModal}>
-                + New App
-              </button>
+              </span>
+              <span className="pull-right">
+                <button type="button" className="btn btn-success header-btn"
+                    onClick={this.showNewAppModal}>
+                  + New App
+                </button>
+              </span>
             </div>
           </div>
           <AppListComponent collection={this.state.collection} ref="appList" />
