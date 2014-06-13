@@ -1,8 +1,15 @@
 @font-face {
-  font-family: 'Lato';
+  font-family: 'OpenSans';
   font-style: normal;
   font-weight: 300;
-  src: local('Lato Light'), local('Lato-Light'), url(https://themes.googleusercontent.com/static/fonts/lato/v6/kcf5uOXucLcbFOydGU24WALUuEpTyoUstqEm5AMlJo4.woff) format('woff');
+  src: url(../fonts/OpenSans-Light.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'DINNextLT';
+  font-style: normal;
+  font-weight: 100;
+  src: url(../fonts/DINNextLTPro-UltraLight.otf) format('opentype');
 }
 
 @-webkit-keyframes blink {
