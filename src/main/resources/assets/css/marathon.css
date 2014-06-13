@@ -198,6 +198,11 @@ a:focus {
   margin-right: 10px;
 }
 
+.list-inline-subtext {
+  display: inline-block;
+  margin-left: 10px;
+}
+
 .text-info {
   color: #B8E8EF;
 }
