@@ -84,15 +84,17 @@ define([
       }
 
       var sortKey = this.props.tasks.sortKey;
-      var sortOrder =
-        this.props.tasks.sortReverse ?
-        "▲" :
-        "▼";
+
+      var headerClassSet = React.addons.classSet({
+          "clickable": true,
+          "dropup": this.props.tasks.sortReverse
+        });
+
       return (
         <table className="table">
           <thead>
             <tr>
-              <th className="clickable" width="1" onClick={this.handleThToggleClick}>
+              <th className={headerClassSet} width="1" onClick={this.handleThToggleClick}>
                 <input type="checkbox"
                   checked={allTasksSelected}
                   disabled={tasksLength === 0}
@@ -100,28 +102,28 @@ define([
               </th>
               <th>
                 <span onClick={this.sortCollectionBy.bind(null, "id")}
-                      className="clickable">
-                  ID {(sortKey === "id") ? sortOrder : null}
+                      className={headerClassSet}>
+                  ID {(sortKey === "id") ? <span className="caret"></span> : null}
                 </span>
               </th>
               <th>
                 <span onClick={this.sortCollectionBy.bind(null, "status")}
-                      className="clickable">
-                  Status {(sortKey === "status") ? sortOrder : null}
+                      className={headerClassSet}>
+                  Status {(sortKey === "status") ? <span className="caret"></span> : null}
                 </span>
               </th>
               <th className="text-right">
                 <span onClick={this.sortCollectionBy.bind(null, "updatedAt")}
-                      className="clickable">
-                  {(sortKey === "updatedAt") ? sortOrder : null} Updated
+                      className={headerClassSet}>
+                  {(sortKey === "updatedAt") ? <span className="caret"></span> : null} Updated
                 </span>
               </th>
               {
                 hasHealth ?
                   <th className="text-center">
                     <span onClick={this.sortCollectionBy.bind(null, "health")}
-                          className="clickable">
-                      {(sortKey === "health") ? sortOrder : null} Health
+                          className={headerClassSet}>
+                      {(sortKey === "health") ? <span className="caret"></span> : null} Health
                     </span>
                   </th> :
                   null

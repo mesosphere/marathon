@@ -88,6 +88,10 @@ a,
   transition: all 0.2s ease-in-out;
 }
 
+.caret {
+  border-width: 5px;
+}
+
 .badge {
   background-color: #323539;
   color: #737c84;
