@@ -2,17 +2,22 @@
 
 define([
   "React",
+  "mixins/BackboneMixin",
   "jsx!components/TaskListItemComponent"
-], function(React, TaskListItemComponent) {
+], function(React, BackboneMixin, TaskListItemComponent) {
 
   return React.createClass({
     displayName: "TaskListComponent",
+    mixins:[BackboneMixin],
     propTypes: {
       fetchState: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
       selectedTasks: React.PropTypes.object.isRequired,
       STATES: React.PropTypes.object.isRequired,
       tasks: React.PropTypes.object.isRequired
+    },
+    getResource: function() {
+      return this.props.tasks;
     },
     getInitialState: function() {
       return {
