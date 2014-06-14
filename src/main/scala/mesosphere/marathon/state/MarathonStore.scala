@@ -48,7 +48,7 @@ class MarathonStore[S <: MarathonState[_, S]](
 
   Await.result(migrationRes, Duration.Inf)
 
-  private[this] val locks = {
+  private[this] lazy val locks = {
     CacheBuilder
       .newBuilder()
       .weakValues()
