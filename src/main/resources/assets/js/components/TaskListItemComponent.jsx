@@ -77,17 +77,15 @@ define([
       var hasHealth = !!this.props.hasHealth;
 
       var statusClassSet = React.addons.classSet({
-        // "": true,
-        // "badge-default": task.isStarted(),
         "badge badge-circlet": task.isStaged()
       });
 
       var taskHealth = task.getHealth();
       var healthClassSet = React.addons.classSet({
-        "text-center": true,
-        "text-healthy": taskHealth === Task.HEALTH.HEALTHY,
-        "text-unhealthy": taskHealth === Task.HEALTH.UNHEALTHY,
-        "text-muted": taskHealth === Task.HEALTH.UNKNOWN
+        "health-dot": true,
+        "health-dot-success": taskHealth === Task.HEALTH.HEALTHY,
+        "health-dot-warning": taskHealth === Task.HEALTH.UNHEALTHY,
+        "health-dot-unknown": taskHealth === Task.HEALTH.UNKNOWN
       });
 
       var updatedAtNode;
@@ -121,7 +119,7 @@ define([
           {
             hasHealth ?
               <td title={this.props.taskHealthMessage}
-                className={healthClassSet}>●</td> :
+                className="text-center"><span className={healthClassSet}> </span></td> :
               null
           }
         </tr>

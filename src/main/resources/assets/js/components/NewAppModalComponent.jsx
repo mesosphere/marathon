@@ -122,7 +122,7 @@ define([
                 <input min="1" step="1" type="number" required />
               </FormGroupComponent>
               <hr />
-              <h4>Optional Settings</h4>
+              <h4 className="text-muted">Optional Settings</h4>
               <FormGroupComponent
                   attribute="cmd"
                   label="Command"
@@ -153,7 +153,7 @@ define([
             <div className="modal-footer">
               <div className="pull-left">
                 <input type="submit" className="btn btn-success" value="+ Create" />
-                <button className="btn btn-link" type="button" onClick={this.destroy}>
+                <button className="btn btn-subtle" type="button" onClick={this.destroy}>
                   Cancel
                 </button>
               </div>
