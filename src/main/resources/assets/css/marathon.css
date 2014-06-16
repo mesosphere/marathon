@@ -1,8 +1,8 @@
 @font-face {
-  font-family: 'OpenSans';
+  font-family: 'Open Sans';
   font-style: normal;
   font-weight: 300;
-  src: url(../fonts/OpenSans-Light.ttf) format('truetype');
+  src: local('Open Sans Light'), local('OpenSans-Light'), url(https://themes.googleusercontent.com/static/fonts/opensans/v8/DXI1ORHCpsQm3Vp6mXoaTaRDOzjiPcYnFooOUGCOsRk.woff) format('woff');
 }
 
 @-webkit-keyframes blink {
@@ -31,7 +31,7 @@ h1, .h1,
 h2, .h2,
 h3, .h3,
 h4, .h4 {
-  font-family: OpenSans;
+  font-family: Open Sans;
 }
 
 h1, .h1 {
@@ -47,7 +47,7 @@ hr {
 
 dt,
 th {
-  color: #737c84;
+  color: #828b93;
 }
 
 dt {
@@ -86,7 +86,7 @@ a,
 
 .badge {
   background-color: #323539;
-  color: #737c84;
+  color: #828b93;
 }
 
 .badge-default {
@@ -245,7 +245,7 @@ a,
 }
 
 .text-muted {
-  color: #737c84;
+  color: #828b93;
 }
 
 /* ==============
@@ -290,13 +290,13 @@ a,
 
 .btn-primary {
   background-color: transparent;
-  border-color: #3C729D;
-  color: #3C729D;
+  border-color: #5A92C0;
+  color: #5A92C0;
 }
 
 .btn-primary:active,
 .btn-primary:hover {
-  background-color: #3C729D;
+  background-color: #5A92C0;
   color: #f6f6f6;
 }
 
@@ -525,7 +525,7 @@ fieldset[disabled] .btn-subtle.active {
 }
 
 .health-dot-unknown:before {
-  background-color: #737c84;
+  background-color: #828b93;
 }
 
 .clickable {
