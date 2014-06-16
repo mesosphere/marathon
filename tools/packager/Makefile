@@ -23,9 +23,9 @@ FPM_OPTS := -s dir -n marathon -v $(PKG_VER) --iteration $(PKG_REL) \
 	Apache Mesos" \
 	--maintainer "Mesosphere Package Builder <support@mesosphere.io>" \
 	--vendor "Mesosphere, Inc."
-FPM_OPTS_DEB := -t deb --config-files etc/ \
+FPM_OPTS_DEB := -t deb \
 	-d 'java7-runtime-headless | java6-runtime-headless'
-FPM_OPTS_RPM := -t rpm --config-files etc/ \
+FPM_OPTS_RPM := -t rpm \
 	-d coreutils -d 'java >= 1.6'
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
@@ -44,17 +44,18 @@ help:
 .PHONY: rpm
 rpm: toor/rpm/etc/init/marathon.conf
 rpm: toor/rpm/$(PREFIX)/bin/marathon
-	fpm -C toor/rpm $(FPM_OPTS_RPM) $(FPM_OPTS) .
+	fpm -C toor/rpm --config-files etc/ $(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: fedora
 fedora: toor/fedora/usr/lib/systemd/system/marathon.service
 fedora: toor/fedora/$(PREFIX)/bin/marathon
-	fpm -C toor/fedora $(FPM_OPTS_RPM) $(FPM_OPTS) .
+	fpm -C toor/fedora --config-files usr/lib/systemd/system/marathon.service \
+		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: deb
 deb: toor/deb/etc/init/marathon.conf
 deb: toor/deb/$(PREFIX)/bin/marathon
-	fpm -C toor/deb $(FPM_OPTS_DEB) $(FPM_OPTS) .
+	fpm -C toor/deb --config-files etc/ $(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: osx
 osx: toor/osx/$(PREFIX)/bin/marathon
