@@ -42,36 +42,36 @@ help:
 	@exit 0
 
 .PHONY: rpm
-rpm: with-upstart
-	fpm -C toor $(FPM_OPTS_RPM) $(FPM_OPTS) .
+rpm: toor/rpm/etc/init/marathon.conf
+rpm: toor/rpm/$(PREFIX)/bin/marathon
+	fpm -C toor/rpm $(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: fedora
-fedora: with-serviced
-	fpm -C toor $(FPM_OPTS_RPM) $(FPM_OPTS) .
+fedora: toor/fedora/usr/lib/systemd/system/marathon.service
+fedora: toor/fedora/$(PREFIX)/bin/marathon
+	fpm -C toor/fedora $(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: deb
-deb: with-upstart
-	fpm -C toor $(FPM_OPTS_DEB) $(FPM_OPTS) .
+deb: toor/deb/etc/init/marathon.conf
+deb: toor/deb/$(PREFIX)/bin/marathon
+	fpm -C toor/deb $(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: osx
-osx: just-jar
-	fpm -C toor $(FPM_OPTS_OSX) $(FPM_OPTS) .
+osx: toor/osx/$(PREFIX)/bin/marathon
+	fpm -C toor/osx $(FPM_OPTS_OSX) $(FPM_OPTS) .
 
-.PHONY: with-upstart
-with-upstart: just-jar marathon.conf
-	mkdir -p toor/etc/init
-	cp marathon.conf toor/etc/init/
+toor/%/etc/init/marathon.conf: marathon.conf
+	mkdir -p "$(dir $@)"
+	cp marathon.conf "$@"
 
-.PHONY: with-serviced
-with-serviced: just-jar marathon.service
-	mkdir -p toor/usr/lib/systemd/system/
-	cp marathon.service toor/usr/lib/systemd/system/
+toor/%/usr/lib/systemd/system/marathon.service: marathon.service
+	mkdir -p "$(dir $@)"
+	cp marathon.service "$@"
 
-.PHONY: just-jar
-just-jar: marathon-runnable.jar
-	mkdir -p toor/$(PREFIX)/bin
-	cp marathon-runnable.jar toor/$(PREFIX)/bin/marathon
-	chmod 755 toor/$(PREFIX)/bin/marathon
+toor/%/bin/marathon: marathon-runnable.jar
+	mkdir -p "$(dir $@)"
+	cp marathon-runnable.jar "$@"
+	chmod 755 "$@"
 
 marathon-runnable.jar:
 	cd marathon && sbt assembly && bin/build-distribution
