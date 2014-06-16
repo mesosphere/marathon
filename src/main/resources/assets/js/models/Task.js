@@ -2,7 +2,7 @@ define([
   "Backbone",
   "jquery"
 ], function(Backbone, $, _) {
-  var STATUS_STAGED = "Pending";//Staged
+  var STATUS_STAGED = "Staged";
   var STATUS_STARTED = "Started";
   var HEALTH = {
     HEALTHY: 0,

@@ -67,7 +67,7 @@ define([
         <div className="container-fluid">
           <div className="brand-header row">
             <div className="col-sm-12">
-              <img className="marathon-logo" src="../img/marathon-logo.svg" />
+              <img className="marathon-logo" width="27" height="27" alt="Marathon Logo" src="../img/marathon-logo.svg" />
               <span className="h1 text-align-top">
                 Marathon
               </span>
