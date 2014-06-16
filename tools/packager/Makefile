@@ -30,7 +30,7 @@ FPM_OPTS_RPM := -t rpm --config-files etc/ \
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
 .PHONY: all
-all: snapshot
+all: deb rpm
 
 .PHONY: help
 help:
@@ -40,13 +40,6 @@ help:
 	@echo "To override package release version:"
 	@echo "  make PKG_REL=0.2.20141228050159 rpm"
 	@exit 0
-
-.PHONY: release
-release: PKG_REL := 1
-release: deb rpm
-
-.PHONY: snapshot
-snapshot: deb rpm
 
 .PHONY: rpm
 rpm: with-upstart
