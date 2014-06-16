@@ -18,6 +18,15 @@ endif
 .PHONY: all
 all: snapshot
 
+.PHONY: help
+help:
+	@echo "Please choose one of the following targets: deb, rpm, fedora, osx"
+	@echo "For release builds:"
+	@echo "  make PKG_REL=1 deb"
+	@echo "To override package release version:"
+	@echo "  make PKG_REL=0.2.20141228050159 rpm"
+	@exit 0
+
 .PHONY: release
 release: PKG_REL := 1
 release: deb rpm
