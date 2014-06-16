@@ -10,9 +10,9 @@ PKG_VER := $(shell cd marathon && cat version.sbt | $(EXTRACT_VER))
 PKG_TAG := $(shell cd marathon && cat version.sbt | $(EXTRACT_TAG))
 
 ifeq ($(strip $(PKG_TAG)),)
-PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M')
+PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M%S')
 else
-PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M').$(PKG_TAG)
+PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M%S').$(PKG_TAG)
 endif
 
 .PHONY: all
