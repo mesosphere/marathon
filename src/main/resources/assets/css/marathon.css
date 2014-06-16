@@ -147,7 +147,7 @@ a,
   border-bottom: none;
 }
 
-.modal-header .btn+.btn {
+.modal-header .btn + .btn {
   margin-left: 5px;
   margin-bottom: 0;
 }
