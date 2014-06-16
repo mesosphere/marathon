@@ -15,6 +15,20 @@ else
 PKG_REL := 0.1.$(shell date -u +'%Y%m%d%H%M%S').$(PKG_TAG)
 endif
 
+FPM_OPTS := -s dir -n marathon -v $(PKG_VER) --iteration $(PKG_REL) \
+	--architecture native \
+	--url "https://github.com/mesosphere/marathon" \
+	--license Apache-2.0 \
+	--description "Cluster-wide init and control system for services running on\
+	Apache Mesos" \
+	--maintainer "Mesosphere Package Builder <support@mesosphere.io>" \
+	--vendor "Mesosphere, Inc."
+FPM_OPTS_DEB := -t deb --config-files etc/ \
+	-d 'java7-runtime-headless | java6-runtime-headless'
+FPM_OPTS_RPM := -t rpm --config-files etc/ \
+	-d coreutils -d 'java >= 1.6'
+FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
+
 .PHONY: all
 all: snapshot
 
@@ -36,31 +50,19 @@ snapshot: deb rpm
 
 .PHONY: rpm
 rpm: with-upstart
-	fpm -t rpm -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor \
-		--url=https://github.com/mesosphere/marathon --license Apache-2.0 \
-		--vendor Mesosphere --config-files etc/ .
+	fpm -C toor $(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: fedora
 fedora: with-serviced
-	fpm -t rpm -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor \
-		--url=https://github.com/mesosphere/marathon --license Apache-2.0 \
-		--vendor Mesosphere --config-files etc/ .
+	fpm -C toor $(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: deb
 deb: with-upstart
-	fpm -t deb -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor \
-		--url=https://github.com/mesosphere/marathon --license Apache-2.0 \
-		--vendor Mesosphere --config-files etc/ .
+	fpm -C toor $(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: osx
 osx: just-jar
-	fpm -t osxpkg --osxpkg-identifier-prefix io.mesosphere -s dir \
-		-n marathon -v $(PKG_VER) --iteration $(PKG_REL) -C toor \
-		--url=https://github.com/mesosphere/marathon --license Apache-2.0 \
-		--vendor Mesosphere .
+	fpm -C toor $(FPM_OPTS_OSX) $(FPM_OPTS) .
 
 .PHONY: with-upstart
 with-upstart: just-jar marathon.conf
