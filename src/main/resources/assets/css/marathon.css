@@ -5,13 +5,6 @@
   src: url(../fonts/OpenSans-Light.ttf) format('truetype');
 }
 
-@font-face {
-  font-family: 'DINNextLT';
-  font-style: normal;
-  font-weight: 100;
-  src: url(../fonts/DINNextLTPro-UltraLight.otf) format('opentype');
-}
-
 @-webkit-keyframes blink {
   0% { opacity: 1; }
   50% { opacity: 0; }
@@ -43,7 +36,6 @@ h4, .h4 {
 
 h1, .h1 {
   text-transform: uppercase;
-  font-family: DINNextLT;
   letter-spacing:1.248px;
   font-weight: 100;
   font-size: 24px;
@@ -437,7 +429,7 @@ fieldset[disabled] .btn-subtle.active {
 
 .marathon-logo {
   margin: 17px 7px;
-  width: 27px;
+  width: 160px;
   height: 27px;
 }
 

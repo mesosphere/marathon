@@ -67,10 +67,7 @@ define([
         <div className="container-fluid">
           <div className="brand-header row">
             <div className="col-sm-12">
-              <img className="marathon-logo" width="27" height="27" alt="Marathon Logo" src="../img/marathon-logo.svg" />
-              <span className="h1 text-align-top">
-                Marathon
-              </span>
+              <img className="h1 marathon-logo" width="160" height="27" alt="Marathon Logo" src="/img/marathon-logo.png" />
               <span className="pull-right">
                 <button type="button" className="btn btn-success header-btn"
                     onClick={this.showNewAppModal}>
