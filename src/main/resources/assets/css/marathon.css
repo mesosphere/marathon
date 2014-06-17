@@ -31,7 +31,7 @@ h1, .h1,
 h2, .h2,
 h3, .h3,
 h4, .h4 {
-  font-family: Open Sans;
+  font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 h1, .h1 {
