@@ -142,20 +142,18 @@ define([
                 <span className="badge">{model.get("instances")}</span>
               </li>
             </ul>
-            <div className="row">
-              <div className="header-btn col-md-12">
-                <button className="btn btn-sm btn-default"
-                    onClick={this.suspendApp}
-                    disabled={this.props.model.get("instances") < 1}>
-                  Suspend
-                </button>
-                <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
-                  Scale
-                </button>
-                <button className="btn btn-sm btn-danger pull-right" onClick={this.destroyApp}>
-                  Destroy App
-                </button>
-              </div>
+            <div className="header-btn">
+              <button className="btn btn-sm btn-default"
+                  onClick={this.suspendApp}
+                  disabled={this.props.model.get("instances") < 1}>
+                Suspend
+              </button>
+              <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
+                Scale
+              </button>
+              <button className="btn btn-sm btn-danger pull-right" onClick={this.destroyApp}>
+                Destroy App
+              </button>
             </div>
           </div>
           <TogglableTabsComponent className="modal-body modal-body-no-top"
