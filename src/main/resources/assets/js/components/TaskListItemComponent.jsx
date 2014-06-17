@@ -120,7 +120,7 @@ define([
           <td className="text-right">{updatedAtNode}</td>
           {
             hasHealth ?
-              <td title={this.props.formatTaskHealthMessage(task)}
+              <td title={this.props.taskHealthMessage}
                 className={healthClassSet} >●</td> :
               null
           }

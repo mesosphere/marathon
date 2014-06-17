@@ -89,7 +89,7 @@ define([
                     </time>
                   </dd>
                   <dt>Health</dt>
-                  <dd className={healthClassSet}>{this.props.formatTaskHealthMessage(task)}</dd>
+                  <dd className={healthClassSet}>{this.props.taskHealthMessage}</dd>
                 </dl>
                 {
                   hasHealth ?
