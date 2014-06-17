@@ -136,7 +136,7 @@ define([
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
             <span className="h3 modal-title">{model.get("id")}</span>
-            <ul className="list-inline list-inline-subtext text-muted">
+            <ul className="list-inline list-inline-subtext">
               <li>
                 <strong>Instances </strong>
                 <span className="badge">{model.get("instances")}</span>
