@@ -153,7 +153,7 @@ define([
             <div className="modal-footer">
               <div className="pull-left">
                 <input type="submit" className="btn btn-success" value="+ Create" />
-                <button className="btn btn-subtle" type="button" onClick={this.destroy}>
+                <button className="btn btn-info-subtle" type="button" onClick={this.destroy}>
                   Cancel
                 </button>
               </div>
