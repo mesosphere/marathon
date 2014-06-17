@@ -63,13 +63,15 @@ define([
     render: function() {
       var _this = this;
       var sortKey = this.props.collection.sortKey;
-      var sortOrder =
-        this.props.collection.sortReverse ?
-        "▲" :
-        "▼";
 
       var appNodes;
       var tableClassName = "table table-fixed";
+
+      var headerClassSet = React.addons.classSet({
+          "clickable": true,
+          "dropup": this.props.collection.sortReverse
+        });
+
       if (this.state.fetchState === STATE_LOADING) {
         appNodes =
           <tr>
@@ -110,28 +112,28 @@ define([
           <thead>
             <tr>
               <th>
-                <span onClick={this.sortCollectionBy.bind(null, "id")} className="clickable">
-                  ID {sortKey === "id" ? sortOrder : null}
+                <span onClick={this.sortCollectionBy.bind(null, "id")} className={headerClassSet}>
+                  ID {sortKey === "id" ? <span className="caret"></span> : null}
                 </span>
               </th>
               <th>
-                <span onClick={this.sortCollectionBy.bind(null, "cmd")} className="clickable">
-                  Command {sortKey === "cmd" ? sortOrder : null}
+                <span onClick={this.sortCollectionBy.bind(null, "cmd")} className={headerClassSet}>
+                  Command {sortKey === "cmd" ? <span className="caret"></span> : null}
                 </span>
               </th>
               <th className="text-right">
-                <span onClick={this.sortCollectionBy.bind(null, "mem")} className="clickable">
-                  {sortKey === "mem" ? sortOrder : null} Memory (MB)
+                <span onClick={this.sortCollectionBy.bind(null, "mem")} className={headerClassSet}>
+                  {sortKey === "mem" ? <span className="caret"></span> : null} Memory (MB)
                 </span>
               </th>
               <th className="text-right">
-                <span onClick={this.sortCollectionBy.bind(null, "cpus")} className="clickable">
-                  {sortKey === "cpus" ? sortOrder : null} CPUs
+                <span onClick={this.sortCollectionBy.bind(null, "cpus")} className={headerClassSet}>
+                  {sortKey === "cpus" ? <span className="caret"></span> : null} CPUs
                 </span>
               </th>
               <th className="text-right">
-                <span onClick={this.sortCollectionBy.bind(null, "instances")} className="clickable">
-                  {sortKey === "instances" ? sortOrder : null} Instances
+                <span onClick={this.sortCollectionBy.bind(null, "instances")} className={headerClassSet}>
+                  {sortKey === "instances" ? <span className="caret"></span> : null} Instances
                 </span>
               </th>
             </tr>

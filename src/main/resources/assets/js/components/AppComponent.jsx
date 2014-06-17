@@ -12,8 +12,7 @@ define([
       var model = this.props.model;
 
       var instancesClassSet = React.addons.classSet({
-        "text-right": true,
-        "text-warning": !model.allInstancesBooted()
+        "badge badge-circlet": !model.allInstancesBooted()
       });
 
       return (
@@ -28,7 +27,11 @@ define([
           </td>
           <td className="text-right">{model.get("mem")}</td>
           <td className="text-right">{model.get("cpus")}</td>
-          <td className={instancesClassSet}>{model.formatTasksRunning()} / {model.get("instances")}</td>
+          <td className="text-right">
+            <span className={instancesClassSet}>
+              {model.formatTasksRunning()} / {model.get("instances")}
+            </span>
+          </td>
         </tr>
       );
     }

@@ -86,7 +86,7 @@ define([
 
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
-          <form method="post" className="form-horizontal" role="form" onSubmit={this.onSubmit}>
+          <form method="post" role="form" onSubmit={this.onSubmit}>
             <div className="modal-header">
               <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
@@ -122,7 +122,7 @@ define([
                 <input min="1" step="1" type="number" required />
               </FormGroupComponent>
               <hr />
-              <h4>Optional Settings</h4>
+              <h4 className="text-muted">Optional Settings</h4>
               <FormGroupComponent
                   attribute="cmd"
                   label="Command"
@@ -151,10 +151,12 @@ define([
               </FormGroupComponent>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-link" type="button" onClick={this.destroy}>
-                Cancel
-              </button>
-              <input type="submit" className="btn btn-primary" value="Create" />
+              <div className="pull-left">
+                <input type="submit" className="btn btn-success" value="+ Create" />
+                <button className="btn btn-info-subtle" type="button" onClick={this.destroy}>
+                  Cancel
+                </button>
+              </div>
             </div>
           </form>
         </ModalComponent>
