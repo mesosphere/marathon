@@ -25,7 +25,7 @@ define([
     getHealth: function() {
       var nullResult = true;
       var health = false;
-      var healthCheckResults = this.get("healthCheckResults")
+      var healthCheckResults = this.get("healthCheckResults");
       if (healthCheckResults != null) {
         health = healthCheckResults.every(function (hcr) {
           if (hcr) {
@@ -41,6 +41,7 @@ define([
       } else {
         return health ? HEALTH.HEALTHY : HEALTH.UNHEALTHY;
       }
+
     },
 
     parse: function(response) {

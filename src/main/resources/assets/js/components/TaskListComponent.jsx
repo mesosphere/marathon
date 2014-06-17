@@ -121,9 +121,9 @@ define([
               {
                 hasHealth ?
                   <th className="text-center">
-                    <span onClick={this.sortCollectionBy.bind(null, "health")}
+                    <span onClick={this.sortCollectionBy.bind(null, "getHealth")}
                           className={headerClassSet}>
-                      {(sortKey === "health") ? <span className="caret"></span> : null} Health
+                      {(sortKey === "getHealth") ? <span className="caret"></span> : null} Health
                     </span>
                   </th> :
                   null
