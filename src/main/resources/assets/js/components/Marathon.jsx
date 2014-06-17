@@ -67,8 +67,10 @@ define([
         <div>
           <nav className="navbar navbar-inverse" role="navigation">
            <div className="container-fluid">
-              <img className="h1" width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
-              <button type="button" className="btn btn-success header-btn pull-right"
+              <div className="navbar-brand">
+                <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
+              </div>
+              <button type="button" className="btn btn-success navbar-btn pull-right"
                   onClick={this.showNewAppModal}>
                 + New App
               </button>
