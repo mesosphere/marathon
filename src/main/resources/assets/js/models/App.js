@@ -77,24 +77,26 @@ define([
       return tasksRunning == null ? "-" : tasksRunning;
     },
     formatTaskHealthMessage: function(task) {
-
-      var msg = DEFAULT_HEALTH_MSG;
-      var taskHealth = task.getHealth();
-      switch(taskHealth) {
-        case Task.HEALTH.HEALTHY:
-           msg = "Healthy";
-          break;
-        case Task.HEALTH.UNHEALTHY:
-          var healthCheckResults = task.get("healthCheckResults");
-          if (healthCheckResults != null) {
-            msg = findHealthCheckMsg(healthCheckResults, this);
-          }
-          break;
-        default:
-          msg = DEFAULT_HEALTH_MSG;
-          break;
+      if (task) {
+        var msg = DEFAULT_HEALTH_MSG;
+        var taskHealth = task.getHealth();
+        switch(taskHealth) {
+          case Task.HEALTH.HEALTHY:
+             msg = "Healthy";
+            break;
+          case Task.HEALTH.UNHEALTHY:
+            var healthCheckResults = task.get("healthCheckResults");
+            if (healthCheckResults != null) {
+              msg = findHealthCheckMsg(healthCheckResults, this);
+            }
+            break;
+          default:
+            msg = DEFAULT_HEALTH_MSG;
+            break;
+        }
+        return msg;
       }
-      return msg;
+      return null;
     },
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
