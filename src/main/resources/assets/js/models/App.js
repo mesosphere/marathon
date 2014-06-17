@@ -82,7 +82,7 @@ define([
         var taskHealth = task.getHealth();
         switch(taskHealth) {
           case Task.HEALTH.HEALTHY:
-             msg = "Healthy";
+            msg = "Healthy";
             break;
           case Task.HEALTH.UNHEALTHY:
             var healthCheckResults = task.get("healthCheckResults");
