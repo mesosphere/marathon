@@ -169,7 +169,7 @@ class MarathonStoreTest extends MarathonSpec {
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
     val res = store.names()
 
-    assert(Seq("foo", "bar") == Await.result(res, 5.seconds).toSeq, "Should return all application keys")
+    assert(Set("foo", "bar") == Await.result(res, 5.seconds).toSet, "Should return all application keys")
   }
 
   test("NamesFail") {
