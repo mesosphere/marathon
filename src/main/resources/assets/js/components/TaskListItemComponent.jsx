@@ -119,7 +119,7 @@ define([
           {
             hasHealth ?
               <td title={this.props.formatTaskHealthMessage(task)}
-                className="text-center"><span className={healthClassSet}> </span></td> :
+                className="text-center"><span className={healthClassSet}></span></td> :
               null
           }
         </tr>

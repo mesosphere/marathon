@@ -45,7 +45,7 @@ define([
                   {timeFields}
                   <dt>Consecutive failures</dt>
                   {cResult.consecutiveFailures == null ?
-                    <dd>None</dd> :
+                    <dd className="text-muted">None</dd> :
                     <dd>{cResult.consecutiveFailures}</dd>}
                   <dt>Alive</dt>
                   {cResult.alive == null ?

@@ -47,7 +47,7 @@ hr {
 
 dt,
 th {
-  color: #828b93;
+  color: #6f757d;
 }
 
 dt {
@@ -86,7 +86,7 @@ a,
 
 .badge {
   background-color: #323539;
-  color: #828b93;
+  color: #6f757d;
 }
 
 .badge-default {
@@ -113,7 +113,7 @@ a,
 }
 
 .help-block {
-  color: #b3b3b3;
+  color: #6f757d;
 }
 
 .modal {
@@ -158,11 +158,11 @@ a,
 }
 
 .text-healthy {
-  color: #00b482;
+  color: #7aff68;
 }
 
 .text-unhealthy {
-  color: #d9534f;
+  color: #ff7d64;
 }
 
 .breadcrumb {
@@ -224,7 +224,7 @@ a,
   background-color: transparent;
   border-color: #555;
   border-bottom-color: #222224;
-  color: #00b482;
+  color: #f6f6f6;
 }
 
 .list-inline > li {
@@ -245,7 +245,7 @@ a,
 }
 
 .text-muted {
-  color: #828b93;
+  color: #6f757d;
 }
 
 /* ==============
@@ -286,18 +286,6 @@ a,
 
 .btn-link {
   color: #999;
-}
-
-.btn-primary {
-  background-color: transparent;
-  border-color: #5A92C0;
-  color: #5A92C0;
-}
-
-.btn-primary:active,
-.btn-primary:hover {
-  background-color: #5A92C0;
-  color: #f6f6f6;
 }
 
 .btn-default {
@@ -359,7 +347,7 @@ a,
 .btn-info:active,
 .btn-info.active,
 .open .dropdown-toggle.btn-info {
-  background-color: #54585f;
+  background-color: #6f757d;
   border-color: #323539;
 }
 
@@ -378,7 +366,8 @@ fieldset[disabled] .btn-info:active,
 .btn-info.disabled.active,
 .btn-info[disabled].active,
 fieldset[disabled] .btn-info.active {
-  background-color: #5b6067;
+  color: #838a93;
+  background-color: #4d5157;
   border-color: #323539;
 }
 
@@ -427,14 +416,9 @@ fieldset[disabled] .btn-subtle.active {
  * ==============
  */
 
-.marathon-logo {
-  margin: 17px 7px;
-  width: 160px;
-  height: 27px;
-}
-
-.brand-header {
+.navbar-inverse {
   background-color: #2a2d2f;
+  border-color: transparent;
 }
 
 .texture-background {
@@ -517,15 +501,15 @@ fieldset[disabled] .btn-subtle.active {
 }
 
 .health-dot-success:before {
-  background-color: #00b482;
+  background-color: #7aff68;
 }
 
 .health-dot-warning:before {
-  background-color: #d9534f;
+  background-color: #ff7d64;
 }
 
 .health-dot-unknown:before {
-  background-color: #828b93;
+  background-color: #6f757d;
 }
 
 .clickable {

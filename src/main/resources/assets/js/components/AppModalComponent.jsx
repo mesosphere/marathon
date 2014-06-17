@@ -85,10 +85,10 @@ define([
         model.get("healthChecks") != null &&
         model.get("healthChecks").length > 0;
       var cmdNode = (model.get("cmd") == null) ?
-        <dd>Unspecified</dd> :
+        <dd className="text-muted">Unspecified</dd> :
         <dd>{model.get("cmd")}</dd>;
       var constraintsNode = (model.get("constraints").length < 1) ?
-        <dd>Unspecified</dd> :
+        <dd className="text-muted">Unspecified</dd> :
         model.get("constraints").map(function(c) {
 
           // Only include constraint parts if they are not empty Strings. For
@@ -105,26 +105,26 @@ define([
           );
         });
       var containerNode = (model.get("container") == null) ?
-        <dd>Unspecified</dd> :
+        <dd className="text-muted">Unspecified</dd> :
         <dd>{JSON.stringify(model.get("container"))}</dd>;
       var envNode = (Object.keys(model.get("env")).length === 0) ?
-        <dd>Unspecified</dd> :
+        <dd className="text-muted">Unspecified</dd> :
 
         // Print environment variables as key value pairs like "key=value"
         Object.keys(model.get("env")).map(function(k) {
           return <dd key={k}>{k + "=" + model.get("env")[k]}</dd>
         });
       var executorNode = (model.get("executor") === "") ?
-        <dd>Unspecified</dd> :
+        <dd className="text-muted">Unspecified</dd> :
         <dd>{model.get("executor")}</dd>;
       var portsNode = (model.get("ports").length === 0 ) ?
-        <dd>Unspecified</dd> :
+        <dd className="text-muted">Unspecified</dd> :
         <dd>{model.get("ports").join(",")}</dd>;
       var versionNode = (model.get("version") == null) ?
-        <dd>Unspecified</dd> :
+        <dd className="text-muted">Unspecified</dd> :
         <dd>{model.get("version").toLocaleString()}</dd>;
       var urisNode = (model.get("uris").length === 0) ?
-        <dd>Unspecified</dd> :
+        <dd className="text-muted">Unspecified</dd> :
         model.get("uris").map(function(u) {
           return <dd key={u}>{u}</dd>;
         });
