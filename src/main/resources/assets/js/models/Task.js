@@ -41,7 +41,6 @@ define([
       } else {
         return health ? HEALTH.HEALTHY : HEALTH.UNHEALTHY;
       }
-
     },
 
     parse: function(response) {
