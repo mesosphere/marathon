@@ -64,19 +64,17 @@ define([
 
     render: function() {
       return (
-        <div className="container-fluid">
-          <div className="brand-header row">
-            <div className="col-sm-12">
-              <img className="h1 marathon-logo" width="160" height="27" alt="Marathon Logo" src="/img/marathon-logo.png" />
-              <span className="pull-right">
-                <button type="button" className="btn btn-success header-btn"
-                    onClick={this.showNewAppModal}>
-                  + New App
-                </button>
-              </span>
+        <div>
+          <nav className="navbar navbar-inverse" role="navigation">
+           <div className="container-fluid">
+              <img className="h1" width="160" height="27" alt="Marathon Logo" src="/img/marathon-logo.png" />
+              <button type="button" className="btn btn-success header-btn pull-right"
+                  onClick={this.showNewAppModal}>
+                + New App
+              </button>
             </div>
-          </div>
-          <AppListComponent collection={this.state.collection} ref="appList" />
+          </nav>
+          <AppListComponent className="container-fluid" collection={this.state.collection} ref="appList" />
         </div>
       );
     }
