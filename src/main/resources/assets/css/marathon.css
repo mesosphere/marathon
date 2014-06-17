@@ -47,7 +47,7 @@ hr {
 
 dt,
 th {
-  color: #6f757d;
+  color: #8e929b;
 }
 
 dt {
@@ -86,7 +86,7 @@ a,
 
 .badge {
   background-color: #323539;
-  color: #6f757d;
+  color: #8e929b;
 }
 
 .badge-default {
@@ -113,7 +113,7 @@ a,
 }
 
 .help-block {
-  color: #6f757d;
+  color: #8e929b;
 }
 
 .modal {
@@ -246,7 +246,7 @@ a,
 }
 
 .text-muted {
-  color: #6f757d;
+  color: #8e929b;
 }
 
 /* ==============
@@ -347,7 +347,7 @@ a,
 .btn-info:active,
 .btn-info.active,
 .open .dropdown-toggle.btn-info {
-  background-color: #6f757d;
+  background-color: #8e929b;
   border-color: #323539;
 }
 
@@ -426,6 +426,7 @@ fieldset[disabled] .btn-info-subtle.active {
     margin-left: 0;
   }
 }
+
 .navbar-brand {
   padding-top: 10px;
   padding-left: 0;
@@ -519,7 +520,7 @@ fieldset[disabled] .btn-info-subtle.active {
 }
 
 .health-dot-unknown:before {
-  background-color: #6f757d;
+  background-color: #8e929b;
 }
 
 .clickable {
