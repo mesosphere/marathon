@@ -185,7 +185,7 @@ define([
                   STATES={STATES} />
                 <TaskDetailComponent
                   fetchState={this.state.fetchState}
-                  formatTaskHealthMessage={model.formatTaskHealthMessage}
+                  taskHealthMessage={model.formatTaskHealthMessage(this.state.activeTask)}
                   hasHealth={hasHealth}
                   STATES={STATES}
                   onShowTaskList={this.showTaskList}
