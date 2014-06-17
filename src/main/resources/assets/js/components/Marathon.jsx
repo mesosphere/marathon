@@ -74,7 +74,9 @@ define([
               </button>
             </div>
           </nav>
-          <AppListComponent className="container-fluid" collection={this.state.collection} ref="appList" />
+          <div className="container-fluid">
+            <AppListComponent collection={this.state.collection} ref="appList" />
+          </div>
         </div>
       );
     }
