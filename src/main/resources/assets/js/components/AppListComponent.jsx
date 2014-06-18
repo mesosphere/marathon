@@ -93,7 +93,7 @@ define([
           </tr>;
       } else {
         appNodes = this.props.collection.map(function(model) {
-          return <AppComponent key={model.cid} model={model} onClick={_this.onAppClick} />;
+          return <AppComponent key={model.id} model={model} onClick={_this.onAppClick} />;
         });
 
         // Give rows the selectable look when there are apps to click.
