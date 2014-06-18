@@ -200,6 +200,8 @@ define([
                 <dd>{model.get("instances")}</dd>
                 <dt>Memory (MB)</dt>
                 <dd>{model.get("mem")}</dd>
+                <dt>Disk Space (MB)</dt>
+                <dd>{model.get("disk")}</dd>
                 <dt>Ports</dt>
                 {portsNode}
                 <dt>URIs</dt>
