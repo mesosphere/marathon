@@ -112,8 +112,8 @@ health checks consecutively, that task is killed.
 Each health check supports the following options:
 
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
-  ignored within this number of seconds or until the task becomes healthy for
-  the first time.
+  ignored within this number of seconds of the task being started or until the
+  task becomes healthy for the first time.
 * `intervalSeconds` (Optional. Default: 10): Number of seconds to wait between
   health checks.
 * `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
