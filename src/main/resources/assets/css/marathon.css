@@ -380,7 +380,9 @@ fieldset[disabled] .btn-info.active {
 }
 
 .navbar-brand {
-  padding-top: 10px;
+  height: auto;
+  padding-bottom: 12px;
+  padding-top: 11px;
   padding-left: 0;
 }
 
