@@ -23,7 +23,7 @@
  */
 
 body {
-  background: #111113;
+  background-color: #323539;
   color: #f6f6f6;
 }
 
@@ -31,14 +31,7 @@ h1, .h1,
 h2, .h2,
 h3, .h3,
 h4, .h4 {
-  font-family: Open Sans;
-}
-
-h1, .h1 {
-  text-transform: uppercase;
-  letter-spacing:1.248px;
-  font-weight: 100;
-  font-size: 24px;
+  font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 hr {
@@ -58,7 +51,8 @@ dd {
   color: #f6f6f6;
 }
 
-dt, dd {
+dt,
+dd {
   line-height: 1.728571429;
 }
 
@@ -253,14 +247,6 @@ a,
  * Helpers
  * ==============
  */
-.fullscreen {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-}
-
 .control-label {
   font-weight: normal;
 }
@@ -398,14 +384,9 @@ fieldset[disabled] .btn-info.active {
   padding-left: 0;
 }
 
-.texture-background {
-  background-color: #323539;
-  z-index: -1;
-}
-
-.nav-tabs>li.active>a,
-.nav-tabs>li.active>a:hover,
-.nav-tabs>li.active>a:focus {
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
   border-top: none;
   border-left: none;
   border-right: none;
@@ -413,7 +394,7 @@ fieldset[disabled] .btn-info.active {
   border-color: #00b482;
 }
 
-.nav-tabs>li>a {
+.nav-tabs > li > a {
   margin-top: 3px;
   border-radius: 0;
 }
