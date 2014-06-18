@@ -371,40 +371,6 @@ fieldset[disabled] .btn-info.active {
   border-color: #323539;
 }
 
-.btn-info-subtle {
-  background-color: transparent;
-  border-color: #5b6067;
-}
-
-.btn-info-subtle:hover,
-.btn-info-subtle:focus,
-.btn-info-subtle:active,
-.btn-info-subtle.active,
-.open .dropdown-toggle.btn-info-subtle {
-  color: #fff;
-  background-color: #5b6067;
-  border-color: #5b6067;
-}
-
-.btn-info-subtle.disabled,
-.btn-info-subtle[disabled],
-fieldset[disabled] .btn-info-subtle,
-.btn-info-subtle.disabled:hover,
-.btn-info-subtle[disabled]:hover,
-fieldset[disabled] .btn-info-subtle:hover,
-.btn-info-subtle.disabled:focus,
-.btn-info-subtle[disabled]:focus,
-fieldset[disabled] .btn-info-subtle:focus,
-.btn-info-subtle.disabled:active,
-.btn-info-subtle[disabled]:active,
-fieldset[disabled] .btn-info-subtle:active,
-.btn-info-subtle.disabled.active,
-.btn-info-subtle[disabled].active,
-fieldset[disabled] .btn-info-subtle.active {
-  background-color: #5b6067;
-  border-color: #5b6067;
-}
-
 .overflow-ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;
