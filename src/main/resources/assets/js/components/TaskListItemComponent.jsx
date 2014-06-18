@@ -3,9 +3,8 @@
 define([
   "React",
   "models/Task",
-  "jsx!components/BadgeComponent",
-  "jsx!components/TaskDetailComponent"
-], function(React, Task, BadgeComponent, TaskDetailComponent) {
+  "jsx!components/BadgeComponent"
+], function(React, Task, BadgeComponent) {
   "use strict";
 
   function buildHref(host, port) {

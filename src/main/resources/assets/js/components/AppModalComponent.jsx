@@ -159,7 +159,7 @@ define([
       var envNode = (Object.keys(model.get("env")).length === 0) ?
         <dd className="text-muted">Unspecified</dd> :
         Object.keys(model.get("env")).map(function(k) {
-          return <dd key={k}>{k + "=" + model.get("env")[k]}</dd>
+          return <dd key={k}>{k + "=" + model.get("env")[k]}</dd>;
         });
 
       var executorNode = (model.get("executor") === "") ?

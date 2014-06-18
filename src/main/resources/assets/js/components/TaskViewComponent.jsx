@@ -73,7 +73,7 @@ define([
     },
     render: function() {
       var selectedTasksLength = Object.keys(this.state.selectedTasks).length;
-
+      var buttons;
       if (selectedTasksLength === 0) {
         buttons =
           <p>

@@ -19,9 +19,9 @@ define([
         var bVal = _.isFunction(b[this.sortKey]) ?
           b[this.sortKey]() :
           b.get(this.sortKey);
-        return this.sortReverse
-                ? bVal < aVal ? 1 : bVal > aVal ? -1 : 0 // reversed
-                : aVal < bVal ? 1 : aVal > bVal ? -1 : 0; // regular
+        return this.sortReverse ?
+          bVal < aVal ? 1 : bVal > aVal ? -1 : 0 : // reversed
+          aVal < bVal ? 1 : aVal > bVal ? -1 : 0; // regular
       };
     }
   });
