@@ -88,7 +88,7 @@ define([
       } else {
         modelAttrs.uris = [];
       }
-      
+
       // Constraints should be an Array of Strings.
       if ("constraints" in modelAttrs) {
         var constraintsArray = modelAttrs.constraints.split(",");

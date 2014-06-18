@@ -6,6 +6,8 @@ define([
   "mousetrap",
   "React"
 ], function($, _, Mousetrap, React) {
+  "use strict";
+
   function modalSizeClassName(size) {
     return (size == null) ? "" : "modal-" + size;
   }

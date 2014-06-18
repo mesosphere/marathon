@@ -2,6 +2,8 @@ define([
   "models/SortableCollection",
   "models/Task"
 ], function(SortableCollection, Task) {
+  "use strict";
+
   return SortableCollection.extend({
     model: Task,
 

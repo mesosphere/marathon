@@ -5,6 +5,7 @@ define([
   "mixins/BackboneMixin",
   "jsx!components/TaskListItemComponent"
 ], function(React, BackboneMixin, TaskListItemComponent) {
+  "use strict";
 
   return React.createClass({
     displayName: "TaskListComponent",

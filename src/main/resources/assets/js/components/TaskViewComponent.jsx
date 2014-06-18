@@ -4,6 +4,7 @@ define([
   "React",
   "jsx!components/TaskListComponent"
 ], function(React, TaskListComponent) {
+  "use strict";
 
   return React.createClass({
     displayName: "TaskViewComponent",

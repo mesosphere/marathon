@@ -3,6 +3,7 @@
 define([
   "React"
 ], function(React) {
+  "use strict";
 
   return React.createClass({
     displayName: "StackedViewComponent",

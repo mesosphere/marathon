@@ -8,6 +8,8 @@ define([
   "jsx!components/TaskHealthComponent"
 ], function(React, BackboneMixin, Task,
   TimeFieldComponent, TaskHealthComponent) {
+  "use strict";
+
 
   return React.createClass({
     displayName: "TaskDetailComponent",

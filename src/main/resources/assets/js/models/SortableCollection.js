@@ -2,6 +2,8 @@ define([
   "Backbone",
   "Underscore"
 ], function(Backbone, _) {
+  "use strict";
+
   var DEFAULT_ATTR = "id";
   var SortableCollection = Backbone.Collection.extend({
     setComparator: function(attribute) {

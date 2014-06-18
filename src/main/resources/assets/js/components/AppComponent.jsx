@@ -4,6 +4,8 @@ define([
   "React",
   "jsx!components/BadgeComponent"
 ], function(React, BadgeComponent) {
+  "use strict";
+
   return React.createClass({
     onClick: function() {
       this.props.onClick(this.props.model);

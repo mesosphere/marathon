@@ -6,6 +6,7 @@ define([
   "jsx!components/BadgeComponent",
   "jsx!components/TaskDetailComponent"
 ], function(React, Task, BadgeComponent, TaskDetailComponent) {
+  "use strict";
 
   function buildHref(host, port) {
     return "http://" + host + ":" + port;

@@ -3,6 +3,8 @@
 define([
   "React"
 ], function(React) {
+  "use strict";
+
   function noop() {}
 
   return React.createClass({

@@ -4,6 +4,7 @@ define([
   "React",
   "jsx!components/TimeFieldComponent"
 ], function(React, TimeFieldComponent) {
+  "use strict";
 
   return React.createClass({
     displayName: "TaskHealthComponent",
@@ -13,9 +14,10 @@ define([
     render: function() {
       var task = this.props.task;
       var healthCheckResults = task.get("healthCheckResults");
+      var healthNodeList;
 
       if (healthCheckResults != null) {
-        var healthNodeList = healthCheckResults.map(function (cResult, index) {
+        healthNodeList = healthCheckResults.map(function (cResult, index) {
           if (cResult != null) {
             var timeNodes = [
               {

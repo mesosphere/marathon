@@ -3,6 +3,8 @@
 define([
   "React"
 ], function(React) {
+  "use strict";
+
   return React.createClass({
     propTypes: {
       isActive: React.PropTypes.bool,

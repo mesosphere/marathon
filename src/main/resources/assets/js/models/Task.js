@@ -1,7 +1,9 @@
 define([
   "Backbone",
   "jquery"
-], function(Backbone, $, _) {
+], function(Backbone, $) {
+  "use strict";
+
   var STATUS_STAGED = "Staged";
   var STATUS_STARTED = "Started";
   var HEALTH = {
