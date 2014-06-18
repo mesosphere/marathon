@@ -109,21 +109,26 @@ A health check is considered passing if (1) its HTTP response code is between
 `timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
 health checks consecutively, that task is killed.
 
-Each health check supports the following:
+Each health check supports the following options:
 
-* `gracePeriodSeconds`: Health check failures are ignored within this number of
-  seconds or until the task becomes healthy for the first time.
-* `intervalSeconds`: Number of seconds to wait between health checks.
-* `maxConsecutiveFailures`: Number of consecutive health check failures after
-  which the unhealthy task should be killed.
-* `path`: Path to endpoint exposed by the task that will provide health status.
-  Example: "/path/to/health". _Note: only used if `type == "http"`._
-* `portIndex`: Index in this app's `ports` array to be used for health requests.
-  An index is used so the app can use random ports, like "[0, 0, 0]" for example,
-  and tasks could be started with port environment variables like `$PORT1`.
-* `timeoutSeconds`: Number of seconds after which a health check is considered a
-  failure regardless of the response.
-* `type`: Protocol of the requests to be performed. One of "http" or "tcp".
+* `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
+  ignored within this number of seconds or until the task becomes healthy for
+  the first time.
+* `intervalSeconds` (Optional. Default: 10): Number of seconds to wait between
+  health checks.
+* `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
+  check failures after which the unhealthy task should be killed.
+* `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
+  will provide health  status. Example: "/path/to/health".
+  _Note: only used if `protocol == "HTTP"`._
+* `portIndex` (Optional. Default: 0): Index in this app's `ports` array to be
+  used for health requests. An index is used so the app can use random ports,
+  like "[0, 0, 0]" for example, and tasks could be started with port environment
+  variables like `$PORT1`.
+* `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
+  performed. One of "HTTP" or "TCP".
+* `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
+  health check is considered a failure regardless of the response.
 
 ##### `id`
 
