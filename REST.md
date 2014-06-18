@@ -104,16 +104,25 @@ operating as expected. Health checks begin immediately upon task launch. For
 design details, refer to the [health checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)
 wiki page.
 
-A health check is considered passing if (1) its HTTP response code is between 200 and 399, inclusive, and (2) its response is received within the `timeoutSeconds` period. If a task fails more than `maxConseutiveFailures` health checks consecutively, that task is killed.
+A health check is considered passing if (1) its HTTP response code is between
+200 and 399, inclusive, and (2) its response is received within the
+`timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
+health checks consecutively, that task is killed.
 
 Each health check supports the following:
 
-* `gracePeriodSeconds`: Health check failures are ignored within this number of seconds or until the task becomes health for the first time.
+* `gracePeriodSeconds`: Health check failures are ignored within this number of
+  seconds or until the task becomes healthy for the first time.
 * `intervalSeconds`: Number of seconds to wait between health checks.
-* `maxConsecutiveFailures`: Number of consecutive health check failures after which the unhealthy task should be killed.
-* `path`: Path to endpoint exposed by the task that will provide health status. Example: "/path/to/health". _Note: only used if `type == "http"`._
-* `portIndex`: Index in this app's `ports` array to be used for health requests. An index is used so the app can use random ports, like "[0, 0, 0]" for example, and tasks could be started with port environment variables like `$PORT1`.
-* `timeoutSeconds`: Number of seconds after which a health check is considered a failure regardless of the response.
+* `maxConsecutiveFailures`: Number of consecutive health check failures after
+  which the unhealthy task should be killed.
+* `path`: Path to endpoint exposed by the task that will provide health status.
+  Example: "/path/to/health". _Note: only used if `type == "http"`._
+* `portIndex`: Index in this app's `ports` array to be used for health requests.
+  An index is used so the app can use random ports, like "[0, 0, 0]" for example,
+  and tasks could be started with port environment variables like `$PORT1`.
+* `timeoutSeconds`: Number of seconds after which a health check is considered a
+  failure regardless of the response.
 * `type`: Protocol of the requests to be performed. One of "http" or "tcp".
 
 ##### `id`
