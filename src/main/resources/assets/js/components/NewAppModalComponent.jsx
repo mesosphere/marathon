@@ -153,6 +153,7 @@ define([
         return <p key={i} className="text-danger"><strong>{error.message}</strong></p>;
       });
 
+      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
           <form method="post" role="form" onSubmit={this.onSubmit}>

@@ -30,6 +30,7 @@ define([
         );
       }, this);
 
+      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <ul className="nav nav-tabs">
           {tabs}

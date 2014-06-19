@@ -16,6 +16,8 @@ define([
     },
     render: function() {
       var time = this.props.time;
+
+      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
           <dt>{this.props.label}</dt>

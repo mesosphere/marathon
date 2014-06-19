@@ -59,6 +59,7 @@ define([
           }
         });
       }
+      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div className={this.props.className}>
           {healthNodeList}

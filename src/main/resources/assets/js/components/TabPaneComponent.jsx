@@ -30,6 +30,7 @@ define([
         "tab-pane": true
       });
 
+      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div className={classSet}>
           {this.props.children}

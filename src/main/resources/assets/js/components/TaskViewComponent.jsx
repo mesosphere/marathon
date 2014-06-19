@@ -99,6 +99,8 @@ define([
             </button>
           </p>;
       }
+
+      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
           {buttons}

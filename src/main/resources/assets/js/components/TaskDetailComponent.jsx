@@ -60,6 +60,7 @@ define([
         });
       }
 
+      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
           <ol className="breadcrumb">

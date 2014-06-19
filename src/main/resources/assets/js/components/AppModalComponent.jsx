@@ -176,7 +176,7 @@ define([
         model.get("uris").map(function(u) {
           return <dd key={u}>{u}</dd>;
         });
-
+      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}
           size="lg">
