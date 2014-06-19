@@ -3,6 +3,7 @@
 define([
   "React",
   "mixins/BackboneMixin",
+  "models/AppVersionCollection",
   "jsx!components/AppVersionComponent",
   "jsx!components/AppVersionListComponent",
   "jsx!components/ModalComponent",
@@ -11,9 +12,10 @@ define([
   "jsx!components/TaskDetailComponent",
   "jsx!components/TaskViewComponent",
   "jsx!components/TogglableTabsComponent"
-], function(React, BackboneMixin, AppVersionComponent, AppVersionListComponent,
-    ModalComponent, StackedViewComponent, TabPaneComponent,
-    TaskDetailComponent, TaskViewComponent, TogglableTabsComponent) {
+], function(React, BackboneMixin, AppVersionCollection, AppVersionComponent,
+    AppVersionListComponent, ModalComponent, StackedViewComponent,
+    TabPaneComponent, TaskDetailComponent, TaskViewComponent,
+    TogglableTabsComponent) {
 
   var STATES = {
       STATE_LOADING: 0,
