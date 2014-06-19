@@ -27,8 +27,7 @@ define([
         );
       } else {
         if (this.props.appVersions.length > 0) {
-          listItems = [];
-          this.props.appVersions.forEach(function(v) {
+          listItems = this.props.appVersions.map(function(v) {
             return (
               <AppVersionListItemComponent
                 app={this.props.app}
