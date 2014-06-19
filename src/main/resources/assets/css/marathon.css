@@ -420,26 +420,16 @@ fieldset[disabled] .btn-info.active {
 
 .badge-circlet {
   padding: 7px 9px;
+  background: transparent;
   border-radius: 14px;
+  color: inherit;
   font-size: 14px;
   font-weight: normal;
-  background-color: #3b3e43;
-  color: #f6f6f6;
 }
 
-.badge-circlet:before {
-  content: "\00a0";
-  -moz-border-radius: 6px;
-  -webkit-border-radius: 6px;
-  border-radius: 6px;
-  border: solid 2px #51565d;
-  background-color: #faef66;
-  width: 12px;
-  height: 12px;
-  display: inline-block;
-  vertical-align: bottom;
-  margin-right: 6px;
-  margin-bottom: 1px;
+.badge-circlet-default {
+  background-color: #3b3e43;
+  color: #f6f6f6;
 }
 
 .health-dot {
@@ -448,9 +438,9 @@ fieldset[disabled] .btn-info.active {
 
 .health-dot:before {
   content: "\00a0";
-  -moz-border-radius: 6px;
-  -webkit-border-radius: 6px;
-  border-radius: 6px;
+  -moz-border-radius: 50%;
+  -webkit-border-radius: 50%;
+  border-radius: 50%;
   border: solid 2px #51565d;
   width: 12px;
   height: 12px;
@@ -460,12 +450,16 @@ fieldset[disabled] .btn-info.active {
   margin-bottom: 1px;
 }
 
-.health-dot-success:before {
-  background-color: #7aff68;
+.health-dot-error:before {
+  background-color: #ff7d64;
 }
 
 .health-dot-warning:before {
-  background-color: #ff7d64;
+  background-color: #faef66
+}
+
+.health-dot-success:before {
+  background-color: #7aff68;
 }
 
 .health-dot-unknown:before {

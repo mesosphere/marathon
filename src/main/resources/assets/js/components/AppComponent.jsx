@@ -12,7 +12,8 @@ define([
       var model = this.props.model;
 
       var instancesClassSet = React.addons.classSet({
-        "badge badge-circlet": !model.allInstancesBooted()
+        "badge badge-circlet": true,
+        "badge-circlet-default": !model.allInstancesBooted()
       });
 
       return (
@@ -29,6 +30,7 @@ define([
           <td className="text-right">{model.get("cpus")}</td>
           <td className="text-right">
             <span className={instancesClassSet}>
+              {model.allInstancesBooted() ? null : <span className="health-dot health-dot-warning"></span>}
               {model.formatTasksRunning()} / {model.get("instances")}
             </span>
           </td>
