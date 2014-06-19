@@ -61,7 +61,6 @@ define([
       this.stopPolling();
     },
     render: function() {
-      var _this = this;
       var sortKey = this.props.collection.sortKey;
 
       var appNodes;
@@ -93,8 +92,8 @@ define([
           </tr>;
       } else {
         appNodes = this.props.collection.map(function(model) {
-          return <AppComponent key={model.id} model={model} onClick={_this.onAppClick} />;
-        });
+          return <AppComponent key={model.id} model={model} onClick={this.onAppClick} />;
+        }, this);
 
         // Give rows the selectable look when there are apps to click.
         tableClassName += " table-hover table-selectable";
