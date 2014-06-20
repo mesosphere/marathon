@@ -82,7 +82,7 @@ a,
   display: inline-block;
   width: 0;
   height: 0;
-  vertical-align: top;
+  vertical-align: middle;
   border-right: 5px solid;
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
@@ -92,7 +92,6 @@ a,
   display: inline-block;
   width: 0;
   height: 0;
-  vertical-align: top;
   border-left: 5px solid;
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
@@ -205,11 +204,9 @@ a,
   line-height: 1.1;
 }
 
-.nav-tabs > li > a:hover {
+.nav-tabs > li > a:hover,
+.nav-tabs > li > a:focus {
   color: #f6f6f6;
-}
-
-.nav-tabs > li > a:hover {
   border-color: transparent;
 }
 
@@ -219,8 +216,13 @@ a,
   background-color: #3e4146;
 }
 
-.table > thead > tr > th {
-  border-bottom-color: #3d4045;
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+  background-color: transparent;
+  border-color: #555;
+  border-bottom-color: #222224;
+  color: #f6f6f6;
 }
 
 .table > thead > tr > th,
@@ -229,16 +231,7 @@ a,
 .table > thead > tr > td,
 .table > tbody > tr > td,
 .table > tfoot > tr > td {
-  border-top-color: #3d4045;
-}
-
-.nav-tabs > li.active > a,
-.nav-tabs > li.active > a:hover,
-.nav-tabs > li.active > a:focus {
-  background-color: transparent;
-  border-color: #555;
-  border-bottom-color: #222224;
-  color: #f6f6f6;
+  border-color: #3d4045;
 }
 
 .list-inline > li {
@@ -406,14 +399,37 @@ fieldset[disabled] .btn-info.active {
   padding-left: 0;
 }
 
-.list-group-item-inverse {
-  background-color: transparent;
-  border-color: #2a2d2f;
+.panel-group .panel-inverse {
+  border-radius: 0;
+  border-top: solid 1px #3d4045;
+  -moz-box-shadow: none;
+  -webkit-box-shadow: none;
+  box-shadow: none;
 }
 
-.well {
+.panel-group .panel-header {
+  color: #8e929b;
+  font-weight: bold;
+  border-top: solid 0 transparent;
+  border-bottom: solid 1px #3d4045;
+}
+
+.panel-group .panel-inverse+.panel-inverse {
+  margin-top: 0;
+}
+
+.panel-inverse {
+  background-color: transparent;
+  border-color: transparent;
+}
+
+.panel-body {
   background-color: #454a50;
-  border-color: #2a2d2f;
+}
+
+.panel-inverse .panel-body {
+  border-radius: 0 0 4px 4px;
+  margin-bottom: 15px;
 }
 
 .nav-tabs > li.active > a,

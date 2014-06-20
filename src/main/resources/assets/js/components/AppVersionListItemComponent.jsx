@@ -9,21 +9,40 @@ define([
   return React.createClass({
     displayName: "AppVersionListItemComponent",
     propTypes: {
-      app: React.PropTypes.instanceOf(App).isRequired,
       appVersion: React.PropTypes.instanceOf(AppVersion).isRequired,
       onRollback: React.PropTypes.func
     },
 
     getInitialState: function() {
+      var open = !!this.props.currentVersion;
+      if (open) {
+        this.props.appVersion.fetch();
+      }
       return {
-        open: !!this.props.currentVersion
+        open: open
       };
     },
 
     handleDetailsClick: function(event) {
+      if (event.target.type === "radio") {
+        // handled by other functions
+        return;
+      }
       event.preventDefault();
+      if (!this.state.open) {
+        this.props.appVersion.fetch();
+      }
       this.setState({open: !this.state.open});
-      // this.props.onShowDetails(this.props.app, event);
+    },
+
+    handleFirstRadioClick: function(event) {
+      event.preventDefault();
+      // TODO: handle this
+    },
+
+    handleSecondRadioClick: function(event) {
+      event.preventDefault();
+      // TODO: handle this
     },
 
     render: function() {
@@ -33,17 +52,17 @@ define([
         });
       var versionDate = new Date(this.props.appVersion.get("version"));
       return (
-        <li className="list-group-item list-group-item-inverse">
-          <div className="row clickable" onClick={this.handleDetailsClick}>
-            <span className="col-md-9">
+        <div className="panel panel-inverse">
+          <div className="panel-heading row clickable" onClick={this.handleDetailsClick}>
+            <span className="col-md-7">
               <time dateTime={versionDate.toISOString()} title={versionDate.toISOString()}>
                 {versionDate.toLocaleString()}</time>
             </span>
-            <span className="text-center col-md-1">
-              <input type="radio" />
+            <span className="text-center col-md-2">
+              <input type="radio" onClick={this.handleFirstRadioClick} />
             </span>
-            <span className="text-center col-md-1">
-              <input type="radio" />
+            <span className="text-center col-md-2">
+              <input type="radio" onClick={this.handleSecondRadioClick} />
             </span>
             <span className="clickable text-center col-md-1">
               <span className={caretClassSet}></span>
@@ -51,15 +70,15 @@ define([
           </div>
           {
             this.state.open ?
-              <div className="well well-sm">
+              <div className="panel-body">
                 <AppVersionComponent
-                  app={this.props.app}
                   onRollback={this.props.onRollback}
+                  appVersion={this.props.appVersion}
                   currentVersion={this.props.currentVersion} />
               </div> :
               null
           }
-        </li>
+        </div>
       );
     }
   });

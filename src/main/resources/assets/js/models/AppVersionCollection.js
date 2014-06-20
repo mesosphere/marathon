@@ -17,8 +17,8 @@ define([
       // API response is a list of strings. Use the strings as "versions" and
       // return objects to be turned into models by Backbone.
       return response.versions.map(function(v) {
-        return {version: v};
-      });
+        return {version: v, appId: this.options.appId};
+      }, this);
     },
 
     url: function() {

@@ -225,7 +225,6 @@ define([
                 onActivate={this.fetchAppVersions}>
               <h4>Versions</h4>
               <AppVersionListComponent
-                app={this.props.model}
                 appVersions={appVersions}
                 onRollback={this.rollbackToAppVersion} />
             </TabPaneComponent>
