@@ -1,9 +1,10 @@
 /** @jsx React.DOM */
 
 define([
+  "Underscore",
   "React",
   "models/App"
-], function(React, App) {
+], function(_, React, App) {
   var UNSPECIFIED_NODE =
     React.createClass({
       render: function() {
@@ -15,7 +16,15 @@ define([
     displayName: "AppVersionComponent",
 
     propTypes: {
-      app: React.PropTypes.instanceOf(App).isRequired
+      app: React.PropTypes.instanceOf(App).isRequired,
+      onRollback: React.PropTypes.func
+    },
+
+    handleSubmit: function(event) {
+      if (_.isFunction(this.props.onRollback)) {
+        event.preventDefault();
+        this.props.onRollback(this.props.appVersion, event);
+      }
     },
 
     render: function() {
@@ -67,39 +76,54 @@ define([
         });
 
       return (
-        <dl className="dl-horizontal">
-          <dt>Command</dt>
-          {cmdNode}
-          <dt>Constraints</dt>
-          {constraintsNode}
-          <dt>Container</dt>
-          {containerNode}
-          <dt>CPUs</dt>
-          <dd>{app.get("cpus")}</dd>
-          <dt>Environment</dt>
-          {envNode}
-          <dt>Executor</dt>
-          {executorNode}
-          <dt>ID</dt>
-          <dd>{app.id}</dd>
-          <dt>Instances</dt>
-          <dd>{app.get("instances")}</dd>
-          <dt>Memory (MB)</dt>
-          <dd>{app.get("mem")}</dd>
-          <dt>Ports</dt>
-          {portsNode}
-          <dt>Task Rate Limit</dt>
-          {taskRateLimitNode}
-          <dt>URIs</dt>
-          {urisNode}
-          <dt>Version</dt>
-          <dd>
-            <time dateTime={app.get("version").toISOString()}
-                title={app.get("version").toISOString()}>
-              {app.get("version").toLocaleString()}
-            </time>
-          </dd>
-        </dl>
+        <div>
+          <dl className="dl-horizontal">
+            <dt>Command</dt>
+            {cmdNode}
+            <dt>Constraints</dt>
+            {constraintsNode}
+            <dt>Container</dt>
+            {containerNode}
+            <dt>CPUs</dt>
+            <dd>{app.get("cpus")}</dd>
+            <dt>Environment</dt>
+            {envNode}
+            <dt>Executor</dt>
+            {executorNode}
+            <dt>ID</dt>
+            <dd>{app.id}</dd>
+            <dt>Instances</dt>
+            <dd>{app.get("instances")}</dd>
+            <dt>Memory (MB)</dt>
+            <dd>{app.get("mem")}</dd>
+            <dt>Ports</dt>
+            {portsNode}
+            <dt>Task Rate Limit</dt>
+            {taskRateLimitNode}
+            <dt>URIs</dt>
+            {urisNode}
+            <dt>Version</dt>
+            <dd>
+              <time dateTime={app.get("version").toISOString()}
+                  title={app.get("version").toISOString()}>
+                {app.get("version").toLocaleString()}
+              </time>
+            </dd>
+          </dl>
+          {
+            this.props.currentVersion ?
+              null :
+              <span className="text-right">
+                <form action={this.props.app.url()} method="post" onSubmit={this.handleSubmit}>
+                    <input type="hidden" name="_method" value="put" />
+                    <input type="hidden" name="version" value={app.get("version")} />
+                    <button type="submit" className="btn btn-sm btn-success">
+                      Set as current
+                    </button>
+                </form>
+              </span>
+          }
+        </div>
       );
     }
   });

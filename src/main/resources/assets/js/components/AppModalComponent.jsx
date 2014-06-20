@@ -4,7 +4,6 @@ define([
   "React",
   "mixins/BackboneMixin",
   "models/AppVersionCollection",
-  "jsx!components/AppVersionComponent",
   "jsx!components/AppVersionListComponent",
   "jsx!components/ModalComponent",
   "jsx!components/StackedViewComponent",
@@ -12,10 +11,9 @@ define([
   "jsx!components/TaskDetailComponent",
   "jsx!components/TaskViewComponent",
   "jsx!components/TogglableTabsComponent"
-], function(React, BackboneMixin, AppVersionCollection, AppVersionComponent,
-    AppVersionListComponent, ModalComponent, StackedViewComponent,
-    TabPaneComponent, TaskDetailComponent, TaskViewComponent,
-    TogglableTabsComponent) {
+], function(React, BackboneMixin, AppVersionCollection, AppVersionListComponent,
+    ModalComponent, StackedViewComponent, TabPaneComponent, TaskDetailComponent,
+    TaskViewComponent, TogglableTabsComponent) {
 
   var STATES = {
       STATE_LOADING: 0,
@@ -168,6 +166,7 @@ define([
           return <dd key={u}>{u}</dd>;
         });
 
+        var appVersions = this.state.appVersions ? this.state.appVersions.models : null;
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}
           size="lg">
@@ -224,12 +223,10 @@ define([
             <TabPaneComponent
                 id="configuration"
                 onActivate={this.fetchAppVersions}>
-              <h4>Current Version</h4>
-              <AppVersionComponent app={this.props.model} />
-              <h4>Previous Versions</h4>
+              <h4>Versions</h4>
               <AppVersionListComponent
                 app={this.props.model}
-                appVersions={this.state.appVersions == null ? null : this.state.appVersions.slice(1)}
+                appVersions={appVersions}
                 onRollback={this.rollbackToAppVersion} />
             </TabPaneComponent>
           </TogglableTabsComponent>

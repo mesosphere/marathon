@@ -13,41 +13,27 @@ define([
       onRollback: React.PropTypes.func
     },
 
-    getInitialState: function() {
-      return {
-        expandedAppVersions: {}
-      };
-    },
-
     render: function() {
-      var listItems;
-      if (this.props.appVersions == null) {
-        listItems = (
-          <tr><td className="text-muted text-center">Loading versions...</td></tr>
-        );
-      } else {
-        if (this.props.appVersions.length > 0) {
-          listItems = this.props.appVersions.map(function(v) {
-            return (
-              <AppVersionListItemComponent
-                app={this.props.app}
-                appVersion={v}
-                key={v.get("version")}
-                onRollback={this.props.onRollback}
-                onShowDetails={this.props.onShowDetails} />
-            );
-          }, this);
-        } else {
-          listItems = <tr><td className="text-muted text-center">No previous versions</td></tr>
-        }
-      }
-
+      var appVersions = this.props.appVersions;
       return (
-        <table className="table table-selectable">
-          <tbody>
-            {listItems}
-          </tbody>
-        </table>
+        <ul className="list-group">
+            {
+              appVersions == null ?
+                <li className="text-muted text-center col-md-12">Loading versions...</li> :
+                appVersions.length > 0 ?
+                  appVersions.map(function(v, i) {
+                    return (
+                        <AppVersionListItemComponent
+                          app={this.props.app}
+                          appVersion={v}
+                          key={v.get("version")}
+                          onRollback={this.props.onRollback}
+                          currentVersion={this.props.app.get("version") === v.get("version")} />
+                    );
+                  }, this) :
+                  <li className="text-danger text-center col-md-12">Error fetching app versions</li>
+            }
+        </ul>
       );
     }
   });
