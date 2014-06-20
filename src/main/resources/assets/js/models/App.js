@@ -41,7 +41,7 @@ define([
         env: {},
         executor: "",
         healthChecks: [],
-        id: _.uniqueId("app-"),
+        id: null,
         instances: 1,
         mem: 16.0,
         ports: [0],
@@ -78,9 +78,9 @@ define([
     },
     formatTaskHealthMessage: function(task) {
       if (task) {
-        var msg = DEFAULT_HEALTH_MSG;
-        var taskHealth = task.getHealth();
-        switch(taskHealth) {
+        var msg;
+
+        switch(task.getHealth()) {
           case Task.HEALTH.HEALTHY:
             msg = "Healthy";
             break;
@@ -94,6 +94,7 @@ define([
             msg = DEFAULT_HEALTH_MSG;
             break;
         }
+
         return msg;
       }
       return null;
@@ -183,7 +184,7 @@ define([
         }
       }
 
-      if (errors.length > 0) return errors;
+      if (errors.length > 0) { return errors; }
     }
   }, {
     VALID_ID_PATTERN: VALID_ID_PATTERN

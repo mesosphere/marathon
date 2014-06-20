@@ -43,10 +43,6 @@ th {
   color: #8e929b;
 }
 
-dt {
-  font-weight: normal;
-}
-
 dd {
   color: #f6f6f6;
 }
@@ -114,23 +110,15 @@ a,
   display: block;
 }
 
-.modal-body {
-  background-color: #323539;
-}
-
 .modal-body-no-top {
   padding-top: 0;
 }
 
-.modal-footer {
-  border-top: none;
-  margin-top: 0;
-  padding-top: 0;
-  background-color: #323539;
-}
-
 .modal-header {
+  background-color: #222224;
   border-bottom: none;
+  -webkit-border-radius: 6px 6px 0 0;
+  border-radius: 6px 6px 0 0;
 }
 
 .modal-header .btn + .btn {
@@ -139,7 +127,7 @@ a,
 }
 
 .modal-content {
-  background-color: #222224;
+  background-color: #323539;
 }
 
 .has-error .help-block,
@@ -197,6 +185,10 @@ a,
 .nav > li > a:focus {
   text-decoration: none;
   background-color: #3e4146;
+}
+
+.table-unstyled {
+  margin-bottom: 0;
 }
 
 .table > thead > tr > th {
@@ -374,7 +366,8 @@ fieldset[disabled] .btn-info.active {
 }
 
 @media (min-width: 768px) {
-  .navbar>.container .navbar-brand, .navbar>.container-fluid .navbar-brand {
+  .navbar > .container .navbar-brand,
+  .navbar > .container-fluid .navbar-brand {
     margin-left: 0;
   }
 }
