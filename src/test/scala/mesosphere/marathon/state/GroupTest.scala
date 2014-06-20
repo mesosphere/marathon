@@ -16,7 +16,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ))
 
       When("a group with a specific path is requested")
-      val path = GroupId("/test/group1")
+      val path = PathId("/test/group1")
 
       Then("the group is found")
       current.group(path) should be('defined)
@@ -31,7 +31,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ))
 
       When("a group with a specific path is requested")
-      val path = GroupId("/test/unknown")
+      val path = PathId("/test/unknown")
 
       Then("the group is not found")
       current.group(path) should be('empty)
@@ -48,7 +48,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       When("the group will be updated")
       val timestamp = Timestamp.now()
       val result = current.update(timestamp) { group =>
-        if (group.id == GroupId("/test/group2"))
+        if (group.id == PathId("/test/group2"))
           Group("/test/group3", scaling, Set(AppDefinition("app2")), version = timestamp)
         else group
       }
@@ -82,21 +82,21 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ))
 
       When("a non existing path is requested")
-      val path = GroupId("/test/group3/group4/group5")
+      val path = PathId("/test/group3/group4/group5")
       val group = current.makeGroup(path)
 
       Then("the path has been created")
       group.group(path) should be('defined)
 
       When("a partly existing path is requested")
-      val path2 = GroupId("/test/group1/group4/group5")
+      val path2 = PathId("/test/group1/group4/group5")
       val group2 = current.makeGroup(path2)
 
       Then("only the missing path has been created")
       group2.group(path2) should be('defined)
 
       When("the path is already existent")
-      val path3 = GroupId("/test/group1")
+      val path3 = PathId("/test/group1")
       val group3 = current.makeGroup(path3)
 
       Then("nothing has been changed")
@@ -147,7 +147,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("The dependency list is correct")
       ids should have size 7
-      ids should not contain GroupId("/test/cache/c1")
+      ids should not contain PathId("/test/cache/c1")
       val expected = List(
         "/test/database/redis/r1",
         "/test/database/mongo/m1",
@@ -189,7 +189,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("The dependency list is correct")
       ids should have size 7
-      ids should not contain GroupId("/test/cache/c1")
+      ids should not contain PathId("/test/cache/c1")
       val expected = List(
         "/test/database/redis",
         "/test/database/mongo",

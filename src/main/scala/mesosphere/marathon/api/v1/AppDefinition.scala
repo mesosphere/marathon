@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v1
 
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.{ ContainerInfo, Protos }
-import mesosphere.marathon.state.{ Migration, GroupId, MarathonState, Timestamp, Timestamped }
+import mesosphere.marathon.state.{ Migration, PathId, MarathonState, Timestamp, Timestamped }
 import mesosphere.marathon.Protos.{ StorageVersion, MarathonTask, Constraint }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.health.HealthCheck
@@ -53,7 +53,7 @@ case class AppDefinition(
 
   healthChecks: Set[HealthCheck] = Set.empty,
 
-  dependencies: Set[GroupId] = Set.empty,
+  dependencies: Set[PathId] = Set.empty,
 
   version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {

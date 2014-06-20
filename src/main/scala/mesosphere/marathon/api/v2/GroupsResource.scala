@@ -4,7 +4,7 @@ import javax.ws.rs._
 import javax.ws.rs.core.{ Request, Response, MediaType }
 import javax.inject.Inject
 import javax.validation.{ ConstraintViolation, ConstraintViolationException, Validation }
-import mesosphere.marathon.state.{ GroupId, Group, Timestamp, GroupManager }
+import mesosphere.marathon.state.{ PathId, Group, Timestamp, GroupManager }
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import mesosphere.marathon.api.Responses
@@ -124,7 +124,7 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   @Path("""{path:.+}""")
   def delete(@PathParam("path") path: String,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    val gid = GroupId(path)
+    val gid = PathId(path)
     val version = Timestamp.now()
     if (gid.isRoot) {
       if (result(groupManager.expunge(gid), defaultWait)) Response.ok(Map("version" -> version)).build()
@@ -136,7 +136,7 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
     }
   }
 
-  private def updateOrCreate(id: GroupId, update: GroupUpdate, force: Boolean): Response = {
+  private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): Response = {
     checkIsValid(update)
     val version = Timestamp.now()
     groupManager.update(id, version, group => update.apply(group, version), force)

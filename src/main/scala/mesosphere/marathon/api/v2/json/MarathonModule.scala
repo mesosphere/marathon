@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import com.fasterxml.jackson.databind._
 import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
-import mesosphere.marathon.state.{ GroupId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.health.HealthCheck
 import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind.Module.SetupContext
@@ -31,7 +31,7 @@ class MarathonModule extends Module {
   private val finiteDurationClass = classOf[FiniteDuration]
   private val containerInfoClass = classOf[ContainerInfo]
   private val appUpdateClass = classOf[AppUpdate]
-  private val groupIdClass = classOf[GroupId]
+  private val groupIdClass = classOf[PathId]
 
   def getModuleName: String = "MarathonModule"
 
@@ -50,7 +50,7 @@ class MarathonModule extends Module {
         else if (matches(timestampClass)) TimestampSerializer
         else if (matches(finiteDurationClass)) FiniteDurationSerializer
         else if (matches(containerInfoClass)) ContainerInfoSerializer
-        else if (matches(groupIdClass)) GroupIdSerializer
+        else if (matches(groupIdClass)) PathIdSerializer
         else null
       }
     })
@@ -67,7 +67,7 @@ class MarathonModule extends Module {
         else if (matches(finiteDurationClass)) FiniteDurationDeserializer
         else if (matches(containerInfoClass)) ContainerInfoDeserializer
         else if (matches(appUpdateClass)) AppUpdateDeserializer
-        else if (matches(groupIdClass)) GroupIdDeserializer
+        else if (matches(groupIdClass)) PathIdDeserializer
         else null
       }
     })
@@ -164,8 +164,8 @@ class MarathonModule extends Module {
     }
   }
 
-  object GroupIdSerializer extends JsonSerializer[GroupId] {
-    def serialize(id: GroupId, jgen: JsonGenerator, provider: SerializerProvider) {
+  object PathIdSerializer extends JsonSerializer[PathId] {
+    def serialize(id: PathId, jgen: JsonGenerator, provider: SerializerProvider) {
       jgen.writeString(id)
     }
   }
@@ -226,8 +226,8 @@ class MarathonModule extends Module {
     }
   }
 
-  object GroupIdDeserializer extends JsonDeserializer[GroupId] {
-    def deserialize(json: JsonParser, context: DeserializationContext): GroupId = {
+  object PathIdDeserializer extends JsonDeserializer[PathId] {
+    def deserialize(json: JsonParser, context: DeserializationContext): PathId = {
       val tree: JsonNode = json.getCodec.readTree(json)
       tree.textValue()
     }

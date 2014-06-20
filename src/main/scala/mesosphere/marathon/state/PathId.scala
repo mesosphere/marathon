@@ -2,7 +2,7 @@ package mesosphere.marathon.state
 
 import scala.language.implicitConversions
 
-case class GroupId(path: List[String], absolute: Boolean = true) {
+case class PathId(path: List[String], absolute: Boolean = true) {
 
   def root: String = path.headOption.getOrElse("")
 
@@ -14,22 +14,22 @@ case class GroupId(path: List[String], absolute: Boolean = true) {
 
   def safePath: String = path.mkString("_")
 
-  def parent: GroupId = if (tail.isEmpty) this else GroupId(path.reverse.tail.reverse)
+  def parent: PathId = if (tail.isEmpty) this else PathId(path.reverse.tail.reverse)
 
-  def child: GroupId = GroupId(tail)
+  def child: PathId = PathId(tail)
 
-  def append(id: GroupId): GroupId = GroupId(path ::: id.path)
+  def append(id: PathId): PathId = PathId(path ::: id.path)
 
-  def restOf(parent: GroupId): GroupId = {
+  def restOf(parent: PathId): PathId = {
     def in(currentPath: List[String], parentPath: List[String]): List[String] = {
       if (currentPath.isEmpty) Nil
       else if (parentPath.isEmpty || currentPath.head != parentPath.head) currentPath
       else in(currentPath.tail, parentPath.tail)
     }
-    GroupId(in(path, parent.path))
+    PathId(in(path, parent.path))
   }
 
-  def canonicalPath(base: GroupId = GroupId(Nil, absolute = true)): GroupId = {
+  def canonicalPath(base: PathId = PathId(Nil, absolute = true)): PathId = {
     require(base.absolute, "Base path is not absolute, canonical path can not be computed!")
     def in(remaining: List[String], result: List[String] = Nil): List[String] = remaining match {
       case head :: tail if head == "."  => in(tail, result)
@@ -37,15 +37,15 @@ case class GroupId(path: List[String], absolute: Boolean = true) {
       case head :: tail                 => in(tail, head :: result)
       case Nil                          => result.reverse
     }
-    if (absolute) GroupId(in(path)) else GroupId(in(base.path ::: path))
+    if (absolute) PathId(in(path)) else PathId(in(base.path ::: path))
   }
 
   override def toString: String = path.mkString(if (absolute) "/" else "", "/", "")
 }
 
-object GroupId {
-  implicit def apply(in: String): GroupId = GroupId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").toList, in.startsWith("/"))
-  implicit def groupId2String(in: GroupId): String = in.toString
-  def empty: GroupId = GroupId(Nil)
+object PathId {
+  implicit def apply(in: String): PathId = PathId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").filter(_.nonEmpty).toList, in.startsWith("/"))
+  implicit def pathId2String(in: PathId): String = in.toString
+  def empty: PathId = PathId(Nil)
 }
 

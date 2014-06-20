@@ -25,11 +25,11 @@ object ScalingStrategy {
 }
 
 case class Group(
-    id: GroupId,
+    id: PathId,
     scalingStrategy: ScalingStrategy,
     apps: Set[AppDefinition] = Set.empty,
     groups: Set[Group] = Set.empty,
-    dependencies: Set[GroupId] = Set.empty,
+    dependencies: Set[PathId] = Set.empty,
     version: Timestamp = Timestamp.now()) extends MarathonState[GroupDefinition, Group] {
 
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
@@ -54,7 +54,7 @@ case class Group(
     if (fn(this)) Some(this) else in(groups.toList)
   }
 
-  def group(gid: GroupId): Option[Group] = {
+  def group(gid: PathId): Option[Group] = {
     if (id == gid) Some(this) else {
       val restPath = gid.restOf(id)
       groups.find(_.id.restOf(id).root == restPath.root).flatMap(_.group(gid))
@@ -69,11 +69,11 @@ case class Group(
     fn(this.copy(groups = in(groups.toList).toSet, version = timestamp))
   }
 
-  def remove(gid: GroupId, timestamp: Timestamp = Timestamp.now()): Group = {
+  def remove(gid: PathId, timestamp: Timestamp = Timestamp.now()): Group = {
     copy(groups = groups.filter(_.id != gid).map(_.remove(gid, timestamp)), version = timestamp)
   }
 
-  def makeGroup(gid: GroupId): Group = {
+  def makeGroup(gid: PathId): Group = {
     val restPath = gid.restOf(id)
     if (gid.isEmpty || restPath.isEmpty) this //group already exists
     else {
@@ -149,8 +149,8 @@ case class Group(
 }
 
 object Group {
-  def empty: Group = Group(GroupId(Nil), ScalingStrategy.empty)
-  def emptyWithId(id: GroupId) = empty.copy(id = id)
+  def empty: Group = Group(PathId(Nil), ScalingStrategy.empty)
+  def emptyWithId(id: PathId) = empty.copy(id = id)
 
   def fromProto(msg: GroupDefinition): Group = {
     val scalingStrategy = msg.getScalingStrategy
@@ -166,7 +166,7 @@ object Group {
       ),
       apps = msg.getAppsList.map(AppDefinition.fromProto).toSet,
       groups = msg.getGroupsList.map(fromProto).toSet,
-      dependencies = msg.getDependenciesList.map(GroupId.apply).toSet,
+      dependencies = msg.getDependenciesList.map(PathId.apply).toSet,
       version = Timestamp(msg.getVersion)
     )
   }

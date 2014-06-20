@@ -36,7 +36,7 @@ class GroupManager @Singleton @Inject() (
     * @param id the identifier of the group.
     * @return the list of versions of this object.
     */
-  def versions(id: GroupId): Future[Iterable[Timestamp]] = {
+  def versions(id: PathId): Future[Iterable[Timestamp]] = {
     require(!id.isEmpty, "Empty group id given!")
     groupRepo.listVersions(id.root)
   }
@@ -46,7 +46,7 @@ class GroupManager @Singleton @Inject() (
     * @param id the id of the group.
     * @return the group if it is found, otherwise None
     */
-  def group(id: GroupId): Future[Option[Group]] = {
+  def group(id: PathId): Future[Option[Group]] = {
     require(!id.isEmpty, "Empty group id given!")
     groupRepo.group(id.root).map(_.flatMap(_.findGroup(_.id == id)))
   }
@@ -57,7 +57,7 @@ class GroupManager @Singleton @Inject() (
     * @param version the version of the group.
     * @return the group if it is found, otherwise None
     */
-  def group(id: GroupId, version: Timestamp): Future[Option[Group]] = {
+  def group(id: PathId, version: Timestamp): Future[Option[Group]] = {
     require(!id.isEmpty, "Empty group id given!")
     groupRepo.group(id.root, version).map(_.flatMap(_.findGroup(_.id == id)))
   }
@@ -91,7 +91,7 @@ class GroupManager @Singleton @Inject() (
     *              one can control, to stop a current deployment and start a new one.
     * @return the nw group future, which completes, when the update process has been finished.
     */
-  def update(id: GroupId, version: Timestamp, fn: Group => Group, force: Boolean): Future[Group] = {
+  def update(id: PathId, version: Timestamp, fn: Group => Group, force: Boolean): Future[Group] = {
     groupRepo.currentVersion(id.root).map(_.getOrElse(Group.emptyWithId(id.root))).flatMap { current =>
       val update = current.makeGroup(id).update(version) {
         group => if (group.id == id) fn(group) else group
@@ -131,7 +131,7 @@ class GroupManager @Singleton @Inject() (
     case _ => planRepo.expunge(id)
   }
 
-  def expunge(id: GroupId): Future[Boolean] = {
+  def expunge(id: PathId): Future[Boolean] = {
     log.info(s"Delete group $id")
     groupRepo.currentVersion(id.root).flatMap {
       case Some(current) => Future.sequence(current.transitiveApps.map(scheduler.stopApp)).flatMap(_ => groupRepo.expunge(id).map(_.forall(identity)))
