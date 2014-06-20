@@ -78,6 +78,26 @@ a,
   border-width: 5px;
 }
 
+.caret-right {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  vertical-align: top;
+  border-right: 5px solid;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
+.caret-left {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  vertical-align: top;
+  border-left: 5px solid;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
 .badge {
   background-color: #323539;
   color: #8e929b;
@@ -384,6 +404,16 @@ fieldset[disabled] .btn-info.active {
   padding-bottom: 12px;
   padding-top: 11px;
   padding-left: 0;
+}
+
+.list-group-item-inverse {
+  background-color: transparent;
+  border-color: #2a2d2f;
+}
+
+.well {
+  background-color: #454a50;
+  border-color: #2a2d2f;
 }
 
 .nav-tabs > li.active > a,
