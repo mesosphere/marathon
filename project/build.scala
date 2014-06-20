@@ -111,7 +111,7 @@ object Dependency {
     val TwitterZkCLient = "0.0.43"
     val Jersey = "1.18.1"
     val JodaTime = "2.3"
-    val JodaConvert = "1.5"
+    val JodaConvert = "1.6"
     val UUIDGenerator = "3.1.3"
     val JGraphT = "0.9.1"
 

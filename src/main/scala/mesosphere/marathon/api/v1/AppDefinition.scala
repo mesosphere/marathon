@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v1
 
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.{ ContainerInfo, Protos }
-import mesosphere.marathon.state.{ Migration, MarathonState, Timestamp, Timestamped }
+import mesosphere.marathon.state.{ Migration, GroupId, MarathonState, Timestamp, Timestamped }
 import mesosphere.marathon.Protos.{ StorageVersion, MarathonTask, Constraint }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.health.HealthCheck
@@ -36,9 +36,9 @@ case class AppDefinition(
 
   @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = "",
 
-  constraints: Set[Constraint] = Set(),
+  constraints: Set[Constraint] = Set.empty,
 
-  uris: Seq[String] = Seq(),
+  uris: Seq[String] = Seq.empty,
 
   @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
@@ -51,7 +51,9 @@ case class AppDefinition(
 
   container: Option[ContainerInfo] = None,
 
-  healthChecks: Set[HealthCheck] = Set(),
+  healthChecks: Set[HealthCheck] = Set.empty,
+
+  dependencies: Set[GroupId] = Set.empty,
 
   version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {
@@ -180,7 +182,7 @@ object AppDefinition {
     app: AppDefinition) extends AppDefinition(
     app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
     app.constraints, app.uris, app.ports, app.taskRateLimit, app.container,
-    app.healthChecks, app.version
+    app.healthChecks, app.dependencies, app.version
   ) {
 
     /**

@@ -2,7 +2,7 @@ package mesosphere.marathon.state
 
 import scala.language.implicitConversions
 
-case class GroupId(path: List[String]) {
+case class GroupId(path: List[String], absolute: Boolean = true) {
 
   def root: String = path.headOption.getOrElse("")
 
@@ -29,24 +29,22 @@ case class GroupId(path: List[String]) {
     GroupId(in(path, parent.path))
   }
 
-  def canonicalPath(base: GroupId): GroupId = {
+  def canonicalPath(base: GroupId = GroupId(Nil, absolute = true)): GroupId = {
+    require(base.absolute, "Base path is not absolute, canonical path can not be computed!")
     def in(remaining: List[String], result: List[String] = Nil): List[String] = remaining match {
       case head :: tail if head == "."  => in(tail, result)
       case head :: tail if head == ".." => in(tail, result.tail)
       case head :: tail                 => in(tail, head :: result)
       case Nil                          => result.reverse
     }
-    if (isEmpty) this
-    else if (root == ".") GroupId(in(base.path ::: path))
-    else if (root == "..") GroupId(in(base.parent.path ::: path))
-    else GroupId(in(path))
+    if (absolute) GroupId(in(path)) else GroupId(in(base.path ::: path))
   }
 
-  override def toString: String = path.mkString("/")
+  override def toString: String = path.mkString(if (absolute) "/" else "", "/", "")
 }
 
 object GroupId {
-  implicit def apply(in: String): GroupId = GroupId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").toList)
+  implicit def apply(in: String): GroupId = GroupId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").toList, in.startsWith("/"))
   implicit def groupId2String(in: GroupId): String = in.toString
   def empty: GroupId = GroupId(Nil)
 }

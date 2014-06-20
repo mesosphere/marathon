@@ -9,8 +9,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers {
 
   test("start from empty group") {
     val app = AppDefinition("app")
-    val from = Group("group", ScalingStrategy(1, None), Seq.empty)
-    val to = Group("group", ScalingStrategy(1, None), Seq(app))
+    val from = Group("group", ScalingStrategy(1, None), Set.empty)
+    val to = Group("group", ScalingStrategy(1, None), Set(app))
     val plan = DeploymentPlan("plan", from, to)
 
     plan.toStart should have size 1
@@ -25,8 +25,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers {
     val app2 = AppDefinition("app2", "cmd2")
     val app3 = AppDefinition("app3", "cmd3")
 
-    val from = Group("group", ScalingStrategy(1, None), Seq(app, app2))
-    val to = Group("group", ScalingStrategy(1, None), Seq(appUpdate, app2, app3))
+    val from = Group("group", ScalingStrategy(1, None), Set(app, app2))
+    val to = Group("group", ScalingStrategy(1, None), Set(appUpdate, app2, app3))
     val plan = DeploymentPlan("plan", from, to)
 
     plan.toStart should have size 1

@@ -27,9 +27,9 @@ object ScalingStrategy {
 case class Group(
     id: GroupId,
     scalingStrategy: ScalingStrategy,
-    apps: Seq[AppDefinition] = Seq.empty,
-    groups: Seq[Group] = Seq.empty,
-    dependencies: Seq[GroupId] = Seq.empty,
+    apps: Set[AppDefinition] = Set.empty,
+    groups: Set[Group] = Set.empty,
+    dependencies: Set[GroupId] = Set.empty,
     version: Timestamp = Timestamp.now()) extends MarathonState[GroupDefinition, Group] {
 
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
@@ -66,7 +66,7 @@ case class Group(
       case head :: rest => head.update(timestamp)(fn) :: in(rest)
       case Nil          => Nil
     }
-    fn(this.copy(groups = in(groups.toList), version = timestamp))
+    fn(this.copy(groups = in(groups.toList).toSet, version = timestamp))
   }
 
   def remove(gid: GroupId, timestamp: Timestamp = Timestamp.now()): Group = {
@@ -80,28 +80,54 @@ case class Group(
       val (change, remaining) = groups.partition(_.id.restOf(id).root == restPath.root)
       val toUpdate = change.headOption.getOrElse(Group.empty.copy(id = id.append(restPath.root)))
       val nestedUpdate = if (restPath.isEmpty) toUpdate else toUpdate.makeGroup(restPath.child)
-      this.copy(groups = nestedUpdate +: remaining)
+      this.copy(groups = remaining + nestedUpdate)
     }
   }
 
-  def transitiveApps: Seq[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
+  def transitiveApps: Set[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
 
-  def transitiveGroups: Seq[Group] = this +: groups.flatMap(_.transitiveGroups)
+  def transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
-  def transitiveAppGroups: Seq[Group] = transitiveGroups.filter(_.apps.nonEmpty)
+  def transitiveAppGroups: Set[Group] = transitiveGroups.filter(_.apps.nonEmpty)
 
-  lazy val dependencyGraph: DirectedGraph[Group, DefaultEdge] = {
-    val graph = new DefaultDirectedGraph[Group, DefaultEdge](classOf[DefaultEdge])
+  lazy val applicationDependencies: List[(AppDefinition, AppDefinition)] = {
+    var result = List.empty[(AppDefinition, AppDefinition)]
     val allGroups = transitiveGroups
+
+    //group->group dependencies
     for {
       group <- allGroups
       dependencyId <- group.dependencies
       dependency <- allGroups.find(_.id == dependencyId)
-      appDependency <- dependency.transitiveAppGroups
-    } {
-      graph.addVertex(group)
-      graph.addVertex(appDependency)
-      graph.addEdge(group, appDependency)
+      app <- group.transitiveApps
+      dependentApp <- dependency.transitiveApps
+    } result ::= app -> dependentApp
+
+    //app->group/app dependencies
+    for {
+      group <- transitiveAppGroups
+      app <- group.apps
+      dependencyId <- app.dependencies
+      dependentApp = transitiveApps.find(_.id == dependencyId.toString).map(a => Set(a))
+      dependentGroup = allGroups.find(_.id == dependencyId).map(_.transitiveApps)
+      dependent <- dependentApp orElse dependentGroup getOrElse Set.empty
+    } result ::= app -> dependent
+    result
+  }
+
+  def applicationDependenciesML: String = {
+    val res = for ((app, dependent) <- applicationDependencies) yield {
+      s"[${app.id}]->[${dependent.id}]"
+    }
+    res.mkString("http://yuml.me/diagram/plain/class/", ", ", "")
+  }
+
+  def dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
+    val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
+    for ((app, dependent) <- applicationDependencies) {
+      graph.addVertex(app)
+      graph.addVertex(dependent)
+      graph.addEdge(app, dependent)
     }
     graph
   }
@@ -110,15 +136,15 @@ case class Group(
     * Get all dependencies of this group which has applications and all non dependant groups.
     * @return The resolved dependency list in topological order, all non dependant groups.
     */
-  def dependencyList: (List[Group], Set[Group]) = {
+  def dependencyList: (List[AppDefinition], Set[AppDefinition]) = {
     require(hasNonCyclicDependencies, "dependency graph is not acyclic!")
-    val dependantGroups = new TopologicalOrderIterator(dependencyGraph).toList.reverse.filter(_.apps.nonEmpty)
-    val independentGroups = transitiveAppGroups.toSet -- dependantGroups
-    (dependantGroups, independentGroups)
+    val dependantApps = new TopologicalOrderIterator(dependencyGraph).toList.reverse
+    val independentApps = transitiveApps.toSet -- dependantApps
+    (dependantApps, independentApps)
   }
 
   def hasNonCyclicDependencies: Boolean = {
-    !new CycleDetector[Group, DefaultEdge](dependencyGraph).detectCycles()
+    !new CycleDetector[AppDefinition, DefaultEdge](dependencyGraph).detectCycles()
   }
 }
 
@@ -138,9 +164,9 @@ object Group {
         scalingStrategy.getMinimumHealthCapacity,
         maximumRunningFactor
       ),
-      apps = msg.getAppsList.map(AppDefinition.fromProto),
-      groups = msg.getGroupsList.map(fromProto),
-      dependencies = msg.getDependenciesList.map(GroupId.apply),
+      apps = msg.getAppsList.map(AppDefinition.fromProto).toSet,
+      groups = msg.getGroupsList.map(fromProto).toSet,
+      dependencies = msg.getDependenciesList.map(GroupId.apply).toSet,
       version = Timestamp(msg.getVersion)
     )
   }
