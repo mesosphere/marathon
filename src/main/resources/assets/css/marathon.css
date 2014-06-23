@@ -187,10 +187,6 @@ a,
   background-color: #3e4146;
 }
 
-.table-unstyled {
-  margin-bottom: 0;
-}
-
 .table > thead > tr > th {
   border-bottom-color: #3d4045;
 }
@@ -398,8 +394,24 @@ fieldset[disabled] .btn-info.active {
   margin-top: 14px;
 }
 
+.table-badged > thead > tr > th,
+.table-badged > tbody > tr > th,
+.table-badged > tfoot > tr > th,
+.table-badged > thead > tr > td,
+.table-badged > tbody > tr > td,
+.table-badged > tfoot > tr > td {
+  /* Match the 28px height of badges in tables that contain badged (like the
+   * AppList table).
+   */
+  line-height: 2;
+}
+
 .table-fixed {
   table-layout: fixed;
+}
+
+.table-unstyled {
+  margin-bottom: 0;
 }
 
 .table > tbody > tr.active > td,

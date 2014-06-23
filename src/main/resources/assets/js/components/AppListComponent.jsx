@@ -85,12 +85,12 @@ define([
       var sortKey = this.props.collection.sortKey;
 
       var appNodes;
-      var tableClassName = "table table-fixed";
+      var tableClassName = "table table-fixed table-badged";
 
       var headerClassSet = React.addons.classSet({
-          "clickable": true,
-          "dropup": this.props.collection.sortReverse
-        });
+        "clickable": true,
+        "dropup": this.props.collection.sortReverse
+      });
 
       if (this.state.fetchState === STATE_LOADING) {
         appNodes =
