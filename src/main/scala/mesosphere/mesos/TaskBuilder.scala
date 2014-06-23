@@ -1,5 +1,6 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.state.PathId
 import org.apache.log4j.Logger
 import java.io.ByteArrayOutputStream
 import scala.collection._
@@ -12,7 +13,6 @@ import mesosphere.marathon._
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
 import scala.util.Random
-import scala.Some
 import mesosphere.mesos.protos.{ RangesResource, ScalarResource, Resource }
 
 /**
@@ -20,7 +20,7 @@ import mesosphere.mesos.protos.{ RangesResource, ScalarResource, Resource }
   */
 
 class TaskBuilder(app: AppDefinition,
-                  newTaskId: String => TaskID,
+                  newTaskId: PathId => TaskID,
                   taskTracker: TaskTracker,
                   mapper: ObjectMapper = new ObjectMapper()) {
 

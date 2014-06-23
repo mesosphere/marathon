@@ -1,5 +1,6 @@
 package mesosphere.marathon.tasks
 
+import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskID
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 
@@ -13,11 +14,11 @@ object TaskIDUtil {
   val uuidGenerator =
     Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
-  def taskId(appName: String) = {
-    appName + taskDelimiter + uuidGenerator.generate()
+  def taskId(appId: PathId): String = {
+    appId.toString + taskDelimiter + uuidGenerator.generate()
   }
 
-  def appID(taskId: TaskID) = {
+  def appID(taskId: TaskID): PathId = {
     val taskIdString = taskId.getValue
     taskIdString.substring(0, taskIdString.lastIndexOf(taskDelimiter))
   }

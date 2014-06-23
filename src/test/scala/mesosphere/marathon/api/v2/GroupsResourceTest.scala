@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
-import mesosphere.marathon.state.{ Timestamp, ScalingStrategy, Group }
+import mesosphere.marathon.state.{ PathId, Timestamp, ScalingStrategy, Group }
 import mesosphere.marathon.api.v1.AppDefinition
 
 class GroupsResourceTest extends FunSuite with GivenWhenThen with Matchers {
@@ -37,7 +37,7 @@ class GroupsResourceTest extends FunSuite with GivenWhenThen with Matchers {
     val group1 = group.group("/test/group1").get
     val group3 = group.group("/test/group3").get
     group1.id.toString should be("/test/group1")
-    group1.apps.head.id should be("/test/group1/app3")
+    group1.apps.head.id should be(PathId("/test/group1/app3"))
     group3.id.toString should be("/test/group3")
     group3.apps should be('empty)
   }

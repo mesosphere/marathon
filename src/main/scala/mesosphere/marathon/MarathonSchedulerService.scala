@@ -4,7 +4,7 @@ import org.apache.mesos.Protos.TaskID
 import org.apache.log4j.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.{ AppRepository, Timestamp }
+import mesosphere.marathon.state.{ PathId, AppRepository, Timestamp }
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import javax.inject.{ Named, Inject }
 import java.util.{ TimerTask, Timer }
@@ -95,9 +95,9 @@ class MarathonSchedulerService @Inject() (
     schedulerActor ? StopApp(app)
   }
 
-  def updateApp(appName: String, appUpdate: AppUpdate): Future[_] =
-    (schedulerActor ? UpdateApp(appName, appUpdate)) flatMap { _ =>
-      schedulerActor ? ScaleApp(appName)
+  def updateApp(appId: PathId, appUpdate: AppUpdate): Future[_] =
+    (schedulerActor ? UpdateApp(appId, appUpdate)) flatMap { _ =>
+      schedulerActor ? ScaleApp(appId)
     }
 
   def upgradeApp(
@@ -119,27 +119,27 @@ class MarathonSchedulerService @Inject() (
   }
 
   def listApps(): Iterable[AppDefinition] =
-    Await.result(appRepository.apps, config.zkTimeoutDuration)
+    Await.result(appRepository.apps(), config.zkTimeoutDuration)
 
-  def listAppVersions(appName: String): Iterable[Timestamp] =
-    Await.result(appRepository.listVersions(appName), config.zkTimeoutDuration)
+  def listAppVersions(appId: PathId): Iterable[Timestamp] =
+    Await.result(appRepository.listVersions(appId), config.zkTimeoutDuration)
 
-  def getApp(appName: String): Option[AppDefinition] = {
-    Await.result(appRepository.currentVersion(appName), config.zkTimeoutDuration)
+  def getApp(appId: PathId): Option[AppDefinition] = {
+    Await.result(appRepository.currentVersion(appId), config.zkTimeoutDuration)
   }
 
-  def getApp(appName: String, version: Timestamp): Option[AppDefinition] = {
-    Await.result(appRepository.app(appName, version), config.zkTimeoutDuration)
+  def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
+    Await.result(appRepository.app(appId, version), config.zkTimeoutDuration)
   }
 
   def killTasks(
-    appName: String,
+    appId: PathId,
     tasks: Iterable[MarathonTask],
     scale: Boolean): Iterable[MarathonTask] = {
     if (scale) {
-      getApp(appName) foreach { app =>
+      getApp(appId) foreach { app =>
         val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
-        Await.result(schedulerActor ? UpdateApp(appName, appUpdate), timeout.duration)
+        Await.result(schedulerActor ? UpdateApp(appId, appUpdate), timeout.duration)
       }
     }
 

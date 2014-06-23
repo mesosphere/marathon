@@ -53,7 +53,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
     result(pipeline(Post(s"$url/v2/apps", app)), waitTime)
   }
 
-  def deleteApp(id: String): RestResult[HttpResponse] = {
+  def deleteApp(id: PathId): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Delete(s"$url/v2/apps/$id")), waitTime)
   }

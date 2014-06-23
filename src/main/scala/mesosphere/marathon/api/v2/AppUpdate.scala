@@ -5,7 +5,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.lang.{ Integer => JInt, Double => JDouble }
 
@@ -15,7 +15,7 @@ import java.lang.{ Integer => JInt, Double => JDouble }
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppUpdate(
 
-    id: Option[String] = None, //needed for updates inside a group
+    id: Option[PathId] = None, //needed for updates inside a group
 
     cmd: Option[String] = None,
 

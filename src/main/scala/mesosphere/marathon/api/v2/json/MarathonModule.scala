@@ -240,7 +240,7 @@ object MarathonModule {
   @JsonIgnoreProperties(ignoreUnknown = true)
   case class AppUpdateBuilder(
 
-      id: Option[String] = None, //needed for updates inside a group
+      id: Option[PathId] = None, //needed for updates inside a group
 
       cmd: Option[String] = None,
 

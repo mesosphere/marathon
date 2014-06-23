@@ -90,8 +90,8 @@ object DeploymentPlan {
 
   def apply(id: String, original: Group, target: Group, version: Timestamp = Timestamp.now()): DeploymentPlan = {
     //lookup maps for original and target apps
-    val originalApp: Map[String, AppDefinition] = original.transitiveApps.map(app => app.id -> app).toMap
-    val targetApp: Map[String, AppDefinition] = target.transitiveApps.map(app => app.id -> app).toMap
+    val originalApp: Map[PathId, AppDefinition] = original.transitiveApps.map(app => app.id -> app).toMap
+    val targetApp: Map[PathId, AppDefinition] = target.transitiveApps.map(app => app.id -> app).toMap
 
     //compute the diff from original to target in terms of application
     val (toStart, toStop, toScale, toRestart) = {

@@ -9,7 +9,7 @@ import mesosphere.marathon.api.v2.AppUpdate
 import akka.util.Timeout
 import scala.collection.mutable.{ HashSet, ListBuffer }
 import org.apache.mesos.Protos.{ TaskInfo, TaskStatus }
-import mesosphere.marathon.state.AppRepository
+import mesosphere.marathon.state.{ PathId, AppRepository }
 import mesosphere.util.{ LockManager, RateLimiters }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -100,32 +100,26 @@ class MarathonSchedulerActor(
     * If it succeeds it executes the given function,
     * otherwise a [CommandFailed] message is sent to
     * the original sender.
-    * @param appId
-    * @param origSender
-    * @param cmd
-    * @param f
-    * @tparam U
-    * @return
     */
-  def locking[U](appId: String, origSender: ActorRef, cmd: Command, blocking: Boolean = false)(f: => Future[U]): Unit = {
+  def locking[U](appId: PathId, origSender: ActorRef, cmd: Command, blocking: Boolean = false)(f: => Future[U]): Unit = {
     val lock = appLocks.get(appId)
     if (blocking) {
       lock.acquire()
-      log.debug(s"Acquired lock for app: ${appId}, performing cmd: $cmd")
+      log.debug(s"Acquired lock for app: $appId, performing cmd: $cmd")
       f andThen {
         case _ =>
           lock.release()
       }
     }
     else if (lock.tryAcquire(1000, TimeUnit.MILLISECONDS)) {
-      log.debug(s"Acquired lock for app: ${appId}, performing cmd: $cmd")
+      log.debug(s"Acquired lock for app: $appId, performing cmd: $cmd")
       f andThen {
         case _ =>
           lock.release()
       }
     }
     else {
-      log.debug(s"Failed to acquire lock for app: ${appId} to perform cmd: $cmd")
+      log.debug(s"Failed to acquire lock for app: $appId to perform cmd: $cmd")
       origSender ! CommandFailed(cmd, new AppLockedException)
     }
   }
@@ -147,7 +141,7 @@ object MarathonSchedulerActor {
     def answer = AppStopped(app)
   }
 
-  case class UpdateApp(appId: String, update: AppUpdate) extends Command {
+  case class UpdateApp(appId: PathId, update: AppUpdate) extends Command {
     def answer = AppUpdated(appId)
   }
 
@@ -159,7 +153,7 @@ object MarathonSchedulerActor {
     def answer = TasksReconciled
   }
 
-  case class ScaleApp(appId: String) extends Command {
+  case class ScaleApp(appId: PathId) extends Command {
     def answer = AppScaled(appId)
   }
 
@@ -170,9 +164,9 @@ object MarathonSchedulerActor {
   sealed trait Event
   case class AppStarted(app: AppDefinition) extends Event
   case class AppStopped(app: AppDefinition) extends Event
-  case class AppUpdated(appId: String) extends Event
+  case class AppUpdated(appId: PathId) extends Event
   case class AppUpgraded(app: AppDefinition) extends Event
-  case class AppScaled(appId: String) extends Event
+  case class AppScaled(appId: PathId) extends Event
   case object TasksReconciled extends Event
   case class TasksLaunched(tasks: Seq[TaskInfo]) extends Event
 
@@ -242,7 +236,7 @@ trait SchedulerActions { this: Actor with ActorLogging =>
 
   def updateApp(
     driver: SchedulerDriver,
-    id: String,
+    id: PathId,
     appUpdate: AppUpdate): Future[AppDefinition] = {
     appRepository.currentVersion(id).flatMap {
       case Some(currentVersion) =>
@@ -290,15 +284,15 @@ trait SchedulerActions { this: Actor with ActorLogging =>
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Unit = {
-    appRepository.allIds().onComplete {
+    appRepository.allPathIds().onComplete {
       case Success(iterator) =>
         log.info("Syncing tasks for all apps")
         val buf = new ListBuffer[TaskStatus]
-        val appNames = HashSet.empty[String]
-        for (appName <- iterator) {
-          appNames += appName
-          self ! ScaleApp(appName)
-          val tasks = taskTracker.get(appName)
+        val appIds = HashSet.empty[PathId]
+        for (appId <- iterator) {
+          appIds += appId
+          self ! ScaleApp(appId)
+          val tasks = taskTracker.get(appId)
           for (task <- tasks) {
             val statuses = task.getStatusesList.asScala.toList
             if (statuses.nonEmpty) {
@@ -307,7 +301,7 @@ trait SchedulerActions { this: Actor with ActorLogging =>
           }
         }
         for (app <- taskTracker.list.keys) {
-          if (!appNames.contains(app)) {
+          if (!appIds.contains(app)) {
             log.warning(s"App $app exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
             val tasks = taskTracker.get(app)
             for (task <- tasks) {
@@ -382,13 +376,13 @@ trait SchedulerActions { this: Actor with ActorLogging =>
     }
   }
 
-  def scale(driver: SchedulerDriver, appName: String): Future[Unit] = {
-    currentAppVersion(appName) map {
+  def scale(driver: SchedulerDriver, appId: PathId): Future[Unit] = {
+    currentAppVersion(appId) map {
       case Some(app) => scale(driver, app)
-      case _         => log.warning("App %s does not exist. Not scaling.".format(appName))
+      case _         => log.warning("App %s does not exist. Not scaling.".format(appId))
     }
   }
 
-  def currentAppVersion(appId: String): Future[Option[AppDefinition]] =
+  def currentAppVersion(appId: PathId): Future[Option[AppDefinition]] =
     appRepository.currentVersion(appId)
 }

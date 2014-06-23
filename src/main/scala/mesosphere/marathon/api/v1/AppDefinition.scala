@@ -22,7 +22,8 @@ import mesosphere.mesos.protos.{ Resource, ScalarResource }
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppDefinition(
 
-  @FieldNotEmpty @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$") id: String = "",
+  //@FieldNotEmpty @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$") id: String = "",
+  id: PathId = PathId.empty,
 
   cmd: String = "",
 

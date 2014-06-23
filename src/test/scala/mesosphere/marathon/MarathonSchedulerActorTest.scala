@@ -3,7 +3,7 @@ package mesosphere.marathon
 import akka.testkit.{ TestProbe, TestActorRef, ImplicitSender, TestKit }
 import akka.actor.{ Props, ActorRef, ActorSystem }
 import org.scalatest.{ Matchers, BeforeAndAfterAll }
-import mesosphere.marathon.state.{ Timestamp, AppRepository }
+import mesosphere.marathon.state.{ PathId, Timestamp, AppRepository }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
@@ -130,7 +130,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
-        case CancelUpgrade("testApp", _) =>
+        case CancelUpgrade(PathId("testApp" :: Nil, false), _) =>
           lock.release()
           NoAutoPilot
       }
@@ -199,7 +199,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
-        case CancelUpgrade("testApp", _) =>
+        case CancelUpgrade(PathId("testApp" :: Nil, false), _) =>
           lock.release()
           KeepRunning
 
@@ -223,11 +223,11 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val app = AppDefinition(id = "testApp", instances = 1)
     val tasks = mutable.Set(MarathonTask.newBuilder().setId("task_a").build())
 
-    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id)))
+    when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
     when(tracker.get(app.id)).thenReturn(mutable.Set.empty[MarathonTask])
     when(tracker.list).thenReturn(
       mutable.HashMap(
-        "nope" -> new TaskTracker.App(
+        PathId("nope") -> new TaskTracker.App(
           "nope",
           tasks,
           false)))
@@ -247,7 +247,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   test("ScaleApp") {
     val app = AppDefinition(id = "testApp", instances = 1)
 
-    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id)))
+    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(tracker.get(app.id)).thenReturn(mutable.Set.empty[MarathonTask])
 
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))

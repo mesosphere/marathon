@@ -148,7 +148,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       Then("The dependency list is correct")
       ids should have size 7
       ids should not contain PathId("/test/cache/c1")
-      val expected = List(
+      val expected = List[PathId](
         "/test/database/redis/r1",
         "/test/database/mongo/m1",
         "/test/database/memcache/c1",
@@ -190,7 +190,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       Then("The dependency list is correct")
       ids should have size 7
       ids should not contain PathId("/test/cache/c1")
-      val expected = List(
+      val expected = List[PathId](
         "/test/database/redis",
         "/test/database/mongo",
         "/test/database/memcache",

@@ -123,7 +123,7 @@ class AppRepositoryTest extends MarathonSpec {
     verify(store).expunge("app1")
     for {
       app <- allApps
-      if app.id == "app1"
+      if app.id.toString == "app1"
     } verify(store).expunge(s"${app.id}:${app.version}")
   }
 }

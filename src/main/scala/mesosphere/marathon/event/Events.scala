@@ -7,7 +7,7 @@ import com.google.inject.{ Inject, Singleton, Provides, AbstractModule }
 import akka.event.EventStream
 import javax.inject.Named
 import org.apache.log4j.Logger
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import akka.actor.ActorSystem
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
@@ -83,19 +83,19 @@ case class AddHealthCheck(
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
 
 case class RemoveHealthCheck(
-  appId: String,
+  appId: PathId,
   eventType: String = "remove_health_check_event",
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
 
 case class FailedHealthCheck(
-  appId: String,
+  appId: PathId,
   taskId: String,
   healthCheck: HealthCheck,
   eventType: String = "failed_health_check_event",
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
 
 case class HealthStatusChanged(
-  appId: String,
+  appId: PathId,
   taskId: String,
   alive: Boolean,
   eventType: String = "health_status_changed_event",
@@ -119,22 +119,22 @@ case class GroupChangeFailed(
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class RestartSuccess(
-  appId: String,
+  appId: PathId,
   eventType: String = "restart_success",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class RestartFailed(
-  appId: String,
+  appId: PathId,
   eventType: String = "restart_failed",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class RollbackSuccess(
-  appId: String,
+  appId: PathId,
   eventType: String = "rollback_success",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class RollbackFailed(
-  appId: String,
+  appId: PathId,
   eventType: String = "rollback_failed",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
@@ -144,7 +144,7 @@ case class MesosStatusUpdateEvent(
   slaveId: String,
   taskId: String,
   taskStatus: String,
-  appId: String,
+  appId: PathId,
   host: String,
   ports: Iterable[Integer],
   version: String,

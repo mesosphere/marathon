@@ -2,13 +2,13 @@ package mesosphere.marathon.upgrade
 
 import akka.actor._
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.PathId
 import org.apache.mesos.SchedulerDriver
 import scala.concurrent.{ Future, Promise }
 import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
 import akka.event.EventStream
 import mesosphere.marathon.ConcurrentTaskUpgradeException
 import scala.collection.mutable
-import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
 
 class AppUpgradeManager(
     taskTracker: TaskTracker,
@@ -17,9 +17,7 @@ class AppUpgradeManager(
   import AppUpgradeManager._
   import context.dispatcher
 
-  type AppID = String
-
-  var runningUpgrades: mutable.Map[AppID, ActorRef] = mutable.Map.empty
+  var runningUpgrades: mutable.Map[PathId, ActorRef] = mutable.Map.empty
 
   def receive = {
     case Upgrade(driver, app, keepAlive, maxRunning) if !runningUpgrades.contains(app.id) =>
@@ -65,8 +63,8 @@ class AppUpgradeManager(
 
 object AppUpgradeManager {
   case class Upgrade(driver: SchedulerDriver, app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None)
-  case class CancelUpgrade(appId: String, reason: Throwable)
+  case class CancelUpgrade(appId: PathId, reason: Throwable)
 
-  case class UpgradeFinished(appId: String)
-  case class UpgradeCancelled(appId: String)
+  case class UpgradeFinished(appId: PathId)
+  case class UpgradeCancelled(appId: PathId)
 }
