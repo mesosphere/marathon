@@ -11,19 +11,21 @@ import org.apache.log4j.Logger
 
 sealed trait DeploymentAction
 //application has not been started before
-case class StartApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
+final case class StartApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
 //application is started, but more instances should be started
-case class ScaleApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
+final case class ScaleApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
 //application is started, but shall be completely stopped
-case class StopApplication(app: AppDefinition) extends DeploymentAction
+final case class StopApplication(app: AppDefinition) extends DeploymentAction
+//application is restarted, but there are still instances of the old application
+final case class KillAllOldTasksOf(app: AppDefinition) extends DeploymentAction
 //application is there but should be replaced
-case class RestartApplication(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int) extends DeploymentAction
+final case class RestartApplication(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int) extends DeploymentAction
 
-case class DeploymentStep(actions: List[DeploymentAction]) {
+final case class DeploymentStep(actions: List[DeploymentAction]) {
   def +(step: DeploymentStep) = DeploymentStep(actions ++ step.actions)
 }
 
-case class DeploymentPlan(
+final case class DeploymentPlan(
     id: String,
     original: Group,
     target: Group,
@@ -87,15 +89,15 @@ object DeploymentPlan {
   def empty() = DeploymentPlan("", Group.empty, Group.empty, Nil, Timestamp.now())
 
   def apply(id: String, original: Group, target: Group, version: Timestamp = Timestamp.now()): DeploymentPlan = {
+    //lookup maps for original and target apps
+    val originalApp: Map[String, AppDefinition] = original.transitiveApps.map(app => app.id -> app).toMap
+    val targetApp: Map[String, AppDefinition] = target.transitiveApps.map(app => app.id -> app).toMap
 
-    val originalApps = original.transitiveApps
-    val targetApps = target.transitiveApps
-    def originalApp: Map[String, AppDefinition] = originalApps.map(app => app.id -> app).toMap
-    def targetApp: Map[String, AppDefinition] = targetApps.map(app => app.id -> app).toMap
+    //compute the diff from original to target in terms of application
     val (toStart, toStop, toScale, toRestart) = {
       val isUpdate = targetApp.keySet.intersect(originalApp.keySet)
       val updateList = isUpdate.toList
-      val origTarget = updateList.flatMap(id => originalApps.find(_.id == id)).zip(updateList.flatMap(id => targetApps.find(_.id == id)))
+      val origTarget = updateList.map(originalApp).zip(updateList.map(targetApp))
       (targetApp.keySet.filterNot(isUpdate.contains),
         originalApp.keySet.filterNot(isUpdate.contains),
         origTarget.filter{ case (from, to) => from.isOnlyScaleChange(to) }.map(_._2.id),
@@ -105,26 +107,30 @@ object DeploymentPlan {
     val changedApplications = toStart ++ toRestart ++ toScale ++ toStop
     val (dependent, nonDependent) = target.dependencyList
 
-    var pass1 = List.empty[DeploymentStep]
-    var pass2 = List.empty[DeploymentStep]
-    for (app <- dependent.filter(a => changedApplications.contains(a.id))) {
-      val origApp = originalApp(app.id)
-      var pass1Actions = List.empty[DeploymentAction]
-      var pass2Actions = List.empty[DeploymentAction]
-      if (toStart.contains(app.id)) pass1Actions ::= StartApplication(app, app.instances)
-      else if (toStop.contains(app.id)) pass1Actions ::= StopApplication(origApp)
-      else if (toScale.contains(app.id)) pass1Actions ::= ScaleApplication(app, app.instances)
-      else {
-        pass1Actions ::= RestartApplication(origApp,
-          (target.scalingStrategy.minimumHealthCapacity * origApp.instances).ceil.toInt,
-          (target.scalingStrategy.minimumHealthCapacity * app.instances).ceil.toInt)
-        pass2Actions ::= StopApplication(origApp)
-        pass2Actions ::= ScaleApplication(app, app.instances)
+    //apply the changes to the dependent applications
+    val dependentSteps: List[DeploymentStep] = {
+      var pass1 = List.empty[DeploymentStep]
+      var pass2 = List.empty[DeploymentStep]
+      for (app <- dependent.filter(a => changedApplications.contains(a.id))) {
+        var pass1Actions = List.empty[DeploymentAction]
+        var pass2Actions = List.empty[DeploymentAction]
+        if (toStart.contains(app.id)) pass1Actions ::= StartApplication(app, app.instances)
+        else if (toStop.contains(app.id)) pass1Actions ::= StopApplication(originalApp(app.id))
+        else if (toScale.contains(app.id)) pass1Actions ::= ScaleApplication(app, app.instances)
+        else {
+          pass1Actions ::= RestartApplication(app,
+            (target.scalingStrategy.minimumHealthCapacity * originalApp(app.id).instances).ceil.toInt,
+            (target.scalingStrategy.minimumHealthCapacity * app.instances).ceil.toInt)
+          pass2Actions ::= KillAllOldTasksOf(app)
+          pass2Actions ::= ScaleApplication(app, app.instances)
+        }
+        if (pass1Actions.nonEmpty) pass1 ::= DeploymentStep(pass1Actions)
+        if (pass2Actions.nonEmpty) pass2 ::= DeploymentStep(pass2Actions)
       }
-      pass1 ::= DeploymentStep(pass1Actions)
-      pass2 ::= DeploymentStep(pass2Actions)
+      pass1.reverse ::: pass2
     }
 
+    //apply the changes to the non dependent applications
     val nonDependentStep = DeploymentStep(nonDependent.toList.filter(a => changedApplications.contains(a.id)).map { app =>
       val origApp = originalApp(app.id)
       if (toStart.contains(app.id)) StartApplication(app, app.instances)
@@ -133,9 +139,15 @@ object DeploymentPlan {
       else RestartApplication(app, 0, app.instances)
     })
 
-    val finalSteps = pass1.reverse ::: pass2 match {
-      case head :: rest => head + nonDependentStep :: rest
-      case Nil          => List(nonDependentStep)
+    //applications not included in the new group, but don't exist in the old one
+    val unhandledStops = {
+      val stops = toStop.filterNot(id => dependent.exists(_.id == id) || nonDependent.exists(_.id == id))
+      if (stops.nonEmpty) List(DeploymentStep(stops.map(originalApp).map(StopApplication).toList)) else Nil
+    }
+
+    var finalSteps = dependentSteps match {
+      case head :: rest => head + nonDependentStep :: rest ::: unhandledStops
+      case Nil          => nonDependentStep :: unhandledStops
     }
 
     DeploymentPlan(id, original, target, finalSteps, version)
