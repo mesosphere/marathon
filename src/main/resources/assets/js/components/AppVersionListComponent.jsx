@@ -2,12 +2,14 @@
 
 define([
   "React",
+  "models/App",
   "jsx!components/AppVersionListItemComponent",
-], function(React, AppVersionListItemComponent) {
+], function(React, App, AppVersionListItemComponent) {
   return React.createClass({
     displayName: "AppVersionListComponent",
 
     propTypes: {
+      app: React.PropTypes.instanceOf(App).isRequired,
       appVersions: React.PropTypes.array,
       onRollback: React.PropTypes.func
     },
@@ -40,10 +42,11 @@ define([
                   appVersions.map(function(v, i) {
                     return (
                         <AppVersionListItemComponent
+                          app={this.props.app}
                           appVersion={v}
+                          currentVersion={i === 0}
                           key={v.get("version")}
-                          onRollback={this.props.onRollback}
-                          currentVersion={i === 0} />
+                          onRollback={this.props.onRollback} />
                     );
                   }, this) :
                   <div className="text-danger text-center">Error fetching app versions</div>

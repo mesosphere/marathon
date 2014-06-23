@@ -17,6 +17,7 @@ define([
     displayName: "AppVersionComponent",
 
     propTypes: {
+      app: React.PropTypes.instanceOf(App).isRequired,
       appVersion: React.PropTypes.instanceOf(AppVersion).isRequired,
       onRollback: React.PropTypes.func
     },
@@ -123,7 +124,7 @@ define([
               <span className="text-right">
                 <form action={this.props.app.url()} method="post" onSubmit={this.handleSubmit}>
                     <input type="hidden" name="_method" value="put" />
-                    <input type="hidden" name="version" value={app.get("version")} />
+                    <input type="hidden" name="version" value={appVersion.get("version")} />
                     <button type="submit" className="btn btn-sm btn-success">
                       Set as current
                     </button>

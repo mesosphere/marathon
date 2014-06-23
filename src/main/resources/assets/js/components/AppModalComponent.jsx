@@ -106,13 +106,8 @@ define([
 
     rollbackToAppVersion: function(appVersion) {
       var _this = this;
-
-      appVersion.fetch({
-        success: function() {
-          _this.props.model.setAppVersion(appVersion);
-          _this.props.model.save();
-        }
-      });
+      _this.props.model.setAppVersion(appVersion);
+      _this.props.model.save();
     },
 
     render: function() {
@@ -225,6 +220,7 @@ define([
                 onActivate={this.fetchAppVersions}>
               <h4>Versions</h4>
               <AppVersionListComponent
+                app={model}
                 appVersions={appVersions}
                 onRollback={this.rollbackToAppVersion} />
             </TabPaneComponent>
