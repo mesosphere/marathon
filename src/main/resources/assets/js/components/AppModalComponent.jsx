@@ -42,7 +42,14 @@ define([
     },
 
     fetchAppVersions: function() {
-      this.state.appVersions.fetch();
+      this.state.appVersions.fetch({
+        error: function() {
+          this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+        }.bind(this),
+        success: function() {
+          this.setState({appVersionsFetchState: STATES.STATE_SUCCESS});
+        }.bind(this)
+      });
     },
 
     getResource: function() {
@@ -54,17 +61,18 @@ define([
         activeTask: null,
         activeViewIndex: 0,
         appVersions: null,
-        fetchState: STATES.STATE_LOADING
+        tasksFetchState: STATES.STATE_LOADING,
+        appVersionsFetchState: STATES.STATE_LOADING
       };
     },
 
     fetchTasks: function() {
       this.props.model.tasks.fetch({
         error: function() {
-          this.setState({fetchState: STATES.STATE_ERROR});
+          this.setState({tasksFetchState: STATES.STATE_ERROR});
         }.bind(this),
         success: function() {
-          this.setState({fetchState: STATES.STATE_SUCCESS});
+          this.setState({tasksFetchState: STATES.STATE_SUCCESS});
         }.bind(this)
       });
     },
@@ -98,9 +106,8 @@ define([
     },
 
     rollbackToAppVersion: function(appVersion) {
-      var _this = this;
-      _this.props.model.setAppVersion(appVersion);
-      _this.props.model.save(
+      this.props.model.setAppVersion(appVersion);
+      this.props.model.save(
         null,
         {
           success: function () {
@@ -111,7 +118,6 @@ define([
     },
 
     render: function() {
-      var _this = this;
       var model = this.props.model;
       var hasHealth =
         model.get("healthChecks") != null &&
@@ -198,7 +204,7 @@ define([
                 activeViewIndex={this.state.activeViewIndex}>
                 <TaskViewComponent
                   collection={model.tasks}
-                  fetchState={this.state.fetchState}
+                  fetchState={this.state.tasksFetchState}
                   fetchTasks={this.fetchTasks}
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   hasHealth={hasHealth}
@@ -206,7 +212,7 @@ define([
                   onTaskDetailSelect={this.showTaskDetails}
                   STATES={STATES} />
                 <TaskDetailComponent
-                  fetchState={this.state.fetchState}
+                  fetchState={this.state.tasksFetchState}
                   taskHealthMessage={model.formatTaskHealthMessage(this.state.activeTask)}
                   hasHealth={hasHealth}
                   STATES={STATES}
@@ -222,7 +228,9 @@ define([
                 app={model}
                 appVersions={this.state.appVersions}
                 fetchAppVersions={this.fetchAppVersions}
-                onRollback={this.rollbackToAppVersion} />
+                fetchState={this.state.appVersionsFetchState}
+                onRollback={this.rollbackToAppVersion}
+                STATES={STATES} />
             </TabPaneComponent>
           </TogglableTabsComponent>
         </ModalComponent>

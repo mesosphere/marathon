@@ -26,17 +26,9 @@ define([
     render: function() {
       var appVersions = this.props.appVersions.models;
       // Should I use this here?
-      // new Date(this.props.app.get("version")).getTime() == new Date(v.get("version")).getTime()
+      // new Date(this.props.app.get("version")).getTime() === new Date(v.get("version")).getTime()
+      // this also adds the need to refresh the app configuration
 
-      // {
-      //       appVersions != null && appVersions.length > 0 ?
-      //         appVersions.map(function(v, i) {
-      //           return (
-      //             <a href="#" onClick={this.handlePageChange(i)}>i</a>
-      //           );
-      //         }, this) :
-      //         null
-      //     }
       return (
         <div>
           <p>
@@ -61,9 +53,9 @@ define([
               </div>
             </div>
               {
-                appVersions == null ?
+                this.props.fetchState === this.props.STATES.STATE_LOADING ?
                   <div className="text-muted text-center">Loading versions...</div> :
-                  appVersions.length > 0 ?
+                  this.props.fetchState === this.props.STATES.STATE_SUCCESS ?
                     appVersions.map(function(v, i) {
                       if (i < ITEMS_PER_PAGE) {
                         return (
