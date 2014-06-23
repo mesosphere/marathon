@@ -37,7 +37,7 @@ class AppRepositoryTest extends MarathonSpec {
     val repo = new AppRepository(store)
     val res = repo.store(appDef)
 
-    assert(Some(appDef) == Await.result(res, 5.seconds), "Should return the correct AppDefinition")
+    assert(appDef == Await.result(res, 5.seconds), "Should return the correct AppDefinition")
     verify(store).store(versionedKey, appDef)
     verify(store).store(s"testApp", appDef)
   }

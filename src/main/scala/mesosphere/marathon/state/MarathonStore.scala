@@ -22,7 +22,7 @@ class MarathonStore[S <: MarathonState[_, S]](
   import BackToTheFuture.futureToFutureOption
 
   private[this] val log = LoggerFactory.getLogger(getClass)
-  private[this] val locks = LockManager()
+  private[this] lazy val locks = LockManager()
 
   val migrationRes = version.flatMap { ver =>
     if (migration.needsMigration(ver)) {
@@ -47,8 +47,6 @@ class MarathonStore[S <: MarathonState[_, S]](
   }
 
   Await.result(migrationRes, Duration.Inf)
-
-  private[this] lazy val locks = {
 
   def fetch(key: String): Future[Option[S]] = {
     state.fetch(prefix + key) map {

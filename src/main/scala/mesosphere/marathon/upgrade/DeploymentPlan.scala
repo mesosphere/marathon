@@ -3,6 +3,8 @@ package mesosphere.marathon.upgrade
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.{ PathId, Group, Timestamp, MarathonState }
 import mesosphere.marathon.Protos.DeploymentPlanDefinition
+import mesosphere.marathon.state.Migration
+import mesosphere.marathon.Protos.StorageVersion
 import scala.concurrent.Future
 import mesosphere.marathon.MarathonSchedulerService
 import org.apache.log4j.Logger
@@ -137,5 +139,10 @@ object DeploymentPlan {
     }
 
     DeploymentPlan(id, original, target, finalSteps, version)
+  }
+
+  implicit object DeploymentPlanMigration extends Migration[DeploymentPlan] {
+    def needsMigration(version: StorageVersion): Boolean = false
+    def migrate(version: StorageVersion, obj: DeploymentPlan): DeploymentPlan = obj
   }
 }

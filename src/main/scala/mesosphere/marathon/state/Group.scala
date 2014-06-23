@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.{ GroupDefinition, ScalingStrategyDefinition }
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.Protos.StorageVersion
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.traverse.TopologicalOrderIterator
@@ -169,6 +170,11 @@ object Group {
       dependencies = msg.getDependenciesList.map(PathId.apply).toSet,
       version = Timestamp(msg.getVersion)
     )
+  }
+
+  implicit object GroupMigration extends Migration[Group] {
+    def needsMigration(version: StorageVersion): Boolean = false
+    def migrate(version: StorageVersion, obj: Group): Group = obj
   }
 }
 
