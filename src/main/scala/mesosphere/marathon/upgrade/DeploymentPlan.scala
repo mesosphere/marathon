@@ -53,7 +53,7 @@ final case class DeploymentPlan(
       .build()
   }
 
-  def deploy(scheduler: MarathonSchedulerService, force: Boolean): Future[Boolean] = ???
+  def deploy(scheduler: MarathonSchedulerService, force: Boolean): Future[Boolean] = Future.successful(true)
 
   /*
   def deploy(scheduler: MarathonSchedulerService, force: Boolean): Future[Boolean] = {
@@ -139,7 +139,7 @@ object DeploymentPlan {
       else RestartApplication(app, 0, app.instances)
     })
 
-    //applications not included in the new group, but don't exist in the old one
+    //applications not included in the new group, but exist in the old one
     val unhandledStops = {
       val stops = toStop.filterNot(id => dependent.exists(_.id == id) || nonDependent.exists(_.id == id))
       if (stops.nonEmpty) List(DeploymentStep(stops.map(originalApp).map(StopApplication).toList)) else Nil

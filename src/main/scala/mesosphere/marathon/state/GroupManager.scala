@@ -92,7 +92,7 @@ class GroupManager @Singleton @Inject() (
     * @return the nw group future, which completes, when the update process has been finished.
     */
   def update(id: PathId, version: Timestamp, fn: Group => Group, force: Boolean): Future[Group] = {
-    groupRepo.currentVersion(id.root).map(_.getOrElse(Group.emptyWithId(id.root))).flatMap { current =>
+    groupRepo.currentVersion(id.root).map(_.getOrElse(Group.emptyWithId(id.rootPath))).flatMap { current =>
       val update = current.makeGroup(id).update(version) {
         group => if (group.id == id) fn(group) else group
       }

@@ -39,14 +39,15 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   @GET
   @Path("""{path:.+}""")
   def group(@PathParam("path") path: String): Response = {
+    val absolute = "/" + path
     def groupResponse(g: Option[Group]) = g match {
       case Some(group) => Response.ok(group).build()
-      case None        => Responses.unknownGroup(path)
+      case None        => Responses.unknownGroup(absolute)
     }
-    path match {
+    absolute match {
       case ListVersionsRE(id)        => Response.ok(result(groupManager.versions(id), defaultWait)).build()
       case GetVersionRE(id, version) => groupResponse(result(groupManager.group(id, Timestamp(version)), defaultWait))
-      case _                         => groupResponse(result(groupManager.group(path), defaultWait))
+      case _                         => groupResponse(result(groupManager.group(absolute), defaultWait))
     }
   }
 
@@ -74,7 +75,7 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   def createUpdate(@PathParam("path") path: String,
                    update: GroupUpdate,
                    @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    updateOrCreate(path, update, force)
+    updateOrCreate("/" + path, update, force)
   }
 
   /**
@@ -139,7 +140,8 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): Response = {
     checkIsValid(update)
     val version = Timestamp.now()
-    groupManager.update(id, version, group => update.apply(group, version), force)
+    val effectivePath = update.id.map(_.canonicalPath(id)).getOrElse(id)
+    groupManager.update(effectivePath, version, group => update.apply(group, version), force)
     Response.ok(Map("version" -> version)).build()
   }
 

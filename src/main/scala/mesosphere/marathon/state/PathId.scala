@@ -6,6 +6,8 @@ case class PathId(path: List[String], absolute: Boolean = true) {
 
   def root: String = path.headOption.getOrElse("")
 
+  def rootPath: PathId = PathId(path.headOption.map(_ :: Nil).getOrElse(Nil), absolute)
+
   def tail: List[String] = path.tail
 
   def isEmpty: Boolean = path.isEmpty
@@ -14,11 +16,11 @@ case class PathId(path: List[String], absolute: Boolean = true) {
 
   def safePath: String = path.mkString("_")
 
-  def parent: PathId = if (tail.isEmpty) this else PathId(path.reverse.tail.reverse)
+  def parent: PathId = if (tail.isEmpty) this else PathId(path.reverse.tail.reverse, absolute)
 
   def child: PathId = PathId(tail)
 
-  def append(id: PathId): PathId = PathId(path ::: id.path)
+  def append(id: PathId): PathId = PathId(path ::: id.path, absolute)
 
   def restOf(parent: PathId): PathId = {
     def in(currentPath: List[String], parentPath: List[String]): List[String] = {
@@ -26,7 +28,7 @@ case class PathId(path: List[String], absolute: Boolean = true) {
       else if (parentPath.isEmpty || currentPath.head != parentPath.head) currentPath
       else in(currentPath.tail, parentPath.tail)
     }
-    PathId(in(path, parent.path))
+    PathId(in(path, parent.path), absolute)
   }
 
   def canonicalPath(base: PathId = PathId(Nil, absolute = true)): PathId = {
