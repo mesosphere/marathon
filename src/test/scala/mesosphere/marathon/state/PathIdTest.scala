@@ -56,7 +56,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       group should be(PathId("/a/b/c/d/e/f"))
     }
 
-    it("can compute the restOf with respect to a given oath") {
+    it("can compute the restOf with respect to a given path") {
       Given("A base id")
       val id = PathId("a/b/c")
 
@@ -64,7 +64,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       val group = PathId("a/b/c/d/e/f").restOf(id)
 
       Then("the path is absolute and correct")
-      group should be(PathId("/d/e/f"))
+      group should be(PathId("d/e/f"))
     }
 
     it("can append to a path") {
