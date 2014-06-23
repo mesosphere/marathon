@@ -31,7 +31,10 @@ define([
       Mousetrap.bind("c", function() {
         this.showNewAppModal(); }.bind(this), "keyup");
       Mousetrap.bind("#", function() {
-        this.refs.appList.destroyActiveApp();
+        if (this.state.modal != null &&
+            _.isFunction(this.state.modal.destroyApp)) {
+          this.state.modal.destroyApp();
+        }
       }.bind(this));
     },
 
