@@ -4,8 +4,9 @@ define([
   "React",
   "models/App",
   "models/AppVersion",
+  "mixins/BackboneMixin",
   "jsx!components/AppVersionComponent"
-], function(React, App, AppVersion, AppVersionComponent) {
+], function(React, App, AppVersion, BackboneMixin, AppVersionComponent) {
   "use strict";
 
   var STATES = {
@@ -16,10 +17,15 @@ define([
 
   return React.createClass({
     displayName: "AppVersionListItemComponent",
+    mixins:[BackboneMixin],
     propTypes: {
       app: React.PropTypes.instanceOf(App).isRequired,
       appVersion: React.PropTypes.instanceOf(AppVersion).isRequired,
       onRollback: React.PropTypes.func
+    },
+
+    getResource: function () {
+      return this.props.appVersion;
     },
 
     getInitialState: function() {

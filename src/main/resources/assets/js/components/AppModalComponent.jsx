@@ -24,30 +24,27 @@ define([
 
   return React.createClass({
     displayName: "AppModalComponent",
+
     mixins:[BackboneMixin],
+
     componentWillMount: function() {
       this.fetchTasks();
+      var appVersions = new AppVersionCollection(null, {appId: this.props.model.id});
+      this.setState({appVersions: appVersions});
     },
+
     componentDidMount: function() {
       this.startPolling();
     },
+
     componentWillUnmount: function() {
       this.stopPolling();
     },
+
     fetchAppVersions: function() {
-      var _this = this;
-      var appVersions = this.state.appVersions;
-
-      if (appVersions == null) {
-        appVersions = new AppVersionCollection({appId: this.props.model.id});
-      }
-
-      appVersions.fetch({
-        success: function() {
-          _this.setState({appVersions: appVersions});
-        }
-      });
+      this.state.appVersions.fetch();
     },
+
     getResource: function() {
       return this.props.model;
     },
@@ -61,25 +58,21 @@ define([
       };
     },
 
-    getResource: function () {
-      return this.props.model;
-    },
     fetchTasks: function() {
-      var _this = this;
-
       this.props.model.tasks.fetch({
         error: function() {
-          _this.setState({fetchState: STATES.STATE_ERROR});
-        },
+          this.setState({fetchState: STATES.STATE_ERROR});
+        }.bind(this),
         success: function() {
-          _this.setState({fetchState: STATES.STATE_SUCCESS});
-        }
+          this.setState({fetchState: STATES.STATE_SUCCESS});
+        }.bind(this)
       });
     },
 
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
+
     destroyApp: function() {
       if (confirm("Destroy app '" + this.props.model.get("id") + "'?\nThis is irreversible.")) {
         this.props.model.destroy();
@@ -107,7 +100,16 @@ define([
     rollbackToAppVersion: function(appVersion) {
       var _this = this;
       _this.props.model.setAppVersion(appVersion);
-      _this.props.model.save();
+      _this.props.model.save({
+        success: function () {
+          console.log('save');
+          // refresh app versions
+          this.fetchAppVersions();
+        }.bind(this),
+        error: function () {
+          console.log('error');
+        }
+      });
     },
 
     render: function() {
@@ -161,7 +163,6 @@ define([
           return <dd key={u}>{u}</dd>;
         });
 
-        var appVersions = this.state.appVersions ? this.state.appVersions.models : null;
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}
           size="lg">
@@ -216,12 +217,13 @@ define([
               </StackedViewComponent>
             </TabPaneComponent>
             <TabPaneComponent
-                id="configuration"
-                onActivate={this.fetchAppVersions}>
+              id="configuration"
+              onActivate={this.fetchAppVersions} >
               <h4>Versions</h4>
               <AppVersionListComponent
                 app={model}
-                appVersions={appVersions}
+                appVersions={this.state.appVersions}
+                fetchAppVersions={this.fetchAppVersions}
                 onRollback={this.rollbackToAppVersion} />
             </TabPaneComponent>
           </TogglableTabsComponent>

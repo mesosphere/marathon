@@ -1,16 +1,15 @@
 define([
   "Backbone",
-  "models/AppVersion"
-], function(Backbone, AppVersion) {
-  return Backbone.Collection.extend({
-    comparator: function(a, b) {
-      return Date.parse(b.get("version")) - Date.parse(a.get("version"));
-    },
-
+  "models/AppVersion",
+  "models/SortableCollection"
+], function(Backbone, AppVersion, SortableCollection) {
+  return SortableCollection.extend({
     model: AppVersion,
 
-    initialize: function(options) {
+    initialize: function(models, options) {
       this.options = options;
+      this.setComparator("getVersion");
+      this.sort();
     },
 
     parse: function(response) {

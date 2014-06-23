@@ -8,6 +8,10 @@ define([
       this.options = options;
     },
 
+    getVersion: function() {
+      return Date.parse(this.get("version"));
+    },
+
     parse: function(response) {
       return response;
     },
