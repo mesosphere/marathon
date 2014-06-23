@@ -100,16 +100,14 @@ define([
     rollbackToAppVersion: function(appVersion) {
       var _this = this;
       _this.props.model.setAppVersion(appVersion);
-      _this.props.model.save({
-        success: function () {
-          console.log('save');
-          // refresh app versions
-          this.fetchAppVersions();
-        }.bind(this),
-        error: function () {
-          console.log('error');
-        }
-      });
+      _this.props.model.save(
+        null,
+        {
+          success: function () {
+            // refresh app versions
+            this.fetchAppVersions();
+          }.bind(this)
+        });
     },
 
     render: function() {

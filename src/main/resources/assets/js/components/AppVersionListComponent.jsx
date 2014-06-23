@@ -25,7 +25,6 @@ define([
 
     render: function() {
       var appVersions = this.props.appVersions.models;
-      // console.log('render', appVersions);
       // Should I use this here?
       // new Date(this.props.app.get("version")).getTime() == new Date(v.get("version")).getTime()
 
