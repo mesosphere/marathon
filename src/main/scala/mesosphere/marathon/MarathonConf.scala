@@ -79,4 +79,6 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
   lazy val mesosUser = opt[String]("mesos_user",
     descr = "Mesos user for this framework",
     default = new SystemProperties().get("user.name")) // Current logged in user
+
+  lazy val retryTimeSpanInSec = 10
 }

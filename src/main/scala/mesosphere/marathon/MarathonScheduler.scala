@@ -23,6 +23,9 @@ import mesosphere.util.{ ThreadPoolContext, RateLimiters }
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
+import java.util.Date
+import scala.collection.mutable.HashMap
+import scala.math.pow
 
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -37,6 +40,36 @@ object MarathonScheduler {
   }
 
   val callbacks: SchedulerCallbacks = new MarathonSchedulerCallbacksImpl(Some(Main.injector.getInstance(classOf[MarathonSchedulerService])))
+}
+
+case class RetryCounter(time: Date, counter: Int)
+class MarathonSchedulerRetryHelper(timeSpanInSec: Int) {
+  private val retryMap = new HashMap[String, RetryCounter]
+  private def isTimeUp(lastRetry: RetryCounter) = {
+    val diffInSec = (((new Date).getTime - lastRetry.time.getTime) / 1000.0)
+    if (diffInSec > pow(2, lastRetry.counter) * timeSpanInSec) true
+    else false
+  }
+
+  /**
+    * Retrys scale on a failed app if wait time is up.
+    */
+  def retry(callback: (SchedulerDriver, String) => Unit, driver: SchedulerDriver, appID: String): Boolean = {
+    if (retryMap.contains(appID)) {
+      val retryCounter = retryMap.get(appID).get
+      if (isTimeUp(retryCounter)) {
+        callback(driver, appID)
+        retryMap += appID -> RetryCounter(new Date, retryCounter.counter + 1)
+        true
+      }
+      else false
+    }
+    else {
+      callback(driver, appID)
+      retryMap += appID -> RetryCounter(new Date, 1)
+      true
+    }
+  }
 }
 
 class MarathonScheduler @Inject() (
@@ -56,6 +89,7 @@ class MarathonScheduler @Inject() (
   import mesosphere.mesos.protos.Implicits._
 
   implicit val zkTimeout = config.zkFutureTimeout
+  private val helper = new MarathonSchedulerRetryHelper(config.retryTimeSpanInSec)
 
   /**
     * Returns a future containing the optional most recent version
@@ -153,8 +187,10 @@ class MarathonScheduler @Inject() (
           case Some(task) => postEvent(status, task)
           case None       => log.warn(s"Couldn't post event for ${status.getTaskId}")
         }
-
-        if (rateLimiters.tryAcquire(appID)) {
+        if (status.getState.eq(TaskState.TASK_FAILED)) {
+          helper.retry(scale, driver, appID)
+        }
+        else if (rateLimiters.tryAcquire(appID)) {
           scale(driver, appID)
         }
         else {
@@ -286,7 +322,7 @@ class MarathonScheduler @Inject() (
         val appNames = HashSet.empty[String]
         for (appName <- iterator) {
           appNames += appName
-          scale(driver, appName)
+          helper.retry(scale, driver, appName)
           val tasks = taskTracker.get(appName)
           for (task <- tasks) {
             val statuses = task.getStatusesList.asScala.toList

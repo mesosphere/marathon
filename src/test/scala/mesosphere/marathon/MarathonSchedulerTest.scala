@@ -16,6 +16,7 @@ import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 import scala.collection.mutable
+import org.apache.log4j.Logger
 
 /**
   * @author Tobi Knaup
@@ -30,6 +31,8 @@ class MarathonSchedulerTest extends MarathonSpec {
   var frameworkIdUtil: FrameworkIdUtil = null
   var rateLimiters: RateLimiters = null
   var config: MarathonConf = null
+
+  private val log = Logger.getLogger(getClass.getName)
 
   before {
     repo = mock[AppRepository]
@@ -118,4 +121,22 @@ class MarathonSchedulerTest extends MarathonSpec {
     verify(queue).purge(same(app))
     verify(driver).killTask(Matchers.eq(TaskID.newBuilder.setValue("down_0").build))
   }
+
+  test("retry") {
+    def mackScaleSuccess(a: SchedulerDriver, b: String): Unit = {
+      log.info("MarathonSchedulerRetryHelper.retry triggered.")
+    }
+    val driver = mock[SchedulerDriver]
+    val mockAppId = "mockAppId"
+    val marathonSchedulerRetryHelper = new MarathonSchedulerRetryHelper(1)
+    assert(marathonSchedulerRetryHelper.retry(mackScaleSuccess, driver, mockAppId))
+    assert(!marathonSchedulerRetryHelper.retry(mackScaleSuccess, driver, mockAppId))
+    Thread.sleep(3000)
+    assert(marathonSchedulerRetryHelper.retry(mackScaleSuccess, driver, mockAppId))
+    assert(!marathonSchedulerRetryHelper.retry(mackScaleSuccess, driver, mockAppId))
+    Thread.sleep(5000)
+    assert(marathonSchedulerRetryHelper.retry(mackScaleSuccess, driver, mockAppId))
+    assert(!marathonSchedulerRetryHelper.retry(mackScaleSuccess, driver, mockAppId))
+  }
+
 }
