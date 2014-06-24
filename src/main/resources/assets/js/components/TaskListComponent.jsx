@@ -113,8 +113,8 @@ define([
                 </span>
               </th>
               <th className="text-right">
-                <span className="clickable" onClick={this.sortCollectionBy.bind(null, "version")}>
-                  {(sortKey === "version") ? sortOrder : null} Version
+                <span className={headerClassSet} onClick={this.sortCollectionBy.bind(null, "version")}>
+                  {(sortKey === "version") ? <span className="caret"></span> : null} Version
                 </span>
               </th>
               <th className="text-right">
