@@ -12,10 +12,6 @@ define([
       return Date.parse(this.get("version"));
     },
 
-    parse: function(response) {
-      return response;
-    },
-
     url: function() {
       return "/v2/apps/" + this.options.appId + "/versions/" + this.get("version");
     }
