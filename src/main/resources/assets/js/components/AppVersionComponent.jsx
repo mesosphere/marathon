@@ -66,6 +66,9 @@ define([
       var executorNode = (appVersion.get("executor") === "") ?
         <UNSPECIFIED_NODE /> :
         <dd>{appVersion.get("executor")}</dd>;
+      var diskNode = (appVersion.get("disk") == null) ?
+        <UNSPECIFIED_NODE /> :
+        <dd>{appVersion.get("disk")}</dd>;
       var portsNode = (appVersion.get("ports").length === 0 ) ?
         <UNSPECIFIED_NODE /> :
         <dd>{appVersion.get("ports").join(",")}</dd>;
@@ -77,10 +80,11 @@ define([
         appVersion.get("uris").map(function(u) {
           return <dd key={u}>{u}</dd>;
         });
-
+      var versionDate = appVersion.get("version");
+      console.log('ver', versionDate);
       return (
         <div>
-          <dl className="dl-horizontal">
+          <dl className="dl-horizontal dl-unstyled">
             <dt>Command</dt>
             {cmdNode}
             <dt>Constraints</dt>
@@ -100,7 +104,7 @@ define([
             <dt>Memory (MB)</dt>
             <dd>{appVersion.get("mem")}</dd>
             <dt>Disk Space (MB)</dt>
-            <dd>{appVersion.get("disk")}</dd>
+            <dd>{diskNode}</dd>
             <dt>Ports</dt>
             {portsNode}
             <dt>Task Rate Limit</dt>
@@ -109,12 +113,12 @@ define([
             {urisNode}
             <dt>Version</dt>
             {
-              appVersion.get("version") ?
+              versionDate ?
                 <UNSPECIFIED_NODE /> :
                 <dd>
-                  <time dateTime={appVersion.get("version").toISOString()}
-                      title={appVersion.get("version").toISOString()}>
-                    {appVersion.get("version").toLocaleString()}
+                  <time dateTime={versionDate.toISOString()}
+                      title={versionDate.toISOString()}>
+                    {versionDate.toISOString()}
                   </time>
                 </dd>
             }
