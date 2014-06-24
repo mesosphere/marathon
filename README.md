@@ -226,15 +226,15 @@ Marathon API can do.
     # Start an app with 128 MB memory, 1 CPU, and 1 instance
     curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
         localhost:8080/v2/apps \
-        -d '{"id": "app_123", "cmd": "sleep 600", "instances": 1, "mem": 128, "cpus": 1}'
+        -d '{"id": "app-123", "cmd": "sleep 600", "instances": 1, "mem": 128, "cpus": 1}'
 
     # Scale the app to 2 instances
     curl -X PUT -H "Accept: application/json" -H "Content-Type: application/json" \
-        localhost:8080/v2/apps/app_123 \
-        -d '{"id": "app_123", "cmd": "sleep 600", "instances": 2, "mem": 128, "cpus": 1}'
+        localhost:8080/v2/apps/app-123 \
+        -d '{"id": "app-123", "cmd": "sleep 600", "instances": 2, "mem": 128, "cpus": 1}'
 
     # Stop the app
-    curl -X DELETE localhost:8080/v2/apps/app_123
+    curl -X DELETE localhost:8080/v2/apps/app-123
 
 ##### Example starting an app using constraints
 
