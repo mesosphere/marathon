@@ -1,6 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import akka.testkit.TestKit
+import mesosphere.marathon.state.PathId._
 import org.scalatest.{ BeforeAndAfterAll, Matchers, FunSuiteLike }
 import akka.actor.{ Props, ActorSystem }
 import mesosphere.marathon.tasks.TaskQueue
@@ -9,8 +10,6 @@ import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.{ TaskUpgradeCancelledException, TaskFailedException }
-import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.Protos.MarathonTask
 
 class TaskStartActorTest
     extends TestKit(ActorSystem("System"))
@@ -26,7 +25,7 @@ class TaskStartActorTest
   test("Start success") {
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp", instances = 5)
+    val app = AppDefinition("myApp".toPath, instances = 5)
 
     val ref = system.actorOf(Props(
       classOf[TaskStartActor],
@@ -51,7 +50,7 @@ class TaskStartActorTest
   test("Start failure") {
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp", instances = 5)
+    val app = AppDefinition("myApp".toPath, instances = 5)
 
     val ref = system.actorOf(Props(
       classOf[TaskStartActor],
@@ -79,7 +78,7 @@ class TaskStartActorTest
   test("Cancelled") {
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp", instances = 5)
+    val app = AppDefinition("myApp".toPath, instances = 5)
 
     val ref = system.actorOf(Props(
       classOf[TaskStartActor],

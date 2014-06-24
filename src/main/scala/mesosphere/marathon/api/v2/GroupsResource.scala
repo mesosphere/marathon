@@ -8,13 +8,14 @@ import mesosphere.marathon.state.{ PathId, Group, Timestamp, GroupManager }
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import mesosphere.marathon.api.Responses
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConverters._
 import org.hibernate.validator.internal.engine.ConstraintViolationImpl
 import java.lang.annotation.ElementType
 import org.hibernate.validator.internal.engine.path.PathImpl
 import scala.reflect.ClassTag
 import scala.collection.mutable
+import PathId._
+import mesosphere.util.ThreadPoolContext.context
 
 @Path("v2/groups")
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -33,21 +34,20 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
 
   /**
     * Get a specific group, optionally with specifc version
-    * @param path the identifier of the group encded as path
+    * @param id the identifier of the group encded as path
     * @return the group or the group versions.
     */
   @GET
-  @Path("""{path:.+}""")
-  def group(@PathParam("path") path: String): Response = {
-    val absolute = "/" + path
+  @Path("""{id:.+}""")
+  def group(@PathParam("id") id: String): Response = {
     def groupResponse(g: Option[Group]) = g match {
       case Some(group) => Response.ok(group).build()
-      case None        => Responses.unknownGroup(absolute)
+      case None        => Responses.unknownGroup(id.toRootPath)
     }
-    absolute match {
-      case ListVersionsRE(id)        => Response.ok(result(groupManager.versions(id), defaultWait)).build()
-      case GetVersionRE(id, version) => groupResponse(result(groupManager.group(id, Timestamp(version)), defaultWait))
-      case _                         => groupResponse(result(groupManager.group(absolute), defaultWait))
+    id match {
+      case ListVersionsRE(id)        => Response.ok(result(groupManager.versions(id.toRootPath), defaultWait)).build()
+      case GetVersionRE(id, version) => groupResponse(result(groupManager.group(id.toRootPath, Timestamp(version)), defaultWait))
+      case _                         => groupResponse(result(groupManager.group(id.toRootPath), defaultWait))
     }
   }
 
@@ -65,33 +65,33 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   /**
     * Create or update a group.
     * If the path to the group does not exist, it gets created.
-    * @param path is the identifier of the the group to update.
+    * @param id is the identifier of the the group to update.
     * @param update is the update to apply on the group specified by the given path.
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     */
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
-  @Path("""{path:.+}""")
-  def createUpdate(@PathParam("path") path: String,
+  @Path("""{id:.+}""")
+  def createUpdate(@PathParam("id") id: String,
                    update: GroupUpdate,
                    @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    updateOrCreate("/" + path, update, force)
+    updateOrCreate(id.toRootPath, update, force)
   }
 
   /**
     * Create or update a group.
     * If the path to the group does not exist, it gets created.
-    * @param path is the identifier of the the group to update.
+    * @param id is the identifier of the the group to update.
     * @param update is the update to apply on the group specified by the given path.
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     */
   @PUT
   @Consumes(Array(MediaType.APPLICATION_JSON)) //@Path("""{path:(?!.*/version/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$).+}""")
-  @Path("""{path:.+}""")
-  def update(@PathParam("path") path: String,
+  @Path("""{id:.+}""")
+  def update(@PathParam("id") id: String,
              update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    updateOrCreate(path, update, force)
+    updateOrCreate(id.toRootPath, update, force)
   }
 
   /**
@@ -105,34 +105,35 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   def rollbackTo(@PathParam("id") id: String,
                  @PathParam("version") version: String,
                  @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    val res = groupManager.group(id, Timestamp(version)).map {
+    val groupId = id.toRootPath
+    val res = groupManager.group(groupId, Timestamp(version)).map {
       case Some(group) =>
-        groupManager.update(id, group.version, _ => group, force)
+        groupManager.update(groupId, group.version, _ => group, force)
         Response.noContent().build()
       case None =>
-        Responses.unknownGroup(id)
+        Responses.unknownGroup(groupId)
     }
     result(res, defaultWait)
   }
 
   /**
     * Delete a specific subtree or a complete tree.
-    * @param path the identifier of the group to delete encoded as path
+    * @param id the identifier of the group to delete encoded as path
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     * @return A version response, which defines the resulting change.
     */
   @DELETE
-  @Path("""{path:.+}""")
-  def delete(@PathParam("path") path: String,
+  @Path("""{id:.+}""")
+  def delete(@PathParam("id") id: String,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    val gid = PathId(path)
+    val groupId = id.toRootPath
     val version = Timestamp.now()
-    if (gid.isRoot) {
-      if (result(groupManager.expunge(gid), defaultWait)) Response.ok(Map("version" -> version)).build()
-      else Responses.unknownGroup(path)
+    if (groupId.isRoot) {
+      if (result(groupManager.expunge(groupId), defaultWait)) Response.ok(Map("version" -> version)).build()
+      else Responses.unknownGroup(groupId)
     }
     else {
-      groupManager.update(gid.root, version, _.remove(gid, version), force)
+      groupManager.update(groupId.rootPath, version, _.remove(groupId, version), force)
       Response.ok(Map("version" -> version)).build()
     }
   }
@@ -192,6 +193,6 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
     }
 
     val errors = groupValidation("", root)
-    if (!errors.isEmpty) throw new ConstraintViolationException("Group is not valid", errors.asJava)
+    if (errors.nonEmpty) throw new ConstraintViolationException("Group is not valid", errors.asJava)
   }
 }

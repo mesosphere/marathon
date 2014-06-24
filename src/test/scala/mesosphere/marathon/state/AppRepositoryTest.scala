@@ -8,18 +8,19 @@ import scala.concurrent.duration._
 import org.joda.time.DateTime
 import mesosphere.marathon.MarathonSpec
 import scala.language.postfixOps
+import PathId._
 
 class AppRepositoryTest extends MarathonSpec {
   test("App") {
     val store = mock[MarathonStore[AppDefinition]]
     val timestamp = new Timestamp(DateTime.now())
-    val appDef = AppDefinition(id = "testApp", version = timestamp)
+    val appDef = AppDefinition(id = "testApp".toPath, version = timestamp)
     val future = Future.successful(Some(appDef))
 
     when(store.fetch(s"testApp:$timestamp")).thenReturn(future)
 
     val repo = new AppRepository(store)
-    val res = repo.app("testApp", timestamp)
+    val res = repo.app("testApp".toPath, timestamp)
 
     assert(Some(appDef) == Await.result(res, 5.seconds), "Should return the correct AppDefinition")
     verify(store).fetch(s"testApp:$timestamp")
@@ -27,7 +28,7 @@ class AppRepositoryTest extends MarathonSpec {
 
   test("Store") {
     val store = mock[MarathonStore[AppDefinition]]
-    val appDef = AppDefinition(id = "testApp")
+    val appDef = AppDefinition(id = "testApp".toPath)
     val future = Future.successful(Some(appDef))
     val versionedKey = s"testApp:${appDef.version}"
 
@@ -57,8 +58,8 @@ class AppRepositoryTest extends MarathonSpec {
 
   test("Apps") {
     val store = mock[MarathonStore[AppDefinition]]
-    val appDef1 = AppDefinition("app1")
-    val appDef2 = AppDefinition("app2")
+    val appDef1 = AppDefinition("app1".toPath)
+    val appDef2 = AppDefinition("app2".toPath)
     val appDef1Old = appDef1.copy(version = Timestamp(appDef1.version.dateTime.minusDays(1)))
     val appDef2Old = appDef2.copy(version = Timestamp(appDef2.version.dateTime.minusDays(1)))
     val allApps = Seq(appDef1, appDef2, appDef1Old, appDef2Old)
@@ -66,25 +67,25 @@ class AppRepositoryTest extends MarathonSpec {
     val future = Future.successful((Seq("app1", "app2") ++ allApps.map(x => s"${x.id}:${x.version}")).toIterator)
 
     when(store.names()).thenReturn(future)
-    when(store.fetch(appDef1.id)).thenReturn(Future.successful(Some(appDef1)))
-    when(store.fetch(appDef2.id)).thenReturn(Future.successful(Some(appDef2)))
+    when(store.fetch(appDef1.id.toString)).thenReturn(Future.successful(Some(appDef1)))
+    when(store.fetch(appDef2.id.toString)).thenReturn(Future.successful(Some(appDef2)))
 
     val repo = new AppRepository(store)
     val res = repo.apps()
 
     assert(Seq(appDef1, appDef2) == Await.result(res, 5.seconds), "Should return only current versions")
     verify(store).names()
-    verify(store).fetch(appDef1.id)
-    verify(store).fetch(appDef2.id)
+    verify(store).fetch(appDef1.id.toString)
+    verify(store).fetch(appDef2.id.toString)
   }
 
   test("ListVersions") {
     val store = mock[MarathonStore[AppDefinition]]
-    val appDef1 = AppDefinition("app1")
+    val appDef1 = AppDefinition("app1".toPath)
     val version1 = appDef1.copy(version = Timestamp(appDef1.version.dateTime.minusDays(1)))
     val version2 = appDef1.copy(version = Timestamp(appDef1.version.dateTime.minusDays(2)))
     val version3 = appDef1.copy(version = Timestamp(appDef1.version.dateTime.minusDays(3)))
-    val appDef2 = AppDefinition("app2")
+    val appDef2 = AppDefinition("app2".toPath)
     val allApps = Seq(appDef1, version1, version2, version3, appDef2)
 
     val future = Future.successful((Seq("app1", "app2") ++ allApps.map(x => s"${x.id}:${x.version}")).toIterator)
@@ -101,11 +102,11 @@ class AppRepositoryTest extends MarathonSpec {
 
   test("Expunge") {
     val store = mock[MarathonStore[AppDefinition]]
-    val appDef1 = AppDefinition("app1")
+    val appDef1 = AppDefinition("app1".toPath)
     val version1 = appDef1.copy(version = Timestamp(appDef1.version.dateTime.minusDays(1)))
     val version2 = appDef1.copy(version = Timestamp(appDef1.version.dateTime.minusDays(2)))
     val version3 = appDef1.copy(version = Timestamp(appDef1.version.dateTime.minusDays(3)))
-    val appDef2 = AppDefinition("app2")
+    val appDef2 = AppDefinition("app2".toPath)
     val allApps = Seq(appDef1, version1, version2, version3, appDef2)
 
     val future = Future.successful((Seq("app1", "app2") ++ allApps.map(x => s"${x.id}:${x.version}")).toIterator)

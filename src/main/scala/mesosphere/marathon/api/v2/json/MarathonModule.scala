@@ -16,6 +16,7 @@ import mesosphere.marathon.api.v2._
 import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import PathId._
 
 /**
   * @author Tobi Knaup
@@ -166,7 +167,7 @@ class MarathonModule extends Module {
 
   object PathIdSerializer extends JsonSerializer[PathId] {
     def serialize(id: PathId, jgen: JsonGenerator, provider: SerializerProvider) {
-      jgen.writeString(id)
+      jgen.writeString(id.toString)
     }
   }
 
@@ -229,7 +230,7 @@ class MarathonModule extends Module {
   object PathIdDeserializer extends JsonDeserializer[PathId] {
     def deserialize(json: JsonParser, context: DeserializationContext): PathId = {
       val tree: JsonNode = json.getCodec.readTree(json)
-      tree.textValue()
+      tree.textValue().toPath
     }
   }
 }

@@ -1,7 +1,7 @@
 package mesosphere.marathon.health
 
 import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -13,7 +13,7 @@ import mesosphere.mesos.protos.TaskID
 import mesosphere.marathon.Protos.MarathonTask
 
 class HealthCheckActor(
-    appId: String,
+    appId: PathId,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
     eventBus: EventStream) extends Actor with ActorLogging {

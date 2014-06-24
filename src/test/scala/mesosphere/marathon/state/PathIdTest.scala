@@ -1,6 +1,7 @@
 package mesosphere.marathon.state
 
 import org.scalatest.{ Matchers, GivenWhenThen, FunSpec, FunSuite }
+import PathId._
 
 class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -72,7 +73,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       val id = PathId("/a/b/c")
 
       When("a relative path is canonized")
-      val group = id.append("/d/e/f")
+      val group = id.append("/d/e/f".toPath)
 
       Then("the path is absolute and correct")
       group should be(PathId("/a/b/c/d/e/f"))

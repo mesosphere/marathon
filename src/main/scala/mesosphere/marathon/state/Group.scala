@@ -8,6 +8,7 @@ import org.jgrapht.alg.CycleDetector
 import org.jgrapht.traverse.TopologicalOrderIterator
 import scala.collection.JavaConversions._
 import org.jgrapht.graph._
+import PathId._
 
 case class ScalingStrategy(
     minimumHealthCapacity: Double,
@@ -38,7 +39,7 @@ case class Group(
 
   override def toProto: GroupDefinition = {
     GroupDefinition.newBuilder
-      .setId(id)
+      .setId(id.toString)
       .setScalingStrategy(scalingStrategy.toProto)
       .setVersion(version.toString)
       .addAllApps(apps.map(_.toProto))
@@ -79,7 +80,7 @@ case class Group(
     if (gid.isEmpty || restPath.isEmpty) this //group already exists
     else {
       val (change, remaining) = groups.partition(_.id.restOf(id).root == restPath.root)
-      val toUpdate = change.headOption.getOrElse(Group.empty.copy(id = id.append(restPath.root)))
+      val toUpdate = change.headOption.getOrElse(Group.empty.copy(id = id.append(restPath.rootPath)))
       val nestedUpdate = if (restPath.isEmpty) toUpdate else toUpdate.makeGroup(restPath.child)
       this.copy(groups = remaining + nestedUpdate)
     }
@@ -160,7 +161,7 @@ object Group {
       else None
     }
     Group(
-      id = msg.getId,
+      id = msg.getId.toPath,
       scalingStrategy = ScalingStrategy(
         scalingStrategy.getMinimumHealthCapacity,
         maximumRunningFactor

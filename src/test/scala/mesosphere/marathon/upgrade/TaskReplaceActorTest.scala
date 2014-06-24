@@ -14,6 +14,7 @@ import scala.concurrent.duration._
 import mesosphere.marathon.TaskUpgradeCancelledException
 import mesosphere.marathon.tasks.TaskQueue
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.PathId._
 
 class TaskReplaceActorTest
     extends TestKit(ActorSystem("System"))
@@ -41,7 +42,7 @@ class TaskReplaceActorTest
       driver,
       queue,
       system.eventStream,
-      AppDefinition(id = "myApp", instances = 5),
+      AppDefinition(id = "myApp".toPath, instances = 5),
       5,
       tasks,
       promise))
@@ -49,7 +50,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until 5)
-      system.eventStream.publish(HealthStatusChanged("myApp", s"task_$i", true))
+      system.eventStream.publish(HealthStatusChanged("myApp".toPath, s"task_$i", true))
 
     Await.result(promise.future, 5.seconds) should be(true)
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
@@ -66,7 +67,7 @@ class TaskReplaceActorTest
 
     val tasks = Set(taskA, taskB)
     val promise = Promise[Boolean]()
-    val app = AppDefinition(id = "myApp", instances = 5)
+    val app = AppDefinition(id = "myApp".toPath, instances = 5)
 
     val ref = TestActorRef(Props(
       classOf[TaskReplaceActor],
@@ -81,7 +82,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until 5)
-      system.eventStream.publish(HealthStatusChanged("myApp", s"task_$i", true))
+      system.eventStream.publish(HealthStatusChanged("myApp".toPath, s"task_$i", true))
 
     Await.result(promise.future, 5.seconds) should be(true)
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
@@ -105,7 +106,7 @@ class TaskReplaceActorTest
       driver,
       queue,
       system.eventStream,
-      AppDefinition(id = "myApp", instances = 1),
+      AppDefinition(id = "myApp".toPath, instances = 1),
       0,
       tasks,
       promise))

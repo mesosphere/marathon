@@ -8,6 +8,7 @@ import mesosphere.marathon.Protos.StorageVersion
 import scala.concurrent.Future
 import mesosphere.marathon.MarathonSchedulerService
 import org.apache.log4j.Logger
+import PathId._
 
 sealed trait DeploymentAction
 //application has not been started before
@@ -26,7 +27,7 @@ final case class DeploymentStep(actions: List[DeploymentAction]) {
 }
 
 final case class DeploymentPlan(
-    id: String,
+    id: PathId,
     original: Group,
     target: Group,
     steps: List[DeploymentStep],
@@ -37,7 +38,7 @@ final case class DeploymentPlan(
   override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan = mergeFromProto(DeploymentPlanDefinition.parseFrom(bytes))
 
   override def mergeFromProto(msg: DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
-    msg.getId,
+    msg.getId.toPath,
     Group.empty.mergeFromProto(msg.getOriginial),
     Group.empty.mergeFromProto(msg.getTarget),
     Nil, //TODO: store plan as well
@@ -46,7 +47,7 @@ final case class DeploymentPlan(
 
   override def toProto: DeploymentPlanDefinition = {
     DeploymentPlanDefinition.newBuilder()
-      .setId(id)
+      .setId(id.toString)
       .setVersion(version.toString)
       .setOriginial(original.toProto)
       .setTarget(target.toProto)
@@ -86,9 +87,9 @@ final case class DeploymentPlan(
 }
 
 object DeploymentPlan {
-  def empty() = DeploymentPlan("", Group.empty, Group.empty, Nil, Timestamp.now())
+  def empty() = DeploymentPlan(PathId.empty, Group.empty, Group.empty, Nil, Timestamp.now())
 
-  def apply(id: String, original: Group, target: Group, version: Timestamp = Timestamp.now()): DeploymentPlan = {
+  def apply(id: PathId, original: Group, target: Group, version: Timestamp = Timestamp.now()): DeploymentPlan = {
     //lookup maps for original and target apps
     val originalApp: Map[PathId, AppDefinition] = original.transitiveApps.map(app => app.id -> app).toMap
     val targetApp: Map[PathId, AppDefinition] = target.transitiveApps.map(app => app.id -> app).toMap

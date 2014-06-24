@@ -1,5 +1,6 @@
 package mesosphere.marathon.api.v1
 
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.v2.AppUpdate
@@ -69,8 +70,8 @@ class AppsResource @Inject() (
   @Timed
   def search(@QueryParam("id") id: String,
              @QueryParam("cmd") cmd: String) = {
-    service.listApps.filter { x =>
-      val validId = id == null || id.isEmpty || x.id.toLowerCase.contains(id.toLowerCase)
+    service.listApps().filter { x =>
+      val validId = id == null || id.isEmpty || x.id.toString.toLowerCase.contains(id.toLowerCase)
       val validCmd = cmd == null || cmd.isEmpty || x.cmd.toLowerCase.contains(cmd.toLowerCase)
 
       // Maybe add some other query parameters?
@@ -82,14 +83,14 @@ class AppsResource @Inject() (
   @Path("{appId}/tasks")
   @Timed
   def app(@PathParam("appId") appId: String): Response = {
-    if (taskTracker.contains(appId)) {
-      val tasks = taskTracker.get(appId)
+    val pathId = appId.toRootPath
+    if (taskTracker.contains(pathId)) {
+      val tasks = taskTracker.get(pathId)
       val result = Map(appId -> tasks)
       Response.ok(result).build
     }
     else {
-      Responses.unknownApp(appId)
+      Responses.unknownApp(pathId)
     }
   }
-
 }

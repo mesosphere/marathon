@@ -1,6 +1,7 @@
 package mesosphere.marathon.health
 
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
@@ -24,21 +25,21 @@ class HealthCheckManager @Singleton @Inject() (
 
   import HealthCheckActor.{ GetTaskHealth, Health }
 
-  protected[this] var appHealthChecks = Map[String, Set[ActiveHealthCheck]]()
+  protected[this] var appHealthChecks = Map[PathId, Set[ActiveHealthCheck]]()
 
-  def list(appId: String): Set[HealthCheck] =
+  def list(appId: PathId): Set[HealthCheck] =
     appHealthChecks.get(appId).fold(Set[HealthCheck]()) { activeHealthChecks =>
       activeHealthChecks.map(_.healthCheck)
     }
 
   protected[this] def find(
-    appId: String,
+    appId: PathId,
     healthCheck: HealthCheck): Option[ActiveHealthCheck] =
     appHealthChecks.get(appId).flatMap {
       _.find { _.healthCheck == healthCheck }
     }
 
-  def add(appId: String, healthCheck: HealthCheck): Unit = {
+  def add(appId: PathId, healthCheck: HealthCheck): Unit = {
     val healthChecksForApp =
       appHealthChecks.get(appId).getOrElse(Set[ActiveHealthCheck]())
 
@@ -57,7 +58,7 @@ class HealthCheckManager @Singleton @Inject() (
   def addAllFor(app: AppDefinition): Unit =
     app.healthChecks.foreach(add(app.id, _))
 
-  def remove(appId: String, healthCheck: HealthCheck): Unit = {
+  def remove(appId: PathId, healthCheck: HealthCheck): Unit = {
     for (activeHealthChecks <- appHealthChecks.get(appId)) {
       activeHealthChecks.find(_.healthCheck == healthCheck) foreach deactivate
 
@@ -72,7 +73,7 @@ class HealthCheckManager @Singleton @Inject() (
     eventBus.publish(RemoveHealthCheck(appId))
   }
 
-  def removeAllFor(appId: String): Unit =
+  def removeAllFor(appId: PathId): Unit =
     for {
       activeHealthChecks <- appHealthChecks.get(appId)
       ahc <- activeHealthChecks
@@ -86,7 +87,7 @@ class HealthCheckManager @Singleton @Inject() (
     for (hc <- toAdd) add(app.id, hc)
   }
 
-  def status(appId: String, taskId: String): Future[Seq[Option[Health]]] = {
+  def status(appId: PathId, taskId: String): Future[Seq[Option[Health]]] = {
     implicit val timeout: Timeout = Timeout(2, SECONDS)
     appHealthChecks.get(appId) match {
       case Some(activeHealthCheckSet) => Future.sequence(

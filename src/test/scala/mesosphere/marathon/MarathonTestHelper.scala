@@ -3,6 +3,7 @@ package mesosphere.marathon
 import org.apache.mesos.Protos.Offer
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.mesos.protos._
+import mesosphere.marathon.state.PathId._
 
 /**
   * @author Tobi Knaup
@@ -51,7 +52,7 @@ trait MarathonTestHelper {
   }
 
   def makeBasicApp() = AppDefinition(
-    id = "testApp",
+    id = "testApp".toPath,
     cpus = 1,
     mem = 64,
     executor = "//cmd"

@@ -46,8 +46,12 @@ case class PathId(path: List[String], absolute: Boolean = true) {
 }
 
 object PathId {
-  implicit def apply(in: String): PathId = PathId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").filter(_.nonEmpty).toList, in.startsWith("/"))
-  implicit def pathId2String(in: PathId): String = in.toString
+  def apply(in: String): PathId = PathId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").filter(_.nonEmpty).toList, in.startsWith("/"))
   def empty: PathId = PathId(Nil)
+
+  implicit class StringPathId(val stringPath: String) extends AnyVal {
+    def toPath: PathId = PathId(stringPath)
+    def toRootPath: PathId = PathId(stringPath).canonicalPath()
+  }
 }
 

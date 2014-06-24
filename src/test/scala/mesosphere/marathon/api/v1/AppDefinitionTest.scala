@@ -8,6 +8,7 @@ import org.apache.mesos.Protos.CommandInfo
 import javax.validation.Validation
 import mesosphere.marathon.MarathonSpec
 import org.scalatest.Matchers
+import mesosphere.marathon.state.PathId._
 
 /**
   * @author Tobi Knaup
@@ -16,7 +17,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
   test("ToProto") {
     val app = AppDefinition(
-      id = "play",
+      id = "play".toPath,
       cmd = "bash foo-*/start -Dhttp.port=$PORT",
       cpus = 4,
       mem = 256,
@@ -107,24 +108,24 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     */
 
     shouldViolate(
-      AppDefinition(id = "test", instances = -3),
+      AppDefinition(id = "test".toPath, instances = -3),
       "instances",
       "{javax.validation.constraints.Min.message}"
     )
 
     shouldViolate(
-      AppDefinition(id = "test", instances = -3, ports = Seq(9000, 8080, 9000)),
+      AppDefinition(id = "test".toPath, instances = -3, ports = Seq(9000, 8080, 9000)),
       "ports",
       "Elements must be unique"
     )
 
     shouldNotViolate(
-      AppDefinition(id = "test", ports = Seq(0, 0, 8080)),
+      AppDefinition(id = "test".toPath, ports = Seq(0, 0, 8080)),
       "ports",
       "Elements must be unique"
     )
 
-    val correct = AppDefinition(id = "test")
+    val correct = AppDefinition(id = "test".toPath)
 
     shouldNotViolate(
       correct.copy(executor = "//cmd"),
@@ -188,7 +189,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     migration.needsMigration(oldVersion) should be(true)
 
-    val migratedApp = migration.migrate(oldVersion, AppDefinition("My.super_Cool-app"))
+    val migratedApp = migration.migrate(oldVersion, AppDefinition("My.super_Cool-app".toPath))
 
     migratedApp.id.toString should be("my.super-cool-app")
   }

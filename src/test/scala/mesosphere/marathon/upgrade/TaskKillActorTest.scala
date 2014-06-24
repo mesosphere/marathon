@@ -12,6 +12,7 @@ import mesosphere.marathon.event.MesosStatusUpdateEvent
 import org.mockito.Mockito.verify
 import org.apache.mesos.Protos.TaskID
 import mesosphere.marathon.TaskUpgradeCancelledException
+import mesosphere.marathon.state.PathId
 
 class TaskKillActorTest
     extends TestKit(ActorSystem("System"))
@@ -37,8 +38,8 @@ class TaskKillActorTest
 
     watch(ref)
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", "", Nil, ""))
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.getId, "TASK_KILLED", "", "", Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", PathId.empty, "", Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.getId, "TASK_KILLED", PathId.empty, "", Nil, ""))
 
     Await.result(promise.future, 5.seconds) should be(true)
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())

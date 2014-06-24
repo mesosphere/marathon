@@ -18,6 +18,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.upgrade.AppUpgradeManager.UpgradeFinished
 import org.apache.mesos.Protos.TaskID
 import scala.concurrent.Await
+import mesosphere.marathon.state.PathId._
 
 class AppUpgradeActorTest
     extends TestKit(ActorSystem("System"))
@@ -45,7 +46,7 @@ class AppUpgradeActorTest
   }
 
   test("Upgrade") {
-    val app = AppDefinition(id = "MyApp", instances = 2)
+    val app = AppDefinition(id = "MyApp".toPath, instances = 2)
     val taskA = MarathonTask.newBuilder().setId("task_a").build()
     val taskB = MarathonTask.newBuilder().setId("task_b").build()
 
@@ -68,15 +69,15 @@ class AppUpgradeActorTest
     awaitStartup(ref.path / "Stopper")
     awaitStartup(ref.path / "Starter")
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", "task_a", "TASK_KILLED", "MyApp", "", Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", "task_a", "TASK_KILLED", "MyApp".toPath, "", Nil, ""))
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", "task_c", "TASK_RUNNING", "MyApp", "", Nil, app.version.toString))
-    system.eventStream.publish(MesosStatusUpdateEvent("", "task_d", "TASK_RUNNING", "MyApp", "", Nil, app.version.toString))
+    system.eventStream.publish(MesosStatusUpdateEvent("", "task_c", "TASK_RUNNING", "MyApp".toPath, "", Nil, app.version.toString))
+    system.eventStream.publish(MesosStatusUpdateEvent("", "task_d", "TASK_RUNNING", "MyApp".toPath, "", Nil, app.version.toString))
 
-    system.eventStream.publish(HealthStatusChanged("MyApp", "task_c", alive = true))
-    system.eventStream.publish(HealthStatusChanged("MyApp", "task_d", alive = true))
+    system.eventStream.publish(HealthStatusChanged("MyApp".toPath, "task_c", alive = true))
+    system.eventStream.publish(HealthStatusChanged("MyApp".toPath, "task_d", alive = true))
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", "task_b", "TASK_KILLED", "MyApp", "", Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", "task_b", "TASK_KILLED", "MyApp".toPath, "", Nil, ""))
 
     expectMsg(5.seconds, UpgradeFinished(app.id))
 

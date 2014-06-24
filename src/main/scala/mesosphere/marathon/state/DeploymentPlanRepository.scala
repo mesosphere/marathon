@@ -5,5 +5,5 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 
 class DeploymentPlanRepository(val store: PersistenceStore[DeploymentPlan]) extends EntityRepository[DeploymentPlan] {
 
-  def store(plan: DeploymentPlan): Future[DeploymentPlan] = storeWithVersion(plan.id, plan.version, plan)
+  def store(plan: DeploymentPlan): Future[DeploymentPlan] = storeWithVersion(plan.id.safePath, plan.version, plan)
 }

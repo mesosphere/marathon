@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.api.v1.AppDefinition
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
+import PathId._
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -10,9 +11,9 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     it("can find a group by its path") {
       Given("an existing group with two subgroups")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current = Group("/test", scaling, groups = Set(
-        Group("/test/group1", scaling, Set(AppDefinition("/test/group1/app1"))),
-        Group("/test/group2", scaling, Set(AppDefinition("/test/group2/app2")))
+      val current = Group("/test".toPath, scaling, groups = Set(
+        Group("/test/group1".toPath, scaling, Set(AppDefinition("/test/group1/app1".toPath))),
+        Group("/test/group2".toPath, scaling, Set(AppDefinition("/test/group2/app2".toPath)))
       ))
 
       When("a group with a specific path is requested")
@@ -25,9 +26,9 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     it("can not find a group if its not existing") {
       Given("an existing group with two subgroups")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current = Group("/test", scaling, groups = Set(
-        Group("/test/group1", scaling, Set(AppDefinition("/test/group1/app1"))),
-        Group("/test/group2", scaling, Set(AppDefinition("/test/group2/app2")))
+      val current = Group("/test".toPath, scaling, groups = Set(
+        Group("/test/group1".toPath, scaling, Set(AppDefinition("/test/group1/app1".toPath))),
+        Group("/test/group2".toPath, scaling, Set(AppDefinition("/test/group2/app2".toPath)))
       ))
 
       When("a group with a specific path is requested")
@@ -40,45 +41,45 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     it("can do an update by applying a change function") {
       Given("an existing group with two subgroups")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current = Group("/test", scaling, groups = Set(
-        Group("/test/group1", scaling, Set(AppDefinition("/test/group1/app1"))),
-        Group("/test/group2", scaling, Set(AppDefinition("/test/group2/app2")))
+      val current = Group("/test".toPath, scaling, groups = Set(
+        Group("/test/group1".toPath, scaling, Set(AppDefinition("/test/group1/app1".toPath))),
+        Group("/test/group2".toPath, scaling, Set(AppDefinition("/test/group2/app2".toPath)))
       ))
 
       When("the group will be updated")
       val timestamp = Timestamp.now()
       val result = current.update(timestamp) { group =>
         if (group.id == PathId("/test/group2"))
-          Group("/test/group3", scaling, Set(AppDefinition("app2")), version = timestamp)
+          Group("/test/group3".toPath, scaling, Set(AppDefinition("app2".toPath)), version = timestamp)
         else group
       }
 
       Then("the update has been applied")
       result.version should be(timestamp)
       result.groups should have size 2
-      result.group("/test/group3") should be('defined)
-      result.group("/test/group3").get.version should be(timestamp)
-      result.group("/test").get.version should be(timestamp)
+      result.group("/test/group3".toPath) should be('defined)
+      result.group("/test/group3".toPath).get.version should be(timestamp)
+      result.group("/test".toPath).get.version should be(timestamp)
     }
 
     it("can delete a node based in the path") {
       Given("an existing group with two subgroups")
-      val current = Group("/test", ScalingStrategy(0.5, Some(1))).makeGroup("/test/foo/one").makeGroup("/test/bla/two")
+      val current = Group("/test".toPath, ScalingStrategy(0.5, Some(1))).makeGroup("/test/foo/one".toPath).makeGroup("/test/bla/two".toPath)
 
       When("a node will be deleted based on path")
-      val group = current.remove("/test/foo")
+      val group = current.remove("/test/foo".toPath)
 
       Then("the update has been applied")
-      group.group("/test/foo") should be('empty)
-      group.group("/test/bla") should be('defined)
+      group.group("/test/foo".toPath) should be('empty)
+      group.group("/test/bla".toPath) should be('defined)
     }
 
     it("can make groups specified by a path") {
       Given("a group with subgroups")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current = Group("/test", scaling, groups = Set(
-        Group("/test/group1", scaling, Set(AppDefinition("/test/group1/app1"))),
-        Group("/test/group2", scaling, Set(AppDefinition("/test/group2/app2")))
+      val current = Group("/test".toPath, scaling, groups = Set(
+        Group("/test/group1".toPath, scaling, Set(AppDefinition("/test/group1/app1".toPath))),
+        Group("/test/group2".toPath, scaling, Set(AppDefinition("/test/group2/app2".toPath)))
       ))
 
       When("a non existing path is requested")
@@ -106,9 +107,9 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     it("can marshal and unmarshal from to protos") {
       Given("a group with subgroups")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current = Group("/test", scaling, groups = Set(
-        Group("/test/group1", scaling, Set(AppDefinition("/test/group1/app1"))),
-        Group("/test/group2", scaling, Set(AppDefinition("/test/group2/app2")))
+      val current = Group("/test".toPath, scaling, groups = Set(
+        Group("/test/group1".toPath, scaling, Set(AppDefinition("/test/group1/app1".toPath))),
+        Group("/test/group2".toPath, scaling, Set(AppDefinition("/test/group2/app2".toPath)))
       ))
 
       When("the group is marshalled and unmarshalled again")
@@ -121,22 +122,22 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     it("can turn a group with group dependencies into a dependency graph") {
       Given("a group with subgroups and dependencies")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current: Group = Group("/test", scaling, groups = Set(
-        Group("/test/database", scaling, groups = Set(
-          Group("/test/database/redis", scaling, Set(AppDefinition("/test/database/redis/r1"))),
-          Group("/test/database/memcache", scaling, Set(AppDefinition("/test/database/memcache/c1")), dependencies = Set("/test/database/mongo", "/test/database/redis")),
-          Group("/test/database/mongo", scaling, Set(AppDefinition("/test/database/mongo/m1")), dependencies = Set("/test/database/redis"))
+      val current: Group = Group("/test".toPath, scaling, groups = Set(
+        Group("/test/database".toPath, scaling, groups = Set(
+          Group("/test/database/redis".toPath, scaling, Set(AppDefinition("/test/database/redis/r1".toPath))),
+          Group("/test/database/memcache".toPath, scaling, Set(AppDefinition("/test/database/memcache/c1".toPath)), dependencies = Set("/test/database/mongo".toPath, "/test/database/redis".toPath)),
+          Group("/test/database/mongo".toPath, scaling, Set(AppDefinition("/test/database/mongo/m1".toPath)), dependencies = Set("/test/database/redis".toPath))
         )),
-        Group("/test/service", scaling, groups = Set(
-          Group("/test/service/service1", scaling, Set(AppDefinition("/test/service/service1/s1")), dependencies = Set("/test/database/memcache")),
-          Group("/test/service/service2", scaling, Set(AppDefinition("/test/service/service2/s2")), dependencies = Set("/test/database", "/test/service/service1"))
+        Group("/test/service".toPath, scaling, groups = Set(
+          Group("/test/service/service1".toPath, scaling, Set(AppDefinition("/test/service/service1/s1".toPath)), dependencies = Set("/test/database/memcache".toPath)),
+          Group("/test/service/service2".toPath, scaling, Set(AppDefinition("/test/service/service2/s2".toPath)), dependencies = Set("/test/database".toPath, "/test/service/service1".toPath))
         )),
-        Group("/test/frontend", scaling, groups = Set(
-          Group("/test/frontend/app1", scaling, Set(AppDefinition("/test/frontend/app1/a1")), dependencies = Set("/test/service/service2")),
-          Group("/test/frontend/app2", scaling, Set(AppDefinition("/test/frontend/app2/a2")), dependencies = Set("/test/service", "/test/database/mongo", "/test/frontend/app1"))
+        Group("/test/frontend".toPath, scaling, groups = Set(
+          Group("/test/frontend/app1".toPath, scaling, Set(AppDefinition("/test/frontend/app1/a1".toPath)), dependencies = Set("/test/service/service2".toPath)),
+          Group("/test/frontend/app2".toPath, scaling, Set(AppDefinition("/test/frontend/app2/a2".toPath)), dependencies = Set("/test/service".toPath, "/test/database/mongo".toPath, "/test/frontend/app1".toPath))
         )),
-        Group("/test/cache", scaling, groups = Set(
-          Group("/test/cache/c1", scaling, Set(AppDefinition("/test/cache/c1/c1"))) //has no dependencies
+        Group("/test/cache".toPath, scaling, groups = Set(
+          Group("/test/cache/c1".toPath, scaling, Set(AppDefinition("/test/cache/c1/c1".toPath))) //has no dependencies
         ))
       ))
       current.hasNonCyclicDependencies should equal(true)
@@ -149,13 +150,13 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ids should have size 7
       ids should not contain PathId("/test/cache/c1")
       val expected = List[PathId](
-        "/test/database/redis/r1",
-        "/test/database/mongo/m1",
-        "/test/database/memcache/c1",
-        "/test/service/service1/s1",
-        "/test/service/service2/s2",
-        "/test/frontend/app1/a1",
-        "/test/frontend/app2/a2")
+        "/test/database/redis/r1".toPath,
+        "/test/database/mongo/m1".toPath,
+        "/test/database/memcache/c1".toPath,
+        "/test/service/service1/s1".toPath,
+        "/test/service/service2/s2".toPath,
+        "/test/frontend/app1/a1".toPath,
+        "/test/frontend/app2/a2".toPath)
       ids should be(expected)
       independent should have size 1
     }
@@ -163,22 +164,22 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     it("can turn a group with app dependencies into a dependency graph") {
       Given("a group with subgroups and dependencies")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current: Group = Group("/test", scaling, groups = Set(
-        Group("/test/database", scaling, Set(
-          AppDefinition("/test/database/redis"),
-          AppDefinition("/test/database/memcache", dependencies = Set("/test/database/mongo", "/test/database/redis")),
-          AppDefinition("/test/database/mongo", dependencies = Set("/test/database/redis"))
+      val current: Group = Group("/test".toPath, scaling, groups = Set(
+        Group("/test/database".toPath, scaling, Set(
+          AppDefinition("/test/database/redis".toPath),
+          AppDefinition("/test/database/memcache".toPath, dependencies = Set("/test/database/mongo".toPath, "/test/database/redis".toPath)),
+          AppDefinition("/test/database/mongo".toPath, dependencies = Set("/test/database/redis".toPath))
         )),
-        Group("/test/service", scaling, Set(
-          AppDefinition("/test/service/srv1", dependencies = Set("/test/database/memcache")),
-          AppDefinition("/test/service/srv2", dependencies = Set("/test/database/mongo", "/test/service/srv1"))
+        Group("/test/service".toPath, scaling, Set(
+          AppDefinition("/test/service/srv1".toPath, dependencies = Set("/test/database/memcache".toPath)),
+          AppDefinition("/test/service/srv2".toPath, dependencies = Set("/test/database/mongo".toPath, "/test/service/srv1".toPath))
         )),
-        Group("/test/frontend", scaling, Set(
-          AppDefinition("/test/frontend/app1", dependencies = Set("/test/service/srv2")),
-          AppDefinition("/test/frontend/app2", dependencies = Set("/test/service/srv2", "/test/database/mongo", "/test/frontend/app1"))
+        Group("/test/frontend".toPath, scaling, Set(
+          AppDefinition("/test/frontend/app1".toPath, dependencies = Set("/test/service/srv2".toPath)),
+          AppDefinition("/test/frontend/app2".toPath, dependencies = Set("/test/service/srv2".toPath, "/test/database/mongo".toPath, "/test/frontend/app1".toPath))
         )),
-        Group("/test/cache", scaling, Set(
-          AppDefinition("/test/cache/cache1") //has no dependencies
+        Group("/test/cache".toPath, scaling, Set(
+          AppDefinition("/test/cache/cache1".toPath) //has no dependencies
         ))
       ))
       current.hasNonCyclicDependencies should equal(true)
@@ -191,13 +192,13 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ids should have size 7
       ids should not contain PathId("/test/cache/c1")
       val expected = List[PathId](
-        "/test/database/redis",
-        "/test/database/mongo",
-        "/test/database/memcache",
-        "/test/service/srv1",
-        "/test/service/srv2",
-        "/test/frontend/app1",
-        "/test/frontend/app2")
+        "/test/database/redis".toPath,
+        "/test/database/mongo".toPath,
+        "/test/database/memcache".toPath,
+        "/test/service/srv1".toPath,
+        "/test/service/srv2".toPath,
+        "/test/frontend/app1".toPath,
+        "/test/frontend/app2".toPath)
       ids should be(expected)
       independent should have size 1
 
@@ -206,22 +207,22 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     it("can turn a group without dependencies into a single step u") {
       Given("a group with subgroups and dependencies")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current: Group = Group("/test", scaling, groups = Set(
-        Group("/test/database", scaling, groups = Set(
-          Group("/test/database/redis", scaling, Set(AppDefinition("/test/database/redis/r1"))),
-          Group("/test/database/memcache", scaling, Set(AppDefinition("/test/database/memcache/m1"))),
-          Group("/test/database/mongo", scaling, Set(AppDefinition("/test/database/mongo/m1")))
+      val current: Group = Group("/test".toPath, scaling, groups = Set(
+        Group("/test/database".toPath, scaling, groups = Set(
+          Group("/test/database/redis".toPath, scaling, Set(AppDefinition("/test/database/redis/r1".toPath))),
+          Group("/test/database/memcache".toPath, scaling, Set(AppDefinition("/test/database/memcache/m1".toPath))),
+          Group("/test/database/mongo".toPath, scaling, Set(AppDefinition("/test/database/mongo/m1".toPath)))
         )),
-        Group("/test/service", scaling, groups = Set(
-          Group("/test/service/service1", scaling, Set(AppDefinition("/test/service/service1/srv1"))),
-          Group("/test/service/service2", scaling, Set(AppDefinition("/test/service/service2/srv2")))
+        Group("/test/service".toPath, scaling, groups = Set(
+          Group("/test/service/service1".toPath, scaling, Set(AppDefinition("/test/service/service1/srv1".toPath))),
+          Group("/test/service/service2".toPath, scaling, Set(AppDefinition("/test/service/service2/srv2".toPath)))
         )),
-        Group("/test/frontend", scaling, groups = Set(
-          Group("/test/frontend/app1", scaling, Set(AppDefinition("/test/frontend/app1/a1"))),
-          Group("/test/frontend/app2", scaling, Set(AppDefinition("/test/frontend/app2/a2")))
+        Group("/test/frontend".toPath, scaling, groups = Set(
+          Group("/test/frontend/app1".toPath, scaling, Set(AppDefinition("/test/frontend/app1/a1".toPath))),
+          Group("/test/frontend/app2".toPath, scaling, Set(AppDefinition("/test/frontend/app2/a2".toPath)))
         )),
-        Group("/test/cache", scaling, groups = Set(
-          Group("/test/cache/c1", scaling, Set(AppDefinition("/test/cache/c1/cache1")))
+        Group("/test/cache".toPath, scaling, groups = Set(
+          Group("/test/cache/c1".toPath, scaling, Set(AppDefinition("/test/cache/c1/cache1".toPath)))
         ))
       ))
       current.hasNonCyclicDependencies should equal(true)
@@ -238,12 +239,12 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     it("can not compute the dependencies, if the dependency graph is not strictly acyclic") {
       Given("a group with cycled dependencies")
       val scaling = ScalingStrategy(0.5, Some(1))
-      val current: Group = Group("/test", scaling, groups = Set(
-        Group("/test/database", scaling, groups = Set(
-          Group("/test/database/mongo", scaling, Set(AppDefinition("/test/database/mongo/m1", dependencies = Set("/test/service"))))
+      val current: Group = Group("/test".toPath, scaling, groups = Set(
+        Group("/test/database".toPath, scaling, groups = Set(
+          Group("/test/database/mongo".toPath, scaling, Set(AppDefinition("/test/database/mongo/m1".toPath, dependencies = Set("/test/service".toPath))))
         )),
-        Group("/test/service", scaling, groups = Set(
-          Group("/test/service/service1", scaling, Set(AppDefinition("/test/service/service1/srv1", dependencies = Set("/test/database"))))
+        Group("/test/service".toPath, scaling, groups = Set(
+          Group("/test/service/service1".toPath, scaling, Set(AppDefinition("/test/service/service1/srv1".toPath, dependencies = Set("/test/database".toPath))))
         ))
       ))
       current.hasNonCyclicDependencies should equal(false)

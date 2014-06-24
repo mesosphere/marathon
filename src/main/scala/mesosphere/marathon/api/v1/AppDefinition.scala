@@ -8,15 +8,12 @@ import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.PortIndices
-import com.fasterxml.jackson.annotation.{
-  JsonIgnore,
-  JsonIgnoreProperties,
-  JsonProperty
-}
+import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
 import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
+import PathId._
 
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -83,7 +80,7 @@ case class AppDefinition(
     val memResource = ScalarResource(Resource.MEM, mem)
 
     val builder = Protos.ServiceDefinition.newBuilder
-      .setId(id)
+      .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
       .addAllPorts(ports.asJava)
@@ -110,7 +107,7 @@ case class AppDefinition(
       }.toMap
 
     AppDefinition(
-      id = proto.getId,
+      id = proto.getId.toPath,
       cmd = proto.getCmd.getValue,
       executor = proto.getExecutor,
       taskRateLimit = proto.getTaskRateLimit,
@@ -233,7 +230,7 @@ object AppDefinition {
     override def migrate(version: StorageVersion, obj: AppDefinition): AppDefinition = {
       if (version.getMajor == 0 && version.getMinor < 6) {
         // container changes are handled in the AppDefinition object
-        obj.copy(id = obj.id.toLowerCase().replaceAll("_", "-"))
+        obj.copy(id = obj.id.toString.toLowerCase.replaceAll("_", "-").toPath)
       }
       // add other migration cases
       else {

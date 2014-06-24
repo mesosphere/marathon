@@ -14,10 +14,10 @@ import akka.event.EventStream
 import org.apache.mesos.state.InMemoryState
 import akka.pattern.ask
 import akka.util.Timeout
-import mesosphere.marathon.TaskUpgradeCancelledException
 import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
 import akka.testkit.TestActor.{ NoAutoPilot, AutoPilot }
 import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.state.PathId._
 
 class AppUpgradeManagerTest
     extends TestKit(ActorSystem("System"))
@@ -39,10 +39,10 @@ class AppUpgradeManagerTest
     val taskTracker = new TaskTracker(new InMemoryState, config)
     val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
 
-    manager ! Upgrade(driver, AppDefinition(id = "testApp"), 10)
+    manager ! Upgrade(driver, AppDefinition(id = "testApp".toPath), 10)
 
     awaitCond(
-      manager.underlyingActor.runningUpgrades.contains("testApp"),
+      manager.underlyingActor.runningUpgrades.contains("testApp".toPath),
       5.seconds
     )
   }
@@ -79,9 +79,9 @@ class AppUpgradeManagerTest
     val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
 
     implicit val timeout = Timeout(1.minute)
-    val res = (manager ? Upgrade(driver, AppDefinition(id = "testApp"), 10)).mapTo[Boolean]
+    val res = (manager ? Upgrade(driver, AppDefinition(id = "testApp".toPath), 10)).mapTo[Boolean]
 
-    manager ! CancelUpgrade("testApp", new Exception)
+    manager ! CancelUpgrade("testApp".toPath, new Exception)
 
     intercept[Exception] {
       Await.result(res, 5.seconds)

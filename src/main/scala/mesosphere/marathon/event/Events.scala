@@ -106,13 +106,13 @@ case class HealthStatusChanged(
 trait UpgradeEvent extends MarathonEvent
 
 case class GroupChangeSuccess(
-  groupId: String,
+  groupId: PathId,
   version: String,
   eventType: String = "group_change_success",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class GroupChangeFailed(
-  groupId: String,
+  groupId: PathId,
   version: String,
   reason: String,
   eventType: String = "group_change_failed",

@@ -102,7 +102,7 @@ class MarathonSchedulerActor(
     * the original sender.
     */
   def locking[U](appId: PathId, origSender: ActorRef, cmd: Command, blocking: Boolean = false)(f: => Future[U]): Unit = {
-    val lock = appLocks.get(appId)
+    val lock = appLocks.get(appId.toString)
     if (blocking) {
       lock.acquire()
       log.debug(s"Acquired lock for app: $appId, performing cmd: $cmd")

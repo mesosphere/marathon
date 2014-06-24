@@ -104,7 +104,7 @@ class GroupManager @Singleton @Inject() (
     log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
     //checkpoint where to start from
     //if there is an upgrade in progress
-    val startFromGroup = planRepo.currentVersion(current.id).map {
+    val startFromGroup = planRepo.currentVersion(current.id.toString).map {
       case Some(upgrade) =>
         if (!force) throw UpgradeInProgressException(s"Running upgrade for group ${current.id}. Use force flag to override!")
         upgrade.target
@@ -125,16 +125,16 @@ class GroupManager @Singleton @Inject() (
     case Failure(ex) => eventBus.publish(GroupChangeFailed(group.id, group.version.toString, ex.getMessage))
   }
 
-  private def deletePlan(id: String): PartialFunction[Try[Group], Unit] = {
+  private def deletePlan(id: PathId): PartialFunction[Try[Group], Unit] = {
     case Failure(ex: TaskUpgradeCancelledException) => //do not delete the plan, if a rollback is requested
     case Failure(ex: UpgradeInProgressException) => //do not delete the plan, if there is an upgrade in progress
-    case _ => planRepo.expunge(id)
+    case _ => planRepo.expunge(id.toString)
   }
 
   def expunge(id: PathId): Future[Boolean] = {
     log.info(s"Delete group $id")
     groupRepo.currentVersion(id.root).flatMap {
-      case Some(current) => Future.sequence(current.transitiveApps.map(scheduler.stopApp)).flatMap(_ => groupRepo.expunge(id).map(_.forall(identity)))
+      case Some(current) => Future.sequence(current.transitiveApps.map(scheduler.stopApp)).flatMap(_ => groupRepo.expunge(id.toString).map(_.forall(identity)))
       case None          => Future.successful(false)
     }
   }

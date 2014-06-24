@@ -4,6 +4,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state._
 import mesosphere.marathon.state.ScalingStrategy
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import PathId._
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class GroupUpdate(
@@ -49,11 +50,11 @@ case class GroupUpdate(
 }
 
 object GroupUpdate {
-  def apply(id: PathId, scalingStrategy: ScalingStrategy, apps: Set[AppDefinition]): GroupUpdate = {
-    GroupUpdate(Some(id), Some(scalingStrategy), if (apps.isEmpty) None else Some(apps))
+  def apply(id: String, scalingStrategy: ScalingStrategy, apps: Set[AppDefinition]): GroupUpdate = {
+    GroupUpdate(Some(id.toPath), Some(scalingStrategy), if (apps.isEmpty) None else Some(apps))
   }
-  def apply(id: PathId, scalingStrategy: ScalingStrategy, apps: Set[AppDefinition], groups: Set[GroupUpdate]): GroupUpdate = {
-    GroupUpdate(Some(id), Some(scalingStrategy), if (apps.isEmpty) None else Some(apps), if (groups.isEmpty) None else Some(groups))
+  def apply(id: String, scalingStrategy: ScalingStrategy, apps: Set[AppDefinition], groups: Set[GroupUpdate]): GroupUpdate = {
+    GroupUpdate(Some(id.toPath), Some(scalingStrategy), if (apps.isEmpty) None else Some(apps), if (groups.isEmpty) None else Some(groups))
   }
-  def empty(id: String): GroupUpdate = GroupUpdate(Some(id))
+  def empty(id: String): GroupUpdate = GroupUpdate(Some(id.toPath))
 }

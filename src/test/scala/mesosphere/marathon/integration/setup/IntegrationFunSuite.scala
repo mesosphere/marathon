@@ -1,6 +1,7 @@
 package mesosphere.marathon.integration.setup
 
 import java.io.File
+import mesosphere.marathon.state.PathId
 import org.scalatest._
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -54,7 +55,7 @@ object ExternalMarathonIntegrationTest {
 /**
   * Health check helper to define health behaviour of launched applications
   */
-class IntegrationHealthCheck(val appId: String, val versionId: String, val port: Int, var state: Boolean, var lastUpdate: DateTime = new DateTime(0)) {
+class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port: Int, var state: Boolean, var lastUpdate: DateTime = new DateTime(0)) {
 
   case class HealthStatusChange(deadLine: Deadline, state: Boolean)
   private[this] var changes = List.empty[HealthStatusChange]
@@ -134,7 +135,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     waitFor(s"event $kind to arrive", maxWait)(nextEvent)
   }
 
-  def waitForTasks(appId: String, num: Int, maxWait: FiniteDuration = 30.seconds): List[ITEnrichedTask] = {
+  def waitForTasks(appId: PathId, num: Int, maxWait: FiniteDuration = 30.seconds): List[ITEnrichedTask] = {
     def checkTasks: Option[List[ITEnrichedTask]] = {
       val tasks = Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil)
       if (tasks.size == num) Some(tasks) else None
@@ -172,7 +173,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     next()
   }
 
-  def appProxy(appId: String, versionId: String, instances: Int): AppDefinition = {
+  def appProxy(appId: PathId, versionId: String, instances: Int): AppDefinition = {
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[AppMock].getName
@@ -182,7 +183,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
 
   }
 
-  def appProxyCheck(appId: String, versionId: String, state: Boolean): IntegrationHealthCheck = {
+  def appProxyCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
     //this is used for all instances, as long as there is no specific instance check
     //the specific instance check has also a specific port, which is assigned by mesos
     val check = new IntegrationHealthCheck(appId, versionId, 0, state)
@@ -190,7 +191,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     check
   }
 
-  def taskProxyChecks(appId: String, versionId: String, state: Boolean): Seq[IntegrationHealthCheck] = {
+  def taskProxyChecks(appId: PathId, versionId: String, state: Boolean): Seq[IntegrationHealthCheck] = {
     marathon.tasks(appId).value.flatMap(_.ports).map { port =>
       val check = new IntegrationHealthCheck(appId, versionId, port, state)
       ExternalMarathonIntegrationTest.healthChecks

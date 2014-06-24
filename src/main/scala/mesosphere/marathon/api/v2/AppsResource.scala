@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import javax.ws.rs._
-import scala.Array
+import mesosphere.marathon.state.PathId._
 import javax.ws.rs.core.{ Response, Context, MediaType }
 import javax.inject.{ Named, Inject }
 import mesosphere.marathon.event.{ EventModule, ApiPostEvent }
@@ -54,11 +54,9 @@ class AppsResource @Inject() (
   @Path("{id}")
   @Timed
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def show(@PathParam("id") id: String): Response = service.getApp(id) match {
-    case Some(app) =>
-      Response.ok(Map("app" -> app.withTasks(taskTracker))).build
-
-    case None => Responses.unknownApp(id)
+  def show(@PathParam("id") id: String): Response = service.getApp(id.toRootPath) match {
+    case Some(app) => Response.ok(Map("app" -> app.withTasks(taskTracker))).build
+    case None      => Responses.unknownApp(id.toRootPath)
   }
 
   @PUT
@@ -68,12 +66,13 @@ class AppsResource @Inject() (
     @Context req: HttpServletRequest,
     @PathParam("id") id: String,
     @Valid appUpdate: AppUpdate): Response = {
-    val updatedApp = appUpdate.apply(AppDefinition(id))
+    val appId = id.toRootPath
+    val updatedApp = appUpdate.apply(AppDefinition(appId))
 
-    service.getApp(id) match {
+    service.getApp(appId) match {
       case Some(app) =>
         maybePostEvent(req, updatedApp)
-        Await.result(service.updateApp(id, appUpdate), config.zkTimeoutDuration)
+        Await.result(service.updateApp(appId, appUpdate), config.zkTimeoutDuration)
         Response.noContent.build
 
       case None => create(req, updatedApp)
@@ -84,7 +83,7 @@ class AppsResource @Inject() (
   @Path("{id}")
   @Timed
   def delete(@Context req: HttpServletRequest, @PathParam("id") id: String): Response = {
-    val app = AppDefinition(id = id)
+    val app = AppDefinition(id = id.toRootPath)
     maybePostEvent(req, app)
     Await.result(service.stopApp(app), config.zkTimeoutDuration)
     Response.noContent.build
@@ -108,7 +107,7 @@ class AppsResource @Inject() (
 
     service.listApps().filter { app =>
       val appMatchesCmd = cmd != null && cmd.nonEmpty && isPrefix(cmd, app.cmd)
-      val appMatchesId = id != null && id.nonEmpty && isPrefix(id, app.id)
+      val appMatchesId = id != null && id.nonEmpty && isPrefix(id, app.id.toString)
 
       appMatchesCmd || appMatchesId
     }

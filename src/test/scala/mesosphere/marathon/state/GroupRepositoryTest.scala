@@ -6,12 +6,13 @@ import scala.concurrent.duration._
 import org.mockito.Mockito._
 import org.scalatest.Matchers
 import scala.language.postfixOps
+import PathId._
 
 class GroupRepositoryTest extends MarathonSpec with Matchers {
 
   test("Store canary strategy") {
     val store = mock[MarathonStore[Group]]
-    val group = Group("g1", ScalingStrategy(1, None), Set.empty)
+    val group = Group("g1".toPath, ScalingStrategy(1, None), Set.empty)
     val future = Future.successful(Some(group))
     val versionedKey = s"g1:${group.version}"
     val appRepo = mock[AppRepository]
@@ -28,7 +29,7 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
   }
 
   test("group back and forth again with rolling strategy") {
-    val group = Group("g1", ScalingStrategy(1, None), Set.empty)
+    val group = Group("g1".toPath, ScalingStrategy(1, None), Set.empty)
     val proto = group.toProto
     val merged = Group.fromProto(proto)
     group should be(merged)

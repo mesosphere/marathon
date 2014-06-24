@@ -1,5 +1,7 @@
 package mesosphere.marathon.integration.setup
 
+import mesosphere.marathon.state.PathId
+
 import scala.reflect.ClassTag
 import com.google.inject.Scopes
 import javax.ws.rs._
@@ -92,7 +94,7 @@ class ApplicationHealthCheck @Inject() () {
 
   @GET
   @Path("{appId}/{versionId}/{port}")
-  def isApplicationHealthy(@PathParam("appId") appId: String, @PathParam("versionId") versionId: String, @PathParam("port") port: Int): Response = {
+  def isApplicationHealthy(@PathParam("appId") appId: PathId, @PathParam("versionId") versionId: String, @PathParam("port") port: Int): Response = {
     def instance = ExternalMarathonIntegrationTest.healthChecks.find{ c => c.appId == appId && c.versionId == versionId && c.port == port }
     def definition = ExternalMarathonIntegrationTest.healthChecks.find{ c => c.appId == appId && c.versionId == versionId && c.port == 0 }
     val state = instance.orElse(definition).fold(true)(_.healthy)

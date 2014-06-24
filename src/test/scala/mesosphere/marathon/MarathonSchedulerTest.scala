@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import org.mockito.Mockito._
 import com.fasterxml.jackson.databind.ObjectMapper
-import mesosphere.marathon.state.{ Timestamp, AppRepository }
+import mesosphere.marathon.state.{ PathId, Timestamp, AppRepository }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -17,6 +17,7 @@ import akka.testkit.{ TestKit, TestProbe }
 import org.scalatest.BeforeAndAfterAll
 import mesosphere.marathon.MarathonSchedulerActor.LaunchTasks
 import scala.concurrent.duration._
+import PathId._
 
 /**
   * @author Tobi Knaup
@@ -65,14 +66,14 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     val offers = Lists.newArrayList(offer)
     val now = Timestamp.now
     val app = AppDefinition(
-      id = "testOffers",
+      id = "testOffers".toPath,
       executor = "//cmd",
       ports = Seq(8080),
       version = now
     )
     val allApps = Vector(app)
 
-    when(tracker.newTaskId("testOffers"))
+    when(tracker.newTaskId("testOffers".toPath))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
     when(tracker.checkStagedTasks).thenReturn(Seq())
     when(queue.poll()).thenReturn(app)
