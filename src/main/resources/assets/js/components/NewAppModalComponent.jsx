@@ -69,6 +69,7 @@ define([
       // mem, cpus, and instances are all Numbers and should be parsed as such.
       if ("mem" in modelAttrs) modelAttrs.mem = parseFloat(modelAttrs.mem);
       if ("cpus" in modelAttrs) modelAttrs.cpus = parseFloat(modelAttrs.cpus);
+      if ("disk" in modelAttrs) modelAttrs.disk = parseFloat(modelAttrs.disk);
       if ("instances" in modelAttrs) {
         modelAttrs.instances = parseInt(modelAttrs.instances, 10);
       }
@@ -114,6 +115,12 @@ define([
                   label="Memory (MB)"
                   model={model}>
                 <input min="0" step="any" type="number" required />
+              </FormGroupComponent>
+              <FormGroupComponent
+                  attribute="disk"
+                  label="Disk Space (MB)"
+                  model={model}>
+              <input min="0" step="any" type="number" required />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="instances"

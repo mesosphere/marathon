@@ -93,7 +93,7 @@ object Dependency {
     val Chaos = "0.5.6"
     val JacksonCCM = "0.1.0"
     val Mesos = "0.19.0"
-    val MesosUtils = "0.18.2-2"
+    val MesosUtils = "0.19.0-1"
     val Akka = "2.2.4"
     val Spray = "1.2.1"
     val Json4s = "3.2.5"
@@ -115,7 +115,7 @@ object Dependency {
   val sprayHttpx = "io.spray" % "spray-httpx" % V.Spray
   val json4s = "org.json4s" %% "json4s-jackson" % V.Json4s
   val chaos = "mesosphere" % "chaos" % V.Chaos
-  val mesosUtils = "mesosphere" % "mesos-utils" % V.MesosUtils
+  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime

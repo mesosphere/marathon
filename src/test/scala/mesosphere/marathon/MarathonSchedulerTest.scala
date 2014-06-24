@@ -54,7 +54,7 @@ class MarathonSchedulerTest extends MarathonSpec {
 
   test("ResourceOffers") {
     val driver = mock[SchedulerDriver]
-    val offer = makeBasicOffer(4, 1024, 31000, 32000).build
+    val offer = makeBasicOffer(cpus = 4, mem = 1024, disk = 4000, beginPort = 31000, endPort = 32000).build
     val offers = Lists.newArrayList(offer)
     val now = Timestamp.now
     val app = AppDefinition(
