@@ -114,6 +114,9 @@ define([
       this.props.model.save(
         null,
         {
+          error: function () {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+          },
           success: function () {
             // refresh app versions
             this.fetchAppVersions();
@@ -253,6 +256,9 @@ define([
         model.save(
           {instances: instances},
           {
+            error: function () {
+              this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+            },
             success: function () {
               // refresh app versions
               this.fetchAppVersions();
