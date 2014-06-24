@@ -4,8 +4,10 @@ define([
   "React",
   "models/App",
   "jsx!components/AppVersionListItemComponent",
+  "jsx!components/PagedNavComponent",
   "jsx!components/PagedContentComponent",
-], function(React, App, AppVersionListItemComponent, PagedContentComponent) {
+], function(React, App, AppVersionListItemComponent,
+    PagedNavComponent, PagedContentComponent) {
   "use strict";
 
   return React.createClass({
@@ -17,8 +19,22 @@ define([
       onRollback: React.PropTypes.func
     },
 
+    getInitialState: function() {
+      return {
+        currentPage: 0,
+        itemsPerPage: 20,
+        noVisiblePages: 6
+      };
+    },
+
+    handlePageChange: function(pageNum) {
+      this.setState({currentPage: pageNum});
+    },
+
     render: function() {
       var appVersions = this.props.appVersions.models;
+      var itemsPerPage = this.state.itemsPerPage;
+      var currentPage = this.state.currentPage;
       var currentVersion = this.props.appVersions.at(0);
       return (
         <div>
@@ -26,6 +42,19 @@ define([
             <button className="btn btn-sm btn-info" onClick={this.props.fetchAppVersions}>
               ↻ Refresh
             </button>
+            <span className="pull-right">
+              {
+                // is there at least two pages
+                appVersions.length > itemsPerPage?
+                  <PagedNavComponent
+                    currentPage={currentPage}
+                    onPageChange={this.handlePageChange}
+                    itemsPerPage={itemsPerPage}
+                    noItems={appVersions.length}
+                    noVisiblePages={this.state.noVisiblePages} /> :
+                    null
+              }
+            </span>
           </p>
           <div className="panel-group">
             <div className="panel panel-header panel-inverse">
@@ -47,8 +76,8 @@ define([
                         appVersion={currentVersion}
                         currentVersion={true} />
                       <PagedContentComponent
-                        itemsPerPage={20}
-                        noVisiblePages={6}>
+                        currentPage={currentPage}
+                        itemsPerPage={itemsPerPage}>
                         {
                           appVersions.map(function(v, i) {
                             if (i > 0) {

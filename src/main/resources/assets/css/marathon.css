@@ -413,6 +413,11 @@ fieldset[disabled] .btn-info.active {
   margin-bottom: 15px;
 }
 
+.pagination-unstyled {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .pagination > li > a,
 .pagination > li > span {
   color: #f6f6f6;
