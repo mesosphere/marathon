@@ -62,7 +62,7 @@ three applications, each with a different number of tasks: Search (1), Jetty
 ![Marathon1](https://raw.github.com/mesosphere/marathon/master/docs/img/marathon1.png "Initial Marathon")
 
 As the website gains traction and the user base grows, we decide to scale-out
-the search service and our Rails-based application. This is done via a simple
+the search service and our Rails-based application. This is done via a
 REST call to the Marathon API to add more tasks. Marathon will take care of
 placing the new tasks on machines with spare capacity, honoring the
 constraints we previously set.
@@ -91,10 +91,10 @@ difficult situation!
 
 1.  Install [Mesos][Mesos]. One easy way is via your system's package manager.
     Current builds for major Linux distributions and Mac OS X are available
-    from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
+    from on the Mesosphere [downloads page](http://mesosphere.io/downloads/).
 
     If building from source, see the
-    [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
+    Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
     [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
     for details. Running `make install` will install Mesos in `/usr/local` in
     the same way as these packages do.
@@ -116,7 +116,7 @@ difficult situation!
 
 #### Building From Source
 
-1.  If you want to build Marathon from source, check out this repo and use sbt to build a JAR:
+1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
 
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
@@ -152,7 +152,7 @@ command launches Marathon on Mesos in *local mode*. Point your web browser to
 
 ### Command Line Options
 
-There are some command line options that can influence how Marathon works.
+The following options can influence how Marathon works:
 
 * `--master`: The URL of the Mesos master. The format is a comma-delimited list of
     of hosts like `zk://host1:port,host2:port/mesos`. Pay particular attention to the
