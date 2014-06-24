@@ -405,7 +405,7 @@ fieldset[disabled] .btn-info.active {
 }
 
 .panel-body {
-  background-color: #454a50;
+  background-color: #222224;
 }
 
 .panel-inverse .panel-body {
@@ -486,6 +486,10 @@ fieldset[disabled] .btn-info.active {
 
 .table-selectable tr > td {
   cursor: pointer;
+}
+
+.dl-unstyled {
+  margin-bottom: 0;
 }
 
 .badge-circlet {
