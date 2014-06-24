@@ -182,7 +182,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     sink.flush()
   }
 
-  def fetchFromState(appId: PathId) = state.fetch(prefix + appId).get()
+  def fetchFromState(appId: PathId) = state.fetch(prefix + appId.safePath).get()
 
   def store(appId: PathId): Future[Variable] = {
     val oldVar = fetchFromState(appId)

@@ -14,8 +14,6 @@ case class PathId(path: List[String], absolute: Boolean = true) {
 
   def isRoot: Boolean = path.size == 1
 
-  def safePath: String = path.mkString("_")
-
   def parent: PathId = if (tail.isEmpty) this else PathId(path.reverse.tail.reverse, absolute)
 
   def child: PathId = PathId(tail)
@@ -42,7 +40,10 @@ case class PathId(path: List[String], absolute: Boolean = true) {
     if (absolute) PathId(in(path)) else PathId(in(base.path ::: path))
   }
 
-  override def toString: String = path.mkString(if (absolute) "/" else "", "/", "")
+  def safePath: String = toString("_")
+
+  override def toString: String = toString("/")
+  private def toString(delimiter:String): String = path.mkString(if (absolute) delimiter else "", delimiter, "")
 }
 
 object PathId {
