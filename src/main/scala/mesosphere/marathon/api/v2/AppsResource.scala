@@ -40,7 +40,7 @@ class AppsResource @Inject() (
   @Produces(Array(MediaType.APPLICATION_JSON))
   def create(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    val withRootId = app.copy(id=app.id.canonicalPath())
+    val withRootId = app.copy(id = app.id.canonicalPath())
     Await.result(service.startApp(withRootId), config.zkTimeoutDuration)
     //TODO(MV): delegate to group manager
     Response.created(new URI(s"${withRootId.id}")).build

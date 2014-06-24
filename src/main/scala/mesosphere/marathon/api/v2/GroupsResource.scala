@@ -26,11 +26,10 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   val GetVersionRE = """^(.+)/versions/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$""".r
 
   /**
-    * List all available top level groups.
-    * @return all top level groups
+    * Get root group.
     */
   @GET
-  def list(): Iterable[Group] = result(groupManager.list(), defaultWait)
+  def root(): Group = result(groupManager.root, defaultWait)
 
   /**
     * Get a specific group, optionally with specifc version
@@ -59,7 +58,7 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   @Consumes(Array(MediaType.APPLICATION_JSON))
   def create(update: GroupUpdate): Response = {
     require(update.id.isDefined)
-    updateOrCreate(update.id.get, update, force = false)
+    updateOrCreate(PathId.empty, update, force = false)
   }
 
   /**
@@ -128,14 +127,8 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val groupId = id.toRootPath
     val version = Timestamp.now()
-    if (groupId.isRoot) {
-      if (result(groupManager.expunge(groupId), defaultWait)) Response.ok(Map("version" -> version)).build()
-      else Responses.unknownGroup(groupId)
-    }
-    else {
-      groupManager.update(groupId.rootPath, version, _.remove(groupId, version), force)
-      Response.ok(Map("version" -> version)).build()
-    }
+    groupManager.update(groupId.rootPath, version, _.remove(groupId, version), force)
+    Response.ok(Map("version" -> version)).build()
   }
 
   private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): Response = {

@@ -25,5 +25,5 @@ class GroupRepository(val store: PersistenceStore[Group], appRepo: AppRepository
     }
   }
 
-  def store(group: Group): Future[Group] = storeWithVersion(group.id.safePath, group.version, group)
+  def store(path: String, group: Group): Future[Group] = storeWithVersion(path, group.version, group)
 }

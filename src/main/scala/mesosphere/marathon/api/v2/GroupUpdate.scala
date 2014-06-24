@@ -33,7 +33,7 @@ case class GroupUpdate(
         .map(_.toGroup(current.id, version))
       groupUpdates.toSet ++ groupAdditions
     }
-    val effectiveApps = apps.getOrElse(current.apps)
+    val effectiveApps = apps.getOrElse(current.apps).map(app => app.copy(id = app.id.canonicalPath(current.id)))
     val effectiveScaling = scalingStrategy.getOrElse(current.scalingStrategy)
     val effectiveDependencies = dependencies.fold(current.dependencies)(_.map(_.canonicalPath(current.id)))
     Group(current.id, effectiveScaling, effectiveApps, effectiveGroups, effectiveDependencies, version)
@@ -42,7 +42,7 @@ case class GroupUpdate(
   def toGroup(base: PathId, version: Timestamp): Group = Group(
     groupId.canonicalPath(base),
     scalingStrategy.getOrElse(ScalingStrategy.empty),
-    apps.getOrElse(Set.empty),
+    apps.getOrElse(Set.empty).map(app => app.copy(id = app.id.canonicalPath(base))),
     groups.getOrElse(Set.empty).map(_.toGroup(base, version)),
     dependencies.fold(Set.empty[PathId])(_.map(_.canonicalPath(base))),
     version

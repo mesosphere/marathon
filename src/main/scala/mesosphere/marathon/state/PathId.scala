@@ -12,7 +12,7 @@ case class PathId(path: List[String], absolute: Boolean = true) {
 
   def isEmpty: Boolean = path.isEmpty
 
-  def isRoot: Boolean = path.size == 1
+  def isRoot: Boolean = path.isEmpty
 
   def parent: PathId = if (tail.isEmpty) this else PathId(path.reverse.tail.reverse, absolute)
 
@@ -43,7 +43,7 @@ case class PathId(path: List[String], absolute: Boolean = true) {
   def safePath: String = toString("_")
 
   override def toString: String = toString("/")
-  private def toString(delimiter:String): String = path.mkString(if (absolute) delimiter else "", delimiter, "")
+  private def toString(delimiter: String): String = path.mkString(if (absolute) delimiter else "", delimiter, "")
 }
 
 object PathId {

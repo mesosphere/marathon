@@ -2,13 +2,9 @@ package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.{ PathId, Group, Timestamp, MarathonState }
-import mesosphere.marathon.Protos.DeploymentPlanDefinition
-import mesosphere.marathon.state.Migration
-import mesosphere.marathon.Protos.StorageVersion
 import scala.concurrent.Future
 import mesosphere.marathon.MarathonSchedulerService
 import org.apache.log4j.Logger
-import PathId._
 
 sealed trait DeploymentAction
 //application has not been started before
@@ -27,69 +23,15 @@ final case class DeploymentStep(actions: List[DeploymentAction]) {
 }
 
 final case class DeploymentPlan(
-    id: PathId,
-    original: Group,
-    target: Group,
-    steps: List[DeploymentStep],
-    version: Timestamp) extends MarathonState[DeploymentPlanDefinition, DeploymentPlan] {
-
-  private[this] val log = Logger.getLogger(getClass.getName)
-
-  override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan = mergeFromProto(DeploymentPlanDefinition.parseFrom(bytes))
-
-  override def mergeFromProto(msg: DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
-    msg.getId.toPath,
-    Group.empty.mergeFromProto(msg.getOriginial),
-    Group.empty.mergeFromProto(msg.getTarget),
-    Nil, //TODO(MV): store plan as well
-    Timestamp(msg.getVersion)
-  )
-
-  override def toProto: DeploymentPlanDefinition = {
-    DeploymentPlanDefinition.newBuilder()
-      .setId(id.toString)
-      .setVersion(version.toString)
-      .setOriginial(original.toProto)
-      .setTarget(target.toProto)
-      .build()
-  }
-
-  def deploy(scheduler: MarathonSchedulerService, force: Boolean): Future[Boolean] = Future.successful(true)
-
-  /*
-  def deploy(scheduler: MarathonSchedulerService, force: Boolean): Future[Boolean] = {
-    log.info(s"Deploy group ${target.id}: start:${toStart.map(_.id)}, stop:${toStop.map(_.id)}, scale:${toScale.map(_.id)}, restart:${toRestart.map(_.id)}")
-
-    val updateFuture = toScale.map(to => scheduler.updateApp(to.id, AppUpdate(instances = Some(to.instances))).map(_ => true))
-    val restartFuture = toRestart.map { app =>
-      // call 'ceil' to ensure that the minimumHealthCapacity is not undershot because of rounding
-      val keepAlive = (target.scalingStrategy.minimumHealthCapacity * app.instances).ceil.toInt
-      scheduler.upgradeApp(
-        app,
-        keepAlive,
-        // we need to start at least 1 instance
-        target.scalingStrategy.maximumRunningFactor.map(x => math.max((x * app.instances).toInt, keepAlive + 1)),
-        force = force)
-    }
-    val startFuture = toStart.map(scheduler.startApp(_).map(_ => true))
-    val stopFuture = toStop.map(scheduler.stopApp(_).map(_ => true))
-    val successFuture = Set(Future.successful(true)) //used, for immediate success, if no action is performed
-    val deployFuture = Future.sequence(
-      startFuture ++
-        updateFuture ++
-        restartFuture ++
-        stopFuture ++
-        successFuture).map(_.forall(identity))
-
-    deployFuture andThen { case result => log.info(s"Deployment of ${target.id} has been finished $result") }
-  }
-  */
-}
+  original: Group,
+  target: Group,
+  steps: List[DeploymentStep],
+  version: Timestamp)
 
 object DeploymentPlan {
-  def empty() = DeploymentPlan(PathId.empty, Group.empty, Group.empty, Nil, Timestamp.now())
+  def empty() = DeploymentPlan(Group.empty, Group.empty, Nil, Timestamp.now())
 
-  def apply(id: PathId, original: Group, target: Group, version: Timestamp = Timestamp.now()): DeploymentPlan = {
+  def apply(original: Group, target: Group, version: Timestamp = Timestamp.now()): DeploymentPlan = {
     //lookup maps for original and target apps
     val originalApp: Map[PathId, AppDefinition] = original.transitiveApps.map(app => app.id -> app).toMap
     val targetApp: Map[PathId, AppDefinition] = target.transitiveApps.map(app => app.id -> app).toMap
@@ -133,9 +75,8 @@ object DeploymentPlan {
 
     //apply the changes to the non dependent applications
     val nonDependentStep = DeploymentStep(nonDependent.toList.filter(a => changedApplications.contains(a.id)).map { app =>
-      val origApp = originalApp(app.id)
       if (toStart.contains(app.id)) StartApplication(app, app.instances)
-      else if (toStop.contains(app.id)) StopApplication(origApp)
+      else if (toStop.contains(app.id)) StopApplication(originalApp(app.id))
       else if (toScale.contains(app.id)) ScaleApplication(app, app.instances)
       else RestartApplication(app, 0, app.instances)
     })
@@ -151,11 +92,6 @@ object DeploymentPlan {
       case Nil          => nonDependentStep :: unhandledStops
     }
 
-    DeploymentPlan(id, original, target, finalSteps, version)
-  }
-
-  implicit object DeploymentPlanMigration extends Migration[DeploymentPlan] {
-    def needsMigration(version: StorageVersion): Boolean = false
-    def migrate(version: StorageVersion, obj: DeploymentPlan): DeploymentPlan = obj
+    DeploymentPlan(original, target, finalSteps, version)
   }
 }

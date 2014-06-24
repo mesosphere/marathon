@@ -21,15 +21,12 @@ class GroupManager @Singleton @Inject() (
     scheduler: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
-    planRepo: DeploymentPlanRepository,
     @Named(EventModule.busName) eventBus: EventStream) {
 
   private[this] val log = Logger.getLogger(getClass.getName)
+  private[this] val zkName = "root"
 
-  /**
-    * List all current versions of all top level groups.
-    */
-  def list(): Future[Iterable[Group]] = groupRepo.current()
+  def root: Future[Group] = groupRepo.group(zkName).map(_.getOrElse(Group.empty))
 
   /**
     * Get all available versions for given group identifier.
@@ -38,7 +35,7 @@ class GroupManager @Singleton @Inject() (
     */
   def versions(id: PathId): Future[Iterable[Timestamp]] = {
     require(!id.isEmpty, "Empty group id given!")
-    groupRepo.listVersions(id.root)
+    groupRepo.listVersions(zkName)
   }
 
   /**
@@ -47,8 +44,7 @@ class GroupManager @Singleton @Inject() (
     * @return the group if it is found, otherwise None
     */
   def group(id: PathId): Future[Option[Group]] = {
-    require(!id.isEmpty, "Empty group id given!")
-    groupRepo.group(id.root).map(_.flatMap(_.findGroup(_.id == id)))
+    root.map(_.findGroup(_.id == id))
   }
 
   /**
@@ -58,26 +54,8 @@ class GroupManager @Singleton @Inject() (
     * @return the group if it is found, otherwise None
     */
   def group(id: PathId, version: Timestamp): Future[Option[Group]] = {
-    require(!id.isEmpty, "Empty group id given!")
-    groupRepo.group(id.root, version).map(_.flatMap(_.findGroup(_.id == id)))
-  }
-
-  /**
-    * Create a new group.
-    * @param group the group to create.
-    * @return the stored group future.
-    */
-  def create(group: Group): Future[Group] = {
-    groupRepo.currentVersion(group.id.root).flatMap {
-      case Some(current) =>
-        log.warn(s"There is already an group with this id: ${group.id}")
-        throw new IllegalArgumentException(s"Can not install group ${group.id}, since there is already a group with this id!")
-      case None =>
-        log.info(s"Create new Group ${group.id}")
-        groupRepo.store(group).flatMap(stored =>
-          Future.sequence(stored.transitiveApps.map(scheduler.startApp)).map(ignore => stored).andThen(postEvent(group))
-        )
-    }
+    val versioned = groupRepo.group(zkName, version).map(_.getOrElse(Group.empty))
+    versioned.map(_.findGroup(_.id == id))
   }
 
   /**
@@ -92,9 +70,12 @@ class GroupManager @Singleton @Inject() (
     * @return the nw group future, which completes, when the update process has been finished.
     */
   def update(id: PathId, version: Timestamp, fn: Group => Group, force: Boolean): Future[Group] = {
-    groupRepo.currentVersion(id.root).map(_.getOrElse(Group.emptyWithId(id.rootPath))).flatMap { current =>
+    root.flatMap { current =>
       val update = current.makeGroup(id).update(version) {
-        group => if (group.id == id) fn(group) else group
+        group =>
+          val gid = group.id
+          val lookFor = id
+          if (group.id == id) fn(group) else group
       }
       upgrade(current, update, force)
     }
@@ -102,40 +83,21 @@ class GroupManager @Singleton @Inject() (
 
   private def upgrade(current: Group, group: Group, force: Boolean): Future[Group] = {
     log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
-    //checkpoint where to start from
-    //if there is an upgrade in progress
-    val startFromGroup = planRepo.currentVersion(current.id.toString).map {
-      case Some(upgrade) =>
-        if (!force) throw UpgradeInProgressException(s"Running upgrade for group ${current.id}. Use force flag to override!")
-        upgrade.target
-      case None => current
+    //TODO(MV): delegate to scheduler
+    def deploy(plan: DeploymentPlan, force: Boolean): Future[Boolean] = {
+      log.info(s"Deploy: $plan")
+      Future.successful(true)
     }
     val restart = for {
-      startGroup <- startFromGroup
-      storedGroup <- groupRepo.store(group)
-      plan <- planRepo.store(DeploymentPlan(current.id, startGroup, storedGroup))
-      result <- plan.deploy(scheduler, force) if result
+      storedGroup <- groupRepo.store(zkName, group)
+      plan = DeploymentPlan(current, storedGroup)
+      result <- deploy(plan, force) if result
     } yield storedGroup
-    //remove the upgrade plan after the task has been finished
-    restart.andThen(deletePlan(current.id)).andThen(postEvent(group))
+    restart.andThen(postEvent(group))
   }
 
   private def postEvent(group: Group): PartialFunction[Try[Group], Unit] = {
     case Success(_)  => eventBus.publish(GroupChangeSuccess(group.id, group.version.toString))
     case Failure(ex) => eventBus.publish(GroupChangeFailed(group.id, group.version.toString, ex.getMessage))
-  }
-
-  private def deletePlan(id: PathId): PartialFunction[Try[Group], Unit] = {
-    case Failure(ex: TaskUpgradeCancelledException) => //do not delete the plan, if a rollback is requested
-    case Failure(ex: UpgradeInProgressException) => //do not delete the plan, if there is an upgrade in progress
-    case _ => planRepo.expunge(id.toString)
-  }
-
-  def expunge(id: PathId): Future[Boolean] = {
-    log.info(s"Delete group $id")
-    groupRepo.currentVersion(id.root).flatMap {
-      case Some(current) => Future.sequence(current.transitiveApps.map(scheduler.stopApp)).flatMap(_ => groupRepo.expunge(id.toString).map(_.forall(identity)))
-      case None          => Future.successful(false)
-    }
   }
 }

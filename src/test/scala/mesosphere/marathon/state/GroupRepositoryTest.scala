@@ -14,18 +14,18 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
     val store = mock[MarathonStore[Group]]
     val group = Group("g1".toPath, ScalingStrategy(1, None), Set.empty)
     val future = Future.successful(Some(group))
-    val versionedKey = s"g1:${group.version}"
+    val versionedKey = s"root:${group.version}"
     val appRepo = mock[AppRepository]
 
     when(store.store(versionedKey, group)).thenReturn(future)
-    when(store.store("g1", group)).thenReturn(future)
+    when(store.store("root", group)).thenReturn(future)
 
     val repo = new GroupRepository(store, appRepo)
-    val res = repo.store(group)
+    val res = repo.store("root", group)
 
-    assert(group == Await.result(res, 5 seconds), "Should return the correct AppDefinition")
+    assert(group == Await.result(res, 5 seconds), "Should return the correct Group")
     verify(store).store(versionedKey, group)
-    verify(store).store(s"g1", group)
+    verify(store).store(s"root", group)
   }
 
   test("group back and forth again with rolling strategy") {

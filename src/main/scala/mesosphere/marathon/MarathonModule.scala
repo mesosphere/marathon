@@ -137,12 +137,6 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideDeploymentPlanRepository(state: State): DeploymentPlanRepository = new DeploymentPlanRepository(
-    new MarathonStore[DeploymentPlan](state, DeploymentPlan.empty, "deployment:")
-  )
-
-  @Provides
-  @Singleton
   def provideActorSystem(): ActorSystem = ActorSystem("marathon")
 
   @Provides

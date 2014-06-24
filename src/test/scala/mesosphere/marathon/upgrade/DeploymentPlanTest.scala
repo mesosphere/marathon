@@ -56,7 +56,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
       Group("/test/database".toPath, scaling, Set(mongo._2)),
       Group("/test/service".toPath, scaling, Set(service._2))
     ))
-    val plan = DeploymentPlan("plan".toPath, from, to)
+    val plan = DeploymentPlan(from, to)
 
     Then("the deployment steps are correct")
     plan.steps should have size 4
@@ -83,7 +83,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
       Group("/test/database".toPath, scaling, Set(mongo._2)),
       Group("/test/service".toPath, scaling, Set(service._2))
     ))
-    val plan = DeploymentPlan("plan".toPath, from, to)
+    val plan = DeploymentPlan(from, to)
 
     Then("the deployment steps are correct")
     plan.steps should have size 1
@@ -113,7 +113,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
       Group("/test/service".toPath, scaling, Set(service._2, toStart._2)),
       Group("/test/independent".toPath, scaling, Set(independent._2))
     ))
-    val plan = DeploymentPlan("plan".toPath, from, to)
+    val plan = DeploymentPlan(from, to)
 
     Then("the deployment contains steps for dependent and independent applications")
     plan.steps should have size 6
