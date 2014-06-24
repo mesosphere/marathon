@@ -4,6 +4,8 @@ define([
   "React"
 ], function(React) {
   "use strict";
+  function noop() { return false; }
+
   return React.createClass({
     displayName: "PagedNavComponent",
 
@@ -64,37 +66,41 @@ define([
           return page;
         }
       }, this);
+
+      var disableLeft = currentPage === 0;
+      var disableRight = currentPage === noPages - 1;
       var leftArrowsClassSet = React.addons.classSet({
-        "disabled": currentPage === 0
+        "disabled": disableLeft
       });
       var rightArrowsClassSet = React.addons.classSet({
-        "disabled": currentPage === noPages - 1
+        "disabled": disableRight
       });
+      var leftArrowsFunc = disableLeft ? noop : this.handlePageChange;
+      var rightArrowsFunc = disableRight ? noop : this.handlePageChange;
 
       return (
         <div className="text-center">
           <ul className="pagination row">
             <li className={leftArrowsClassSet}>
-              <a href="#" onClick={this.handlePageChange.bind(this, 0)}>
+              <a href="#" onClick={leftArrowsFunc.bind(this, 0)}>
                 «
               </a>
             </li>
             <li className={leftArrowsClassSet}>
-              <a href="#"
-                onClick={this.handlePageChange.bind(this, currentPage - 1)}>
+              <a href="#" onClick={leftArrowsFunc.bind(this, currentPage - 1)}>
                 ‹
               </a>
             </li>
             {pagination}
             <li className={rightArrowsClassSet}>
               <a href="#"
-                onClick={this.handlePageChange.bind(this, currentPage + 1)}>
+                onClick={rightArrowsFunc.bind(this, currentPage + 1)}>
                 ›
               </a>
             </li>
             <li className={rightArrowsClassSet}>
               <a href="#"
-                onClick={this.handlePageChange.bind(this, noPages - 1)}>
+                onClick={rightArrowsFunc.bind(this, noPages - 1)}>
                 »
               </a>
             </li>

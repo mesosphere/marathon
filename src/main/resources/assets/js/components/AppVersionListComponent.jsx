@@ -19,10 +19,6 @@ define([
 
     render: function() {
       var appVersions = this.props.appVersions.models;
-      // Should I use this here?
-      // new Date(this.props.app.get("version")).getTime() === new Date(v.get("version")).getTime()
-      // this also adds the need to refresh the app configuration
-
       var currentVersion = this.props.appVersions.at(0);
       return (
         <div>
@@ -43,14 +39,16 @@ define([
             </div>
               {
                 this.props.fetchState === this.props.STATES.STATE_LOADING ?
-                  <div className="text-muted text-center">Loading versions...</div> :
+                  <p className="text-muted text-center">Loading versions...</p> :
                   this.props.fetchState === this.props.STATES.STATE_SUCCESS ?
                     <div>
                       <AppVersionListItemComponent
                         app={this.props.app}
                         appVersion={currentVersion}
                         currentVersion={true} />
-                      <PagedContentComponent itemsPerPage={20} >
+                      <PagedContentComponent
+                        itemsPerPage={20}
+                        noVisiblePages={6}>
                         {
                           appVersions.map(function(v, i) {
                             if (i > 0) {
@@ -67,7 +65,7 @@ define([
                         }
                       </PagedContentComponent>
                     </div> :
-                    <div className="text-danger text-center">Error fetching app versions</div>
+                    <p className="text-danger text-center">Error fetching app versions</p>
               }
           </div>
         </div>

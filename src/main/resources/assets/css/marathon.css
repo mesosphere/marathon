@@ -79,22 +79,15 @@ a,
 }
 
 .caret-right {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  vertical-align: middle;
-  border-right: 5px solid;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
+  border-color: transparent transparent transparent #f6f6f6;
+  border-width: 5px 0 5px 5px;
+  border-style: solid;
 }
 
 .caret-left {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  border-left: 5px solid;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
+  border-color: transparent #f6f6f6 transparent transparent;
+  border-width: 5px 5px 5px 0;
+  border-style: solid;
 }
 
 .badge {
@@ -402,7 +395,6 @@ fieldset[disabled] .btn-info.active {
 .panel-group .panel-inverse {
   border-radius: 0;
   border-top: solid 1px #3d4045;
-  -moz-box-shadow: none;
   -webkit-box-shadow: none;
   box-shadow: none;
 }
@@ -414,7 +406,7 @@ fieldset[disabled] .btn-info.active {
   border-bottom: solid 1px #3d4045;
 }
 
-.panel-group .panel-inverse+.panel-inverse {
+.panel-group .panel-inverse + .panel-inverse {
   margin-top: 0;
 }
 

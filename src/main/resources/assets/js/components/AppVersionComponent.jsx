@@ -118,12 +118,12 @@ define([
           </dl>
           {
             this.props.currentVersion ?
-              <span className="pull-right text-muted">Current version</span> :
+              null :
               <span className="text-right">
                 <form action={this.props.app.url()} method="post" onSubmit={this.handleSubmit}>
                     <input type="hidden" name="_method" value="put" />
                     <input type="hidden" name="version" value={appVersion.get("version")} />
-                    <button type="submit" className="btn btn-sm btn-success">
+                    <button type="submit" className="btn btn-sm btn-default">
                       Set as current
                     </button>
                 </form>

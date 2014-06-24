@@ -12,13 +12,15 @@ define([
 
     propTypes: {
       onPageChange: React.PropTypes.func,
-      itemsPerPage: React.PropTypes.number
+      itemsPerPage: React.PropTypes.number,
+      noVisiblePages: React.PropTypes.number
     },
 
     getDefaultProps: function() {
       return {
         onPageChange: noop,
-        itemsPerPage: 20
+        itemsPerPage: 20,
+        noVisiblePages: 6
       };
     },
 
@@ -37,22 +39,27 @@ define([
     render: function() {
       var children = this.props.children;
       var begin = this.state.currentPage * this.state.itemsPerPage;
-      var end = (this.state.currentPage + 1) * this.state.itemsPerPage;
+      var end = begin + this.state.itemsPerPage;
       var pageNodes = React.Children.map(children, function(child, i) {
-          if (i >= begin && i < end) {
-            return child;
-          }
+        if (child != null && i >= begin && i < end) {
+          return React.addons.cloneWithProps(child, {key: i});
+        }
       });
 
       return (
         <div>
           {pageNodes}
-          <PagedNavComponent
-            currentPage={this.state.currentPage}
-            handlePageChange={this.handlePageChange}
-            itemsPerPage={this.props.itemsPerPage}
-            items={children}
-            noVisiblePages={6} />
+          {
+            // is there at least two pages
+            children.length > this.props.itemsPerPage ?
+              <PagedNavComponent
+                currentPage={this.state.currentPage}
+                handlePageChange={this.handlePageChange}
+                itemsPerPage={this.props.itemsPerPage}
+                items={children}
+                noVisiblePages={this.props.noVisiblePages} /> :
+                null
+          }
         </div>
       );
     }

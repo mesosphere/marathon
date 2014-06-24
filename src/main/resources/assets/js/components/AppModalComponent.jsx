@@ -16,10 +16,10 @@ define([
     TaskViewComponent, TogglableTabsComponent) {
 
   var STATES = {
-      STATE_LOADING: 0,
-      STATE_ERROR: 1,
-      STATE_SUCCESS: 2
-    };
+    STATE_LOADING: 0,
+    STATE_ERROR: 1,
+    STATE_SUCCESS: 2
+  };
   var UPDATE_INTERVAL = 2000;
 
   return React.createClass({
@@ -224,7 +224,6 @@ define([
             <TabPaneComponent
               id="configuration"
               onActivate={this.fetchAppVersions} >
-              <h4>Versions</h4>
               <AppVersionListComponent
                 app={model}
                 appVersions={this.state.appVersions}
