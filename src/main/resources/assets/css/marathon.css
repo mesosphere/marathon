@@ -432,6 +432,24 @@ fieldset[disabled] .btn-info.active {
   margin-bottom: 15px;
 }
 
+.pagination > li > a,
+.pagination > li > span {
+  color: #f6f6f6;
+  border: 1px solid #454a50;
+  background-color: #5b6067; border-color: #323539;
+}
+
+.pagination > .disabled > span,
+.pagination > .disabled > span:hover,
+.pagination > .disabled > span:focus,
+.pagination > .disabled > a,
+.pagination > .disabled > a:hover,
+.pagination > .disabled > a:focus {
+  color: #838a93;
+  background-color: #4d5157;
+  border-color: #323539;
+}
+
 .nav-tabs > li.active > a,
 .nav-tabs > li.active > a:hover,
 .nav-tabs > li.active > a:focus {
