@@ -72,7 +72,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
-    /* TODO: validate path id
+    /* TODO(MV): validate path id
     val app = AppDefinition(id = "a b")
     shouldViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
 

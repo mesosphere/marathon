@@ -31,13 +31,7 @@ class AppsResource @Inject() (
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@QueryParam("cmd") cmd: String,
             @QueryParam("id") id: String) = {
-    val apps = if (cmd != null || id != null) {
-      search(cmd, id)
-    }
-    else {
-      service.listApps()
-    }
-
+    val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
     Map("apps" -> apps.map(_.withTaskCounts(taskTracker)))
   }
 
@@ -46,8 +40,10 @@ class AppsResource @Inject() (
   @Produces(Array(MediaType.APPLICATION_JSON))
   def create(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    Await.result(service.startApp(app), config.zkTimeoutDuration)
-    Response.created(new URI(s"${app.id}")).build
+    val withRootId = app.copy(id=app.id.canonicalPath())
+    Await.result(service.startApp(withRootId), config.zkTimeoutDuration)
+    //TODO(MV): delegate to group manager
+    Response.created(new URI(s"${withRootId.id}")).build
   }
 
   @GET
@@ -73,6 +69,7 @@ class AppsResource @Inject() (
       case Some(app) =>
         maybePostEvent(req, updatedApp)
         Await.result(service.updateApp(appId, appUpdate), config.zkTimeoutDuration)
+        //TODO(MV): delegate to group manager
         Response.noContent.build
 
       case None => create(req, updatedApp)
@@ -86,6 +83,7 @@ class AppsResource @Inject() (
     val app = AppDefinition(id = id.toRootPath)
     maybePostEvent(req, app)
     Await.result(service.stopApp(app), config.zkTimeoutDuration)
+    //TODO(MV): delegate to group manager
     Response.noContent.build
   }
 

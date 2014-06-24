@@ -41,7 +41,7 @@ final case class DeploymentPlan(
     msg.getId.toPath,
     Group.empty.mergeFromProto(msg.getOriginial),
     Group.empty.mergeFromProto(msg.getTarget),
-    Nil, //TODO: store plan as well
+    Nil, //TODO(MV): store plan as well
     Timestamp(msg.getVersion)
   )
 
