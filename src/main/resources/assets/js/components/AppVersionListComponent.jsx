@@ -34,14 +34,8 @@ define([
           <div className="panel-group">
             <div className="panel panel-header panel-inverse">
               <div className="panel-heading row">
-                <span className="col-md-7">
+                <span className="col-md-11">
                   Version
-                </span>
-                <span className="text-center col-md-2">
-                  Diff from
-                </span>
-                <span className="text-center col-md-2">
-                  Diff to
                 </span>
                 <span className="clickable text-center col-md-1">
                 </span>

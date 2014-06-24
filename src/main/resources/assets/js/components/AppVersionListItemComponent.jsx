@@ -62,16 +62,6 @@ define([
       this.setState({open: !this.state.open});
     },
 
-    handleFirstRadioClick: function(event) {
-      event.preventDefault();
-      // TODO: handle this
-    },
-
-    handleSecondRadioClick: function(event) {
-      event.preventDefault();
-      // TODO: handle this
-    },
-
     render: function() {
       var caretClassSet = React.addons.classSet({
           "caret-right": this.state.open,
@@ -106,15 +96,9 @@ define([
       return (
         <div className="panel panel-inverse">
           <div className="panel-heading row clickable" onClick={this.handleDetailsClick}>
-            <span className="col-md-7">
+            <span className="col-md-11">
               <time dateTime={versionDate.toISOString()} title={versionDate.toISOString()}>
                 {versionDate.toLocaleString()}</time>
-            </span>
-            <span className="text-center col-md-2">
-              <input type="radio" onClick={this.handleFirstRadioClick} />
-            </span>
-            <span className="text-center col-md-2">
-              <input type="radio" onClick={this.handleSecondRadioClick} />
             </span>
             <span className="clickable text-center col-md-1">
               <span className={caretClassSet}></span>
