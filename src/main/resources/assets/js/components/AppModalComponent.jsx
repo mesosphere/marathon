@@ -106,6 +106,7 @@ define([
     },
 
     rollbackToAppVersion: function(appVersion) {
+      this.setState({appVersionsFetchState: STATES.STATE_LOADING});
       this.props.model.setAppVersion(appVersion);
       this.props.model.save(
         null,

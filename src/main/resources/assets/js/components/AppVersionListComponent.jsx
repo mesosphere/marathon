@@ -4,10 +4,10 @@ define([
   "React",
   "models/App",
   "jsx!components/AppVersionListItemComponent",
-], function(React, App, AppVersionListItemComponent) {
+  "jsx!components/PagedContentComponent",
+], function(React, App, AppVersionListItemComponent, PagedContentComponent) {
   "use strict";
 
-  var ITEMS_PER_PAGE = 3;
   return React.createClass({
     displayName: "AppVersionListComponent",
     propTypes: {
@@ -17,18 +17,13 @@ define([
       onRollback: React.PropTypes.func
     },
 
-    getInitialState: function() {
-      return {
-        currentPage: 0
-      };
-    },
-
     render: function() {
       var appVersions = this.props.appVersions.models;
       // Should I use this here?
       // new Date(this.props.app.get("version")).getTime() === new Date(v.get("version")).getTime()
       // this also adds the need to refresh the app configuration
 
+      var currentVersion = this.props.appVersions.at(0);
       return (
         <div>
           <p>
@@ -56,18 +51,28 @@ define([
                 this.props.fetchState === this.props.STATES.STATE_LOADING ?
                   <div className="text-muted text-center">Loading versions...</div> :
                   this.props.fetchState === this.props.STATES.STATE_SUCCESS ?
-                    appVersions.map(function(v, i) {
-                      if (i < ITEMS_PER_PAGE) {
-                        return (
-                            <AppVersionListItemComponent
-                              app={this.props.app}
-                              appVersion={v}
-                              currentVersion={i === 0}
-                              key={v.get("version")}
-                              onRollback={this.props.onRollback} />
-                        );
-                      }
-                    }, this) :
+                    <div>
+                      <AppVersionListItemComponent
+                        app={this.props.app}
+                        appVersion={currentVersion}
+                        currentVersion={true} />
+                      <PagedContentComponent itemsPerPage={20} >
+                        {
+                          appVersions.map(function(v, i) {
+                            if (i > 0) {
+                              return (
+                                  <AppVersionListItemComponent
+                                    app={this.props.app}
+                                    appVersion={v}
+                                    currentVersion={false}
+                                    key={v.get("version")}
+                                    onRollback={this.props.onRollback} />
+                              );
+                            }
+                          }, this)
+                        }
+                      </PagedContentComponent>
+                    </div> :
                     <div className="text-danger text-center">Error fetching app versions</div>
               }
           </div>

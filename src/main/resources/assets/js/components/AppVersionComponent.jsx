@@ -31,53 +31,51 @@ define([
 
     render: function() {
       var appVersion = this.props.appVersion;
-      if (appVersion) {
 
-        var cmdNode = (appVersion.get("cmd") == null) ?
-          <UNSPECIFIED_NODE /> :
-          <dd>{appVersion.get("cmd")}</dd>;
-        var constraintsNode = (appVersion.get("constraints").length < 1) ?
-          <UNSPECIFIED_NODE /> :
-          appVersion.get("constraints").map(function(c) {
+      var cmdNode = (appVersion.get("cmd") == null) ?
+        <UNSPECIFIED_NODE /> :
+        <dd>{appVersion.get("cmd")}</dd>;
+      var constraintsNode = (appVersion.get("constraints").length < 1) ?
+        <UNSPECIFIED_NODE /> :
+        appVersion.get("constraints").map(function(c) {
 
-            // Only include constraint parts if they are not empty Strings. For
-            // example, a hostname uniqueness constraint looks like:
-            //
-            //     ["hostname", "UNIQUE", ""]
-            //
-            // it should print "hostname:UNIQUE" instead of "hostname:UNIQUE:", no
-            // trailing colon.
-            return (
-              <dd key={c}>
-                {c.filter(function(s) { return s !== ""; }).join(":")}
-              </dd>
-            );
-          });
-        var containerNode = (appVersion.get("container") == null) ?
-          <UNSPECIFIED_NODE /> :
-          <dd>{JSON.stringify(appVersion.get("container"))}</dd>;
-        var envNode = (Object.keys(appVersion.get("env")).length === 0) ?
-          <UNSPECIFIED_NODE /> :
+          // Only include constraint parts if they are not empty Strings. For
+          // example, a hostname uniqueness constraint looks like:
+          //
+          //     ["hostname", "UNIQUE", ""]
+          //
+          // it should print "hostname:UNIQUE" instead of "hostname:UNIQUE:", no
+          // trailing colon.
+          return (
+            <dd key={c}>
+              {c.filter(function(s) { return s !== ""; }).join(":")}
+            </dd>
+          );
+        });
+      var containerNode = (appVersion.get("container") == null) ?
+        <UNSPECIFIED_NODE /> :
+        <dd>{JSON.stringify(appVersion.get("container"))}</dd>;
+      var envNode = (Object.keys(appVersion.get("env")).length === 0) ?
+        <UNSPECIFIED_NODE /> :
 
-          // Print environment variables as key value pairs like "key=value"
-          Object.keys(appVersion.get("env")).map(function(k) {
-            return <dd key={k}>{k + "=" + appVersion.get("env")[k]}</dd>
-          });
-        var executorNode = (appVersion.get("executor") === "") ?
-          <UNSPECIFIED_NODE /> :
-          <dd>{appVersion.get("executor")}</dd>;
-        var portsNode = (appVersion.get("ports").length === 0 ) ?
-          <UNSPECIFIED_NODE /> :
-          <dd>{appVersion.get("ports").join(",")}</dd>;
-        var taskRateLimitNode = (appVersion.get("taskRateLimit") == null) ?
-          <UNSPECIFIED_NODE /> :
-          <dd>{appVersion.get("taskRateLimit")}</dd>;
-        var urisNode = (appVersion.get("uris").length === 0) ?
-          <UNSPECIFIED_NODE /> :
-          appVersion.get("uris").map(function(u) {
-            return <dd key={u}>{u}</dd>;
-          });
-        }
+        // Print environment variables as key value pairs like "key=value"
+        Object.keys(appVersion.get("env")).map(function(k) {
+          return <dd key={k}>{k + "=" + appVersion.get("env")[k]}</dd>
+        });
+      var executorNode = (appVersion.get("executor") === "") ?
+        <UNSPECIFIED_NODE /> :
+        <dd>{appVersion.get("executor")}</dd>;
+      var portsNode = (appVersion.get("ports").length === 0 ) ?
+        <UNSPECIFIED_NODE /> :
+        <dd>{appVersion.get("ports").join(",")}</dd>;
+      var taskRateLimitNode = (appVersion.get("taskRateLimit") == null) ?
+        <UNSPECIFIED_NODE /> :
+        <dd>{appVersion.get("taskRateLimit")}</dd>;
+      var urisNode = (appVersion.get("uris").length === 0) ?
+        <UNSPECIFIED_NODE /> :
+        appVersion.get("uris").map(function(u) {
+          return <dd key={u}>{u}</dd>;
+        });
 
       return (
         <div>
