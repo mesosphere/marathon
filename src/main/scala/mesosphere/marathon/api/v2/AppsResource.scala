@@ -51,7 +51,7 @@ class AppsResource @Inject() (
   }
 
   @GET
-  @Path("{id}")
+  @Path("""{id:.+}""")
   @Timed
   @Produces(Array(MediaType.APPLICATION_JSON))
   def show(@PathParam("id") id: String): Response = service.getApp(id.toRootPath) match {
@@ -60,7 +60,7 @@ class AppsResource @Inject() (
   }
 
   @PUT
-  @Path("{id}")
+  @Path("""{id:.+}""")
   @Timed
   def replace(
     @Context req: HttpServletRequest,
@@ -80,7 +80,7 @@ class AppsResource @Inject() (
   }
 
   @DELETE
-  @Path("{id}")
+  @Path("""{id:.+}""")
   @Timed
   def delete(@Context req: HttpServletRequest, @PathParam("id") id: String): Response = {
     val app = AppDefinition(id = id.toRootPath)
@@ -89,11 +89,11 @@ class AppsResource @Inject() (
     Response.noContent.build
   }
 
-  @Path("{appId}/tasks")
+  @Path("{appId:.+}/tasks")
   @Produces(Array(MediaType.APPLICATION_JSON))
   def appTasksResource() = new AppTasksResource(service, taskTracker, healthCheckManager)
 
-  @Path("{appId}/versions")
+  @Path("{appId:.+}/versions")
   @Produces(Array(MediaType.APPLICATION_JSON))
   def appVersionsResource() = new AppVersionsResource(service)
 
