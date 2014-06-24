@@ -94,6 +94,9 @@ define([
       if (_options.scale) {
         instances = this.props.model.get("instances");
         this.props.model.set("instances", instances - 1);
+        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
+        // refresh app versions
+        this.fetchAppVersions();
       }
 
       // Force an update since React doesn't know a key was removed from
@@ -246,7 +249,16 @@ define([
       // perform the action only if a value is submitted.
       if (instancesString != null && instancesString !== "") {
         var instances = parseInt(instancesString, 10);
-        model.save({instances: instances});
+        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
+        model.save(
+          {instances: instances},
+          {
+            success: function () {
+              // refresh app versions
+              this.fetchAppVersions();
+            }.bind(this)
+          }
+        );
 
         if (model.validationError != null) {
           // If the model is not valid, revert the changes to prevent the UI
