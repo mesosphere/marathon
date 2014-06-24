@@ -131,7 +131,7 @@ define([
                     <input type="hidden" name="_method" value="put" />
                     <input type="hidden" name="version" value={appVersion.get("version")} />
                     <button type="submit" className="btn btn-sm btn-default">
-                      Set as current
+                      Apply these settings
                     </button>
                 </form>
               </span>
