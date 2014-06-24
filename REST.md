@@ -147,6 +147,12 @@ values. Each port value is exposed to the instance via environment variables
 `$PORT0`, `$PORT1`, etc. Ports assigned to running instances are also available
 via the task resource.
 
+##### `taskRateLimit` (Optional. Default: 1.0)
+
+Max number of tasks to launch for this app per second. For example, if an app
+is started with 10 instances and `taskRateLimit` is set to 2.5, the tasks will
+be started in a minimum of 4 seconds (10 instances / 2.5 instances/second).
+
 ##### Example
 
 **Request:**
