@@ -91,7 +91,7 @@ define([
         });
 
       return (
-        <table className="table">
+        <table className="table table-unstyled">
           <thead>
             <tr>
               <th className={headerClassSet} width="1" onClick={this.handleThToggleClick}>

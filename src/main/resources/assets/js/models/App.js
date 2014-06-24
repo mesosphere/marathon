@@ -11,7 +11,7 @@ define([
 
   var DEFAULT_HEALTH_MSG = "Unknown";
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
-    "executor", "id", "instances", "mem", "ports", "uris"];
+    "executor", "id", "instances", "mem", "disk", "ports", "uris"];
   var VALID_ID_PATTERN = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
   var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
 
@@ -41,9 +41,10 @@ define([
         env: {},
         executor: "",
         healthChecks: [],
-        id: _.uniqueId("app-"),
+        id: null,
         instances: 1,
         mem: 16.0,
+        disk: 0.0,
         ports: [0],
         uris: []
       };
@@ -78,9 +79,9 @@ define([
     },
     formatTaskHealthMessage: function(task) {
       if (task) {
-        var msg = DEFAULT_HEALTH_MSG;
-        var taskHealth = task.getHealth();
-        switch(taskHealth) {
+        var msg;
+
+        switch(task.getHealth()) {
           case Task.HEALTH.HEALTHY:
             msg = "Healthy";
             break;
@@ -94,6 +95,7 @@ define([
             msg = DEFAULT_HEALTH_MSG;
             break;
         }
+
         return msg;
       }
       return null;
@@ -159,6 +161,11 @@ define([
           new ValidationError("cpus", "CPUs must be a non-negative Number"));
       }
 
+      if (_.isNaN(attrs.disk) || !_.isNumber(attrs.disk) || attrs.disk < 0) {
+        errors.push(
+          new ValidationError("disk", "Disk Space must be a non-negative Number"));
+      }
+
       if (_.isNaN(attrs.instances) || !_.isNumber(attrs.instances) ||
           attrs.instances < 0) {
         errors.push(
@@ -196,7 +203,7 @@ define([
         }
       }
 
-      if (errors.length > 0) return errors;
+      if (errors.length > 0) { return errors; }
     }
   }, {
     VALID_ID_PATTERN: VALID_ID_PATTERN

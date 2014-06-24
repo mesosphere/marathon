@@ -3,9 +3,8 @@
 define([
   "React",
   "jsx!components/AppComponent",
-  "jsx!components/AppModalComponent",
   "mixins/BackboneMixin"
-], function(React, AppComponent, AppModalComponent, BackboneMixin) {
+], function(React, AppComponent, BackboneMixin) {
   var STATE_LOADING = 0;
   var STATE_ERROR = 1;
   var STATE_SUCCESS = 2;
@@ -16,29 +15,29 @@ define([
     displayName: "AppListComponent",
     mixins: [BackboneMixin],
 
+    propTypes: {
+      collection: React.PropTypes.object.isRequired,
+      onSelectApp: React.PropTypes.func.isRequired
+    },
+
     componentDidMount: function() {
       this.startPolling();
     },
+
     componentWillUnmount: function() {
       this.stopPolling();
     },
-    destroyActiveApp: function() {
-      if (this.modal != null) {
-        this.modal.destroyApp();
-      }
-    },
+
     getInitialState: function() {
       return {
         fetchState: STATE_LOADING
       };
     },
+
     getResource: function() {
       return this.props.collection;
     },
-    handleModalDestroy: function() {
-      this.startPolling();
-      this.modal = null;
-    },
+
     fetchResource: function() {
       var _this = this;
 
@@ -52,25 +51,46 @@ define([
         }
       });
     },
-    onAppClick: function(model) {
-      this.modal = React.renderComponent(
-        <AppModalComponent model={model} onDestroy={this.handleModalDestroy} />,
-        document.getElementById("lightbox")
-      );
 
+    onClickApp: function(app) {
       this.stopPolling();
+      this.props.onSelectApp(app);
     },
+
+    sortCollectionBy: function(comparator) {
+      var collection = this.props.collection;
+      comparator =
+        collection.sortKey === comparator && !collection.sortReverse ?
+        "-" + comparator :
+        comparator;
+      collection.setComparator(comparator);
+      collection.sort();
+    },
+
+    startPolling: function() {
+      if (this._interval == null) {
+        this.fetchResource();
+        this._interval = setInterval(this.fetchResource, UPDATE_INTERVAL);
+      }
+    },
+
+    stopPolling: function() {
+      if (this._interval != null) {
+        clearInterval(this._interval);
+        this._interval = null;
+      }
+    },
+
     render: function() {
-      var _this = this;
       var sortKey = this.props.collection.sortKey;
 
       var appNodes;
-      var tableClassName = "table table-fixed";
+      var tableClassName = "table table-fixed table-badged";
 
       var headerClassSet = React.addons.classSet({
-          "clickable": true,
-          "dropup": this.props.collection.sortReverse
-        });
+        "clickable": true,
+        "dropup": this.props.collection.sortReverse
+      });
 
       if (this.state.fetchState === STATE_LOADING) {
         appNodes =
@@ -93,8 +113,8 @@ define([
           </tr>;
       } else {
         appNodes = this.props.collection.map(function(model) {
-          return <AppComponent key={model.id} model={model} onClick={_this.onAppClick} />;
-        });
+          return <AppComponent key={model.id} model={model} onClick={this.onClickApp} />;
+        }, this);
 
         // Give rows the selectable look when there are apps to click.
         tableClassName += " table-hover table-selectable";
@@ -143,26 +163,6 @@ define([
           </tbody>
         </table>
       );
-    },
-    sortCollectionBy: function(comparator) {
-      var collection = this.props.collection;
-      comparator =
-        collection.sortKey === comparator && !collection.sortReverse ?
-        "-" + comparator :
-        comparator;
-      collection.setComparator(comparator);
-      collection.sort();
-    },
-    startPolling: function() {
-      this.fetchResource();
-
-      if (this._interval == null) {
-        this._interval = setInterval(this.fetchResource, UPDATE_INTERVAL);
-      }
-    },
-    stopPolling: function() {
-      clearInterval(this._interval);
-      this._interval = null;
     }
   });
 });

@@ -83,8 +83,8 @@ define([
       var taskHealth = task.getHealth();
       var healthClassSet = React.addons.classSet({
         "health-dot": true,
+        "health-dot-error": taskHealth === Task.HEALTH.UNHEALTHY,
         "health-dot-success": taskHealth === Task.HEALTH.HEALTHY,
-        "health-dot-warning": taskHealth === Task.HEALTH.UNHEALTHY,
         "health-dot-unknown": taskHealth === Task.HEALTH.UNKNOWN
       });
 

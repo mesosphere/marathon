@@ -6,6 +6,7 @@ define([
   "models/App",
   "models/AppVersion"
 ], function(_, React, App, AppVersion) {
+  "use strict";
   var UNSPECIFIED_NODE =
     React.createClass({
       render: function() {
@@ -60,7 +61,7 @@ define([
 
         // Print environment variables as key value pairs like "key=value"
         Object.keys(appVersion.get("env")).map(function(k) {
-          return <dd key={k}>{k + "=" + appVersion.get("env")[k]}</dd>
+          return <dd key={k}>{k + "=" + appVersion.get("env")[k]}</dd>;
         });
       var executorNode = (appVersion.get("executor") === "") ?
         <UNSPECIFIED_NODE /> :
@@ -98,6 +99,8 @@ define([
             <dd>{appVersion.get("instances")}</dd>
             <dt>Memory (MB)</dt>
             <dd>{appVersion.get("mem")}</dd>
+            <dt>Disk Space (MB)</dt>
+            <dd>{appVersion.get("disk")}</dd>
             <dt>Ports</dt>
             {portsNode}
             <dt>Task Rate Limit</dt>

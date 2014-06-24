@@ -48,7 +48,11 @@ class AppsResource @Inject() (
   def create(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
     Await.result(service.startApp(app), config.zkTimeoutDuration)
-    Response.created(new URI(s"${app.id}")).build
+
+    // Set content to `None` so the response does not set a `Content-Length`
+    // header with value 0, which would tell clients to parse the body as JSON.
+    // An empty string (response body with length 0) is invalid JSON.
+    Response.created(new URI(s"${app.id}")).entity(None).build
   }
 
   @GET
