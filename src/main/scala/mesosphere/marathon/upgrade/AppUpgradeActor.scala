@@ -109,6 +109,7 @@ class AppUpgradeActor(
           eventBus,
           app,
           nrToStartImmediately,
+          false,
           startPromise), "Starter")
     }
     else {

@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.TestKit
+import akka.testkit.{ TestActorRef, TestKit }
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ BeforeAndAfterAll, Matchers, FunSuiteLike }
 import akka.actor.{ Props, ActorSystem }
@@ -8,8 +8,8 @@ import mesosphere.marathon.tasks.TaskQueue
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
-import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.{ TaskUpgradeCanceledException, TaskFailedException }
+import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.TaskUpgradeCanceledException
 
 class TaskStartActorTest
     extends TestKit(ActorSystem("System"))
@@ -27,12 +27,13 @@ class TaskStartActorTest
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
-    val ref = system.actorOf(Props(
+    val ref = TestActorRef(Props(
       classOf[TaskStartActor],
       taskQueue,
       system.eventStream,
       app,
       app.instances,
+      false,
       promise))
 
     watch(ref)
@@ -47,30 +48,28 @@ class TaskStartActorTest
     expectTerminated(ref)
   }
 
-  test("Start failure") {
+  test("Start with health checks") {
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
-    val ref = system.actorOf(Props(
+    val ref = TestActorRef(Props(
       classOf[TaskStartActor],
       taskQueue,
       system.eventStream,
       app,
       app.instances,
+      true,
       promise))
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app) == 5, 5.seconds)
+    awaitCond(taskQueue.count(app) == 5, 1.second)
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", app.id, "", Nil, app.version.toString))
+    for ((_, i) <- taskQueue.removeAll().zipWithIndex)
+      system.eventStream.publish(HealthStatusChanged(app.id, s"task_${i}", true))
 
-    val ex = intercept[TaskFailedException] {
-      Await.result(promise.future, 5.seconds) should be(true)
-    }
-
-    ex.getMessage should equal("Task failed during start")
+    Await.result(promise.future, 1.second) should be(true)
 
     expectTerminated(ref)
   }
@@ -86,6 +85,7 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
+      false,
       promise))
 
     watch(ref)

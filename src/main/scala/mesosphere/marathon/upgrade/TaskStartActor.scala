@@ -5,23 +5,21 @@ import akka.event.EventStream
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Promise
 import akka.actor.{ ActorLogging, Actor }
-import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.{ TaskUpgradeCanceledException, TaskFailedException }
 
 class TaskStartActor(
     taskQueue: TaskQueue,
-    eventBus: EventStream,
-    app: AppDefinition,
+    val eventBus: EventStream,
+    val app: AppDefinition,
     nrToStart: Int,
-    promise: Promise[Boolean]) extends Actor with ActorLogging {
+    val withHealthChecks: Boolean,
+    promise: Promise[Boolean]) extends Actor with ActorLogging with StartingBehavior {
 
   var running: Int = 0
   val AppID = app.id
-  val Version = app.version.toString
 
-  eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
-
-  override def preStart(): Unit = {
+  override def initializeStart(): Unit = {
     for (_ <- 0 until nrToStart) taskQueue.add(app)
   }
 
@@ -33,19 +31,11 @@ class TaskStartActor(
           "The task upgrade has been cancelled"))
   }
 
-  def receive = {
-    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", AppID, _, _, Version, _, _) =>
-      running += 1
-      log.info(s"Task $taskId is now running. Waiting for ${nrToStart - running} more tasks.")
-      if (running == nrToStart) {
-        promise.success(true)
-        context.stop(self)
-      }
+  override def expectedSize: Int = nrToStart
 
-    case MesosStatusUpdateEvent(_, _, "TASK_FAILED", AppID, _, _, Version, _, _) =>
-      promise.failure(new TaskFailedException("Task failed during start"))
-      context.stop(self)
-
-    case x: MesosStatusUpdateEvent => log.debug(s"Received $x")
+  override def success(): Unit = {
+    promise.success(true)
+    context.stop(self)
   }
+
 }

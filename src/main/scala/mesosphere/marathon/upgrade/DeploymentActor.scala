@@ -10,12 +10,6 @@ import scala.concurrent.{ Promise, Future }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.MarathonTask
 
-class AppRestartActor() extends Actor {
-  def receive = {
-    case _ =>
-  }
-}
-
 class DeploymentActor(
     parent: ActorRef,
     receiver: ActorRef,
@@ -41,6 +35,7 @@ class DeploymentActor(
     case NextStep =>
       // no more steps, we're done
       eventBus.publish(DeploymentSuccess(plan.target.id))
+      receiver ! Finished
       context.stop(self)
   }
 
@@ -72,7 +67,7 @@ class DeploymentActor(
     }
     else if (scaleTo > runningTasks.size) {
       val promise = Promise[Boolean]()
-      context.actorOf(Props(new TaskStartActor(taskQueue, eventBus, app, scaleTo - runningTasks.size, promise)))
+      context.actorOf(Props(new TaskStartActor(taskQueue, eventBus, app, scaleTo - runningTasks.size, true, promise)))
       promise.future.map(_ => ())
     }
     else {
@@ -93,11 +88,17 @@ class DeploymentActor(
   }
 
   def restartApp(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int): Future[Unit] = {
-    val promise = Promise[Unit]()
+    val startPromise = Promise[Boolean]()
+    val stopPromise = Promise[Boolean]()
     val runningTasks = taskTracker.fetchApp(app.id).tasks.toSeq
     val tasksToKill = runningTasks.filterNot(_.getVersion == app.version.toString)
+    val runningNew = runningTasks.filter(_.getVersion == app.version.toString)
+    val nrToStart = scaleNewTo - runningNew.size
 
-    promise.future
+    context.actorOf(Props(new TaskStartActor(taskQueue, eventBus, app, nrToStart, true, startPromise)))
+    context.actorOf(Props(new TaskKillActor(driver, eventBus, tasksToKill.toSet, stopPromise)))
+
+    startPromise.future.zip(stopPromise.future).map(_ => ())
   }
 
 }
@@ -105,4 +106,5 @@ class DeploymentActor(
 object DeploymentActor {
   case object NextStep
   case object Failed
+  case object Finished
 }
