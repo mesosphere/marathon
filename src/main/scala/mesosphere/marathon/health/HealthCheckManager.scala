@@ -72,11 +72,13 @@ class HealthCheckManager @Singleton @Inject() (
     eventBus.foreach(_.post(RemoveHealthCheck(appId)))
   }
 
+  def removeAll(): Unit = appHealthChecks.keys foreach removeAllFor
+
   def removeAllFor(appId: String): Unit =
-    for {
-      activeHealthChecks <- appHealthChecks.get(appId)
-      ahc <- activeHealthChecks
-    } remove(appId, ahc.healthCheck)
+    for (activeHealthChecks <- appHealthChecks.get(appId)) {
+      activeHealthChecks foreach deactivate
+      appHealthChecks = appHealthChecks - appId
+    }
 
   def reconcileWith(app: AppDefinition): Unit = {
     val existingHealthChecks = list(app.id)

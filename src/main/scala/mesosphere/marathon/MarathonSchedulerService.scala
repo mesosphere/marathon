@@ -210,6 +210,9 @@ class MarathonSchedulerService @Inject() (
   def stopDriver(): Unit = {
     log.info("Stopping driver")
 
+    // Stop all health checks
+    healthCheckManager.removeAll()
+
     // Stopping the driver will cause the driver run() method to return.
     driver.stop(true) // failover = true
 
