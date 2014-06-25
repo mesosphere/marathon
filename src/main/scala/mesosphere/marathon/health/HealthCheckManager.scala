@@ -3,27 +3,26 @@ package mesosphere.marathon.health
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.pattern.ask
 import akka.util.Timeout
-import javax.inject.{Named, Inject, Singleton}
+import javax.inject.{ Named, Inject, Singleton }
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import mesosphere.util.ThreadPoolContext.context
 import com.google.common.eventbus.EventBus
-import mesosphere.marathon.event.{RemoveHealthCheck, AddHealthCheck, EventModule}
+import mesosphere.marathon.event.{ RemoveHealthCheck, AddHealthCheck, EventModule }
 import org.apache.mesos.MesosSchedulerDriver
 import mesosphere.marathon.MarathonSchedulerDriver
 
 case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
 class HealthCheckManager @Singleton @Inject() (
-  system: ActorSystem,
-  @Named(EventModule.busName) eventBus: Option[EventBus],
-  taskTracker: TaskTracker
-) {
+    system: ActorSystem,
+    @Named(EventModule.busName) eventBus: Option[EventBus],
+    taskTracker: TaskTracker) {
 
-  import HealthCheckActor.{GetTaskHealth, Health}
+  import HealthCheckActor.{ GetTaskHealth, Health }
 
   protected[this] var appHealthChecks = Map[String, Set[ActiveHealthCheck]]()
 
@@ -34,8 +33,7 @@ class HealthCheckManager @Singleton @Inject() (
 
   protected[this] def find(
     appId: String,
-    healthCheck: HealthCheck
-  ): Option[ActiveHealthCheck] =
+    healthCheck: HealthCheck): Option[ActiveHealthCheck] =
     appHealthChecks.get(appId).flatMap {
       _.find { _.healthCheck == healthCheck }
     }
@@ -74,11 +72,13 @@ class HealthCheckManager @Singleton @Inject() (
     eventBus.foreach(_.post(RemoveHealthCheck(appId)))
   }
 
+  def removeAll(): Unit = appHealthChecks.keys foreach removeAllFor
+
   def removeAllFor(appId: String): Unit =
-    for {
-      activeHealthChecks <- appHealthChecks.get(appId)
-      ahc <- activeHealthChecks
-    } remove(appId, ahc.healthCheck)
+    for (activeHealthChecks <- appHealthChecks.get(appId)) {
+      activeHealthChecks foreach deactivate
+      appHealthChecks = appHealthChecks - appId
+    }
 
   def reconcileWith(app: AppDefinition): Unit = {
     val existingHealthChecks = list(app.id)
@@ -89,7 +89,7 @@ class HealthCheckManager @Singleton @Inject() (
   }
 
   def status(appId: String, taskId: String): Future[Seq[Option[Health]]] = {
-    implicit val timeout : Timeout = Timeout(2, SECONDS)
+    implicit val timeout: Timeout = Timeout(2, SECONDS)
     appHealthChecks.get(appId) match {
       case Some(activeHealthCheckSet) => Future.sequence(
         activeHealthCheckSet.toSeq.map {

@@ -36,7 +36,7 @@ Create and start a new application.
 
 The full JSON format of an application resource is as follows:
 
-```json
+```
 {
     "cmd": "env && sleep 300",
     "constraints": [
@@ -54,22 +54,21 @@ The full JSON format of an application resource is as follows:
     "healthChecks": [
         {
             "protocol": "HTTP",
-            "acceptableResponses": [200],
             "path": "/health",
-            "initialDelaySeconds": 3,
+            "gracePeriodSeconds": 3,
             "intervalSeconds": 10,
             "portIndex": 0,
             "timeoutSeconds": 10
         },
         {
             "protocol": "TCP",
-            "initialDelaySeconds": 3,
+            "gracePeriodSeconds": 3,
             "intervalSeconds": 5,
             "portIndex": 1,
             "timeoutSeconds": 5
         }
     ],
-    "id": "myApp",
+    "id": "my-app",
     "instances": 3,
     "mem": 256.0,
     "ports": [
@@ -86,34 +85,82 @@ The full JSON format of an application resource is as follows:
 }
 ```
 
-_Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER",
+##### `constraints`
+
+Valid constraint operators are one of ["UNIQUE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
 the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constraints).
 
-_Container:_ Additional data passed to the container on application launch.
-These consist of an "image" and an array of string options.  The meaning of
-this data is fully dependent upon the executor.  Furthermore, _it is invalid to
-pass container options when using the default command executor_.
+##### `container`
 
-_Ports:_ An array of required port resources on the host.  To generate one or
-more arbitrary free ports for each application instance, pass zeros as port
-values.  Each port value is exposed to the instance via environment variables
-`$PORT0`, `$PORT1`, etc.  Ports assigned to running instances are also
-available via the task resource.
+Additional data passed to the container on application launch. These consist of
+an "image" and an array of string options. The meaning of this data is fully
+dependent upon the executor. Furthermore, _it is invalid to pass container
+options when using the default command executor_.
+
+##### `healthChecks`
+
+An array of checks to be performed on running tasks to determine if they are
+operating as expected. Health checks begin immediately upon task launch. For
+design details, refer to the [health checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)
+wiki page.
+
+A health check is considered passing if (1) its HTTP response code is between
+200 and 399, inclusive, and (2) its response is received within the
+`timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
+health checks consecutively, that task is killed.
+
+Each health check supports the following options:
+
+* `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
+  ignored within this number of seconds of the task being started or until the
+  task becomes healthy for the first time.
+* `intervalSeconds` (Optional. Default: 10): Number of seconds to wait between
+  health checks.
+* `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
+  check failures after which the unhealthy task should be killed.
+* `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
+  will provide health  status. Example: "/path/to/health".
+  _Note: only used if `protocol == "HTTP"`._
+* `portIndex` (Optional. Default: 0): Index in this app's `ports` array to be
+  used for health requests. An index is used so the app can use random ports,
+  like "[0, 0, 0]" for example, and tasks could be started with port environment
+  variables like `$PORT1`.
+* `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
+  performed. One of "HTTP" or "TCP".
+* `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
+  health check is considered a failure regardless of the response.
+
+##### `id`
+
+Unique string identifier for the app. It must be at least 1 character and may
+only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters
+(`a-z`). The name may not begin or end with a dash.
+
+(The allowable format is represented by the regular expression
+`^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$`.)
+
+##### `ports`
+
+An array of required port resources on the host. To generate one or more
+arbitrary free ports for each application instance, pass zeros as port
+values. Each port value is exposed to the instance via environment variables
+`$PORT0`, `$PORT1`, etc. Ports assigned to running instances are also available
+via the task resource.
 
 ##### Example
 
 **Request:**
 
-:http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
+:http --ignore-stdin DELETE localhost:8080/v2/apps/my-app
 
-http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v2/apps id=myApp cmd='env && sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' env:='{"LD_LIBRARY_PATH": "/usr/local/lib/myLib"}' constraints:='[["hostname", "UNIQUE", ""]]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
+http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v2/apps id=my-app cmd='env && sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' env:='{"LD_LIBRARY_PATH": "/usr/local/lib/myLib"}' constraints:='[["hostname", "UNIQUE", ""]]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 **Response:**
 
-:http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
+:http --ignore-stdin DELETE localhost:8080/v2/apps/my-app
 
-http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v2/apps id=myApp cmd='env && sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' env:='{"LD_LIBRARY_PATH": "/usr/local/lib/myLib"}' constraints:='[["hostname", "UNIQUE", ""]]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
+http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v2/apps id=my-app cmd='env && sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' env:='{"LD_LIBRARY_PATH": "/usr/local/lib/myLib"}' constraints:='[["hostname", "UNIQUE", ""]]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 #### GET `/v2/apps`
 
@@ -151,11 +198,11 @@ List the application with id `appId`.
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/my-app
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/my-app
 
 #### GET `/v2/apps/{appId}/versions`
 
@@ -165,11 +212,11 @@ List the versions of the application with id `appId`.
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp/versions
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/my-app/versions
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp/versions
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/my-app/versions
 
 #### GET `/v2/apps/{appId}/versions/{version}`
 
@@ -180,7 +227,7 @@ List the configuration of the application with id `appId` at version `version`.
 **Request:**
 
 ```
-GET /v2/apps/myApp/versions/2014-03-01T23:17:50.295Z HTTP/1.1
+GET /v2/apps/my-app/versions/2014-03-01T23:17:50.295Z HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
@@ -202,7 +249,7 @@ Transfer-Encoding: chunked
     "cpus": 0.1, 
     "env": {}, 
     "executor": "", 
-    "id": "myApp", 
+    "id": "my-app", 
     "instances": 4, 
     "mem": 5.0, 
     "ports": [
@@ -227,13 +274,13 @@ __not__ pre-emptively restarted.
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps/myApp cmd='sleep 55' constraints:='[["hostname", "UNIQUE", ""]]' ports:='[9000]' cpus=0.3 mem=9 instances=2
+http --print=HB --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps/my-app cmd='sleep 55' constraints:='[["hostname", "UNIQUE", ""]]' ports:='[9000]' cpus=0.3 mem=9 instances=2
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps/myApp cmd='sleep 55' constraints:='[["hostname", "UNIQUE", ""]]' ports:='[9000]' cpus=0.3 mem=9 instances=2
+http --print=hb --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps/my-app cmd='sleep 55' constraints:='[["hostname", "UNIQUE", ""]]' ports:='[9000]' cpus=0.3 mem=9 instances=2
 
-:http --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps/myApp cmd='sleep 60' constraints:='[]' ports:='[0, 0]' cpus=0.1 mem=5 instances=3
+:http --ignore-stdin --json --pretty format PUT localhost:8080/v2/apps/my-app cmd='sleep 60' constraints:='[]' ports:='[0, 0]' cpus=0.1 mem=5 instances=3
 
 ##### Example (version rollback)
 
@@ -242,7 +289,7 @@ If the `version` key is supplied in the JSON body, the rest of the object is ign
 **Request:**
 
 ```
-PUT /v2/apps/myApp HTTP/1.1
+PUT /v2/apps/my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 39
@@ -269,15 +316,15 @@ Destroy an application. All data about that application will be deleted.
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format DELETE localhost:8080/v2/apps/myApp
+http --print=HB --ignore-stdin --json --pretty format DELETE localhost:8080/v2/apps/my-app
 
-:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
+:http --ignore-stdin POST localhost:8080/v2/apps id=my-app cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format DELETE localhost:8080/v2/apps/myApp
+http --print=hb --ignore-stdin --json --pretty format DELETE localhost:8080/v2/apps/my-app
 
-:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
+:http --ignore-stdin POST localhost:8080/v2/apps id=my-app cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 #### GET `/v2/apps/{appId}/tasks`
 
@@ -287,21 +334,21 @@ List all running tasks for application `appId`.
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp/tasks
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/my-app/tasks
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/myApp/tasks
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v2/apps/my-app/tasks
 
 ##### Example (as text)
 
 **Request:**
 
-http --print=HB --ignore-stdin --pretty format GET localhost:8080/v2/apps/myApp/tasks Accept:text/plain
+http --print=HB --ignore-stdin --pretty format GET localhost:8080/v2/apps/my-app/tasks Accept:text/plain
 
 **Response:**
 
-http --print=hb --ignore-stdin --pretty format GET localhost:8080/v2/apps/myApp/tasks Accept:text/plain
+http --print=hb --ignore-stdin --pretty format GET localhost:8080/v2/apps/my-app/tasks Accept:text/plain
 
 #### DELETE `/v2/apps/{appId}/tasks?host={host}&scale={true|false}`
 
@@ -317,11 +364,11 @@ killed tasks.  The `scale` parameter defaults to `false`.
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format DELETE 'localhost:8080/v2/apps/myApp/tasks?host=mesos.vm&scale=false'
+http --print=HB --ignore-stdin --json --pretty format DELETE 'localhost:8080/v2/apps/my-app/tasks?host=mesos.vm&scale=false'
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format DELETE 'localhost:8080/v2/apps/myApp/tasks?host=mesos.vm&scale=false'
+http --print=hb --ignore-stdin --json --pretty format DELETE 'localhost:8080/v2/apps/my-app/tasks?host=mesos.vm&scale=false'
 
 #### DELETE `/v2/apps/{appId}/tasks/{taskId}?scale={true|false}`
 
@@ -336,7 +383,7 @@ the application is scaled down one if the supplied `taskId` exists.  The
 **Request:**
 
 ```
-DELETE /v2/apps/myApp/tasks/myApp_3-1389916890411 HTTP/1.1
+DELETE /v2/apps/my-app/tasks/my-app_3-1389916890411 HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0
@@ -356,7 +403,7 @@ Transfer-Encoding: chunked
 {
     "task": {
         "host": "mesos.vm",
-        "id": "myApp_3-1389916890411",
+        "id": "my-app_3-1389916890411",
         "ports": [
             31509,
             31510
@@ -456,15 +503,15 @@ http --print=hb --ignore-stdin --json --pretty format DELETE localhost:8080/v2/e
 
 **Request:**
 
-:http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
+:http --ignore-stdin DELETE localhost:8080/v2/apps/my-app
 
-http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/start id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
+http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/start id=my-app cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 **Response:**
 
-:http --ignore-stdin DELETE localhost:8080/v2/apps/myApp
+:http --ignore-stdin DELETE localhost:8080/v2/apps/my-app
 
-http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/start id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
+http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/start id=my-app cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 #### GET `/v1/apps`
 
@@ -484,15 +531,15 @@ http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/apps
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/stop id=myApp
+http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/stop id=my-app
 
-:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
+:http --ignore-stdin POST localhost:8080/v2/apps id=my-app cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 **Request:**
 
-http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/stop id=myApp
+http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/stop id=my-app
 
-:http --ignore-stdin POST localhost:8080/v2/apps id=myApp cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
+:http --ignore-stdin POST localhost:8080/v2/apps id=my-app cmd='sleep 60' instances=3 mem=5 cpus=0.1 ports:='[0, 0]' uris:='["https://raw.github.com/mesosphere/marathon/master/README.md"]'
 
 #### POST `/v1/apps/scale`
 
@@ -500,13 +547,13 @@ http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/app
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/scale id=myApp instances=4
+http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/scale id=my-app instances=4
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/scale id=myApp instances=4
+http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/apps/scale id=my-app instances=4
 
-:http --ignore-stdin PUT localhost:8080/v2/apps/myApp instances=3
+:http --ignore-stdin PUT localhost:8080/v2/apps/my-app instances=3
 
 #### GET `/v1/apps/search?id={appId}&cmd={command}`
 
@@ -514,11 +561,11 @@ http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/app
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v1/apps/search?id=myApp
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v1/apps/search?id=my-app
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/apps/search?id=myApp
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/apps/search?id=my-app
 
 ##### Example
 
@@ -536,11 +583,11 @@ http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/apps
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v1/apps/myApp/tasks
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v1/apps/my-app/tasks
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/apps/myApp/tasks
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/apps/my-app/tasks
 
 ### _Endpoints_
 
@@ -572,21 +619,21 @@ http --print=hb --ignore-stdin --pretty format GET localhost:8080/v1/endpoints A
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v1/endpoints/myApp
+http --print=HB --ignore-stdin --json --pretty format GET localhost:8080/v1/endpoints/my-app
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/endpoints/myApp
+http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/endpoints/my-app
 
 ##### Example (as text)
 
 **Request:**
 
-http --print=HB --ignore-stdin --pretty format GET localhost:8080/v1/endpoints/myApp Accept:text/plain
+http --print=HB --ignore-stdin --pretty format GET localhost:8080/v1/endpoints/my-app Accept:text/plain
 
 **Response:**
 
-http --print=hb --ignore-stdin --pretty format GET localhost:8080/v1/endpoints/myApp Accept:text/plain
+http --print=hb --ignore-stdin --pretty format GET localhost:8080/v1/endpoints/my-app Accept:text/plain
 
 ### Tasks
 
@@ -609,11 +656,11 @@ http --print=hb --ignore-stdin --json --pretty format GET localhost:8080/v1/task
 
 **Request:**
 
-http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v1/tasks/kill?appId=myApp
+http --print=HB --ignore-stdin --json --pretty format POST localhost:8080/v1/tasks/kill?appId=my-app
 
 **Response:**
 
-http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/tasks/kill?appId=myApp
+http --print=hb --ignore-stdin --json --pretty format POST localhost:8080/v1/tasks/kill?appId=my-app
 
 ### _Debug_
 

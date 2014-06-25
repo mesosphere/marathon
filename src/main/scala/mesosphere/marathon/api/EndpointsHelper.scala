@@ -14,8 +14,7 @@ object EndpointsHelper {
   def appsToEndpointString(
     taskTracker: TaskTracker,
     apps: Seq[AppDefinition],
-    delimiter: String
-  ): String = {
+    delimiter: String): String = {
     val sb = new StringBuilder
     for (app <- apps) {
       val cleanId = app.id.replaceAll("\\s+", "_")
@@ -27,7 +26,8 @@ object EndpointsHelper {
           sb.append(s"${task.getHost} ")
         }
         sb.append(s"\n")
-      } else {
+      }
+      else {
         for ((port, i) <- app.ports.zipWithIndex) {
           sb.append(s"$cleanId$delimiter$port$delimiter")
           for (task <- tasks) {

@@ -1,21 +1,20 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.{FrameworkID, FrameworkInfo}
-import org.apache.mesos.{SchedulerDriver, MesosSchedulerDriver}
+import org.apache.mesos.Protos.{ FrameworkID, FrameworkInfo }
+import org.apache.mesos.{ SchedulerDriver, MesosSchedulerDriver }
 
 /**
- * Wrapper class for the scheduler
- */
+  * Wrapper class for the scheduler
+  */
 object MarathonSchedulerDriver {
 
   var driver: Option[SchedulerDriver] = None
 
-  val frameworkName = "marathon-" + Main.properties.getProperty("marathon.version")
+  val frameworkName = s"marathon-${BuildInfo.version}"
 
   def newDriver(config: MarathonConf,
                 scheduler: MarathonScheduler,
-                frameworkId: Option[FrameworkID]
-               ): SchedulerDriver = {
+                frameworkId: Option[FrameworkID]): SchedulerDriver = {
     val builder = FrameworkInfo.newBuilder()
       .setName(frameworkName)
       .setFailoverTimeout(config.mesosFailoverTimeout())

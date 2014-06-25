@@ -7,12 +7,13 @@ define([
     onClick: function() {
       this.props.onClick(this.props.model);
     },
+
     render: function() {
       var model = this.props.model;
 
       var instancesClassSet = React.addons.classSet({
-        "text-right": true,
-        "text-warning": !model.allInstancesBooted()
+        "badge badge-circlet": true,
+        "badge-circlet-default": !model.allInstancesBooted()
       });
 
       return (
@@ -27,7 +28,12 @@ define([
           </td>
           <td className="text-right">{model.get("mem")}</td>
           <td className="text-right">{model.get("cpus")}</td>
-          <td className={instancesClassSet}>{model.get("tasksRunning")} / {model.get("instances")}</td>
+          <td className="text-right">
+            <span className={instancesClassSet}>
+              {model.allInstancesBooted() ? null : <span className="health-dot health-dot-warning"></span>}
+              {model.formatTasksRunning()} / {model.get("instances")}
+            </span>
+          </td>
         </tr>
       );
     }

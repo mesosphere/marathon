@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import mesosphere.marathon.api.v1.AppDefinition
 import org.mockito.Mockito._
 import org.mockito.Matchers._
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import org.joda.time.DateTime
 import mesosphere.marathon.MarathonSpec
@@ -20,7 +20,7 @@ class AppRepositoryTest extends MarathonSpec {
     val repo = new AppRepository(store)
     val res = repo.app("testApp", timestamp)
 
-    assert(Some(appDef) == Await.result(res, 5 seconds), "Should return the correct AppDefinition")
+    assert(Some(appDef) == Await.result(res, 5.seconds), "Should return the correct AppDefinition")
     verify(store).fetch(s"testApp:${timestamp}")
   }
 
@@ -36,7 +36,7 @@ class AppRepositoryTest extends MarathonSpec {
     val repo = new AppRepository(store)
     val res = repo.store(appDef)
 
-    assert(Some(appDef) == Await.result(res, 5 seconds), "Should return the correct AppDefinition")
+    assert(Some(appDef) == Await.result(res, 5.seconds), "Should return the correct AppDefinition")
     verify(store).store(versionedKey, appDef)
     verify(store).store(s"testApp", appDef)
   }
@@ -50,7 +50,7 @@ class AppRepositoryTest extends MarathonSpec {
     val repo = new AppRepository(store)
     val res = repo.appIds()
 
-    assert(Seq("app1", "app2") == Await.result(res, 5 seconds), "Should return only unversioned names")
+    assert(Seq("app1", "app2") == Await.result(res, 5.seconds), "Should return only unversioned names")
     verify(store).names()
   }
 
@@ -71,7 +71,7 @@ class AppRepositoryTest extends MarathonSpec {
     val repo = new AppRepository(store)
     val res = repo.apps()
 
-    assert(Seq(appDef1, appDef2) == Await.result(res, 5 seconds), "Should return only current versions")
+    assert(Seq(appDef1, appDef2) == Await.result(res, 5.seconds), "Should return only current versions")
     verify(store).names()
     verify(store).fetch(appDef1.id)
     verify(store).fetch(appDef2.id)
@@ -94,7 +94,7 @@ class AppRepositoryTest extends MarathonSpec {
     val res = repo.listVersions(appDef1.id)
 
     val expected = Seq(appDef1.version, version1.version, version2.version, version3.version)
-    assert(expected == Await.result(res, 5 seconds), "Should return all versions of given app")
+    assert(expected == Await.result(res, 5.seconds), "Should return all versions of given app")
     verify(store).names()
   }
 
@@ -113,7 +113,7 @@ class AppRepositoryTest extends MarathonSpec {
     when(store.expunge(any())).thenReturn(Future.successful(true))
 
     val repo = new AppRepository(store)
-    val res = Await.result(repo.expunge(appDef1.id), 5 seconds).toSeq
+    val res = Await.result(repo.expunge(appDef1.id), 5.seconds).toSeq
 
     assert(res.size == 5, "Should expunge all versions")
     assert(res.forall(identity), "Should succeed")

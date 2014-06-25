@@ -2,26 +2,24 @@ package mesosphere.marathon.api
 
 import scala.collection.JavaConverters._
 import com.google.inject.Inject
-import java.net.{HttpURLConnection, URL}
-import java.io.{OutputStream, InputStream}
+import java.net.{ HttpURLConnection, URL }
+import java.io.{ OutputStream, InputStream }
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Named
 import javax.servlet._
-import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
-import mesosphere.marathon.{MarathonSchedulerService, ModuleNames}
+import javax.servlet.http.{ HttpServletResponse, HttpServletRequest }
+import mesosphere.marathon.{ MarathonSchedulerService, ModuleNames }
 import org.apache.log4j.Logger
 
-
 /**
- * Servlet filter that proxies requests to the leader if we are not the leader.
- *
- * @param schedulerService
- * @param leader
- */
-class LeaderProxyFilter @Inject()
-    (schedulerService: MarathonSchedulerService,
-     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean)
-  extends Filter  {
+  * Servlet filter that proxies requests to the leader if we are not the leader.
+  *
+  * @param schedulerService
+  * @param leader
+  */
+class LeaderProxyFilter @Inject() (schedulerService: MarathonSchedulerService,
+                                   @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean)
+    extends Filter {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -39,7 +37,8 @@ class LeaderProxyFilter @Inject()
     // TODO handle https
     if (request.getQueryString != null) {
       new URL("http://%s%s?%s".format(leaderData, request.getRequestURI, request.getQueryString))
-    } else {
+    }
+    else {
       new URL("http://%s%s".format(leaderData, request.getRequestURI))
     }
   }
@@ -55,7 +54,8 @@ class LeaderProxyFilter @Inject()
       // Proxying occurs if we aren't in the leadership position and we know about the other leader (to proxy to).
       if (schedulerService.isLeader || schedulerService.getLeader.isEmpty) {
         chain.doFilter(request, response)
-      } else {
+      }
+      else {
         try {
           val leaderData = schedulerService.getLeader
 
@@ -66,7 +66,6 @@ class LeaderProxyFilter @Inject()
           val proxy =
             buildUrl(leaderData.get, request)
               .openConnection().asInstanceOf[HttpURLConnection]
-
 
           val names = request.getHeaderNames
           // getHeaderNames() and getHeaders() are known to return null, see:
@@ -112,15 +111,18 @@ class LeaderProxyFilter @Inject()
             }
             copy(proxy.getInputStream, response.getOutputStream)
             proxy.getInputStream.close()
-          } catch {
+          }
+          catch {
             case e: Exception =>
               copy(proxy.getErrorStream, response.getOutputStream)
               proxy.getErrorStream().close()
-          } finally {
+          }
+          finally {
             responseOutputStream.close()
           }
 
-        } catch {
+        }
+        catch {
           case e: Exception =>
             log.warn("Exception while proxying", e)
         }

@@ -3,7 +3,7 @@ package mesosphere.marathon.health
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.TaskTracker
-import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, Props}
+import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.google.common.eventbus.EventBus
@@ -13,14 +13,13 @@ import mesosphere.mesos.protos.TaskID
 import mesosphere.marathon.Protos.MarathonTask
 
 class HealthCheckActor(
-  appId: String,
-  healthCheck: HealthCheck,
-  taskTracker: TaskTracker,
-  eventBus: Option[EventBus]
-) extends Actor with ActorLogging {
+    appId: String,
+    healthCheck: HealthCheck,
+    taskTracker: TaskTracker,
+    eventBus: Option[EventBus]) extends Actor with ActorLogging {
 
-  import HealthCheckActor.{GetTaskHealth, Health}
-  import HealthCheckWorker.{HealthCheckJob, HealthResult, Healthy, Unhealthy}
+  import HealthCheckActor.{ GetTaskHealth, Health }
+  import HealthCheckWorker.{ HealthCheckJob, HealthResult, Healthy, Unhealthy }
   import context.dispatcher // execution context
   import mesosphere.mesos.protos.Implicits._
 
@@ -57,13 +56,21 @@ class HealthCheckActor(
   protected[this] case object Tick
 
   protected[this] def purgeStatusOfDoneTasks(): Unit = {
-    log.debug("Purging status of done tasks")
+    log.debug(
+      "Purging health status of done tasks for app [{}] and healthCheck [{}]",
+      appId,
+      healthCheck
+    )
     val activeTaskIds = taskTracker.get(appId).map(_.getId)
     taskHealth = taskHealth.filterKeys(activeTaskIds)
   }
 
   protected[this] def scheduleNextHealthCheck(): Unit = {
-    log.debug("Scheduling next health check")
+    log.debug(
+      "Scheduling next health check for app [{}] and healthCheck [{}]",
+      appId,
+      healthCheck
+    )
     nextScheduledCheck = Some(
       context.system.scheduler.scheduleOnce(healthCheck.interval) {
         self ! Tick
@@ -99,7 +106,7 @@ class HealthCheckActor(
     // Ignore failures during the grace period, until the task becomes green
     // for the first time.
     health.firstSuccess.isEmpty &&
-    task.getStartedAt + healthCheck.gracePeriod.toMillis > System.currentTimeMillis()
+      task.getStartedAt + healthCheck.gracePeriod.toMillis > System.currentTimeMillis()
   }
 
   def receive = {
@@ -123,7 +130,8 @@ class HealthCheckActor(
               if (ignoreFailures(task, health)) {
                 // Don't update health
                 health
-              } else {
+              }
+              else {
                 eventBus.foreach(_.post(FailedHealthCheck(appId, taskId, healthCheck)))
                 checkConsecutiveFailures(task, health)
                 health.update(result)
@@ -142,7 +150,7 @@ class HealthCheckActor(
             appId = appId,
             taskId = taskId,
             alive = newHealth.alive())
-          )
+        )
         )
       }
   }
@@ -153,15 +161,13 @@ object HealthCheckActor {
   case class GetTaskHealth(taskId: String)
 
   case class Health(
-    taskId: String,
-    firstSuccess: Option[Timestamp] = None,
-    lastSuccess: Option[Timestamp] = None,
-    lastFailure: Option[Timestamp] = None,
-    @FieldJsonInclude(Include.NON_NULL)
-    lastFailureCause: Option[String] = None,
-    consecutiveFailures: Int = 0
-  ) {
-    import HealthCheckWorker.{HealthResult, Healthy, Unhealthy}
+      taskId: String,
+      firstSuccess: Option[Timestamp] = None,
+      lastSuccess: Option[Timestamp] = None,
+      lastFailure: Option[Timestamp] = None,
+      @FieldJsonInclude(Include.NON_NULL) lastFailureCause: Option[String] = None,
+      consecutiveFailures: Int = 0) {
+    import HealthCheckWorker.{ HealthResult, Healthy, Unhealthy }
 
     @JsonProperty
     def alive(): Boolean = lastSuccess.exists { successTime =>

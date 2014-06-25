@@ -1,15 +1,14 @@
 package mesosphere.marathon.event.http
 
-import mesosphere.marathon.state.MarathonState
+import mesosphere.marathon.state.{ Migration, MarathonState }
 import mesosphere.marathon.Protos
 import collection.JavaConversions._
 
 import mesosphere.marathon.api.validation.FieldConstraints.FieldJsonProperty
+import mesosphere.marathon.Protos.StorageVersion
 
 case class EventSubscribers(
-  @FieldJsonProperty("callbackUrls")
-  urls: Set[String] = Set.empty[String]
-) extends MarathonState[Protos.EventSubscribers, EventSubscribers]{
+    @FieldJsonProperty("callbackUrls") urls: Set[String] = Set.empty[String]) extends MarathonState[Protos.EventSubscribers, EventSubscribers] {
 
   override def mergeFromProto(message: Protos.EventSubscribers): EventSubscribers =
     EventSubscribers(Set(message.getCallbackUrlsList: _*))
@@ -23,5 +22,13 @@ case class EventSubscribers(
     val builder = Protos.EventSubscribers.newBuilder()
     urls.foreach(builder.addCallbackUrls(_))
     builder.build()
+  }
+}
+
+object EventSubscribers {
+  implicit object EventSubscribersMigration extends Migration[EventSubscribers] {
+    override def needsMigration(version: StorageVersion): Boolean = false
+
+    override def migrate(version: StorageVersion, obj: EventSubscribers): EventSubscribers = obj
   }
 }

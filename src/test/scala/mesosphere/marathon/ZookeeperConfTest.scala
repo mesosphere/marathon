@@ -16,7 +16,7 @@ class ZookeeperConfTest extends MarathonSpec {
     val host = "host1:123"
     val timeout = 123
     val state = "/test"
-    val opts = conf("--zk_hosts", host, "--zk_timeout", timeout.toString, "--zk_state", state )
+    val opts = conf("--zk_hosts", host, "--zk_timeout", timeout.toString, "--zk_state", state)
 
     assert(opts.zooKeeperHostString() == host)
     assert(opts.zooKeeperTimeout() == timeout)
@@ -37,7 +37,7 @@ class ZookeeperConfTest extends MarathonSpec {
     assert(Try(conf("--zk", "zk://host1")).isFailure, "No path")
   }
 
-  def conf(args:String *) = {
+  def conf(args: String*) = {
     val opts = new ScallopConf(args) with ZookeeperConf {
       //scallop will trigger sys exit
       override protected def onError(e: Throwable): Unit = throw e

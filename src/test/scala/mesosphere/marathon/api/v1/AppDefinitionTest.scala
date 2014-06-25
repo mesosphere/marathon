@@ -3,15 +3,13 @@ package mesosphere.marathon.api.v1
 import com.google.common.collect.Lists
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.ServiceDefinition
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ Migration, StorageVersions, Timestamp }
 import org.apache.mesos.Protos.CommandInfo
 import javax.validation.Validation
 import mesosphere.marathon.MarathonSpec
+import org.scalatest.Matchers
 
-/**
- * @author Tobi Knaup
- */
-class AppDefinitionTest extends MarathonSpec {
+class AppDefinitionTest extends MarathonSpec with Matchers {
 
   test("ToProto") {
     val app = AppDefinition(
@@ -75,6 +73,24 @@ class AppDefinitionTest extends MarathonSpec {
 
     shouldViolate(
       app.copy(id = "a#$%^&*b"),
+      "id",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldViolate(
+      app.copy(id = "-dash-disallowed-at-start"),
+      "id",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldViolate(
+      app.copy(id = "dash-disallowed-at-end-"),
+      "id",
+      "{javax.validation.constraints.Pattern.message}"
+    )
+
+    shouldViolate(
+      app.copy(id = "uppercaseLettersNoGood"),
       "id",
       "{javax.validation.constraints.Pattern.message}"
     )
@@ -158,6 +174,18 @@ class AppDefinitionTest extends MarathonSpec {
     val readResult = mapper.readValue(json, classOf[AppDefinition])
 
     assert(readResult == original)
+  }
+
+  test("Migration") {
+    val oldVersion = StorageVersions(0, 0, 0)
+
+    val migration = implicitly[Migration[AppDefinition]]
+
+    migration.needsMigration(oldVersion) should be(true)
+
+    val migratedApp = migration.migrate(oldVersion, AppDefinition("My.super_Cool-app"))
+
+    migratedApp.id should be("my.super-cool-app")
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {

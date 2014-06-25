@@ -1,17 +1,14 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.Protos.{Constraint, MarathonTask}
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.Constraint.Operator
 import scala.collection.JavaConverters._
 import scala.util.Random
-import mesosphere.mesos.protos.{FrameworkID, SlaveID, OfferID, TextAttribute}
-import org.apache.mesos.Protos.{Offer, Attribute}
+import mesosphere.mesos.protos.{ FrameworkID, SlaveID, OfferID, TextAttribute }
+import org.apache.mesos.Protos.{ Offer, Attribute }
 import mesosphere.marathon.MarathonSpec
 
-/**
- * @author Florian Leibert (flo@leibert.de)
- */
 class ConstraintsTest extends MarathonSpec {
 
   import mesosphere.mesos.protos.Implicits._
@@ -164,13 +161,13 @@ class ConstraintsTest extends MarathonSpec {
 
     val clusterNotMet = Constraints.meetsConstraint(
       freshRack, // list of tasks register in the cluster
-      makeOffer("foohost", Set(TextAttribute("jdk", "6"))),  // slave attributes
+      makeOffer("foohost", Set(TextAttribute("jdk", "6"))), // slave attributes
       jdk7Constraint)
     assert(!clusterNotMet, "Should not meet cluster constraints.")
 
     val clusterMet = Constraints.meetsConstraint(
       freshRack, // list of tasks register in the cluster
-      makeOffer("foohost", Set(TextAttribute("jdk", "7"))),  // slave attributes
+      makeOffer("foohost", Set(TextAttribute("jdk", "7"))), // slave attributes
       jdk7Constraint)
     assert(clusterMet, "Should meet cluster constraints.")
   }

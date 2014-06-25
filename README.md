@@ -25,21 +25,14 @@ can even start other Marathon instances via Marathon.
 * *HA* -- run any number of Marathon schedulers, but only one gets elected as
     leader; if you access a non-leader, your request gets proxied to the
     current leader
-* *Basic Auth* and *SSL*
-* *REST API*
+* *[Constraints](https://github.com/mesosphere/marathon/wiki/Constraints)* - e.g., only one instance of an application per rack, node, etc.
+* *[Service Discovery &amp; Load Balancing](https://github.com/mesosphere/marathon/wiki/Service-Discovery-&-Load-Balancing)* via HAProxy or the events API (see below).
+* *[Health Checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)*: check your application's health via HTTP or TCP checks.
+* *[Event Subscription](https://github.com/mesosphere/marathon/wiki/Event-Bus)* lets you supply an HTTP endpoint to receive notifications, for example to integrate with an external load balancer.
 * *Web UI*
-* *Metrics* -- via Coda Hale's [metrics library](http://metrics.codahale.com/)
-* *Constraints* -- e.g., only one instance of an application per rack, node,
-    etc. See the
-    [documentation](https://github.com/mesosphere/marathon/wiki/Constraints)
-    for more info.
-* *Service Discovery* and *Load Balancing* -- see the [documentation](https://github.com/mesosphere/marathon/wiki/Service-Discovery-&-Load-Balancing) for more info.
-* *Event Subscription* -- e.g., if you need to notify an external web service
-    about task updates or state changes, you can supply an HTTP endpoint to
-    receive notifications. See the
-    [wiki page](https://github.com/mesosphere/marathon/wiki/Event-Bus) for
-    details.
-* *[Health Checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)* - check your application's health via HTTP or TCP checks.
+* *JSON/REST API* for easy integration and scriptability
+* *Basic Auth* and *SSL*
+* *Metrics*: available at `/metrics` in JSON format
 
 ## Overview
 
@@ -69,7 +62,7 @@ three applications, each with a different number of tasks: Search (1), Jetty
 ![Marathon1](https://raw.github.com/mesosphere/marathon/master/docs/img/marathon1.png "Initial Marathon")
 
 As the website gains traction and the user base grows, we decide to scale-out
-the search service and our Rails-based application. This is done via a simple
+the search service and our Rails-based application. This is done via a
 REST call to the Marathon API to add more tasks. Marathon will take care of
 placing the new tasks on machines with spare capacity, honoring the
 constraints we previously set.
@@ -92,16 +85,16 @@ difficult situation!
 * [Zookeeper][Zookeeper]
 * JDK 1.6+
 * Scala 2.10+
-* Maven 3.0+
+* sbt 0.13.5
 
 ### Installation
 
 1.  Install [Mesos][Mesos]. One easy way is via your system's package manager.
     Current builds for major Linux distributions and Mac OS X are available
-    from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
+    from on the Mesosphere [downloads page](http://mesosphere.io/downloads/).
 
     If building from source, see the
-    [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
+    Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
     [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
     for details. Running `make install` will install Mesos in `/usr/local` in
     the same way as these packages do.
@@ -110,24 +103,24 @@ difficult situation!
 
     **For Mesos 0.17.0 and later:**
 
-        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.0/marathon-0.5.0.tgz
-        tar xzf marathon-0.5.0.tgz
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz
+        tar xzf marathon-0.5.1.tgz
 
     **For Mesos 0.16.0 and earlier:**
 
-        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.0_mesos-0.16.0/marathon-0.5.0_mesos-0.16.0.tgz
-        tar xzf marathon-0.5.0_mesos-0.16.0.tgz
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1_mesos-0.16.0/marathon-0.5.1_mesos-0.16.0.tgz
+        tar xzf marathon-0.5.1_mesos-0.16.0.tgz
 
     SHA-256 checksums are available by appending `.sha256` to the URLs.
 
 
 #### Building From Source
 
-1.  If you want to build Marathon from source, check out this repo and use Maven to build a JAR:
+1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
 
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
-        mvn package
+        sbt assembly
 
 1.  Run `./bin/build-distribution` to package Marathon as an
     [executable JAR](http://mesosphere.io/2013/12/07/executable-jars/)
@@ -157,34 +150,9 @@ command launches Marathon on Mesos in *local mode*. Point your web browser to
 
     ./bin/start --master local --zk zk://localhost:2181/marathon
 
-#### Working on assets
-
-When editing assets like CSS and JavaScript locally, they are loaded from the
-packaged JAR by default and are not editable. To load them from a directory for
-easy editing, set the `assets_path` flag when running Marathon:
-
-    ./bin/start --master local --zk zk://localhost:2181/marathon --assets_path src/main/resources/assets/
-
-#### Compiling Assets
-
-*Note: You only need to follow these steps if you plan to edit the JavaScript source.*
-
-1. Install [NPM](https://npmjs.org/)
-2. Change to the assets directory
-
-        cd src/main/resources/assets
-3. Install dev dependencies
-
-        npm install
-4. Build the assets
-
-        ./bin/build
-
-The main JS file will be written to `src/main/resources/assets/js/dist/main.js`.
-
 ### Command Line Options
 
-There are some command line options that can influence how Marathon works.
+The following options can influence how Marathon works:
 
 * `--master`: The URL of the Mesos master. The format is a comma-delimited list of
     of hosts like `zk://host1:port,host2:port/mesos`. Pay particular attention to the
@@ -233,15 +201,15 @@ Marathon API can do.
     # Start an app with 128 MB memory, 1 CPU, and 1 instance
     curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
         localhost:8080/v2/apps \
-        -d '{"id": "app_123", "cmd": "sleep 600", "instances": 1, "mem": 128, "cpus": 1}'
+        -d '{"id": "app-123", "cmd": "sleep 600", "instances": 1, "mem": 128, "cpus": 1}'
 
     # Scale the app to 2 instances
     curl -X PUT -H "Accept: application/json" -H "Content-Type: application/json" \
-        localhost:8080/v2/apps/app_123 \
-        -d '{"id": "app_123", "cmd": "sleep 600", "instances": 2, "mem": 128, "cpus": 1}'
+        localhost:8080/v2/apps/app-123 \
+        -d '{"id": "app-123", "cmd": "sleep 600", "instances": 2, "mem": 128, "cpus": 1}'
 
     # Stop the app
-    curl -X DELETE localhost:8080/v2/apps/app_123
+    curl -X DELETE localhost:8080/v2/apps/app-123
 
 ##### Example starting an app using constraints
 

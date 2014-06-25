@@ -2,34 +2,34 @@ package mesosphere.marathon.tasks
 
 import scala.collection._
 import scala.collection.JavaConverters._
-import org.apache.mesos.Protos.{TaskID, TaskStatus}
+import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 import javax.inject.Inject
-import org.apache.mesos.state.{Variable, State}
+import org.apache.mesos.state.{ Variable, State }
 import mesosphere.marathon.Protos._
-import mesosphere.marathon.Main
+import mesosphere.marathon.{ MarathonConf, Main }
 import java.io._
 import scala.Some
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import org.apache.log4j.Logger
 import mesosphere.util.Stats
 import com.codahale.metrics.Gauge
 
-/**
- * @author Tobi Knaup
- */
 
-class TaskTracker @Inject()(state: State, stats: Stats) {
+import mesosphere.util.{ ThreadPoolContext, BackToTheFuture }
+
+class TaskTracker @Inject() (state: State, stats: Stats, config: MarathonConf) {
 
   import TaskTracker.App
-  import ExecutionContext.Implicits.global
-  import mesosphere.util.BackToTheFuture.futureToFuture
+  import ThreadPoolContext.context
+  import BackToTheFuture.futureToFuture
+
+  implicit val timeout = config.zkFutureTimeout
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
   val prefix = "tasks:"
 
-  private[this] val apps = new mutable.HashMap[String, App] with
-    mutable.SynchronizedMap[String, App]
+  private[this] val apps = new mutable.HashMap[String, App] with mutable.SynchronizedMap[String, App]
 
   stats.register("TaskTracker.taskCount", new Gauge[Int] {
     override def getValue: Int = apps.values.map(_.tasks.size).sum
@@ -133,9 +133,8 @@ class TaskTracker @Inject()(state: State, stats: Stats) {
     apps.getOrElseUpdate(appName, fetchApp(appName)).shutdown = true
 
   def newTaskId(appName: String): TaskID = {
-    val taskCount = count(appName)
     TaskID.newBuilder()
-      .setValue(TaskIDUtil.taskId(appName, taskCount))
+      .setValue(TaskIDUtil.taskId(appName))
       .build
   }
 
@@ -150,11 +149,11 @@ class TaskTracker @Inject()(state: State, stats: Stats) {
         }
       }
 
-      if (apps.contains(appName)) {
-        apps(appName)
-      } else {
-        new App(appName, new mutable.HashSet[MarathonTask](), false)
-      }
+    if (apps.contains(appName)) {
+      apps(appName)
+    }
+    else {
+      new App(appName, new mutable.HashSet[MarathonTask](), false)
     }
   }
 
@@ -171,10 +170,12 @@ class TaskTracker @Inject()(state: State, stats: Stats) {
           log.warn(s"App name from task state for $appName is wrong!  Got '${app.getName}' Continuing anyway...")
         }
         results ++= app.getTasksList.asScala.toSet
-      } else {
+      }
+      else {
         log.warn(s"Unable to deserialize task state for $appName")
       }
-    } catch {
+    }
+    catch {
       case e: com.google.protobuf.InvalidProtocolBufferException =>
         log.warn(s"Unable to deserialize task state for $appName", e)
     }
@@ -219,7 +220,7 @@ class TaskTracker @Inject()(state: State, stats: Stats) {
     }.flatten
 
     toKill.foreach(t => {
-      log.warn(s"Task '${t.getId}' was staged ${(now - t.getStagedAt)/1000}s ago and has not yet started")
+      log.warn(s"Task '${t.getId}' was staged ${(now - t.getStagedAt) / 1000}s ago and has not yet started")
     })
     toKill
   }
@@ -229,6 +230,5 @@ object TaskTracker {
   class App(
     val appName: String,
     var tasks: mutable.Set[MarathonTask],
-    var shutdown: Boolean
-  )
+    var shutdown: Boolean)
 }

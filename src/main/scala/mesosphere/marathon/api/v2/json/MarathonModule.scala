@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import com.fasterxml.jackson.databind._
-import mesosphere.marathon.Protos.{MarathonTask, Constraint}
+import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.health.HealthCheck
 import com.fasterxml.jackson.core._
@@ -10,16 +10,12 @@ import com.fasterxml.jackson.databind.ser.Serializers
 import com.fasterxml.jackson.databind.deser.Deserializers
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS
-import mesosphere.marathon.{EmptyContainerInfo, ContainerInfo}
+import mesosphere.marathon.{ EmptyContainerInfo, ContainerInfo }
 import scala.collection.JavaConverters._
 import mesosphere.marathon.api.v2.AppUpdate
-import java.lang.{ Integer => JInt, Double => JDouble}
+import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-
-/**
- * @author Tobi Knaup
- */
 
 class MarathonModule extends Module {
   import MarathonModule._
@@ -34,7 +30,7 @@ class MarathonModule extends Module {
 
   def getModuleName: String = "MarathonModule"
 
-  def version(): Version = new Version(0, 0, 1, null , null , null)
+  def version(): Version = new Version(0, 0, 1, null, null, null)
 
   def setupModule(context: SetupContext) {
     context.addSerializers(new Serializers.Base {
@@ -154,7 +150,7 @@ class MarathonModule extends Module {
       jgen.writeStartObject()
       jgen.writeObjectField("appId", enriched.appId)
       MarathonTaskSerializer.writeFieldValues(enriched.task, jgen, provider)
-      if(enriched.healthCheckResults.nonEmpty) {
+      if (enriched.healthCheckResults.nonEmpty) {
         jgen.writeObjectField("healthCheckResults", enriched.healthCheckResults)
       }
       jgen.writeEndObject()
@@ -185,7 +181,8 @@ class MarathonModule extends Module {
         ContainerInfo(
           image = tree.get("image").asText(),
           options = tree.get("options").elements().asScala.map(_.asText()).toList)
-      } else {
+      }
+      else {
         EmptyContainerInfo
       }
     }
@@ -201,10 +198,12 @@ class MarathonModule extends Module {
 
         if (container.isNull) {
           Some(EmptyContainerInfo)
-        } else {
+        }
+        else {
           Option(ContainerInfoDeserializer.deserialize(container.traverse(oc), context))
         }
-      } else {
+      }
+      else {
         None
       }
 
@@ -220,30 +219,27 @@ object MarathonModule {
   // of the 'AppUpdate' class and remove this workaround.
   @JsonIgnoreProperties(ignoreUnknown = true)
   case class AppUpdateBuilder(
-    cmd: Option[String] = None,
+      cmd: Option[String] = None,
 
-    instances: Option[JInt] = None,
+      instances: Option[JInt] = None,
 
-    cpus: Option[JDouble] = None,
+      cpus: Option[JDouble] = None,
 
-    mem: Option[JDouble] = None,
+      mem: Option[JDouble] = None,
 
-    uris: Option[Seq[String]] = None,
+      uris: Option[Seq[String]] = None,
 
-    @FieldPortsArray
-    ports: Option[Seq[JInt]] = None,
+      @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
-    constraints: Option[Set[Constraint]] = None,
+      constraints: Option[Set[Constraint]] = None,
 
-    executor: Option[String] = None,
+      executor: Option[String] = None,
 
-    container: Option[ContainerInfo] = None,
+      container: Option[ContainerInfo] = None,
 
-    healthChecks: Option[Set[HealthCheck]] = None,
+      healthChecks: Option[Set[HealthCheck]] = None,
 
-    version: Option[Timestamp] = None
-
-  ) {
+      version: Option[Timestamp] = None) {
     def build = AppUpdate(
       cmd, instances, cpus, mem, uris, ports, constraints,
       executor, container, healthChecks, version

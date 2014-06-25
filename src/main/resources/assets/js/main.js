@@ -1,9 +1,13 @@
 require.config({
+  jsx: {
+    extension: "jsx"
+  },
   paths: {
     "Backbone": "libs/backbone-min",
-    "jsx": "libs/jsx-0.0.1",
+    "jsx": "libs/jsx-0.0.2",
     "JSXTransformer": "libs/JSXTransformer-0.10.0.max",
     "jquery": "libs/jquery-2.0.3",
+    "mousetrap": "libs/mousetrap-1.4.6",
     "React": "libs/react-with-addons-0.10.0",
     "Underscore": "libs/underscore-min"
   },
@@ -20,21 +24,10 @@ require.config({
 
 require([
   "React",
-  "models/AppCollection",
-  "jsx!components/AppListComponent",
-  "jsx!components/NewAppButtonComponent"
-], function(React, AppCollection, AppListComponent, NewAppButtonComponent) {
-  var appCollection = new AppCollection();
-
+  "jsx!components/Marathon"
+], function(React, Marathon) {
   React.renderComponent(
-    NewAppButtonComponent({collection: appCollection}),
-    document.getElementById("new-app-button-container")
+    Marathon(),
+    document.getElementById("marathon")
   );
-
-  React.renderComponent(
-    AppListComponent({collection: appCollection}),
-    document.getElementById("job-list")
-  );
-
-  appCollection.fetch({reset: true});
 });

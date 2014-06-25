@@ -1,20 +1,17 @@
 # Marathon Dockerfile
-FROM ubuntu:precise
+FROM ubuntu:13.10
 MAINTAINER Mesosphere <support@mesosphere.io>
 
 ## DEPENDENCIES ##
 RUN apt-get update && apt-get install --assume-yes python-software-properties curl default-jdk
 
-# install maven from a PPA, it doesn't seem to be in the Docker Ubuntu distro.
-RUN add-apt-repository ppa:natecarlson/maven3
-RUN apt-get update && apt-get install --assume-yes maven3
-
 # install mesos (for libs) from mesosphere downloads
-RUN curl http://downloads.mesosphere.io/master/ubuntu/12.04/mesos_0.18.0_amd64.deb > mesos.deb && dpkg --install mesos.deb && rm mesos.deb
+ADD http://downloads.mesosphere.io/master/ubuntu/13.10/mesos_0.18.2_amd64.deb /tmp/mesos.deb
+RUN dpkg --install /tmp/mesos.deb && rm /tmp/mesos.deb
 
 ## MARATHON ##
-ADD . /opt/marathon
-RUN cd /opt/marathon && mvn3 package
+ADD http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz /tmp/marathon.tgz
+RUN mkdir -p /opt/marathon && tar xzf /tmp/marathon.tgz -C /opt/marathon --strip=1 && rm -f /tmp/marathon.tgz
 
 EXPOSE 8080
 WORKDIR /opt/marathon

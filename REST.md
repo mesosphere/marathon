@@ -35,7 +35,7 @@ Create and start a new application.
 
 The full JSON format of an application resource is as follows:
 
-```json
+```
 {
     "cmd": "(env && sleep 300)",
     "constraints": [
@@ -53,22 +53,21 @@ The full JSON format of an application resource is as follows:
     "healthChecks": [
         {
             "protocol": "HTTP",
-            "acceptableResponses": [200],
             "path": "/health",
-            "initialDelaySeconds": 3,
+            "gracePeriodSeconds": 3,
             "intervalSeconds": 10,
             "portIndex": 0,
             "timeoutSeconds": 10
         },
         {
             "protocol": "TCP",
-            "initialDelaySeconds": 3,
+            "gracePeriodSeconds": 3,
             "intervalSeconds": 5,
             "portIndex": 1,
             "timeoutSeconds": 5
         }
     ],
-    "id": "myApp",
+    "id": "my-app",
     "instances": 3,
     "mem": 256.0,
     "ports": [
@@ -85,20 +84,68 @@ The full JSON format of an application resource is as follows:
 }
 ```
 
-_Constraints:_ Valid constraint operators are one of ["UNIQUE", "CLUSTER",
-"GROUP_BY"].  For additional information on using placement constraints see
-[Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.io/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
+##### `constraints`
 
-_Container:_ Additional data passed to the container on application launch.
-These consist of an "image" and an array of string options.  The meaning of
-this data is fully dependent upon the executor.  Furthermore, _it is invalid to
-pass container options when using the default command executor_.
+Valid constraint operators are one of ["UNIQUE", "CLUSTER",
+"GROUP_BY"]. For additional information on using placement constraints see
+the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constraints).
 
-_Ports:_ An array of required port resources on the host.  To generate one or
-more arbitrary free ports for each application instance, pass zeros as port
-values.  Each port value is exposed to the instance via environment variables
-`$PORT0`, `$PORT1`, etc.  Ports assigned to running instances are also
-available via the task resource.
+##### `container`
+
+Additional data passed to the container on application launch. These consist of
+an "image" and an array of string options. The meaning of this data is fully
+dependent upon the executor. Furthermore, _it is invalid to pass container
+options when using the default command executor_.
+
+##### `healthChecks`
+
+An array of checks to be performed on running tasks to determine if they are
+operating as expected. Health checks begin immediately upon task launch. For
+design details, refer to the [health checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)
+wiki page.
+
+A health check is considered passing if (1) its HTTP response code is between
+200 and 399, inclusive, and (2) its response is received within the
+`timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
+health checks consecutively, that task is killed.
+
+###### Health Check Options
+
+* `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
+  ignored within this number of seconds of the task being started or until the
+  task becomes healthy for the first time.
+* `intervalSeconds` (Optional. Default: 10): Number of seconds to wait between
+  health checks.
+* `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
+  check failures after which the unhealthy task should be killed.
+* `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
+  will provide health  status. Example: "/path/to/health".
+  _Note: only used if `protocol == "HTTP"`._
+* `portIndex` (Optional. Default: 0): Index in this app's `ports` array to be
+  used for health requests. An index is used so the app can use random ports,
+  like "[0, 0, 0]" for example, and tasks could be started with port environment
+  variables like `$PORT1`.
+* `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
+  performed. One of "HTTP" or "TCP".
+* `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
+  health check is considered a failure regardless of the response.
+
+##### `id`
+
+Unique string identifier for the app. It must be at least 1 character and may
+only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters
+(`a-z`). The name may not begin or end with a dash.
+
+(The allowable format is represented by the regular expression
+`^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$`.)
+
+##### `ports`
+
+An array of required port resources on the host. To generate one or more
+arbitrary free ports for each application instance, pass zeros as port
+values. Each port value is exposed to the instance via environment variables
+`$PORT0`, `$PORT1`, etc. Ports assigned to running instances are also available
+via the task resource.
 
 ##### Example
 
@@ -127,7 +174,7 @@ User-Agent: HTTPie/0.7.2
     "env": {
         "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
     }, 
-    "id": "myApp", 
+    "id": "my-app", 
     "instances": "3", 
     "mem": "5", 
     "ports": [
@@ -147,7 +194,7 @@ User-Agent: HTTPie/0.7.2
 HTTP/1.1 201 Created
 Content-Length: 0
 Content-Type: application/json
-Location: http://localhost:8080/v2/apps/myApp
+Location: http://localhost:8080/v2/apps/my-app
 Server: Jetty(8.y.z-SNAPSHOT)
 
 
@@ -197,7 +244,7 @@ Transfer-Encoding: chunked
                 "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
             }, 
             "executor": "", 
-            "id": "myApp", 
+            "id": "my-app", 
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
@@ -260,7 +307,7 @@ Transfer-Encoding: chunked
                 "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
             }, 
             "executor": "", 
-            "id": "myApp", 
+            "id": "my-app", 
             "instances": 3, 
             "mem": 5.0, 
             "ports": [
@@ -288,7 +335,7 @@ List the application with id `appId`.
 **Request:**
 
 ```
-GET /v2/apps/myApp HTTP/1.1
+GET /v2/apps/my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
@@ -322,7 +369,7 @@ Transfer-Encoding: chunked
             "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
         }, 
         "executor": "", 
-        "id": "myApp", 
+        "id": "my-app", 
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
@@ -333,7 +380,7 @@ Transfer-Encoding: chunked
         "tasks": [
             {
                 "host": "agouti.local", 
-                "id": "myApp_0-1396592732285", 
+                "id": "my-app_0-1396592732285", 
                 "ports": [
                     31876, 
                     31877
@@ -362,7 +409,7 @@ List the versions of the application with id `appId`.
 **Request:**
 
 ```
-GET /v2/apps/myApp/versions HTTP/1.1
+GET /v2/apps/my-app/versions HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
@@ -396,7 +443,7 @@ List the configuration of the application with id `appId` at version `version`.
 **Request:**
 
 ```
-GET /v2/apps/myApp/versions/2014-03-01T23:17:50.295Z HTTP/1.1
+GET /v2/apps/my-app/versions/2014-03-01T23:17:50.295Z HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
@@ -418,7 +465,7 @@ Transfer-Encoding: chunked
     "cpus": 0.1, 
     "env": {}, 
     "executor": "", 
-    "id": "myApp", 
+    "id": "my-app", 
     "instances": 4, 
     "mem": 5.0, 
     "ports": [
@@ -444,7 +491,7 @@ __not__ pre-emptively restarted.
 **Request:**
 
 ```
-PUT /v2/apps/myApp HTTP/1.1
+PUT /v2/apps/my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 126
@@ -488,7 +535,7 @@ If the `version` key is supplied in the JSON body, the rest of the object is ign
 **Request:**
 
 ```
-PUT /v2/apps/myApp HTTP/1.1
+PUT /v2/apps/my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 39
@@ -516,7 +563,7 @@ Destroy an application. All data about that application will be deleted.
 **Request:**
 
 ```
-DELETE /v2/apps/myApp HTTP/1.1
+DELETE /v2/apps/my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0
@@ -548,7 +595,7 @@ List all running tasks for application `appId`.
 **Request:**
 
 ```
-GET /v2/apps/myApp/tasks HTTP/1.1
+GET /v2/apps/my-app/tasks HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
@@ -570,7 +617,7 @@ Transfer-Encoding: chunked
     "tasks": [
         {
             "host": "agouti.local", 
-            "id": "myApp_1-1396592790353", 
+            "id": "my-app_1-1396592790353", 
             "ports": [
                 31336, 
                 31337
@@ -581,7 +628,7 @@ Transfer-Encoding: chunked
         }, 
         {
             "host": "agouti.local", 
-            "id": "myApp_0-1396592784349", 
+            "id": "my-app_0-1396592784349", 
             "ports": [
                 31382, 
                 31383
@@ -599,7 +646,7 @@ Transfer-Encoding: chunked
 **Request:**
 
 ```
-GET /v2/apps/myApp/tasks HTTP/1.1
+GET /v2/apps/my-app/tasks HTTP/1.1
 Accept: text/plain
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
@@ -616,8 +663,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	19385	agouti.local:31336	agouti.local:31364	agouti.local:31382	
-myApp	11186	agouti.local:31337	agouti.local:31365	agouti.local:31383	
+my-app	19385	agouti.local:31336	agouti.local:31364	agouti.local:31382	
+my-app	11186	agouti.local:31337	agouti.local:31365	agouti.local:31383	
 
 ```
 
@@ -636,7 +683,7 @@ killed tasks.  The `scale` parameter defaults to `false`.
 **Request:**
 
 ```
-DELETE /v2/apps/myApp/tasks?host=mesos.vm&scale=false HTTP/1.1
+DELETE /v2/apps/my-app/tasks?host=mesos.vm&scale=false HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0
@@ -673,7 +720,7 @@ the application is scaled down one if the supplied `taskId` exists.  The
 **Request:**
 
 ```
-DELETE /v2/apps/myApp/tasks/myApp_3-1389916890411 HTTP/1.1
+DELETE /v2/apps/my-app/tasks/my-app_3-1389916890411 HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0
@@ -693,7 +740,7 @@ Transfer-Encoding: chunked
 {
     "task": {
         "host": "mesos.vm",
-        "id": "myApp_3-1389916890411",
+        "id": "my-app_3-1389916890411",
         "ports": [
             31509,
             31510
@@ -736,9 +783,9 @@ Transfer-Encoding: chunked
 {
     "tasks": [
         {
-            "appId": "myApp", 
+            "appId": "my-app", 
             "host": "agouti.local", 
-            "id": "myApp_2-1396592796360", 
+            "id": "my-app_2-1396592796360", 
             "ports": [
                 31364, 
                 31365
@@ -748,9 +795,9 @@ Transfer-Encoding: chunked
             "version": "2014-04-04T06:26:23.051Z"
         }, 
         {
-            "appId": "myApp", 
+            "appId": "my-app", 
             "host": "agouti.local", 
-            "id": "myApp_1-1396592790353", 
+            "id": "my-app_1-1396592790353", 
             "ports": [
                 31336, 
                 31337
@@ -760,9 +807,9 @@ Transfer-Encoding: chunked
             "version": "2014-04-04T06:26:23.051Z"
         }, 
         {
-            "appId": "myApp", 
+            "appId": "my-app", 
             "host": "agouti.local", 
-            "id": "myApp_0-1396592784349", 
+            "id": "my-app_0-1396592784349", 
             "ports": [
                 31382, 
                 31383
@@ -797,8 +844,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp	19385	agouti.local:31336	agouti.local:31364	agouti.local:31382	
-myApp	11186	agouti.local:31337	agouti.local:31365	agouti.local:31383	
+my-app	19385	agouti.local:31336	agouti.local:31364	agouti.local:31382	
+my-app	11186	agouti.local:31337	agouti.local:31365	agouti.local:31383	
 
 ```
 
@@ -938,7 +985,7 @@ User-Agent: HTTPie/0.7.2
 {
     "cmd": "sleep 60", 
     "cpus": "0.1", 
-    "id": "myApp", 
+    "id": "my-app", 
     "instances": "3", 
     "mem": "5", 
     "ports": [
@@ -995,7 +1042,7 @@ Transfer-Encoding: chunked
         "cpus": 0.1, 
         "env": {}, 
         "executor": "", 
-        "id": "myApp", 
+        "id": "my-app", 
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
@@ -1029,7 +1076,7 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 {
-    "id": "myApp"
+    "id": "my-app"
 }
 ```
 
@@ -1061,7 +1108,7 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 {
-    "id": "myApp", 
+    "id": "my-app", 
     "instances": "4"
 }
 ```
@@ -1084,7 +1131,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 **Request:**
 
 ```
-GET /v1/apps/search?id=myApp HTTP/1.1
+GET /v1/apps/search?id=my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
@@ -1110,7 +1157,7 @@ Transfer-Encoding: chunked
         "cpus": 0.1, 
         "env": {}, 
         "executor": "", 
-        "id": "myApp", 
+        "id": "my-app", 
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
@@ -1157,7 +1204,7 @@ Transfer-Encoding: chunked
         "cpus": 0.1, 
         "env": {}, 
         "executor": "", 
-        "id": "myApp", 
+        "id": "my-app", 
         "instances": 3, 
         "mem": 5.0, 
         "ports": [
@@ -1180,7 +1227,7 @@ Transfer-Encoding: chunked
 **Request:**
 
 ```
-GET /v1/apps/myApp/tasks HTTP/1.1
+GET /v1/apps/my-app/tasks HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
@@ -1199,10 +1246,10 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "myApp": [
+    "my-app": [
         {
             "host": "agouti.local", 
-            "id": "myApp_0-1396592878455", 
+            "id": "my-app_0-1396592878455", 
             "ports": [
                 31759, 
                 31760
@@ -1210,7 +1257,7 @@ Transfer-Encoding: chunked
         }, 
         {
             "host": "agouti.local", 
-            "id": "myApp_2-1396592890464", 
+            "id": "my-app_2-1396592890464", 
             "ports": [
                 31991, 
                 31992
@@ -1218,7 +1265,7 @@ Transfer-Encoding: chunked
         }, 
         {
             "host": "agouti.local", 
-            "id": "myApp_1-1396592884460", 
+            "id": "my-app_1-1396592884460", 
             "ports": [
                 31945, 
                 31946
@@ -1226,7 +1273,7 @@ Transfer-Encoding: chunked
         }, 
         {
             "host": "agouti.local", 
-            "id": "myApp_3-1396592896470", 
+            "id": "my-app_3-1396592896470", 
             "ports": [
                 31938, 
                 31939
@@ -1265,11 +1312,11 @@ Transfer-Encoding: chunked
 
 [
     {
-        "id": "myApp", 
+        "id": "my-app", 
         "instances": [
             {
                 "host": "agouti.local", 
-                "id": "myApp_0-1396592878455", 
+                "id": "my-app_0-1396592878455", 
                 "ports": [
                     31759, 
                     31760
@@ -1277,7 +1324,7 @@ Transfer-Encoding: chunked
             }, 
             {
                 "host": "agouti.local", 
-                "id": "myApp_2-1396592890464", 
+                "id": "my-app_2-1396592890464", 
                 "ports": [
                     31991, 
                     31992
@@ -1285,7 +1332,7 @@ Transfer-Encoding: chunked
             }, 
             {
                 "host": "agouti.local", 
-                "id": "myApp_3-1396592896470", 
+                "id": "my-app_3-1396592896470", 
                 "ports": [
                     31938, 
                     31939
@@ -1322,8 +1369,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_17753 17753 agouti.local:31991 agouti.local:31938 agouti.local:31759 
-myApp_18445 18445 agouti.local:31992 agouti.local:31939 agouti.local:31760 
+my-app_17753 17753 agouti.local:31991 agouti.local:31938 agouti.local:31759 
+my-app_18445 18445 agouti.local:31992 agouti.local:31939 agouti.local:31760 
 
 ```
 
@@ -1334,7 +1381,7 @@ myApp_18445 18445 agouti.local:31992 agouti.local:31939 agouti.local:31760
 **Request:**
 
 ```
-GET /v1/endpoints/myApp HTTP/1.1
+GET /v1/endpoints/my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
@@ -1353,11 +1400,11 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "id": "myApp", 
+    "id": "my-app", 
     "instances": [
         {
             "host": "agouti.local", 
-            "id": "myApp_0-1396592878455", 
+            "id": "my-app_0-1396592878455", 
             "ports": [
                 31759, 
                 31760
@@ -1365,7 +1412,7 @@ Transfer-Encoding: chunked
         }, 
         {
             "host": "agouti.local", 
-            "id": "myApp_2-1396592890464", 
+            "id": "my-app_2-1396592890464", 
             "ports": [
                 31991, 
                 31992
@@ -1373,7 +1420,7 @@ Transfer-Encoding: chunked
         }, 
         {
             "host": "agouti.local", 
-            "id": "myApp_3-1396592896470", 
+            "id": "my-app_3-1396592896470", 
             "ports": [
                 31938, 
                 31939
@@ -1392,7 +1439,7 @@ Transfer-Encoding: chunked
 **Request:**
 
 ```
-GET /v1/endpoints/myApp HTTP/1.1
+GET /v1/endpoints/my-app HTTP/1.1
 Accept: text/plain
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
@@ -1409,8 +1456,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-myApp_17753 17753 agouti.local:31991 agouti.local:31938 agouti.local:31988 
-myApp_18445 18445 agouti.local:31992 agouti.local:31939 agouti.local:31989 
+my-app_17753 17753 agouti.local:31991 agouti.local:31938 agouti.local:31988 
+my-app_18445 18445 agouti.local:31992 agouti.local:31939 agouti.local:31989 
 
 ```
 
@@ -1442,10 +1489,10 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "myApp": [
+    "my-app": [
         {
             "host": "agouti.local", 
-            "id": "myApp_2-1396592951529", 
+            "id": "my-app_2-1396592951529", 
             "ports": [
                 31994, 
                 31995
@@ -1453,7 +1500,7 @@ Transfer-Encoding: chunked
         }, 
         {
             "host": "agouti.local", 
-            "id": "myApp_3-1396592896470", 
+            "id": "my-app_3-1396592896470", 
             "ports": [
                 31938, 
                 31939
@@ -1461,7 +1508,7 @@ Transfer-Encoding: chunked
         }, 
         {
             "host": "agouti.local", 
-            "id": "myApp_2-1396592939516", 
+            "id": "my-app_2-1396592939516", 
             "ports": [
                 31988, 
                 31989
@@ -1479,7 +1526,7 @@ Transfer-Encoding: chunked
 **Request:**
 
 ```
-POST /v1/tasks/kill?appId=myApp HTTP/1.1
+POST /v1/tasks/kill?appId=my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0

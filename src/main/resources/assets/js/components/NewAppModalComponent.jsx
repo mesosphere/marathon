@@ -5,17 +5,42 @@ define([
   "Underscore",
   "React",
   "mixins/BackboneMixin",
+  "models/App",
   "jsx!components/FormGroupComponent",
   "jsx!components/ModalComponent"
-], function($, _, React, BackboneMixin, FormGroupComponent, ModalComponent) {
+], function($, _, React, BackboneMixin, App, FormGroupComponent,
+      ModalComponent) {
+
   return React.createClass({
+    mixins: [BackboneMixin],
+    propTypes: {
+      onCreate: React.PropTypes.func,
+      onDestroy: React.PropTypes.func
+    },
+
+    getDefaultProps: function() {
+      return {
+        onCreate: $.noop,
+        onDestroy: $.noop
+      };
+    },
+
+    getInitialState: function() {
+      return {
+        model: new App()
+      };
+    },
+
     destroy: function() {
+      // This will also call `this.props.onDestroy` since it is passed as the
+      // callback for the modal's `onDestroy` prop.
       this.refs.modalComponent.destroy();
     },
+
     getResource: function() {
-      return this.props.model;
+      return this.state.model;
     },
-    mixins: [BackboneMixin],
+
     onSubmit: function(event) {
       event.preventDefault();
 
@@ -44,23 +69,25 @@ define([
       // mem, cpus, and instances are all Numbers and should be parsed as such.
       if ("mem" in modelAttrs) modelAttrs.mem = parseFloat(modelAttrs.mem);
       if ("cpus" in modelAttrs) modelAttrs.cpus = parseFloat(modelAttrs.cpus);
+      if ("disk" in modelAttrs) modelAttrs.disk = parseFloat(modelAttrs.disk);
       if ("instances" in modelAttrs) {
         modelAttrs.instances = parseInt(modelAttrs.instances, 10);
       }
 
-      this.props.model.set(modelAttrs);
+      this.state.model.set(modelAttrs);
 
-      if (this.props.model.isValid()) {
-        this.props.onCreate();
+      if (this.state.model.isValid()) {
+        this.props.onCreate(this.state.model);
         this.destroy();
       }
     },
+
     render: function() {
-      var model = this.props.model;
+      var model = this.state.model;
 
       return (
-        <ModalComponent ref="modalComponent">
-          <form method="post" className="form-horizontal" role="form" onSubmit={this.onSubmit}>
+        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
+          <form method="post" role="form" onSubmit={this.onSubmit}>
             <div className="modal-header">
               <button type="button" className="close"
                 aria-hidden="true" onClick={this.destroy}>&times;</button>
@@ -71,7 +98,11 @@ define([
                   attribute="id"
                   label="ID"
                   model={model}>
-                <input autoFocus required />
+                <input
+                  autoFocus
+                  pattern={App.VALID_ID_PATTERN}
+                  required
+                  title="Must be a valid hostname (may contain only digits, dashes, dots, and lowercase letters)" />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="cpus"
@@ -84,6 +115,12 @@ define([
                   label="Memory (MB)"
                   model={model}>
                 <input min="0" step="any" type="number" required />
+              </FormGroupComponent>
+              <FormGroupComponent
+                  attribute="disk"
+                  label="Disk Space (MB)"
+                  model={model}>
+              <input min="0" step="any" type="number" required />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="instances"
@@ -119,12 +156,11 @@ define([
                   model={model}>
                 <input />
               </FormGroupComponent>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-link" type="button" onClick={this.destroy}>
-                Cancel
-              </button>
-              <input type="submit" className="btn btn-primary" value="Create" />
+              <div>
+                <input type="submit" className="btn btn-success" value="+ Create" /> <button className="btn btn-default" type="button" onClick={this.destroy}>
+                  Cancel
+                </button>
+              </div>
             </div>
           </form>
         </ModalComponent>

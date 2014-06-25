@@ -1,9 +1,9 @@
 package mesosphere.marathon
 
 import com.google.inject._
-import org.apache.mesos.state.{ZooKeeperState, State}
+import org.apache.mesos.state.{ ZooKeeperState, State }
 import java.util.concurrent.TimeUnit
-import com.twitter.common.zookeeper.{Group, CandidateImpl, Candidate, ZooKeeperClient}
+import com.twitter.common.zookeeper.{ Group, CandidateImpl, Candidate, ZooKeeperClient }
 import org.apache.zookeeper.ZooDefs
 import com.twitter.common.base.Supplier
 import org.apache.log4j.Logger
@@ -11,24 +11,21 @@ import javax.inject.Named
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
 import akka.actor.ActorSystem
-import mesosphere.marathon.state.{MarathonStore, AppRepository}
+import mesosphere.marathon.state.{ MarathonStore, AppRepository }
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 
-/**
- * @author Tobi Knaup
- */
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
   final val NAMED_LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
 }
 
-class MarathonModule(conf: MarathonConf with ZookeeperConf, zk: ZooKeeperClient)
-  extends AbstractModule {
+class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
+    extends AbstractModule {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -60,7 +57,7 @@ class MarathonModule(conf: MarathonConf with ZookeeperConf, zk: ZooKeeperClient)
   def provideMesosState(): State = {
     new ZooKeeperState(
       conf.zkHosts,
-      conf.zooKeeperTimeout.get.get,
+      conf.zkTimeoutDuration.toMillis,
       TimeUnit.MILLISECONDS,
       conf.zooKeeperStatePath
     )

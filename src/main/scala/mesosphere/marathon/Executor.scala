@@ -1,6 +1,5 @@
 package mesosphere.marathon
 
-
 sealed trait Executor
 case class CommandExecutor() extends Executor
 case class PathExecutor(path: String) extends Executor

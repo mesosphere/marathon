@@ -2,14 +2,13 @@ package mesosphere.marathon.api.v2
 
 import javax.ws.rs._
 import scala.Array
-import javax.ws.rs.core.{Response, Context, MediaType}
-import javax.inject.{Named, Inject}
+import javax.ws.rs.core.{ Response, Context, MediaType }
+import javax.inject.{ Named, Inject }
 import mesosphere.marathon.event.EventModule
 import com.google.common.eventbus.EventBus
-import mesosphere.marathon.{MarathonSchedulerService, BadRequestException}
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.tasks.TaskTracker
 import com.codahale.metrics.annotation.Timed
-import com.sun.jersey.api.NotFoundException
 import javax.servlet.http.HttpServletRequest
 import javax.validation.Valid
 import mesosphere.marathon.api.v1.AppDefinition
@@ -17,19 +16,16 @@ import scala.concurrent.Await
 import mesosphere.marathon.event.ApiPostEvent
 import java.net.URI
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.api.{PATCH, Responses}
-
-/**
- * @author Tobi Knaup
- */
+import mesosphere.marathon.api.Responses
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class AppsResource @Inject()(
+class AppsResource @Inject() (
     @Named(EventModule.busName) eventBus: Option[EventBus],
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
-    healthCheckManager: HealthCheckManager) {
+    healthCheckManager: HealthCheckManager,
+    config: MarathonConf) {
 
   @GET
   @Timed
@@ -38,7 +34,8 @@ class AppsResource @Inject()(
             @QueryParam("id") id: String) = {
     val apps = if (cmd != null || id != null) {
       search(cmd, id)
-    } else {
+    }
+    else {
       service.listApps()
     }
 
@@ -49,11 +46,13 @@ class AppsResource @Inject()(
   @Timed
   @Produces(Array(MediaType.APPLICATION_JSON))
   def create(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
-    validateContainerOpts(app)
-
     maybePostEvent(req, app)
-    Await.result(service.startApp(app), service.defaultWait)
-    Response.created(new URI(s"${app.id}")).build
+    Await.result(service.startApp(app), config.zkTimeoutDuration)
+
+    // Set content to `None` so the response does not set a `Content-Length`
+    // header with value 0, which would tell clients to parse the body as JSON.
+    // An empty string (response body with length 0) is invalid JSON.
+    Response.created(new URI(s"${app.id}")).entity(None).build
   }
 
   @GET
@@ -73,15 +72,13 @@ class AppsResource @Inject()(
   def replace(
     @Context req: HttpServletRequest,
     @PathParam("id") id: String,
-    @Valid appUpdate: AppUpdate
-  ): Response = {
+    @Valid appUpdate: AppUpdate): Response = {
     val updatedApp = appUpdate.apply(AppDefinition(id))
 
     service.getApp(id) match {
       case Some(app) =>
-        validateContainerOpts(updatedApp)
         maybePostEvent(req, updatedApp)
-        Await.result(service.updateApp(id, appUpdate), service.defaultWait)
+        Await.result(service.updateApp(id, appUpdate), config.zkTimeoutDuration)
         Response.noContent.build
 
       case None => create(req, updatedApp)
@@ -94,7 +91,7 @@ class AppsResource @Inject()(
   def delete(@Context req: HttpServletRequest, @PathParam("id") id: String): Response = {
     val app = AppDefinition(id = id)
     maybePostEvent(req, app)
-    Await.result(service.stopApp(app), service.defaultWait)
+    Await.result(service.stopApp(app), config.zkTimeoutDuration)
     Response.noContent.build
   }
 
@@ -105,16 +102,6 @@ class AppsResource @Inject()(
   @Path("{appId}/versions")
   @Produces(Array(MediaType.APPLICATION_JSON))
   def appVersionsResource() = new AppVersionsResource(service)
-
-  /**
-   * Causes a 400: Bad Request if container options are supplied
-   * with the default executor
-   */
-  private def validateContainerOpts(app: AppDefinition): Unit =
-    if (app.container.isDefined && (app.executor == "" || app.executor == "//cmd"))
-      throw new BadRequestException(
-        "Container options are not supported with the default executor"
-      )
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.foreach(_.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app)))

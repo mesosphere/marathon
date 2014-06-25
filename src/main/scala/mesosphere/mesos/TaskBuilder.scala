@@ -13,17 +13,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
 import scala.util.Random
 import scala.Some
-import mesosphere.mesos.protos.{RangesResource, ScalarResource, Resource}
+import mesosphere.mesos.protos.{ RangesResource, ScalarResource, Resource }
 
-
-/**
- * @author Tobi Knaup
- */
-
-class TaskBuilder (app: AppDefinition,
-                   newTaskId: String => TaskID,
-                   taskTracker: TaskTracker,
-                   mapper: ObjectMapper = new ObjectMapper()) {
+class TaskBuilder(app: AppDefinition,
+                  newTaskId: String => TaskID,
+                  taskTracker: TaskTracker,
+                  mapper: ObjectMapper = new ObjectMapper()) {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -32,19 +27,22 @@ class TaskBuilder (app: AppDefinition,
   def buildIfMatches(offer: Offer): Option[(TaskInfo, Seq[Long])] = {
     var cpuRole = ""
     var memRole = ""
+    var diskRole = ""
 
     offerMatches(offer) match {
-      case Some((cpu, mem)) =>
+      case Some((cpu, mem, disk)) =>
         cpuRole = cpu
         memRole = mem
+        diskRole = disk
       case _ =>
-        log.info(s"No matching offer for ${app.id} (need ${app.cpus} CPUs, ${app.mem} mem, ${app.ports.size} ports) : " + offer)
+        log.info(s"No matching offer for ${app.id} (need ${app.cpus} CPUs, ${app.mem} mem, ${app.disk} disk, ${app.ports.size} ports) : " + offer)
         return None
     }
 
     val executor: Executor = if (app.executor == "") {
       Main.conf.executor
-    } else {
+    }
+    else {
       Executor.dispatch(app.executor)
     }
 
@@ -65,12 +63,6 @@ class TaskBuilder (app: AppDefinition,
 
       executor match {
         case CommandExecutor() => {
-          if (app.container.nonEmpty) {
-            log.warn("The command executor can not handle container " +
-                        "options. No tasks will be started for this " +
-                        "appliction.")
-            return None
-          }
           builder.setCommand(TaskBuilder.commandInfo(app, ports))
         }
 
@@ -96,9 +88,10 @@ class TaskBuilder (app: AppDefinition,
     }
   }
 
-  private def offerMatches(offer: Offer): Option[(String, String)] = {
+  private def offerMatches(offer: Offer): Option[(String, String, String)] = {
     var cpuRole = ""
     var memRole = ""
+    var diskRole = ""
 
     for (resource <- offer.getResourcesList.asScala) {
       if (cpuRole.isEmpty &&
@@ -111,10 +104,14 @@ class TaskBuilder (app: AppDefinition,
         resource.getScalar.getValue >= app.mem) {
         memRole = resource.getRole
       }
-      // TODO handle other resources
+      if (diskRole.isEmpty &&
+        resource.getName == Resource.DISK &&
+        resource.getScalar.getValue >= app.disk) {
+        diskRole = resource.getRole
+      }
     }
 
-    if (cpuRole.isEmpty || memRole.isEmpty) {
+    if (cpuRole.isEmpty || memRole.isEmpty || diskRole.isEmpty) {
       return None
     }
 
@@ -124,12 +121,12 @@ class TaskBuilder (app: AppDefinition,
         Constraints.meetsConstraint(runningTasks, offer, _)
       )
       if (!constraintsMet) {
-        log.warn("Did not meet a constraint in an offer." )
+        log.warn("Did not meet a constraint in an offer.")
         return None
       }
       log.info("Met all constraints.")
     }
-    Some((cpuRole, memRole))
+    Some((cpuRole, memRole, diskRole))
   }
 }
 
@@ -141,6 +138,13 @@ object TaskBuilder {
     val builder = CommandInfo.newBuilder()
       .setValue(app.cmd)
       .setEnvironment(environment(envMap))
+
+    for (c <- app.container) {
+      val container = CommandInfo.ContainerInfo.newBuilder()
+        .setImage(c.image)
+        .addAllOptions(c.options.asJava)
+      builder.setContainer(container)
+    }
 
     if (app.uris != null) {
       val uriProtos = app.uris.map(uri => {

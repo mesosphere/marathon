@@ -1,7 +1,7 @@
 package mesosphere.mesos
 
 import scala.collection.JavaConverters._
-import mesosphere.marathon.Protos.{MarathonTask, Constraint}
+import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
 import mesosphere.marathon.Protos.Constraint.Operator
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Offer
@@ -17,9 +17,9 @@ object Constraints {
   val GroupByDefault = 0
 
   private def getIntValue(s: String, default: Int): Int = s match {
-    case "inf" => Integer.MAX_VALUE
+    case "inf"  => Integer.MAX_VALUE
     case Int(x) => x
-    case _ => default
+    case _      => default
   }
 
   private final class ConstraintsChecker(tasks: Iterable[MarathonTask], offer: Offer, constraint: Constraint) {
@@ -30,9 +30,11 @@ object Constraints {
     def isMatch: Boolean =
       if (field == "hostname") {
         checkHostName
-      } else if (attr.nonEmpty) {
+      }
+      else if (attr.nonEmpty) {
         checkAttribute
-      } else {
+      }
+      else {
         // This will be reached in case we want to schedule for an attribute
         // that's not supplied.
         false
@@ -69,14 +71,15 @@ object Constraints {
 
     private def checkHostName =
       constraint.getOperator match {
-        case Operator.LIKE => offer.getHostname.matches(value)
+        case Operator.LIKE   => offer.getHostname.matches(value)
         // All running tasks must have a hostname that is different from the one in the offer
         case Operator.UNIQUE => tasks.forall(_.getHost != offer.getHostname)
         case Operator.CLUSTER =>
           // Hostname must match or be empty
           (value.isEmpty || value == offer.getHostname) &&
-          // All running tasks must have the same hostname as the one in the offer
-          tasks.forall(_.getHost == offer.getHostname)
+            // All running tasks must have the same hostname as the one in the offer
+            tasks.forall(_.getHost == offer.getHostname)
+        case _ => false
       }
 
     private def checkAttribute = {
@@ -92,7 +95,8 @@ object Constraints {
         case Operator.LIKE =>
           if (value.nonEmpty) {
             attr.get.getText.getValue.matches(value)
-          } else {
+          }
+          else {
             log.warn("Error, value is required for LIKE operation")
             false
           }
@@ -100,19 +104,19 @@ object Constraints {
     }
 
     /**
-     * Filters running tasks by matching their attributes to this field & value.
-     * @param tasks
-     * @param field
-     * @param value
-     * @return
-     */
+      * Filters running tasks by matching their attributes to this field & value.
+      * @param tasks
+      * @param field
+      * @param value
+      * @return
+      */
     private def matchTaskAttributes(tasks: Iterable[MarathonTask], field: String, value: String) =
       tasks.filter {
         _.getAttributesList.asScala
           .filter { y =>
-          y.getName == field &&
-            y.getText.getValue == value
-        }.nonEmpty
+            y.getName == field &&
+              y.getText.getValue == value
+          }.nonEmpty
       }
   }
 

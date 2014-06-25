@@ -13,7 +13,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
 - Given that `N` instances of an application are currently running in the
   cluster, restart them
 
-- Ensure that there are at least `N` healthy instances available for servicing
+- Ensure that there are at least `k` percent healthy instances available for servicing
   requests at all times
 
 - Allow for dynamic reconfiguration of load balancers such that no production
@@ -357,22 +357,9 @@ POST /v2/groups/test
 ```json
 {
   "id": "product-a",
-  "scaleUpStrategy": {
-    "maxBatchSize": 2,
-    "staged": {
-      "steps": [3, "20%", "100%"],
-      "stepSeconds": 300
-    },
-    "startupTimeout": 60,
-    "watchPeriod": 60
+  "scalingStrategy": {
+    "minimumHealthCapacity": 0.5
   },
-  "scaleDownStrategy": {
-    "maxBatchSize": 3,
-    "staged": {
-      "steps": ["75%", "100%"],
-      "stepSeconds": 180
-    }
-  }
   "apps": [
     {
       "id": "rails-frontend-1.3.2",

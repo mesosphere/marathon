@@ -2,9 +2,9 @@ package mesosphere.marathon
 
 import org.apache.mesos.state.{State, InMemoryState}
 import mesosphere.marathon.Protos.MarathonTask
-import org.apache.mesos.Protos.{TaskID, TaskStatus, TaskState}
-import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
-import mesosphere.marathon.tasks.{TaskTracker, TaskIDUtil}
+import org.apache.mesos.Protos.{ TaskID, TaskStatus, TaskState }
+import java.io.{ ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream }
+import mesosphere.marathon.tasks.{ TaskTracker, TaskIDUtil }
 import com.google.common.collect.Lists
 import mesosphere.mesos.protos.TextAttribute
 import mesosphere.util.Stats
@@ -16,12 +16,13 @@ class TaskTrackerTest extends MarathonSpec {
 
   var taskTracker: TaskTracker = null
   var state: State = null
+  val config = mock[MarathonConf]
 
   before {
     val metricRegistry = new MetricRegistry
     val stats = new Stats(metricRegistry)
     state = new InMemoryState
-    taskTracker = new TaskTracker(state, stats)
+    taskTracker = new TaskTracker(state, stats, config)
   }
 
   def makeSampleTask(id: String) = {
@@ -57,9 +58,9 @@ class TaskTrackerTest extends MarathonSpec {
     }
 
     val app = "foo"
-    val taskId1 = TaskIDUtil.taskId(app, 1)
-    val taskId2 = TaskIDUtil.taskId(app, 2)
-    val taskId3 = TaskIDUtil.taskId(app, 3)
+    val taskId1 = TaskIDUtil.taskId(app)
+    val taskId2 = TaskIDUtil.taskId(app)
+    val taskId3 = TaskIDUtil.taskId(app)
 
     val task1 = makeTask(taskId1, "foo.bar.bam", 100)
     val task2 = makeTask(taskId2, "foo.bar.bam", 200)
@@ -92,9 +93,9 @@ class TaskTrackerTest extends MarathonSpec {
     }
 
     val app = "foo"
-    val taskId1 = TaskIDUtil.taskId(app, 1)
-    val taskId2 = TaskIDUtil.taskId(app, 2)
-    val taskId3 = TaskIDUtil.taskId(app, 3)
+    val taskId1 = TaskIDUtil.taskId(app)
+    val taskId2 = TaskIDUtil.taskId(app)
+    val taskId3 = TaskIDUtil.taskId(app)
 
     val task1 = makeTask(taskId1, "foo.bar.bam", 100)
     val task2 = makeTask(taskId2, "foo.bar.bam", 200)
@@ -111,7 +112,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     val metricRegistry2 = new MetricRegistry
     val stats2 = new Stats(metricRegistry2)
-    val taskTracker2 = new TaskTracker(state, stats2)
+    val taskTracker2 = new TaskTracker(state, stats2, config)
     val results = taskTracker2.fetchApp(app).tasks
 
     shouldContainTask(results, task1)

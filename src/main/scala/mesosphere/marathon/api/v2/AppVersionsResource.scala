@@ -2,12 +2,11 @@ package mesosphere.marathon.api.v2
 
 import javax.ws.rs._
 import com.codahale.metrics.annotation.Timed
-import javax.ws.rs.core.{MediaType, Response}
+import javax.ws.rs.core.{ MediaType, Response }
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.state.Timestamp
 import org.apache.log4j.Logger
 import mesosphere.marathon.api.Responses
-
 
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))

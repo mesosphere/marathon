@@ -2,10 +2,6 @@ package mesosphere.marathon.state
 
 import scala.concurrent.Future
 
-/**
- * @author Tobi Knaup
- */
-
 trait PersistenceStore[T] {
 
   def fetch(key: String): Future[Option[T]]
@@ -14,7 +10,7 @@ trait PersistenceStore[T] {
 
   // () => T: returns deserialized T value.
   // user can avoid unnecessary deserialization calls.
-  def modify(key:String)(f: (() => T) => T): Future[Option[T]]
+  def modify(key: String)(f: (() => T) => T): Future[Option[T]]
 
   def expunge(key: String): Future[Boolean]
 

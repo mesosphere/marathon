@@ -5,14 +5,15 @@ declare -a java_args
 declare -a app_args
 FRAMEWORK_HOME=`dirname $0`/..
 
-if [ -z ${MESOS_NATIVE_LIBRARY+x} ]
+if [ -z ${MESOS_NATIVE_JAVA_LIBRARY+x} ]
 then
   search_paths='/usr/lib /usr/local/lib'
-  echo "MESOS_NATIVE_LIBRARY is not set. Searching in $search_paths."
-  export MESOS_NATIVE_LIBRARY=$(find -L $search_paths -name libmesos.dylib -or -name libmesos.so 2>/dev/null | head -n1)
+  echo "MESOS_NATIVE_JAVA_LIBRARY is not set. Searching in $search_paths."
+  export MESOS_NATIVE_JAVA_LIBRARY=$(find -L $search_paths -name libmesos.dylib -or -name libmesos.so 2>/dev/null | head -n1)
+  export MESOS_NATIVE_LIBRARY=$MESOS_NATIVE_JAVA_LIBRARY
 fi
 
-echo "MESOS_NATIVE_LIBRARY is set to $MESOS_NATIVE_LIBRARY"
+echo "MESOS_NATIVE_LIBRARY, MESOS_NATIVE_JAVA_LIBRARY set to $MESOS_NATIVE_JAVA_LIBRARY"
 
 addJava() { java_args=( "${java_args[@]}" "$1" ); }
 addApplication() { app_args=( "${app_args[@]}" "$1" ); }
@@ -41,5 +42,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [ -n ${JVM_OPTS+x} ]
+then
+  for arg in ${JVM_OPTS[@]}
+  do
+    addJava "$arg"
+  done
+fi
+
 # Start Marathon
-java "${java_args[@]}" -jar "$FRAMEWORK_HOME"/target/marathon-*-jar-with-dependencies.jar "${app_args[@]}"
+marathon_jar=$(find "$FRAMEWORK_HOME"/target -name 'marathon-assembly-*.jar' | sort | tail -1)
+java "${java_args[@]}" -jar "$marathon_jar" "${app_args[@]}"

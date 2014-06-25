@@ -1,46 +1,45 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.{TaskID, FrameworkInfo}
-import org.apache.mesos.MesosSchedulerDriver
+import org.apache.mesos.Protos.TaskID
 import org.apache.log4j.Logger
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.{AppRepository, Timestamp}
+import mesosphere.marathon.state.{ AppRepository, Timestamp }
 import com.google.common.util.concurrent.AbstractExecutionThreadService
-import javax.inject.{Named, Inject}
-import java.util.{TimerTask, Timer}
-import scala.concurrent.{Future, ExecutionContext, Await}
-import scala.concurrent.duration.{Duration, MILLISECONDS}
+import javax.inject.{ Named, Inject }
+import java.util.{ TimerTask, Timer }
+import scala.concurrent.{ Future, Await }
+import scala.concurrent.duration.MILLISECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Group.JoinException
 import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
-import scala.util.{Failure, Success, Random}
+import scala.util.{ Failure, Success, Random }
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import scala.concurrent.duration._
 import java.util.concurrent.CountDownLatch
+import mesosphere.util.{ BackToTheFuture, ThreadPoolContext }
 
 /**
- * Wrapper class for the scheduler
- *
- * @author Tobi Knaup
- */
-class MarathonSchedulerService @Inject()(
-    healthCheckManager: HealthCheckManager,
-    @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
-    config: MarathonConf,
-    frameworkIdUtil: FrameworkIdUtil,
-    @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
-    appRepository: AppRepository,
-    scheduler: MarathonScheduler)
-  extends AbstractExecutionThreadService with Leader {
+  * Wrapper class for the scheduler
+  */
+class MarathonSchedulerService @Inject() (
+  healthCheckManager: HealthCheckManager,
+  @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
+  config: MarathonConf,
+  frameworkIdUtil: FrameworkIdUtil,
+  @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
+  appRepository: AppRepository,
+  scheduler: MarathonScheduler)
+    extends AbstractExecutionThreadService with Leader {
 
-  // TODO use a thread pool here
-  import ExecutionContext.Implicits.global
+  import ThreadPoolContext.context
+
+  implicit val zkTimeout = config.zkFutureTimeout
 
   val latch = new CountDownLatch(1)
 
@@ -56,7 +55,7 @@ class MarathonSchedulerService @Inject()(
 
   val log = Logger.getLogger(getClass.getName)
 
-  val frameworkId = frameworkIdUtil.fetch()
+  val frameworkId = frameworkIdUtil.fetch
   frameworkId match {
     case Some(id) =>
       log.info(s"Setting framework ID to ${id.getValue}")
@@ -68,10 +67,6 @@ class MarathonSchedulerService @Inject()(
   // be reused (i.e. once stopped they can't be started again. Thus,
   // we have to allocate a new driver before each run or after each stop.
   var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
-
-  def defaultWait = {
-    appRepository.defaultWait
-  }
 
   def startApp(app: AppDefinition): Future[_] = {
     // Backwards compatibility
@@ -96,28 +91,27 @@ class MarathonSchedulerService @Inject()(
     }
 
   def listApps(): Iterable[AppDefinition] =
-    Await.result(appRepository.apps, defaultWait)
+    Await.result(appRepository.apps, config.zkTimeoutDuration)
 
   def listAppVersions(appName: String): Iterable[Timestamp] =
-    Await.result(appRepository.listVersions(appName), defaultWait)
+    Await.result(appRepository.listVersions(appName), config.zkTimeoutDuration)
 
   def getApp(appName: String): Option[AppDefinition] = {
-    Await.result(appRepository.currentVersion(appName), defaultWait)
+    Await.result(appRepository.currentVersion(appName), config.zkTimeoutDuration)
   }
 
-  def getApp(appName: String, version: Timestamp) : Option[AppDefinition] = {
-    Await.result(appRepository.app(appName, version), defaultWait)
+  def getApp(appName: String, version: Timestamp): Option[AppDefinition] = {
+    Await.result(appRepository.app(appName, version), config.zkTimeoutDuration)
   }
 
   def killTasks(
     appName: String,
     tasks: Iterable[MarathonTask],
-    scale: Boolean
-  ): Iterable[MarathonTask] = {
+    scale: Boolean): Iterable[MarathonTask] = {
     if (scale) {
       getApp(appName) foreach { app =>
         val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
-        Await.result(scheduler.updateApp(driver, appName, appUpdate), defaultWait)
+        Await.result(scheduler.updateApp(driver, appName, appUpdate), config.zkTimeoutDuration)
       }
     }
 
@@ -175,7 +169,6 @@ class MarathonSchedulerService @Inject()(
 
   def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = {
     log.info("Running driver")
-    listApps foreach healthCheckManager.reconcileWith
 
     // The following block asynchronously runs the driver. Note that driver.run()
     // blocks until the driver has been stopped (or aborted).
@@ -196,7 +189,7 @@ class MarathonSchedulerService @Inject()(
         // not the leader
         abdicateCmdOption match {
           case Some(cmd) => cmd.execute()
-          case _ => leader.set(false)
+          case _         => leader.set(false)
         }
 
         // If we are shutting down then don't offer leadership. But if we
@@ -260,6 +253,9 @@ class MarathonSchedulerService @Inject()(
     // Note that abdication command will be ran upon driver shutdown.
     leader.set(false)
 
+    // Stop all health checks
+    healthCheckManager.removeAll()
+
     stopDriver()
   }
 
@@ -269,6 +265,9 @@ class MarathonSchedulerService @Inject()(
     // We have been elected as leader. Thus, update leadership and run the driver.
     leader.set(true)
     runDriver(abdicateOption)
+
+    // Create health checks for any existing apps
+    listApps foreach healthCheckManager.reconcileWith
   }
 
   def abdicateLeadership(): Unit = {
@@ -303,7 +302,8 @@ class MarathonSchedulerService @Inject()(
         def run() {
           if (isLeader) {
             scheduler.reconcileTasks(driver)
-          } else log.info("Not leader therefore not reconciling tasks")
+          }
+          else log.info("Not leader therefore not reconciling tasks")
         }
       },
       reconciliationInitialDelay.toMillis,

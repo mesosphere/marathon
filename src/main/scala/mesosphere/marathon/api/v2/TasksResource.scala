@@ -12,13 +12,9 @@ import org.apache.log4j.Logger
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.health.HealthCheckActor.Health
 
-/**
- * @author Tobi Knaup
- */
-
 @Path("v2/tasks")
-class TasksResource @Inject()(service: MarathonSchedulerService,
-                              taskTracker: TaskTracker) {
+class TasksResource @Inject() (service: MarathonSchedulerService,
+                               taskTracker: TaskTracker) {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -26,8 +22,9 @@ class TasksResource @Inject()(service: MarathonSchedulerService,
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
   def indexJson() = {
-    val flatTasksList = taskTracker.list.flatMap { case (appId, setOfTasks) =>
-      setOfTasks.tasks.map(EnrichedTask(appId, _, Seq[Option[Health]]()))
+    val flatTasksList = taskTracker.list.flatMap {
+      case (appId, setOfTasks) =>
+        setOfTasks.tasks.map(EnrichedTask(appId, _, Seq[Option[Health]]()))
     }
 
     Map("tasks" -> flatTasksList)

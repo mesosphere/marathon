@@ -6,11 +6,6 @@ import mesosphere.marathon.api.v2.json.MarathonModule
 import com.google.inject.Scopes
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
-
-/**
- * @author Tobi Knaup
- */
-
 class MarathonRestModule extends RestModule {
 
   override val jacksonModules = Seq(

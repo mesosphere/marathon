@@ -4,28 +4,25 @@ import mesosphere.marathon.api.v1.AppDefinition
 
 import org.mockito.Mockito._
 
-import mesosphere.marathon.Protos.{MarathonTask, Constraint}
-import mesosphere.marathon.tasks.{MarathonTasks, TaskTracker}
+import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.Protos.{Offer, TaskInfo}
+import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import mesosphere.mesos.protos._
-
-/**
- * @author Tobi Knaup
- */
 
 class TaskBuilderTest extends MarathonSpec {
 
   import mesosphere.mesos.protos.Implicits._
 
   test("BuildIfMatches") {
-    val offer = makeBasicOffer(1.0, 128.0, 31000, 32000)
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
       .addResources(ScalarResource("cpus", 1))
       .addResources(ScalarResource("mem", 128))
+      .addResources(ScalarResource("disk", 2000))
       .build
 
     val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
@@ -34,6 +31,7 @@ class TaskBuilderTest extends MarathonSpec {
         id = "testApp",
         cpus = 1,
         mem = 64,
+        disk = 1,
         executor = "//cmd",
         ports = Seq(8080, 8081)
       )
@@ -58,11 +56,13 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("BuildIfMatchesWithRole") {
-    val offer = makeBasicOfferWithRole(1.0, 128.0, 31000, 32000, "marathon")
+    val offer = makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = "marathon")
       .addResources(ScalarResource("cpus", 1, "*"))
       .addResources(ScalarResource("mem", 128, "*"))
+      .addResources(ScalarResource("disk", 1000, "*"))
       .addResources(ScalarResource("cpus", 2, "marathon"))
       .addResources(ScalarResource("mem", 256, "marathon"))
+      .addResources(ScalarResource("disk", 2000, "marathon"))
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
@@ -72,6 +72,7 @@ class TaskBuilderTest extends MarathonSpec {
         id = "testApp",
         cpus = 2,
         mem = 200,
+        disk = 2,
         executor = "//cmd",
         ports = Seq(8080, 8081)
       )
@@ -96,11 +97,13 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("BuildIfMatchesWithRole2") {
-    val offer = makeBasicOfferWithRole(1.0, 128.0, 31000, 32000, "*")
+    val offer = makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = "*")
       .addResources(ScalarResource("cpus", 1, "*"))
       .addResources(ScalarResource("mem", 128, "*"))
+      .addResources(ScalarResource("disk", 1000, "*"))
       .addResources(ScalarResource("cpus", 2, "marathon"))
       .addResources(ScalarResource("mem", 256, "marathon"))
+      .addResources(ScalarResource("disk", 2000, "marathon"))
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
@@ -110,6 +113,7 @@ class TaskBuilderTest extends MarathonSpec {
         id = "testApp",
         cpus = 1,
         mem = 64,
+        disk = 1,
         executor = "//cmd",
         ports = Seq(8080, 8081)
       )
@@ -135,7 +139,7 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("BuildIfMatchesWithRackIdConstraint") {
-    val taskTracker =  mock[TaskTracker]
+    val taskTracker = mock[TaskTracker]
 
     val offer = makeBasicOffer(1.0, 128.0, 31000, 32000)
       .addAttributes(TextAttribute("rackid", "1"))
@@ -147,7 +151,7 @@ class TaskBuilderTest extends MarathonSpec {
           .setField("rackid")
           .setOperator(Constraint.Operator.UNIQUE)
           .build()
-        )
+      )
     )
 
     val t1 = makeSampleTask(app.id, "rackid", "2")
@@ -318,7 +322,7 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   def buildIfMatches(offer: Offer, app: AppDefinition) = {
-    val taskTracker =  mock[TaskTracker]
+    val taskTracker = mock[TaskTracker]
     val builder = new TaskBuilder(app,
       s => TaskID(s), taskTracker)
     builder.buildIfMatches(offer)

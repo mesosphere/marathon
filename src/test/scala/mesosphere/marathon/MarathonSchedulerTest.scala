@@ -3,14 +3,14 @@ package mesosphere.marathon
 import org.mockito.Mockito._
 import org.mockito.Matchers._
 import com.fasterxml.jackson.databind.ObjectMapper
-import mesosphere.marathon.state.{Timestamp, AppRepository}
+import mesosphere.marathon.state.{ Timestamp, AppRepository }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.{MarathonTasks, TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
 import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
-import org.apache.mesos.Protos.{OfferID, TaskID, TaskInfo}
-import org.mockito.{Matchers, ArgumentCaptor}
+import org.apache.mesos.Protos.{ OfferID, TaskID, TaskInfo }
+import org.mockito.{ Matchers, ArgumentCaptor }
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
@@ -18,9 +18,6 @@ import mesosphere.util.{Stats, RateLimiters}
 import scala.collection.mutable
 import com.codahale.metrics.MetricRegistry
 
-/**
- * @author Tobi Knaup
- */
 class MarathonSchedulerTest extends MarathonSpec {
 
   var repo: AppRepository = null
@@ -30,6 +27,7 @@ class MarathonSchedulerTest extends MarathonSpec {
   var scheduler: MarathonScheduler = null
   var frameworkIdUtil: FrameworkIdUtil = null
   var rateLimiters: RateLimiters = null
+  var config: MarathonConf = null
 
   val metricRegistry = new MetricRegistry
   val stats = new Stats(metricRegistry)
@@ -41,6 +39,7 @@ class MarathonSchedulerTest extends MarathonSpec {
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     rateLimiters = mock[RateLimiters]
+    config = mock[MarathonConf]
     scheduler = new MarathonScheduler(
       None,
       new ObjectMapper,
@@ -50,13 +49,14 @@ class MarathonSchedulerTest extends MarathonSpec {
       queue,
       frameworkIdUtil,
       rateLimiters,
-      stats
+      stats,
+      config
     )
   }
 
   test("ResourceOffers") {
     val driver = mock[SchedulerDriver]
-    val offer = makeBasicOffer(4, 1024, 31000, 32000).build
+    val offer = makeBasicOffer(cpus = 4, mem = 1024, disk = 4000, beginPort = 31000, endPort = 32000).build
     val offers = Lists.newArrayList(offer)
     val now = Timestamp.now
     val app = AppDefinition(
