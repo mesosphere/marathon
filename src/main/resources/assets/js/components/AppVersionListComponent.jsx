@@ -3,20 +3,28 @@
 define([
   "React",
   "models/App",
+  "mixins/BackboneMixin",
   "jsx!components/AppVersionListItemComponent",
   "jsx!components/PagedNavComponent",
   "jsx!components/PagedContentComponent",
-], function(React, App, AppVersionListItemComponent,
+], function(React, App, BackboneMixin, AppVersionListItemComponent,
     PagedNavComponent, PagedContentComponent) {
   "use strict";
 
   return React.createClass({
     displayName: "AppVersionListComponent",
+
+    mixins: [BackboneMixin],
+
     propTypes: {
       app: React.PropTypes.instanceOf(App).isRequired,
       appVersions: React.PropTypes.object.isRequired,
       fetchAppVersions: React.PropTypes.func.isRequired,
       onRollback: React.PropTypes.func
+    },
+
+    getResource: function() {
+      return this.props.appVersions;
     },
 
     getInitialState: function() {
@@ -35,7 +43,7 @@ define([
       var appVersions = this.props.appVersions.models;
       var itemsPerPage = this.state.itemsPerPage;
       var currentPage = this.state.currentPage;
-      var currentVersion = this.props.appVersions.at(0);
+      // var currentVersion = this.props.appVersions.at(0);
       var useEndArrows =
         Math.ceil(appVersions.length / itemsPerPage) > this.state.noVisiblePages;
       return (
@@ -78,7 +86,7 @@ define([
                     <div>
                       <AppVersionListItemComponent
                         app={this.props.app}
-                        appVersion={currentVersion}
+                        appVersion={this.props.app}
                         currentVersion={true} />
                       <PagedContentComponent
                         currentPage={currentPage}

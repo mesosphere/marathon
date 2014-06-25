@@ -25,7 +25,7 @@ define([
   return React.createClass({
     displayName: "AppModalComponent",
 
-    mixins:[BackboneMixin],
+    mixins: [BackboneMixin],
 
     componentWillMount: function() {
       this.fetchTasks();
@@ -109,15 +109,14 @@ define([
     },
 
     rollbackToAppVersion: function(appVersion) {
-      this.setState({appVersionsFetchState: STATES.STATE_LOADING});
       this.props.model.setAppVersion(appVersion);
       this.props.model.save(
         null,
         {
-          error: function () {
+          error: function() {
             this.setState({appVersionsFetchState: STATES.STATE_ERROR});
-          },
-          success: function () {
+          }.bind(this),
+          success: function() {
             // refresh app versions
             this.fetchAppVersions();
           }.bind(this)
@@ -252,14 +251,13 @@ define([
       // perform the action only if a value is submitted.
       if (instancesString != null && instancesString !== "") {
         var instances = parseInt(instancesString, 10);
-        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
         model.save(
           {instances: instances},
           {
-            error: function () {
+            error: function() {
               this.setState({appVersionsFetchState: STATES.STATE_ERROR});
             },
-            success: function () {
+            success: function() {
               // refresh app versions
               this.fetchAppVersions();
             }.bind(this)
@@ -312,12 +310,11 @@ define([
 
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
-        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
         this.props.model.suspend({
-          error: function () {
+          error: function() {
             this.setState({appVersionsFetchState: STATES.STATE_ERROR});
-          },
-          success: function () {
+          }.bind(this),
+          success: function() {
             // refresh app versions
             this.fetchAppVersions();
           }.bind(this)

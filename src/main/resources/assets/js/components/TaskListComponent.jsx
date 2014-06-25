@@ -8,7 +8,9 @@ define([
 
   return React.createClass({
     displayName: "TaskListComponent",
-    mixins:[BackboneMixin],
+
+    mixins: [BackboneMixin],
+
     propTypes: {
       fetchState: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
@@ -16,15 +18,18 @@ define([
       STATES: React.PropTypes.object.isRequired,
       tasks: React.PropTypes.object.isRequired
     },
+
     getResource: function() {
       return this.props.tasks;
     },
+
     getInitialState: function() {
       return {
         fetchState: this.props.STATES.STATE_LOADING,
         showTimestamps: false
       };
     },
+
     handleThToggleClick: function(event) {
       // If the click happens on the checkbox, let the checkbox's onchange event
       // handler handle it and skip handling the event here.
@@ -32,6 +37,21 @@ define([
         this.props.toggleAllTasks();
       }
     },
+
+    sortCollectionBy: function(comparator) {
+      var collection = this.props.tasks;
+      comparator =
+        collection.sortKey === comparator && !collection.sortReverse ?
+        "-" + comparator :
+        comparator;
+      collection.setComparator(comparator);
+      collection.sort();
+    },
+
+    toggleShowTimestamps: function() {
+      this.setState({showTimestamps: !this.state.showTimestamps});
+    },
+
     render: function() {
       var taskNodes;
       var tasksLength = this.props.tasks.length;
@@ -140,18 +160,6 @@ define([
           </tbody>
         </table>
       );
-    },
-    sortCollectionBy: function(comparator) {
-      var collection = this.props.tasks;
-      comparator =
-        collection.sortKey === comparator && !collection.sortReverse ?
-        "-" + comparator :
-        comparator;
-      collection.setComparator(comparator);
-      collection.sort();
-    },
-    toggleShowTimestamps: function() {
-      this.setState({showTimestamps: !this.state.showTimestamps});
     }
   });
 });

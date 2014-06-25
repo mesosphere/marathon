@@ -19,7 +19,10 @@ define([
 
     propTypes: {
       app: React.PropTypes.instanceOf(App).isRequired,
-      appVersion: React.PropTypes.instanceOf(AppVersion).isRequired,
+      appVersion: React.PropTypes.oneOfType([
+        React.PropTypes.instanceOf(App).isRequired,
+        React.PropTypes.instanceOf(AppVersion).isRequired
+      ]),
       onRollback: React.PropTypes.func
     },
 

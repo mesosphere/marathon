@@ -17,10 +17,15 @@ define([
 
   return React.createClass({
     displayName: "AppVersionListItemComponent",
+
     mixins: [BackboneMixin],
+
     propTypes: {
       app: React.PropTypes.instanceOf(App).isRequired,
-      appVersion: React.PropTypes.instanceOf(AppVersion).isRequired,
+      appVersion: React.PropTypes.oneOfType([
+        React.PropTypes.instanceOf(App).isRequired,
+        React.PropTypes.instanceOf(AppVersion).isRequired
+      ]),
       onRollback: React.PropTypes.func
     },
 
@@ -30,7 +35,7 @@ define([
       }
     },
 
-    getResource: function () {
+    getResource: function() {
       return this.props.appVersion;
     },
 
