@@ -44,10 +44,10 @@ define([
             <button className="btn btn-sm btn-info" onClick={this.props.fetchAppVersions}>
               ↻ Refresh
             </button>
-            <span className="pull-right">
+            <div className="pull-right">
               {
                 // is there at least two pages
-                appVersions.length > itemsPerPage?
+                appVersions.length > itemsPerPage ?
                   <PagedNavComponent
                     currentPage={currentPage}
                     onPageChange={this.handlePageChange}
@@ -55,18 +55,20 @@ define([
                     noItems={appVersions.length}
                     noVisiblePages={this.state.noVisiblePages}
                     useEndArrows={useEndArrows} /> :
-                    null
+                  null
               }
-            </span>
+            </div>
           </p>
           <div className="panel-group">
             <div className="panel panel-header panel-inverse">
-              <div className="panel-heading row">
-                <span className="col-md-11">
-                  Version
-                </span>
-                <span className="clickable text-center col-md-1">
-                </span>
+              <div className="panel-heading">
+                <div className="row">
+                  <div className="col-xs-11">
+                    Version
+                  </div>
+                  <div className="clickable text-center col-xs-1">
+                  </div>
+                </div>
               </div>
             </div>
               {

@@ -66,7 +66,7 @@ define([
 
     render: function() {
       var caretClassSet = React.addons.classSet({
-        "clickable text-center col-md-1": true,
+        "clickable text-center col-xs-1": true,
         "dropup": this.state.open
       });
       var versionDate = new Date(this.props.appVersion.get("version"));
@@ -97,19 +97,21 @@ define([
       }
       return (
         <div className="panel panel-inverse">
-          <div className="panel-heading row clickable" onClick={this.handleDetailsClick}>
-            <span className="col-md-9">
-              <time dateTime={versionDate.toISOString()} title={versionDate.toISOString()}>
-                {versionDate.toLocaleString()}</time>
-            </span>
-            {
-              this.props.currentVersion ?
-                <span className="text-muted col-md-2">Current version</span> :
-                <span className="text-muted col-md-2"></span>
-            }
-            <span className={caretClassSet}>
-              <span className="caret"></span>
-            </span>
+          <div className="panel-heading clickable" onClick={this.handleDetailsClick}>
+            <div className="row">
+              <div className="col-xs-9">
+                <time dateTime={versionDate.toISOString()} title={versionDate.toISOString()}>
+                  {versionDate.toLocaleString()}</time>
+              </div>
+              {
+                this.props.currentVersion ?
+                  <div className="text-muted col-xs-2">Current version</div> :
+                  <div className="text-muted col-xs-2">&nbsp;</div>
+              }
+              <div className={caretClassSet}>
+                <span className="caret"></span>
+              </div>
+            </div>
           </div>
             {
               this.state.open ?
