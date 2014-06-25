@@ -109,7 +109,7 @@ A health check is considered passing if (1) its HTTP response code is between
 `timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
 health checks consecutively, that task is killed.
 
-Each health check supports the following options:
+###### Health Check Options
 
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
   ignored within this number of seconds of the task being started or until the
