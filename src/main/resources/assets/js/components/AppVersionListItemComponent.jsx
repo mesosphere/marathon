@@ -66,8 +66,8 @@ define([
 
     render: function() {
       var caretClassSet = React.addons.classSet({
-        "caret caret-left": this.state.open,
-        "caret": !this.state.open
+        "clickable text-center col-md-1": true,
+        "dropup": this.state.open
       });
       var versionDate = new Date(this.props.appVersion.get("version"));
       var versionNode;
@@ -107,8 +107,8 @@ define([
                 <span className="text-muted col-md-2">Current version</span> :
                 <span className="text-muted col-md-2"></span>
             }
-            <span className="clickable text-center col-md-1">
-              <span className={caretClassSet}></span>
+            <span className={caretClassSet}>
+              <span className="caret"></span>
             </span>
           </div>
             {

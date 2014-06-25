@@ -74,18 +74,6 @@ a,
   border-width: 5px;
 }
 
-.caret-right {
-  border-color: transparent transparent transparent #f6f6f6;
-  border-width: 5px 0 5px 5px;
-  border-style: solid;
-}
-
-.caret-left {
-  border-color: transparent #f6f6f6 transparent transparent;
-  border-width: 5px 5px 5px 0;
-  border-style: solid;
-}
-
 .badge {
   background-color: #323539;
   color: #8e929b;
@@ -384,6 +372,7 @@ fieldset[disabled] .btn-info.active {
 .panel-group .panel-inverse {
   border-radius: 0;
   border-top: solid 1px #3d4045;
+  border-bottom-width: 0;
   -webkit-box-shadow: none;
   box-shadow: none;
 }
@@ -406,6 +395,10 @@ fieldset[disabled] .btn-info.active {
 
 .panel-body {
   background-color: #222224;
+}
+
+.panel-inverse .panel-heading:hover {
+  background-color: #454a50;
 }
 
 .panel-inverse .panel-body {
@@ -456,8 +449,8 @@ fieldset[disabled] .btn-info.active {
 }
 
 .nav-tabs > li > a {
-  margin-top: 3px;
   border-radius: 0;
+  padding-top: 13px;
 }
 
 .header-btn {
