@@ -3,8 +3,6 @@ package mesosphere.marathon
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ SchedulerDriver, Scheduler }
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
-import scala.collection.mutable.HashSet
 import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
@@ -279,36 +277,28 @@ class MarathonScheduler @Inject() (
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Unit = {
-    appRepository.appIds().onComplete {
-      case Success(iterator) =>
+    appRepository.appIds().map(_.toSet).onComplete {
+      case Success(appIds) =>
         log.info("Syncing tasks for all apps")
-        val buf = new ListBuffer[TaskStatus]
-        val appNames = HashSet.empty[String]
-        for (appName <- iterator) {
-          appNames += appName
-          scale(driver, appName)
-          val tasks = taskTracker.get(appName)
-          for (task <- tasks) {
-            val statuses = task.getStatusesList.asScala.toList
-            if (statuses.nonEmpty) {
-              buf += statuses.last
-            }
-          }
+
+        for (appId <- appIds) scale(driver, appId)
+
+        val knownTaskStatuses = appIds.flatMap { appId =>
+          taskTracker.get(appId).flatMap(_.getStatusesList.asScala.lastOption)
         }
-        for (app <- taskTracker.list.keys) {
-          if (!appNames.contains(app)) {
-            log.warn(s"App $app exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
-            val tasks = taskTracker.get(app)
-            for (task <- tasks) {
-              log.info(s"Killing task ${task.getId}")
-              driver.killTask(protos.TaskID(task.getId))
-            }
-            taskTracker.expunge(app)
+
+        for (unknownAppId <- taskTracker.list.keySet -- appIds) {
+          log.warn(s"App $unknownAppId exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
+          for (orphanTask <- taskTracker.get(unknownAppId)) {
+            log.info(s"Killing task ${orphanTask.getId}")
+            driver.killTask(protos.TaskID(orphanTask.getId))
           }
+          taskTracker.expunge(unknownAppId)
         }
+
         log.info("Requesting task reconciliation with the Mesos master")
-        log.debug(s"Tasks to reconcile: $buf")
-        driver.reconcileTasks(buf.asJava)
+        log.debug(s"Tasks to reconcile: $knownTaskStatuses")
+        driver.reconcileTasks(knownTaskStatuses.asJava)
 
       case Failure(t) =>
         log.warn("Failed to get task names", t)
