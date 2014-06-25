@@ -28,6 +28,8 @@ import akka.pattern.ask
 import scala.util.{ Failure, Success }
 import akka.util.Timeout
 import scala.concurrent.Promise
+import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.upgrade.DeploymentActor.{ Failed, Finished }
 
 /**
   * Wrapper class for the scheduler
@@ -115,6 +117,18 @@ class MarathonSchedulerService @Inject() (
     promise.future.map {
       case CommandFailed(_, reason) => throw reason
       case _                        => true
+    }
+  }
+
+  def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
+    val promise = Promise[Any]()
+    val receiver = system.actorOf(Props(classOf[PromiseActor], promise))
+
+    schedulerActor.tell(Deploy(plan, force), receiver)
+
+    promise.future.map {
+      case Finished  => ()
+      case Failed(t) => throw t
     }
   }
 

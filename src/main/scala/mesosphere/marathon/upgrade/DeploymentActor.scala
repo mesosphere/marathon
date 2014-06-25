@@ -36,8 +36,7 @@ class DeploymentActor(
       performStep(steps.next()) onComplete {
         case Success(_) => self ! NextStep
         case Failure(t) =>
-          log.error(t, s"Deployment of group ${plan.target.id} failed")
-          receiver ! Failed
+          receiver ! Failed(t)
           context.stop(self)
       }
 
@@ -114,6 +113,6 @@ class DeploymentActor(
 
 object DeploymentActor {
   case object NextStep
-  case object Failed
+  case class Failed(reason: Throwable)
   case object Finished
 }
