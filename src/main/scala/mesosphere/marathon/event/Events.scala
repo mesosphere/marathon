@@ -128,6 +128,16 @@ case class RestartFailed(
   eventType: String = "restart_failed",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
+case class DeploymentSuccess(
+  id: PathId,
+  eventType: String = "deployment_success",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
+case class DeploymentFailed(
+  id: PathId,
+  eventType: String = "deployment_failed",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
 case class RollbackSuccess(
   appId: PathId,
   eventType: String = "rollback_success",

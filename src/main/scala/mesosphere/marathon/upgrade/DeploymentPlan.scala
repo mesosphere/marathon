@@ -3,7 +3,10 @@ package mesosphere.marathon.upgrade
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 
-sealed trait DeploymentAction
+sealed trait DeploymentAction {
+  def app: AppDefinition
+}
+
 //application has not been started before
 final case class StartApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
 //application is started, but more instances should be started

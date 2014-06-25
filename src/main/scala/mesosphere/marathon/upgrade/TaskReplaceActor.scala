@@ -7,7 +7,7 @@ import mesosphere.marathon.event.{ MesosStatusUpdateEvent, HealthStatusChanged }
 import org.apache.mesos.SchedulerDriver
 import scala.collection.mutable
 import org.apache.mesos.Protos.TaskID
-import mesosphere.marathon.{ TaskUpgradeCancelledException, TaskFailedException }
+import mesosphere.marathon.{ TaskUpgradeCanceledException, TaskFailedException }
 import akka.event.EventStream
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskQueue
@@ -32,7 +32,7 @@ class TaskReplaceActor(
     eventBus.unsubscribe(self)
     if (!promise.isCompleted)
       promise.tryFailure(
-        new TaskUpgradeCancelledException(
+        new TaskUpgradeCanceledException(
           "The task upgrade has been cancelled"))
   }
 

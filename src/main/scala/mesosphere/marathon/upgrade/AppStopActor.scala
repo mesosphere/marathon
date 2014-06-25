@@ -1,59 +1,54 @@
 package mesosphere.marathon.upgrade
 
 import org.apache.mesos.SchedulerDriver
+import mesosphere.marathon.{ AppStopCanceledException, AppStartCanceledException, SchedulerActions }
 import akka.event.EventStream
-import mesosphere.marathon.Protos.MarathonTask
-import akka.actor.{ Actor, ActorLogging }
+import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Promise
+import akka.actor._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import org.apache.mesos.Protos.TaskID
-import mesosphere.marathon.TaskUpgradeCanceledException
-import scala.collection.mutable
+import mesosphere.marathon.tasks.TaskTracker
+import scala.collection.immutable.Set
 
-class TaskKillActor(
+class AppStopActor(
     driver: SchedulerDriver,
+    scheduler: SchedulerActions,
+    taskTracker: TaskTracker,
     eventBus: EventStream,
-    tasksToKill: Set[MarathonTask],
-    promise: Promise[Boolean]) extends Actor with ActorLogging {
+    app: AppDefinition,
+    promise: Promise[Unit]) extends Actor with ActorLogging {
 
-  val idsToKill = tasksToKill.map(_.getId).to[mutable.Set]
-
-  eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
+  var idsToKill = taskTracker.fetchApp(app.id).tasks.map(_.getId).to[Set]
 
   override def preStart(): Unit = {
-    log.info(s"Killing ${tasksToKill.size} instances")
-    for (task <- tasksToKill)
-      driver.killTask(taskId(task.getId))
+    eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
+    scheduler.stopApp(driver, app)
   }
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
     if (!promise.isCompleted)
-      promise.tryFailure(
-        new TaskUpgradeCanceledException(
-          "The task upgrade has been cancelled"))
+      promise.tryFailure(new AppStopCanceledException("The app stop has been cancelled"))
   }
 
   def receive = {
     case MesosStatusUpdateEvent(_, taskId, "TASK_KILLED", _, _, _, _, _, _) if idsToKill(taskId) =>
-      idsToKill.remove(taskId)
+      idsToKill -= taskId
       log.info(s"Task $taskId has been killed. Waiting for ${idsToKill.size} more tasks to be killed.")
       checkFinished()
 
     case MesosStatusUpdateEvent(_, taskId, "TASK_LOST", _, _, _, _, _, _) if idsToKill(taskId) =>
-      idsToKill.remove(taskId)
+      idsToKill -= taskId
       log.warning(s"Task $taskId should have been killed but was lost, removing it from the list. Waiting for ${idsToKill.size} more tasks to be killed.")
       checkFinished()
 
     case x: MesosStatusUpdateEvent => log.debug(s"Received $x")
   }
 
-  def checkFinished(): Unit =
-    if (idsToKill.size == 0) {
-      log.info("Successfully killed all the tasks")
-      promise.success(true)
+  def checkFinished(): Unit = {
+    if (idsToKill.isEmpty) {
+      promise.success(())
       context.stop(self)
     }
-
-  private def taskId(id: String) = TaskID.newBuilder().setValue(id).build()
+  }
 }

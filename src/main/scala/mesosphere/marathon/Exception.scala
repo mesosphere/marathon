@@ -32,4 +32,13 @@ class TaskFailedException(msg: String) extends TaskUpgradeFailedException(msg)
 class ConcurrentTaskUpgradeException(msg: String) extends TaskUpgradeFailedException(msg)
 class MissingHealthCheckException(msg: String) extends TaskUpgradeFailedException(msg)
 class AppDeletedException(msg: String) extends TaskUpgradeFailedException(msg)
-class TaskUpgradeCancelledException(msg: String) extends TaskUpgradeFailedException(msg)
+class TaskUpgradeCanceledException(msg: String) extends TaskUpgradeFailedException(msg)
+
+/*
+ * Deployment specific exceptions
+ */
+abstract class DeploymentFailedException(msg: String) extends Exception(msg)
+
+class DeploymentCanceledException(msg: String) extends DeploymentFailedException(msg)
+class AppStartCanceledException(msg: String) extends DeploymentFailedException(msg)
+class AppStopCanceledException(msg: String) extends DeploymentFailedException(msg)

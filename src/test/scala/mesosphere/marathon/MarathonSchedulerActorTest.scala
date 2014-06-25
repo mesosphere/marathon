@@ -78,7 +78,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("StartApp") {
-    val app = AppDefinition(id = "testApp".toPath, instances = 2)
+    val app = AppDefinition(id = "test-app".toPath, instances = 2)
 
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
     when(repo.store(app)).thenReturn(Future.successful(app))
@@ -97,7 +97,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("StopApp") {
-    val app = AppDefinition(id = "testApp".toPath, instances = 2)
+    val app = AppDefinition(id = "test-app".toPath, instances = 2)
     val task = MarathonTask.newBuilder().setId("task_1").build()
 
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
@@ -116,21 +116,21 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("StopApp with running Upgrade") {
-    val app = AppDefinition(id = "testApp".toPath, instances = 2)
+    val app = AppDefinition(id = "test-app".toPath, instances = 2)
     val task = MarathonTask.newBuilder().setId("task_1").build()
     val probe = TestProbe()
 
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
     when(tracker.get(app.id)).thenReturn(mutable.Set(task))
 
-    val lock = schedulerActor.underlyingActor.appLocks.get("testApp")
+    val lock = schedulerActor.underlyingActor.appLocks.get("test-app".toPath)
     lock.acquire()
 
     schedulerActor.underlyingActor.upgradeManager = probe.ref
 
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
-        case CancelUpgrade(PathId("testApp" :: Nil, false), _) =>
+        case CancelUpgrade(PathId("test-app" :: Nil, false), _) =>
           lock.release()
           NoAutoPilot
       }
@@ -149,7 +149,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("UpdateApp") {
-    val app = AppDefinition(id = "testApp".toPath, instances = 1, version = Timestamp(Timestamp.now().time.minusDays(1)))
+    val app = AppDefinition(id = "test-app".toPath, instances = 1, version = Timestamp(Timestamp.now().time.minusDays(1)))
     val appUpdate = spy(AppUpdate(instances = Some(2)))
     val updatedApp = appUpdate(app)
 
@@ -167,7 +167,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("UpgradeApp") {
-    val app = AppDefinition(id = "testApp".toPath, instances = 1)
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val probe = TestProbe()
     schedulerActor.underlyingActor.upgradeManager = probe.ref
 
@@ -188,18 +188,18 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("RollbackApp") {
-    val app = AppDefinition(id = "testApp".toPath, instances = 1)
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val probe = TestProbe()
     schedulerActor.underlyingActor.upgradeManager = probe.ref
 
-    val lock = schedulerActor.underlyingActor.appLocks.get("testApp")
+    val lock = schedulerActor.underlyingActor.appLocks.get("test-app".toPath)
     lock.acquire()
 
     when(repo.store(app)).thenReturn(Future.successful(app))
 
     probe.setAutoPilot(new AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
-        case CancelUpgrade(PathId("testApp" :: Nil, false), _) =>
+        case CancelUpgrade(PathId("test-app" :: Nil, false), _) =>
           lock.release()
           KeepRunning
 
@@ -220,7 +220,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("ReconcileTasks") {
-    val app = AppDefinition(id = "testApp".toPath, instances = 1)
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val tasks = mutable.Set(MarathonTask.newBuilder().setId("task_a").build())
 
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
@@ -237,15 +237,15 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     schedulerActor ! ReconcileTasks
 
-    verify(driver).killTask(TaskID.newBuilder().setValue("task_a").build())
+    expectMsg(5.seconds, TasksReconciled)
+
     verify(tracker).expunge("nope".toPath)
     verify(queue).add(app)
-
-    expectMsg(5.seconds, TasksReconciled)
+    verify(driver).killTask(TaskID.newBuilder().setValue("task_a").build())
   }
 
   test("ScaleApp") {
-    val app = AppDefinition(id = "testApp".toPath, instances = 1)
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
 
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(tracker.get(app.id)).thenReturn(mutable.Set.empty[MarathonTask])
@@ -253,14 +253,14 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
     when(tracker.count(app.id)).thenReturn(0)
 
-    schedulerActor ! ScaleApp("testApp".toPath)
+    schedulerActor ! ScaleApp("test-app".toPath)
     verify(queue).add(app)
 
     expectMsg(5.seconds, AppScaled(app.id))
   }
 
   test("LaunchTasks") {
-    val app = AppDefinition(id = "testApp".toPath, instances = 1, executor = "//cmd")
+    val app = AppDefinition(id = "test-app".toPath, instances = 1, executor = "//cmd")
     val offer = makeBasicOffer().build()
     val task = new TaskBuilder(app, x => TaskID.newBuilder().setValue(x.toString).build(), tracker).buildIfMatches(offer)
     val tasks = Seq(task.get._1)

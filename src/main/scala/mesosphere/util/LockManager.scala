@@ -2,15 +2,16 @@ package mesosphere.util
 
 import com.google.common.cache.{ LoadingCache, CacheLoader, CacheBuilder }
 import java.util.concurrent.Semaphore
+import mesosphere.marathon.state.PathId
 
 object LockManager {
-  def apply(): LoadingCache[String, Semaphore] = {
+  def apply[A <: AnyRef](): LoadingCache[A, Semaphore] = {
     CacheBuilder
       .newBuilder()
       .weakValues()
-      .build[String, Semaphore](
-        new CacheLoader[String, Semaphore] {
-          override def load(key: String): Semaphore = new Semaphore(1)
+      .build[A, Semaphore](
+        new CacheLoader[A, Semaphore] {
+          override def load(key: A): Semaphore = new Semaphore(1)
         }
       )
   }

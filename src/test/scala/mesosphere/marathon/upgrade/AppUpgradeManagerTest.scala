@@ -16,7 +16,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
 import akka.testkit.TestActor.{ NoAutoPilot, AutoPilot }
-import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.{ SchedulerActions, MarathonConf }
 import mesosphere.marathon.state.PathId._
 
 class AppUpgradeManagerTest
@@ -37,7 +37,8 @@ class AppUpgradeManagerTest
     val taskQueue = mock[TaskQueue]
     val config = mock[MarathonConf]
     val taskTracker = new TaskTracker(new InMemoryState, config)
-    val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
+    val scheduler = mock[SchedulerActions]
+    val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, scheduler, eventBus))
 
     manager ! Upgrade(driver, AppDefinition(id = "testApp".toRootPath), 10)
 
@@ -52,7 +53,8 @@ class AppUpgradeManagerTest
     val taskQueue = mock[TaskQueue]
     val config = mock[MarathonConf]
     val taskTracker = new TaskTracker(new InMemoryState, config)
-    val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
+    val scheduler = mock[SchedulerActions]
+    val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, scheduler, eventBus))
     val probe = TestProbe()
 
     probe.setAutoPilot(new AutoPilot {
@@ -76,7 +78,8 @@ class AppUpgradeManagerTest
     val taskQueue = mock[TaskQueue]
     val config = mock[MarathonConf]
     val taskTracker = new TaskTracker(new InMemoryState, config)
-    val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
+    val scheduler = mock[SchedulerActions]
+    val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, scheduler, eventBus))
 
     implicit val timeout = Timeout(1.minute)
     val res = (manager ? Upgrade(driver, AppDefinition(id = "testApp".toRootPath), 10)).mapTo[Boolean]

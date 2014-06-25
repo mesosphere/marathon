@@ -9,7 +9,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.{ TaskUpgradeCancelledException, TaskFailedException }
+import mesosphere.marathon.{ TaskUpgradeCanceledException, TaskFailedException }
 
 class TaskStartActorTest
     extends TestKit(ActorSystem("System"))
@@ -92,7 +92,7 @@ class TaskStartActorTest
 
     system.stop(ref)
 
-    intercept[TaskUpgradeCancelledException] {
+    intercept[TaskUpgradeCanceledException] {
       Await.result(promise.future, 5.seconds)
     }.getMessage should equal("The task upgrade has been cancelled")
 

@@ -11,7 +11,7 @@ import org.mockito.Mockito._
 import mesosphere.marathon.event.HealthStatusChanged
 import org.apache.mesos.Protos.TaskID
 import scala.concurrent.duration._
-import mesosphere.marathon.TaskUpgradeCancelledException
+import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.tasks.TaskQueue
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.PathId._
@@ -115,7 +115,7 @@ class TaskReplaceActorTest
 
     system.stop(ref)
 
-    intercept[TaskUpgradeCancelledException] {
+    intercept[TaskUpgradeCanceledException] {
       Await.result(promise.future, 5.seconds)
     }.getMessage should equal("The task upgrade has been cancelled")
 

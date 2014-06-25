@@ -49,7 +49,7 @@ class AppUpgradeActor(
       case x =>
         manager ! UpgradeFinished(app.id)
         log.info(s"Finished upgrade of ${app.id}")
-        context.stop(self)
+        self ! PoisonPill
         resultPromise.tryComplete(x)
     }
 

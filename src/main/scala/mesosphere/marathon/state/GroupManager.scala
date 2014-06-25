@@ -3,6 +3,7 @@ package mesosphere.marathon.state
 import javax.inject.Inject
 import akka.event.EventStream
 import com.google.inject.Singleton
+import mesosphere.marathon.{ TaskUpgradeCanceledException, UpgradeInProgressException, MarathonSchedulerService }
 import com.google.inject.name.Named
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.api.v1.AppDefinition
