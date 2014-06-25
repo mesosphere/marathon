@@ -1,22 +1,22 @@
 package mesosphere.marathon.api.v1
 
-import javax.inject.{Inject, Named}
+import javax.inject.{ Inject, Named }
 import javax.servlet.http.HttpServletRequest
 import javax.validation.Valid
 import javax.ws.rs._
-import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.Responses
-import mesosphere.marathon.event.{ApiPostEvent, EventModule}
+import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import org.apache.log4j.Logger
 
-import scala.concurrent.{Await, Awaitable}
+import scala.concurrent.{ Await, Awaitable }
 
 /**
   * @author Tobi Knaup

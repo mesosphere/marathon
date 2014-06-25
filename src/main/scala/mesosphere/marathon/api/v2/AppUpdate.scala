@@ -5,7 +5,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ ScalingStrategy, PathId, Timestamp }
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.lang.{ Integer => JInt, Double => JDouble }
 
@@ -19,6 +19,8 @@ case class AppUpdate(
 
     cmd: Option[String] = None,
 
+    env: Option[Map[String, String]] = None,
+
     instances: Option[JInt] = None,
 
     cpus: Option[JDouble] = None,
@@ -29,6 +31,8 @@ case class AppUpdate(
 
     @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
+    taskRateLimit: Option[JDouble] = None,
+
     constraints: Option[Set[Constraint]] = None,
 
     executor: Option[String] = None,
@@ -37,31 +41,34 @@ case class AppUpdate(
 
     healthChecks: Option[Set[HealthCheck]] = None,
 
+    dependencies: Option[Set[PathId]] = None,
+
+    scalingStrategy: Option[ScalingStrategy] = None,
+
     version: Option[Timestamp] = None) {
 
   /**
     * Returns the supplied [[AppDefinition]] after updating its members
     * with respect to this update request.
     */
-  def apply(app: AppDefinition): AppDefinition = {
-
-    var updated = app
-
-    for (v <- cmd) updated = updated.copy(cmd = v)
-    for (v <- instances) updated = updated.copy(instances = v)
-    for (v <- cpus) updated = updated.copy(cpus = v)
-    for (v <- mem) updated = updated.copy(mem = v)
-    for (v <- uris) updated = updated.copy(uris = v)
-    for (v <- ports) updated = updated.copy(ports = v)
-    for (v <- constraints) updated = updated.copy(constraints = v)
-    for (v <- executor) updated = updated.copy(executor = v)
-    for (v <- healthChecks) updated = updated.copy(healthChecks = v)
-
-    updated.copy(
-      container = this.container.orElse(app.container),
-      version = Timestamp.now()
-    )
-  }
+  def apply(app: AppDefinition): AppDefinition = app.copy(
+    app.id,
+    cmd.getOrElse(app.cmd),
+    env.getOrElse(app.env),
+    instances.getOrElse(app.instances),
+    cpus.getOrElse(app.cpus),
+    mem.getOrElse(app.mem),
+    executor.getOrElse(app.executor),
+    constraints.getOrElse(app.constraints),
+    uris.getOrElse(app.uris),
+    ports.getOrElse(app.ports),
+    taskRateLimit.getOrElse(app.taskRateLimit),
+    container.orElse(app.container),
+    healthChecks.getOrElse(app.healthChecks),
+    dependencies.getOrElse(app.dependencies),
+    scalingStrategy.getOrElse(app.scalingStrategy),
+    Timestamp.now()
+  )
 
 }
 

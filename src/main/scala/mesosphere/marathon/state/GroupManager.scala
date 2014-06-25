@@ -7,13 +7,13 @@ import mesosphere.marathon.{ TaskUpgradeCanceledException, UpgradeInProgressExce
 import com.google.inject.name.Named
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.event.{EventModule, GroupChangeFailed, GroupChangeSuccess}
+import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade._
 import mesosphere.util.ThreadPoolContext.context
 import org.apache.log4j.Logger
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 /**
   * The group manager is the facade for all group related actions.

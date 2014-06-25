@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.state.PathId._
-import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
+import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
 class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
 

@@ -1,19 +1,21 @@
 package mesosphere.marathon.api.v1
 
-import mesosphere.mesos.TaskBuilder
-import mesosphere.marathon.{ ContainerInfo, Protos }
-import mesosphere.marathon.state.{ Migration, PathId, MarathonState, Timestamp, Timestamped }
-import mesosphere.marathon.Protos.{ StorageVersion, MarathonTask, Constraint }
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.health.HealthCheck
+import java.lang.{ Double => JDouble, Integer => JInt }
+
+import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask, StorageVersion }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.PortIndices
-import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
-import org.apache.mesos.Protos.TaskState
-import scala.collection.JavaConverters._
-import java.lang.{ Integer => JInt, Double => JDouble }
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state._
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{ ContainerInfo, Protos }
+import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
-import PathId._
+import org.apache.mesos.Protos.TaskState
+
+import scala.collection.JavaConverters._
 
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -53,6 +55,8 @@ case class AppDefinition(
 
   dependencies: Set[PathId] = Set.empty,
 
+  scalingStrategy: ScalingStrategy = ScalingStrategy.empty,
+
   version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {
 
@@ -91,6 +95,7 @@ case class AppDefinition(
       .addResources(memResource)
       .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
       .setVersion(version.toString)
+      .setScalingStrategy(scalingStrategy.toProto)
 
     builder.build
   }
@@ -114,8 +119,8 @@ case class AppDefinition(
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
       constraints = proto.getConstraintsList.asScala.toSet,
-      cpus = resourcesMap.get(Resource.CPUS).getOrElse(this.cpus),
-      mem = resourcesMap.get(Resource.MEM).getOrElse(this.mem),
+      cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
+      mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
       container = if (proto.getCmd.hasContainer) {
@@ -130,7 +135,8 @@ case class AppDefinition(
       },
       healthChecks =
         proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
-      version = Timestamp(proto.getVersion)
+      version = Timestamp(proto.getVersion),
+      scalingStrategy = if (proto.hasScalingStrategy) ScalingStrategy.fromProto(proto.getScalingStrategy) else ScalingStrategy.empty
     )
   }
 
@@ -158,7 +164,9 @@ case class AppDefinition(
       ports.toSet != to.ports.toSet ||
       executor != to.executor ||
       healthChecks != to.healthChecks ||
-      taskRateLimit != to.taskRateLimit
+      taskRateLimit != to.taskRateLimit ||
+      dependencies != to.dependencies ||
+      scalingStrategy != to.scalingStrategy
   }
 }
 
@@ -180,7 +188,7 @@ object AppDefinition {
     app: AppDefinition) extends AppDefinition(
     app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
     app.constraints, app.uris, app.ports, app.taskRateLimit, app.container,
-    app.healthChecks, app.dependencies, app.version
+    app.healthChecks, app.dependencies, app.scalingStrategy, app.version
   ) {
 
     /**

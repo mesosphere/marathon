@@ -24,11 +24,16 @@ case class ScalingStrategy(
 
 object ScalingStrategy {
   def empty: ScalingStrategy = ScalingStrategy(1, None)
+  def fromProto(scalingStrategy: ScalingStrategyDefinition) = {
+    ScalingStrategy(
+      scalingStrategy.getMinimumHealthCapacity,
+      if (scalingStrategy.hasMaximumRunningFactor) Some(scalingStrategy.getMaximumRunningFactor) else None
+    )
+  }
 }
 
 case class Group(
     id: PathId,
-    scalingStrategy: ScalingStrategy,
     apps: Set[AppDefinition] = Set.empty,
     groups: Set[Group] = Set.empty,
     dependencies: Set[PathId] = Set.empty,
@@ -40,7 +45,6 @@ case class Group(
   override def toProto: GroupDefinition = {
     GroupDefinition.newBuilder
       .setId(id.toString)
-      .setScalingStrategy(scalingStrategy.toProto)
       .setVersion(version.toString)
       .addAllApps(apps.map(_.toProto))
       .addAllGroups(groups.map(_.toProto))
@@ -172,21 +176,12 @@ case class Group(
 }
 
 object Group {
-  def empty: Group = Group(PathId(Nil), ScalingStrategy.empty)
+  def empty: Group = Group(PathId(Nil))
   def emptyWithId(id: PathId) = empty.copy(id = id)
 
   def fromProto(msg: GroupDefinition): Group = {
-    val scalingStrategy = msg.getScalingStrategy
-    val maximumRunningFactor = {
-      if (scalingStrategy.hasMaximumRunningFactor) Some(msg.getScalingStrategy.getMaximumRunningFactor)
-      else None
-    }
     Group(
       id = msg.getId.toPath,
-      scalingStrategy = ScalingStrategy(
-        scalingStrategy.getMinimumHealthCapacity,
-        maximumRunningFactor
-      ),
       apps = msg.getAppsList.map(AppDefinition.fromProto).toSet,
       groups = msg.getGroupsList.map(fromProto).toSet,
       dependencies = msg.getDependenciesList.map(PathId.apply).toSet,

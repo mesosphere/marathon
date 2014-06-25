@@ -2,9 +2,9 @@ package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.{ Timestamp, ScalingStrategy, Group }
-import org.scalatest.{ GivenWhenThen, Matchers }
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ ScalingStrategy, Group, Timestamp }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
@@ -39,22 +39,22 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
   test("when updating a group with dependencies, the correct order is computed") {
 
     Given("Two application updates with command and scale changes")
-    val scaling = ScalingStrategy(0.75, Some(1))
     val mongoId = "/test/database/mongo".toPath
     val serviceId = "/test/service/srv1".toPath
-    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0)) ->
-      AppDefinition(mongoId, "mng2", instances = 8)
-    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0)) ->
-      AppDefinition(serviceId, "srv2", dependencies = Set(mongoId), instances = 10)
-    val from: Group = Group("/test".toPath, scaling, groups = Set(
-      Group("/test/database".toPath, scaling, Set(mongo._1)),
-      Group("/test/service".toPath, scaling, Set(service._1))
+    val scaling = ScalingStrategy(0.75, Some(1))
+    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0), scalingStrategy = scaling) ->
+      AppDefinition(mongoId, "mng2", instances = 8, scalingStrategy = scaling)
+    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0), scalingStrategy = scaling) ->
+      AppDefinition(serviceId, "srv2", dependencies = Set(mongoId), instances = 10, scalingStrategy = scaling)
+    val from: Group = Group("/test".toPath, groups = Set(
+      Group("/test/database".toPath, Set(mongo._1)),
+      Group("/test/service".toPath, Set(service._1))
     ))
 
     When("the deployment plan is computed")
-    val to: Group = Group("/test".toPath, scaling, groups = Set(
-      Group("/test/database".toPath, scaling, Set(mongo._2)),
-      Group("/test/service".toPath, scaling, Set(service._2))
+    val to: Group = Group("/test".toPath, groups = Set(
+      Group("/test/database".toPath, Set(mongo._2)),
+      Group("/test/service".toPath, Set(service._2))
     ))
     val plan = DeploymentPlan(from, to)
 
@@ -68,20 +68,22 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
   test("when updating a group without dependencies, the upgrade can be performed in one step") {
     Given("Two application updates with command and scale changes")
-    val scaling = ScalingStrategy(0.75, Some(1))
     val mongoId = "/test/database/mongo".toPath
     val serviceId = "/test/service/srv1".toPath
-    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0)) -> AppDefinition(mongoId, "mng2", instances = 8)
-    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0)) -> AppDefinition(serviceId, "srv2", instances = 10)
-    val from: Group = Group("/test".toPath, scaling, groups = Set(
-      Group("/test/database".toPath, scaling, Set(mongo._1)),
-      Group("/test/service".toPath, scaling, Set(service._1))
+    val scaling = ScalingStrategy(0.75, Some(1))
+    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0), scalingStrategy = scaling) ->
+      AppDefinition(mongoId, "mng2", instances = 8, scalingStrategy = scaling)
+    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0), scalingStrategy = scaling) ->
+      AppDefinition(serviceId, "srv2", instances = 10, scalingStrategy = scaling)
+    val from: Group = Group("/test".toPath, groups = Set(
+      Group("/test/database".toPath, Set(mongo._1)),
+      Group("/test/service".toPath, Set(service._1))
     ))
 
     When("the deployment plan is computed")
-    val to: Group = Group("/test".toPath, scaling, groups = Set(
-      Group("/test/database".toPath, scaling, Set(mongo._2)),
-      Group("/test/service".toPath, scaling, Set(service._2))
+    val to: Group = Group("/test".toPath, groups = Set(
+      Group("/test/database".toPath, Set(mongo._2)),
+      Group("/test/service".toPath, Set(service._2))
     ))
     val plan = DeploymentPlan(from, to)
 
@@ -92,26 +94,26 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
   test("when updating a group with dependent and independent applications, the correct order is computed") {
     Given("application updates with command and scale changes")
-    val scaling = ScalingStrategy(0.75, Some(1))
     val mongoId = "/test/database/mongo".toPath
     val serviceId = "/test/service/srv1".toPath
     val appId = "/test/independent/app".toPath
-    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0)) -> AppDefinition(mongoId, "mng2", instances = 8)
-    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0)) -> AppDefinition(serviceId, "srv2", dependencies = Set(mongoId), instances = 10)
-    val independent = AppDefinition(appId, "app1", instances = 1, version = Timestamp(0)) -> AppDefinition(appId, "app2", instances = 3)
+    val scaling = ScalingStrategy(0.75, Some(1))
+    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0), scalingStrategy = scaling) -> AppDefinition(mongoId, "mng2", instances = 8, scalingStrategy = scaling)
+    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0), scalingStrategy = scaling) -> AppDefinition(serviceId, "srv2", dependencies = Set(mongoId), instances = 10, scalingStrategy = scaling)
+    val independent = AppDefinition(appId, "app1", instances = 1, version = Timestamp(0), scalingStrategy = scaling) -> AppDefinition(appId, "app2", instances = 3, scalingStrategy = scaling)
     val toStop = AppDefinition("/test/service/toStop".toPath, instances = 1, dependencies = Set(mongoId)) -> None
     val toStart = None -> AppDefinition("/test/service/toStart".toPath, instances = 1, dependencies = Set(serviceId))
-    val from: Group = Group("/test".toPath, scaling, groups = Set(
-      Group("/test/database".toPath, scaling, Set(mongo._1)),
-      Group("/test/service".toPath, scaling, Set(service._1, toStop._1)),
-      Group("/test/independent".toPath, scaling, Set(independent._1))
+    val from: Group = Group("/test".toPath, groups = Set(
+      Group("/test/database".toPath, Set(mongo._1)),
+      Group("/test/service".toPath, Set(service._1, toStop._1)),
+      Group("/test/independent".toPath, Set(independent._1))
     ))
 
     When("the deployment plan is computed")
-    val to: Group = Group("/test".toPath, scaling, groups = Set(
-      Group("/test/database".toPath, scaling, Set(mongo._2)),
-      Group("/test/service".toPath, scaling, Set(service._2, toStart._2)),
-      Group("/test/independent".toPath, scaling, Set(independent._2))
+    val to: Group = Group("/test".toPath, groups = Set(
+      Group("/test/database".toPath, Set(mongo._2)),
+      Group("/test/service".toPath, Set(service._2, toStart._2)),
+      Group("/test/independent".toPath, Set(independent._2))
     ))
     val plan = DeploymentPlan(from, to)
 

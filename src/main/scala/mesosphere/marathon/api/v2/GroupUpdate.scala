@@ -1,15 +1,13 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state._
-import mesosphere.marathon.state.ScalingStrategy
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import PathId._
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state._
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class GroupUpdate(
     id: Option[PathId],
-    scalingStrategy: Option[ScalingStrategy] = None,
     apps: Option[Set[AppDefinition]] = None,
     groups: Option[Set[GroupUpdate]] = None,
     dependencies: Option[Set[PathId]] = None) {
@@ -34,14 +32,12 @@ case class GroupUpdate(
       groupUpdates.toSet ++ groupAdditions
     }
     val effectiveApps = apps.getOrElse(current.apps).map(app => app.copy(id = app.id.canonicalPath(current.id)))
-    val effectiveScaling = scalingStrategy.getOrElse(current.scalingStrategy)
     val effectiveDependencies = dependencies.fold(current.dependencies)(_.map(_.canonicalPath(current.id)))
-    Group(current.id, effectiveScaling, effectiveApps, effectiveGroups, effectiveDependencies, version)
+    Group(current.id, effectiveApps, effectiveGroups, effectiveDependencies, version)
   }
 
   def toGroup(base: PathId, version: Timestamp): Group = Group(
     groupId.canonicalPath(base),
-    scalingStrategy.getOrElse(ScalingStrategy.empty),
     apps.getOrElse(Set.empty).map(app => app.copy(id = app.id.canonicalPath(base))),
     groups.getOrElse(Set.empty).map(_.toGroup(base, version)),
     dependencies.fold(Set.empty[PathId])(_.map(_.canonicalPath(base))),
@@ -50,11 +46,11 @@ case class GroupUpdate(
 }
 
 object GroupUpdate {
-  def apply(id: String, scalingStrategy: ScalingStrategy, apps: Set[AppDefinition]): GroupUpdate = {
-    GroupUpdate(Some(id.toPath), Some(scalingStrategy), if (apps.isEmpty) None else Some(apps))
+  def apply(id: PathId, apps: Set[AppDefinition]): GroupUpdate = {
+    GroupUpdate(Some(id), if (apps.isEmpty) None else Some(apps))
   }
-  def apply(id: String, scalingStrategy: ScalingStrategy, apps: Set[AppDefinition], groups: Set[GroupUpdate]): GroupUpdate = {
-    GroupUpdate(Some(id.toPath), Some(scalingStrategy), if (apps.isEmpty) None else Some(apps), if (groups.isEmpty) None else Some(groups))
+  def apply(id: PathId, apps: Set[AppDefinition], groups: Set[GroupUpdate]): GroupUpdate = {
+    GroupUpdate(Some(id), if (apps.isEmpty) None else Some(apps), if (groups.isEmpty) None else Some(groups))
   }
   def empty(id: String): GroupUpdate = GroupUpdate(Some(id.toPath))
 }
