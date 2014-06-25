@@ -145,8 +145,8 @@ define([
     setAppVersion: function(appVersion) {
       this.set(_.pick(appVersion.attributes, EDITABLE_ATTRIBUTES));
     },
-    suspend: function() {
-      this.save({instances: 0});
+    suspend: function(options) {
+      this.save({instances: 0}, options);
     },
     validate: function(attrs, options) {
       var errors = [];

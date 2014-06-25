@@ -312,7 +312,16 @@ define([
 
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
-        this.props.model.suspend();
+        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
+        this.props.model.suspend({
+          error: function () {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+          },
+          success: function () {
+            // refresh app versions
+            this.fetchAppVersions();
+          }.bind(this)
+        });
       }
     },
     showTaskDetails: function(task) {
