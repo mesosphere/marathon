@@ -13,7 +13,9 @@ define([
       onPageChange: React.PropTypes.func.isRequired,
       itemsPerPage: React.PropTypes.number,
       noItems: React.PropTypes.number.isRequired,
-      noVisiblePages: React.PropTypes.number
+      noVisiblePages: React.PropTypes.number,
+      useArrows: React.PropTypes.bool,
+      useEndArrows: React.PropTypes.bool
     },
 
     getDefaultProps: function() {
@@ -55,11 +57,11 @@ define([
           // only draw those within the bounds
           if (pageNumber >= lowerBound && pageNumber <= upperBound) {
             pagination.push(
-              <li className={pageNumber === currentPage ? "disabled" : ""}
+              <li className={pageNumber === currentPage ? "success disabled" : ""}
                   key={pageNumber}>
                 <a href="#"
                   onClick={this.handlePageChange.bind(this, pageNumber)}>
-                  {pageNumber}
+                  {pageNumber + 1}
                 </a>
               </li>
             );
@@ -75,30 +77,47 @@ define([
         "disabled": currentPage === noPages - 1
       });
 
-      return (
-        <ul className="pagination pagination-sm pagination-unstyled">
-          <li className={leftArrowsClassSet}>
-            <a href="#" onClick={this.handlePageChange.bind(this, 0)}>
-              «
-            </a>
-          </li>
+      var leftArrow =
+        this.props.useArrows ?
           <li className={leftArrowsClassSet}>
             <a href="#" onClick={this.handlePageChange.bind(this, currentPage - 1)}>
               ‹
             </a>
-          </li>
-          {pagination}
+          </li> :
+          null;
+      var leftEndArrow =
+        this.props.useEndArrows ?
+          <li className={leftArrowsClassSet}>
+            <a href="#" onClick={this.handlePageChange.bind(this, 0)}>
+              «
+            </a>
+          </li> :
+          null;
+      var rightArrow =
+        this.props.useArrows ?
           <li className={rightArrowsClassSet}>
             <a href="#" onClick={this.handlePageChange.bind(this, currentPage + 1)}>
               ›
             </a>
-          </li>
+          </li> :
+          null;
+      var rightEndArrow =
+        this.props.useEndArrows ?
           <li className={rightArrowsClassSet}>
             <a href="#"
               onClick={this.handlePageChange.bind(this, noPages - 1)}>
               »
             </a>
-          </li>
+          </li> :
+          null;
+
+      return (
+        <ul className="pagination pagination-sm pagination-unstyled">
+          {leftEndArrow}
+          {leftArrow}
+          {pagination}
+          {rightArrow}
+          {rightEndArrow}
         </ul>
       );
     }

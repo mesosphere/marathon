@@ -397,7 +397,7 @@ fieldset[disabled] .btn-info.active {
   background-color: #222224;
 }
 
-.panel-inverse .panel-heading:hover {
+.panel-inverse:not(.panel-header) .panel-heading:hover {
   background-color: #454a50;
 }
 
@@ -437,6 +437,18 @@ fieldset[disabled] .btn-info.active {
   background-color: #454a50;
   border-color: #323539;
 }
+
+.pagination > .success > span,
+.pagination > .success > span:hover,
+.pagination > .success > span:focus,
+.pagination > .success > a,
+.pagination > .success > a:hover,
+.pagination > .success > a:focus {
+  color: #f6f6f6;
+  background-color: #00b482;
+}
+
+
 
 .nav-tabs > li.active > a,
 .nav-tabs > li.active > a:hover,

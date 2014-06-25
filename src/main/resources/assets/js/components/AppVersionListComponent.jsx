@@ -36,6 +36,8 @@ define([
       var itemsPerPage = this.state.itemsPerPage;
       var currentPage = this.state.currentPage;
       var currentVersion = this.props.appVersions.at(0);
+      var useEndArrows =
+        Math.ceil(appVersions.length / itemsPerPage) > this.state.noVisiblePages;
       return (
         <div>
           <p>
@@ -51,7 +53,8 @@ define([
                     onPageChange={this.handlePageChange}
                     itemsPerPage={itemsPerPage}
                     noItems={appVersions.length}
-                    noVisiblePages={this.state.noVisiblePages} /> :
+                    noVisiblePages={this.state.noVisiblePages}
+                    useEndArrows={useEndArrows} /> :
                     null
               }
             </span>

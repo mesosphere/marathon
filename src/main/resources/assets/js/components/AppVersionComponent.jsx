@@ -80,7 +80,6 @@ define([
         appVersion.get("uris").map(function(u) {
           return <dd key={u}>{u}</dd>;
         });
-      var versionDate = appVersion.get("version");
       return (
         <div>
           <dl className="dl-horizontal dl-unstyled">
@@ -96,8 +95,6 @@ define([
             {envNode}
             <dt>Executor</dt>
             {executorNode}
-            <dt>ID</dt>
-            <dd>{appVersion.id}</dd>
             <dt>Instances</dt>
             <dd>{appVersion.get("instances")}</dd>
             <dt>Memory (MB)</dt>
@@ -111,21 +108,12 @@ define([
             <dt>URIs</dt>
             {urisNode}
             <dt>Version</dt>
-            {
-              versionDate ?
-                <UNSPECIFIED_NODE /> :
-                <dd>
-                  <time dateTime={versionDate.toISOString()}
-                      title={versionDate.toISOString()}>
-                    {versionDate.toISOString()}
-                  </time>
-                </dd>
-            }
+            <dd>{appVersion.id}</dd>
           </dl>
           {
             this.props.currentVersion ?
               null :
-              <span className="text-right">
+              <div className="text-right">
                 <form action={this.props.app.url()} method="post" onSubmit={this.handleSubmit}>
                     <input type="hidden" name="_method" value="put" />
                     <input type="hidden" name="version" value={appVersion.get("version")} />
@@ -133,7 +121,7 @@ define([
                       Apply these settings
                     </button>
                 </form>
-              </span>
+              </div>
           }
         </div>
       );
