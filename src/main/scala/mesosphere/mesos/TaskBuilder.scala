@@ -15,10 +15,6 @@ import scala.util.Random
 import scala.Some
 import mesosphere.mesos.protos.{ RangesResource, ScalarResource, Resource }
 
-/**
-  * @author Tobi Knaup
-  */
-
 class TaskBuilder(app: AppDefinition,
                   newTaskId: String => TaskID,
                   taskTracker: TaskTracker,

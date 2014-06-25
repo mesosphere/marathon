@@ -17,9 +17,6 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 import scala.collection.mutable
 
-/**
-  * @author Tobi Knaup
-  */
 class MarathonSchedulerTest extends MarathonSpec {
 
   var repo: AppRepository = null

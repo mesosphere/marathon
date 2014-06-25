@@ -9,9 +9,6 @@ import mesosphere.mesos.protos.{ FrameworkID, SlaveID, OfferID, TextAttribute }
 import org.apache.mesos.Protos.{ Offer, Attribute }
 import mesosphere.marathon.MarathonSpec
 
-/**
-  * @author Florian Leibert (flo@leibert.de)
-  */
 class ConstraintsTest extends MarathonSpec {
 
   import mesosphere.mesos.protos.Implicits._

@@ -5,10 +5,6 @@ import java.net.InetSocketAddress
 import mesosphere.util.BackToTheFuture
 import scala.concurrent.duration._
 
-/**
-  * @author Tobi Knaup
-  */
-
 trait ZookeeperConf extends ScallopConf {
 
   private val hostAndPort = """[A-z0-9-.]+(?::\d+)?"""

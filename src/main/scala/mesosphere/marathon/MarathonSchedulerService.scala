@@ -26,8 +26,6 @@ import mesosphere.util.{ BackToTheFuture, ThreadPoolContext }
 
 /**
   * Wrapper class for the scheduler
-  *
-  * @author Tobi Knaup
   */
 class MarathonSchedulerService @Inject() (
   healthCheckManager: HealthCheckManager,

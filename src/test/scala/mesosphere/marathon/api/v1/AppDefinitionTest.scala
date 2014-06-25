@@ -9,9 +9,6 @@ import javax.validation.Validation
 import mesosphere.marathon.MarathonSpec
 import org.scalatest.Matchers
 
-/**
-  * @author Tobi Knaup
-  */
 class AppDefinitionTest extends MarathonSpec with Matchers {
 
   test("ToProto") {

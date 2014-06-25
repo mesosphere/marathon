@@ -10,10 +10,6 @@ import javax.ws.rs.core.Response.Status
 import mesosphere.marathon.api.Responses
 import scala.collection.JavaConverters._
 
-/**
-  * @author Tobi Knaup
-  */
-
 @Path("v1/endpoints")
 class EndpointsResource @Inject() (
     schedulerService: MarathonSchedulerService,

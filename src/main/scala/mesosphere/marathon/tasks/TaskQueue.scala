@@ -9,8 +9,6 @@ import java.util.Comparator
 
 /**
   * Utility class to stage tasks before they get scheduled
-  *
-  * @author Tobi Knaup
   */
 
 class TaskQueue {

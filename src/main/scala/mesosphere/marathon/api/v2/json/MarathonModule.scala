@@ -17,10 +17,6 @@ import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
-/**
-  * @author Tobi Knaup
-  */
-
 class MarathonModule extends Module {
   import MarathonModule._
 

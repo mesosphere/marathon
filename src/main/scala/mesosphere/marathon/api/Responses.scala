@@ -3,10 +3,6 @@ package mesosphere.marathon.api
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
 
-/**
-  * @author Tobi Knaup
-  */
-
 object Responses {
 
   def unknownApp(id: String): Response = {

@@ -4,10 +4,6 @@ import org.rogach.scallop.ScallopConf
 import java.net.InetSocketAddress
 import scala.sys.SystemProperties
 
-/**
-  * @author Tobi Knaup
-  */
-
 trait MarathonConf extends ScallopConf with ZookeeperConf {
 
   lazy val mesosMaster = opt[String]("master",
