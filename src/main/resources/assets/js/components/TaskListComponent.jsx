@@ -65,21 +65,21 @@ define([
       if (this.props.fetchState === this.props.STATES.STATE_LOADING) {
         taskNodes =
           <tr>
-            <td className="text-center text-muted" colSpan="5">
+            <td className="text-center text-muted" colSpan="7">
               Loading tasks...
             </td>
           </tr>;
       } else if (this.props.fetchState === this.props.STATES.STATE_ERROR) {
         taskNodes =
           <tr>
-            <td className="text-center text-danger" colSpan="5">
+            <td className="text-center text-danger" colSpan="7">
               Error fetching tasks. Refresh the list to try again.
             </td>
           </tr>;
       } else if (tasksLength === 0) {
         taskNodes =
           <tr>
-            <td className="text-center" colSpan="5">
+            <td className="text-center" colSpan="7">
               No tasks running.
             </td>
           </tr>;
