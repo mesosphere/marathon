@@ -4,7 +4,6 @@ define([
   "React"
 ], function(React) {
   "use strict";
-  function noop() { return false; }
 
   return React.createClass({
     displayName: "PagedNavComponent",
@@ -25,7 +24,14 @@ define([
     },
 
     handlePageChange: function(pageNum) {
-      this.props.onPageChange(pageNum);
+      var noPages = Math.ceil(this.props.noItems / this.props.itemsPerPage);
+      if (pageNum >= 0 &&
+          pageNum < noPages &&
+          pageNum !== this.props.currentPage) {
+        this.props.onPageChange(pageNum);
+      } else {
+        return false;
+      }
     },
 
     render: function() {
@@ -49,11 +55,8 @@ define([
           // only draw those within the bounds
           if (pageNumber >= lowerBound && pageNumber <= upperBound) {
             pagination.push(
-              pageNumber === currentPage ?
-              <li className="disabled" key={pageNumber}>
-                <span>{pageNumber}</span>
-              </li> :
-              <li key={pageNumber}>
+              <li className={pageNumber === currentPage ? "disabled" : ""}
+                  key={pageNumber}>
                 <a href="#"
                   onClick={this.handlePageChange.bind(this, pageNumber)}>
                   {pageNumber}
@@ -65,39 +68,34 @@ define([
         }
       }
 
-      var disableLeft = currentPage === 0;
-      var disableRight = currentPage === noPages - 1;
       var leftArrowsClassSet = React.addons.classSet({
-        "disabled": disableLeft
+        "disabled": currentPage === 0
       });
       var rightArrowsClassSet = React.addons.classSet({
-        "disabled": disableRight
+        "disabled": currentPage === noPages - 1
       });
-      var leftArrowsFunc = disableLeft ? noop : this.handlePageChange;
-      var rightArrowsFunc = disableRight ? noop : this.handlePageChange;
 
       return (
         <ul className="pagination pagination-sm pagination-unstyled">
           <li className={leftArrowsClassSet}>
-            <a href="#" onClick={leftArrowsFunc.bind(this, 0)}>
+            <a href="#" onClick={this.handlePageChange.bind(this, 0)}>
               «
             </a>
           </li>
           <li className={leftArrowsClassSet}>
-            <a href="#" onClick={leftArrowsFunc.bind(this, currentPage - 1)}>
+            <a href="#" onClick={this.handlePageChange.bind(this, currentPage - 1)}>
               ‹
             </a>
           </li>
           {pagination}
           <li className={rightArrowsClassSet}>
-            <a href="#"
-              onClick={rightArrowsFunc.bind(this, currentPage + 1)}>
+            <a href="#" onClick={this.handlePageChange.bind(this, currentPage + 1)}>
               ›
             </a>
           </li>
           <li className={rightArrowsClassSet}>
             <a href="#"
-              onClick={rightArrowsFunc.bind(this, noPages - 1)}>
+              onClick={this.handlePageChange.bind(this, noPages - 1)}>
               »
             </a>
           </li>

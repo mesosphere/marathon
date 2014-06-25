@@ -81,7 +81,6 @@ define([
           return <dd key={u}>{u}</dd>;
         });
       var versionDate = appVersion.get("version");
-      console.log('ver', versionDate);
       return (
         <div>
           <dl className="dl-horizontal dl-unstyled">
