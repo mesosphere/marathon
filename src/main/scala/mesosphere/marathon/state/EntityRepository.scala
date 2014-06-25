@@ -54,7 +54,7 @@ trait EntityRepository[T <: MarathonState[_, T]] {
       names.collect {
         case name: String if name.startsWith(prefix) =>
           Timestamp(name.substring(prefix.length))
-      }.toSeq
+      }.toSeq.sorted.reverse
     }
   }
 

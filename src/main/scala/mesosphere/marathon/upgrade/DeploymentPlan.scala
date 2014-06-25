@@ -1,10 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.{ PathId, Group, Timestamp, MarathonState }
-import scala.concurrent.Future
-import mesosphere.marathon.MarathonSchedulerService
-import org.apache.log4j.Logger
+import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 
 sealed trait DeploymentAction
 //application has not been started before
@@ -23,10 +20,22 @@ final case class DeploymentStep(actions: List[DeploymentAction]) {
 }
 
 final case class DeploymentPlan(
-  original: Group,
-  target: Group,
-  steps: List[DeploymentStep],
-  version: Timestamp)
+    original: Group,
+    target: Group,
+    steps: List[DeploymentStep],
+    version: Timestamp) {
+  override def toString: String = {
+    def actionString(a: DeploymentAction): String = a match {
+      case StartApplication(app, scale)      => s"Start(${app.id}, $scale)"
+      case StopApplication(app)              => s"Stop(${app.id})"
+      case ScaleApplication(app, scale)      => s"Scale(${app.id}, $scale)"
+      case KillAllOldTasksOf(app)            => s"KillOld(${app.id})"
+      case RestartApplication(app, from, to) => s"Restart(${app.id}, $from, $to)"
+    }
+    val stepString = steps.map(_.actions.map(actionString)).mkString("Step(", ", ", ")")
+    s"DeploymentPlan($stepString)"
+  }
+}
 
 object DeploymentPlan {
   def empty() = DeploymentPlan(Group.empty, Group.empty, Nil, Timestamp.now())

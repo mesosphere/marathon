@@ -1,20 +1,22 @@
 package mesosphere.marathon.api.v1
 
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.event.{ EventModule, ApiPostEvent }
-import javax.ws.rs._
-import javax.ws.rs.core.{ Context, Response, MediaType }
-import javax.inject.{ Named, Inject }
-import javax.validation.Valid
+import javax.inject.{Inject, Named}
 import javax.servlet.http.HttpServletRequest
-import com.codahale.metrics.annotation.Timed
+import javax.validation.Valid
+import javax.ws.rs._
+import javax.ws.rs.core.{Context, MediaType, Response}
+
 import akka.event.EventStream
-import scala.concurrent.Await
-import org.apache.log4j.Logger
+import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.Responses
+import mesosphere.marathon.event.{ApiPostEvent, EventModule}
+import mesosphere.marathon.state.GroupManager
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
+import org.apache.log4j.Logger
+
+import scala.concurrent.{Await, Awaitable}
 
 /**
   * @author Tobi Knaup
@@ -25,6 +27,7 @@ class AppsResource @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
+    groupManager: GroupManager,
     config: MarathonConf) {
 
   val log = Logger.getLogger(getClass.getName)
@@ -38,7 +41,8 @@ class AppsResource @Inject() (
   @Timed
   def start(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    Await.result(service.startApp(app), config.zkTimeoutDuration)
+    val withRootId = app.copy(id = app.id.canonicalPath())
+    result(groupManager.updateApp(withRootId.id, _ => withRootId))
     Response.noContent.build
   }
 
@@ -47,7 +51,8 @@ class AppsResource @Inject() (
   @Timed
   def stop(@Context req: HttpServletRequest, app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    Await.result(service.stopApp(app), config.zkTimeoutDuration)
+    val appId = app.id.canonicalPath()
+    result(groupManager.update(appId.parent, _.removeApplication(appId)))
     Response.noContent.build
   }
 
@@ -56,8 +61,7 @@ class AppsResource @Inject() (
   @Timed
   def scale(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
-    val appUpdate = AppUpdate(instances = Some(app.instances))
-    Await.result(service.updateApp(app.id, appUpdate), config.zkTimeoutDuration)
+    result(groupManager.updateApp(app.id.canonicalPath(), _.copy(instances = app.instances)))
     Response.noContent.build
   }
 
@@ -93,4 +97,6 @@ class AppsResource @Inject() (
       Responses.unknownApp(pathId)
     }
   }
+
+  private def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 }

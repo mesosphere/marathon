@@ -1,17 +1,18 @@
 package mesosphere.marathon.state
 
 import javax.inject.Inject
-import mesosphere.marathon.upgrade.DeploymentPlan
-import scala.concurrent.Future
-import com.google.inject.Singleton
-import mesosphere.marathon.{ TaskUpgradeCancelledException, UpgradeInProgressException, MarathonSchedulerService }
-import org.apache.log4j.Logger
-import mesosphere.marathon.tasks.TaskTracker
-import scala.util.{ Try, Failure, Success }
-import com.google.inject.name.Named
-import mesosphere.marathon.event.{ GroupChangeFailed, GroupChangeSuccess, EventModule }
 import akka.event.EventStream
+import com.google.inject.Singleton
+import com.google.inject.name.Named
+import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.event.{EventModule, GroupChangeFailed, GroupChangeSuccess}
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.upgrade._
 import mesosphere.util.ThreadPoolContext.context
+import org.apache.log4j.Logger
+import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
 /**
   * The group manager is the facade for all group related actions.
@@ -21,6 +22,7 @@ class GroupManager @Singleton @Inject() (
     scheduler: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
+    appRepo: AppRepository,
     @Named(EventModule.busName) eventBus: EventStream) {
 
   private[this] val log = Logger.getLogger(getClass.getName)
@@ -49,7 +51,7 @@ class GroupManager @Singleton @Inject() (
 
   /**
     * Get a specific group with a specific version.
-    * @param id the idenfifier of the group.
+    * @param id the identifier of the group.
     * @param version the version of the group.
     * @return the group if it is found, otherwise None
     */
@@ -69,22 +71,31 @@ class GroupManager @Singleton @Inject() (
     *              one can control, to stop a current deployment and start a new one.
     * @return the nw group future, which completes, when the update process has been finished.
     */
-  def update(id: PathId, version: Timestamp, fn: Group => Group, force: Boolean): Future[Group] = {
+  def update(id: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
     root.flatMap { current =>
-      val update = current.makeGroup(id).update(version) {
-        group =>
-          val gid = group.id
-          val lookFor = id
-          if (group.id == id) fn(group) else group
-      }
+      val update = current.update(id, fn, version)
+      upgrade(current, update, force)
+    }
+  }
+
+  def updateApp(id: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false) = {
+    root.flatMap{ current =>
+      val update = current.updateApp(id, fn, version)
       upgrade(current, update, force)
     }
   }
 
   private def upgrade(current: Group, group: Group, force: Boolean): Future[Group] = {
     log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
-    //TODO(MV): delegate to scheduler
+    //TODO(MV): delegate to scheduler - only mock implementation
     def deploy(plan: DeploymentPlan, force: Boolean): Future[Boolean] = {
+      plan.steps.flatMap(_.actions).foreach {
+        case StartApplication(app, to)     => appRepo.store(app)
+        case ScaleApplication(app, to)     => appRepo.store(app)
+        case RestartApplication(app, _, _) => appRepo.store(app)
+        case StopApplication(app)          => appRepo.expunge(app.id)
+        case _                             => //nothing
+      }
       log.info(s"Deploy: $plan")
       Future.successful(true)
     }

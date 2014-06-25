@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
-import org.scalatest.{ Matchers, GivenWhenThen, FunSpec, FunSuite }
-import PathId._
+import mesosphere.marathon.state.PathId._
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -79,5 +79,21 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       group should be(PathId("/a/b/c/d/e/f"))
     }
 
+    it("can give the parent path") {
+      Given("A base id")
+      val id1 = PathId("/a/b/c")
+      val id2 = PathId("/a")
+      val id3 = PathId.empty
+
+      When("a relative path is canonized")
+      val parent1 = id1.parent
+      val parent2 = id2.parent
+      val parent3 = id3.parent
+
+      Then("the path is absolute and correct")
+      parent1 should be(PathId("/a/b"))
+      parent2 should be(PathId.empty)
+      parent3 should be(PathId.empty)
+    }
   }
 }

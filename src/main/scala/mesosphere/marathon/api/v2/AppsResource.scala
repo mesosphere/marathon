@@ -1,21 +1,24 @@
 package mesosphere.marathon.api.v2
 
-import javax.ws.rs._
-import mesosphere.marathon.state.PathId._
-import javax.ws.rs.core.{ Response, Context, MediaType }
-import javax.inject.{ Named, Inject }
-import mesosphere.marathon.event.{ EventModule, ApiPostEvent }
-import akka.event.EventStream
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
-import mesosphere.marathon.tasks.TaskTracker
-import com.codahale.metrics.annotation.Timed
+import java.net.URI
+import javax.inject.{Inject, Named}
 import javax.servlet.http.HttpServletRequest
 import javax.validation.Valid
-import mesosphere.marathon.api.v1.AppDefinition
-import scala.concurrent.Await
-import java.net.URI
-import mesosphere.marathon.health.HealthCheckManager
+import javax.ws.rs._
+import javax.ws.rs.core.{Context, MediaType, Response}
+
+import akka.event.EventStream
+import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.Responses
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.event.{ApiPostEvent, EventModule}
+import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.state.GroupManager
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
+
+import scala.concurrent.{Await, Awaitable}
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -24,7 +27,8 @@ class AppsResource @Inject() (
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
-    config: MarathonConf) {
+    config: MarathonConf,
+    groupManager: GroupManager) {
 
   @GET
   @Timed
@@ -41,8 +45,7 @@ class AppsResource @Inject() (
   def create(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
     val withRootId = app.copy(id = app.id.canonicalPath())
-    Await.result(service.startApp(withRootId), config.zkTimeoutDuration)
-    //TODO(MV): delegate to group manager
+    result(groupManager.updateApp(withRootId.id, _ => withRootId, app.version))
     Response.created(new URI(s"${withRootId.id}")).build
   }
 
@@ -63,16 +66,19 @@ class AppsResource @Inject() (
     @PathParam("id") id: String,
     @Valid appUpdate: AppUpdate): Response = {
     val appId = id.toRootPath
-    val updatedApp = appUpdate.apply(AppDefinition(appId))
 
     service.getApp(appId) match {
       case Some(app) =>
-        maybePostEvent(req, updatedApp)
-        Await.result(service.updateApp(appId, appUpdate), config.zkTimeoutDuration)
-        //TODO(MV): delegate to group manager
-        Response.noContent.build
+        //if version is defined, replace with version
+        val update = appUpdate.version.flatMap(v => service.getApp(appId, v)).orElse(Some(appUpdate(app)))
+        val response = update.map { updatedApp =>
+          maybePostEvent(req, updatedApp)
+          result(groupManager.updateApp(appId, _ => updatedApp, updatedApp.version))
+          Response.noContent.build
+        }
+        response.getOrElse(Responses.unknownApp(appId, appUpdate.version))
 
-      case None => create(req, updatedApp)
+      case None => create(req, appUpdate(AppDefinition(appId)))
     }
   }
 
@@ -80,10 +86,9 @@ class AppsResource @Inject() (
   @Path("""{id:.+}""")
   @Timed
   def delete(@Context req: HttpServletRequest, @PathParam("id") id: String): Response = {
-    val app = AppDefinition(id = id.toRootPath)
-    maybePostEvent(req, app)
-    Await.result(service.stopApp(app), config.zkTimeoutDuration)
-    //TODO(MV): delegate to group manager
+    val appId = id.toRootPath
+    maybePostEvent(req, AppDefinition(id = appId))
+    result(groupManager.update(appId.parent, _.removeApplication(appId)))
     Response.noContent.build
   }
 
@@ -97,6 +102,8 @@ class AppsResource @Inject() (
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
+
+  private def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 
   private def search(cmd: String, id: String): Iterable[AppDefinition] = {
     /** Returns true iff `a` is a prefix of `b`, case-insensitively */

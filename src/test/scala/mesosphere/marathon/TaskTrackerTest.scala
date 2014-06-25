@@ -50,7 +50,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     val state = new InMemoryState
     val taskTracker = new TaskTracker(state, config)
-    val app = "foo".toPath
+    val app = "foo".toRootPath
     val taskId1 = TaskIDUtil.taskId(app)
     val taskId2 = TaskIDUtil.taskId(app)
     val taskId3 = TaskIDUtil.taskId(app)
@@ -87,7 +87,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     val state = new InMemoryState
     val taskTracker1 = new TaskTracker(state, config)
-    val id = "foo".toPath
+    val id = "foo".toRootPath
     val taskId1 = TaskIDUtil.taskId(id)
     val taskId2 = TaskIDUtil.taskId(id)
     val taskId3 = TaskIDUtil.taskId(id)
@@ -121,7 +121,7 @@ class TaskTrackerTest extends MarathonSpec {
     val task2 = makeSampleTask("task2")
     val task3 = makeSampleTask("task3")
 
-    val app1 = "app1".toPath
+    val app1 = "app1".toRootPath
     taskTracker.starting(app1, task1)
     taskTracker.starting(app1, task2)
     taskTracker.starting(app1, task3)

@@ -3,7 +3,7 @@ package mesosphere.marathon.api
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
 
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ Timestamp, PathId }
 
 /**
   * @author Tobi Knaup
@@ -18,10 +18,12 @@ object Responses {
       .build
   }
 
-  def unknownApp(id: PathId): Response = {
+  def unknownApp(id: PathId, version: Option[Timestamp] = None): Response = {
+    var text = s"App '$id' does not exist"
+    version.map(v => text += s" in version $v")
     Response
       .status(Status.NOT_FOUND)
-      .entity(Map("message" -> s"App '$id' does not exist"))
+      .entity(Map("message" -> text))
       .build
   }
 

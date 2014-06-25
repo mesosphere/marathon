@@ -39,10 +39,10 @@ class AppUpgradeManagerTest
     val taskTracker = new TaskTracker(new InMemoryState, config)
     val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
 
-    manager ! Upgrade(driver, AppDefinition(id = "testApp".toPath), 10)
+    manager ! Upgrade(driver, AppDefinition(id = "testApp".toRootPath), 10)
 
     awaitCond(
-      manager.underlyingActor.runningUpgrades.contains("testApp".toPath),
+      manager.underlyingActor.runningUpgrades.contains("testApp".toRootPath),
       5.seconds
     )
   }
@@ -79,9 +79,9 @@ class AppUpgradeManagerTest
     val manager = TestActorRef[AppUpgradeManager](Props(classOf[AppUpgradeManager], taskTracker, taskQueue, eventBus))
 
     implicit val timeout = Timeout(1.minute)
-    val res = (manager ? Upgrade(driver, AppDefinition(id = "testApp".toPath), 10)).mapTo[Boolean]
+    val res = (manager ? Upgrade(driver, AppDefinition(id = "testApp".toRootPath), 10)).mapTo[Boolean]
 
-    manager ! CancelUpgrade("testApp".toPath, new Exception)
+    manager ! CancelUpgrade("testApp".toRootPath, new Exception)
 
     intercept[Exception] {
       Await.result(res, 5.seconds)

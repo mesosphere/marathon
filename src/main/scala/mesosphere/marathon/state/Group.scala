@@ -63,6 +63,23 @@ case class Group(
     }
   }
 
+  def updateApp(path: PathId, fn: AppDefinition => AppDefinition, timestamp: Timestamp): Group = {
+    val groupId = path.parent
+    makeGroup(groupId).update(timestamp) { group =>
+      if (group.id == groupId) {
+        val current = group.apps.find(_.id == path).getOrElse(AppDefinition(path))
+        group.putApplication(fn(current))
+      }
+      else group
+    }
+  }
+
+  def update(path: PathId, fn: Group => Group, timestamp: Timestamp): Group = {
+    makeGroup(path).update(timestamp) { group =>
+      if (group.id == path) fn(group) else group
+    }
+  }
+
   def update(timestamp: Timestamp = Timestamp.now())(fn: Group => Group): Group = {
     def in(groups: List[Group]): List[Group] = groups match {
       case head :: rest => head.update(timestamp)(fn) :: in(rest)
@@ -74,6 +91,10 @@ case class Group(
   def remove(gid: PathId, timestamp: Timestamp = Timestamp.now()): Group = {
     copy(groups = groups.filter(_.id != gid).map(_.remove(gid, timestamp)), version = timestamp)
   }
+
+  def putApplication(appDef: AppDefinition): Group = copy(apps = apps.filter(_.id != appDef.id) + appDef)
+
+  def removeApplication(appId: PathId): Group = copy(apps = apps.filter(_.id != appId))
 
   def makeGroup(gid: PathId): Group = {
     val restPath = gid.restOf(id)

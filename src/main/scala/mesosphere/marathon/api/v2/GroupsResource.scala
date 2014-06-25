@@ -1,27 +1,29 @@
 package mesosphere.marathon.api.v2
 
-import javax.ws.rs._
-import javax.ws.rs.core.{ Request, Response, MediaType }
-import javax.inject.Inject
-import javax.validation.{ ConstraintViolation, ConstraintViolationException, Validation }
-import mesosphere.marathon.state.{ PathId, Group, Timestamp, GroupManager }
-import scala.concurrent.Await.result
-import scala.concurrent.duration._
-import mesosphere.marathon.api.Responses
-import scala.collection.JavaConverters._
-import org.hibernate.validator.internal.engine.ConstraintViolationImpl
 import java.lang.annotation.ElementType
-import org.hibernate.validator.internal.engine.path.PathImpl
-import scala.reflect.ClassTag
-import scala.collection.mutable
-import PathId._
+import java.net.URI
+import javax.inject.Inject
+import javax.validation.{ConstraintViolation, ConstraintViolationException, Validation}
+import javax.ws.rs._
+import javax.ws.rs.core.{MediaType, Response}
+
+import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.api.Responses
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{Group, GroupManager, PathId, Timestamp}
 import mesosphere.util.ThreadPoolContext.context
+import org.hibernate.validator.internal.engine.ConstraintViolationImpl
+import org.hibernate.validator.internal.engine.path.PathImpl
+
+import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.concurrent.{Await, Awaitable}
+import scala.reflect.ClassTag
 
 @Path("v2/groups")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class GroupsResource @Inject() (groupManager: GroupManager) {
+class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf) {
 
-  val defaultWait = 3.seconds
   val ListVersionsRE = """^(.+)/versions$""".r
   val GetVersionRE = """^(.+)/versions/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$""".r
 
@@ -29,11 +31,11 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
     * Get root group.
     */
   @GET
-  def root(): Group = result(groupManager.root, defaultWait)
+  def root(): Group = result(groupManager.root)
 
   /**
-    * Get a specific group, optionally with specifc version
-    * @param id the identifier of the group encded as path
+    * Get a specific group, optionally with specific version
+    * @param id the identifier of the group encoded as path
     * @return the group or the group versions.
     */
   @GET
@@ -44,9 +46,9 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
       case None        => Responses.unknownGroup(id.toRootPath)
     }
     id match {
-      case ListVersionsRE(id)        => Response.ok(result(groupManager.versions(id.toRootPath), defaultWait)).build()
-      case GetVersionRE(id, version) => groupResponse(result(groupManager.group(id.toRootPath, Timestamp(version)), defaultWait))
-      case _                         => groupResponse(result(groupManager.group(id.toRootPath), defaultWait))
+      case ListVersionsRE(gid)        => Response.ok(result(groupManager.versions(gid.toRootPath))).build()
+      case GetVersionRE(gid, version) => groupResponse(result(groupManager.group(gid.toRootPath, Timestamp(version))))
+      case _                         => groupResponse(result(groupManager.group(id.toRootPath)))
     }
   }
 
@@ -57,8 +59,8 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
   def create(update: GroupUpdate): Response = {
-    require(update.id.isDefined)
-    updateOrCreate(PathId.empty, update, force = false)
+    val (path, version) = updateOrCreate(PathId.empty, update, force = false)
+    Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
   }
 
   /**
@@ -74,7 +76,8 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
   def createUpdate(@PathParam("id") id: String,
                    update: GroupUpdate,
                    @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    updateOrCreate(id.toRootPath, update, force)
+    val (path, version) = updateOrCreate(id.toRootPath, update, force)
+    Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
   }
 
   /**
@@ -91,13 +94,15 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
              update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     updateOrCreate(id.toRootPath, update, force)
+    val (_, version) = updateOrCreate(id.toRootPath, update, force)
+    Response.ok(Map("version" -> version)).build()
   }
 
   /**
     * Rollback to a specific version of a given group.
     * @param id the identifier of the group to roll back.
     * @param version the version of the group to roll to.
-    * @param force if there is an upgrade in progress, it can be overriden with the force flag.
+    * @param force if there is an upgrade in progress, it can be overridden with the force flag.
     */
   @PUT
   @Path("""{id:.+}/version/{version}""")
@@ -107,12 +112,12 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
     val groupId = id.toRootPath
     val res = groupManager.group(groupId, Timestamp(version)).map {
       case Some(group) =>
-        groupManager.update(groupId, group.version, _ => group, force)
-        Response.noContent().build()
+        groupManager.update(groupId, _ => group, group.version, force)
+        Response.ok(group).build()
       case None =>
         Responses.unknownGroup(groupId)
     }
-    result(res, defaultWait)
+    result(res)
   }
 
   /**
@@ -127,16 +132,16 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val groupId = id.toRootPath
     val version = Timestamp.now()
-    groupManager.update(groupId.rootPath, version, _.remove(groupId, version), force)
+    groupManager.update(groupId.parent, _.remove(groupId, version), version, force)
     Response.ok(Map("version" -> version)).build()
   }
 
-  private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): Response = {
+  private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): (PathId, Timestamp) = {
     checkIsValid(update)
     val version = Timestamp.now()
     val effectivePath = update.id.map(_.canonicalPath(id)).getOrElse(id)
-    groupManager.update(effectivePath, version, group => update.apply(group, version), force)
-    Response.ok(Map("version" -> version)).build()
+    groupManager.update(effectivePath, group => update.apply(group, version), version, force)
+    (effectivePath, version)
   }
 
   //Note: this is really ugly. It is necessary, since bean validation will not walk into a scala Seq[_] and
@@ -188,4 +193,6 @@ class GroupsResource @Inject() (groupManager: GroupManager) {
     val errors = groupValidation("", root)
     if (errors.nonEmpty) throw new ConstraintViolationException("Group is not valid", errors.asJava)
   }
+
+  private def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 }

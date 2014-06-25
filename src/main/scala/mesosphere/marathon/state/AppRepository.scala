@@ -4,10 +4,9 @@ import mesosphere.marathon.api.v1.AppDefinition
 
 import mesosphere.util.ThreadPoolContext.context
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 class AppRepository(val store: PersistenceStore[AppDefinition]) extends EntityRepository[AppDefinition] {
 
-  def allPathIds(): Future[Iterable[PathId]] = allIds().map(_.map(PathId.apply))
+  def allPathIds(): Future[Iterable[PathId]] = allIds().map(_.map(PathId.fromSafePath))
 
   def currentVersion(appId: PathId): Future[Option[AppDefinition]] = currentVersion(appId.safePath)
   def listVersions(appId: PathId): Future[Iterable[Timestamp]] = listVersions(appId.safePath)

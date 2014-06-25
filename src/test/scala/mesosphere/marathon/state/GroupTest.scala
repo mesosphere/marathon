@@ -64,6 +64,28 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       result.group("/test".toPath).get.version should be(timestamp)
     }
 
+    it("can do an update by applying a change function with a path identifier") {
+      Given("an existing group with two subgroups")
+      val scaling = ScalingStrategy(0.5, Some(1))
+      val current = Group.empty.copy(groups = Set(
+        Group("/test".toPath, scaling, groups = Set(
+          Group("/test/group1".toPath, scaling, Set(AppDefinition("/test/group1/app1".toPath))),
+          Group("/test/group2".toPath, scaling, Set(AppDefinition("/test/group2/app2".toPath)))
+        ))))
+
+      When("the group will be updated")
+      val timestamp = Timestamp.now()
+      def change(group: Group) = Group("/test/group3".toPath, scaling, Set(AppDefinition("app2".toPath)), version = timestamp)
+
+      val result = current.update(PathId("/test/group2"), change, timestamp)
+
+      Then("the update has been applied")
+      result.version should be(timestamp)
+      result.group("/test/group3".toPath) should be('defined)
+      result.group("/test/group3".toPath).get.version should be(timestamp)
+      result.group("/test".toPath).get.version should be(timestamp)
+    }
+
     it("can delete a node based in the path") {
       Given("an existing group with two subgroups")
       val current = Group.empty.makeGroup("/test/foo/one".toPath).makeGroup("/test/bla/two".toPath)
