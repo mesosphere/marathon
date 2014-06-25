@@ -9,6 +9,7 @@ import mesosphere.marathon.event.DeploymentSuccess
 import scala.concurrent.{ Promise, Future }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.MarathonTask
+import scala.util.{ Failure, Success }
 
 class DeploymentActor(
     parent: ActorRef,
@@ -18,7 +19,7 @@ class DeploymentActor(
     plan: DeploymentPlan,
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
-    eventBus: EventStream) extends Actor {
+    eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
 
@@ -31,7 +32,15 @@ class DeploymentActor(
   }
 
   def receive = {
-    case NextStep if steps.hasNext => performStep(steps.next())
+    case NextStep if steps.hasNext =>
+      performStep(steps.next()) onComplete {
+        case Success(_) => self ! NextStep
+        case Failure(t) =>
+          log.error(t, s"Deployment of group ${plan.target.id} failed")
+          receiver ! Failed
+          context.stop(self)
+      }
+
     case NextStep =>
       // no more steps, we're done
       eventBus.publish(DeploymentSuccess(plan.target.id))
