@@ -9,8 +9,6 @@ import akka.actor._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.tasks.TaskTracker
 import scala.collection.immutable.Set
-import mesosphere.mesos.protos.TaskID
-import mesosphere.mesos.protos.Implicits._
 
 class AppStopActor(
     driver: SchedulerDriver,
@@ -24,7 +22,7 @@ class AppStopActor(
 
   override def preStart(): Unit = {
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
-    idsToKill.foreach(x => driver.killTask(TaskID(x)))
+    scheduler.stopApp(driver, app)
   }
 
   override def postStop(): Unit = {
@@ -49,7 +47,6 @@ class AppStopActor(
 
   def checkFinished(): Unit = {
     if (idsToKill.isEmpty) {
-      scheduler.stopApp(driver, app)
       promise.success(())
       context.stop(self)
     }

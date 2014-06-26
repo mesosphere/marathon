@@ -51,9 +51,24 @@ class AppUpgradeManager(
         case _ => origSender ! UpgradeCanceled(appId)
       }
 
+    case CancelDeployment(id, reason) =>
+      val origSender = sender
+      runningDeployments.remove(id) match {
+        case Some(ref) =>
+          stopActor(ref, reason) onComplete {
+            case _ => origSender ! DeploymentCanceled(id)
+          }
+
+        case _ => origSender ! DeploymentCanceled(id)
+      }
+
     case UpgradeFinished(id) =>
       log.info(s"Removing $id from list of running upgrades")
       runningUpgrades -= id
+
+    case DeploymentFinished(id) =>
+      log.info(s"Removing $id from list of running deployments")
+      runningDeployments -= id
 
     case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.target.id) =>
       val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, driver, scheduler, plan, taskTracker, taskQueue, eventBus))
@@ -75,5 +90,6 @@ object AppUpgradeManager {
 
   case class UpgradeFinished(appId: PathId)
   case class UpgradeCanceled(appId: PathId)
-  case class DeploymentCanceled(id: String)
+  case class DeploymentFinished(appId: PathId)
+  case class DeploymentCanceled(id: PathId)
 }
