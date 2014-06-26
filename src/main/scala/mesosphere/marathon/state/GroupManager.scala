@@ -1,18 +1,20 @@
 package mesosphere.marathon.state
 
 import javax.inject.Inject
+
 import akka.event.EventStream
 import com.google.inject.Singleton
 import com.google.inject.name.Named
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
+import mesosphere.marathon.event.{EventModule, GroupChangeFailed, GroupChangeSuccess}
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade._
 import mesosphere.util.ThreadPoolContext.context
 import org.apache.log4j.Logger
+
 import scala.concurrent.Future
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success}
 
 /**
   * The group manager is the facade for all group related actions.
@@ -87,16 +89,21 @@ class GroupManager @Singleton @Inject() (
 
   private def upgrade(current: Group, group: Group, force: Boolean): Future[Group] = {
     log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
-    val restart = for {
+
+    val deployment = for {
       storedGroup <- groupRepo.store(zkName, group)
       plan = DeploymentPlan(current, storedGroup)
       result <- scheduler.deploy(plan, force)
-    } yield storedGroup
-    restart.andThen(postEvent(group))
-  }
+    } yield plan
 
-  private def postEvent(group: Group): PartialFunction[Try[Group], Unit] = {
-    case Success(_)  => eventBus.publish(GroupChangeSuccess(group.id, group.version.toString))
-    case Failure(ex) => eventBus.publish(GroupChangeFailed(group.id, group.version.toString, ex.getMessage))
+    deployment.onComplete {
+      case Success(plan) =>
+        log.info(s"Deployment finished for change: $plan")
+        eventBus.publish(GroupChangeSuccess(group.id, group.version.toString))
+      case Failure(ex) =>
+        log.info(s"Deployment failed for change: ${group.version}")
+        eventBus.publish(GroupChangeFailed(group.id, group.version.toString, ex.getMessage))
+    }
+    deployment.map(_.target)
   }
 }

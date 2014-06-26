@@ -36,7 +36,7 @@ final case class DeploymentPlan(
       case RestartApplication(app, from, to) => s"Restart(${app.id}, $from, $to)"
     }
     val stepString = steps.map(_.actions.map(actionString)).mkString("Step(", ", ", ")")
-    s"DeploymentPlan($stepString)"
+    s"DeploymentPlan($version, $stepString)"
   }
 }
 

@@ -1,14 +1,14 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.Protos.{ GroupDefinition, ScalingStrategyDefinition }
+import mesosphere.marathon.Protos.{GroupDefinition, ScalingStrategyDefinition, StorageVersion}
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.state.PathId._
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
-import org.jgrapht.traverse.TopologicalOrderIterator
-import scala.collection.JavaConversions._
 import org.jgrapht.graph._
-import PathId._
+import org.jgrapht.traverse.TopologicalOrderIterator
+
+import scala.collection.JavaConversions._
 
 case class ScalingStrategy(
     minimumHealthCapacity: Double,

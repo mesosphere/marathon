@@ -1,35 +1,34 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.TaskID
-import org.apache.log4j.Logger
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.{ PathId, AppRepository, Timestamp }
-import com.google.common.util.concurrent.AbstractExecutionThreadService
-import javax.inject.{ Named, Inject }
-import java.util.{ TimerTask, Timer }
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration.MILLISECONDS
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.{Timer, TimerTask}
+import javax.inject.{Inject, Named}
+
+import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.pattern.ask
+import akka.util.Timeout
+import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.twitter.common.base.ExceptionalCommand
-import com.twitter.common.zookeeper.Group.JoinException
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
-import scala.util.Random
-import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.health.HealthCheckManager
-import scala.concurrent.duration._
-import java.util.concurrent.CountDownLatch
-import mesosphere.util.{ BackToTheFuture, ThreadPoolContext, PromiseActor }
-import akka.actor.{ Props, ActorSystem, ActorRef }
+import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.MarathonSchedulerActor._
-import akka.pattern.ask
-import scala.util.{ Failure, Success }
-import akka.util.Timeout
-import scala.concurrent.Promise
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v2.AppUpdate
+import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.state.{AppRepository, PathId, Timestamp}
+import mesosphere.marathon.upgrade.DeploymentActor.{Failed, Finished}
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.upgrade.DeploymentActor.{ Failed, Finished }
+import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.{ThreadPoolContext, PromiseActor}
+import org.apache.log4j.Logger
+import org.apache.mesos.Protos.TaskID
+
+import scala.concurrent.duration.{MILLISECONDS, _}
+import scala.concurrent.{Await, Future, Promise}
+import scala.util.{Failure, Random, Success}
 
 /**
   * Wrapper class for the scheduler
@@ -121,6 +120,7 @@ class MarathonSchedulerService @Inject() (
   }
 
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
+    log.info(s"Deploy plan:$plan with force:$force")
     val promise = Promise[Any]()
     val receiver = system.actorOf(Props(classOf[PromiseActor], promise))
 
