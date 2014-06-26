@@ -3,11 +3,10 @@ FROM ubuntu:14.04
 MAINTAINER Mesosphere <support@mesosphere.io>
 
 ## DEPENDENCIES ##
-RUN apt-get update && apt-get install --assume-yes python-software-properties curl default-jdk
-
-# install mesos (for libs) from mesosphere downloads
-ADD http://downloads.mesosphere.io/master/ubuntu/14.04/mesos_0.19.0_amd64.deb /tmp/mesos.deb
-RUN dpkg --install /tmp/mesos.deb && rm /tmp/mesos.deb
+RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources.list.d/mesosphere.list
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
+RUN apt-get update
+RUN apt-get install --assume-yes mesos python-software-properties curl default-jdk
 
 ## MARATHON ##
 ADD http://downloads.mesosphere.io/marathon/marathon-0.6.0/marathon-0.6.0.tgz /tmp/marathon.tgz
