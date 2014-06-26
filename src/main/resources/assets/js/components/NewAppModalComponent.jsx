@@ -53,7 +53,11 @@ define([
       }
 
       // URIs should be an Array of Strings.
-      if ("uris" in modelAttrs) modelAttrs.uris = modelAttrs.uris.split(",");
+      if ("uris" in modelAttrs) {
+        modelAttrs.uris = modelAttrs.uris.split(",");
+      } else {
+        modelAttrs.uris = [];
+      }
 
       // Ports should always be an Array.
       if ("ports" in modelAttrs) {
@@ -77,8 +81,44 @@ define([
       this.state.model.set(modelAttrs);
 
       if (this.state.model.isValid()) {
-        this.props.onCreate(this.state.model);
-        this.destroy();
+        this.props.onCreate(
+          this.state.model,
+          {
+            error: function(obj, response) {
+              if(this.state.model.validationError == null) {
+                this.state.model.validationError = [];
+              }
+              // handling success as well
+              if (response.status < 300) {
+                this.destroy();
+              } else if (response.status === 422) {
+                this.state.model.validationError.push(
+                  {
+                    attribute: "id",
+                    message: "An app with this ID already exists"
+                  }
+                );
+              } else if (response.status >= 500) {
+                this.state.model.validationError.push(
+                  {
+                    attribute: "general",
+                    message: "Server error, could not create"
+                  }
+                );
+              } else {
+                this.state.model.validationError.push(
+                  {
+                    attribute: "general",
+                    message: "Creation unsuccessful"
+                  }
+                );
+              }
+            }.bind(this),
+            success: function() {
+              this.destroy();
+            }.bind(this)
+          }
+        );
       }
     },
 
@@ -157,6 +197,10 @@ define([
                 <input />
               </FormGroupComponent>
               <div>
+                <FormGroupComponent
+                  attribute="general"
+                  model={model}>
+              </FormGroupComponent>
                 <input type="submit" className="btn btn-success" value="+ Create" /> <button className="btn btn-default" type="button" onClick={this.destroy}>
                   Cancel
                 </button>
