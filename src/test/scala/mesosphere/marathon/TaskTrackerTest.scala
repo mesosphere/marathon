@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import org.apache.mesos.state.{State, InMemoryState}
+import org.apache.mesos.state.{ State, InMemoryState }
 import mesosphere.marathon.Protos.MarathonTask
 import org.apache.mesos.Protos.{ TaskID, TaskStatus, TaskState }
 import java.io.{ ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream }

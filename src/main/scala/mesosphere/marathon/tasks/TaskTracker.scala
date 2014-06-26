@@ -14,7 +14,6 @@ import org.apache.log4j.Logger
 import mesosphere.util.Stats
 import com.codahale.metrics.Gauge
 
-
 import mesosphere.util.{ ThreadPoolContext, BackToTheFuture }
 
 class TaskTracker @Inject() (state: State, stats: Stats, config: MarathonConf) {
@@ -149,11 +148,12 @@ class TaskTracker @Inject() (state: State, stats: Stats, config: MarathonConf) {
         }
       }
 
-    if (apps.contains(appName)) {
-      apps(appName)
-    }
-    else {
-      new App(appName, new mutable.HashSet[MarathonTask](), false)
+      if (apps.contains(appName)) {
+        apps(appName)
+      }
+      else {
+        new App(appName, new mutable.HashSet[MarathonTask](), false)
+      }
     }
   }
 

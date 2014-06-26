@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
-import mesosphere.util.{Stats, ThreadPoolContext, RateLimiters }
+import mesosphere.util.{ Stats, ThreadPoolContext, RateLimiters }
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
@@ -114,20 +114,21 @@ class MarathonScheduler @Inject() (
             i += 1
           }
 
-        if (!found) {
-          log.debug("Offer doesn't match request. Declining.")
-          // Add it back into the queue so the we can try again
-          driver.declineOffer(offer.getId)
+          if (!found) {
+            log.debug("Offer doesn't match request. Declining.")
+            // Add it back into the queue so the we can try again
+            driver.declineOffer(offer.getId)
+          }
+          else {
+            taskQueue.addAll(apps.drop(i))
+          }
         }
-        else {
-          taskQueue.addAll(apps.drop(i))
+        catch {
+          case t: Throwable =>
+            log.error("Caught an exception. Declining offer.", t)
+            // Ensure that we always respond
+            driver.declineOffer(offer.getId)
         }
-      }
-      catch {
-        case t: Throwable =>
-          log.error("Caught an exception. Declining offer.", t)
-          // Ensure that we always respond
-          driver.declineOffer(offer.getId)
       }
     }
   }
@@ -152,48 +153,42 @@ class MarathonScheduler @Inject() (
         taskTracker.terminated(appID, status).foreach(taskOption => {
           taskOption match {
             case Some(task) => postEvent(status, task)
-            case None => log.warn(s"Couldn't post event for ${status.getTaskId}")
+            case None       => log.warn(s"Couldn't post event for ${status.getTaskId}")
           }
 
-      // Remove from our internal list
-      taskTracker.terminated(appID, status).foreach(taskOption => {
-        taskOption match {
-          case Some(task) => postEvent(status, task)
-          case None       => log.warn(s"Couldn't post event for ${status.getTaskId}")
-        }
-
-        if (rateLimiters.tryAcquire(appID)) {
-          scale(driver, appID)
-        }
-        else {
-          log.warn(s"Rate limit reached for $appID")
-        }
-      })
-    }
-    else if (status.getState.eq(TaskState.TASK_RUNNING)) {
-      taskTracker.running(appID, status).onComplete {
-        case Success(task) => postEvent(status, task)
-        case Failure(t) =>
-          log.warn(s"Couldn't post event for ${status.getTaskId}", t)
-          log.warn(s"Killing task ${status.getTaskId}")
-          driver.killTask(status.getTaskId)
+          if (rateLimiters.tryAcquire(appID)) {
+            scale(driver, appID)
+          }
+          else {
+            log.warn(s"Rate limit reached for $appID")
+          }
+        })
       }
-    }
-    else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
-      log.warn(s"Received status update for unknown app $appID")
-      log.warn(s"Killing task ${status.getTaskId}")
-      driver.killTask(status.getTaskId)
-    }
-    else {
-      taskTracker.statusUpdate(appID, status).onComplete {
-        case Success(t) =>
-          t match {
-            case None =>
-              log.warn(s"Killing task ${status.getTaskId}")
-              driver.killTask(status.getTaskId)
-            case _ =>
-          }
-        case _ =>
+      else if (status.getState.eq(TaskState.TASK_RUNNING)) {
+        taskTracker.running(appID, status).onComplete {
+          case Success(task) => postEvent(status, task)
+          case Failure(t) =>
+            log.warn(s"Couldn't post event for ${status.getTaskId}", t)
+            log.warn(s"Killing task ${status.getTaskId}")
+            driver.killTask(status.getTaskId)
+        }
+      }
+      else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
+        log.warn(s"Received status update for unknown app $appID")
+        log.warn(s"Killing task ${status.getTaskId}")
+        driver.killTask(status.getTaskId)
+      }
+      else {
+        taskTracker.statusUpdate(appID, status).onComplete {
+          case Success(t) =>
+            t match {
+              case None =>
+                log.warn(s"Killing task ${status.getTaskId}")
+                driver.killTask(status.getTaskId)
+              case _ =>
+            }
+          case _ =>
+        }
       }
     }
   }
