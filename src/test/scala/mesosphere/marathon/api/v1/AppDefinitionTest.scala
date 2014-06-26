@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v1
 
 import com.google.common.collect.Lists
+import mesosphere.marathon.api.v2.ModelValidation
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.state.{ Migration, StorageVersions, Timestamp }
@@ -13,7 +14,7 @@ import mesosphere.marathon.state.PathId._
 /**
   * @author Tobi Knaup
   */
-class AppDefinitionTest extends MarathonSpec with Matchers {
+class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation {
 
   test("ToProto") {
     val app = AppDefinition(
@@ -61,57 +62,26 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
     def shouldViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = validator.validate(app).asScala
+      val violations = checkApp(app)
       assert(violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
     def shouldNotViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = validator.validate(app).asScala
+      val violations = checkApp(app)
       assert(!violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
-    /* TODO(MV): validate path id
-    val app = AppDefinition(id = "a b")
-    shouldViolate(app, "id", "{javax.validation.constraints.Pattern.message}")
+    val idError = "contains invalid characters. Allowed characters: [a-z0-9]"
+    val app = AppDefinition(id = "a b".toRootPath)
 
-    shouldViolate(
-      app.copy(id = "a#$%^&*b"),
-      "id",
-      "{javax.validation.constraints.Pattern.message}"
-    )
-
-    shouldViolate(
-      app.copy(id = "-dash-disallowed-at-start"),
-      "id",
-      "{javax.validation.constraints.Pattern.message}"
-    )
-
-    shouldViolate(
-      app.copy(id = "dash-disallowed-at-end-"),
-      "id",
-      "{javax.validation.constraints.Pattern.message}"
-    )
-
-    shouldViolate(
-      app.copy(id = "uppercaseLettersNoGood"),
-      "id",
-      "{javax.validation.constraints.Pattern.message}"
-    )
-
-    shouldNotViolate(
-      app.copy(id = "ab"),
-      "id",
-      "{javax.validation.constraints.Pattern.message}"
-    )
-    */
-
-    shouldViolate(
-      AppDefinition(id = "test".toPath, instances = -3),
-      "instances",
-      "{javax.validation.constraints.Min.message}"
-    )
+    shouldViolate(app, "id", idError)
+    shouldViolate(app.copy(id = "a#$%^&*b".toRootPath), "id", idError)
+    shouldViolate(app.copy(id = "-dash-disallowed-at-start".toRootPath), "id", idError)
+    shouldViolate(app.copy(id = "dash-disallowed-at-end-".toRootPath), "id", idError)
+    shouldViolate(app.copy(id = "uppercaseLettersNoGood".toRootPath), "id", idError)
+    shouldNotViolate(app.copy(id = "ab".toRootPath), "id", idError)
 
     shouldViolate(
       AppDefinition(id = "test".toPath, instances = -3, ports = Seq(9000, 8080, 9000)),

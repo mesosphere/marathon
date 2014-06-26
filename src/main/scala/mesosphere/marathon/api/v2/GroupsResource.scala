@@ -1,9 +1,7 @@
 package mesosphere.marathon.api.v2
 
-import java.lang.annotation.ElementType
 import java.net.URI
 import javax.inject.Inject
-import javax.validation.{ ConstraintViolation, ConstraintViolationException, Validation }
 import javax.ws.rs._
 import javax.ws.rs.core.{ MediaType, Response }
 
@@ -13,17 +11,12 @@ import mesosphere.marathon.api.Responses
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
 import mesosphere.util.ThreadPoolContext.context
-import org.hibernate.validator.internal.engine.ConstraintViolationImpl
-import org.hibernate.validator.internal.engine.path.PathImpl
 
-import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.concurrent.{ Await, Awaitable }
-import scala.reflect.ClassTag
 
 @Path("v2/groups")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf) {
+class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf) extends ModelValidation {
 
   val ListVersionsRE = """^(.+)/versions$""".r
   val GetVersionRE = """^(.+)/versions/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$""".r
@@ -63,6 +56,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
   def create(update: GroupUpdate): Response = {
+    requireValid(checkGroup(update))
     val (path, version) = updateOrCreate(PathId.empty, update, force = false)
     Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
   }
@@ -81,6 +75,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   def createUpdate(@PathParam("id") id: String,
                    update: GroupUpdate,
                    @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    requireValid(checkGroup(update))
     val (path, version) = updateOrCreate(id.toRootPath, update, force)
     Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
   }
@@ -99,6 +94,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   def update(@PathParam("id") id: String,
              update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    requireValid(checkGroup(update))
     updateOrCreate(id.toRootPath, update, force)
     val (_, version) = updateOrCreate(id.toRootPath, update, force)
     Response.ok(Map("version" -> version)).build()
@@ -145,39 +141,11 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   }
 
   private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): (PathId, Timestamp) = {
-    checkIsValid(update)
+    requireValid(checkGroup(update))
     val version = Timestamp.now()
     val effectivePath = update.id.map(_.canonicalPath(id)).getOrElse(id)
     groupManager.update(effectivePath, group => update.apply(group, version), version, force)
     (effectivePath, version)
-  }
-
-  //Note: this is really ugly. It is necessary, since bean validation will not walk into a scala Seq[_] and
-  //can not check scala Double values. So we have to do this by hand.
-  val validator = Validation.buildDefaultValidatorFactory().getValidator
-  private def checkIsValid(root: GroupUpdate) {
-    def withPath[T](bean: T, e: ConstraintViolation[_], path: String)(implicit ct: ClassTag[T]): ConstraintViolation[T] = {
-      ConstraintViolationImpl.forParameterValidation[T](
-        e.getMessageTemplate, e.getMessage, ct.runtimeClass.asInstanceOf[Class[T]], bean, e.getLeafBean, e.getInvalidValue,
-        PathImpl.createPathFromString(path + e.getPropertyPath),
-        e.getConstraintDescriptor, ElementType.FIELD, e.getExecutableParameters)
-    }
-    def groupValidation(path: String, group: GroupUpdate): mutable.Set[ConstraintViolation[GroupUpdate]] = {
-      val groupErrors = validator.validate(group).asScala.map(withPath(root, _, path))
-      val appErrors = group.apps
-        .getOrElse(Seq.empty)
-        .flatMap(app => validator.validate(app).asScala)
-        .zipWithIndex
-        .map(a => withPath(root, a._1, path + s"apps[${a._2}]."))
-      val nestedGroupErrors = group.groups
-        .getOrElse(Seq.empty)
-        .zipWithIndex
-        .flatMap(g => groupValidation(path + s"groups[${g._2}].", g._1))
-      groupErrors ++ nestedGroupErrors ++ appErrors
-    }
-
-    val errors = groupValidation("", root)
-    if (errors.nonEmpty) throw new ConstraintViolationException("Group is not valid", errors.asJava)
   }
 
   private def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
