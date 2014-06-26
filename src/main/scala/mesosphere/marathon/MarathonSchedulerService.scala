@@ -2,10 +2,10 @@ package mesosphere.marathon
 
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.{Timer, TimerTask}
-import javax.inject.{Inject, Named}
+import java.util.{ Timer, TimerTask }
+import javax.inject.{ Inject, Named }
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
@@ -18,17 +18,17 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{AppRepository, PathId, Timestamp}
-import mesosphere.marathon.upgrade.DeploymentActor.{Failed, Finished}
+import mesosphere.marathon.state.{ AppRepository, PathId, Timestamp }
+import mesosphere.marathon.upgrade.DeploymentActor.{ Failed, Finished }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.{ThreadPoolContext, PromiseActor}
+import mesosphere.util.{ ThreadPoolContext, PromiseActor }
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskID
 
-import scala.concurrent.duration.{MILLISECONDS, _}
-import scala.concurrent.{Await, Future, Promise}
-import scala.util.{Failure, Random, Success}
+import scala.concurrent.duration.{ MILLISECONDS, _ }
+import scala.concurrent.{ Await, Future, Promise }
+import scala.util.{ Failure, Random, Success }
 
 /**
   * Wrapper class for the scheduler
@@ -127,7 +127,7 @@ class MarathonSchedulerService @Inject() (
     schedulerActor.tell(Deploy(plan, force), receiver)
 
     promise.future.map {
-      case Deployed(_)  => ()
+      case Deployed(_)         => ()
       case CommandFailed(_, t) => throw t
     }
   }

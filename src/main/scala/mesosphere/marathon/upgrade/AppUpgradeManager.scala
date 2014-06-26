@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.actor._
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppRepository, PathId }
 import org.apache.mesos.SchedulerDriver
 import scala.concurrent.{ Future, Promise }
 import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
@@ -11,6 +11,7 @@ import mesosphere.marathon.{ SchedulerActions, ConcurrentTaskUpgradeException }
 import scala.collection.mutable
 
 class AppUpgradeManager(
+    appRepository: AppRepository,
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     scheduler: SchedulerActions,
@@ -71,7 +72,7 @@ class AppUpgradeManager(
       runningDeployments -= id
 
     case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.target.id) =>
-      val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, driver, scheduler, plan, taskTracker, taskQueue, eventBus))
+      val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, appRepository, driver, scheduler, plan, taskTracker, taskQueue, eventBus))
       runningDeployments += plan.target.id -> ref
   }
 

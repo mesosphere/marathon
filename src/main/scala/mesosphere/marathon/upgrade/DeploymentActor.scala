@@ -11,10 +11,12 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.MarathonTask
 import scala.util.{ Failure, Success }
 import mesosphere.marathon.upgrade.AppUpgradeManager.DeploymentFinished
+import mesosphere.marathon.state.AppRepository
 
 class DeploymentActor(
     parent: ActorRef,
     receiver: ActorRef,
+    appRepository: AppRepository,
     driver: SchedulerDriver,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
@@ -52,11 +54,12 @@ class DeploymentActor(
   def performStep(step: DeploymentStep): Future[Unit] = {
     if (step.actions.isEmpty) {
       Future.successful(())
-    } else {
+    }
+    else {
       val futures = step.actions.map {
         case StartApplication(app, scaleTo) => startApp(app, scaleTo)
         case ScaleApplication(app, scaleTo) => scaleApp(app, scaleTo)
-        case StopApplication(app) => stopApp(app)
+        case StopApplication(app)           => stopApp(app)
         case KillAllOldTasksOf(app) =>
           val runningTasks = taskTracker.fetchApp(app.id).tasks.toSeq
           killTasks(runningTasks.filterNot(_.getVersion == app.version.toString))
@@ -71,12 +74,12 @@ class DeploymentActor(
   def startApp(app: AppDefinition, scaleTo: Int): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(Props(classOf[AppStartActor], driver, scheduler, eventBus, app, scaleTo, promise))
-    promise.future
+    storeOnSuccess(app, promise.future)
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int): Future[Unit] = {
     val runningTasks = taskTracker.fetchApp(app.id).tasks
-    if (scaleTo == runningTasks.size) {
+    val res = if (scaleTo == runningTasks.size) {
       Future.successful(())
     }
     else if (scaleTo > runningTasks.size) {
@@ -87,6 +90,8 @@ class DeploymentActor(
     else {
       killTasks(runningTasks.toSeq.sortBy(_.getStartedAt).drop(scaleTo))
     }
+
+    storeOnSuccess(app, res)
   }
 
   def killTasks(tasks: Seq[MarathonTask]): Future[Unit] = {
@@ -98,7 +103,9 @@ class DeploymentActor(
   def stopApp(app: AppDefinition): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(Props(classOf[AppStopActor], driver, scheduler, taskTracker, eventBus, app, promise))
-    promise.future
+    promise.future.andThen {
+      case Success(_) => appRepository.expunge(app.id)
+    }
   }
 
   def restartApp(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int): Future[Unit] = {
@@ -112,9 +119,14 @@ class DeploymentActor(
     context.actorOf(Props(classOf[TaskStartActor], taskQueue, eventBus, app, nrToStart, true, startPromise))
     context.actorOf(Props(classOf[TaskKillActor], driver, eventBus, tasksToKill.toSet, stopPromise))
 
-    startPromise.future.zip(stopPromise.future).map(_ => ())
+    val res = startPromise.future.zip(stopPromise.future).map(_ => ())
+    storeOnSuccess(app, res)
   }
 
+  def storeOnSuccess[A](app: AppDefinition, future: Future[A]): Future[A] = for {
+    x <- future
+    _ <- appRepository.store(app)
+  } yield x
 }
 
 object DeploymentActor {

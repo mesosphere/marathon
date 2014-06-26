@@ -54,7 +54,7 @@ class MarathonSchedulerActor(
       self)
 
     upgradeManager = context.actorOf(
-      Props(classOf[AppUpgradeManager], taskTracker, taskQueue, scheduler, eventBus), "UpgradeManager")
+      Props(classOf[AppUpgradeManager], appRepository, taskTracker, taskQueue, scheduler, eventBus), "UpgradeManager")
 
   }
 

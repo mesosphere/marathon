@@ -1,6 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.Protos.{GroupDefinition, ScalingStrategyDefinition, StorageVersion}
+import mesosphere.marathon.Protos.{ GroupDefinition, ScalingStrategyDefinition, StorageVersion }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.PathId._
 import org.jgrapht.DirectedGraph
