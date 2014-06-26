@@ -1,7 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.{ AppStopCanceledException, AppStartCanceledException, SchedulerActions }
+import mesosphere.marathon.{ AppStopCanceledException, SchedulerActions }
 import akka.event.EventStream
 import mesosphere.marathon.api.v1.AppDefinition
 import scala.concurrent.Promise
@@ -9,6 +9,8 @@ import akka.actor._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.tasks.TaskTracker
 import scala.collection.immutable.Set
+import mesosphere.mesos.protos.TaskID
+import mesosphere.mesos.protos.Implicits._
 
 class AppStopActor(
     driver: SchedulerDriver,
@@ -22,7 +24,7 @@ class AppStopActor(
 
   override def preStart(): Unit = {
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
-    scheduler.stopApp(driver, app)
+    idsToKill.foreach(x => driver.killTask(TaskID(x)))
   }
 
   override def postStop(): Unit = {
@@ -47,6 +49,7 @@ class AppStopActor(
 
   def checkFinished(): Unit = {
     if (idsToKill.isEmpty) {
+      scheduler.stopApp(driver, app)
       promise.success(())
       context.stop(self)
     }

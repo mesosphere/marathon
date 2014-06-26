@@ -1,6 +1,6 @@
 package mesosphere.marathon.tasks
 
-import com.fasterxml.uuid.{EthernetAddress, Generators}
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskID
 

@@ -24,6 +24,7 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import org.apache.mesos.Protos.OfferID
 import java.util.concurrent.TimeUnit
 import org.slf4j.LoggerFactory
+import mesosphere.marathon.upgrade.DeploymentActor.{ Failed, Finished }
 
 class MarathonSchedulerActor(
     val appRepository: AppRepository,
@@ -113,7 +114,7 @@ class MarathonSchedulerActor(
       } yield action.app.id
 
       locking(ids.distinct, origSender, cmd, blocking = false) {
-        deploy(driver, plan)
+        deploy(driver, plan).sendAnswer(origSender, cmd)
       }
 
     case cmd @ Deploy(plan, true) =>
@@ -123,7 +124,7 @@ class MarathonSchedulerActor(
 
       upgradeManager ! CancelDeployment(plan.target.id, new DeploymentCanceledException("The upgrade has been cancelled"))
       locking(ids, origSender, cmd, blocking = true) {
-        deploy(driver, plan)
+        deploy(driver, plan).sendAnswer(origSender, cmd)
       }
   }
 
@@ -211,13 +212,18 @@ class MarathonSchedulerActor(
     }
   }
 
-  def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Future[Boolean] = {
+  def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Future[Unit] = {
     val promise = Promise[Any]()
     val promiseActor = context.actorOf(Props(classOf[PromiseActor], promise))
     val msg = PerformDeployment(driver, plan)
     upgradeManager.tell(msg, promiseActor)
 
-    promise.future.mapTo[Boolean] andThen {
+    val res = promise.future.map {
+      case Finished  => ()
+      case Failed(t) => throw t
+    }
+
+    res andThen {
       case Success(_) =>
         log.info(s"Deployment of ${plan.target.id} successful")
         eventBus.publish(DeploymentSuccess(plan.target.id))

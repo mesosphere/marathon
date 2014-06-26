@@ -34,6 +34,7 @@ class AppStartActor(
   }
 
   def success(): Unit = {
+    log.info(s"Successfully started $scaleTo instances of ${app.id}")
     promise.success(())
     context.stop(self)
   }
