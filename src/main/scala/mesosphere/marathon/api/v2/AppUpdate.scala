@@ -15,7 +15,7 @@ import java.lang.{ Integer => JInt, Double => JDouble }
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppUpdate(
 
-    id: Option[PathId] = None, //needed for updates inside a group
+    id: Option[PathId] = None,
 
     cmd: Option[String] = None,
 
@@ -79,16 +79,21 @@ object AppUpdate {
     */
   def fromAppDefinition(app: AppDefinition): AppUpdate =
     AppUpdate(
-      cmd = Option(app.cmd),
-      instances = Option(app.instances),
-      cpus = Option(app.cpus),
-      mem = Option(app.mem),
-      uris = Option(app.uris),
-      ports = Option(app.ports),
-      constraints = Option(app.constraints),
-      executor = Option(app.executor),
-      container = app.container,
-      healthChecks = Option(app.healthChecks)
+      Option(app.id),
+      Option(app.cmd),
+      Option(app.env),
+      Option(app.instances),
+      Option(app.cpus),
+      Option(app.mem),
+      Option(app.uris),
+      Option(app.ports),
+      Option(app.taskRateLimit),
+      Option(app.constraints),
+      Option(app.executor),
+      app.container,
+      Option(app.healthChecks),
+      Option(app.dependencies),
+      Option(app.scalingStrategy),
+      Option(app.version)
     )
-
 }

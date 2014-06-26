@@ -7,6 +7,7 @@ import javax.validation.{ ConstraintViolation, ConstraintViolationException, Val
 import javax.ws.rs._
 import javax.ws.rs.core.{ MediaType, Response }
 
+import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.Responses
 import mesosphere.marathon.state.PathId._
@@ -31,6 +32,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     * Get root group.
     */
   @GET
+  @Timed
   def root(): Group = result(groupManager.root)
 
   /**
@@ -40,6 +42,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     */
   @GET
   @Path("""{id:.+}""")
+  @Timed
   def group(@PathParam("id") id: String): Response = {
     def groupResponse(g: Option[Group]) = g match {
       case Some(group) => Response.ok(group).build()
@@ -58,6 +61,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     */
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
+  @Timed
   def create(update: GroupUpdate): Response = {
     val (path, version) = updateOrCreate(PathId.empty, update, force = false)
     Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
@@ -73,6 +77,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("""{id:.+}""")
+  @Timed
   def createUpdate(@PathParam("id") id: String,
                    update: GroupUpdate,
                    @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
@@ -90,6 +95,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   @PUT
   @Consumes(Array(MediaType.APPLICATION_JSON)) //@Path("""{path:(?!.*/version/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$).+}""")
   @Path("""{id:.+}""")
+  @Timed
   def update(@PathParam("id") id: String,
              update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
@@ -106,6 +112,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     */
   @PUT
   @Path("""{id:.+}/version/{version}""")
+  @Timed
   def rollbackTo(@PathParam("id") id: String,
                  @PathParam("version") version: String,
                  @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
@@ -128,6 +135,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     */
   @DELETE
   @Path("""{id:.+}""")
+  @Timed
   def delete(@PathParam("id") id: String,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val groupId = id.toRootPath

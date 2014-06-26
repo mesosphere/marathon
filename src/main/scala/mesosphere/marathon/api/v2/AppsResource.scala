@@ -13,8 +13,8 @@ import mesosphere.marathon.api.Responses
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
@@ -61,10 +61,9 @@ class AppsResource @Inject() (
   @PUT
   @Path("""{id:.+}""")
   @Timed
-  def replace(
-    @Context req: HttpServletRequest,
-    @PathParam("id") id: String,
-    @Valid appUpdate: AppUpdate): Response = {
+  def replace(@Context req: HttpServletRequest,
+              @PathParam("id") id: String,
+              @Valid appUpdate: AppUpdate): Response = {
     val appId = id.toRootPath
 
     service.getApp(appId) match {
@@ -80,6 +79,24 @@ class AppsResource @Inject() (
 
       case None => create(req, appUpdate(AppDefinition(appId)))
     }
+  }
+
+  @PUT
+  @Timed
+  def replaceMultiple(@Context req: HttpServletRequest,
+                      @Valid updates: Seq[AppUpdate]): Response = {
+    val version = Timestamp.now()
+    def updateApp(update: AppUpdate, app: AppDefinition): AppDefinition = {
+      update.version.flatMap(v => service.getApp(app.id, v)).orElse(Some(update(app))).getOrElse(app)
+    }
+    def updateGroup(root: Group) = updates.foldLeft(root) { (group, update) =>
+      update.id match {
+        case Some(id) => group.updateApp(id.canonicalPath(), updateApp(update, _), version)
+        case None     => group
+      }
+    }
+    groupManager.update(PathId.empty, updateGroup, version)
+    Response.ok().build()
   }
 
   @DELETE

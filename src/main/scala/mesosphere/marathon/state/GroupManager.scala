@@ -3,7 +3,6 @@ package mesosphere.marathon.state
 import javax.inject.Inject
 import akka.event.EventStream
 import com.google.inject.Singleton
-import mesosphere.marathon.{ TaskUpgradeCanceledException, UpgradeInProgressException, MarathonSchedulerService }
 import com.google.inject.name.Named
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.api.v1.AppDefinition
@@ -88,22 +87,10 @@ class GroupManager @Singleton @Inject() (
 
   private def upgrade(current: Group, group: Group, force: Boolean): Future[Group] = {
     log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
-    //TODO(MV): delegate to scheduler - only mock implementation
-    def deploy(plan: DeploymentPlan, force: Boolean): Future[Boolean] = {
-      plan.steps.flatMap(_.actions).foreach {
-        case StartApplication(app, to)     => appRepo.store(app)
-        case ScaleApplication(app, to)     => appRepo.store(app)
-        case RestartApplication(app, _, _) => appRepo.store(app)
-        case StopApplication(app)          => appRepo.expunge(app.id)
-        case _                             => //nothing
-      }
-      log.info(s"Deploy: $plan")
-      Future.successful(true)
-    }
     val restart = for {
       storedGroup <- groupRepo.store(zkName, group)
       plan = DeploymentPlan(current, storedGroup)
-      result <- deploy(plan, force) if result
+      result <- scheduler.deploy(plan, force)
     } yield storedGroup
     restart.andThen(postEvent(group))
   }
