@@ -64,11 +64,11 @@ trait BeanValidation {
   */
 trait ModelValidation extends BeanValidation {
 
-  def checkGroup(group: GroupUpdate, path: String = "", parent: PathId = PathId.empty): Iterable[ConstraintViolation[GroupUpdate]] = {
-    if ((group.version orElse group.scale).isDefined) Nil else {
+  def checkGroup(group: GroupUpdate, needsId: Boolean, path: String = "", parent: PathId = PathId.empty): Iterable[ConstraintViolation[GroupUpdate]] = {
+    if ((group.version orElse group.scaleBy).isDefined) Nil else {
       val base = group.id.map(_.canonicalPath(parent)).getOrElse(parent)
       validate(group,
-        defined(group, group.id, "id", (b: GroupUpdate, p: PathId, i: String) => idErrors(b, p, i), mandatory = true),
+        defined(group, group.id, "id", (b: GroupUpdate, p: PathId, i: String) => idErrors(b, p, i), mandatory = needsId),
         group.id.map(checkPath(group, parent, _, path + "id")).getOrElse(Nil),
         group.apps.map(checkApps(_, path + "apps", base)).getOrElse(Nil),
         group.groups.map(checkGroups(_, path + "groups", base)).getOrElse(Nil)
@@ -77,7 +77,7 @@ trait ModelValidation extends BeanValidation {
   }
 
   def checkGroups(groups: Iterable[GroupUpdate], path: String = "res", parent: PathId = PathId.empty) = {
-    groups.zipWithIndex.flatMap{ case (group, pos) => checkGroup(group, s"$path[$pos].", parent) }
+    groups.zipWithIndex.flatMap{ case (group, pos) => checkGroup(group, true, s"$path[$pos].", parent) }
   }
 
   def checkUpdates(apps: Iterable[AppUpdate], path: String = "res") = {

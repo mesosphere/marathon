@@ -30,6 +30,8 @@ class AppsResource @Inject() (
     config: MarathonConf,
     groupManager: GroupManager) extends ModelValidation {
 
+  val ListApps = """^((?:.+/)|)\*$""".r
+
   @GET
   @Timed
   def index(@QueryParam("cmd") cmd: String,
@@ -51,9 +53,20 @@ class AppsResource @Inject() (
   @GET
   @Path("""{id:.+}""")
   @Timed
-  def show(@PathParam("id") id: String): Response = service.getApp(id.toRootPath) match {
-    case Some(app) => Response.ok(Map("app" -> app.withTasks(taskTracker))).build
-    case None      => Responses.unknownApp(id.toRootPath)
+  def show(@PathParam("id") id: String): Response = {
+    def transitiveApps(gid: PathId) = {
+      val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
+      val withTasks = apps.map(_.withTasks(taskTracker))
+      Response.ok(Map("*" -> withTasks)).build()
+    }
+    def app() = service.getApp(id.toRootPath) match {
+      case Some(app) => Response.ok(Map("app" -> app.withTasks(taskTracker))).build
+      case None      => Responses.unknownApp(id.toRootPath)
+    }
+    id match {
+      case ListApps(gid) => transitiveApps(gid.toRootPath)
+      case _             => app()
+    }
   }
 
   @PUT

@@ -18,6 +18,7 @@ import scala.concurrent.{ Await, Awaitable }
 @Produces(Array(MediaType.APPLICATION_JSON))
 class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf) extends ModelValidation {
 
+  val ListApps = """^((?:.+/)|)apps$""".r
   val ListVersionsRE = """^(.+)/versions$""".r
   val GetVersionRE = """^(.+)/versions/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$""".r
 
@@ -37,14 +38,17 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   @Path("""{id:.+}""")
   @Timed
   def group(@PathParam("id") id: String): Response = {
-    def groupResponse(g: Option[Group]) = g match {
-      case Some(group) => Response.ok(group).build()
-      case None        => Responses.unknownGroup(id.toRootPath)
+    def groupResponse[T](id: PathId, fn: Group => T, version: Option[Timestamp] = None) = {
+      result(version.map(groupManager.group(id, _)).getOrElse(groupManager.group(id))) match {
+        case Some(group) => Response.ok(fn(group)).build()
+        case None        => Responses.unknownGroup(id)
+      }
     }
     id match {
+      case ListApps(gid)              => groupResponse(gid.toRootPath, _.transitiveApps)
       case ListVersionsRE(gid)        => Response.ok(result(groupManager.versions(gid.toRootPath))).build()
-      case GetVersionRE(gid, version) => groupResponse(result(groupManager.group(gid.toRootPath, Timestamp(version))))
-      case _                          => groupResponse(result(groupManager.group(id.toRootPath)))
+      case GetVersionRE(gid, version) => groupResponse(gid.toRootPath, identity, version = Some(Timestamp(version)))
+      case _                          => groupResponse(id.toRootPath, identity)
     }
   }
 
@@ -55,11 +59,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def create(update: GroupUpdate): Response = {
-    requireValid(checkGroup(update))
-    val (path, version) = updateOrCreate(PathId.empty, update, force = false)
-    Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
-  }
+  def create(update: GroupUpdate): Response = createUpdate("", update, force = false)
 
   /**
     * Create or update a group.
@@ -75,20 +75,15 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   def createUpdate(@PathParam("id") id: String,
                    update: GroupUpdate,
                    @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    requireValid(checkGroup(update))
+    requireValid(checkGroup(update, needsId = true))
     val (path, version) = updateOrCreate(id.toRootPath, update, force)
     Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
   }
 
   @PUT
-  @Consumes(Array(MediaType.APPLICATION_JSON)) //@Path("""{path:(?!.*/version/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$).+}""")
+  @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def updateRoot(update: GroupUpdate,
-                 @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    requireValid(checkGroup(update))
-    val (_, version) = updateOrCreate(PathId.empty, update, force)
-    Response.ok(Map("version" -> version)).build()
-  }
+  def updateRoot(group: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response = update("", group, force)
 
   /**
     * Create or update a group.
@@ -98,13 +93,13 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     */
   @PUT
-  @Consumes(Array(MediaType.APPLICATION_JSON)) //@Path("""{path:(?!.*/version/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$).+}""")
+  @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("""{id:.+}""")
   @Timed
   def update(@PathParam("id") id: String,
              update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    requireValid(checkGroup(update))
+    requireValid(checkGroup(update, needsId = false))
     val (_, version) = updateOrCreate(id.toRootPath, update, force)
     Response.ok(Map("version" -> version)).build()
   }
@@ -127,13 +122,12 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   }
 
   private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): (PathId, Timestamp) = {
-    requireValid(checkGroup(update))
     val version = Timestamp.now()
     def groupChange(group: Group): Group = {
       val versionChange = update.version.map { version =>
         result(groupManager.group(id, version)).getOrElse(throw new IllegalArgumentException(s"Group $id not available in version $version"))
       }
-      val scaleChange = update.scale.map { scale =>
+      val scaleChange = update.scaleBy.map { scale =>
         group.transitiveApps.foldLeft(group) { (changedGroup, app) =>
           changedGroup.updateApp(app.id, _.copy(instances = (app.instances * scale).ceil.toInt), version)
         }

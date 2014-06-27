@@ -12,14 +12,14 @@ case class GroupUpdate(
     apps: Option[Set[AppDefinition]] = None,
     groups: Option[Set[GroupUpdate]] = None,
     dependencies: Option[Set[PathId]] = None,
-    scale: Option[JDouble] = None,
+    scaleBy: Option[JDouble] = None,
     version: Option[Timestamp] = None) {
 
   //TODO: fallback, if no id is given
   def groupId: PathId = id.getOrElse(throw new IllegalArgumentException("No group id was given!"))
 
   def apply(current: Group, timestamp: Timestamp): Group = {
-    require(scale.isEmpty, "To apply the update, no scale should be given.")
+    require(scaleBy.isEmpty, "To apply the update, no scale should be given.")
     require(version.isEmpty, "To apply the update, no version should be given.")
     val effectiveGroups = groups.fold(current.groups) { groups =>
       val currentIds = current.groups.map(_.id)

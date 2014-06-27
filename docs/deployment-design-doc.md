@@ -200,7 +200,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
 
 ### Managed Scaling
 
-- There is a `/v2/groups/.../someGroup/scale` endpoint that updates the instances parameter of each descendent application, maintaining the relative ratios among the
+- There is an endpoint that updates the instances parameter of each descendent application, maintaining the relative ratios among the
   members and taking into account inter-group dependencies
 
 - **TODO**: _More clearly define scaling semantics_
@@ -261,21 +261,20 @@ POST /v2/apps/product-a/frontend
 }
 ```
 
-Creating a multitude of apps:  
-**Beware:** This _replaces_ the collection of apps in the `frontend` collection.
+Creating or updating a multitude of apps:  
 
 ```
-PUT /v2/apps/product-a/frontend/*
+PUT /v2/apps
 ```
 ```json
 [
   {
-    "id": "play",
+    "id": "/product-a/frontend/play",
     "cmd": "tar -xf *.tgz && bin/start-play.sh",
     "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz"
   },
   {
-    "id": "fun",
+    "id": "/product-a/frontend/fun",
     "cmd": "tar -xf *.tgz && bin/start-play.sh",
     "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz",
     "healthChecks": [
@@ -287,42 +286,6 @@ PUT /v2/apps/product-a/frontend/*
         "maxConsecutiveFailures": 0
       }
     ]
-  }
-]
-```
-
-OR  
-**Beware:** This _replaces_ the collection of apps in the `frontend` collection.
-
-```
-PUT /v2/apps/*
-```
-```json
-[
-  {
-    "id": "product-a/frontend/play",
-    "cmd": "tar -xf *.tgz && bin/start-play.sh",
-    "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz"
-  },
-  {
-    "id": "product-a/frontend/fun",
-    "cmd": "tar -xf *.tgz && bin/start-play.sh",
-    "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz"
-  }
-]
-```
-
-however, the following fails with a `400: Bad Request` because absolute paths may only be created at the root of the group hierarchy:
-
-```
-PUT /v2/apps/product-a/frontend/*
-```
-```json
-[
-  {
-    "id": "/product-a/frontend/play",
-    "cmd": "tar -xf *.tgz && bin/start-play.sh",
-    "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz"
   }
 ]
 ```
@@ -484,14 +447,18 @@ PUT /v2/groups/myGroup
 
 ##### Scale a group, maintaining relative instance ratios (creates a new version of the group and its apps)
 
-**TODO:**: _What does this mean, specifically?_
-
 ```
-POST /v2/groups/myGroup/scale
+PUT /v2/groups/myGroup
 ```
 ```json
-{ "factor": 3.0 }
+{ "scaleBy": 2 }
 ```
+
+This would scale all transitive apps of the group myGroup by the factor of 2.
+Example: 
+/myGroup/backend/app.instances 4 --> 8
+/myGroup/frontend/tier1/app.instances 1 --> 2
+
 
 ##### Destroy a group
 
