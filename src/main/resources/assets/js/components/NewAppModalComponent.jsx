@@ -100,6 +100,21 @@ define([
     render: function() {
       var model = this.state.model;
 
+      var errors;
+      var errorBlock;
+
+      if (model.validationError != null) {
+        errors = model.validationError.filter(function(e) {
+          return (e.attribute === "general");
+        });
+      }
+
+      if (errors != null && errors.length > 0) {
+        errorBlock = errors.map(function(error, i) {
+          return <p key={i} className="text-danger"><strong>{error.message}</strong></p>;
+        });
+      }
+
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
           <form method="post" role="form" onSubmit={this.onSubmit}>
@@ -172,9 +187,7 @@ define([
                 <input />
               </FormGroupComponent>
               <div>
-                <FormGroupComponent
-                  attribute="general"
-                  model={model} />
+                {errorBlock}
                 <input type="submit" className="btn btn-success" value="+ Create" /> <button className="btn btn-default" type="button" onClick={this.destroy}>
                   Cancel
                 </button>
