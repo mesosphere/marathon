@@ -323,7 +323,7 @@ class SchedulerActions(
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  def startApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
+  def startApp(driver: SchedulerDriver, app: AppDefinition): Future[Unit] = {
     currentAppVersion(app.id).flatMap { appOption =>
       require(appOption.isEmpty, s"Already started app '${app.id}'")
 
@@ -337,7 +337,7 @@ class SchedulerActions(
     }
   }
 
-  def stopApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
+  def stopApp(driver: SchedulerDriver, app: AppDefinition): Future[Unit] = {
     appRepository.expunge(app.id).map { successes =>
       if (!successes.forall(_ == true)) {
         throw new StorageException("Error expunging " + app.id)

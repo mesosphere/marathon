@@ -37,7 +37,9 @@ class DeploymentActor(
   def receive = {
     case NextStep if steps.hasNext =>
       performStep(steps.next()) onComplete {
-        case Success(_) => self ! NextStep
+        case Success(_) =>
+          log.info("Dispatching next step")
+          self ! NextStep
         case Failure(t) =>
           receiver ! Failed(t)
           context.stop(self)
@@ -116,7 +118,7 @@ class DeploymentActor(
     val runningNew = runningTasks.filter(_.getVersion == app.version.toString)
     val nrToStart = scaleNewTo - runningNew.size
 
-    context.actorOf(Props(classOf[TaskStartActor], taskQueue, eventBus, app, nrToStart, true, startPromise))
+    context.actorOf(Props(classOf[TaskStartActor], taskQueue, eventBus, app, nrToStart, app.healthChecks.nonEmpty, startPromise))
     context.actorOf(Props(classOf[TaskKillActor], driver, eventBus, tasksToKill.toSet, stopPromise))
 
     val res = startPromise.future.zip(stopPromise.future).map(_ => ())

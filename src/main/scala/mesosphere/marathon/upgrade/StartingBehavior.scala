@@ -45,6 +45,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   final def checkForRunning: Receive = {
     case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", app.`id`, _, _, Version, _, _) =>
       runningTasks += 1
+      log.info(s"Started $taskId")
       if (runningTasks == expectedSize) {
         success()
       }

@@ -34,6 +34,7 @@ class TaskStartActor(
   override def expectedSize: Int = nrToStart
 
   override def success(): Unit = {
+    log.info(s"Successfully started $nrToStart instances of ${app.id}")
     promise.success(true)
     context.stop(self)
   }

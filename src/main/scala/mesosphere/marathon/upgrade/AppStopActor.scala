@@ -39,7 +39,7 @@ class AppStopActor(
       log.info(s"Task $taskId has been killed. Waiting for ${idsToKill.size} more tasks to be killed.")
       checkFinished()
 
-    case x: MesosStatusUpdateEvent => log.debug(s"Received $x")
+    case x => log.debug(s"Received $x")
   }
 
   def checkFinished(): Unit = {

@@ -87,10 +87,10 @@ object AppUpgradeManager {
   case class Upgrade(driver: SchedulerDriver, app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None)
   case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
   case class CancelUpgrade(appId: PathId, reason: Throwable)
-  case class CancelDeployment(id: PathId, reason: Throwable)
+  case class CancelDeployment(groupId: PathId, reason: Throwable)
 
   case class UpgradeFinished(appId: PathId)
   case class UpgradeCanceled(appId: PathId)
-  case class DeploymentFinished(appId: PathId)
-  case class DeploymentCanceled(id: PathId)
+  case class DeploymentFinished(groupId: PathId)
+  case class DeploymentCanceled(groupId: PathId)
 }

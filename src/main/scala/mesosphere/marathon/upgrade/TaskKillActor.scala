@@ -18,9 +18,8 @@ class TaskKillActor(
 
   val idsToKill = tasksToKill.map(_.getId).to[mutable.Set]
 
-  eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
-
   override def preStart(): Unit = {
+    eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     log.info(s"Killing ${tasksToKill.size} instances")
     for (task <- tasksToKill)
       driver.killTask(taskId(task.getId))
@@ -34,15 +33,11 @@ class TaskKillActor(
           "The task upgrade has been cancelled"))
   }
 
+  val taskFinished = "^TASK_(FINISHED|LOST|KILLED)$".r
   def receive = {
-    case MesosStatusUpdateEvent(_, taskId, "TASK_KILLED", _, _, _, _, _, _) if idsToKill(taskId) =>
+    case MesosStatusUpdateEvent(_, taskId, taskFinished(_), _, _, _, _, _, _) if idsToKill(taskId) =>
       idsToKill.remove(taskId)
       log.info(s"Task $taskId has been killed. Waiting for ${idsToKill.size} more tasks to be killed.")
-      checkFinished()
-
-    case MesosStatusUpdateEvent(_, taskId, "TASK_LOST", _, _, _, _, _, _) if idsToKill(taskId) =>
-      idsToKill.remove(taskId)
-      log.warning(s"Task $taskId should have been killed but was lost, removing it from the list. Waiting for ${idsToKill.size} more tasks to be killed.")
       checkFinished()
 
     case x: MesosStatusUpdateEvent => log.debug(s"Received $x")
