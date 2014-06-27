@@ -85,33 +85,8 @@ define([
           this.state.model,
           {
             error: function(obj, response) {
-              if(this.state.model.validationError == null) {
-                this.state.model.validationError = [];
-              }
-              // handling success as well
-              if (response.status < 300) {
+              if (!this.state.model.hasSaveError(obj, response)) {
                 this.destroy();
-              } else if (response.status === 422) {
-                this.state.model.validationError.push(
-                  {
-                    attribute: "id",
-                    message: "An app with this ID already exists"
-                  }
-                );
-              } else if (response.status >= 500) {
-                this.state.model.validationError.push(
-                  {
-                    attribute: "general",
-                    message: "Server error, could not create"
-                  }
-                );
-              } else {
-                this.state.model.validationError.push(
-                  {
-                    attribute: "general",
-                    message: "Creation unsuccessful"
-                  }
-                );
               }
             }.bind(this),
             success: function() {
@@ -214,8 +189,7 @@ define([
               <div>
                 <FormGroupComponent
                   attribute="general"
-                  model={model}>
-                </FormGroupComponent>
+                  model={model} />
                 <input type="submit" className="btn btn-success" value="+ Create" /> <button className="btn btn-default" type="button" onClick={this.destroy}>
                   Cancel
                 </button>
