@@ -72,6 +72,11 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
       "reconciliation operations.",
     default = Some(30000L)) // 30 seconds
 
+  lazy val executorHealthChecks = opt[Boolean]("executor_health_checks",
+    descr = "If enabled, health checks are performed by the executor " +
+      "instead of the Marathon scheduler.  This feature requires Mesos 0.20+",
+    default = Some(false))
+
   lazy val mesosUser = opt[String]("mesos_user",
     descr = "Mesos user for this framework",
     default = new SystemProperties().get("user.name")) // Current logged in user

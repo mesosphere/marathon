@@ -8,6 +8,7 @@ import mesosphere.marathon.api.validation.FieldConstraints.FieldJsonInclude
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude.Include
+import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS
@@ -17,19 +18,20 @@ import java.lang.{ Integer => JInt }
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class HealthCheck(
 
-    @FieldJsonInclude(Include.NON_NULL)@FieldJsonDeserialize(contentAs = classOf[java.lang.String]) path: Option[String] = HealthCheck.DefaultPath,
+  @FieldJsonInclude(Include.NON_NULL)@FieldJsonDeserialize(contentAs = classOf[java.lang.String]) path: Option[String] = HealthCheck.DefaultPath,
 
-    @FieldNotEmpty protocol: Protocol = HealthCheck.DefaultProtocol,
+  @FieldNotEmpty protocol: Protocol = HealthCheck.DefaultProtocol,
 
-    @FieldNotEmpty portIndex: JInt = HealthCheck.DefaultPortIndex,
+  @FieldNotEmpty portIndex: JInt = HealthCheck.DefaultPortIndex,
 
-    @FieldJsonProperty("gracePeriodSeconds") gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+  @FieldJsonProperty("gracePeriodSeconds") gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
 
-    @FieldJsonProperty("intervalSeconds") interval: FiniteDuration = HealthCheck.DefaultInterval,
+  @FieldJsonProperty("intervalSeconds") interval: FiniteDuration = HealthCheck.DefaultInterval,
 
-    @FieldJsonProperty("timeoutSeconds") timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+  @FieldJsonProperty("timeoutSeconds") timeout: FiniteDuration = HealthCheck.DefaultTimeout,
 
-    @FieldNotEmpty maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures) extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
+  @FieldNotEmpty maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures)
+    extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
   def toProto: Protos.HealthCheckDefinition = {
     val builder = Protos.HealthCheckDefinition.newBuilder
@@ -59,10 +61,28 @@ case class HealthCheck(
   def mergeFromProto(bytes: Array[Byte]): HealthCheck =
     mergeFromProto(Protos.HealthCheckDefinition.parseFrom(bytes))
 
+  def toMesos(ports: Seq[Int]): MesosProtos.HealthCheck = {
+    // NB: Mesos supports HTTP health checks, others to be added in the future
+    assert(this.protocol == Protocol.HTTP)
+
+    val httpBuilder = MesosProtos.HealthCheck.HTTP.newBuilder
+      .setPort(ports(portIndex))
+
+    path foreach httpBuilder.setPath
+
+    MesosProtos.HealthCheck.newBuilder
+      .setHttp(httpBuilder)
+      .setDelaySeconds(0)
+      .setIntervalSeconds(this.interval.toSeconds.toInt)
+      .setTimeoutSeconds(this.timeout.toSeconds.toInt)
+      .setConsecutiveFailures(this.maxConsecutiveFailures)
+      .setGracePeriodSeconds(this.gracePeriod.toSeconds.toInt)
+      .build
+  }
+
 }
 
 object HealthCheck {
-
   val DefaultPath = Some("/")
   val DefaultProtocol = Protocol.HTTP
   val DefaultPortIndex = 0
