@@ -187,9 +187,7 @@ define([
                 <input />
               </FormGroupComponent>
               <div>
-                <FormGroupComponent
-                  attribute="general"
-                  model={model} />
+                {errorBlock}
                 <input type="submit" className="btn btn-success" value="+ Create" /> <button className="btn btn-default" type="button" onClick={this.destroy}>
                   Cancel
                 </button>
