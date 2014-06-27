@@ -5,7 +5,7 @@ define([
 ], function(React) {
   return React.createClass({
     propTypes: {
-      children: React.PropTypes.component,
+      children: React.PropTypes.component.isRequired,
       model: React.PropTypes.object.isRequired
     },
 
@@ -29,8 +29,8 @@ define([
 
       if (errors != null && errors.length > 0) {
         className += " has-error";
-        errorBlock = errors.map(function(error, i) {
-          return <div key={i} className="help-block"><strong>{error.message}</strong></div>;
+        errorBlock = errors.map(function(error) {
+          return <div className="help-block"><strong>{error.message}</strong></div>;
         });
       }
 
@@ -40,36 +40,27 @@ define([
 
       // Assume there is a single child of either <input> or <textarea>, and add
       // the needed props to make it an input for this attribute.
-      var formControlChild =
-        this.props.children ?
-          React.addons.cloneWithProps(
-            React.Children.only(this.props.children),
-            {
-              className: "form-control",
-              id: fieldId,
-              name: attribute,
-              onChange: this.onInputChange,
-              value: this.props.model.get(attribute)
-            }
-          ) :
-          null;
+      var formControlChild = React.addons.cloneWithProps(
+        React.Children.only(this.props.children),
+        {
+          className: "form-control",
+          id: fieldId,
+          name: attribute,
+          onChange: this.onInputChange,
+          value: this.props.model.get(attribute)
+        }
+      );
 
       return (
         <div className={className}>
-          {
-            this.props.children ?
-            <div>
-              <label htmlFor={fieldId} className="control-label">
-                {this.props.label}
-              </label>
-              <div>
-                {formControlChild}
-                {helpBlock}
-                {errorBlock}
-              </div>
-            </div> :
-            errorBlock
-          }
+          <label htmlFor={fieldId} className="control-label">
+            {this.props.label}
+          </label>
+          <div>
+            {formControlChild}
+            {helpBlock}
+            {errorBlock}
+          </div>
         </div>
       );
     }
