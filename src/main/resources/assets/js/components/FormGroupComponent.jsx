@@ -41,18 +41,18 @@ define([
       // Assume there is a single child of either <input> or <textarea>, and add
       // the needed props to make it an input for this attribute.
       var formControlChild =
-      this.props.children ?
-        React.addons.cloneWithProps(
-          React.Children.only(this.props.children),
-          {
-            className: "form-control",
-            id: fieldId,
-            name: attribute,
-            onChange: this.onInputChange,
-            value: this.props.model.get(attribute)
-          }
-        ) :
-        null;
+        this.props.children ?
+          React.addons.cloneWithProps(
+            React.Children.only(this.props.children),
+            {
+              className: "form-control",
+              id: fieldId,
+              name: attribute,
+              onChange: this.onInputChange,
+              value: this.props.model.get(attribute)
+            }
+          ) :
+          null;
 
       return (
         <div className={className}>
