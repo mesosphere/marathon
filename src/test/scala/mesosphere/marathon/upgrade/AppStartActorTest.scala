@@ -105,4 +105,48 @@ class AppStartActorTest
     verify(scheduler).stopApp(driver, app)
     expectTerminated(ref)
   }
+
+  test("No tasks to start without health checks") {
+    val app = AppDefinition(id = PathId("app"), instances = 10)
+    val promise = Promise[Unit]()
+    val ref = TestActorRef[AppStartActor](
+      Props(
+        classOf[AppStartActor],
+        driver,
+        scheduler,
+        system.eventStream,
+        app,
+        0,
+        promise
+      )
+    )
+    watch(ref)
+
+    Await.result(promise.future, 5.seconds)
+
+    verify(scheduler).startApp(driver, app.copy(instances = 0))
+    expectTerminated(ref)
+  }
+
+  test("No tasks to start with health checks") {
+    val app = AppDefinition(id = PathId("app"), instances = 10, healthChecks = Set(HealthCheck()))
+    val promise = Promise[Unit]()
+    val ref = TestActorRef[AppStartActor](
+      Props(
+        classOf[AppStartActor],
+        driver,
+        scheduler,
+        system.eventStream,
+        app,
+        0,
+        promise
+      )
+    )
+    watch(ref)
+
+    Await.result(promise.future, 5.seconds)
+
+    verify(scheduler).startApp(driver, app.copy(instances = 0))
+    expectTerminated(ref)
+  }
 }

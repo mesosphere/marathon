@@ -23,6 +23,7 @@ class AppStopActor(
   override def preStart(): Unit = {
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     scheduler.stopApp(driver, app)
+    checkFinished()
   }
 
   override def postStop(): Unit = {

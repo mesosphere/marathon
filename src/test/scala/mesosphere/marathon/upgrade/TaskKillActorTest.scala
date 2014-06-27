@@ -9,7 +9,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import org.mockito.Mockito.verify
+import org.mockito.Mockito.{ verify, verifyZeroInteractions }
 import org.apache.mesos.Protos.TaskID
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.state.PathId
@@ -45,6 +45,22 @@ class TaskKillActorTest
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
 
+    expectTerminated(ref)
+  }
+
+  test("Kill tasks with empty task list") {
+    val driver = mock[SchedulerDriver]
+
+    val tasks = Set[MarathonTask]()
+    val promise = Promise[Boolean]()
+
+    val ref = TestActorRef(Props(classOf[TaskKillActor], driver, system.eventStream, tasks, promise))
+
+    watch(ref)
+
+    Await.result(promise.future, 5.seconds) should be(true)
+
+    verifyZeroInteractions(driver)
     expectTerminated(ref)
   }
 

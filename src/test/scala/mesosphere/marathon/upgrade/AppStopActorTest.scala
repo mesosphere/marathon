@@ -62,6 +62,31 @@ class AppStopActorTest
     expectTerminated(ref)
   }
 
+  test("Stop App without running tasks") {
+    val app = AppDefinition(id = PathId("app"), instances = 2)
+    val promise = Promise[Unit]()
+
+    when(taskTracker.fetchApp(app.id)).thenReturn(new TaskTracker.App(app.id, mutable.Set.empty[MarathonTask], false))
+
+    val ref = TestActorRef[AppStopActor](
+      Props(
+        new AppStopActor(
+          driver,
+          scheduler,
+          taskTracker,
+          system.eventStream,
+          app,
+          promise
+        ))
+    )
+    watch(ref)
+
+    Await.result(promise.future, 5.seconds)
+
+    verify(scheduler).stopApp(driver, app)
+    expectTerminated(ref)
+  }
+
   test("Failed") {
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()

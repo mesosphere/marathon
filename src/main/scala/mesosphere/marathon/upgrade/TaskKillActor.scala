@@ -23,6 +23,8 @@ class TaskKillActor(
     log.info(s"Killing ${tasksToKill.size} instances")
     for (task <- tasksToKill)
       driver.killTask(taskId(task.getId))
+
+    checkFinished()
   }
 
   override def postStop(): Unit = {

@@ -48,6 +48,27 @@ class TaskStartActorTest
     expectTerminated(ref)
   }
 
+  test("Start success with no instances to start") {
+    val taskQueue = new TaskQueue
+    val promise = Promise[Boolean]()
+    val app = AppDefinition("myApp".toPath, instances = 0)
+
+    val ref = TestActorRef(Props(
+      classOf[TaskStartActor],
+      taskQueue,
+      system.eventStream,
+      app,
+      app.instances,
+      false,
+      promise))
+
+    watch(ref)
+
+    Await.result(promise.future, 1.second) should be(true)
+
+    expectTerminated(ref)
+  }
+
   test("Start with health checks") {
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
@@ -68,6 +89,27 @@ class TaskStartActorTest
 
     for ((_, i) <- taskQueue.removeAll().zipWithIndex)
       system.eventStream.publish(HealthStatusChanged(app.id, s"task_${i}", true))
+
+    Await.result(promise.future, 1.second) should be(true)
+
+    expectTerminated(ref)
+  }
+
+  test("Start with health checks with no instances to start") {
+    val taskQueue = new TaskQueue
+    val promise = Promise[Boolean]()
+    val app = AppDefinition("myApp".toPath, instances = 0)
+
+    val ref = TestActorRef(Props(
+      classOf[TaskStartActor],
+      taskQueue,
+      system.eventStream,
+      app,
+      app.instances,
+      true,
+      promise))
+
+    watch(ref)
 
     Await.result(promise.future, 1.second) should be(true)
 

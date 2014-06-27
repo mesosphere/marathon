@@ -26,6 +26,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
     }
 
     initializeStart()
+    checkFinished()
   }
 
   final def receive =
@@ -35,9 +36,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   final def checkForHealthy: Receive = {
     case HealthStatusChanged(app.`id`, taskId, true, _, _) if !healthyTasks(taskId) =>
       healthyTasks += taskId
-      if (healthyTasks.size == expectedSize) {
-        success()
-      }
+      checkFinished()
 
     case x => log.debug(s"Received $x")
   }
@@ -46,11 +45,18 @@ trait StartingBehavior { this: Actor with ActorLogging =>
     case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", app.`id`, _, _, Version, _, _) =>
       runningTasks += 1
       log.info(s"Started $taskId")
-      if (runningTasks == expectedSize) {
-        success()
-      }
+      checkFinished()
 
     case x => log.debug(s"Received $x")
+  }
+
+  def checkFinished(): Unit = {
+    if (withHealthChecks && healthyTasks.size == expectedSize) {
+      success()
+    }
+    else if (runningTasks == expectedSize) {
+      success()
+    }
   }
 
   def success(): Unit
