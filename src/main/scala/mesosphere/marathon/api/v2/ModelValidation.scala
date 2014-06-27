@@ -10,6 +10,7 @@ import org.hibernate.validator.internal.engine.path.PathImpl
 
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
+import scala.util.{ Failure, Success, Try }
 
 /**
   * Bean validation helper trait.
@@ -47,10 +48,10 @@ trait BeanValidation {
     }
   }
 
-  def validate[T](bean: T, path: String, violationSets: Iterable[ConstraintViolation[_]]*)(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[T]] = {
+  def validate[T](bean: T, violationSets: Iterable[ConstraintViolation[_]]*)(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[T]] = {
     val beanErrors = validator.validate(bean).asScala
     val result = beanErrors ++ violationSets.flatMap(identity)
-    result.map(withPath(bean, _, path))
+    result.map(withPath(bean, _, ""))
   }
 
   def requireValid[T](errors: Iterable[ConstraintViolation[T]]) {
@@ -63,46 +64,58 @@ trait BeanValidation {
   */
 trait ModelValidation extends BeanValidation {
 
-  def checkGroup(group: GroupUpdate, path: String = ""): Iterable[ConstraintViolation[GroupUpdate]] = {
-    validate(group, path,
+  def checkGroup(group: GroupUpdate, path: String = "", parent: PathId = PathId.empty): Iterable[ConstraintViolation[GroupUpdate]] = {
+    val base = group.id.map(_.canonicalPath(parent)).getOrElse(parent)
+    validate(group,
       defined(group, group.id, "id", (b: GroupUpdate, p: PathId, i: String) => idErrors(b, p, i), mandatory = true),
-      group.apps.map(checkApps(_, path + "apps")).getOrElse(Nil),
-      group.groups.map(checkGroups(_, path + "groups")).getOrElse(Nil)
+      group.id.map(checkPath(group, parent, _, path + "id")).getOrElse(Nil),
+      group.apps.map(checkApps(_, path + "apps", base)).getOrElse(Nil),
+      group.groups.map(checkGroups(_, path + "groups", base)).getOrElse(Nil)
     )
   }
 
-  def checkGroups(groups: Iterable[GroupUpdate], path: String = "res") = {
-    groups.zipWithIndex.flatMap{ case (group, pos) => checkGroup(group, s"$path[$pos].") }
+  def checkGroups(groups: Iterable[GroupUpdate], path: String = "res", parent: PathId = PathId.empty) = {
+    groups.zipWithIndex.flatMap{ case (group, pos) => checkGroup(group, s"$path[$pos].", parent) }
   }
 
   def checkUpdates(apps: Iterable[AppUpdate], path: String = "res") = {
     apps.zipWithIndex.flatMap{ case (app, pos) => checkUpdate(app, s"$path[$pos].") }
   }
 
-  def checkApps(apps: Iterable[AppDefinition], path: String = "res") = {
-    apps.zipWithIndex.flatMap{ case (app, pos) => checkApp(app, s"$path[$pos].") }
+  def checkPath[T](t: T, parent: PathId, child: PathId, path: String)(implicit ct: ClassTag[T]) = {
+    val isParent = child.canonicalPath(parent).parent == parent
+    if (!isParent) List(violation(t, child, path, s"identifier $child is not child of $parent. Hint: use relative paths.")) else Nil
+  }
+
+  def checkApps(apps: Iterable[AppDefinition], path: String = "res", parent: PathId = PathId.empty) = {
+    apps.zipWithIndex.flatMap{ case (app, pos) => checkApp(app, parent, s"$path[$pos].") }
   }
 
   def checkUpdate(app: AppUpdate, path: String = "", needsId: Boolean = false) = {
-    validate(app, path,
+    validate(app,
       defined(app, app.id, "id", (b: AppUpdate, p: PathId, i: String) => idErrors(b, p, i), needsId),
       defined(app, app.scalingStrategy, "scalingStrategy", (b: AppUpdate, p: ScalingStrategy, i: String) => healthErrors(b, p, i)),
       defined(app, app.dependencies, "dependencies", (b: AppUpdate, p: Set[PathId], i: String) => dependencyErrors(b, p, i))
     )
   }
 
-  def checkApp(app: AppDefinition, path: String = "") = {
-    validate(app, path,
-      idErrors(app, app.id, "id"),
-      healthErrors(app, app.scalingStrategy, "scalingStrategy"),
-      dependencyErrors(app, app.dependencies, "dependencies")
+  def checkApp(app: AppDefinition, parent: PathId, path: String = "") = {
+    validate(app,
+      idErrors(app, app.id, path + "id"),
+      checkPath(app, parent, app.id, path + "id"),
+      healthErrors(app, app.scalingStrategy, path + "scalingStrategy"),
+      dependencyErrors(app, app.dependencies, path + "dependencies")
     )
   }
 
   def idErrors[T](t: T, id: PathId, path: String)(implicit ct: ClassTag[T]): List[ConstraintViolation[T]] = {
-    val p = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$".r
+    val p = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
     val valid = id.path.forall(p.pattern.matcher(_).matches())
-    if (!valid) List(violation(t, id, path, s"contains invalid characters. Allowed characters: [a-z0-9]")) else Nil
+    val errors = if (!valid) List(violation(t, id, path, "contains invalid characters (allowed: [a-z0-9]* . and .. in path)")) else Nil
+    Try(id.canonicalPath(PathId.empty)) match {
+      case Success(_) => errors
+      case Failure(_) => violation(t, id, path, s"canonical path can not be computed for $id") :: errors
+    }
   }
 
   def dependencyErrors[T](t: T, set: Set[PathId], path: String)(implicit ct: ClassTag[T]) = {

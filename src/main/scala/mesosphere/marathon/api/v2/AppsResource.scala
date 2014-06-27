@@ -41,11 +41,11 @@ class AppsResource @Inject() (
   @POST
   @Timed
   def create(@Context req: HttpServletRequest, app: AppDefinition): Response = {
-    requireValid(checkApp(app))
+    val baseId = app.id.canonicalPath()
+    requireValid(checkApp(app, baseId.parent))
     maybePostEvent(req, app)
-    val withRootId = app.copy(id = app.id.canonicalPath())
-    result(groupManager.updateApp(withRootId.id, _ => withRootId, app.version))
-    Response.created(new URI(s"${withRootId.id}")).build
+    result(groupManager.updateApp(baseId, _ => app.copy(id = baseId), app.version))
+    Response.created(new URI(s"$baseId")).build
   }
 
   @GET
@@ -62,7 +62,7 @@ class AppsResource @Inject() (
   def replace(@Context req: HttpServletRequest,
               @PathParam("id") id: String,
               appUpdate: AppUpdate): Response = {
-    requireValid(checkUpdate(appUpdate))
+    requireValid(checkUpdate(appUpdate, needsId = false))
 
     val appId = id.toRootPath
     service.getApp(appId) match {
@@ -94,7 +94,7 @@ class AppsResource @Inject() (
         case None     => group
       }
     }
-    groupManager.update(PathId.empty, updateGroup, version)
+    result(groupManager.update(PathId.empty, updateGroup, version))
     Response.ok().build()
   }
 

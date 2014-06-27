@@ -4,7 +4,7 @@ import com.google.common.collect.Lists
 import mesosphere.marathon.api.v2.ModelValidation
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.ServiceDefinition
-import mesosphere.marathon.state.{ Migration, StorageVersions, Timestamp }
+import mesosphere.marathon.state.{ PathId, Migration, StorageVersions, Timestamp }
 import org.apache.mesos.Protos.CommandInfo
 import javax.validation.Validation
 import mesosphere.marathon.MarathonSpec
@@ -62,18 +62,18 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
     def shouldViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = checkApp(app)
+      val violations = checkApp(app, PathId.empty)
       assert(violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
     def shouldNotViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = checkApp(app)
+      val violations = checkApp(app, PathId.empty)
       assert(!violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
-    val idError = "contains invalid characters. Allowed characters: [a-z0-9]"
+    val idError = "contains invalid characters (allowed: [a-z0-9]* . and .. in path)"
     val app = AppDefinition(id = "a b".toRootPath)
 
     shouldViolate(app, "id", idError)
