@@ -25,8 +25,7 @@ define([
 
     getInitialState: function() {
       return {
-        fetchState: this.props.STATES.STATE_LOADING,
-        showTimestamps: false
+        fetchState: this.props.STATES.STATE_LOADING
       };
     },
 
@@ -46,10 +45,6 @@ define([
         comparator;
       collection.setComparator(comparator);
       collection.sort();
-    },
-
-    toggleShowTimestamps: function() {
-      this.setState({showTimestamps: !this.state.showTimestamps});
     },
 
     render: function() {
