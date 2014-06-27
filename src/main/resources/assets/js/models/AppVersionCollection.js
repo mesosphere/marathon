@@ -1,8 +1,7 @@
 define([
-  "Backbone",
   "models/AppVersion",
   "models/SortableCollection"
-], function(Backbone, AppVersion, SortableCollection) {
+], function(AppVersion, SortableCollection) {
   return SortableCollection.extend({
     model: AppVersion,
 
