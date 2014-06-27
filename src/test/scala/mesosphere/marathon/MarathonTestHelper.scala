@@ -36,9 +36,9 @@ trait MarathonTestHelper {
       Seq(Range(beginPort, endPort)),
       role
     )
-    val cpusResource = ScalarResource("cpus", cpus, role)
-    val memResource = ScalarResource("mem", mem, role)
-    val diskResource = ScalarResource("disk", disk, role)
+    val cpusResource = ScalarResource(Resource.CPUS, cpus, role)
+    val memResource = ScalarResource(Resource.MEM, mem, role)
+    val diskResource = ScalarResource(Resource.DISK, disk, role)
     Offer.newBuilder
       .setId(OfferID("1"))
       .setFrameworkId(FrameworkID("marathon"))

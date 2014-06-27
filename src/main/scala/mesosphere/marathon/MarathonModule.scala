@@ -3,7 +3,12 @@ package mesosphere.marathon
 import com.google.inject._
 import org.apache.mesos.state.{ ZooKeeperState, State }
 import java.util.concurrent.TimeUnit
-import com.twitter.common.zookeeper.{ Group, CandidateImpl, Candidate, ZooKeeperClient }
+import com.twitter.common.zookeeper.{
+  Group,
+  CandidateImpl,
+  Candidate,
+  ZooKeeperClient
+}
 import org.apache.zookeeper.ZooDefs
 import com.twitter.common.base.Supplier
 import org.apache.log4j.Logger
@@ -14,7 +19,11 @@ import akka.actor.ActorSystem
 import mesosphere.marathon.state.{ MarathonStore, AppRepository }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.health.{
+  HealthCheckManager,
+  MarathonHealthCheckManager,
+  DelegatingHealthCheckManager
+}
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
 
@@ -36,13 +45,19 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
-    bind(classOf[HealthCheckManager]).in(Scopes.SINGLETON)
+
+    bind(classOf[HealthCheckManager]).to(
+      conf.executorHealthChecks() match {
+        case false => classOf[MarathonHealthCheckManager]
+        case true  => classOf[DelegatingHealthCheckManager]
+      }
+    )
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))
       .toInstance(conf.zooKeeperServerSetPath)
 
-    //If running in single scheduler mode, this node is the leader.
+    // If running in single scheduler mode, this node is the leader.
     val leader = new AtomicBoolean(!conf.highlyAvailable())
     bind(classOf[AtomicBoolean])
       .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))

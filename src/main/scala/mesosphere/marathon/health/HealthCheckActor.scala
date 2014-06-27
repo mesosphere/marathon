@@ -1,11 +1,7 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event._
 import mesosphere.marathon.MarathonSchedulerDriver
@@ -18,8 +14,8 @@ class HealthCheckActor(
     taskTracker: TaskTracker,
     eventBus: Option[EventBus]) extends Actor with ActorLogging {
 
-  import HealthCheckActor.{ GetTaskHealth, Health }
-  import HealthCheckWorker.{ HealthCheckJob, HealthResult, Healthy, Unhealthy }
+  import HealthCheckActor.GetTaskHealth
+  import HealthCheckWorker.HealthCheckJob
   import context.dispatcher // execution context
   import mesosphere.mesos.protos.Implicits._
 
@@ -159,33 +155,5 @@ class HealthCheckActor(
 object HealthCheckActor {
 
   case class GetTaskHealth(taskId: String)
-
-  case class Health(
-      taskId: String,
-      firstSuccess: Option[Timestamp] = None,
-      lastSuccess: Option[Timestamp] = None,
-      lastFailure: Option[Timestamp] = None,
-      @FieldJsonInclude(Include.NON_NULL) lastFailureCause: Option[String] = None,
-      consecutiveFailures: Int = 0) {
-    import HealthCheckWorker.{ HealthResult, Healthy, Unhealthy }
-
-    @JsonProperty
-    def alive(): Boolean = lastSuccess.exists { successTime =>
-      lastFailure.isEmpty || successTime > lastFailure.get
-    }
-
-    def update(result: HealthResult): Health = result match {
-      case Healthy(_, time) => this.copy(
-        firstSuccess = this.firstSuccess.orElse(Some(time)),
-        lastSuccess = Some(time),
-        consecutiveFailures = 0
-      )
-      case Unhealthy(_, time, cause) => this.copy(
-        lastFailure = Some(time),
-        lastFailureCause = Some(cause),
-        consecutiveFailures = this.consecutiveFailures + 1
-      )
-    }
-  }
 
 }

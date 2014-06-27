@@ -11,6 +11,7 @@ import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
 import org.apache.mesos.Protos.{ OfferID, TaskID, TaskInfo }
 import org.mockito.{ Matchers, ArgumentCaptor }
+import org.rogach.scallop.ScallopConf
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
 import mesosphere.mesos.util.FrameworkIdUtil
@@ -28,6 +29,15 @@ class MarathonSchedulerTest extends MarathonSpec {
   var rateLimiters: RateLimiters = null
   var config: MarathonConf = null
 
+  def makeConfig(args: String*): MarathonConf = {
+    val opts = new ScallopConf(args) with MarathonConf {
+      // scallop will trigger sys exit
+      override protected def onError(e: Throwable): Unit = throw e
+    }
+    opts.afterInit()
+    opts
+  }
+
   before {
     repo = mock[AppRepository]
     hcManager = mock[HealthCheckManager]
@@ -35,7 +45,7 @@ class MarathonSchedulerTest extends MarathonSpec {
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     rateLimiters = mock[RateLimiters]
-    config = mock[MarathonConf]
+    config = makeConfig("--master", "127.0.0.1:5050")
     scheduler = new MarathonScheduler(
       None,
       new ObjectMapper,
