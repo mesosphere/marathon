@@ -75,21 +75,24 @@ class AppsResource @Inject() (
   def replace(@Context req: HttpServletRequest,
               @PathParam("id") id: String,
               appUpdate: AppUpdate): Response = {
-    requireValid(checkUpdate(appUpdate, needsId = false))
 
-    val appId = id.toRootPath
+    val appId = appUpdate.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
+    val updateWithId = appUpdate.copy(id = Some(appId))
+
+    requireValid(checkUpdate(updateWithId, needsId = false))
+
     service.getApp(appId) match {
       case Some(app) =>
         //if version is defined, replace with version
-        val update = appUpdate.version.flatMap(v => service.getApp(appId, v)).orElse(Some(appUpdate(app)))
+        val update = updateWithId.version.flatMap(v => service.getApp(appId, v)).orElse(Some(updateWithId(app)))
         val response = update.map { updatedApp =>
           maybePostEvent(req, updatedApp)
           result(groupManager.updateApp(appId, _ => updatedApp, updatedApp.version))
           Response.noContent.build
         }
-        response.getOrElse(Responses.unknownApp(appId, appUpdate.version))
+        response.getOrElse(Responses.unknownApp(appId, updateWithId.version))
 
-      case None => create(req, appUpdate(AppDefinition(appId)))
+      case None => create(req, updateWithId(AppDefinition(appId)))
     }
   }
 

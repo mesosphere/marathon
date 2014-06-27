@@ -96,8 +96,9 @@ trait ModelValidation extends BeanValidation {
   def checkUpdate(app: AppUpdate, path: String = "", needsId: Boolean = false) = {
     validate(app,
       defined(app, app.id, "id", (b: AppUpdate, p: PathId, i: String) => idErrors(b, p, i), needsId),
-      defined(app, app.scalingStrategy, "scalingStrategy", (b: AppUpdate, p: ScalingStrategy, i: String) => healthErrors(b, p, i)),
-      defined(app, app.dependencies, "dependencies", (b: AppUpdate, p: Set[PathId], i: String) => dependencyErrors(b, p, i))
+      defined(app, app.scalingStrategy, "scalingStrategy", (b: AppUpdate, p: ScalingStrategy, i: String) => healthErrors(b, p, i))
+    //dependencies must take base path into account
+    //defined(app, app.dependencies, "dependencies", (b: AppUpdate, p: Set[PathId], i: String) => dependencyErrors(b, p, i))
     )
   }
 
