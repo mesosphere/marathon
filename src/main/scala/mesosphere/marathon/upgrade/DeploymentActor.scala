@@ -118,8 +118,17 @@ class DeploymentActor(
     val runningNew = runningTasks.filter(_.getVersion == app.version.toString)
     val nrToStart = scaleNewTo - runningNew.size
 
-    context.actorOf(Props(classOf[TaskStartActor], taskQueue, eventBus, app, nrToStart, app.healthChecks.nonEmpty, startPromise))
-    context.actorOf(Props(classOf[TaskKillActor], driver, eventBus, tasksToKill.toSet, stopPromise))
+    if (nrToStart > 0) {
+      context.actorOf(Props(classOf[TaskStartActor], taskQueue, eventBus, app, nrToStart, app.healthChecks.nonEmpty, startPromise))
+    } else {
+      startPromise.success(true)
+    }
+
+    if (tasksToKill.size > 0) {
+      context.actorOf(Props(classOf[TaskKillActor], driver, eventBus, tasksToKill.toSet, stopPromise))
+    } else {
+      stopPromise.success(true)
+    }
 
     val res = startPromise.future.zip(stopPromise.future).map(_ => ())
     storeOnSuccess(app, res)
