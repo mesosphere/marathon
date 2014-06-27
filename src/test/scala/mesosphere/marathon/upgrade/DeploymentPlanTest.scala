@@ -126,4 +126,21 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     plan.steps(4).actions.toSet should be(Set(KillAllOldTasksOf(mongo._2), ScaleApplication(mongo._2, 8)))
     plan.steps(5).actions.toSet should be(Set(StopApplication(toStop._1)))
   }
+
+  test("when the only action is to stop an application") {
+    Given("application updates with command and scale changes")
+    val scaling = ScalingStrategy(0.75, Some(1))
+    val app = AppDefinition("/test/independent/app".toPath, "app2", instances = 3, scalingStrategy = scaling) -> None
+    val from: Group = Group("/test".toPath, groups = Set(
+      Group("/test/independent".toPath, Set(app._1))
+    ))
+
+    When("the deployment plan is computed")
+    val to: Group = Group("/test".toPath)
+    val plan = DeploymentPlan(from, to)
+
+    Then("the deployment contains steps for dependent and independent applications")
+    plan.steps should have size 1
+    plan.steps(0).actions.toSet should be(Set(StopApplication(app._1)))
+  }
 }

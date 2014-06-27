@@ -20,6 +20,7 @@ final case class RestartApplication(app: AppDefinition, scaleOldTo: Int, scaleNe
 
 final case class DeploymentStep(actions: List[DeploymentAction]) {
   def +(step: DeploymentStep) = DeploymentStep(actions ++ step.actions)
+  def nonEmpty = actions.nonEmpty
 }
 
 final case class DeploymentPlan(
@@ -105,6 +106,6 @@ object DeploymentPlan {
       case Nil          => nonDependentStep :: unhandledStops
     }
 
-    DeploymentPlan(original, target, finalSteps, version)
+    DeploymentPlan(original, target, finalSteps.filter(_.nonEmpty), version)
   }
 }
