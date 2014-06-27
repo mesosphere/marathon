@@ -31,15 +31,12 @@ class AppStopActor(
       promise.tryFailure(new AppStopCanceledException("The app stop has been cancelled"))
   }
 
+  val taskFinished = "^TASK_(FINISHED|LOST|KILLED)$".r
+
   def receive = {
-    case MesosStatusUpdateEvent(_, taskId, "TASK_KILLED", _, _, _, _, _, _) if idsToKill(taskId) =>
+    case MesosStatusUpdateEvent(_, taskId, taskFinished(_), _, _, _, _, _, _) if idsToKill(taskId) =>
       idsToKill -= taskId
       log.info(s"Task $taskId has been killed. Waiting for ${idsToKill.size} more tasks to be killed.")
-      checkFinished()
-
-    case MesosStatusUpdateEvent(_, taskId, "TASK_LOST", _, _, _, _, _, _) if idsToKill(taskId) =>
-      idsToKill -= taskId
-      log.warning(s"Task $taskId should have been killed but was lost, removing it from the list. Waiting for ${idsToKill.size} more tasks to be killed.")
       checkFinished()
 
     case x: MesosStatusUpdateEvent => log.debug(s"Received $x")
