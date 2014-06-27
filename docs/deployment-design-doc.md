@@ -304,7 +304,7 @@ PUT /v2/groups/product-a/frontend
 or from an app to a group
 
 ```
-PUT /v2/groups/product-a/frontend/play
+PUT /v2/apps/product-a/frontend/play
 ```
 ```json
 { "dependencies": ["../backend"] }
@@ -454,12 +454,6 @@ PUT /v2/groups/myGroup
 { "scaleBy": 2 }
 ```
 
-This would scale all transitive apps of the group myGroup by the factor of 2.
-Example: 
-/myGroup/backend/app.instances 4 --> 8
-/myGroup/frontend/tier1/app.instances 1 --> 2
-
-
 ##### Destroy a group
 
 ```
@@ -541,11 +535,19 @@ GET /v2/apps/product-a/frontend/*
 ##### Get a list of tasks in a subtree
 
 ```
+GET /v2/apps/*/task
+GET /v2/apps/product-a/*/task
+GET /v2/apps/product-a/frontend/*/task
+GET /v2/apps/product-a/frontend/play/*/task
+```
+
+```
 GET /v2/tasks/*
 GET /v2/tasks/product-a/*
 GET /v2/tasks/product-a/frontend/*
 GET /v2/tasks/product-a/frontend/play/*
 ```
+
 
 ##### Check the health of a task
 

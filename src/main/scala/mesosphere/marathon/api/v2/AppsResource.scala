@@ -125,7 +125,7 @@ class AppsResource @Inject() (
   }
 
   @Path("{appId:.+}/tasks")
-  def appTasksResource() = new AppTasksResource(service, taskTracker, healthCheckManager)
+  def appTasksResource() = new AppTasksResource(service, taskTracker, healthCheckManager, config, groupManager)
 
   @Path("{appId:.+}/versions")
   def appVersionsResource() = new AppVersionsResource(service)

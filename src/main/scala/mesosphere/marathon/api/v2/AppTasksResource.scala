@@ -3,16 +3,15 @@ package mesosphere.marathon.api.v2
 import javax.ws.rs._
 import com.codahale.metrics.annotation.Timed
 import javax.ws.rs.core.{ MediaType, Response }
+import mesosphere.marathon.state.{PathId, GroupManager}
 import mesosphere.marathon.state.PathId._
 import javax.inject.Inject
-import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.{ Responses, EndpointsHelper }
 import org.apache.log4j.Logger
 import mesosphere.marathon.health.HealthCheckManager
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration.SECONDS
+import scala.concurrent.{Awaitable, Await}
 import mesosphere.marathon.api.v2.json.EnrichedTask
 
 /**
@@ -23,24 +22,32 @@ import mesosphere.marathon.api.v2.json.EnrichedTask
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class AppTasksResource @Inject() (service: MarathonSchedulerService,
                                   taskTracker: TaskTracker,
-                                  healthCheckManager: HealthCheckManager) {
+                                  healthCheckManager: HealthCheckManager,
+                                  config: MarathonConf,
+                                  groupManager: GroupManager
+                                   ) {
 
   val log = Logger.getLogger(getClass.getName)
+  val GroupTasks = """^((?:.+/)|)\*$""".r
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
   def indexJson(@PathParam("appId") appId: String) = {
-    val id = appId.toRootPath
-    if (taskTracker.contains(id)) {
-      val tasks = taskTracker.get(id).map { task =>
-        EnrichedTask(id, task, Await.result(healthCheckManager.status(id, task.getId), Duration(2, SECONDS)))
-      }
-      Response.ok(Map("tasks" -> tasks)).build
+
+    def tasks(appIds: Set[PathId]) = for {
+      id <- appIds
+      task <- taskTracker.get(id)
+    } yield EnrichedTask(id, task, result(healthCheckManager.status(id, task.getId)))
+
+    val matchingApps = appId match {
+      case GroupTasks(gid) => result(groupManager.group(gid.toRootPath)).map(_.transitiveApps.map(_.id)).getOrElse(Set.empty)
+      case _ => Set(appId.toRootPath)
     }
-    else {
-      Responses.unknownApp(id)
-    }
+
+    val running = matchingApps.filter(taskTracker.contains)
+
+    if (running.isEmpty) Responses.unknownApp(appId.toRootPath) else  Response.ok(Map("tasks" -> tasks(running))).build
   }
 
   @GET
@@ -98,4 +105,6 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
       Responses.unknownApp(pathId)
     }
   }
+
+  private def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 }
