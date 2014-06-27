@@ -72,6 +72,7 @@ class DelegatingHealthCheckManager @Inject() (
     }
 
     taskHealth = taskHealth + (taskId -> newHealth)
+
     newHealth
   }
 

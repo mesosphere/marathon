@@ -105,8 +105,12 @@ class MarathonScheduler @Inject() (
                 log.debug("Launching tasks: " + taskInfos)
 
                 val marathonTask = MarathonTasks.makeTask(
-                  task.getTaskId.getValue, offer.getHostname, ports,
-                  offer.getAttributesList.asScala.toList, app.version)
+                  task.getTaskId.getValue,
+                  offer.getHostname,
+                  ports,
+                  offer.getAttributesList.asScala.toList,
+                  app.version
+                )
 
                 taskTracker.starting(app.id, marathonTask)
                 driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
@@ -145,6 +149,9 @@ class MarathonScheduler @Inject() (
     if (config.executorHealthChecks()) healthCheckManager.update(status)
 
     val appId = TaskIDUtil.appID(status.getTaskId)
+
+    // conditionally forward health changes to the health check manager
+    if (config.executorHealthChecks()) healthCheckManager.update(status)
 
     import TaskState._
 
