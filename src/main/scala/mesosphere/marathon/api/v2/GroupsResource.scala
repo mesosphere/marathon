@@ -80,6 +80,16 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
   }
 
+  @PUT
+  @Consumes(Array(MediaType.APPLICATION_JSON)) //@Path("""{path:(?!.*/version/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$).+}""")
+  @Timed
+  def updateRoot(update: GroupUpdate,
+                 @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    requireValid(checkGroup(update))
+    val (_, version) = updateOrCreate(PathId.empty, update, force)
+    Response.ok(Map("version" -> version)).build()
+  }
+
   /**
     * Create or update a group.
     * If the path to the group does not exist, it gets created.
@@ -95,32 +105,8 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
              update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     requireValid(checkGroup(update))
-    updateOrCreate(id.toRootPath, update, force)
     val (_, version) = updateOrCreate(id.toRootPath, update, force)
     Response.ok(Map("version" -> version)).build()
-  }
-
-  /**
-    * Rollback to a specific version of a given group.
-    * @param id the identifier of the group to roll back.
-    * @param version the version of the group to roll to.
-    * @param force if there is an upgrade in progress, it can be overridden with the force flag.
-    */
-  @PUT
-  @Path("""{id:.+}/version/{version}""")
-  @Timed
-  def rollbackTo(@PathParam("id") id: String,
-                 @PathParam("version") version: String,
-                 @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    val groupId = id.toRootPath
-    val res = groupManager.group(groupId, Timestamp(version)).map {
-      case Some(group) =>
-        groupManager.update(groupId, _ => group, group.version, force)
-        Response.ok(group).build()
-      case None =>
-        Responses.unknownGroup(groupId)
-    }
-    result(res)
   }
 
   /**
@@ -143,8 +129,20 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): (PathId, Timestamp) = {
     requireValid(checkGroup(update))
     val version = Timestamp.now()
+    def groupChange(group: Group): Group = {
+      val versionChange = update.version.map { version =>
+        result(groupManager.group(id, version)).getOrElse(throw new IllegalArgumentException(s"Group $id not available in version $version"))
+      }
+      val scaleChange = update.scale.map { scale =>
+        group.transitiveApps.foldLeft(group) { (changedGroup, app) =>
+          changedGroup.updateApp(app.id, _.copy(instances = (app.instances * scale).ceil.toInt), version)
+        }
+      }
+      versionChange orElse scaleChange getOrElse update.apply(group, version)
+    }
+
     val effectivePath = update.id.map(_.canonicalPath(id)).getOrElse(id)
-    groupManager.update(effectivePath, group => update.apply(group, version), version, force)
+    groupManager.update(effectivePath, groupChange, version, force)
     (effectivePath, version)
   }
 

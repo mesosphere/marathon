@@ -110,7 +110,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     val variable = fetchFromState(appId)
     state.expunge(variable)
     apps.remove(appId)
-    log.warn(s"Expunged app ${appId}")
+    log.info(s"Expunged app ${appId}")
   }
 
   def shutDown(appId: PathId): Unit =
