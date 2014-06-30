@@ -36,7 +36,7 @@ all: deb rpm
 help:
 	@echo "Please choose one of the following targets: deb, rpm, fedora, osx"
 	@echo "For release builds:"
-	@echo "  make PKG_REL=1 deb"
+	@echo "  make PKG_REL=1.0 deb"
 	@echo "To override package release version:"
 	@echo "  make PKG_REL=0.2.20141228050159 rpm"
 	@exit 0
