@@ -320,7 +320,7 @@ POST /v2/groups/test
 ```json
 {
   "id": "product-a",
-  "scalingStrategy": {
+  "upgradeStrategy": {
     "minimumHealthCapacity": 0.5
   },
   "apps": [

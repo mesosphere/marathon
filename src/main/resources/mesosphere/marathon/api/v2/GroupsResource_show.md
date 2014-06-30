@@ -24,9 +24,6 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 {
   "id": "myProduct",
-  "scalingStrategy": {
-    "minimumHealthCapacity": 0.75
-  },
   "apps": [
     {
       "id": "myApp",

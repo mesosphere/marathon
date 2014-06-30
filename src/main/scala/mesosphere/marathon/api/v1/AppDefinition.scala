@@ -55,7 +55,7 @@ case class AppDefinition(
 
   dependencies: Set[PathId] = Set.empty,
 
-  scalingStrategy: ScalingStrategy = ScalingStrategy.empty,
+  updateStrategy: UpdateStrategy = UpdateStrategy.empty,
 
   version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {
@@ -95,7 +95,7 @@ case class AppDefinition(
       .addResources(memResource)
       .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
       .setVersion(version.toString)
-      .setScalingStrategy(scalingStrategy.toProto)
+      .setUpdateStrategy(updateStrategy.toProto)
 
     builder.build
   }
@@ -136,7 +136,7 @@ case class AppDefinition(
       healthChecks =
         proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion),
-      scalingStrategy = if (proto.hasScalingStrategy) ScalingStrategy.fromProto(proto.getScalingStrategy) else ScalingStrategy.empty
+      updateStrategy = if (proto.hasUpdateStrategy) UpdateStrategy.fromProto(proto.getUpdateStrategy) else UpdateStrategy.empty
     )
   }
 
@@ -166,7 +166,7 @@ case class AppDefinition(
       healthChecks != to.healthChecks ||
       taskRateLimit != to.taskRateLimit ||
       dependencies != to.dependencies ||
-      scalingStrategy != to.scalingStrategy
+      updateStrategy != to.updateStrategy
   }
 }
 
@@ -188,7 +188,7 @@ object AppDefinition {
     app: AppDefinition) extends AppDefinition(
     app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
     app.constraints, app.uris, app.ports, app.taskRateLimit, app.container,
-    app.healthChecks, app.dependencies, app.scalingStrategy, app.version
+    app.healthChecks, app.dependencies, app.updateStrategy, app.version
   ) {
 
     /**

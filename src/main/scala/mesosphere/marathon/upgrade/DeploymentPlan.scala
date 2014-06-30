@@ -76,8 +76,8 @@ object DeploymentPlan {
         else {
           val orig = originalApp(app.id)
           pass1Actions ::= RestartApplication(app,
-            (orig.scalingStrategy.minimumHealthCapacity * orig.instances).ceil.toInt,
-            (app.scalingStrategy.minimumHealthCapacity * app.instances).ceil.toInt)
+            (orig.updateStrategy.minimumHealthCapacity * orig.instances).ceil.toInt,
+            (app.updateStrategy.minimumHealthCapacity * app.instances).ceil.toInt)
           pass2Actions ::= KillAllOldTasksOf(app)
           pass2Actions ::= ScaleApplication(app, app.instances)
         }

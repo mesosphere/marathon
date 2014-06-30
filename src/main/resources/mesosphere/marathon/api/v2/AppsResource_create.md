@@ -6,22 +6,22 @@ The full JSON format of an application resource is as follows:
 
 ```json
 {
+    "id": "/product/service/myApp",
     "cmd": "(env && sleep 300)",
-    "constraints": [
-        ["attribute", "OPERATOR", "value"]
-    ],
     "container": {
         "image": "docker:///zaiste/postgresql",
         "options": ["-e", "X=7"]
     },
     "cpus": 2,
+    "mem": 256.0,
     "env": {
         "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
     },
     "executor": "",
-    "id": "myApp",
+    "constraints": [
+        ["attribute", "OPERATOR", "value"]
+    ],
     "instances": 3,
-    "mem": 256.0,
     "ports": [
         8080,
         9000
@@ -31,7 +31,21 @@ The full JSON format of an application resource is as follows:
     "tasksStaged": 0, 
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
-    ], 
+    ],
+    "healthChecks": [
+        "protocol": "http",
+        "path": "/",
+        "portIndex": 0,
+        "gracePeriodSeconds": 15,
+        "intervalSeconds": 10,
+        "timeoutSeconds": 20,
+        "maxConsecutiveFailures": 3
+    ],
+    "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
+    "updateStrategy": {
+        "minimumHealthCapacity": 0.5,
+        "maximumRunningFactor": 2.0
+    },
     "version": "2014-03-01T23:29:30.158Z"
 }
 ```

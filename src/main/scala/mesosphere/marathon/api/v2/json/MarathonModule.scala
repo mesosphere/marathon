@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import com.fasterxml.jackson.databind._
 import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
-import mesosphere.marathon.state.{ ScalingStrategy, PathId, Timestamp }
+import mesosphere.marathon.state.{ UpdateStrategy, PathId, Timestamp }
 import mesosphere.marathon.health.HealthCheck
 import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind.Module.SetupContext
@@ -269,12 +269,12 @@ object MarathonModule {
 
       dependencies: Option[Set[PathId]] = None,
 
-      scalingStrategy: Option[ScalingStrategy] = None,
+      updateStrategy: Option[UpdateStrategy] = None,
 
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
       id, cmd, env, instances, cpus, mem, uris, ports, taskRateLimit, constraints,
-      executor, container, healthChecks, dependencies, scalingStrategy, version
+      executor, container, healthChecks, dependencies, updateStrategy, version
     )
   }
 }

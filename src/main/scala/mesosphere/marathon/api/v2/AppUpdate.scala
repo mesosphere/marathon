@@ -5,7 +5,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.state.{ ScalingStrategy, PathId, Timestamp }
+import mesosphere.marathon.state.{ UpdateStrategy, PathId, Timestamp }
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.lang.{ Integer => JInt, Double => JDouble }
 
@@ -43,7 +43,7 @@ case class AppUpdate(
 
     dependencies: Option[Set[PathId]] = None,
 
-    scalingStrategy: Option[ScalingStrategy] = None,
+    updateStrategy: Option[UpdateStrategy] = None,
 
     version: Option[Timestamp] = None) {
 
@@ -66,7 +66,7 @@ case class AppUpdate(
     container.orElse(app.container),
     healthChecks.getOrElse(app.healthChecks),
     dependencies.getOrElse(app.dependencies),
-    scalingStrategy.getOrElse(app.scalingStrategy),
+    updateStrategy.getOrElse(app.updateStrategy),
     Timestamp.now()
   )
 
@@ -93,7 +93,7 @@ object AppUpdate {
       app.container,
       Option(app.healthChecks),
       Option(app.dependencies),
-      Option(app.scalingStrategy),
+      Option(app.updateStrategy),
       Option(app.version)
     )
 }

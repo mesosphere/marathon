@@ -33,10 +33,7 @@ Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 {
-  "scalingStrategy" : { 
-    "minimumHealthCapacity": 0.5 
-  },
-  "apps":[ 
+  "apps":[
     {
       "id": "myApp",
       "cmd": "ruby app2.rb",

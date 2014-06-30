@@ -1,6 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.Protos.{ GroupDefinition, ScalingStrategyDefinition, StorageVersion }
+import mesosphere.marathon.Protos.{ GroupDefinition, UpgradeStrategyDefinition, StorageVersion }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.PathId._
 import org.jgrapht.DirectedGraph
@@ -10,24 +10,24 @@ import org.jgrapht.traverse.TopologicalOrderIterator
 
 import scala.collection.JavaConversions._
 
-case class ScalingStrategy(
+case class UpdateStrategy(
     minimumHealthCapacity: Double,
     maximumRunningFactor: Option[Double]) {
 
-  def toProto: ScalingStrategyDefinition = {
-    val strategy = ScalingStrategyDefinition.newBuilder()
+  def toProto: UpgradeStrategyDefinition = {
+    val strategy = UpgradeStrategyDefinition.newBuilder()
       .setMinimumHealthCapacity(minimumHealthCapacity)
     maximumRunningFactor.foreach(strategy.setMaximumRunningFactor)
     strategy.build()
   }
 }
 
-object ScalingStrategy {
-  def empty: ScalingStrategy = ScalingStrategy(1, None)
-  def fromProto(scalingStrategy: ScalingStrategyDefinition) = {
-    ScalingStrategy(
-      scalingStrategy.getMinimumHealthCapacity,
-      if (scalingStrategy.hasMaximumRunningFactor) Some(scalingStrategy.getMaximumRunningFactor) else None
+object UpdateStrategy {
+  def empty: UpdateStrategy = UpdateStrategy(1, None)
+  def fromProto(upgradeStrategy: UpgradeStrategyDefinition) = {
+    UpdateStrategy(
+      upgradeStrategy.getMinimumHealthCapacity,
+      if (upgradeStrategy.hasMaximumRunningFactor) Some(upgradeStrategy.getMaximumRunningFactor) else None
     )
   }
 }

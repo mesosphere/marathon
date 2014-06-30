@@ -7,7 +7,6 @@ The JSON format of a group resource is as follows:
 ```json
 {
   "id" : "groupName",
-  "scalingStrategy" : { "minimumHealthCapacity": 0.5 },
   "apps":[
      {
          "id": "myApp",
