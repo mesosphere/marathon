@@ -86,7 +86,7 @@ class DeploymentActor(
     }
     else if (scaleTo > runningTasks.size) {
       val promise = Promise[Boolean]()
-      context.actorOf(Props(classOf[TaskStartActor], taskQueue, eventBus, app, scaleTo - runningTasks.size, true, promise))
+      context.actorOf(Props(classOf[TaskStartActor], taskQueue, eventBus, app, scaleTo - runningTasks.size, app.healthChecks.nonEmpty, promise))
       promise.future.map(_ => ())
     }
     else {

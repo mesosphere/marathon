@@ -3,15 +3,15 @@ package mesosphere.marathon.api.v2
 import javax.ws.rs._
 import com.codahale.metrics.annotation.Timed
 import javax.ws.rs.core.{ MediaType, Response }
-import mesosphere.marathon.state.{PathId, GroupManager}
+import mesosphere.marathon.state.{ PathId, GroupManager }
 import mesosphere.marathon.state.PathId._
 import javax.inject.Inject
-import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.api.{ Responses, EndpointsHelper }
 import org.apache.log4j.Logger
 import mesosphere.marathon.health.HealthCheckManager
-import scala.concurrent.{Awaitable, Await}
+import scala.concurrent.{ Awaitable, Await }
 import mesosphere.marathon.api.v2.json.EnrichedTask
 
 /**
@@ -24,8 +24,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                                   taskTracker: TaskTracker,
                                   healthCheckManager: HealthCheckManager,
                                   config: MarathonConf,
-                                  groupManager: GroupManager
-                                   ) {
+                                  groupManager: GroupManager) {
 
   val log = Logger.getLogger(getClass.getName)
   val GroupTasks = """^((?:.+/)|)\*$""".r
@@ -42,12 +41,12 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
 
     val matchingApps = appId match {
       case GroupTasks(gid) => result(groupManager.group(gid.toRootPath)).map(_.transitiveApps.map(_.id)).getOrElse(Set.empty)
-      case _ => Set(appId.toRootPath)
+      case _               => Set(appId.toRootPath)
     }
 
     val running = matchingApps.filter(taskTracker.contains)
 
-    if (running.isEmpty) Responses.unknownApp(appId.toRootPath) else  Response.ok(Map("tasks" -> tasks(running))).build
+    if (running.isEmpty) Responses.unknownApp(appId.toRootPath) else Response.ok(Map("tasks" -> tasks(running))).build
   }
 
   @GET
