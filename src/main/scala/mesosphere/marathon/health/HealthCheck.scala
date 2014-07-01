@@ -72,7 +72,7 @@ case class HealthCheck(
     mergeFromProto(Protos.HealthCheckDefinition.parseFrom(bytes))
 
   // Mesos supports COMMAND health checks, others to be added in the future
-  def toMesos(host: String, ports: Seq[Int]): MesosProtos.HealthCheck = {
+  def toMesos(ports: Seq[Int]): MesosProtos.HealthCheck = {
     val builder = this.protocol match {
       case Protocol.COMMAND =>
         assert(
@@ -80,7 +80,7 @@ case class HealthCheck(
           "A command is required when using the COMMAND health check protocol."
         )
         MesosProtos.HealthCheck.newBuilder
-          .setCommand(this.command.get.toProtoWithEnvironment(host, ports))
+          .setCommand(this.command.get.toProto)
 
       case Protocol.HTTP =>
         throw new UnsupportedOperationException(

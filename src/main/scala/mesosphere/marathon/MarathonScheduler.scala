@@ -354,14 +354,12 @@ class MarathonScheduler @Inject() (
         if (config.executorHealthChecks()) {
           import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 
-          val host = offer.getHostname
-
           // Mesos supports at most one health check, and only COMMAND checks
           // are currently implemented.
           val mesosHealthCheck: Option[org.apache.mesos.Protos.HealthCheck] =
             app.healthChecks.collectFirst {
               case healthCheck if healthCheck.protocol == Protocol.COMMAND =>
-                Try(healthCheck.toMesos(host, ports.map(_.toInt))) match {
+                Try(healthCheck.toMesos(ports.map(_.toInt))) match {
                   case Success(mesosHealthCheck) => Some(mesosHealthCheck)
                   case Failure(cause) =>
                     log.warn(
