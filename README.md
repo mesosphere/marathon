@@ -269,7 +269,7 @@ Marathon was created by [Tobias Knaup](https://github.com/guenter) and
 developed by the team at Mesosphere and by many contributors from
 the community.
 
-[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
+[![githalytics.com alpha](https://cruel-carlota.gopagoda.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
