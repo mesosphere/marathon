@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ UpdateStrategy, Group, Timestamp }
+import mesosphere.marathon.state.{ UpgradeStrategy, Group, Timestamp }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
@@ -38,11 +38,11 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     Given("Two application updates with command and scale changes")
     val mongoId = "/test/database/mongo".toPath
     val serviceId = "/test/service/srv1".toPath
-    val strategy = UpdateStrategy(0.75, Some(1))
-    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0), updateStrategy = strategy) ->
-      AppDefinition(mongoId, "mng2", instances = 8, updateStrategy = strategy)
-    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0), updateStrategy = strategy) ->
-      AppDefinition(serviceId, "srv2", dependencies = Set(mongoId), instances = 10, updateStrategy = strategy)
+    val strategy = UpgradeStrategy(0.75, Some(1))
+    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0), upgradeStrategy = strategy) ->
+      AppDefinition(mongoId, "mng2", instances = 8, upgradeStrategy = strategy)
+    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0), upgradeStrategy = strategy) ->
+      AppDefinition(serviceId, "srv2", dependencies = Set(mongoId), instances = 10, upgradeStrategy = strategy)
     val from: Group = Group("/test".toPath, groups = Set(
       Group("/test/database".toPath, Set(mongo._1)),
       Group("/test/service".toPath, Set(service._1))
@@ -67,11 +67,11 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     Given("Two application updates with command and scale changes")
     val mongoId = "/test/database/mongo".toPath
     val serviceId = "/test/service/srv1".toPath
-    val strategy = UpdateStrategy(0.75, Some(1))
-    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0), updateStrategy = strategy) ->
-      AppDefinition(mongoId, "mng2", instances = 8, updateStrategy = strategy)
-    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0), updateStrategy = strategy) ->
-      AppDefinition(serviceId, "srv2", instances = 10, updateStrategy = strategy)
+    val strategy = UpgradeStrategy(0.75, Some(1))
+    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0), upgradeStrategy = strategy) ->
+      AppDefinition(mongoId, "mng2", instances = 8, upgradeStrategy = strategy)
+    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0), upgradeStrategy = strategy) ->
+      AppDefinition(serviceId, "srv2", instances = 10, upgradeStrategy = strategy)
     val from: Group = Group("/test".toPath, groups = Set(
       Group("/test/database".toPath, Set(mongo._1)),
       Group("/test/service".toPath, Set(service._1))
@@ -94,13 +94,13 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     val mongoId = "/test/database/mongo".toPath
     val serviceId = "/test/service/srv1".toPath
     val appId = "/test/independent/app".toPath
-    val strategy = UpdateStrategy(0.75, Some(1))
-    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0), updateStrategy = strategy) ->
-      AppDefinition(mongoId, "mng2", instances = 8, updateStrategy = strategy)
-    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0), updateStrategy = strategy) ->
-      AppDefinition(serviceId, "srv2", dependencies = Set(mongoId), instances = 10, updateStrategy = strategy)
-    val independent = AppDefinition(appId, "app1", instances = 1, version = Timestamp(0), updateStrategy = strategy) ->
-      AppDefinition(appId, "app2", instances = 3, updateStrategy = strategy)
+    val strategy = UpgradeStrategy(0.75, Some(1))
+    val mongo = AppDefinition(mongoId, "mng1", instances = 4, version = Timestamp(0), upgradeStrategy = strategy) ->
+      AppDefinition(mongoId, "mng2", instances = 8, upgradeStrategy = strategy)
+    val service = AppDefinition(serviceId, "srv1", instances = 4, version = Timestamp(0), upgradeStrategy = strategy) ->
+      AppDefinition(serviceId, "srv2", dependencies = Set(mongoId), instances = 10, upgradeStrategy = strategy)
+    val independent = AppDefinition(appId, "app1", instances = 1, version = Timestamp(0), upgradeStrategy = strategy) ->
+      AppDefinition(appId, "app2", instances = 3, upgradeStrategy = strategy)
     val toStop = AppDefinition("/test/service/toStop".toPath, instances = 1, dependencies = Set(mongoId)) -> None
     val toStart = None -> AppDefinition("/test/service/toStart".toPath, instances = 1, dependencies = Set(serviceId))
     val from: Group = Group("/test".toPath, groups = Set(
@@ -129,8 +129,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
   test("when the only action is to stop an application") {
     Given("application updates with command and scale changes")
-    val strategy = UpdateStrategy(0.75, Some(1))
-    val app = AppDefinition("/test/independent/app".toPath, "app2", instances = 3, updateStrategy = strategy) -> None
+    val strategy = UpgradeStrategy(0.75, Some(1))
+    val app = AppDefinition("/test/independent/app".toPath, "app2", instances = 3, upgradeStrategy = strategy) -> None
     val from: Group = Group("/test".toPath, groups = Set(
       Group("/test/independent".toPath, Set(app._1))
     ))

@@ -2199,19 +2199,19 @@ public final class Protos {
     mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder getHealthChecksOrBuilder(
         int index);
 
-    // optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;
+    // optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;
     /**
-     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
      */
-    boolean hasUpdateStrategy();
+    boolean hasUpgradeStrategy();
     /**
-     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
      */
-    mesosphere.marathon.Protos.UpgradeStrategyDefinition getUpdateStrategy();
+    mesosphere.marathon.Protos.UpgradeStrategyDefinition getUpgradeStrategy();
     /**
-     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
      */
-    mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder getUpdateStrategyOrBuilder();
+    mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder getUpgradeStrategyOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -2368,12 +2368,12 @@ public final class Protos {
             case 106: {
               mesosphere.marathon.Protos.UpgradeStrategyDefinition.Builder subBuilder = null;
               if (((bitField0_ & 0x00000100) == 0x00000100)) {
-                subBuilder = updateStrategy_.toBuilder();
+                subBuilder = upgradeStrategy_.toBuilder();
               }
-              updateStrategy_ = input.readMessage(mesosphere.marathon.Protos.UpgradeStrategyDefinition.PARSER, extensionRegistry);
+              upgradeStrategy_ = input.readMessage(mesosphere.marathon.Protos.UpgradeStrategyDefinition.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom(updateStrategy_);
-                updateStrategy_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom(upgradeStrategy_);
+                upgradeStrategy_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000100;
               break;
@@ -2821,26 +2821,26 @@ public final class Protos {
       return healthChecks_.get(index);
     }
 
-    // optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;
-    public static final int UPDATESTRATEGY_FIELD_NUMBER = 13;
-    private mesosphere.marathon.Protos.UpgradeStrategyDefinition updateStrategy_;
+    // optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;
+    public static final int UPGRADESTRATEGY_FIELD_NUMBER = 13;
+    private mesosphere.marathon.Protos.UpgradeStrategyDefinition upgradeStrategy_;
     /**
-     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
      */
-    public boolean hasUpdateStrategy() {
+    public boolean hasUpgradeStrategy() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
     /**
-     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
      */
-    public mesosphere.marathon.Protos.UpgradeStrategyDefinition getUpdateStrategy() {
-      return updateStrategy_;
+    public mesosphere.marathon.Protos.UpgradeStrategyDefinition getUpgradeStrategy() {
+      return upgradeStrategy_;
     }
     /**
-     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+     * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
      */
-    public mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder getUpdateStrategyOrBuilder() {
-      return updateStrategy_;
+    public mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder getUpgradeStrategyOrBuilder() {
+      return upgradeStrategy_;
     }
 
     private void initFields() {
@@ -2856,7 +2856,7 @@ public final class Protos {
       oBSOLETEContainer_ = mesosphere.marathon.Protos.ContainerInfo.getDefaultInstance();
       version_ = "1970-01-01T00:00:00.000Z";
       healthChecks_ = java.util.Collections.emptyList();
-      updateStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
+      upgradeStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2907,8 +2907,8 @@ public final class Protos {
           return false;
         }
       }
-      if (hasUpdateStrategy()) {
-        if (!getUpdateStrategy().isInitialized()) {
+      if (hasUpgradeStrategy()) {
+        if (!getUpgradeStrategy().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -2957,7 +2957,7 @@ public final class Protos {
         output.writeMessage(12, healthChecks_.get(i));
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeMessage(13, updateStrategy_);
+        output.writeMessage(13, upgradeStrategy_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -3023,7 +3023,7 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(13, updateStrategy_);
+          .computeMessageSize(13, upgradeStrategy_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3138,7 +3138,7 @@ public final class Protos {
           getConstraintsFieldBuilder();
           getOBSOLETEContainerFieldBuilder();
           getHealthChecksFieldBuilder();
-          getUpdateStrategyFieldBuilder();
+          getUpgradeStrategyFieldBuilder();
         }
       }
       private static Builder create() {
@@ -3191,10 +3191,10 @@ public final class Protos {
         } else {
           healthChecksBuilder_.clear();
         }
-        if (updateStrategyBuilder_ == null) {
-          updateStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
+        if (upgradeStrategyBuilder_ == null) {
+          upgradeStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
         } else {
-          updateStrategyBuilder_.clear();
+          upgradeStrategyBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00001000);
         return this;
@@ -3300,10 +3300,10 @@ public final class Protos {
         if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
           to_bitField0_ |= 0x00000100;
         }
-        if (updateStrategyBuilder_ == null) {
-          result.updateStrategy_ = updateStrategy_;
+        if (upgradeStrategyBuilder_ == null) {
+          result.upgradeStrategy_ = upgradeStrategy_;
         } else {
-          result.updateStrategy_ = updateStrategyBuilder_.build();
+          result.upgradeStrategy_ = upgradeStrategyBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -3441,8 +3441,8 @@ public final class Protos {
             }
           }
         }
-        if (other.hasUpdateStrategy()) {
-          mergeUpdateStrategy(other.getUpdateStrategy());
+        if (other.hasUpgradeStrategy()) {
+          mergeUpgradeStrategy(other.getUpgradeStrategy());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -3493,8 +3493,8 @@ public final class Protos {
             return false;
           }
         }
-        if (hasUpdateStrategy()) {
-          if (!getUpdateStrategy().isInitialized()) {
+        if (hasUpgradeStrategy()) {
+          if (!getUpgradeStrategy().isInitialized()) {
             
             return false;
           }
@@ -4927,121 +4927,121 @@ public final class Protos {
         return healthChecksBuilder_;
       }
 
-      // optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;
-      private mesosphere.marathon.Protos.UpgradeStrategyDefinition updateStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
+      // optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;
+      private mesosphere.marathon.Protos.UpgradeStrategyDefinition upgradeStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          mesosphere.marathon.Protos.UpgradeStrategyDefinition, mesosphere.marathon.Protos.UpgradeStrategyDefinition.Builder, mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder> updateStrategyBuilder_;
+          mesosphere.marathon.Protos.UpgradeStrategyDefinition, mesosphere.marathon.Protos.UpgradeStrategyDefinition.Builder, mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder> upgradeStrategyBuilder_;
       /**
-       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
        */
-      public boolean hasUpdateStrategy() {
+      public boolean hasUpgradeStrategy() {
         return ((bitField0_ & 0x00001000) == 0x00001000);
       }
       /**
-       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
        */
-      public mesosphere.marathon.Protos.UpgradeStrategyDefinition getUpdateStrategy() {
-        if (updateStrategyBuilder_ == null) {
-          return updateStrategy_;
+      public mesosphere.marathon.Protos.UpgradeStrategyDefinition getUpgradeStrategy() {
+        if (upgradeStrategyBuilder_ == null) {
+          return upgradeStrategy_;
         } else {
-          return updateStrategyBuilder_.getMessage();
+          return upgradeStrategyBuilder_.getMessage();
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
        */
-      public Builder setUpdateStrategy(mesosphere.marathon.Protos.UpgradeStrategyDefinition value) {
-        if (updateStrategyBuilder_ == null) {
+      public Builder setUpgradeStrategy(mesosphere.marathon.Protos.UpgradeStrategyDefinition value) {
+        if (upgradeStrategyBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          updateStrategy_ = value;
+          upgradeStrategy_ = value;
           onChanged();
         } else {
-          updateStrategyBuilder_.setMessage(value);
+          upgradeStrategyBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00001000;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
        */
-      public Builder setUpdateStrategy(
+      public Builder setUpgradeStrategy(
           mesosphere.marathon.Protos.UpgradeStrategyDefinition.Builder builderForValue) {
-        if (updateStrategyBuilder_ == null) {
-          updateStrategy_ = builderForValue.build();
+        if (upgradeStrategyBuilder_ == null) {
+          upgradeStrategy_ = builderForValue.build();
           onChanged();
         } else {
-          updateStrategyBuilder_.setMessage(builderForValue.build());
+          upgradeStrategyBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00001000;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
        */
-      public Builder mergeUpdateStrategy(mesosphere.marathon.Protos.UpgradeStrategyDefinition value) {
-        if (updateStrategyBuilder_ == null) {
+      public Builder mergeUpgradeStrategy(mesosphere.marathon.Protos.UpgradeStrategyDefinition value) {
+        if (upgradeStrategyBuilder_ == null) {
           if (((bitField0_ & 0x00001000) == 0x00001000) &&
-              updateStrategy_ != mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance()) {
-            updateStrategy_ =
-              mesosphere.marathon.Protos.UpgradeStrategyDefinition.newBuilder(updateStrategy_).mergeFrom(value).buildPartial();
+              upgradeStrategy_ != mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance()) {
+            upgradeStrategy_ =
+              mesosphere.marathon.Protos.UpgradeStrategyDefinition.newBuilder(upgradeStrategy_).mergeFrom(value).buildPartial();
           } else {
-            updateStrategy_ = value;
+            upgradeStrategy_ = value;
           }
           onChanged();
         } else {
-          updateStrategyBuilder_.mergeFrom(value);
+          upgradeStrategyBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00001000;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
        */
-      public Builder clearUpdateStrategy() {
-        if (updateStrategyBuilder_ == null) {
-          updateStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
+      public Builder clearUpgradeStrategy() {
+        if (upgradeStrategyBuilder_ == null) {
+          upgradeStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
           onChanged();
         } else {
-          updateStrategyBuilder_.clear();
+          upgradeStrategyBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00001000);
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
        */
-      public mesosphere.marathon.Protos.UpgradeStrategyDefinition.Builder getUpdateStrategyBuilder() {
+      public mesosphere.marathon.Protos.UpgradeStrategyDefinition.Builder getUpgradeStrategyBuilder() {
         bitField0_ |= 0x00001000;
         onChanged();
-        return getUpdateStrategyFieldBuilder().getBuilder();
+        return getUpgradeStrategyFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
        */
-      public mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder getUpdateStrategyOrBuilder() {
-        if (updateStrategyBuilder_ != null) {
-          return updateStrategyBuilder_.getMessageOrBuilder();
+      public mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder getUpgradeStrategyOrBuilder() {
+        if (upgradeStrategyBuilder_ != null) {
+          return upgradeStrategyBuilder_.getMessageOrBuilder();
         } else {
-          return updateStrategy_;
+          return upgradeStrategy_;
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition updateStrategy = 13;</code>
+       * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           mesosphere.marathon.Protos.UpgradeStrategyDefinition, mesosphere.marathon.Protos.UpgradeStrategyDefinition.Builder, mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder> 
-          getUpdateStrategyFieldBuilder() {
-        if (updateStrategyBuilder_ == null) {
-          updateStrategyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+          getUpgradeStrategyFieldBuilder() {
+        if (upgradeStrategyBuilder_ == null) {
+          upgradeStrategyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
               mesosphere.marathon.Protos.UpgradeStrategyDefinition, mesosphere.marathon.Protos.UpgradeStrategyDefinition.Builder, mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder>(
-                  updateStrategy_,
+                  upgradeStrategy_,
                   getParentForChildren(),
                   isClean());
-          updateStrategy_ = null;
+          upgradeStrategy_ = null;
         }
-        return updateStrategyBuilder_;
+        return upgradeStrategyBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
@@ -11526,7 +11526,7 @@ public final class Protos {
       "\001(\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00210\022\032\n\016",
       "timeoutSeconds\030\005 \001(\r:\00220\022\017\n\004path\030\006 \001(\t:\001" +
       "/\022!\n\026maxConsecutiveFailures\030\007 \001(\r:\0013\"\035\n\010" +
-      "Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\364\003\n\021ServiceD" +
+      "Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\365\003\n\021ServiceD" +
       "efinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mes" +
       "os.CommandInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tres" +
       "ources\030\004 \003(\0132\017.mesos.Resource\022\023\n\013descrip" +
@@ -11537,27 +11537,27 @@ public final class Protos {
       "sphere.marathon.ContainerInfo\022)\n\007version" +
       "\030\013 \001(\t:\0301970-01-01T00:00:00.000Z\022@\n\014heal" +
       "thChecks\030\014 \003(\0132*.mesosphere.marathon.Hea" +
-      "lthCheckDefinition\022F\n\016updateStrategy\030\r \001" +
-      "(\0132..mesosphere.marathon.UpgradeStrategy" +
-      "Definition\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022" +
-      "\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattribut" +
-      "es\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030" +
-      "\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007 " +
-      "\003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 \001(\t\"",
-      "M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 " +
-      "\003(\0132!.mesosphere.marathon.MarathonTask\"1" +
-      "\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opti" +
-      "ons\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcallbac" +
-      "k_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030" +
-      "\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"X\n\031U" +
-      "pgradeStrategyDefinition\022\035\n\025minimumHealt" +
-      "hCapacity\030\001 \002(\001\022\034\n\024maximumRunningFactor\030" +
-      "\002 \001(\001\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n" +
-      "\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesospher",
-      "e.marathon.ServiceDefinition\0224\n\006groups\030\004" +
-      " \003(\0132$.mesosphere.marathon.GroupDefiniti" +
-      "on\022\024\n\014dependencies\030\005 \003(\tB\035\n\023mesosphere.m" +
-      "arathonB\006Protos"
+      "lthCheckDefinition\022G\n\017upgradeStrategy\030\r " +
+      "\001(\0132..mesosphere.marathon.UpgradeStrateg" +
+      "yDefinition\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t" +
+      "\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattribu" +
+      "tes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged_at" +
+      "\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007" +
+      " \003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 \001(\t",
+      "\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002" +
+      " \003(\0132!.mesosphere.marathon.MarathonTask\"" +
+      "1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opt" +
+      "ions\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcallba" +
+      "ck_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major" +
+      "\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"X\n\031" +
+      "UpgradeStrategyDefinition\022\035\n\025minimumHeal" +
+      "thCapacity\030\001 \002(\001\022\034\n\024maximumRunningFactor" +
+      "\030\002 \001(\001\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017" +
+      "\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphe",
+      "re.marathon.ServiceDefinition\0224\n\006groups\030" +
+      "\004 \003(\0132$.mesosphere.marathon.GroupDefinit" +
+      "ion\022\024\n\014dependencies\030\005 \003(\tB\035\n\023mesosphere." +
+      "marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11581,7 +11581,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "TaskRateLimit", "OBSOLETEContainer", "Version", "HealthChecks", "UpdateStrategy", });
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "TaskRateLimit", "OBSOLETEContainer", "Version", "HealthChecks", "UpgradeStrategy", });
           internal_static_mesosphere_marathon_MarathonTask_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new

@@ -4,7 +4,7 @@ import java.lang.annotation.ElementType
 import javax.validation.{ ConstraintViolation, ConstraintViolationException, Validation }
 
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.{ PathId, UpdateStrategy }
+import mesosphere.marathon.state.{ PathId, UpgradeStrategy }
 import org.hibernate.validator.internal.engine.ConstraintViolationImpl
 import org.hibernate.validator.internal.engine.path.PathImpl
 
@@ -96,7 +96,7 @@ trait ModelValidation extends BeanValidation {
   def checkUpdate(app: AppUpdate, path: String = "", needsId: Boolean = false) = {
     validate(app,
       defined(app, app.id, "id", (b: AppUpdate, p: PathId, i: String) => idErrors(b, p, i), needsId),
-      defined(app, app.updateStrategy, "updateStrategy", (b: AppUpdate, p: UpdateStrategy, i: String) => healthErrors(b, p, i))
+      defined(app, app.upgradeStrategy, "upgradeStrategy", (b: AppUpdate, p: UpgradeStrategy, i: String) => healthErrors(b, p, i))
     //dependencies must take base path into account
     //defined(app, app.dependencies, "dependencies", (b: AppUpdate, p: Set[PathId], i: String) => dependencyErrors(b, p, i))
     )
@@ -106,7 +106,7 @@ trait ModelValidation extends BeanValidation {
     validate(app,
       idErrors(app, app.id, path + "id"),
       checkPath(app, parent, app.id, path + "id"),
-      healthErrors(app, app.updateStrategy, path + "updateStrategy"),
+      healthErrors(app, app.upgradeStrategy, path + "upgradeStrategy"),
       dependencyErrors(app, app.dependencies, path + "dependencies")
     )
   }
@@ -125,16 +125,16 @@ trait ModelValidation extends BeanValidation {
     set.zipWithIndex.flatMap{ case (id, pos) => idErrors(t, id, s"$path[$pos]") }
   }
 
-  def healthErrors[T](t: T, updateStrategy: UpdateStrategy, path: String)(implicit ct: ClassTag[T]) = {
+  def healthErrors[T](t: T, upgradeStrategy: UpgradeStrategy, path: String)(implicit ct: ClassTag[T]) = {
     val capacityErrors = {
-      if (updateStrategy.minimumHealthCapacity < 0) Some("is less than 0")
-      else if (updateStrategy.minimumHealthCapacity > 1) Some("is greater than 1")
+      if (upgradeStrategy.minimumHealthCapacity < 0) Some("is less than 0")
+      else if (upgradeStrategy.minimumHealthCapacity > 1) Some("is greater than 1")
       else None
-    } map { violation(t, updateStrategy, path + ".minimumHealthCapacity", _) }
-    val scalingErrors = updateStrategy.maximumRunningFactor.collect {
-      case x if x < 1                                     => "is less than 1"
-      case x if x <= updateStrategy.minimumHealthCapacity => "is less than or equal to minimumHealthCapacity"
-    } map { violation(t, updateStrategy, path + ".maximumRunningFactor", _) }
+    } map { violation(t, upgradeStrategy, path + ".minimumHealthCapacity", _) }
+    val scalingErrors = upgradeStrategy.maximumRunningFactor.collect {
+      case x if x < 1                                      => "is less than 1"
+      case x if x <= upgradeStrategy.minimumHealthCapacity => "is less than or equal to minimumHealthCapacity"
+    } map { violation(t, upgradeStrategy, path + ".maximumRunningFactor", _) }
     capacityErrors ++ scalingErrors
   }
 }

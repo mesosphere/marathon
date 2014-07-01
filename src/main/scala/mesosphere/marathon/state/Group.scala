@@ -10,7 +10,7 @@ import org.jgrapht.traverse.TopologicalOrderIterator
 
 import scala.collection.JavaConversions._
 
-case class UpdateStrategy(
+case class UpgradeStrategy(
     minimumHealthCapacity: Double,
     maximumRunningFactor: Option[Double]) {
 
@@ -22,10 +22,10 @@ case class UpdateStrategy(
   }
 }
 
-object UpdateStrategy {
-  def empty: UpdateStrategy = UpdateStrategy(1, None)
+object UpgradeStrategy {
+  def empty: UpgradeStrategy = UpgradeStrategy(1, None)
   def fromProto(upgradeStrategy: UpgradeStrategyDefinition) = {
-    UpdateStrategy(
+    UpgradeStrategy(
       upgradeStrategy.getMinimumHealthCapacity,
       if (upgradeStrategy.hasMaximumRunningFactor) Some(upgradeStrategy.getMaximumRunningFactor) else None
     )
