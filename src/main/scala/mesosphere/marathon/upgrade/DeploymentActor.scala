@@ -38,7 +38,6 @@ class DeploymentActor(
     case NextStep if steps.hasNext =>
       performStep(steps.next()) onComplete {
         case Success(_) =>
-          log.info("Dispatching next step")
           self ! NextStep
         case Failure(t) =>
           receiver ! Failed(t)
