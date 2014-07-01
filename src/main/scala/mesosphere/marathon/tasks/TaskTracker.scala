@@ -72,14 +72,18 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
 
     appTasks.find(_.getId == taskId) match {
       case Some(task) =>
-        apps(appId).tasks = appTasks - task
-        val ret = store(appId).map(_ => Some(task))
-        log.info(s"Task $taskId removed from TaskTracker")
-        if (apps(appId).shutdown && apps(appId).tasks.isEmpty) {
-          // Are we shutting down this app? If so, expunge
-          expunge(appId)
+        val result = apps.get(appId).map { app =>
+          app.tasks = appTasks - task
+          val ret = store(appId).map(_ => Some(task))
+          log.info(s"Task $taskId removed from TaskTracker")
+          if (app.shutdown && app.tasks.isEmpty) {
+            // Are we shutting down this app? If so, expunge
+            expunge(appId)
+          }
+          ret
         }
-        ret
+
+        result getOrElse Future.successful(None)
       case None =>
         if (apps(appId).shutdown && apps(appId).tasks.isEmpty) {
           // Are we shutting down this app? If so, expunge
