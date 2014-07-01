@@ -1,9 +1,12 @@
 package mesosphere.marathon.health
 
 import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.api.v2.Command
 import Protos.HealthCheckDefinition.Protocol
 import scala.concurrent.duration.FiniteDuration
+import scala.collection.JavaConverters._
 import java.util.concurrent.TimeUnit.SECONDS
+import javax.validation.Validation
 
 class HealthCheckTest extends MarathonSpec {
 
@@ -110,6 +113,57 @@ class HealthCheckTest extends MarathonSpec {
     val readResult = mapper.readValue(json, classOf[HealthCheck])
 
     assert(readResult == original)
+  }
+
+  test("Validation") {
+    val validator = Validation.buildDefaultValidatorFactory().getValidator
+
+    def shouldViolate(hc: HealthCheck, template: String) = {
+      val violations = validator.validate(hc).asScala
+      assert(violations.exists(_.getMessageTemplate == template))
+    }
+
+    def shouldNotViolate(hc: HealthCheck, template: String) = {
+      val violations = validator.validate(hc).asScala
+      assert(!violations.exists(_.getMessageTemplate == template))
+    }
+
+    shouldNotViolate(HealthCheck(), "")
+
+    shouldViolate(
+      HealthCheck(protocol = Protocol.COMMAND, path = Some("/health")),
+      "Health check protocol must match supplied fields."
+    )
+
+    shouldViolate(
+      HealthCheck(protocol = Protocol.COMMAND, command = None),
+      "Health check protocol must match supplied fields."
+    )
+
+    shouldViolate(
+      HealthCheck(
+        protocol = Protocol.HTTP,
+        command = Some(Command("echo healthy"))
+      ),
+      "Health check protocol must match supplied fields."
+    )
+
+    shouldViolate(
+      HealthCheck(
+        protocol = Protocol.TCP,
+        path = Some("/")
+      ),
+      "Health check protocol must match supplied fields."
+    )
+
+    shouldViolate(
+      HealthCheck(
+        protocol = Protocol.TCP,
+        command = Some(Command("echo healthy"))
+      ),
+      "Health check protocol must match supplied fields."
+    )
+
   }
 
 }

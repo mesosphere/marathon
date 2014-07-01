@@ -19,7 +19,7 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
 import mesosphere.util.{ ThreadPoolContext, RateLimiters }
 import mesosphere.marathon.health.HealthCheckManager
-import scala.util.{ Success, Failure }
+import scala.util.{ Try, Success, Failure }
 import org.apache.log4j.Logger
 
 trait SchedulerCallbacks {
@@ -343,28 +343,42 @@ class MarathonScheduler @Inject() (
                       offer: Offer): Option[(TaskInfo, Seq[Long])] = {
     // TODO this should return a MarathonTask
     val builder = new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper)
+
     builder.buildIfMatches(offer) map {
       case (task, ports) =>
-        import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.HTTP
         val taskBuilder = task.toBuilder
 
         if (config.executorHealthChecks()) {
-          val mesosHealthCheck = app.healthChecks.collectFirst {
-            case hc: health.HealthCheck if hc.protocol == HTTP =>
-              hc.toMesos(ports.map(_.toInt))
-          }
+          import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+
+          // Mesos supports at most one health check, and only COMMAND checks
+          // are currently implemented.
+          val mesosHealthCheck: Option[org.apache.mesos.Protos.HealthCheck] =
+            app.healthChecks.collectFirst {
+              case healthCheck if healthCheck.protocol == Protocol.COMMAND =>
+                Try(healthCheck.toMesos(ports.map(_.toInt))) match {
+                  case Success(mesosHealthCheck) => Some(mesosHealthCheck)
+                  case Failure(cause) =>
+                    log.warn(
+                      s"An error occurred with health check [$healthCheck]\n" +
+                        s"Error: [${cause.getMessage}]")
+                    None
+                }
+            }.flatten
+
           mesosHealthCheck foreach taskBuilder.setHealthCheck
+
           if (mesosHealthCheck.size < app.healthChecks.size) {
             val numUnusedChecks = app.healthChecks.size - mesosHealthCheck.size
             log.warn(
-              "Mesos supports one health check per task.\n" +
+              "Mesos supports one command health check per task.\n" +
                 s"Task [${task.getTaskId.getValue}] will run without " +
                 s"$numUnusedChecks of its defined health checks."
             )
           }
         }
 
-        (taskBuilder.build, ports)
+        taskBuilder.build -> ports
     }
   }
 

@@ -1,10 +1,11 @@
 package mesosphere.marathon.health
 
 import mesosphere.marathon.api.validation.FieldConstraints._
+import mesosphere.marathon.api.v2.Command
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.state.MarathonState
-import mesosphere.marathon.api.validation.FieldConstraints.FieldJsonInclude
+import mesosphere.marathon.api.validation.ValidHealthCheck
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude.Include
@@ -15,14 +16,17 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 import java.lang.{ Integer => JInt }
 
+@ValidHealthCheck
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class HealthCheck(
 
   @FieldJsonInclude(Include.NON_NULL)@FieldJsonDeserialize(contentAs = classOf[java.lang.String]) path: Option[String] = HealthCheck.DefaultPath,
 
-  @FieldNotEmpty protocol: Protocol = HealthCheck.DefaultProtocol,
+  protocol: Protocol = HealthCheck.DefaultProtocol,
 
-  @FieldNotEmpty portIndex: JInt = HealthCheck.DefaultPortIndex,
+  portIndex: JInt = HealthCheck.DefaultPortIndex,
+
+  @FieldJsonInclude(Include.NON_NULL)@FieldJsonDeserialize(contentAs = classOf[Command]) command: Option[Command] = HealthCheck.DefaultCommand,
 
   @FieldJsonProperty("gracePeriodSeconds") gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
 
@@ -30,7 +34,7 @@ case class HealthCheck(
 
   @FieldJsonProperty("timeoutSeconds") timeout: FiniteDuration = HealthCheck.DefaultTimeout,
 
-  @FieldNotEmpty maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures)
+  maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures)
     extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
   def toProto: Protos.HealthCheckDefinition = {
@@ -41,6 +45,8 @@ case class HealthCheck(
       .setIntervalSeconds(this.interval.toSeconds.toInt)
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
       .setMaxConsecutiveFailures(this.maxConsecutiveFailures)
+
+    command foreach { c => builder.setCommand(c.toProto) }
 
     path foreach builder.setPath
 
@@ -61,18 +67,36 @@ case class HealthCheck(
   def mergeFromProto(bytes: Array[Byte]): HealthCheck =
     mergeFromProto(Protos.HealthCheckDefinition.parseFrom(bytes))
 
+  // Mesos supports COMMAND health checks, others to be added in the future
   def toMesos(ports: Seq[Int]): MesosProtos.HealthCheck = {
-    // NB: Mesos supports HTTP health checks, others to be added in the future
-    assert(this.protocol == Protocol.HTTP)
+    val builder = this.protocol match {
+      case Protocol.COMMAND =>
+        assert(
+          command.isDefined,
+          "A command is required when using the COMMAND health check protocol."
+        )
+        MesosProtos.HealthCheck.newBuilder
+          .setCommand(this.command.get.toProto)
 
-    val httpBuilder = MesosProtos.HealthCheck.HTTP.newBuilder
-      .setPort(ports(portIndex))
+      case Protocol.HTTP =>
+        throw new UnsupportedOperationException(
+          s"Mesos does not support health checks of type [$protocol]")
+      // TODO: enable this logic once Mesos supports HTTP checks
+      //
+      // val httpBuilder = MesosProtos.HealthCheck.HTTP.newBuilder
+      //   .setPort(ports(portIndex))
+      //
+      // path foreach httpBuilder.setPath
+      //
+      // MesosProtos.HealthCheck.newBuilder
+      //   .setHttp(httpBuilder)
 
-    path foreach httpBuilder.setPath
+      case _ =>
+        throw new UnsupportedOperationException(
+          s"Mesos does not support health checks of type [$protocol]")
+    }
 
-    MesosProtos.HealthCheck.newBuilder
-      .setHttp(httpBuilder)
-      .setDelaySeconds(0)
+    builder.setDelaySeconds(0)
       .setIntervalSeconds(this.interval.toSeconds.toInt)
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
       .setConsecutiveFailures(this.maxConsecutiveFailures)
@@ -86,6 +110,7 @@ object HealthCheck {
   val DefaultPath = Some("/")
   val DefaultProtocol = Protocol.HTTP
   val DefaultPortIndex = 0
+  val DefaultCommand = None
   val DefaultGracePeriod = FiniteDuration(15, SECONDS)
   val DefaultInterval = FiniteDuration(10, SECONDS)
   val DefaultTimeout = FiniteDuration(20, SECONDS)
