@@ -1,25 +1,25 @@
-## DELETE `/v2/groups/{group_id}`
+## PUT `/v2/groups/{groupId}`
 
-Destroy a group. All data about that group and all associated applications will be deleted.
+A group can be scaled. 
+The scaling effects apps directly in the group as well as all transitive applications referenced by subgroups of this group.
+The scaling factor is applied to each individual instance count of each application.
 
 Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
 The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
 the given version.
+
 
 ### Example
 
 **Request:**
 
 ```
-DELETE /v2/groups/product/service/app HTTP/1.1
-Accept: application/json
-Accept-Encoding: gzip, deflate, compress
-Content-Length: 0
-Content-Type: application/json; charset=utf-8
+PUT /v2/groups/product/service HTTP/1.1
+Content-Length: 123
 Host: localhost:8080
-User-Agent: curl/7.35.0
+User-Agent: HTTPie/0.7.2
+{ "scaleBy": 1.5 }
 ```
-
 
 **Response:**
 
@@ -30,3 +30,4 @@ Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
 {"version":"2014-07-01T10:20:50.196Z"}
 ```
+

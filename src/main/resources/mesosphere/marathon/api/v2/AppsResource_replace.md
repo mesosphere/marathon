@@ -1,19 +1,16 @@
 #### PUT `/v2/apps/{appId}`
 
-Replaces parameters of a running application. The new application
-parameters
-apply only to subsequently created tasks, and currently running tasks
-are
-__not__ pre-emptively restarted. If no application with the given id
-exists,
-it will be created.
+Replaces parameters of a running application. If no application with the given id
+exists, it will be created. If there is an application with this id, all running instances get 
+upgraded to the new definition. 
+
 
 ##### Example
 
 **Request:**
 
 ```
-PUT /v2/apps/myApp HTTP/1.1
+PUT /v2/apps/myapp HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 126

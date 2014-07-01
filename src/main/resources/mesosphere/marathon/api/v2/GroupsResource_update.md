@@ -19,13 +19,17 @@ In this case, human interaction is needed with 2 possible choices:
 If there is an upgrade process already in progress, a new update will be rejected unless the force flag is set.
 With the force flag given, a running upgrade is terminated and a new one is started.
 
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
+The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
+the given version.
+
 
 ### Example
 
 **Request:**
 
 ```
-PUT /v2/groups/myProduct HTTP/1.1
+PUT /v2/groups/my/cool/project HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 176
@@ -35,7 +39,7 @@ User-Agent: HTTPie/0.7.2
 {
   "apps":[
     {
-      "id": "myApp",
+      "id": "app",
       "cmd": "ruby app2.rb",
       "env": {},
       "instances": 6,
@@ -65,7 +69,10 @@ User-Agent: HTTPie/0.7.2
 **Response:**
 
 ```
-HTTP/1.1 204 No Content
+HTTP/1.1 200 Ok
+Content-Type: application/json
+Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
+{"version":"2014-07-01T10:20:50.196Z"}
 ```
 

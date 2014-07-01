@@ -7,7 +7,7 @@ List all available groups.
 **Request:**
 
 ```
-GET /v2/groups HTTP/1.1
+GET /v2/groups/product/service HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
@@ -24,7 +24,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 [
     {
-        "id": "myProduct",
+        "id": "/product/service",
         "apps": [
             {
                 "id": "myApp",

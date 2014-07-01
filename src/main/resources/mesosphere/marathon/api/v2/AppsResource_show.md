@@ -7,7 +7,7 @@ List the application with id `appId`.
 **Request:**
 
 ```
-GET /v2/apps/myApp HTTP/1.1
+GET /v2/apps/myapp HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
@@ -27,6 +27,7 @@ Transfer-Encoding: chunked
 
 {
     "app": {
+        "id": "/myapp", 
         "cmd": "env && sleep 60", 
         "constraints": [
             [
@@ -41,7 +42,6 @@ Transfer-Encoding: chunked
             "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
         }, 
         "executor": "", 
-        "id": "myApp", 
         "instances": 3, 
         "mem": 5.0, 
         "ports": [

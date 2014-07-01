@@ -1,58 +1,37 @@
 ## POST `/v2/groups`
 
 Create and start a new application group.
+Application groups can contain other application groups.
+An application group can either hold other groups or applications, but can not be mixed in one.
 
 The JSON format of a group resource is as follows:
 
 ```json
 {
-  "id" : "groupName",
-  "apps":[
-     {
-         "id": "myApp",
-         "cmd": "sleep 30",
-         "constraints": [
-             ["attribute", "OPERATOR", "value"]
-         ],
-         "container": {
-             "image": "docker:///zaiste/postgresql",
-             "options": ["-e", "X=7"]
-         },
-         "cpus": 2,
-         "env": {
-             "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
-         },
-         "executor": "",
-         "instances": 3,
-         "mem": 256.0,
-         "ports": [
-             8080,
-             9000
-         ],
-         "taskRateLimit": 1.0,
-         "tasksRunning": 3, 
-         "tasksStaged": 0, 
-         "uris": [
-             "https://raw.github.com/mesosphere/marathon/master/README.md"
-         ], 
-         "version": "2014-03-01T23:29:30.158Z"
-     },  
-     {
-         "id": "myApp2",
-         "cmd": "someExecutable",
-         "cpus": 2,
-         "instances": 3,
-         "mem": 256.0,
-         "version": "2014-03-01T23:29:30.158Z"
-     } 
-  ],
-  "version": "2014-03-01T23:29:30.158Z"
+  "id": "product",
+  "groups": [{
+    "id": "service",
+    "groups": [{
+      "id": "us-east",
+      "apps": [{
+        "id": "app1",
+        "cmd": "someExecutable"
+      },  
+      {
+        "id": "app2",
+        "cmd": "someOtherExecutable"
+      }]
+    }],
+    "dependencies": ["/product/database", "../backend"]
+  }
+]
+"version": "2014-03-01T23:29:30.158Z"
 }
 ```
 
-The minimumHealthCapacity (value range [0..1]) defines the percentage of healthy nodes during restarts.
-E.g.: A minimumHealthCapacity=0.5 with an app with 10 running instances: at least 5 instances of this application 
-will be always available.
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
+The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
+the given version.
 
 
 ### Example
@@ -68,33 +47,11 @@ Content-Type: application/json
 Content-Length: 273
 {
   "id" : "product",
-  "scalingStrategy" : { 
-    "minimumHealthCapacity": 0.5 
-  },
   "apps":[ 
     {
-      "id": "myApp",
+      "id": "myapp",
       "cmd": "ruby app2.rb",
-      "env": {},
-      "instances": 6,
-      "cpus": 0.2,
-      "mem": 128.0,
-      "executor": "//cmd",
-      "constraints": [],
-      "uris": [],
-      "ports": [19970],
-      "taskRateLimit": 1.0,
-      "container": null,
-      "healthChecks": [
-        {
-          "path": "/health",
-          "protocol": "HTTP",
-          "portIndex": 0,
-          "initialDelaySeconds": 15,
-          "intervalSeconds": 5,
-          "timeoutSeconds": 15
-        }
-      ],
+      "instances": 1
     }
   ]
 }
@@ -104,6 +61,10 @@ Content-Length: 273
 
 
 ```
-HTTP/1.1 204 No Content
+HTTP/1.1 201 Created
+Location: http://localhost:8080/v2/groups/product
+Content-Type: application/json
+Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
+{"version":"2014-07-01T10:20:50.196Z"}
 ```

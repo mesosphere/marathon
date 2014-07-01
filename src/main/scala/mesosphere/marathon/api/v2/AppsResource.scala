@@ -111,7 +111,7 @@ class AppsResource @Inject() (
       }
     }
     result(groupManager.update(PathId.empty, updateGroup, version))
-    Response.ok().build()
+    Response.noContent.build
   }
 
   @DELETE
