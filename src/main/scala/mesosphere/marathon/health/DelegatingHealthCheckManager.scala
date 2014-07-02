@@ -60,10 +60,16 @@ class DelegatingHealthCheckManager @Inject() (
 
     val appId = taskId take taskId.lastIndexOf('.')
 
-    if (!newHealth.alive())
-      firstCommandCheck(appId).foreach { healthCheck =>
-        eventBus.foreach(_.post(FailedHealthCheck(appId, taskId, healthCheck)))
-      }
+    for (
+      bus <- eventBus;
+      healthCheck <- firstCommandCheck(appId)
+    ) {
+      if (!newHealth.alive)
+        bus post FailedHealthCheck(appId, taskId, healthCheck)
+
+      if (newHealth.alive != oldHealth.alive)
+        bus post HealthStatusChanged(appId, taskId, newHealth.alive)
+    }
 
     taskHealth = taskHealth + (taskId -> newHealth)
     newHealth
