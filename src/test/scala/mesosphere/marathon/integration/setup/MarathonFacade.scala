@@ -45,7 +45,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
 
   def app(id: PathId): RestResult[AppDefinition] = {
     val pipeline = sendReceive ~> read[AppDefinition]
-    result(pipeline(Get(s"$url/v2/apps/$id")), waitTime)
+    result(pipeline(Get(s"$url/v2/apps$id")), waitTime)
   }
 
   def createApp(app: AppDefinition): RestResult[HttpResponse] = {
@@ -55,37 +55,38 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
 
   def deleteApp(id: PathId): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
-    result(pipeline(Delete(s"$url/v2/apps/$id")), waitTime)
+    result(pipeline(Delete(s"$url/v2/apps$id")), waitTime)
   }
 
   def updateApp(app: AppDefinition): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
-    result(pipeline(Put(s"$url/v2/apps/${app.id}", app)), waitTime)
+    result(pipeline(Put(s"$url/v2/apps${app.id}", app)), waitTime)
   }
 
   //apps tasks resource --------------------------------------
 
   def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
     val pipeline = sendReceive ~> read[ListTasks]
-    val res = result(pipeline(Get(s"$url/v2/apps/$appId/tasks")), waitTime)
+    val res = result(pipeline(Get(s"$url/v2/apps$appId/tasks")), waitTime)
     RestResult(res.value.tasks.toList, res.code)
   }
 
   //group resource -------------------------------------------
 
-  def listGroups: RestResult[List[Group]] = {
-    val pipeline = sendReceive ~> read[Array[Group]] ~> toList[Group]
-    result(pipeline(Get(s"$url/v2/groups")), waitTime)
+  def listGroups: RestResult[Set[Group]] = {
+    val pipeline = sendReceive ~> read[Group]
+    val root = result(pipeline(Get(s"$url/v2/groups")), waitTime)
+    RestResult(root.value.groups, root.code)
   }
 
   def listGroupVersions(id: PathId): RestResult[List[String]] = {
     val pipeline = sendReceive ~> read[Array[String]] ~> toList[String]
-    result(pipeline(Get(s"$url/v2/groups/$id/versions")), waitTime)
+    result(pipeline(Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
   def group(id: PathId): RestResult[Group] = {
     val pipeline = sendReceive ~> read[Group]
-    result(pipeline(Get(s"$url/v2/groups/$id")), waitTime)
+    result(pipeline(Get(s"$url/v2/groups$id")), waitTime)
   }
 
   def createGroup(group: GroupUpdate): RestResult[HttpResponse] = {
@@ -95,17 +96,17 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
 
   def deleteGroup(id: PathId): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
-    result(pipeline(Delete(s"$url/v2/groups/$id")), waitTime)
+    result(pipeline(Delete(s"$url/v2/groups$id")), waitTime)
   }
 
   def updateGroup(id: PathId, group: GroupUpdate, force: Boolean = false): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
-    result(pipeline(Put(s"$url/v2/groups/$id?force=$force", group)), waitTime)
+    result(pipeline(Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
   }
 
   def rollbackGroup(groupId: PathId, version: String, force: Boolean = false): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
-    result(pipeline(Put(s"$url/v2/groups/$groupId/version/$version?force=$force")), waitTime)
+    result(pipeline(Put(s"$url/v2/groups$groupId/version/$version?force=$force")), waitTime)
   }
 
   //event resource ---------------------------------------------

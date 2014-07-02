@@ -28,6 +28,10 @@ final case class DeploymentPlan(
     target: Group,
     steps: List[DeploymentStep],
     version: Timestamp) {
+
+  def isEmpty: Boolean = steps.isEmpty
+  def nonEmpty: Boolean = !isEmpty
+
   override def toString: String = {
     def actionString(a: DeploymentAction): String = a match {
       case StartApplication(app, scale)      => s"Start(${app.id}, $scale)"

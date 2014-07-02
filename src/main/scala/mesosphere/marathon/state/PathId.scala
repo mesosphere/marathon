@@ -24,6 +24,8 @@ case class PathId(path: List[String], absolute: Boolean = true) {
 
   def append(id: PathId): PathId = PathId(path ::: id.path, absolute)
 
+  def append(id: String): PathId = append(PathId(id))
+
   def restOf(parent: PathId): PathId = {
     def in(currentPath: List[String], parentPath: List[String]): List[String] = {
       if (currentPath.isEmpty) Nil

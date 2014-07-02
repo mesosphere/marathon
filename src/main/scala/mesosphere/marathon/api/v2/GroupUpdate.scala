@@ -57,5 +57,5 @@ object GroupUpdate {
   def apply(id: PathId, apps: Set[AppDefinition], groups: Set[GroupUpdate]): GroupUpdate = {
     GroupUpdate(Some(id), if (apps.isEmpty) None else Some(apps), if (groups.isEmpty) None else Some(groups))
   }
-  def empty(id: String): GroupUpdate = GroupUpdate(Some(id.toRootPath))
+  def empty(id: PathId): GroupUpdate = GroupUpdate(Some(id))
 }

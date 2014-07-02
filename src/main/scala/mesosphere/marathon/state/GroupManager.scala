@@ -38,8 +38,11 @@ class GroupManager @Singleton @Inject() (
     * @return the list of versions of this object.
     */
   def versions(id: PathId): Future[Iterable[Timestamp]] = {
-    require(!id.isEmpty, "Empty group id given!")
-    groupRepo.listVersions(zkName)
+    groupRepo.listVersions(zkName).flatMap { versions =>
+      Future.sequence(versions.map(groupRepo.group(zkName, _))).map { _.collect {
+        case Some(group) if group.group(id).isDefined => group.version
+      }}
+    }
   }
 
   /**
@@ -73,14 +76,14 @@ class GroupManager @Singleton @Inject() (
     *              one can control, to stop a current deployment and start a new one.
     * @return the nw group future, which completes, when the update process has been finished.
     */
-  def update(id: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
+  def update(id: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = synchronized {
     root.flatMap { current =>
       val update = current.update(id, fn, version)
       upgrade(id, current, update, force)
     }
   }
 
-  def updateApp(id: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false) = {
+  def updateApp(id: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false) = synchronized {
     root.flatMap{ current =>
       val update = current.updateApp(id, fn, version)
       upgrade(id.parent, current, update, force)
@@ -90,18 +93,22 @@ class GroupManager @Singleton @Inject() (
   private def upgrade(change: PathId, current: Group, group: Group, force: Boolean): Future[Group] = {
     log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
 
+    def deploy(from: Group, to: Group): Future[DeploymentPlan] = {
+      val plan = DeploymentPlan(from, to)
+      if (plan.isEmpty) Future.successful(plan) else scheduler.deploy(plan, force).map(_ => plan)
+    }
+
     val deployment = for {
       storedGroup <- groupRepo.store(zkName, group)
-      plan = DeploymentPlan(current, storedGroup)
-      result <- scheduler.deploy(plan, force)
+      plan <- deploy(current, storedGroup)
     } yield plan
 
     deployment.onComplete {
       case Success(plan) =>
-        log.info(s"Deployment finished for change: $plan")
+        if (plan.nonEmpty) log.info(s"Deployment finished for change: $plan")
         eventBus.publish(GroupChangeSuccess(change, group.version.toString))
       case Failure(ex) =>
-        log.info(s"Deployment failed for change: ${group.version}")
+        log.warn(s"Deployment failed for change: ${group.version}")
         eventBus.publish(GroupChangeFailed(change, group.version.toString, ex.getMessage))
     }
     deployment.map(_.target)

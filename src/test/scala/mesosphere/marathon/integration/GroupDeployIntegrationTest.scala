@@ -20,50 +20,51 @@ class GroupDeployIntegrationTest
 
   test("create empty group successfully") {
     Given("A group which does not exist in marathon")
-    val group = GroupUpdate.empty("test")
+    val group = GroupUpdate.empty("test".toRootPath)
 
     When("The group gets created")
     val result = marathon.createGroup(group)
 
     Then("The group is created. A success event for this group is send.")
-    result.code should be(200) //no content
+    result.code should be(201) //created
     val event = waitForEvent("group_change_success")
     event.info("groupId") should be(group.id.get.toString)
   }
 
   test("update empty group successfully") {
     Given("An existing group")
-    val name = "test2"
+    val name = "test2".toRootPath
     val group = GroupUpdate.empty(name)
     val dependencies = Set("/test".toPath)
     marathon.createGroup(group)
     waitForEvent("group_change_success")
 
     When("The group gets updated")
-    marathon.updateGroup(name.toPath, group.copy(dependencies = Some(dependencies)))
+    marathon.updateGroup(name, group.copy(dependencies = Some(dependencies)))
     waitForEvent("group_change_success")
 
     Then("The group is updated")
-    val result = marathon.group("test2".toPath)
+    val result = marathon.group("test2".toRootPath)
     result.code should be(200)
     result.value.dependencies should be(dependencies)
   }
 
   test("deleting an existing group gives a 200 http response") {
     Given("An existing group")
-    val group = GroupUpdate.empty("test2")
+    val group = GroupUpdate.empty("test2".toRootPath)
     marathon.createGroup(group)
     waitForEvent("group_change_success")
 
     When("The group gets deleted")
     val result = marathon.deleteGroup(group.id.get)
+    waitForEvent("group_change_success")
 
     Then("The group is deleted")
     result.code should be(200)
     marathon.listGroups.value should be('empty)
   }
 
-  test("delete a non existing group should give a 204 http response") {
+  test("delete a non existing group should give a 404 http response") {
     When("A non existing group is deleted")
     val missing = marathon.deleteGroup("does_not_exist".toPath)
 
@@ -73,8 +74,8 @@ class GroupDeployIntegrationTest
 
   test("create a group with applications to start") {
     Given("A group with one application")
-    val app = AppDefinition(id = "sleep".toPath, executor = "//cmd", cmd = "sleep 100", instances = 2, cpus = 0.1, mem = 16)
-    val group = GroupUpdate("/sleep".toPath, Set(app))
+    val app = AppDefinition(id = "/test/sleep".toPath, executor = "//cmd", cmd = "sleep 100", instances = 2, cpus = 0.1, mem = 16)
+    val group = GroupUpdate("/test".toPath, Set(app))
 
     When("The group is created")
     marathon.createGroup(group)
@@ -117,17 +118,18 @@ class GroupDeployIntegrationTest
 
   test("upgrade a group with application with health checks") {
     Given("A group with one application")
-    val id = "proxy".toRootPath
-    val proxy = appProxy(id, "v1", 1)
+    val id = "test".toRootPath
+    val appId = id.append("app")
+    val proxy = appProxy(appId, "v1", 1)
     val group = GroupUpdate(id, Set(proxy))
     marathon.createGroup(group)
     waitForEvent("group_change_success")
-    val check = appProxyCheck(id, "v1", state = true)
+    val check = appProxyCheck(proxy.id, "v1", state = true)
 
     When("The group is updated")
     check.afterDelay(1.second, state = false)
     check.afterDelay(3.seconds, state = true)
-    marathon.updateGroup(id, group.copy(apps = Some(Set(proxy.copy(cmd = proxy.cmd + " version2")))))
+    marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 1)))))
 
     Then("A success event is send and the application has been started")
     waitForEvent("group_change_success")

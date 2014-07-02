@@ -10,7 +10,6 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.Responses
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
-import mesosphere.util.ThreadPoolContext.context
 
 import scala.concurrent.{ Await, Awaitable }
 
@@ -116,9 +115,11 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   def delete(@PathParam("id") id: String,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val groupId = id.toRootPath
-    val version = Timestamp.now()
-    groupManager.update(groupId.parent, _.remove(groupId, version), version, force)
-    Response.ok(Map("version" -> version)).build()
+    result(groupManager.group(groupId)).fold(Responses.unknownGroup(groupId)) { group =>
+      val version = Timestamp.now()
+      groupManager.update(groupId.parent, _.remove(groupId, version), version, force)
+      Response.ok(Map("version" -> version)).build()
+    }
   }
 
   private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): (PathId, Timestamp) = {
