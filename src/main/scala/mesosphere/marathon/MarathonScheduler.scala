@@ -310,10 +310,16 @@ class MarathonScheduler @Inject() (
     }
   }
 
+  private[marathon] def newTaskId(appName: String): TaskID = {
+    TaskID.newBuilder()
+      .setValue(TaskIDUtil.taskId(appName))
+      .build
+  }
+
   private def newTask(app: AppDefinition,
                       offer: Offer): Option[(TaskInfo, Seq[Long])] = {
     // TODO this should return a MarathonTask
-    new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
+    new TaskBuilder(app, newTaskId, taskTracker, mapper).buildIfMatches(offer)
   }
 
   /**
