@@ -20,13 +20,13 @@ import java.lang.{ Integer => JInt }
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class HealthCheck(
 
-  @FieldJsonInclude(Include.NON_NULL)@FieldJsonDeserialize(contentAs = classOf[java.lang.String]) path: Option[String] = HealthCheck.DefaultPath,
+  @FieldJsonDeserialize(contentAs = classOf[java.lang.String]) path: Option[String] = HealthCheck.DefaultPath,
 
   protocol: Protocol = HealthCheck.DefaultProtocol,
 
   portIndex: JInt = HealthCheck.DefaultPortIndex,
 
-  @FieldJsonInclude(Include.NON_NULL)@FieldJsonDeserialize(contentAs = classOf[Command]) command: Option[Command] = HealthCheck.DefaultCommand,
+  command: Option[Command] = HealthCheck.DefaultCommand,
 
   @FieldJsonProperty("gracePeriodSeconds") gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
 
@@ -55,9 +55,13 @@ case class HealthCheck(
 
   def mergeFromProto(proto: Protos.HealthCheckDefinition): HealthCheck =
     HealthCheck(
-      path = Option(proto.getPath),
+      path =
+        if (proto.hasPath) Some(proto.getPath) else None,
       protocol = proto.getProtocol,
       portIndex = proto.getPortIndex,
+      command =
+        if (proto.hasCommand) Some(Command("").mergeFromProto(proto.getCommand))
+        else None,
       gracePeriod = FiniteDuration(proto.getGracePeriodSeconds, SECONDS),
       timeout = FiniteDuration(proto.getTimeoutSeconds, SECONDS),
       interval = FiniteDuration(proto.getIntervalSeconds, SECONDS),
@@ -68,7 +72,7 @@ case class HealthCheck(
     mergeFromProto(Protos.HealthCheckDefinition.parseFrom(bytes))
 
   // Mesos supports COMMAND health checks, others to be added in the future
-  def toMesos(ports: Seq[Int]): MesosProtos.HealthCheck = {
+  def toMesos(host: String, ports: Seq[Int]): MesosProtos.HealthCheck = {
     val builder = this.protocol match {
       case Protocol.COMMAND =>
         assert(
@@ -76,7 +80,7 @@ case class HealthCheck(
           "A command is required when using the COMMAND health check protocol."
         )
         MesosProtos.HealthCheck.newBuilder
-          .setCommand(this.command.get.toProto)
+          .setCommand(this.command.get.toProtoWithEnvironment(host, ports))
 
       case Protocol.HTTP =>
         throw new UnsupportedOperationException(

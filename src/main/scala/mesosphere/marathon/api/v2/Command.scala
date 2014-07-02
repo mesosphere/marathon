@@ -22,25 +22,17 @@ case class Command(value: String)
       .build
 
   def toProtoWithEnvironment(
-    task: Protos.MarathonTask): MesosProtos.CommandInfo = {
+    host: String,
+    ports: Seq[Int]): MesosProtos.CommandInfo = {
 
     val variables = mutable.Buffer[MesosProtos.Environment.Variable]()
 
-    // the task ID is exposed as $TASK_ID
+    // the task host is exposed as $HOST
     variables +=
       MesosProtos.Environment.Variable.newBuilder
-      .setName("TASK_ID")
-      .setValue(task.getId)
-      .build
-
-    // the task host is exposed as $HOST
-    if (task.hasHost) variables +=
-      MesosProtos.Environment.Variable.newBuilder
       .setName("HOST")
-      .setValue(task.getHost)
+      .setValue(host)
       .build
-
-    val ports = task.getPortsList.asScala
 
     // the first port (if any) is exposed as $PORT
     ports.headOption.foreach { firstPort =>

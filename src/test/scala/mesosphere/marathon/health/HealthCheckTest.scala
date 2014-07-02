@@ -2,6 +2,7 @@ package mesosphere.marathon.health
 
 import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.marathon.api.v2.Command
+import mesosphere.jackson.CaseClassModule
 import Protos.HealthCheckDefinition.Protocol
 import scala.concurrent.duration.FiniteDuration
 import scala.collection.JavaConverters._
@@ -87,7 +88,7 @@ class HealthCheckTest extends MarathonSpec {
     val mergeResult = HealthCheck().mergeFromProto(proto)
 
     val expectedResult = HealthCheck(
-      path = Some("/"),
+      path = None,
       protocol = Protocol.TCP,
       portIndex = 1,
       gracePeriod = FiniteDuration(7, SECONDS),
@@ -107,12 +108,39 @@ class HealthCheckTest extends MarathonSpec {
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     mapper.registerModule(new MarathonModule)
+    mapper.registerModule(CaseClassModule)
 
-    val original = HealthCheck()
-    val json = mapper.writeValueAsString(original)
-    val readResult = mapper.readValue(json, classOf[HealthCheck])
+    {
+      val original = HealthCheck()
+      val json = mapper.writeValueAsString(original)
+      val readResult = mapper.readValue(json, classOf[HealthCheck])
+      assert(readResult == original)
+    }
 
-    assert(readResult == original)
+    {
+      val json =
+        """
+        {
+          "path": null,
+          "protocol": "COMMAND",
+          "portIndex": 0,
+          "command": { "value": "echo healthy" },
+          "gracePeriodSeconds": 15,
+          "intervalSeconds": 10,
+          "timeoutSeconds": 20,
+          "maxConsecutiveFailures": 3
+        }
+        """
+      val expected =
+        HealthCheck(
+          protocol = Protocol.COMMAND,
+          command = Some(Command("echo healthy")),
+          path = None
+        )
+      val readResult = mapper.readValue(json, classOf[HealthCheck])
+      assert(readResult == expected)
+    }
+
   }
 
   test("Validation") {

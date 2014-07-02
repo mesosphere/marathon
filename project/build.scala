@@ -30,6 +30,7 @@ object MarathonBuild extends Build {
       "Local Maven"               at s"${Path.userHome.asFile.toURI.toURL}.m2/repository"
     ),
     sourceGenerators in Compile <+= buildInfo,
+    fork in Test := true,
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
     buildInfoPackage := "mesosphere.marathon"
   )

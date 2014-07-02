@@ -3,11 +3,14 @@ package mesosphere.marathon.health
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 
+import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.concurrent.Future
 
 trait HealthCheckManager {
+
+  protected[this] val log = Logger.getLogger(getClass.getName)
 
   /**
     * Returns the active health checks for the app with the supplied id.
