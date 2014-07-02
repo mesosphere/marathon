@@ -33,7 +33,12 @@ final case class DeploymentPlan(
     version: Timestamp) {
 
   def isEmpty: Boolean = steps.isEmpty
+
   def nonEmpty: Boolean = !isEmpty
+
+  def affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
+
+  def isAffectedBy(other: DeploymentPlan): Boolean = affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
   override def toString: String = {
     def actionString(a: DeploymentAction): String = a match {

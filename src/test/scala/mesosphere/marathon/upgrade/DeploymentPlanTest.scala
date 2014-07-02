@@ -33,6 +33,19 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     */
   }
 
+  test("can compute affected app ids") {
+    val apps = Set(AppDefinition("/app".toPath, "sleep 10"), AppDefinition("/app2".toPath, "cmd2"), AppDefinition("/app3".toPath, "cmd3"))
+    val update = Set(AppDefinition("/app".toPath, "sleep 30"), AppDefinition("/app2".toPath, "cmd2", instances = 10), AppDefinition("/app4".toPath, "cmd4"))
+
+    val from = Group("/group".toPath, apps)
+    val to = Group("/group".toPath, update)
+    val plan = DeploymentPlan(from, to)
+
+    plan.affectedApplicationIds should be (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
+    plan.isAffectedBy(plan) should be (true)
+    plan.isAffectedBy(DeploymentPlan(from, from)) should be(false)
+  }
+
   test("when updating a group with dependencies, the correct order is computed") {
 
     Given("Two application updates with command and scale changes")

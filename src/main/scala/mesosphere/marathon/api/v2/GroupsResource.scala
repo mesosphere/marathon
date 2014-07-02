@@ -107,7 +107,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   @Timed
   def delete(@DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val version = Timestamp.now()
-    groupManager.update(PathId.empty, root => root.copy(apps=Set.empty, groups=Set.empty), version, force)
+    groupManager.update(PathId.empty, root => root.copy(apps = Set.empty, groups = Set.empty), version, force)
     Response.ok(Map("version" -> version)).build()
   }
 

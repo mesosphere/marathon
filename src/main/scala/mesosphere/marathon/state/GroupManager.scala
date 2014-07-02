@@ -39,9 +39,11 @@ class GroupManager @Singleton @Inject() (
     */
   def versions(id: PathId): Future[Iterable[Timestamp]] = {
     groupRepo.listVersions(zkName).flatMap { versions =>
-      Future.sequence(versions.map(groupRepo.group(zkName, _))).map { _.collect {
-        case Some(group) if group.group(id).isDefined => group.version
-      }}
+      Future.sequence(versions.map(groupRepo.group(zkName, _))).map {
+        _.collect {
+          case Some(group) if group.group(id).isDefined => group.version
+        }
+      }
     }
   }
 

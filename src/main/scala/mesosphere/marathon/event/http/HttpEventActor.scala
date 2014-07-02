@@ -7,13 +7,13 @@ import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.state.PathId
 import org.json4s.JsonAST.JString
-import org.json4s.{CustomSerializer, DefaultFormats, FieldSerializer}
-import spray.client.pipelining.{sendReceive, _}
-import spray.http.{HttpRequest, HttpResponse}
+import org.json4s.{ CustomSerializer, DefaultFormats, FieldSerializer }
+import spray.client.pipelining.{ sendReceive, _ }
+import spray.http.{ HttpRequest, HttpResponse }
 import spray.httpx.Json4sJacksonSupport
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLogging with Json4sJacksonSupport {
 
@@ -55,9 +55,9 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     }
   }
 
-  class PathIdSerializer extends CustomSerializer[PathId]( format => (
+  class PathIdSerializer extends CustomSerializer[PathId](format => (
     { case JString(path) => PathId(path) },
-    { case path:PathId => JString(path.toString) }
+    { case path: PathId => JString(path.toString) }
   ))
 
   implicit def json4sJacksonFormats = DefaultFormats + FieldSerializer[AppDefinition]() + new PathIdSerializer
