@@ -12,11 +12,12 @@ import com.google.common.collect.Lists
 import javax.inject.{ Named, Inject }
 import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event._
-import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks }
+import mesosphere.marathon.tasks._
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
+import org.apache.mesos.Protos.{ TaskID }
 import mesosphere.util.{ Stats, ThreadPoolContext, RateLimiters }
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{ Success, Failure }
@@ -45,6 +46,7 @@ class MarathonScheduler @Inject() (
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
+    taskIdUtil: TaskIdUtil,
     rateLimiters: RateLimiters,
     stats: Stats,
     config: MarathonConf) extends Scheduler {
@@ -103,7 +105,7 @@ class MarathonScheduler @Inject() (
                 val marathonTask = MarathonTasks.makeTask(
                   task.getTaskId.getValue, offer.getHostname, ports,
                   offer.getAttributesList.asScala.toList, app.version)
-                taskTracker.starting(app.id, marathonTask)
+                taskTracker.created(app.id, marathonTask)
                 driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
                 found = true
 
@@ -142,7 +144,7 @@ class MarathonScheduler @Inject() (
       log.info("Received status update for task %s: %s (%s)"
         .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
-      val appID = TaskIDUtil.appID(status.getTaskId)
+      val appID = taskIdUtil.appID(status.getTaskId)
 
       if (status.getState.eq(TaskState.TASK_FAILED)
         || status.getState.eq(TaskState.TASK_FINISHED)
@@ -298,7 +300,7 @@ class MarathonScheduler @Inject() (
             log.info(s"Killing task ${orphanTask.getId}")
             driver.killTask(protos.TaskID(orphanTask.getId))
           }
-          taskTracker.expunge(unknownAppId)
+          taskTracker.shutDown(unknownAppId)
         }
 
         log.info("Requesting task reconciliation with the Mesos master")
@@ -310,16 +312,10 @@ class MarathonScheduler @Inject() (
     }
   }
 
-  private[marathon] def newTaskId(appName: String): TaskID = {
-    TaskID.newBuilder()
-      .setValue(TaskIDUtil.taskId(appName))
-      .build
-  }
-
   private def newTask(app: AppDefinition,
                       offer: Offer): Option[(TaskInfo, Seq[Long])] = {
     // TODO this should return a MarathonTask
-    new TaskBuilder(app, newTaskId, taskTracker, mapper).buildIfMatches(offer)
+    new TaskBuilder(app, taskIdUtil.newTaskId, taskTracker, mapper).buildIfMatches(offer)
   }
 
   /**
@@ -402,7 +398,7 @@ class MarathonScheduler @Inject() (
           status.getSlaveId.getValue,
           status.getTaskId.getValue,
           status.getState.name,
-          TaskIDUtil.appID(status.getTaskId),
+          taskIdUtil.appID(status.getTaskId),
           task.getHost,
           task.getPortsList.asScala
         )

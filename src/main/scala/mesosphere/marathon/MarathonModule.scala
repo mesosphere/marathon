@@ -13,7 +13,7 @@ import com.google.inject.name.Names
 import akka.actor.ActorSystem
 import mesosphere.marathon.state.{ MarathonStore, AppRepository }
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
@@ -98,5 +98,10 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
   @Singleton
   def provideFrameworkIdUtil(state: State): FrameworkIdUtil =
     new FrameworkIdUtil(state)
+
+  @Provides
+  @Singleton
+  def provideTaskIdUtil(): TaskIdUtil =
+    new TaskIdUtil
 
 }
