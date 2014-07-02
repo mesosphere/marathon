@@ -79,22 +79,22 @@ class GroupManager @Singleton @Inject() (
   def update(id: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = synchronized {
     root.flatMap { current =>
       val update = current.update(id, fn, version)
-      upgrade(id, current, update, force)
+      upgrade(id, current, update, force, version)
     }
   }
 
   def updateApp(id: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false) = synchronized {
     root.flatMap{ current =>
       val update = current.updateApp(id, fn, version)
-      upgrade(id.parent, current, update, force)
+      upgrade(id.parent, current, update, force, version)
     }
   }
 
-  private def upgrade(change: PathId, current: Group, group: Group, force: Boolean): Future[Group] = {
+  private def upgrade(change: PathId, current: Group, group: Group, force: Boolean, version: Timestamp): Future[Group] = {
     log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
 
     def deploy(from: Group, to: Group): Future[DeploymentPlan] = {
-      val plan = DeploymentPlan(from, to)
+      val plan = DeploymentPlan(from, to, version)
       if (plan.isEmpty) Future.successful(plan) else scheduler.deploy(plan, force).map(_ => plan)
     }
 

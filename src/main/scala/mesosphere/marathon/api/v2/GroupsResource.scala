@@ -103,6 +103,14 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     Response.ok(Map("version" -> version)).build()
   }
 
+  @DELETE
+  @Timed
+  def delete(@DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    val version = Timestamp.now()
+    groupManager.update(PathId.empty, root => root.copy(apps=Set.empty, groups=Set.empty), version, force)
+    Response.ok(Map("version" -> version)).build()
+  }
+
   /**
     * Delete a specific subtree or a complete tree.
     * @param id the identifier of the group to delete encoded as path

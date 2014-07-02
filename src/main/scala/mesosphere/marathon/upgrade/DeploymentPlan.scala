@@ -1,5 +1,7 @@
 package mesosphere.marathon.upgrade
 
+import java.util.UUID
+
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 
@@ -24,6 +26,7 @@ final case class DeploymentStep(actions: List[DeploymentAction]) {
 }
 
 final case class DeploymentPlan(
+    id: String,
     original: Group,
     target: Group,
     steps: List[DeploymentStep],
@@ -46,7 +49,7 @@ final case class DeploymentPlan(
 }
 
 object DeploymentPlan {
-  def empty() = DeploymentPlan(Group.empty, Group.empty, Nil, Timestamp.now())
+  def empty() = DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
 
   def apply(original: Group, target: Group, version: Timestamp = Timestamp.now()): DeploymentPlan = {
     //lookup maps for original and target apps
@@ -110,6 +113,6 @@ object DeploymentPlan {
       case Nil          => nonDependentStep :: unhandledStops
     }
 
-    DeploymentPlan(original, target, finalSteps.filter(_.nonEmpty), version)
+    DeploymentPlan(UUID.randomUUID().toString, original, target, finalSteps.filter(_.nonEmpty), version)
   }
 }
