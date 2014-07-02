@@ -76,18 +76,18 @@ class GroupManager @Singleton @Inject() (
   def update(id: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
     root.flatMap { current =>
       val update = current.update(id, fn, version)
-      upgrade(current, update, force)
+      upgrade(id, current, update, force)
     }
   }
 
   def updateApp(id: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false) = {
     root.flatMap{ current =>
       val update = current.updateApp(id, fn, version)
-      upgrade(current, update, force)
+      upgrade(id.parent, current, update, force)
     }
   }
 
-  private def upgrade(current: Group, group: Group, force: Boolean): Future[Group] = {
+  private def upgrade(change: PathId, current: Group, group: Group, force: Boolean): Future[Group] = {
     log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
 
     val deployment = for {
@@ -99,10 +99,10 @@ class GroupManager @Singleton @Inject() (
     deployment.onComplete {
       case Success(plan) =>
         log.info(s"Deployment finished for change: $plan")
-        eventBus.publish(GroupChangeSuccess(group.id, group.version.toString))
+        eventBus.publish(GroupChangeSuccess(change, group.version.toString))
       case Failure(ex) =>
         log.info(s"Deployment failed for change: ${group.version}")
-        eventBus.publish(GroupChangeFailed(group.id, group.version.toString, ex.getMessage))
+        eventBus.publish(GroupChangeFailed(change, group.version.toString, ex.getMessage))
     }
     deployment.map(_.target)
   }
