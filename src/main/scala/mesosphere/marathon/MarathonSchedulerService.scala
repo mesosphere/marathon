@@ -19,10 +19,9 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppRepository, PathId, Timestamp }
-import mesosphere.marathon.upgrade.DeploymentActor.{ Failed, Finished }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.{ ThreadPoolContext, PromiseActor }
+import mesosphere.util.PromiseActor
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskID
 
@@ -46,7 +45,7 @@ class MarathonSchedulerService @Inject() (
     system: ActorSystem,
     @Named("schedulerActor") schedulerActor: ActorRef) extends AbstractExecutionThreadService with Leader {
 
-  import ThreadPoolContext.context
+  import mesosphere.util.ThreadPoolContext.context
 
   implicit val zkTimeout = config.zkFutureTimeout
 
@@ -137,6 +136,11 @@ class MarathonSchedulerService @Inject() (
 
   def listAppVersions(appId: PathId): Iterable[Timestamp] =
     Await.result(appRepository.listVersions(appId), config.zkTimeoutDuration)
+
+  def listRunningDeployments(): Future[Seq[DeploymentPlan]] =
+    (schedulerActor ? RetrieveRunningDeployments)
+      .mapTo[RunningDeployments]
+      .map(_.plans)
 
   def getApp(appId: PathId): Option[AppDefinition] = {
     Await.result(appRepository.currentVersion(appId), config.zkTimeoutDuration)

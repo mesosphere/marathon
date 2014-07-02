@@ -131,7 +131,7 @@ class DeploymentActorTest
       )
     )
 
-    managerProbe.expectMsg(5.seconds, DeploymentFinished(targetGroup.id))
+    managerProbe.expectMsg(5.seconds, DeploymentFinished(plan.id))
 
     verify(scheduler).startApp(driver, app3)
     verify(driver, times(1)).killTask(TaskID(task1_2.getId))

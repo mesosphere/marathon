@@ -1,6 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import akka.actor._
+import mesosphere.marathon.MarathonSchedulerActor.{ RunningDeployments, RetrieveRunningDeployments }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.{ AppRepository, PathId }
 import org.apache.mesos.SchedulerDriver
@@ -20,7 +21,7 @@ class AppUpgradeManager(
   import context.dispatcher
 
   val runningUpgrades: mutable.Map[PathId, ActorRef] = mutable.Map.empty
-  val runningDeployments: mutable.Map[PathId, ActorRef] = mutable.Map.empty[PathId, ActorRef]
+  val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty[String, DeploymentInfo]
 
   def receive = {
     case Upgrade(driver, app, keepAlive, maxRunning) if !runningUpgrades.contains(app.id) =>
@@ -52,15 +53,19 @@ class AppUpgradeManager(
         case _ => origSender ! UpgradeCanceled(appId)
       }
 
-    case CancelDeployment(id, reason) =>
+    case CancelConflictingDeployments(plan, reason) =>
       val origSender = sender
-      runningDeployments.remove(id) match {
-        case Some(ref) =>
-          stopActor(ref, reason) onComplete {
-            case _ => origSender ! DeploymentCanceled(id)
-          }
+      val conflictingDeployments = for {
+        info <- runningDeployments.values
+        if info.plan.isAffectedBy(plan)
+      } yield info
 
-        case _ => origSender ! DeploymentCanceled(id)
+      val cancellations = conflictingDeployments.map { info =>
+        stopActor(info.ref, reason)
+      }
+
+      Future.sequence(cancellations) onComplete {
+        case _ => origSender ! ConflictingDeploymentsCanceled(plan.id)
       }
 
     case UpgradeFinished(id) =>
@@ -71,9 +76,15 @@ class AppUpgradeManager(
       log.info(s"Removing $id from list of running deployments")
       runningDeployments -= id
 
-    case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.target.id) =>
+    case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.id) =>
       val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, appRepository, driver, scheduler, plan, taskTracker, taskQueue, eventBus))
-      runningDeployments += plan.target.id -> ref
+      runningDeployments += plan.id -> DeploymentInfo(ref, plan)
+
+    case _: PerformDeployment =>
+      sender ! Status.Failure(new ConcurrentTaskUpgradeException("Deployment is already in progress"))
+
+    case RetrieveRunningDeployments =>
+      sender ! RunningDeployments(runningDeployments.values.map(_.plan).toSeq)
   }
 
   def stopActor(ref: ActorRef, reason: Throwable): Future[Boolean] = {
@@ -87,10 +98,14 @@ object AppUpgradeManager {
   case class Upgrade(driver: SchedulerDriver, app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None)
   case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
   case class CancelUpgrade(appId: PathId, reason: Throwable)
-  case class CancelDeployment(groupId: PathId, reason: Throwable)
+  case class CancelConflictingDeployments(plan: DeploymentPlan, reason: Throwable)
 
   case class UpgradeFinished(appId: PathId)
   case class UpgradeCanceled(appId: PathId)
-  case class DeploymentFinished(groupId: PathId)
-  case class DeploymentCanceled(groupId: PathId)
+  case class DeploymentFinished(id: String)
+  case class ConflictingDeploymentsCanceled(id: String)
+
+  case class DeploymentInfo(
+    ref: ActorRef,
+    plan: DeploymentPlan)
 }

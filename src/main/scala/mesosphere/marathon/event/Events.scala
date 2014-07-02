@@ -129,12 +129,12 @@ case class RestartFailed(
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentSuccess(
-  id: PathId,
+  id: String,
   eventType: String = "deployment_success",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentFailed(
-  id: PathId,
+  id: String,
   eventType: String = "deployment_failed",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 

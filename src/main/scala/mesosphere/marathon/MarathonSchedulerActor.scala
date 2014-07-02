@@ -17,7 +17,7 @@ import akka.event.EventStream
 import mesosphere.mesos.util.FrameworkIdUtil
 import scala.util.Failure
 import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess, RestartFailed, RestartSuccess }
-import mesosphere.marathon.upgrade.AppUpgradeManager.{ PerformDeployment, CancelDeployment, CancelUpgrade, Upgrade }
+import mesosphere.marathon.upgrade.AppUpgradeManager._
 import scala.util.Success
 import scala.collection.JavaConverters._
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
@@ -108,24 +108,27 @@ class MarathonSchedulerActor(
     case cmd @ Deploy(plan, false) =>
       // add locking
       val origSender = sender
-      val ids = for {
-        step <- plan.steps
-        action <- step.actions
-      } yield action.app.id
+      val ids = plan.affectedApplicationIds
 
-      locking(ids.distinct, origSender, cmd, blocking = false) {
+      locking(ids, origSender, cmd, blocking = false) {
         deploy(driver, plan).sendAnswer(origSender, cmd)
       }
 
     case cmd @ Deploy(plan, true) =>
       // add locking
       val origSender = sender
-      val ids = distinctIds(plan)
+      val ids = plan.affectedApplicationIds
 
-      upgradeManager ! CancelDeployment(plan.target.id, new DeploymentCanceledException("The upgrade has been cancelled"))
+      upgradeManager ! CancelConflictingDeployments(plan, new DeploymentCanceledException("The upgrade has been cancelled"))
       locking(ids, origSender, cmd, blocking = true) {
         deploy(driver, plan).sendAnswer(origSender, cmd)
       }
+
+    case ConflictingDeploymentsCanceled(id) =>
+      log.info(s"Conflicting deployments for deployment $id have been canceled")
+
+    case msg @ RetrieveRunningDeployments =>
+      upgradeManager forward msg
   }
 
   /**
@@ -140,7 +143,7 @@ class MarathonSchedulerActor(
     * @tparam U
     * @return
     */
-  def locking[U](appIds: Seq[PathId], origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Unit = {
+  def locking[U](appIds: Set[PathId], origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Unit = {
     val locks = for {
       appId <- appIds
     } yield appLocks.get(appId)
@@ -183,7 +186,7 @@ class MarathonSchedulerActor(
     * @return
     */
   def locking[U](appId: PathId, origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Unit =
-    locking(Seq(appId), origSender, cmd, blocking)(f)
+    locking(Set(appId), origSender, cmd, blocking)(f)
 
   // there has to be a better way...
   def driver: SchedulerDriver = MarathonSchedulerDriver.driver.get
@@ -226,12 +229,12 @@ class MarathonSchedulerActor(
     res andThen {
       case Success(_) =>
         log.info(s"Deployment of ${plan.target.id} successful")
-        eventBus.publish(DeploymentSuccess(plan.target.id))
+        eventBus.publish(DeploymentSuccess(plan.id))
 
       case Failure(e) =>
         log.error(s"Deployment of ${plan.target.id} failed", e)
         distinctApps(plan).foreach(taskQueue.purge)
-        eventBus.publish(DeploymentFailed(plan.target.id))
+        eventBus.publish(DeploymentFailed(plan.id))
     }
   }
 
@@ -284,6 +287,8 @@ object MarathonSchedulerActor {
     def answer: Event = Deployed(plan)
   }
 
+  case object RetrieveRunningDeployments
+
   sealed trait Event
   case class AppStarted(app: AppDefinition) extends Event
   case class AppStopped(app: AppDefinition) extends Event
@@ -293,6 +298,8 @@ object MarathonSchedulerActor {
   case object TasksReconciled extends Event
   case class TasksLaunched(tasks: Seq[TaskInfo]) extends Event
   case class Deployed(plan: DeploymentPlan) extends Event
+
+  case class RunningDeployments(plans: Seq[DeploymentPlan])
 
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 

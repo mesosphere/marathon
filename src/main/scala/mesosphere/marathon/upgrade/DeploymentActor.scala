@@ -46,8 +46,8 @@ class DeploymentActor(
 
     case NextStep =>
       // no more steps, we're done
-      eventBus.publish(DeploymentSuccess(plan.target.id))
-      parent ! DeploymentFinished(plan.target.id)
+      eventBus.publish(DeploymentSuccess(plan.id))
+      parent ! DeploymentFinished(plan.id)
       receiver ! Finished
       context.stop(self)
   }
