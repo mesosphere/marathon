@@ -201,5 +201,13 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
       check
     }
   }
+
+  def cleanUp(maxWait: FiniteDuration = 30.seconds) {
+    events.clear()
+    marathon.deleteRoot(force = true)
+    val event = waitForEvent("group_change_success")
+    waitUntil("cleanUp", maxWait) { marathon.listApps.value.isEmpty && marathon.listGroups.value.isEmpty }
+    events.clear()
+  }
 }
 

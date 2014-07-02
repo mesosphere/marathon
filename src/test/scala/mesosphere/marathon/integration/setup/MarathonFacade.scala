@@ -99,6 +99,11 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
     result(pipeline(Delete(s"$url/v2/groups$id")), waitTime)
   }
 
+  def deleteRoot(force: Boolean): RestResult[HttpResponse] = {
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Delete(s"$url/v2/groups?force=$force")), waitTime)
+  }
+
   def updateGroup(id: PathId, group: GroupUpdate, force: Boolean = false): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
@@ -134,8 +139,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
     */
   def cleanUp(withSubscribers: Boolean = false, maxWait: FiniteDuration = 30.seconds) = {
     val deadline = maxWait.fromNow
-    listGroups.value.map(_.id).foreach(deleteGroup)
-    listApps.value.map(_.id).foreach(deleteApp)
+    deleteRoot(force = true)
     if (withSubscribers) listSubscribers.value.urls.foreach(unsubscribe)
     def waitForReady(): Unit = {
       if (deadline.isOverdue()) {
