@@ -108,7 +108,7 @@ define([
             {buildTaskAnchors(task)}
           </td>
           <td className="text-center">
-            <BadgeComponent type={task.isStaged() ? "warning" : null}>
+            <BadgeComponent types={{"warning": task.isStaged()}}>
               {task.get("status")}
             </BadgeComponent>
           </td>
