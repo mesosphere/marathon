@@ -144,4 +144,8 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
   def provideFrameworkIdUtil(state: State): FrameworkIdUtil =
     new FrameworkIdUtil(state)
 
+  @Provides
+  @Singleton
+  def provideMigration(state: State, appRepo: AppRepository, groupRepo: GroupRepository, config: MarathonConf): Migration =
+    new Migration(state, appRepo, groupRepo, config)
 }

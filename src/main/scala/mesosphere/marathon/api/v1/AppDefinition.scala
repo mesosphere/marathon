@@ -223,27 +223,4 @@ object AppDefinition {
     @JsonProperty
     def tasks = appTasks
   }
-
-  implicit object AppDefinitionMigration extends Migration[AppDefinition] {
-    override def needsMigration(version: StorageVersion): Boolean = {
-      if (version.getMajor == 0 && version.getMinor < 6) {
-        true
-      }
-      // add other migration cases
-      else {
-        false
-      }
-    }
-
-    override def migrate(version: StorageVersion, obj: AppDefinition): AppDefinition = {
-      if (version.getMajor == 0 && version.getMinor < 6) {
-        // container changes are handled in the AppDefinition object
-        obj.copy(id = obj.id.toString.toLowerCase.replaceAll("_", "-").toPath)
-      }
-      // add other migration cases
-      else {
-        obj
-      }
-    }
-  }
 }

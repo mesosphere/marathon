@@ -18,7 +18,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ AppRepository, PathId, Timestamp }
+import mesosphere.marathon.state.{ Migration, AppRepository, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
@@ -43,6 +43,7 @@ class MarathonSchedulerService @Inject() (
     appRepository: AppRepository,
     scheduler: MarathonScheduler,
     system: ActorSystem,
+    migration: Migration,
     @Named("schedulerActor") schedulerActor: ActorRef) extends AbstractExecutionThreadService with Leader {
 
   import mesosphere.util.ThreadPoolContext.context
@@ -247,6 +248,9 @@ class MarathonSchedulerService @Inject() (
 
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
     log.info("Elected (Leader Interface)")
+
+    //execute tasks, only the leader is allowed to
+    migration.migrate()
 
     // We have been elected. Thus, elect leadership with the abdication command.
     electLeadership(Some(abdicateCmd))

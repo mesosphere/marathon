@@ -188,10 +188,5 @@ object Group {
       version = Timestamp(msg.getVersion)
     )
   }
-
-  implicit object GroupMigration extends Migration[Group] {
-    def needsMigration(version: StorageVersion): Boolean = false
-    def migrate(version: StorageVersion, obj: Group): Group = obj
-  }
 }
 

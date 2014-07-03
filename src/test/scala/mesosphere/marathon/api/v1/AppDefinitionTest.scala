@@ -1,15 +1,17 @@
 package mesosphere.marathon.api.v1
 
-import com.google.common.collect.Lists
-import mesosphere.marathon.api.v2.ModelValidation
-import scala.collection.JavaConverters._
-import mesosphere.marathon.Protos.ServiceDefinition
-import mesosphere.marathon.state.{ PathId, Migration, StorageVersions, Timestamp }
-import org.apache.mesos.Protos.CommandInfo
 import javax.validation.Validation
+
+import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
-import org.scalatest.Matchers
+import mesosphere.marathon.Protos.ServiceDefinition
+import mesosphere.marathon.api.v2.ModelValidation
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ PathId, Timestamp }
+import org.apache.mesos.Protos.CommandInfo
+import org.scalatest.Matchers
+
+import scala.collection.JavaConverters._
 
 /**
   * @author Tobi Knaup
@@ -137,8 +139,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
   test("SerializationRoundtrip") {
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
     import mesosphere.jackson.CaseClassModule
+    import mesosphere.marathon.api.v2.json.MarathonModule
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
@@ -150,18 +152,6 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     val readResult = mapper.readValue(json, classOf[AppDefinition])
 
     assert(readResult == original)
-  }
-
-  test("Migration") {
-    val oldVersion = StorageVersions(0, 0, 0)
-
-    val migration = implicitly[Migration[AppDefinition]]
-
-    migration.needsMigration(oldVersion) should be(true)
-
-    val migratedApp = migration.migrate(oldVersion, AppDefinition("My.super_Cool-app".toPath))
-
-    migratedApp.id.toString should be("my.super-cool-app")
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
