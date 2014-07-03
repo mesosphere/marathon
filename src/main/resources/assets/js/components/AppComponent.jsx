@@ -25,7 +25,7 @@ define([
           <td className="text-right">{model.get("mem")}</td>
           <td className="text-right">{model.get("cpus")}</td>
           <td className="text-right">
-            <BadgeComponent type={model.allInstancesBooted() ? null : "warning"}>
+            <BadgeComponent types={{"warning": !model.allInstancesBooted()}}>
               {model.formatTasksRunning()} / {model.get("instances")}
             </BadgeComponent>
           </td>
