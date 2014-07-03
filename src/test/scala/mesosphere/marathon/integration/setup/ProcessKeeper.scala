@@ -34,23 +34,23 @@ object ProcessKeeper {
     http.start()
   }
 
-  def startMesosLocal(): Process = startProcess(Process("mesos local"), _.contains("Re-registered with master"))
+  def startMesosLocal(): Process = startProcess("mesos", Process("mesos local"), _.contains("Re-registered with master"))
 
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String]): Process = {
     log.info(s"Start remote marathon with args: $arguments")
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes")
     val builder = Process(javaExecutable :: "-classpath" :: classPath :: "mesosphere.marathon.Main" :: arguments, cwd, env.toList: _*)
-    val process = startProcess(builder, _.contains("Started SelectChannelConnector"))
+    val process = startProcess("marathon", builder, _.contains("Started SelectChannelConnector"))
     log.info("Remote marathon up and running!")
     process
   }
 
-  def startProcess(processBuilder: ProcessBuilder, upWhen: String => Boolean, timeout: Duration = 30.seconds): Process = {
+  def startProcess(name:String, processBuilder: ProcessBuilder, upWhen: String => Boolean, timeout: Duration = 30.seconds): Process = {
     val up = Promise[Boolean]()
     val logger = new ProcessLogger {
       def checkUp(out: String) = {
-        log.info(s"Remote Out: $out")
+        log.info(s"$name out: $out")
         if (!up.isCompleted && upWhen(out)) up.success(true)
       }
       override def buffer[T](f: => T): T = f

@@ -87,7 +87,7 @@ class GroupDeployIntegrationTest
     tasks should have size 2
   }
 
-  ignore("update a group with applications to restart") {
+  test("update a group with applications to restart") {
     Given("A group with one application started")
     val id = "sleep".toRootPath
     val appId = id / "app"
@@ -99,13 +99,13 @@ class GroupDeployIntegrationTest
     When("The group is updated, with a changed application")
     val app1V2 = AppDefinition(id = appId, executor = "//cmd", cmd = "tail -F /dev/null", instances = 1, cpus = 0.1, mem = 16)
     marathon.updateGroup(id, GroupUpdate(id, Set(app1V2)))
-    waitForEvent("group_change_success", 60.seconds)
+    waitForEvent("group_change_success")
 
     Then("A success event is send and the application has been started")
-    waitForTasks(app1V2.id, app1V2.instances, 60.seconds)
+    waitForTasks(app1V2.id, app1V2.instances)
   }
 
-  ignore("create a group with application with health checks") {
+  test("create a group with application with health checks") {
     Given("A group with one application")
     val id = "proxy".toRootPath
     val appId = id / "app"
@@ -119,7 +119,7 @@ class GroupDeployIntegrationTest
     waitForEvent("group_change_success")
   }
 
-  ignore("upgrade a group with application with health checks") {
+  test("upgrade a group with application with health checks") {
     Given("A group with one application")
     val id = "test".toRootPath
     val appId = id / "app"
@@ -138,7 +138,7 @@ class GroupDeployIntegrationTest
     waitForEvent("group_change_success")
   }
 
-  ignore("rollback from an upgrade of group") {
+  test("rollback from an upgrade of group") {
     Given("A group with one application")
     val id = "proxy".toRootPath
     val proxy = appProxy(id, "v1", 2)
@@ -165,7 +165,7 @@ class GroupDeployIntegrationTest
     validFor("all v1 apps are available", 10.seconds) { v1Checks.forall(_.pingSince(2.seconds)) }
   }
 
-  ignore("during Deployment the defined minimum health capacity is never undershot") {
+  test("during Deployment the defined minimum health capacity is never undershot") {
     Given("A group with one application")
     val id = "proxy".toRootPath
     val proxy = appProxy(id, "v1", 2)
@@ -189,7 +189,7 @@ class GroupDeployIntegrationTest
     waitForEvent("group_change_success")
   }
 
-  ignore("An upgrade in progress can not be interrupted without force") {
+  test("An upgrade in progress can not be interrupted without force") {
     Given("A group with one application with an upgrade in progress")
     val id = "proxy".toRootPath
     val proxy = appProxy(id, "v1", 2)

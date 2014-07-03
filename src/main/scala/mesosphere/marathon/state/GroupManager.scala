@@ -68,50 +68,66 @@ class GroupManager @Singleton @Inject() (
   }
 
   /**
-    * Update a group with given identifier.
-    * The change of the group is defined by a change function.
-    * The complete tree gets the given version.
-    * @param id the id of the group to change.
-    * @param version the new version of the group, after the change has applied.
-    * @param fn the update function, which is applied to the group identified by given id
-    * @param force only one update can be applied to applications at a time. with this flag
-    *              one can control, to stop a current deployment and start a new one.
-    * @return the nw group future, which completes, when the update process has been finished.
-    */
-  def update(id: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = synchronized {
-    root.flatMap { current =>
-      val update = current.update(id, fn, version)
-      upgrade(id, current, update, force, version)
-    }
+   * Update a group with given identifier.
+   * The change of the group is defined by a change function.
+   * The complete tree gets the given version.
+   * @param gid the id of the group to change.
+   * @param version the new version of the group, after the change has applied.
+   * @param fn the update function, which is applied to the group identified by given id
+   * @param force only one update can be applied to applications at a time. with this flag
+   *              one can control, to stop a current deployment and start a new one.
+   * @return the nw group future, which completes, when the update process has been finished.
+   */
+  def update(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
+    upgrade(gid, _.update(gid, fn, version), version, force)
   }
 
-  def updateApp(id: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false) = synchronized {
-    root.flatMap{ current =>
-      val update = current.updateApp(id, fn, version)
-      upgrade(id.parent, current, update, force, version)
-    }
+  /**
+   * Update application with given identifier and update function.
+   * @param appId the identifier of the application
+   * @param fn the application change function
+   * @param version the version of the change
+   * @param force if the change has to be forced.
+   * @return the changed group
+   */
+  def updateApp(appId: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
+    upgrade(appId.parent, _.updateApp(appId, fn, version), version, force)
   }
 
-  private def upgrade(change: PathId, current: Group, group: Group, force: Boolean, version: Timestamp): Future[Group] = {
-    log.info(s"Upgrade existing Group ${group.id} with $group force: $force")
+  /**
+   * Update a group with given identifier.
+   * The change of the group is defined by a change function.
+   * The complete tree gets the given version.
+   * @param gid the id of the group to change.
+   * @param version the new version of the group, after the change has applied.
+   * @param fn the update function, which is applied to the group identified by given id
+   * @param force only one update can be applied to applications at a time. with this flag
+   *              one can control, to stop a current deployment and start a new one.
+   * @return the nw group future, which completes, when the update process has been finished.
+   */
+  def upgrade(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
+    log.info(s"Upgrade id:$gid version:$version with force:$force")
 
-    def deploy(from: Group, to: Group): Future[DeploymentPlan] = {
+    def deploy(from: Group): Future[DeploymentPlan] = {
+      val to = fn(from)
       val plan = DeploymentPlan(from, to, version)
       if (plan.isEmpty) Future.successful(plan) else scheduler.deploy(plan, force).map(_ => plan)
     }
 
     val deployment = for {
-      storedGroup <- groupRepo.store(zkName, group)
-      plan <- deploy(current, storedGroup)
+      current <- root
+      plan <- deploy(current)
+      actualState <- root //the update could take a long time, so we apply the change to the current state
+      storedGroup <- groupRepo.store(zkName, fn(actualState))
     } yield plan
 
     deployment.onComplete {
       case Success(plan) =>
-        if (plan.nonEmpty) log.info(s"Deployment finished for change: $plan")
-        eventBus.publish(GroupChangeSuccess(change, group.version.toString))
+        log.info(s"Deployment finished for change: $plan")
+        eventBus.publish(GroupChangeSuccess(gid, version.toString))
       case Failure(ex) =>
-        log.warn(s"Deployment failed for change: ${group.version}")
-        eventBus.publish(GroupChangeFailed(change, group.version.toString, ex.getMessage))
+        log.warn(s"Deployment failed for change: $version")
+        eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
     }
     deployment.map(_.target)
   }
