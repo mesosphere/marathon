@@ -14,7 +14,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import org.mockito.Mockito.{ verify, when, times }
 import org.mockito.Matchers.any
 import scala.collection.mutable
-import mesosphere.marathon.upgrade.AppUpgradeManager.DeploymentFinished
+import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.mesos.protos.TaskID
 import mesosphere.mesos.protos.Implicits._

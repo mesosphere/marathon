@@ -1,23 +1,26 @@
 package mesosphere.marathon
 
-import org.mockito.Mockito._
-import com.fasterxml.jackson.databind.ObjectMapper
-import mesosphere.marathon.state.{ PathId, Timestamp, AppRepository }
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import org.apache.mesos.SchedulerDriver
-import com.google.common.collect.Lists
-import org.apache.mesos.Protos.TaskID
-import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.RateLimiters
+import java.util
+
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.{ TestKit, TestProbe }
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.common.collect.Lists
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppRepository, Timestamp }
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.RateLimiters
+import org.apache.mesos.Protos.{ TaskInfo, TaskID }
+import org.apache.mesos.SchedulerDriver
+import org.mockito.Matchers.{ any, eq => mockEq }
+import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfterAll
-import mesosphere.marathon.MarathonSchedulerActor.LaunchTasks
-import scala.concurrent.duration._
-import PathId._
+
+import scala.collection.JavaConverters._
 
 /**
   * @author Tobi Knaup
@@ -64,7 +67,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     val driver = mock[SchedulerDriver]
     val offer = makeBasicOffer(4, 1024, 31000, 32000).build
     val offers = Lists.newArrayList(offer)
-    val now = Timestamp.now
+    val now = Timestamp.now()
     val app = AppDefinition(
       id = "testOffers".toPath,
       executor = "//cmd",
@@ -81,6 +84,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
 
     scheduler.resourceOffers(driver, offers)
 
-    probe.expectMsgClass(5.seconds, classOf[LaunchTasks])
+    verify(driver).launchTasks(mockEq(Seq(offer.getId).asJava), any[util.Collection[TaskInfo]]())
   }
 }

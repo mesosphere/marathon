@@ -46,7 +46,7 @@ object ProcessKeeper {
     process
   }
 
-  def startProcess(name:String, processBuilder: ProcessBuilder, upWhen: String => Boolean, timeout: Duration = 30.seconds): Process = {
+  def startProcess(name: String, processBuilder: ProcessBuilder, upWhen: String => Boolean, timeout: Duration = 30.seconds): Process = {
     val up = Promise[Boolean]()
     val logger = new ProcessLogger {
       def checkUp(out: String) = {

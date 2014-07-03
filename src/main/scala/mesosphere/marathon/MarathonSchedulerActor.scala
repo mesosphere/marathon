@@ -1,30 +1,29 @@
 package mesosphere.marathon
 
-import akka.actor._
-import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.api.v1.AppDefinition
-import scala.concurrent.{ Promise, ExecutionContext, Future }
-import mesosphere.mesos.protos
-import mesosphere.marathon.api.v2.AppUpdate
-import scala.collection.mutable
-import org.apache.mesos.Protos.{ TaskInfo, TaskStatus }
-import mesosphere.marathon.state.{ PathId, AppRepository }
-import mesosphere.util.{ PromiseActor, LockManager, RateLimiters }
-import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.{ DeploymentPlan, AppUpgradeManager }
-import akka.event.EventStream
-import mesosphere.mesos.util.FrameworkIdUtil
-import scala.util.Failure
-import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess, RestartFailed, RestartSuccess }
-import mesosphere.marathon.upgrade.AppUpgradeManager._
-import scala.util.Success
-import scala.collection.JavaConverters._
-import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
-import org.apache.mesos.Protos.OfferID
 import java.util.concurrent.TimeUnit
+
+import akka.actor._
+import akka.event.EventStream
+import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v2.AppUpdate
+import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess }
+import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.state.{ AppRepository, PathId }
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.upgrade.DeploymentManager._
+import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
+import mesosphere.mesos.protos
+import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.{ LockManager, PromiseActor, RateLimiters }
+import org.apache.mesos.Protos.TaskStatus
+import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
-import mesosphere.marathon.upgrade.DeploymentActor.{ Failed, Finished }
+
+import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.util.{ Failure, Success }
 
 class MarathonSchedulerActor(
     val appRepository: AppRepository,
@@ -35,7 +34,7 @@ class MarathonSchedulerActor(
     val rateLimiters: RateLimiters,
     val eventBus: EventStream) extends Actor with ActorLogging {
   import context.dispatcher
-  import MarathonSchedulerActor._
+  import mesosphere.marathon.MarathonSchedulerActor._
 
   val appLocks = LockManager[PathId]()
   var scheduler: SchedulerActions = _
@@ -54,43 +53,11 @@ class MarathonSchedulerActor(
       self)
 
     upgradeManager = context.actorOf(
-      Props(classOf[AppUpgradeManager], appRepository, taskTracker, taskQueue, scheduler, eventBus), "UpgradeManager")
+      Props(classOf[DeploymentManager], appRepository, taskTracker, taskQueue, scheduler, eventBus), "UpgradeManager")
 
   }
 
   def receive = {
-    case cmd @ StartApp(app) =>
-      val origSender = sender
-      locking(app.id, origSender, cmd, blocking = false) {
-        scheduler.startApp(driver, app).sendAnswer(origSender, cmd)
-      }
-
-    case cmd @ StopApp(app) =>
-      val origSender = sender
-      upgradeManager ! CancelUpgrade(app.id, new AppDeletedException("The app has been deleted"))
-      locking(app.id, origSender, cmd, blocking = true) {
-        scheduler.stopApp(driver, app).sendAnswer(origSender, cmd)
-      }
-
-    case cmd @ UpdateApp(appId, update) =>
-      val origSender = sender
-      locking(appId, origSender, cmd, blocking = false) {
-        scheduler.updateApp(driver, appId, update).sendAnswer(origSender, cmd)
-      }
-
-    case cmd @ UpgradeApp(app, keepAlive, maxRunning, false) =>
-      val origSender = sender
-      locking(app.id, origSender, cmd, blocking = false) {
-        upgradeApp(driver, app, keepAlive, maxRunning).sendAnswer(origSender, cmd)
-      }
-
-    case cmd @ UpgradeApp(app, keepAlive, maxRunning, true) =>
-      val origSender = sender
-      upgradeManager ! CancelUpgrade(app.id, new TaskUpgradeCanceledException("The upgrade has been cancelled"))
-      locking(app.id, origSender, cmd, blocking = true) {
-        upgradeApp(driver, app, keepAlive, maxRunning).sendAnswer(origSender, cmd)
-      }
-
     case cmd @ ReconcileTasks =>
       scheduler.reconcileTasks(driver)
       sender ! cmd.answer
@@ -101,9 +68,11 @@ class MarathonSchedulerActor(
         scheduler.scale(driver, appId).sendAnswer(origSender, cmd)
       }
 
-    case cmd @ LaunchTasks(offers, tasks) =>
-      driver.launchTasks(offers.asJava, tasks.asJava)
-      sender ! cmd.answer
+    case cmd @ UpdateApp(appId, update) =>
+      val origSender = sender
+      locking(appId, origSender, cmd, blocking = false) {
+        scheduler.updateApp(driver, appId, update).sendAnswer(origSender, cmd)
+      }
 
     case cmd @ Deploy(plan, false) =>
       // add locking
@@ -191,40 +160,13 @@ class MarathonSchedulerActor(
   // there has to be a better way...
   def driver: SchedulerDriver = MarathonSchedulerDriver.driver.get
 
-  def upgradeApp(
-    driver: SchedulerDriver,
-    app: AppDefinition,
-    keepAlive: Int,
-    maxRunning: Option[Int]): Future[Boolean] = {
-    appRepository.store(app) flatMap { appDef =>
-      val promise = Promise[Any]()
-      val promiseActor = context.actorOf(Props(classOf[PromiseActor], promise))
-      val msg = Upgrade(driver, app, keepAlive, maxRunning)
-      upgradeManager.tell(msg, promiseActor)
-
-      promise.future.mapTo[Boolean] andThen {
-        case Success(_) =>
-          log.info(s"Restart of ${app.id} successful")
-          eventBus.publish(RestartSuccess(app.id))
-
-        case Failure(e) =>
-          log.error(s"Restart of ${app.id} failed", e)
-          taskQueue.purge(app)
-          eventBus.publish(RestartFailed(app.id))
-      }
-    }
-  }
-
   def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Future[Unit] = {
     val promise = Promise[Any]()
     val promiseActor = context.actorOf(Props(classOf[PromiseActor], promise))
     val msg = PerformDeployment(driver, plan)
     upgradeManager.tell(msg, promiseActor)
 
-    val res = promise.future.map {
-      case Finished  => ()
-      case Failed(t) => throw t
-    }
+    val res = promise.future.map(_ => ())
 
     res andThen {
       case Success(_) =>
@@ -255,22 +197,6 @@ object MarathonSchedulerActor {
     def answer: Event
   }
 
-  case class StartApp(app: AppDefinition) extends Command {
-    def answer = AppStarted(app)
-  }
-
-  case class StopApp(app: AppDefinition) extends Command {
-    def answer = AppStopped(app)
-  }
-
-  case class UpdateApp(appId: PathId, update: AppUpdate) extends Command {
-    def answer = AppUpdated(appId)
-  }
-
-  case class UpgradeApp(app: AppDefinition, keepAlive: Int, maxRunning: Option[Int] = None, force: Boolean = false) extends Command {
-    def answer = AppUpgraded(app)
-  }
-
   case object ReconcileTasks extends Command {
     def answer = TasksReconciled
   }
@@ -279,25 +205,21 @@ object MarathonSchedulerActor {
     def answer = AppScaled(appId)
   }
 
-  case class LaunchTasks(offers: Seq[OfferID], tasks: Seq[TaskInfo]) extends Command {
-    def answer = TasksLaunched(tasks)
-  }
-
   case class Deploy(plan: DeploymentPlan, force: Boolean = false) extends Command {
     def answer: Event = Deployed(plan)
+  }
+
+  case class UpdateApp(appId: PathId, update: AppUpdate) extends Command {
+    def answer = AppUpdated(appId)
   }
 
   case object RetrieveRunningDeployments
 
   sealed trait Event
-  case class AppStarted(app: AppDefinition) extends Event
-  case class AppStopped(app: AppDefinition) extends Event
-  case class AppUpdated(appId: PathId) extends Event
-  case class AppUpgraded(app: AppDefinition) extends Event
   case class AppScaled(appId: PathId) extends Event
   case object TasksReconciled extends Event
-  case class TasksLaunched(tasks: Seq[TaskInfo]) extends Event
   case class Deployed(plan: DeploymentPlan) extends Event
+  case class AppUpdated(appId: PathId) extends Event
 
   case class RunningDeployments(plans: Seq[DeploymentPlan])
 

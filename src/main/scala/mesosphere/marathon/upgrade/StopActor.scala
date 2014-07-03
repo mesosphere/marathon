@@ -1,8 +1,8 @@
 package mesosphere.marathon.upgrade
 
 import akka.actor.{ ActorLogging, Terminated, Actor, ActorRef }
+import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import scala.concurrent.Promise
-import mesosphere.marathon.upgrade.AppUpgradeActor.Cancel
 
 class StopActor(toStop: ActorRef, promise: Promise[Boolean], reason: Throwable) extends Actor with ActorLogging {
 

@@ -78,46 +78,6 @@ class MarathonSchedulerService @Inject() (
 
   implicit val timeout: Timeout = 5.seconds
 
-  def startApp(app: AppDefinition): Future[_] = {
-    // Backwards compatibility
-    val oldPorts = app.ports
-    val newPorts = oldPorts.map(p => if (p == 0) newAppPort(app) else p)
-
-    if (oldPorts != newPorts) {
-      val asMsg = Seq(oldPorts, newPorts).map("[" + _.mkString(", ") + "]")
-      log.info(s"Assigned some ports for ${app.id}: ${asMsg.mkString(" -> ")}")
-    }
-
-    schedulerActor ? StartApp(app.copy(ports = newPorts))
-  }
-
-  def stopApp(app: AppDefinition): Future[_] = {
-    schedulerActor ? StopApp(app)
-  }
-
-  def updateApp(appId: PathId, appUpdate: AppUpdate): Future[_] =
-    (schedulerActor ? UpdateApp(appId, appUpdate)) flatMap { _ =>
-      schedulerActor ? ScaleApp(appId)
-    }
-
-  def upgradeApp(
-    app: AppDefinition,
-    keepAlive: Int,
-    maxRunning: Option[Int],
-    force: Boolean = false): Future[Boolean] = {
-    val promise = Promise[Any]()
-    val receiver = system.actorOf(Props(classOf[PromiseActor], promise))
-
-    // we use this instead of the ask pattern,
-    // because we can't predict the runtime of an upgrade
-    schedulerActor.tell(UpgradeApp(app, keepAlive, maxRunning, force), receiver)
-
-    promise.future.map {
-      case CommandFailed(_, reason) => throw reason
-      case _                        => true
-    }
-  }
-
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
     log.info(s"Deploy plan:$plan with force:$force")
     val promise = Promise[AnyRef]()

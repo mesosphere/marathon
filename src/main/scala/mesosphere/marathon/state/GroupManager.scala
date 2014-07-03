@@ -68,43 +68,43 @@ class GroupManager @Singleton @Inject() (
   }
 
   /**
-   * Update a group with given identifier.
-   * The change of the group is defined by a change function.
-   * The complete tree gets the given version.
-   * @param gid the id of the group to change.
-   * @param version the new version of the group, after the change has applied.
-   * @param fn the update function, which is applied to the group identified by given id
-   * @param force only one update can be applied to applications at a time. with this flag
-   *              one can control, to stop a current deployment and start a new one.
-   * @return the nw group future, which completes, when the update process has been finished.
-   */
+    * Update a group with given identifier.
+    * The change of the group is defined by a change function.
+    * The complete tree gets the given version.
+    * @param gid the id of the group to change.
+    * @param version the new version of the group, after the change has applied.
+    * @param fn the update function, which is applied to the group identified by given id
+    * @param force only one update can be applied to applications at a time. with this flag
+    *              one can control, to stop a current deployment and start a new one.
+    * @return the nw group future, which completes, when the update process has been finished.
+    */
   def update(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
     upgrade(gid, _.update(gid, fn, version), version, force)
   }
 
   /**
-   * Update application with given identifier and update function.
-   * @param appId the identifier of the application
-   * @param fn the application change function
-   * @param version the version of the change
-   * @param force if the change has to be forced.
-   * @return the changed group
-   */
+    * Update application with given identifier and update function.
+    * @param appId the identifier of the application
+    * @param fn the application change function
+    * @param version the version of the change
+    * @param force if the change has to be forced.
+    * @return the changed group
+    */
   def updateApp(appId: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
     upgrade(appId.parent, _.updateApp(appId, fn, version), version, force)
   }
 
   /**
-   * Update a group with given identifier.
-   * The change of the group is defined by a change function.
-   * The complete tree gets the given version.
-   * @param gid the id of the group to change.
-   * @param version the new version of the group, after the change has applied.
-   * @param fn the update function, which is applied to the group identified by given id
-   * @param force only one update can be applied to applications at a time. with this flag
-   *              one can control, to stop a current deployment and start a new one.
-   * @return the nw group future, which completes, when the update process has been finished.
-   */
+    * Update a group with given identifier.
+    * The change of the group is defined by a change function.
+    * The complete tree gets the given version.
+    * @param gid the id of the group to change.
+    * @param version the new version of the group, after the change has applied.
+    * @param fn the update function, which is applied to the group identified by given id
+    * @param force only one update can be applied to applications at a time. with this flag
+    *              one can control, to stop a current deployment and start a new one.
+    * @return the nw group future, which completes, when the update process has been finished.
+    */
   def upgrade(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 

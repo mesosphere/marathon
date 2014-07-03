@@ -1,27 +1,25 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos._
-import org.apache.mesos.{ SchedulerDriver, Scheduler }
-import scala.collection.JavaConverters._
-import mesosphere.mesos.TaskBuilder
-import mesosphere.marathon.api.v1.AppDefinition
-import scala.concurrent.{ Future, ExecutionContext }
-import javax.inject.{ Named, Inject }
+import javax.inject.{ Inject, Named }
+
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
+import com.fasterxml.jackson.databind.ObjectMapper
+import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event._
 import mesosphere.marathon.tasks._
-import com.fasterxml.jackson.databind.ObjectMapper
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.mesos.protos
-import mesosphere.util.{ ThreadPoolContext, RateLimiters }
-import scala.util.{ Success, Failure }
+import mesosphere.mesos.{ TaskBuilder, protos }
+import mesosphere.util.RateLimiters
 import org.apache.log4j.Logger
-import akka.actor.ActorRef
-import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.event.MesosFrameworkMessageEvent
-import mesosphere.marathon.MarathonSchedulerActor.{ LaunchTasks, ScaleApp }
-import akka.actor.ActorSystem
+import org.apache.mesos.Protos._
+import org.apache.mesos.{ Scheduler, SchedulerDriver }
+
+import scala.collection.JavaConverters._
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -51,8 +49,8 @@ class MarathonScheduler @Inject() (
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
-  import ThreadPoolContext.context
   import mesosphere.mesos.protos.Implicits._
+  import mesosphere.util.ThreadPoolContext.context
 
   implicit val zkTimeout = config.zkFutureTimeout
 
@@ -128,7 +126,7 @@ class MarathonScheduler @Inject() (
 
     toLaunch.result().foreach {
       case (id, task) =>
-        schedulerActor ! LaunchTasks(id, task)
+        driver.launchTasks(id.asJava, task.asJava)
     }
   }
 
@@ -137,7 +135,7 @@ class MarathonScheduler @Inject() (
   }
 
   override def statusUpdate(driver: SchedulerDriver, status: TaskStatus) {
-    import TaskState._
+    import org.apache.mesos.Protos.TaskState._
 
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))

@@ -10,7 +10,7 @@ import scala.concurrent.{ Promise, Future }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.MarathonTask
 import scala.util.{ Failure, Success }
-import mesosphere.marathon.upgrade.AppUpgradeManager.DeploymentFinished
+import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
 import mesosphere.marathon.state.AppRepository
 
 class DeploymentActor(
@@ -34,21 +34,29 @@ class DeploymentActor(
     self ! NextStep
   }
 
+  override def postStop(): Unit = {
+    // it doesn't matter if it's a failure or success,
+    // it just has to be removed from the running deployments
+    parent ! DeploymentFinished(plan.id)
+  }
+
   def receive = {
     case NextStep if steps.hasNext =>
       performStep(steps.next()) onComplete {
         case Success(_) =>
           self ! NextStep
         case Failure(t) =>
-          receiver ! Failed(t)
-          context.stop(self)
+          self ! Cancel(t)
       }
 
     case NextStep =>
       // no more steps, we're done
       eventBus.publish(DeploymentSuccess(plan.id))
-      parent ! DeploymentFinished(plan.id)
       receiver ! Finished
+      context.stop(self)
+
+    case Cancel(t) =>
+      receiver ! Status.Failure(t)
       context.stop(self)
   }
 
@@ -133,6 +141,6 @@ class DeploymentActor(
 
 object DeploymentActor {
   case object NextStep
-  case class Failed(reason: Throwable)
   case object Finished
+  case class Cancel(reason: Throwable)
 }

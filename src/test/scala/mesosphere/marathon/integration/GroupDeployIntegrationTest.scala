@@ -16,7 +16,7 @@ class GroupDeployIntegrationTest
     with GivenWhenThen {
 
   //clean up state before running the test case
-  before( cleanUp() )
+  before(cleanUp())
 
   test("create empty group successfully") {
     Given("A group which does not exist in marathon")
@@ -63,7 +63,6 @@ class GroupDeployIntegrationTest
     result.code should be(200)
     marathon.listGroups.value should be('empty)
   }
-
 
   test("delete a non existing group should give a 404 http response") {
     When("A non existing group is deleted")
