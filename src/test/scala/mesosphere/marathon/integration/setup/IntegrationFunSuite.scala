@@ -55,7 +55,7 @@ object ExternalMarathonIntegrationTest {
 /**
   * Health check helper to define health behaviour of launched applications
   */
-class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port: Int, var state: Boolean, var lastUpdate: DateTime = new DateTime(0)) {
+class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port: Int, var state: Boolean, var lastUpdate: DateTime = DateTime.now) {
 
   case class HealthStatusChange(deadLine: Deadline, state: Boolean)
   private[this] var changes = List.empty[HealthStatusChange]
@@ -74,6 +74,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
     state = past.reverse.headOption.fold(state)(_.state)
     changes = future
     lastUpdate = DateTime.now()
+    println(s"Get health state from: $appId $versionId $port -> $state")
     state
   }
 
@@ -83,7 +84,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
     result
   }
 
-  def pingSince(duration: Duration): Boolean = DateTime.now.minusMillis(duration.toMillis.toInt).isAfter(lastUpdate)
+  def pingSince(duration: Duration): Boolean = DateTime.now.minusMillis(duration.toMillis.toInt).isBefore(lastUpdate)
 }
 
 /**
@@ -173,14 +174,13 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     next()
   }
 
-  def appProxy(appId: PathId, versionId: String, instances: Int): AppDefinition = {
+  def appProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true): AppDefinition = {
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[AppMock].getName
-    val exec = s"""$javaExecutable -classpath $classPath $main http://localhost:${config.httpPort}/health$appId/$versionId"""
-    val health = HealthCheck(gracePeriod = 10.second, interval = 1.second, maxConsecutiveFailures = 5)
-    AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128, healthChecks = Set(health))
-
+    val exec = s"""$javaExecutable -classpath $classPath $main $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId"""
+    val health = if (withHealth) Set(HealthCheck(gracePeriod = 10.second, interval = 1.second, maxConsecutiveFailures = 5)) else Set.empty[HealthCheck]
+    AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128, healthChecks = health)
   }
 
   def appProxyCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {

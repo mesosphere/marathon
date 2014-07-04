@@ -4,6 +4,7 @@ import java.util.UUID
 
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.{ Group, PathId, Timestamp }
+import mesosphere.util.Logging
 
 sealed trait DeploymentAction {
   def app: AppDefinition
@@ -41,22 +42,25 @@ final case class DeploymentPlan(
   def isAffectedBy(other: DeploymentPlan): Boolean = affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
   override def toString: String = {
+    def appString(app: AppDefinition) = s"App(${app.id}, ${app.cmd}))"
     def actionString(a: DeploymentAction): String = a match {
-      case StartApplication(app, scale)      => s"Start(${app.id}, $scale)"
-      case StopApplication(app)              => s"Stop(${app.id})"
-      case ScaleApplication(app, scale)      => s"Scale(${app.id}, $scale)"
-      case KillAllOldTasksOf(app)            => s"KillOld(${app.id})"
-      case RestartApplication(app, from, to) => s"Restart(${app.id}, $from, $to)"
+      case StartApplication(app, scale)      => s"Start(${appString(app)}, $scale)"
+      case StopApplication(app)              => s"Stop(${appString(app)})"
+      case ScaleApplication(app, scale)      => s"Scale(${appString(app)}, $scale)"
+      case KillAllOldTasksOf(app)            => s"KillOld(${appString(app)})"
+      case RestartApplication(app, from, to) => s"Restart(${appString(app)}, $from, $to)"
     }
-    val stepString = steps.map(_.actions.map(actionString)).mkString("Step(", ", ", ")")
+    val stepString = steps.map("Step(" + _.actions.map(actionString) + ")").mkString("(", ", ", ")")
     s"DeploymentPlan($version, $stepString)"
   }
 }
 
-object DeploymentPlan {
+object DeploymentPlan extends Logging {
   def empty() = DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
 
   def apply(original: Group, target: Group, version: Timestamp = Timestamp.now()): DeploymentPlan = {
+    log.info(s"Compute DeploymentPlan from $original to $target")
+
     //lookup maps for original and target apps
     val originalApp: Map[PathId, AppDefinition] = original.transitiveApps.map(app => app.id -> app).toMap
     val targetApp: Map[PathId, AppDefinition] = target.transitiveApps.map(app => app.id -> app).toMap
@@ -75,6 +79,15 @@ object DeploymentPlan {
     val changedApplications = toStart ++ toRestart ++ toScale ++ toStop
     val (dependent, nonDependent) = target.dependencyList
 
+    //compute the restart actions: restart, kill, scale for one app
+    def restartActions(app: AppDefinition, orig: AppDefinition) = (
+      RestartApplication(app,
+        (orig.upgradeStrategy.minimumHealthCapacity * orig.instances).ceil.toInt,
+        (app.upgradeStrategy.minimumHealthCapacity * app.instances).ceil.toInt),
+        KillAllOldTasksOf(app),
+        ScaleApplication(app, app.instances)
+    )
+
     //apply the changes to the dependent applications
     val dependentSteps: List[DeploymentStep] = {
       var pass1 = List.empty[DeploymentStep]
@@ -86,12 +99,9 @@ object DeploymentPlan {
         else if (toStop.contains(app.id)) pass1Actions ::= StopApplication(originalApp(app.id))
         else if (toScale.contains(app.id)) pass1Actions ::= ScaleApplication(app, app.instances)
         else {
-          val orig = originalApp(app.id)
-          pass1Actions ::= RestartApplication(app,
-            (orig.upgradeStrategy.minimumHealthCapacity * orig.instances).ceil.toInt,
-            (app.upgradeStrategy.minimumHealthCapacity * app.instances).ceil.toInt)
-          pass2Actions ::= KillAllOldTasksOf(app)
-          pass2Actions ::= ScaleApplication(app, app.instances)
+          val (restart, kill, scale) = restartActions(app, originalApp(app.id))
+          pass1Actions ::= restart
+          pass2Actions = kill :: scale :: pass2Actions
         }
         if (pass1Actions.nonEmpty) pass1 ::= DeploymentStep(pass1Actions)
         if (pass2Actions.nonEmpty) pass2 ::= DeploymentStep(pass2Actions)
@@ -100,12 +110,16 @@ object DeploymentPlan {
     }
 
     //apply the changes to the non dependent applications
-    val nonDependentStep = DeploymentStep(nonDependent.toList.filter(a => changedApplications.contains(a.id)).map { app =>
-      if (toStart.contains(app.id)) StartApplication(app, app.instances)
-      else if (toStop.contains(app.id)) StopApplication(originalApp(app.id))
-      else if (toScale.contains(app.id)) ScaleApplication(app, app.instances)
-      else RestartApplication(app, 0, app.instances)
-    })
+    val nonDependentSteps = nonDependent.toList.filter(a => changedApplications.contains(a.id)).flatMap { app =>
+      def step(actions: DeploymentAction*) = List(DeploymentStep(actions.toList))
+      if (toStart.contains(app.id)) step(StartApplication(app, app.instances))
+      else if (toStop.contains(app.id)) step(StopApplication(originalApp(app.id)))
+      else if (toScale.contains(app.id)) step(ScaleApplication(app, app.instances))
+      else {
+        val (restart, kill, scale) = restartActions(app, originalApp(app.id))
+        List(DeploymentStep(List(restart)), DeploymentStep(List(kill, scale)))
+      }
+    }
 
     //applications not included in the new group, but exist in the old one
     val unhandledStops = {
@@ -113,10 +127,7 @@ object DeploymentPlan {
       if (stops.nonEmpty) List(DeploymentStep(stops.map(originalApp).map(StopApplication).toList)) else Nil
     }
 
-    var finalSteps = dependentSteps match {
-      case head :: rest => head + nonDependentStep :: rest ::: unhandledStops
-      case Nil          => nonDependentStep :: unhandledStops
-    }
+    var finalSteps = nonDependentSteps ++ dependentSteps ++ unhandledStops
 
     DeploymentPlan(UUID.randomUUID().toString, original, target, finalSteps.filter(_.nonEmpty), version)
   }

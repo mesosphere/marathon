@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import scala.concurrent.Await.result
 import spray.client.pipelining._
 import spray.http.HttpResponse
-import mesosphere.marathon.state.{ PathId, Group }
+import mesosphere.marathon.state.{ Timestamp, PathId, Group }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Unsubscribe, Subscribe }
 import mesosphere.marathon.api.v1.AppDefinition
@@ -21,6 +21,7 @@ import mesosphere.marathon.api.v2.GroupUpdate
 case class ListAppsResult(apps: Seq[AppDefinition])
 case class ListTasks(tasks: Seq[ITEnrichedTask])
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
+case class ITVersionResult(version: String)
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Integer], startedAt: Date, stagedAt: Date, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
 /**
@@ -34,6 +35,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
   implicit val appDefMarshaller = marshaller[AppDefinition]
   implicit val groupMarshaller = marshaller[Group]
   implicit val groupUpdateMarshaller = marshaller[GroupUpdate]
+  implicit val versionMarshaller = marshaller[ITVersionResult]
 
   //app resource ----------------------------------------------
 
@@ -89,8 +91,8 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
     result(pipeline(Get(s"$url/v2/groups$id")), waitTime)
   }
 
-  def createGroup(group: GroupUpdate): RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
+  def createGroup(group: GroupUpdate): RestResult[ITVersionResult] = {
+    val pipeline = sendReceive ~> read[ITVersionResult]
     result(pipeline(Post(s"$url/v2/groups", group)), waitTime)
   }
 
@@ -110,8 +112,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
   }
 
   def rollbackGroup(groupId: PathId, version: String, force: Boolean = false): RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
-    result(pipeline(Put(s"$url/v2/groups$groupId/version/$version?force=$force")), waitTime)
+    updateGroup(groupId, GroupUpdate.empty(groupId).copy(version = Some(Timestamp(version))), force)
   }
 
   //event resource ---------------------------------------------

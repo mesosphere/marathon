@@ -93,7 +93,7 @@ class CallbackEventHandler @Inject() () {
 class ApplicationHealthCheck @Inject() () {
 
   @GET
-  @Path("{appId}/{versionId}/{port}")
+  @Path("{appId:.+}/{versionId}/{port}")
   def isApplicationHealthy(@PathParam("appId") path: String, @PathParam("versionId") versionId: String, @PathParam("port") port: Int): Response = {
     val appId = path.toRootPath
     def instance = ExternalMarathonIntegrationTest.healthChecks.find{ c => c.appId == appId && c.versionId == versionId && c.port == port }

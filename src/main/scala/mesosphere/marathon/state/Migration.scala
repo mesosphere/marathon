@@ -156,7 +156,7 @@ object StorageVersions {
     }
   }
 
-  implicit class OrderedStorageVersion(version: StorageVersion) extends Ordered[StorageVersion] {
+  implicit class OrderedStorageVersion(val version: StorageVersion) extends AnyVal with Ordered[StorageVersion] {
     override def compare(that: StorageVersion): Int = {
       def by(left: Int, right: Int, fn: => Int): Int = if (left.compareTo(right) != 0) left.compareTo(right) else fn
       by(version.getMajor, that.getMajor, by(version.getMinor, that.getMinor, by(version.getPatch, that.getPatch, 0)))
