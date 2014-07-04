@@ -42,11 +42,12 @@ class AppsResource @Inject() (
 
   @POST
   @Timed
-  def create(@Context req: HttpServletRequest, app: AppDefinition): Response = {
+  def create(@Context req: HttpServletRequest, app: AppDefinition,
+             @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val baseId = app.id.canonicalPath()
     requireValid(checkApp(app, baseId.parent))
     maybePostEvent(req, app)
-    result(groupManager.updateApp(baseId, _ => app.copy(id = baseId), app.version))
+    result(groupManager.updateApp(baseId, _ => app.copy(id = baseId), app.version, force))
     Response.created(new URI(s"$baseId")).build
   }
 
@@ -74,6 +75,7 @@ class AppsResource @Inject() (
   @Timed
   def replace(@Context req: HttpServletRequest,
               @PathParam("id") id: String,
+              @DefaultValue("false")@QueryParam("force") force: Boolean,
               appUpdate: AppUpdate): Response = {
 
     val appId = appUpdate.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
@@ -87,18 +89,19 @@ class AppsResource @Inject() (
         val update = updateWithId.version.flatMap(v => service.getApp(appId, v)).orElse(Some(updateWithId(app)))
         val response = update.map { updatedApp =>
           maybePostEvent(req, updatedApp)
-          result(groupManager.updateApp(appId, _ => updatedApp, updatedApp.version))
+          result(groupManager.updateApp(appId, _ => updatedApp, updatedApp.version, force))
           Response.noContent.build
         }
         response.getOrElse(Responses.unknownApp(appId, updateWithId.version))
 
-      case None => create(req, updateWithId(AppDefinition(appId)))
+      case None => create(req, updateWithId(AppDefinition(appId)), force)
     }
   }
 
   @PUT
   @Timed
-  def replaceMultiple(updates: Seq[AppUpdate]): Response = {
+  def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean,
+                      updates: Seq[AppUpdate]): Response = {
     requireValid(checkUpdates(updates))
     val version = Timestamp.now()
     def updateApp(update: AppUpdate, app: AppDefinition): AppDefinition = {
@@ -110,17 +113,19 @@ class AppsResource @Inject() (
         case None     => group
       }
     }
-    result(groupManager.update(PathId.empty, updateGroup, version))
+    result(groupManager.update(PathId.empty, updateGroup, version, force))
     Response.noContent.build
   }
 
   @DELETE
   @Path("""{id:.+}""")
   @Timed
-  def delete(@Context req: HttpServletRequest, @PathParam("id") id: String): Response = {
+  def delete(@Context req: HttpServletRequest,
+             @DefaultValue("false")@QueryParam("force") force: Boolean,
+             @PathParam("id") id: String): Response = {
     val appId = id.toRootPath
     maybePostEvent(req, AppDefinition(id = appId))
-    result(groupManager.update(appId.parent, _.removeApplication(appId)))
+    result(groupManager.update(appId.parent, _.removeApplication(appId), force = force))
     Response.noContent.build
   }
 
