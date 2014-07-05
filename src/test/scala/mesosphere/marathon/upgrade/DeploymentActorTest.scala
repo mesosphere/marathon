@@ -55,14 +55,14 @@ class DeploymentActorTest
   test("Deploy") {
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app1 = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2)
+    val app1 = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, version = Timestamp(0))
     val app2 = AppDefinition(id = PathId("app2"), cmd = "cmd", instances = 1, version = Timestamp(0))
-    val app3 = AppDefinition(id = PathId("app3"), cmd = "cmd", instances = 1)
-    val app4 = AppDefinition(id = PathId("app4"), cmd = "cmd")
+    val app3 = AppDefinition(id = PathId("app3"), cmd = "cmd", instances = 1, version = Timestamp(0))
+    val app4 = AppDefinition(id = PathId("app4"), cmd = "cmd", version = Timestamp(0))
     val origGroup = Group(PathId("/foo/bar"), Set(app1, app2, app4))
 
-    val app1New = app1.copy(instances = 1)
-    val app2New = app2.copy(instances = 2, cmd = "otherCmd", version = Timestamp.now())
+    val app1New = app1.copy(instances = 1, version = Timestamp(1000))
+    val app2New = app2.copy(instances = 2, cmd = "otherCmd", version = Timestamp(1000))
 
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New, app2New, app3))
 
