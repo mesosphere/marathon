@@ -80,7 +80,9 @@ class MarathonSchedulerActor(
       val ids = plan.affectedApplicationIds
 
       locking(ids, origSender, cmd, blocking = false) {
-        deploy(driver, plan).sendAnswer(origSender, cmd)
+        val res = deploy(driver, plan)
+        origSender ! cmd.answer
+        res
       }
 
     case cmd @ Deploy(plan, true) =>
@@ -90,7 +92,9 @@ class MarathonSchedulerActor(
 
       upgradeManager ! CancelConflictingDeployments(plan, new DeploymentCanceledException("The upgrade has been cancelled"))
       locking(ids, origSender, cmd, blocking = true) {
-        deploy(driver, plan).sendAnswer(origSender, cmd)
+        val res = deploy(driver, plan)
+        origSender ! cmd.answer
+        res
       }
 
     case ConflictingDeploymentsCanceled(id) =>
@@ -206,7 +210,7 @@ object MarathonSchedulerActor {
   }
 
   case class Deploy(plan: DeploymentPlan, force: Boolean = false) extends Command {
-    def answer: Event = Deployed(plan)
+    def answer: Event = DeploymentStarted(plan)
   }
 
   case class UpdateApp(appId: PathId, update: AppUpdate) extends Command {
@@ -218,7 +222,7 @@ object MarathonSchedulerActor {
   sealed trait Event
   case class AppScaled(appId: PathId) extends Event
   case object TasksReconciled extends Event
-  case class Deployed(plan: DeploymentPlan) extends Event
+  case class DeploymentStarted(plan: DeploymentPlan) extends Event
   case class AppUpdated(appId: PathId) extends Event
 
   case class RunningDeployments(plans: Seq[DeploymentPlan])

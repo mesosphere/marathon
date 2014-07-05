@@ -1,18 +1,21 @@
 package mesosphere.marathon
 
 import akka.actor.{ ActorSystem, Props }
-import akka.testkit.{ ImplicitSender, TestActorRef, TestKit }
+import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.event.{ DeploymentSuccess, UpgradeEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppRepository, PathId }
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.mesos.protos.Implicits._
+import mesosphere.mesos.protos.TaskID
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
-import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito._
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
@@ -91,7 +94,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     verify(tracker).expunge("nope".toPath)
     verify(queue).add(app)
-    verify(driver).killTask(TaskID.newBuilder().setValue("task_a").build())
+    verify(driver).killTask(TaskID("task_a"))
   }
 
   test("ScaleApp") {
@@ -107,5 +110,52 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     verify(queue).add(app)
 
     expectMsg(5.seconds, AppScaled(app.id))
+  }
+
+  test("Deployment") {
+    val probe = TestProbe()
+    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5, None), version = Timestamp(0))
+    val origGroup = Group(PathId("/foo/bar"), Set(app))
+
+    val appNew = app.copy(cmd = "cmd new", version = Timestamp(1000))
+
+    val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
+
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, Nil, Timestamp.now())
+
+    system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
+
+    schedulerActor ! Deploy(plan)
+
+    expectMsg(DeploymentStarted(plan))
+
+    val answer = probe.expectMsgType[DeploymentSuccess]
+    answer.id should be(plan.id)
+
+    system.eventStream.unsubscribe(probe.ref)
+  }
+
+  test("Deployment fail to acquire lock") {
+    val probe = TestProbe()
+    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5, None), version = Timestamp(0))
+    val origGroup = Group(PathId("/foo/bar"), Set(app))
+
+    val appNew = app.copy(cmd = "cmd new", version = Timestamp(1000))
+
+    val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
+
+    val plan = DeploymentPlan(origGroup, targetGroup)
+
+    val lock = schedulerActor.underlyingActor.appLocks.get(app.id)
+    lock.acquire()
+
+    schedulerActor ! Deploy(plan)
+
+    val answer = expectMsgType[CommandFailed]
+
+    answer.cmd should equal(Deploy(plan))
+    answer.reason.isInstanceOf[AppLockedException] should be(true)
+
+    lock.release()
   }
 }

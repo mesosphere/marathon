@@ -87,8 +87,8 @@ class MarathonSchedulerService @Inject() (
     schedulerActor.tell(Deploy(plan, force), receiver)
 
     promise.future.map {
-      case Deployed(_)         => ()
-      case CommandFailed(_, t) => throw t
+      case DeploymentStarted(_) => ()
+      case CommandFailed(_, t)  => throw t
     }
   }
 
