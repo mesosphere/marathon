@@ -120,8 +120,8 @@ class DeploymentActor(
   def restartApp(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int): Future[Unit] = {
     val startPromise = Promise[Boolean]()
     val stopPromise = Promise[Boolean]()
-    val runningTasks = taskTracker.fetchApp(app.id).tasks.toSeq
-    val tasksToKill = runningTasks.filterNot(_.getVersion == app.version.toString)
+    val runningTasks = taskTracker.fetchApp(app.id).tasks.toSeq.sortBy(_.getStartedAt)
+    val tasksToKill = runningTasks.filterNot(_.getVersion == app.version.toString).drop(scaleOldTo)
     val runningNew = runningTasks.filter(_.getVersion == app.version.toString)
     val nrToStart = scaleNewTo - runningNew.size
 
