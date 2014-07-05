@@ -1,27 +1,29 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{ TestProbe, TestActorRef, TestKit }
-import akka.actor.{ Props, ActorSystem }
-import mesosphere.marathon.{ SchedulerActions, MarathonSpec }
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
-import org.scalatest.mock.MockitoSugar
-import mesosphere.marathon.state.{ Timestamp, PathId, Group, AppRepository }
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
-import org.apache.mesos.SchedulerDriver
+import akka.actor.{ ActorSystem, Props }
+import akka.testkit.{ TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
-import scala.concurrent.duration._
 import mesosphere.marathon.api.v1.AppDefinition
-import org.mockito.Mockito.{ verify, when, times }
-import org.mockito.Matchers.any
-import scala.collection.mutable
-import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.mesos.protos.TaskID
+import mesosphere.marathon.state._
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
+import mesosphere.marathon.upgrade.DeploymentActor.Finished
+import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
+import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
 import mesosphere.mesos.protos.Implicits._
-import scala.concurrent.Future
-import org.mockito.stubbing.Answer
-import org.mockito.invocation.InvocationOnMock
+import mesosphere.mesos.protos.TaskID
 import org.apache.mesos.Protos.Status
+import org.apache.mesos.SchedulerDriver
+import org.mockito.Matchers.any
+import org.mockito.Mockito.{ times, verify, when }
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
+import org.scalatest.mock.MockitoSugar
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
+
+import scala.collection.mutable
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class DeploymentActorTest
     extends TestKit(ActorSystem("System"))
@@ -136,5 +138,59 @@ class DeploymentActorTest
     verify(scheduler).startApp(driver, app3)
     verify(driver, times(1)).killTask(TaskID(task1_2.getId))
     verify(scheduler).stopApp(driver, app4)
+  }
+
+  test("Restart app") {
+    val managerProbe = TestProbe()
+    val receiverProbe = TestProbe()
+    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5, None), version = Timestamp(0))
+    val origGroup = Group(PathId("/foo/bar"), Set(app))
+
+    val appNew = app.copy(cmd = "cmd new", version = Timestamp(1000))
+
+    val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
+
+    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app.version).toBuilder.setStartedAt(0).build()
+    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app.version).toBuilder.setStartedAt(1000).build()
+
+    when(tracker.fetchApp(app.id)).thenReturn(new TaskTracker.App(app.id, mutable.Set(task1_1, task1_2), false))
+
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew, 1, 1)))), Timestamp.now())
+
+    when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_2", "TASK_KILLED", app.id, "", Nil, appNew.version.toString))
+        Status.DRIVER_RUNNING
+      }
+    })
+
+    when(queue.add(appNew)).thenAnswer(new Answer[Boolean] {
+      def answer(invocation: InvocationOnMock): Boolean = {
+        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_3", "TASK_RUNNING", app.id, "", Nil, appNew.version.toString))
+        true
+      }
+    })
+
+    when(repo.store(appNew)).thenReturn(Future.successful(appNew))
+
+    val deployer = TestActorRef(
+      Props(
+        classOf[DeploymentActor],
+        managerProbe.ref,
+        receiverProbe.ref,
+        repo,
+        driver,
+        scheduler,
+        plan,
+        tracker,
+        queue,
+        system.eventStream
+      )
+    )
+
+    receiverProbe.expectMsg(Finished)
+
+    verify(driver).killTask(TaskID(task1_2.getId))
+    verify(queue).add(appNew)
   }
 }
