@@ -94,13 +94,25 @@ class GroupManager @Singleton @Inject() (
     upgrade(appId.parent, _.updateApp(appId, fn, version), version, force)
   }
 
+  def cancelDeployment(plan: DeploymentPlan): Future[Group] = scheduler.listRunningDeployments().flatMap { runningDeployments =>
+    require(runningDeployments.size == 1, "A deployment can only be canceled, if there is exactly one. Use the update with force flag!")
+    val reverse = DeploymentPlan(plan.target, plan.original)
+
+    val result = for {
+      execute <- scheduler.deploy(reverse, force = true)
+      storedGroup <- groupRepo.store(zkName, plan.original)
+    } yield storedGroup
+
+    result
+  }
+
   private def upgrade(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
     def deploy(from: Group): Future[DeploymentPlan] = {
       val to = fn(from)
       val plan = DeploymentPlan(from, to, version)
-      if (plan.isEmpty) Future.successful(plan) else scheduler.deploy(plan, force).map(_ => plan)
+      scheduler.deploy(plan, force).map(_ => plan)
     }
 
     val deployment = for {

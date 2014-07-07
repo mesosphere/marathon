@@ -179,7 +179,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[AppMock].getName
     val exec = s"""$javaExecutable -classpath $classPath $main $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId"""
-    val health = if (withHealth) Set(HealthCheck(gracePeriod = 10.second, interval = 1.second, maxConsecutiveFailures = 5)) else Set.empty[HealthCheck]
+    val health = if (withHealth) Set(HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)) else Set.empty[HealthCheck]
     AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128, healthChecks = health)
   }
 
@@ -205,7 +205,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
   def cleanUp(maxWait: FiniteDuration = 30.seconds) {
     events.clear()
     marathon.deleteRoot(force = true)
-    val event = waitForEvent("group_change_success")
+    val event = waitForEvent("deployment_success")
     waitUntil("cleanUp", maxWait) { marathon.listApps.value.isEmpty && marathon.listGroups.value.isEmpty }
     events.clear()
   }

@@ -34,7 +34,7 @@ object ProcessKeeper {
     http.start()
   }
 
-  def startMesosLocal(): Process = startProcess("mesos", Process("mesos local"), _.contains("Re-registered with master"))
+  def startMesosLocal(): Process = startProcess("mesos", Process("mesos local"), _.toLowerCase.contains("registered with master"))
 
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String]): Process = {
     log.info(s"Start remote marathon with args: $arguments")

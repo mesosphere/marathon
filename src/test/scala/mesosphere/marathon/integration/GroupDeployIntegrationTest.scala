@@ -145,21 +145,21 @@ class GroupDeployIntegrationTest
     val proxy = appProxy(appId, "v1", 2)
     val group = GroupUpdate(gid, Set(proxy))
     val create = marathon.createGroup(group)
-    waitForEvent("group_change_success")
+    waitForEvent("deployment_success")
     waitForTasks(proxy.id, proxy.instances)
     val v1Checks = appProxyCheck(appId, "v1", state = true)
 
     When("The group is updated")
     marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
-    waitForEvent("group_change_success")
+    waitForEvent("deployment_success")
 
     Then("The new version is deployed")
     val v2Checks = appProxyCheck(appId, "v2", state = true)
     validFor("all v2 apps are available", 10.seconds) { v2Checks.pingSince(2.seconds) }
 
     When("A rollback to the first version is initiated")
-    marathon.rollbackGroup(gid, create.value.version, force = true)
-    waitForEvent("group_change_success")
+    marathon.rollbackGroup(gid, create.value.version)
+    waitForEvent("deployment_success")
 
     Then("The rollback will be performed and the old version is available")
     validFor("all v1 apps are available", 10.seconds) { v1Checks.pingSince(2.seconds) }
@@ -181,6 +181,7 @@ class GroupDeployIntegrationTest
     marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
 
     Then("All v1 applications are kept alive")
+    v1Check.healthy
     validFor("all v1 apps are always available", 15.seconds) { v1Check.pingSince(3.seconds) }
 
     When("The new application becomes healthy")

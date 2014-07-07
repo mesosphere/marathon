@@ -107,7 +107,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   @Timed
   def delete(@DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val version = Timestamp.now()
-    groupManager.update(PathId.empty, root => root.copy(apps = Set.empty, groups = Set.empty), version, force)
+    result(groupManager.update(PathId.empty, root => root.copy(apps = Set.empty, groups = Set.empty), version, force))
     Response.ok(Map("version" -> version)).build()
   }
 
@@ -125,7 +125,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     val groupId = id.toRootPath
     result(groupManager.group(groupId)).fold(Responses.unknownGroup(groupId)) { group =>
       val version = Timestamp.now()
-      groupManager.update(groupId.parent, _.remove(groupId, version), version, force)
+      result(groupManager.update(groupId.parent, _.remove(groupId, version), version, force))
       Response.ok(Map("version" -> version)).build()
     }
   }
@@ -145,7 +145,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     }
 
     val effectivePath = update.id.map(_.canonicalPath(id)).getOrElse(id)
-    groupManager.update(effectivePath, groupChange, version, force)
+    result(groupManager.update(effectivePath, groupChange, version, force))
     (effectivePath, version)
   }
 

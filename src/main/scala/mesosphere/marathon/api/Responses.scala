@@ -11,26 +11,15 @@ import mesosphere.marathon.state.{ Timestamp, PathId }
 
 object Responses {
 
-  def unknownGroup(id: PathId): Response = {
-    Response
-      .status(Status.NOT_FOUND)
-      .entity(Map("message" -> s"Group '$id' does not exist"))
-      .build
-  }
+  def unknownGroup(id: PathId): Response = notFound(s"Group '$id' does not exist")
+
+  def unknownTask(id: String): Response = notFound(s"Task '$id' does not exist")
 
   def unknownApp(id: PathId, version: Option[Timestamp] = None): Response = {
-    var text = s"App '$id' does not exist"
-    version.map(v => text += s" in version $v")
-    Response
-      .status(Status.NOT_FOUND)
-      .entity(Map("message" -> text))
-      .build
+    notFound(s"App '$id' does not exist" + version.fold("")(v => s" in version $v"))
   }
 
-  def unknownTask(id: String): Response = {
-    Response
-      .status(Status.NOT_FOUND)
-      .entity(Map("message" -> s"Task '$id' does not exist"))
-      .build
+  def notFound(message: String): Response = {
+    Response.status(Status.NOT_FOUND).entity(Map("message" -> message)).build
   }
 }

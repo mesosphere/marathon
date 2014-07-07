@@ -51,7 +51,6 @@ class DeploymentActor(
 
     case NextStep =>
       // no more steps, we're done
-      eventBus.publish(DeploymentSuccess(plan.id))
       receiver ! Finished
       context.stop(self)
 
