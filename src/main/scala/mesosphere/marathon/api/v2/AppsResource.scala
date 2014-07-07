@@ -47,7 +47,8 @@ class AppsResource @Inject() (
     val baseId = app.id.canonicalPath()
     requireValid(checkApp(app, baseId.parent))
     maybePostEvent(req, app)
-    result(groupManager.updateApp(baseId, _ => app.copy(id = baseId), app.version, force))
+    val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
+    result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
     Response.created(new URI(s"$baseId")).build
   }
 

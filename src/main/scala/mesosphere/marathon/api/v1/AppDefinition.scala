@@ -96,6 +96,7 @@ case class AppDefinition(
       .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
       .setVersion(version.toString)
       .setUpgradeStrategy(upgradeStrategy.toProto)
+      .addAllDependencies(dependencies.map(_.toString).asJava)
 
     builder.build
   }
@@ -136,7 +137,8 @@ case class AppDefinition(
       healthChecks =
         proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion),
-      upgradeStrategy = if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy) else UpgradeStrategy.empty
+      upgradeStrategy = if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy) else UpgradeStrategy.empty,
+      dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet
     )
   }
 

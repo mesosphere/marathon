@@ -2212,6 +2212,26 @@ public final class Protos {
      * <code>optional .mesosphere.marathon.UpgradeStrategyDefinition upgradeStrategy = 13;</code>
      */
     mesosphere.marathon.Protos.UpgradeStrategyDefinitionOrBuilder getUpgradeStrategyOrBuilder();
+
+    // repeated string dependencies = 14;
+    /**
+     * <code>repeated string dependencies = 14;</code>
+     */
+    java.util.List<java.lang.String>
+    getDependenciesList();
+    /**
+     * <code>repeated string dependencies = 14;</code>
+     */
+    int getDependenciesCount();
+    /**
+     * <code>repeated string dependencies = 14;</code>
+     */
+    java.lang.String getDependencies(int index);
+    /**
+     * <code>repeated string dependencies = 14;</code>
+     */
+    com.google.protobuf.ByteString
+        getDependenciesBytes(int index);
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -2378,6 +2398,14 @@ public final class Protos {
               bitField0_ |= 0x00000100;
               break;
             }
+            case 114: {
+              if (!((mutable_bitField0_ & 0x00002000) == 0x00002000)) {
+                dependencies_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00002000;
+              }
+              dependencies_.add(input.readBytes());
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -2397,6 +2425,9 @@ public final class Protos {
         }
         if (((mutable_bitField0_ & 0x00000800) == 0x00000800)) {
           healthChecks_ = java.util.Collections.unmodifiableList(healthChecks_);
+        }
+        if (((mutable_bitField0_ & 0x00002000) == 0x00002000)) {
+          dependencies_ = new com.google.protobuf.UnmodifiableLazyStringList(dependencies_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -2843,6 +2874,36 @@ public final class Protos {
       return upgradeStrategy_;
     }
 
+    // repeated string dependencies = 14;
+    public static final int DEPENDENCIES_FIELD_NUMBER = 14;
+    private com.google.protobuf.LazyStringList dependencies_;
+    /**
+     * <code>repeated string dependencies = 14;</code>
+     */
+    public java.util.List<java.lang.String>
+        getDependenciesList() {
+      return dependencies_;
+    }
+    /**
+     * <code>repeated string dependencies = 14;</code>
+     */
+    public int getDependenciesCount() {
+      return dependencies_.size();
+    }
+    /**
+     * <code>repeated string dependencies = 14;</code>
+     */
+    public java.lang.String getDependencies(int index) {
+      return dependencies_.get(index);
+    }
+    /**
+     * <code>repeated string dependencies = 14;</code>
+     */
+    public com.google.protobuf.ByteString
+        getDependenciesBytes(int index) {
+      return dependencies_.getByteString(index);
+    }
+
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -2857,6 +2918,7 @@ public final class Protos {
       version_ = "1970-01-01T00:00:00.000Z";
       healthChecks_ = java.util.Collections.emptyList();
       upgradeStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
+      dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2959,6 +3021,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         output.writeMessage(13, upgradeStrategy_);
       }
+      for (int i = 0; i < dependencies_.size(); i++) {
+        output.writeBytes(14, dependencies_.getByteString(i));
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -3024,6 +3089,15 @@ public final class Protos {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(13, upgradeStrategy_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < dependencies_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(dependencies_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getDependenciesList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3197,6 +3271,8 @@ public final class Protos {
           upgradeStrategyBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00001000);
+        dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00002000);
         return this;
       }
 
@@ -3305,6 +3381,12 @@ public final class Protos {
         } else {
           result.upgradeStrategy_ = upgradeStrategyBuilder_.build();
         }
+        if (((bitField0_ & 0x00002000) == 0x00002000)) {
+          dependencies_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              dependencies_);
+          bitField0_ = (bitField0_ & ~0x00002000);
+        }
+        result.dependencies_ = dependencies_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3443,6 +3525,16 @@ public final class Protos {
         }
         if (other.hasUpgradeStrategy()) {
           mergeUpgradeStrategy(other.getUpgradeStrategy());
+        }
+        if (!other.dependencies_.isEmpty()) {
+          if (dependencies_.isEmpty()) {
+            dependencies_ = other.dependencies_;
+            bitField0_ = (bitField0_ & ~0x00002000);
+          } else {
+            ensureDependenciesIsMutable();
+            dependencies_.addAll(other.dependencies_);
+          }
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5042,6 +5134,99 @@ public final class Protos {
           upgradeStrategy_ = null;
         }
         return upgradeStrategyBuilder_;
+      }
+
+      // repeated string dependencies = 14;
+      private com.google.protobuf.LazyStringList dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureDependenciesIsMutable() {
+        if (!((bitField0_ & 0x00002000) == 0x00002000)) {
+          dependencies_ = new com.google.protobuf.LazyStringArrayList(dependencies_);
+          bitField0_ |= 0x00002000;
+         }
+      }
+      /**
+       * <code>repeated string dependencies = 14;</code>
+       */
+      public java.util.List<java.lang.String>
+          getDependenciesList() {
+        return java.util.Collections.unmodifiableList(dependencies_);
+      }
+      /**
+       * <code>repeated string dependencies = 14;</code>
+       */
+      public int getDependenciesCount() {
+        return dependencies_.size();
+      }
+      /**
+       * <code>repeated string dependencies = 14;</code>
+       */
+      public java.lang.String getDependencies(int index) {
+        return dependencies_.get(index);
+      }
+      /**
+       * <code>repeated string dependencies = 14;</code>
+       */
+      public com.google.protobuf.ByteString
+          getDependenciesBytes(int index) {
+        return dependencies_.getByteString(index);
+      }
+      /**
+       * <code>repeated string dependencies = 14;</code>
+       */
+      public Builder setDependencies(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDependenciesIsMutable();
+        dependencies_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string dependencies = 14;</code>
+       */
+      public Builder addDependencies(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDependenciesIsMutable();
+        dependencies_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string dependencies = 14;</code>
+       */
+      public Builder addAllDependencies(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureDependenciesIsMutable();
+        super.addAll(values, dependencies_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string dependencies = 14;</code>
+       */
+      public Builder clearDependencies() {
+        dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00002000);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string dependencies = 14;</code>
+       */
+      public Builder addDependenciesBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDependenciesIsMutable();
+        dependencies_.add(value);
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
@@ -11526,7 +11711,7 @@ public final class Protos {
       "\001(\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00210\022\032\n\016",
       "timeoutSeconds\030\005 \001(\r:\00220\022\017\n\004path\030\006 \001(\t:\001" +
       "/\022!\n\026maxConsecutiveFailures\030\007 \001(\r:\0013\"\035\n\010" +
-      "Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\365\003\n\021ServiceD" +
+      "Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\213\004\n\021ServiceD" +
       "efinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mes" +
       "os.CommandInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tres" +
       "ources\030\004 \003(\0132\017.mesos.Resource\022\023\n\013descrip" +
@@ -11539,25 +11724,25 @@ public final class Protos {
       "thChecks\030\014 \003(\0132*.mesosphere.marathon.Hea" +
       "lthCheckDefinition\022G\n\017upgradeStrategy\030\r " +
       "\001(\0132..mesosphere.marathon.UpgradeStrateg" +
-      "yDefinition\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t" +
-      "\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattribu" +
-      "tes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged_at" +
-      "\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007" +
-      " \003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 \001(\t",
-      "\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002" +
-      " \003(\0132!.mesosphere.marathon.MarathonTask\"" +
-      "1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opt" +
-      "ions\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcallba" +
-      "ck_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major" +
-      "\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"X\n\031" +
-      "UpgradeStrategyDefinition\022\035\n\025minimumHeal" +
-      "thCapacity\030\001 \002(\001\022\034\n\024maximumRunningFactor" +
-      "\030\002 \001(\001\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017" +
-      "\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphe",
-      "re.marathon.ServiceDefinition\0224\n\006groups\030" +
-      "\004 \003(\0132$.mesosphere.marathon.GroupDefinit" +
-      "ion\022\024\n\014dependencies\030\005 \003(\tB\035\n\023mesosphere." +
-      "marathonB\006Protos"
+      "yDefinition\022\024\n\014dependencies\030\016 \003(\t\"\272\001\n\014Ma" +
+      "rathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005" +
+      "ports\030\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos." +
+      "Attribute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_" +
+      "at\030\006 \001(\003\022#\n\010statuses\030\007 \003(\0132\021.mesos.TaskS",
+      "tatus\022\017\n\007version\030\010 \001(\t\"M\n\013MarathonApp\022\014\n" +
+      "\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere." +
+      "marathon.MarathonTask\"1\n\rContainerInfo\022\017" +
+      "\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\")\n\020Even" +
+      "tSubscribers\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016S" +
+      "torageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 " +
+      "\002(\r\022\r\n\005patch\030\003 \002(\r\"X\n\031UpgradeStrategyDef" +
+      "inition\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\034" +
+      "\n\024maximumRunningFactor\030\002 \001(\001\"\260\001\n\017GroupDe" +
+      "finition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n",
+      "\004apps\030\003 \003(\0132&.mesosphere.marathon.Servic" +
+      "eDefinition\0224\n\006groups\030\004 \003(\0132$.mesosphere" +
+      ".marathon.GroupDefinition\022\024\n\014dependencie" +
+      "s\030\005 \003(\tB\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11581,7 +11766,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "TaskRateLimit", "OBSOLETEContainer", "Version", "HealthChecks", "UpgradeStrategy", });
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "TaskRateLimit", "OBSOLETEContainer", "Version", "HealthChecks", "UpgradeStrategy", "Dependencies", });
           internal_static_mesosphere_marathon_MarathonTask_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new

@@ -65,7 +65,7 @@ case class AppUpdate(
     taskRateLimit.getOrElse(app.taskRateLimit),
     container.orElse(app.container),
     healthChecks.getOrElse(app.healthChecks),
-    dependencies.getOrElse(app.dependencies),
+    dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy.getOrElse(app.upgradeStrategy),
     Timestamp.now()
   )
