@@ -541,15 +541,9 @@ GET /v2/apps/product-a/frontend/*/task
 GET /v2/apps/product-a/frontend/play/*/task
 ```
 
-```
-GET /v2/tasks/*
-GET /v2/tasks/product-a/*
-GET /v2/tasks/product-a/frontend/*
-GET /v2/tasks/product-a/frontend/play/*
-```
 
 
-##### Check the health of a task
+##### Check the health of a task (not implemented)
 
 A task is healthy if its latest health check passed.
 
@@ -557,7 +551,7 @@ A task is healthy if its latest health check passed.
 GET /v2/health/product-a/frontend/play/task_xxxx
 ```
 
-##### Check the health of an app
+##### Check the health of an app (not implemented)
 
 An app's health is one of ["healthy", "unhealthy", "scaling"]
 
@@ -565,7 +559,7 @@ An app's health is one of ["healthy", "unhealthy", "scaling"]
 GET /v2/health/product-a/frontend/play
 ```
 
-##### Check the health of a group
+##### Check the health of a group (not implemented)
 
 A group is "healthy" iff all of its apps are healthy.
 
@@ -573,13 +567,13 @@ A group is "healthy" iff all of its apps are healthy.
 GET /v2/health/groups/product-a
 ```
 
-##### List the health of all apps in a group
+##### List the health of all apps in a group (not implemented)
 
 ```
 GET /v2/health/groups/product-a/*
 ```
 
-##### Get a stream of events for an app
+##### Get a stream of events for an app (not implemented)
 
 ```
 GET /v2/events/product-a/frontend/play
