@@ -69,11 +69,13 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     val plan = DeploymentPlan(from, to)
 
     Then("the deployment steps are correct")
-    plan.steps should have size 4
+    plan.steps should have size 6
     plan.steps(0).actions.toSet should be(Set(RestartApplication(mongo._2, 3, 6)))
     plan.steps(1).actions.toSet should be(Set(RestartApplication(service._2, 3, 8)))
-    plan.steps(2).actions.toSet should be(Set(KillAllOldTasksOf(service._2), ScaleApplication(service._2, 10)))
-    plan.steps(3).actions.toSet should be(Set(KillAllOldTasksOf(mongo._2), ScaleApplication(mongo._2, 8)))
+    plan.steps(2).actions.toSet should be(Set(KillAllOldTasksOf(service._2)))
+    plan.steps(3).actions.toSet should be(Set(KillAllOldTasksOf(mongo._2)))
+    plan.steps(4).actions.toSet should be(Set(ScaleApplication(mongo._2, 8)))
+    plan.steps(5).actions.toSet should be(Set(ScaleApplication(service._2, 10)))
   }
 
   test("when updating a group without dependencies, a random order of updates is used") {
@@ -98,9 +100,10 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     val plan = DeploymentPlan(from, to)
 
     Then("the deployment steps are correct")
-    plan.steps should have size 2
+    plan.steps should have size 3
     plan.steps(0).actions.toSet should be(Set(RestartApplication(mongo._2, 3, 6), RestartApplication(service._2, 3, 8)))
-    plan.steps(1).actions.toSet should be(Set(KillAllOldTasksOf(mongo._2), ScaleApplication(mongo._2, 8), KillAllOldTasksOf(service._2), ScaleApplication(service._2, 10)))
+    plan.steps(1).actions.toSet should be(Set(KillAllOldTasksOf(mongo._2), KillAllOldTasksOf(service._2)))
+    plan.steps(2).actions.toSet should be(Set(ScaleApplication(mongo._2, 8), ScaleApplication(service._2, 10)))
   }
 
   test("when updating a group with dependent and independent applications, the correct order is computed") {
@@ -132,15 +135,18 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     val plan = DeploymentPlan(from, to)
 
     Then("the deployment contains steps for dependent and independent applications")
-    plan.steps should have size 8
+    plan.steps should have size 11
     plan.steps(0).actions.toSet should be(Set(RestartApplication(independent._2, 1, 3)))
-    plan.steps(1).actions.toSet should be(Set(KillAllOldTasksOf(independent._2), ScaleApplication(independent._2, 3)))
-    plan.steps(2).actions.toSet should be(Set(RestartApplication(mongo._2, 3, 6)))
-    plan.steps(3).actions.toSet should be(Set(RestartApplication(service._2, 3, 8)))
-    plan.steps(4).actions.toSet should be(Set(StartApplication(toStart._2, 1)))
-    plan.steps(5).actions.toSet should be(Set(KillAllOldTasksOf(service._2), ScaleApplication(service._2, 10)))
-    plan.steps(6).actions.toSet should be(Set(KillAllOldTasksOf(mongo._2), ScaleApplication(mongo._2, 8)))
-    plan.steps(7).actions.toSet should be(Set(StopApplication(toStop._1)))
+    plan.steps(1).actions.toSet should be(Set(KillAllOldTasksOf(independent._2)))
+    plan.steps(2).actions.toSet should be(Set(ScaleApplication(independent._2, 3)))
+    plan.steps(3).actions.toSet should be(Set(RestartApplication(mongo._2, 3, 6)))
+    plan.steps(4).actions.toSet should be(Set(RestartApplication(service._2, 3, 8)))
+    plan.steps(5).actions.toSet should be(Set(StartApplication(toStart._2, 1)))
+    plan.steps(6).actions.toSet should be(Set(KillAllOldTasksOf(service._2)))
+    plan.steps(7).actions.toSet should be(Set(KillAllOldTasksOf(mongo._2)))
+    plan.steps(8).actions.toSet should be(Set(ScaleApplication(mongo._2, 8)))
+    plan.steps(9).actions.toSet should be(Set(ScaleApplication(service._2, 10)))
+    plan.steps(10).actions.toSet should be(Set(StopApplication(toStop._1)))
   }
 
   test("when the only action is to stop an application") {

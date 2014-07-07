@@ -6,6 +6,8 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 import mesosphere.util.Logging
 
+import scala.collection.mutable.ListBuffer
+
 sealed trait DeploymentAction {
   def app: AppDefinition
 }
@@ -90,40 +92,46 @@ object DeploymentPlan extends Logging {
 
     //apply the changes to the dependent applications
     val dependentSteps: List[DeploymentStep] = {
-      var pass1 = List.empty[DeploymentStep]
-      var pass2 = List.empty[DeploymentStep]
+      val pass1 = ListBuffer.empty[DeploymentStep]
+      var pass2 = ListBuffer.empty[DeploymentStep]
+      var pass3 = ListBuffer.empty[DeploymentStep]
       for (app <- dependent.filter(a => changedApplications.contains(a.id))) {
-        var pass1Actions = List.empty[DeploymentAction]
-        var pass2Actions = List.empty[DeploymentAction]
-        if (toStart.contains(app.id)) pass1Actions ::= StartApplication(app, app.instances)
-        else if (toStop.contains(app.id)) pass1Actions ::= StopApplication(originalApp(app.id))
-        else if (toScale.contains(app.id)) pass1Actions ::= ScaleApplication(app, app.instances)
+        val pass1Actions = ListBuffer.empty[DeploymentAction]
+        val pass2Actions = ListBuffer.empty[DeploymentAction]
+        val pass3Actions = ListBuffer.empty[DeploymentAction]
+        if (toStart.contains(app.id)) pass1Actions += StartApplication(app, app.instances)
+        else if (toStop.contains(app.id)) pass1Actions += StopApplication(originalApp(app.id))
+        else if (toScale.contains(app.id)) pass1Actions += ScaleApplication(app, app.instances)
         else {
           val (restart, kill, scale) = restartActions(app, originalApp(app.id))
-          pass1Actions ::= restart
-          pass2Actions = kill :: scale :: pass2Actions
+          pass1Actions += restart
+          pass2Actions += kill
+          pass3Actions += scale
         }
-        if (pass1Actions.nonEmpty) pass1 ::= DeploymentStep(pass1Actions)
-        if (pass2Actions.nonEmpty) pass2 ::= DeploymentStep(pass2Actions)
+        if (pass1Actions.nonEmpty) pass1 += DeploymentStep(pass1Actions.result())
+        if (pass2Actions.nonEmpty) pass2 += DeploymentStep(pass2Actions.result())
+        if (pass3Actions.nonEmpty) pass3 += DeploymentStep(pass3Actions.result())
       }
-      pass1.reverse ::: pass2
+      (pass1 ++ pass2.reverse ++ pass3).result()
     }
 
     //apply the changes to the non dependent applications
     val nonDependentSteps = {
-      var step1 = List.empty[DeploymentAction]
-      var step2 = List.empty[DeploymentAction]
+      val step1 = ListBuffer.empty[DeploymentAction]
+      val step2 = ListBuffer.empty[DeploymentAction]
+      val step3 = ListBuffer.empty[DeploymentAction]
       nonDependent.toList.filter(a => changedApplications.contains(a.id)).foreach { app =>
-        if (toStart.contains(app.id)) step1 ::= StartApplication(app, app.instances)
-        else if (toStop.contains(app.id)) step1 ::= StopApplication(originalApp(app.id))
-        else if (toScale.contains(app.id)) step1 ::= ScaleApplication(app, app.instances)
+        if (toStart.contains(app.id)) step1 += StartApplication(app, app.instances)
+        else if (toStop.contains(app.id)) step1 += StopApplication(originalApp(app.id))
+        else if (toScale.contains(app.id)) step1 += ScaleApplication(app, app.instances)
         else {
           val (restart, kill, scale) = restartActions(app, originalApp(app.id))
-          step1 ::= restart
-          step2 = kill :: scale :: step2
+          step1 += restart
+          step2 += kill
+          step3 += scale
         }
       }
-      List(DeploymentStep(step1), DeploymentStep(step2))
+      List(DeploymentStep(step1.result()), DeploymentStep(step2.result()), DeploymentStep(step3.result()))
     }
 
     //applications not included in the new group, but exist in the old one

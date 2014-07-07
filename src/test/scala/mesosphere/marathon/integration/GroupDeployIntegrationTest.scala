@@ -1,6 +1,5 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.GroupUpdate
 import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, SingleMarathonIntegrationTest }
 import mesosphere.marathon.state.PathId._
@@ -162,6 +161,7 @@ class GroupDeployIntegrationTest
     waitForEvent("deployment_success")
 
     Then("The rollback will be performed and the old version is available")
+    v1Checks.healthy
     validFor("all v1 apps are available", 10.seconds) { v1Checks.pingSince(2.seconds) }
   }
 
