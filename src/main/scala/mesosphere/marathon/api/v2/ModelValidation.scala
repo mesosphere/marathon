@@ -115,10 +115,14 @@ trait ModelValidation extends BeanValidation {
     val p = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
     val valid = id.path.forall(p.pattern.matcher(_).matches())
     val errors = if (!valid) List(violation(t, id, path, "contains invalid characters (allowed: [a-z0-9]* . and .. in path)")) else Nil
+    //TODO(MV): to compute canonical path, the correct base is needed
+    /*
     Try(id.canonicalPath(PathId.empty)) match {
       case Success(_) => errors
       case Failure(_) => violation(t, id, path, s"canonical path can not be computed for $id") :: errors
     }
+    */
+    errors
   }
 
   def dependencyErrors[T](t: T, set: Set[PathId], path: String)(implicit ct: ClassTag[T]) = {

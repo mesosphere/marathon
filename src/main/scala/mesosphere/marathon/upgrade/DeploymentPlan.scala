@@ -110,15 +110,20 @@ object DeploymentPlan extends Logging {
     }
 
     //apply the changes to the non dependent applications
-    val nonDependentSteps = nonDependent.toList.filter(a => changedApplications.contains(a.id)).flatMap { app =>
-      def step(actions: DeploymentAction*) = List(DeploymentStep(actions.toList))
-      if (toStart.contains(app.id)) step(StartApplication(app, app.instances))
-      else if (toStop.contains(app.id)) step(StopApplication(originalApp(app.id)))
-      else if (toScale.contains(app.id)) step(ScaleApplication(app, app.instances))
-      else {
-        val (restart, kill, scale) = restartActions(app, originalApp(app.id))
-        List(DeploymentStep(List(restart)), DeploymentStep(List(kill, scale)))
+    val nonDependentSteps = {
+      var step1 = List.empty[DeploymentAction]
+      var step2 = List.empty[DeploymentAction]
+      nonDependent.toList.filter(a => changedApplications.contains(a.id)).foreach { app =>
+        if (toStart.contains(app.id)) step1 ::= StartApplication(app, app.instances)
+        else if (toStop.contains(app.id)) step1 ::= StopApplication(originalApp(app.id))
+        else if (toScale.contains(app.id)) step1 ::= ScaleApplication(app, app.instances)
+        else {
+          val (restart, kill, scale) = restartActions(app, originalApp(app.id))
+          step1 ::= restart
+          step2 = kill :: scale :: step2
+        }
       }
+      List(DeploymentStep(step1), DeploymentStep(step2))
     }
 
     //applications not included in the new group, but exist in the old one
