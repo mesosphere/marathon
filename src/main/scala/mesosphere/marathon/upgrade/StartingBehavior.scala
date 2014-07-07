@@ -34,7 +34,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
     else checkForRunning
 
   final def checkForHealthy: Receive = {
-    case HealthStatusChanged(app.`id`, taskId, true, _, _) if !healthyTasks(taskId) =>
+    case HealthStatusChanged(app.`id`, taskId, Version, true, _, _) if !healthyTasks(taskId) =>
       healthyTasks += taskId
       log.info(s"$taskId is now healthy")
       checkFinished()

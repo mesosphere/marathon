@@ -114,9 +114,9 @@ class HealthCheckActor(
       val health = taskHealth.getOrElse(taskId, Health(taskId))
 
       val newHealth = result match {
-        case Healthy(_, _) =>
+        case Healthy(_, _, _) =>
           health.update(result)
-        case Unhealthy(_, _, _) =>
+        case Unhealthy(_, _, _, _) =>
           taskTracker.get(appId).find(_.getId == taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
@@ -141,6 +141,7 @@ class HealthCheckActor(
           HealthStatusChanged(
             appId = appId,
             taskId = taskId,
+            version = result.version,
             alive = newHealth.alive())
         )
       }
@@ -166,12 +167,12 @@ object HealthCheckActor {
     }
 
     def update(result: HealthResult): Health = result match {
-      case Healthy(_, time) => this.copy(
+      case Healthy(_, _, time) => this.copy(
         firstSuccess = this.firstSuccess.orElse(Some(time)),
         lastSuccess = Some(time),
         consecutiveFailures = 0
       )
-      case Unhealthy(_, time, cause) => this.copy(
+      case Unhealthy(_, _, time, cause) => this.copy(
         lastFailure = Some(time),
         lastFailureCause = Some(cause),
         consecutiveFailures = this.consecutiveFailures + 1

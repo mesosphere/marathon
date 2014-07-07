@@ -88,7 +88,7 @@ class TaskStartActorTest
     awaitCond(taskQueue.count(app) == 5, 1.second)
 
     for ((_, i) <- taskQueue.removeAll().zipWithIndex)
-      system.eventStream.publish(HealthStatusChanged(app.id, s"task_${i}", true))
+      system.eventStream.publish(HealthStatusChanged(app.id, s"task_${i}", app.version.toString, true))
 
     Await.result(promise.future, 1.second) should be(true)
 

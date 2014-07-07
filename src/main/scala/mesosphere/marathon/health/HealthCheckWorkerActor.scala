@@ -34,6 +34,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         case Failure(t) =>
           replyTo ! Unhealthy(
             task.getId,
+            task.getVersion,
             Timestamp.now(),
             s"${t.getClass.getSimpleName}: ${t.getMessage}"
           )
@@ -45,7 +46,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   def doCheck(task: MarathonTask, check: HealthCheck): Future[HealthResult] =
     task.getPortsList.asScala.lift(check.portIndex) match {
       case None =>
-        Future { Unhealthy(task.getId, Timestamp.now(), "Invalid port index") }
+        Future { Unhealthy(task.getId, task.getVersion, Timestamp.now(), "Invalid port index") }
 
       case Some(port) => check.protocol match {
         case HTTP => http(task, check, port)
@@ -68,9 +69,9 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Healthy(task.getId, Timestamp.now())
+        Healthy(task.getId, task.getVersion, Timestamp.now())
       else
-        Unhealthy(task.getId, Timestamp.now(), response.status.toString())
+        Unhealthy(task.getId, task.getVersion, Timestamp.now(), response.status.toString())
     }
   }
 
@@ -85,7 +86,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       val socket = new Socket
       socket.connect(address, timeoutMillis)
       socket.close()
-      Healthy(task.getId, Timestamp.now())
+      Healthy(task.getId, task.getVersion, Timestamp.now())
     }
   }
 
@@ -99,16 +100,19 @@ object HealthCheckWorker {
   case class HealthCheckJob(task: MarathonTask, check: HealthCheck)
 
   sealed trait HealthResult {
-    val taskId: String
-    val time: Timestamp
+    def taskId: String
+    def time: Timestamp
+    def version: String
   }
 
   case class Healthy(
     taskId: String,
+    version: String,
     time: Timestamp = Timestamp.now()) extends HealthResult
 
   case class Unhealthy(
     taskId: String,
+    version: String,
     time: Timestamp = Timestamp.now(),
     cause: String) extends HealthResult
 

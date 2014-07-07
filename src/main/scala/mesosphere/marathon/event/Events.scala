@@ -97,6 +97,7 @@ case class FailedHealthCheck(
 case class HealthStatusChanged(
   appId: PathId,
   taskId: String,
+  version: String,
   alive: Boolean,
   eventType: String = "health_status_changed_event",
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent

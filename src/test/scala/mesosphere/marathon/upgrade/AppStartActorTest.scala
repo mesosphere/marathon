@@ -70,8 +70,8 @@ class AppStartActorTest
     )
     watch(ref)
 
-    system.eventStream.publish(HealthStatusChanged(app.id, "task_a", alive = true))
-    system.eventStream.publish(HealthStatusChanged(app.id, "task_b", alive = true))
+    system.eventStream.publish(HealthStatusChanged(app.id, "task_a", app.version.toString, alive = true))
+    system.eventStream.publish(HealthStatusChanged(app.id, "task_b", app.version.toString, alive = true))
 
     Await.result(promise.future, 5.seconds)
 
