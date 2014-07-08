@@ -74,7 +74,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   def createUpdate(@PathParam("id") id: String,
                    update: GroupUpdate,
                    @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    requireValid(checkGroup(update, needsId = true))
+    requireValid(checkGroupUpdate(update, needsId = true))
     val (path, version) = updateOrCreate(id.toRootPath, update, force)
     Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
   }
@@ -98,7 +98,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   def update(@PathParam("id") id: String,
              update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    requireValid(checkGroup(update, needsId = false))
+    requireValid(checkGroupUpdate(update, needsId = false))
     val (_, version) = updateOrCreate(id.toRootPath, update, force)
     Response.ok(Map("version" -> version)).build()
   }

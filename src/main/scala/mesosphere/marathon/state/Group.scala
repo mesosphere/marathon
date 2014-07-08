@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import mesosphere.marathon.Protos.{ GroupDefinition, UpgradeStrategyDefinition, StorageVersion }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.PathId._
@@ -117,6 +118,7 @@ case class Group(
 
   def transitiveAppGroups: Set[Group] = transitiveGroups.filter(_.apps.nonEmpty)
 
+  @JsonIgnore
   lazy val applicationDependencies: List[(AppDefinition, AppDefinition)] = {
     var result = List.empty[(AppDefinition, AppDefinition)]
     val allGroups = transitiveGroups

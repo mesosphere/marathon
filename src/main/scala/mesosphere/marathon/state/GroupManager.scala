@@ -7,6 +7,7 @@ import com.google.inject.Singleton
 import com.google.inject.name.Named
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v2.ModelValidation
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade._
@@ -25,7 +26,7 @@ class GroupManager @Singleton @Inject() (
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
     appRepo: AppRepository,
-    @Named(EventModule.busName) eventBus: EventStream) {
+    @Named(EventModule.busName) eventBus: EventStream) extends ModelValidation {
 
   private[this] val log = Logger.getLogger(getClass.getName)
   private[this] val zkName = "root"
@@ -111,6 +112,7 @@ class GroupManager @Singleton @Inject() (
 
     def deploy(from: Group): Future[DeploymentPlan] = {
       val to = fn(from)
+      requireValid(checkGroup(to))
       val plan = DeploymentPlan(from, to, version)
       scheduler.deploy(plan, force).map(_ => plan)
     }
