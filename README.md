@@ -101,7 +101,12 @@ difficult situation!
 
 1.  Download and unpack the latest release.
 
-    **For Mesos 0.17.0 and later:**
+    **For Mesos 0.19.0:**
+
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.6.0/marathon-0.6.0.tgz
+        tar xzf marathon-0.6.0.tgz
+
+    **For Mesos 0.17.0 to 0.18.2:**
 
         curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz
         tar xzf marathon-0.5.1.tgz
@@ -264,7 +269,7 @@ Marathon was created by [Tobias Knaup](https://github.com/guenter) and
 developed by the team at Mesosphere and by many contributors from
 the community.
 
-[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
+[![githalytics.com alpha](https://cruel-carlota.gopagoda.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
