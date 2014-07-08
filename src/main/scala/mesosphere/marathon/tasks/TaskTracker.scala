@@ -3,19 +3,17 @@ package mesosphere.marathon.tasks
 import java.io._
 import javax.inject.Inject
 
-import com.codahale.metrics.Gauge
 import mesosphere.marathon.Protos._
-import mesosphere.marathon.{Main, MarathonConf}
-import mesosphere.util.Stats
+import mesosphere.marathon.{ Main, MarathonConf }
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskStatus
-import org.apache.mesos.state.{State, Variable}
+import org.apache.mesos.state.{ State, Variable }
 
 import scala.collection.JavaConverters._
 import scala.collection._
 import scala.concurrent.Future
 
-class TaskTracker @Inject()(state: State, stats: Stats, config: MarathonConf) {
+class TaskTracker @Inject() (state: State, config: MarathonConf) {
 
   import mesosphere.marathon.tasks.TaskTracker.App
   import mesosphere.util.BackToTheFuture.futureToFuture
@@ -30,10 +28,6 @@ class TaskTracker @Inject()(state: State, stats: Stats, config: MarathonConf) {
   val ID_DELIMITER = ":"
 
   private[this] val apps = new mutable.HashMap[String, App] with mutable.SynchronizedMap[String, App]
-
-  stats.register("TaskTracker.taskCount", new Gauge[Int] {
-    override def getValue: Int = apps.values.map(_.tasks.size).sum
-  })
 
   private[tasks] def fetchFromState(key: String) = state.fetch(key).get()
 
@@ -174,24 +168,22 @@ class TaskTracker @Inject()(state: State, stats: Stats, config: MarathonConf) {
   }
 
   private[tasks] def fetchApp(appName: String): App = {
-    stats.time("TaskTracker.fetch") {
-      log.info(s"Fetching app from store ${appName}")
-      val names = state.names().get.asScala.toSet
-      if (names.exists(name => name.equals(LEGACY_PREFIX + appName))) {
-        val tasks = migrateApp(appName)
-        new App(appName, tasks, false)
-      }
-      else {
-        val tasks: mutable.Set[MarathonTask] = new mutable.HashSet[MarathonTask]
-        val taskKeys = names.filter(name => name.startsWith(PREFIX + appName + ID_DELIMITER))
-        for (taskKey <- taskKeys) {
-          fetchTask(taskKey) match {
-            case Some(task) => tasks += task
-            case None => //no-op
-          }
+    log.info(s"Fetching app from store ${appName}")
+    val names = state.names().get.asScala.toSet
+    if (names.exists(name => name.equals(LEGACY_PREFIX + appName))) {
+      val tasks = migrateApp(appName)
+      new App(appName, tasks, false)
+    }
+    else {
+      val tasks: mutable.Set[MarathonTask] = new mutable.HashSet[MarathonTask]
+      val taskKeys = names.filter(name => name.startsWith(PREFIX + appName + ID_DELIMITER))
+      for (taskKey <- taskKeys) {
+        fetchTask(taskKey) match {
+          case Some(task) => tasks += task
+          case None       => //no-op
         }
-        new App(appName, tasks, false)
       }
+      new App(appName, tasks, false)
     }
   }
 
@@ -200,7 +192,8 @@ class TaskTracker @Inject()(state: State, stats: Stats, config: MarathonConf) {
     if (bytes.length > 0) {
       val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
       deserialize(taskKey, source)
-    } else None
+    }
+    else None
   }
 
   private[tasks] def migrateApp(appName: String): mutable.Set[MarathonTask] = {
@@ -272,24 +265,21 @@ class TaskTracker @Inject()(state: State, stats: Stats, config: MarathonConf) {
   }
 
   private[tasks] def store(appName: String, task: MarathonTask): Future[Variable] = {
-    stats.timeFuture("TaskTracker.store") {
-      val oldVar = fetchFromState(getKey(appName, task.getId))
-      val bytes = new ByteArrayOutputStream()
-      val output = new ObjectOutputStream(bytes)
-      serialize(task, output)
-      val newVar = oldVar.mutate(bytes.toByteArray)
-      state.store(newVar)
-    }
+    val oldVar = fetchFromState(getKey(appName, task.getId))
+    val bytes = new ByteArrayOutputStream()
+    val output = new ObjectOutputStream(bytes)
+    serialize(task, output)
+    val newVar = oldVar.mutate(bytes.toByteArray)
+    state.store(newVar)
   }
-
 
 }
 
 object TaskTracker {
 
   class App(
-             val appName: String,
-             var tasks: mutable.Set[MarathonTask],
-             var shutdown: Boolean)
+    val appName: String,
+    var tasks: mutable.Set[MarathonTask],
+    var shutdown: Boolean)
 
 }

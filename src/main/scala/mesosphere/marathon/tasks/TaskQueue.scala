@@ -1,27 +1,22 @@
 package mesosphere.marathon.tasks
 
-import java.util.concurrent.PriorityBlockingQueue
-import mesosphere.marathon.api.v1.AppDefinition
-import scala.collection.JavaConverters._
-import scala.collection.immutable.IndexedSeq
 import java.util
 import java.util.Comparator
-import com.codahale.metrics.Gauge
-import javax.inject.Inject
-import mesosphere.util.Stats
+import java.util.concurrent.PriorityBlockingQueue
+
+import mesosphere.marathon.api.v1.AppDefinition
+
+import scala.collection.JavaConverters._
+import scala.collection.immutable.IndexedSeq
 
 /**
   * Utility class to stage tasks before they get scheduled
   */
 
-class TaskQueue @Inject() (stats: Stats) {
-  import TaskQueue._
+class TaskQueue {
+  import mesosphere.marathon.tasks.TaskQueue._
 
   val queue = new PriorityBlockingQueue[AppDefinition](1, AppDefinitionPriority)
-
-  stats.register("TaskQueue.size", new Gauge[Int] {
-    override def getValue: Int = queue.size()
-  })
 
   def poll(): AppDefinition = queue.poll()
 

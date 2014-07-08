@@ -1,10 +1,9 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.MarathonSpec
 import com.codahale.metrics.MetricRegistry
-import mesosphere.util.Stats
+import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.api.v1.AppDefinition
 
 class TaskQueueTest extends MarathonSpec {
   val app1 = AppDefinition(id = "app1", constraints = Set.empty)
@@ -15,8 +14,7 @@ class TaskQueueTest extends MarathonSpec {
 
   before {
     val metricRegistry = new MetricRegistry
-    val stats = new Stats(metricRegistry)
-    queue = new TaskQueue(stats)
+    queue = new TaskQueue()
   }
 
   def buildConstraint(field: String, operator: String, value: String = ""): Constraint = {

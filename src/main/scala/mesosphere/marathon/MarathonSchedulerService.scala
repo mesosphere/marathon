@@ -17,7 +17,6 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppRepository, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.ThreadPoolContext
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskID
 

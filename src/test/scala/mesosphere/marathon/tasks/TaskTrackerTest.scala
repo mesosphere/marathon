@@ -8,7 +8,6 @@ import mesosphere.marathon.Protos.{ MarathonApp, MarathonTask }
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
-import mesosphere.util.Stats
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.state.{ InMemoryState, State }
 
@@ -28,9 +27,8 @@ class TaskTrackerTest extends MarathonSpec {
 
   before {
     val metricRegistry = new MetricRegistry
-    val stats = new Stats(metricRegistry)
     state = new InMemoryState
-    taskTracker = new TaskTracker(state, stats, config)
+    taskTracker = new TaskTracker(state, config)
   }
 
   def makeSampleTask(id: String) = {
@@ -49,7 +47,7 @@ class TaskTrackerTest extends MarathonSpec {
   def makeTaskStatus(id: String, state: TaskState = TaskState.TASK_RUNNING) = {
     TaskStatus.newBuilder
       .setTaskId(TaskID.newBuilder
-      .setValue(id)
+        .setValue(id)
       )
       .setState(state)
       .build

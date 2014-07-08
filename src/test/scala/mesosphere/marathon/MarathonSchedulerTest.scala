@@ -9,7 +9,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppRepository, Timestamp }
 import mesosphere.marathon.tasks._
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.{ RateLimiters, Stats }
+import mesosphere.util.RateLimiters
 import org.apache.mesos.Protos.{ OfferID, TaskID, TaskInfo }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers._
@@ -32,7 +32,6 @@ class MarathonSchedulerTest extends MarathonSpec {
   var config: MarathonConf = null
 
   val metricRegistry = new MetricRegistry
-  val stats = new Stats(metricRegistry)
 
   before {
     repo = mock[AppRepository]
@@ -53,7 +52,6 @@ class MarathonSchedulerTest extends MarathonSpec {
       frameworkIdUtil,
       taskIdUtil,
       rateLimiters,
-      stats,
       config
     )
   }
