@@ -29,6 +29,7 @@ class DeploymentsResource @Inject() (service: MarathonSchedulerService, groupMan
 
   private def toInfo(deployment: DeploymentPlan) = Map(
     "id" -> deployment.id,
+    "version" -> deployment.version,
     "affectedApplications" -> deployment.affectedApplicationIds.map(_.toString),
     "steps" -> deployment.steps.map(step => step.actions.map { action =>
       Map(
