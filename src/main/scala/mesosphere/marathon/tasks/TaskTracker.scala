@@ -157,12 +157,25 @@ class TaskTracker @Inject()(state: State, stats: Stats, config: MarathonConf) {
   }
 
   def expungeOrphanedTasks {
-    // Periodically get a list of names from our store and delete any that don't exist here
-    // More efficient to poll store once for list
+    // Remove tasks that don't have any tasks associated with them. Expensive!
+    log.info("Expunging orphaned tasks from store")
+    val stateTaskKeys = state.names.get.asScala.filter(_.startsWith(PREFIX))
+    val appsTaskKeys = apps.values.flatMap { app =>
+      app.tasks.map(task => getKey(app.appName, task.getId))
+    }.toSet
+
+    for (stateTaskKey <- stateTaskKeys) {
+      if (!appsTaskKeys.contains(stateTaskKey)) {
+        log.info(s"Expunging orphaned task with key ${stateTaskKey}")
+        val variable = state.fetch(stateTaskKey).get
+        state.expunge(variable)
+      }
+    }
   }
 
   private[tasks] def fetchApp(appName: String): App = {
     stats.time("TaskTracker.fetch") {
+      log.info(s"Fetching app from store ${appName}")
       val names = state.names().get.asScala.toSet
       if (names.exists(name => name.equals(LEGACY_PREFIX + appName))) {
         val tasks = migrateApp(appName)

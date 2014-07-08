@@ -1,28 +1,29 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.TaskID
-import org.apache.log4j.Logger
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.{ AppRepository, Timestamp }
-import com.google.common.util.concurrent.AbstractExecutionThreadService
-import javax.inject.{ Named, Inject }
-import java.util.{ TimerTask, Timer }
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration.MILLISECONDS
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.{ Timer, TimerTask }
+import javax.inject.{ Inject, Named }
+
+import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.twitter.common.base.ExceptionalCommand
-import com.twitter.common.zookeeper.Group.JoinException
-import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
-import scala.util.{ Failure, Success, Random }
-import mesosphere.mesos.util.FrameworkIdUtil
+import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.health.HealthCheckManager
-import scala.concurrent.duration._
-import java.util.concurrent.CountDownLatch
-import mesosphere.util.{ BackToTheFuture, ThreadPoolContext }
+import mesosphere.marathon.state.{ AppRepository, Timestamp }
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.ThreadPoolContext
+import org.apache.log4j.Logger
+import org.apache.mesos.Protos.TaskID
+
+import scala.concurrent.duration.{ MILLISECONDS, _ }
+import scala.concurrent.{ Await, Future }
+import scala.util.{ Failure, Random, Success }
 
 /**
   * Wrapper class for the scheduler
@@ -34,10 +35,11 @@ class MarathonSchedulerService @Inject() (
   frameworkIdUtil: FrameworkIdUtil,
   @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
   appRepository: AppRepository,
+  taskTracker: TaskTracker,
   scheduler: MarathonScheduler)
     extends AbstractExecutionThreadService with Leader {
 
-  import ThreadPoolContext.context
+  import mesosphere.util.ThreadPoolContext.context
 
   implicit val zkTimeout = config.zkFutureTimeout
 
@@ -139,7 +141,7 @@ class MarathonSchedulerService @Inject() (
     offerLeadership()
 
     // Start the timer that handles reconciliation
-    scheduleTaskReconciliation()
+    schedulePeriodicOperations()
 
     // Block on the latch which will be countdown only when shutdown has been
     // triggered. This is to prevent run()
@@ -296,7 +298,7 @@ class MarathonSchedulerService @Inject() (
     }
   }
 
-  private def scheduleTaskReconciliation(): Unit = {
+  private def schedulePeriodicOperations(): Unit = {
     reconciliationTimer.schedule(
       new TimerTask {
         def run() {
@@ -308,6 +310,18 @@ class MarathonSchedulerService @Inject() (
       },
       reconciliationInitialDelay.toMillis,
       reconciliationInterval.toMillis
+    )
+
+    // Tasks are only expunged once after the application launches
+    // Wait until reconciliation is definitely finished so that we are guaranteed
+    // to have loaded in all apps
+    reconciliationTimer.schedule(
+      new TimerTask {
+        def run() {
+          taskTracker.expungeOrphanedTasks
+        }
+      },
+      reconciliationInitialDelay.toMillis + reconciliationInterval.toMillis
     )
   }
 

@@ -1,16 +1,16 @@
 package mesosphere.marathon.tasks
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream }
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
-import mesosphere.marathon.Protos.{MarathonApp, MarathonTask}
-import mesosphere.marathon.{MarathonConf, MarathonSpec}
+import mesosphere.marathon.Protos.{ MarathonApp, MarathonTask }
+import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import mesosphere.util.Stats
-import org.apache.mesos.Protos.{TaskID, TaskState, TaskStatus}
-import org.apache.mesos.state.{InMemoryState, State}
+import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
+import org.apache.mesos.state.{ InMemoryState, State }
 
 import scala.collection.JavaConverters._
 import scala.collection._
@@ -264,8 +264,49 @@ class TaskTrackerTest extends MarathonSpec {
     shouldContainTask(migratedTasks, task3)
   }
 
-  test("ReconcileTasks") {
-    // TODO: Write me
-  }
+  test("ExpungeOrphanedTasks") {
+    val ORPHANED_APP_NAME = "orphanedApp"
 
+    val orphanedTaskId1 = taskIdUtil.taskId(ORPHANED_APP_NAME)
+    val orphanedTaskId2 = taskIdUtil.taskId(ORPHANED_APP_NAME)
+    val orphanedTaskId3 = taskIdUtil.taskId(ORPHANED_APP_NAME)
+
+    val orphanedTask1 = makeSampleTask(orphanedTaskId1)
+    val orphanedTask2 = makeSampleTask(orphanedTaskId2)
+    val orphanedTask3 = makeSampleTask(orphanedTaskId3)
+
+    taskTracker.store(ORPHANED_APP_NAME, orphanedTask1)
+    taskTracker.store(ORPHANED_APP_NAME, orphanedTask2)
+    taskTracker.store(ORPHANED_APP_NAME, orphanedTask3)
+
+    val taskId1 = taskIdUtil.taskId(TEST_APP_NAME)
+    val taskId2 = taskIdUtil.taskId(TEST_APP_NAME)
+    val taskId3 = taskIdUtil.taskId(TEST_APP_NAME)
+
+    val task1 = makeSampleTask(taskId1)
+    val task2 = makeSampleTask(taskId2)
+    val task3 = makeSampleTask(taskId3)
+
+    taskTracker.created(TEST_APP_NAME, task1)
+    taskTracker.running(TEST_APP_NAME, makeTaskStatus(taskId1))
+
+    taskTracker.created(TEST_APP_NAME, task2)
+    taskTracker.running(TEST_APP_NAME, makeTaskStatus(taskId2))
+
+    taskTracker.created(TEST_APP_NAME, task3)
+    taskTracker.running(TEST_APP_NAME, makeTaskStatus(taskId3))
+
+    taskTracker.expungeOrphanedTasks
+
+    val names = state.names.get.asScala.toSet
+
+    assert(names.size == 3, "Orphaned tasks were not correctly expunged")
+    assert(!taskTracker.contains(ORPHANED_APP_NAME), "Orphaned app should not exist in TaskTracker")
+
+    val tasks = taskTracker.get(TEST_APP_NAME)
+
+    shouldContainTask(tasks, task1)
+    shouldContainTask(tasks, task2)
+    shouldContainTask(tasks, task3)
+  }
 }
