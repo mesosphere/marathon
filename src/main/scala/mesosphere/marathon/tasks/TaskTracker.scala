@@ -168,7 +168,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   }
 
   private[tasks] def fetchApp(appName: String): App = {
-    log.info(s"Fetching app from store ${appName}")
+    log.debug(s"Fetching app from store ${appName}")
     val names = state.names().get.asScala.toSet
     if (names.exists(name => name.equals(LEGACY_PREFIX + appName))) {
       val tasks = migrateApp(appName)
