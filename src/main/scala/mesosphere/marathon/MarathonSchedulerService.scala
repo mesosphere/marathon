@@ -48,8 +48,8 @@ class MarathonSchedulerService @Inject() (
     Duration(config.reconciliationInitialDelay(), MILLISECONDS)
 
   // Interval between task reconciliation operations
-  val reconciliationFrequency =
-    Duration(config.reconciliationFrequency(), MILLISECONDS)
+  val reconciliationInterval =
+    Duration(config.reconciliationInterval(), MILLISECONDS)
 
   val reconciliationTimer = new Timer("reconciliationTimer")
 
@@ -301,13 +301,13 @@ class MarathonSchedulerService @Inject() (
       new TimerTask {
         def run() {
           if (isLeader) {
-            scheduler.reconcileTasks(driver)
+            scheduler.reconcileAndScaleTasks(driver)
           }
           else log.info("Not leader therefore not reconciling tasks")
         }
       },
       reconciliationInitialDelay.toMillis,
-      reconciliationFrequency.toMillis
+      reconciliationInterval.toMillis
     )
   }
 

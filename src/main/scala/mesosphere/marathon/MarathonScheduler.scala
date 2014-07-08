@@ -253,7 +253,6 @@ class MarathonScheduler @Inject() (
       }
       taskQueue.purge(app)
       taskTracker.shutDown(app.id)
-      // TODO after all tasks have been killed we should remove the app from taskTracker
     }
   }
 
@@ -283,7 +282,7 @@ class MarathonScheduler @Inject() (
     * to give Mesos enough time to deliver task updates.
     * @param driver scheduler driver
     */
-  def reconcileTasks(driver: SchedulerDriver): Unit = {
+  def reconcileAndScaleTasks(driver: SchedulerDriver): Unit = {
     appRepository.appIds().map(_.toSet).onComplete {
       case Success(appIds) =>
         log.info("Syncing tasks for all apps")
@@ -294,6 +293,8 @@ class MarathonScheduler @Inject() (
           taskTracker.get(appId).flatMap(_.getStatusesList.asScala.lastOption)
         }
 
+        // This seems useful only if an app is killed but the tasks are not killed
+        // immediately. Therefore, we instruct the driver to kill these tasks again.
         for (unknownAppId <- taskTracker.list.keySet -- appIds) {
           log.warn(s"App $unknownAppId exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
           for (orphanTask <- taskTracker.get(unknownAppId)) {
