@@ -1,5 +1,5 @@
 {
-  "id": "Hello_Play",
+  "id": "Hello-Play",
   "cmd": "./Hello-*/bin/hello -Dhttp.port=$PORT",
   "mem": 512,
   "cpus": 1.0,
