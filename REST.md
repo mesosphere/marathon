@@ -94,8 +94,7 @@ the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constrai
 
 Additional data passed to the container on application launch. These consist of
 an "image" and an array of string options. The meaning of this data is fully
-dependent upon the executor. Furthermore, _it is invalid to pass container
-options when using the default command executor_.
+dependent upon the executor.
 
 ##### `healthChecks`
 
