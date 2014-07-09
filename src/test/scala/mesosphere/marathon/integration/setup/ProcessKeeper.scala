@@ -34,15 +34,25 @@ object ProcessKeeper {
     http.start()
   }
 
+  def startZooKeeper(port: Int, workDir: String) {
+    val args = "org.apache.zookeeper.server.ZooKeeperServerMain" :: port.toString :: workDir :: Nil
+    startJavaProcess("zookeeper", args, new File("."), sys.env, _.contains("binding to port"))
+  }
+
   def startMesosLocal(): Process = startProcess("mesos", Process("mesos local"), _.toLowerCase.contains("registered with master"))
 
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String]): Process = {
-    log.info(s"Start remote marathon with args: $arguments")
+    val argsWithMain = "mesosphere.marathon.Main" :: arguments
+    startJavaProcess("marathon", argsWithMain, cwd, env, _.contains("Started SelectChannelConnector"))
+  }
+
+  def startJavaProcess(name: String, arguments: List[String], cwd: File, env: Map[String, String], upWhen: String => Boolean): Process = {
+    log.info(s"Start java process $name with args: $arguments")
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes")
-    val builder = Process(javaExecutable :: "-classpath" :: classPath :: "mesosphere.marathon.Main" :: arguments, cwd, env.toList: _*)
-    val process = startProcess("marathon", builder, _.contains("Started SelectChannelConnector"))
-    log.info("Remote marathon up and running!")
+    val builder = Process(javaExecutable :: "-classpath" :: classPath :: arguments, cwd, env.toList: _*)
+    val process = startProcess(name, builder, upWhen)
+    log.info(s"Java process $name up and running!")
     process
   }
 
@@ -89,7 +99,9 @@ object ProcessKeeper {
   }
 
   def main(args: Array[String]) {
-    startMarathon(new File("."), Map("MESOS_NATIVE_LIBRARY" -> "/usr/local/lib/libmesos.dylib"), List("--master", "local", "--event_subscriber", "http_callback"))
+    //startMarathon(new File("."), Map("MESOS_NATIVE_LIBRARY" -> "/usr/local/lib/libmesos.dylib"), List("--master", "local", "--event_subscriber", "http_callback"))
+    startZooKeeper(2183, "/tmp/foo")
+    Thread.sleep(10000)
     stopAllProcesses()
     //startHttpService(11211, ".")
   }

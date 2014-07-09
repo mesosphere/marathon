@@ -110,8 +110,9 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
   override protected def beforeAll(configMap: ConfigMap): Unit = {
     config = IntegrationTestConfig(configMap)
     super.beforeAll(configMap)
-    cleanMarathonState()
+    ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo")
     ProcessKeeper.startMesosLocal()
+    cleanMarathonState()
     startMarathon(config.singleMarathonPort, "--master", config.master, "--event_subscriber", "http_callback")
     ProcessKeeper.startHttpService(config.httpPort, config.cwd)
     ExternalMarathonIntegrationTest.listener += this
@@ -130,7 +131,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
 
   def cleanMarathonState() {
     val watcher = new Watcher { override def process(event: WatchedEvent): Unit = println(event) }
-    val zooKeeper = new ZooKeeper(config.zkHost, 30 * 1000, watcher)
+    val zooKeeper = new ZooKeeper(config.zkHostAndPort, 30 * 1000, watcher)
     def deletePath(path: String) {
       if (zooKeeper.exists(path, false) != null) {
         val children = zooKeeper.getChildren(path, false)

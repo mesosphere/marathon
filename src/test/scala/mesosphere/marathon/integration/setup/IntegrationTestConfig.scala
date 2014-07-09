@@ -12,8 +12,8 @@ case class IntegrationTestConfig(
     //current working directory for all processes to span: defaults to .
     cwd: String,
 
-    //zookeeper url. defaults to zk://localhost:2181/test
-    zk: String,
+    //zookeeper port. defaults to 2183
+    zkPort: Int,
 
     //url to mesos master. defaults to local
     master: String,
@@ -27,12 +27,11 @@ case class IntegrationTestConfig(
     //the port for the local http interface. Defaults dynamically to a port [11211-11311]
     httpPort: Int) {
 
-  private val hostAndPort = """[A-z0-9-.]+(?::\d+)?"""
-  private val zkNode = """[^/]+"""
-  private val zkURLPattern = s"""^zk://($hostAndPort(?:,$hostAndPort)*)(/$zkNode(?:/$zkNode)*)$$""".r
+  private val zkURLPattern = """^zk://([A-z0-9-.]+):(\d+)(.+)$""".r
 
-  def zkHost = zk match { case zkURLPattern(server, _) => server }
-  def zkPath = zk match { case zkURLPattern(_, path) => path }
+  def zkHostAndPort = s"127.0.0.1:$zkPort"
+  def zkPath = "/test"
+  def zk = s"zk://127.0.0.1:$zkPort$zkPath"
 }
 
 object IntegrationTestConfig {
@@ -40,12 +39,12 @@ object IntegrationTestConfig {
     def string(name: String, default: String) = config.getOptional[String](name).getOrElse(default)
     def int(name: String, default: Int) = config.getOptional[String](name).fold(default)(_.toInt)
     val cwd = string("cwd", ".")
-    val zk = string("zk", "zk://localhost:2181/test")
+    val zkPort = int("zkPort", 2183)
     val master = string("master", "local")
     val mesosLib = string("mesosLib", "/usr/local/lib/libmesos.dylib")
     val httpPort = int("httpPort", 11211 + (math.random * 100).toInt)
     val singleMarathonPort = int("singleMarathonPort", 8080 + (math.random * 100).toInt)
-    IntegrationTestConfig(cwd, zk, master, mesosLib, singleMarathonPort, httpPort)
+    IntegrationTestConfig(cwd, zkPort, master, mesosLib, singleMarathonPort, httpPort)
   }
 }
 

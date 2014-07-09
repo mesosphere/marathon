@@ -33,11 +33,7 @@ After the suite is finished:
 To successfully complete the integration tests, following things must be ensured:
 
 - the mesos command must be in path (it will be started with mesos local)
-- a running zookeeper instance has to be provided
-  Without any configuration, a local zookeeper instance is assumed.
 
-Side note: we should think about starting a local zookeeper for the integration tests.
- 
 ## Traits
 
 - IntegrationFunSuite: marks all test cases as integration test. 
@@ -73,8 +69,8 @@ There are following parameters, that can be used to configure the test setup
 
 - cwd: the working directory, used to launch processes. 
   Default value is .
-- zk: the url of the zookeeper instance(s). 
-  Default is zk://localhost:2181/test.
+- zkPort: the port where a local zookeeper is started
+  Default 2183
 - master: the url of the mesos master to connect from marathon. 
   Default is local.
 - mesosLib: the path to the native mesos library. This parameter will only take effect, 
