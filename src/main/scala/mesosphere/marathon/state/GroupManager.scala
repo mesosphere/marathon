@@ -72,42 +72,36 @@ class GroupManager @Singleton @Inject() (
     * Update a group with given identifier.
     * The change of the group is defined by a change function.
     * The complete tree gets the given version.
+    * The change could take time to get deployed.
+    * For this reason, we return the DeploymentPlan as result, which can be queried in the marathon scheduler.
+    *
     * @param gid the id of the group to change.
     * @param version the new version of the group, after the change has applied.
     * @param fn the update function, which is applied to the group identified by given id
     * @param force only one update can be applied to applications at a time. with this flag
     *              one can control, to stop a current deployment and start a new one.
-    * @return the nw group future, which completes, when the update process has been finished.
+    * @return the deployment plan which will be executed.
     */
-  def update(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
+  def update(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = {
     upgrade(gid, _.update(gid, fn, version), version, force)
   }
 
   /**
     * Update application with given identifier and update function.
+    * The change could take time to get deployed.
+    * For this reason, we return the DeploymentPlan as result, which can be queried in the marathon scheduler.
+    *
     * @param appId the identifier of the application
     * @param fn the application change function
     * @param version the version of the change
     * @param force if the change has to be forced.
-    * @return the changed group
+    * @return the deployment plan which will be executed.
     */
-  def updateApp(appId: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
+  def updateApp(appId: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = {
     upgrade(appId.parent, _.updateApp(appId, fn, version), version, force)
   }
 
-  def cancelDeployment(plan: DeploymentPlan): Future[Group] = scheduler.listRunningDeployments().flatMap { runningDeployments =>
-    require(runningDeployments.size == 1, "A deployment can only be canceled, if there is exactly one. Use the update with force flag!")
-    val reverse = DeploymentPlan(plan.target, plan.original)
-
-    val result = for {
-      execute <- scheduler.deploy(reverse, force = true)
-      storedGroup <- groupRepo.store(zkName, plan.original)
-    } yield storedGroup
-
-    result
-  }
-
-  private def upgrade(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[Group] = {
+  private def upgrade(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = {
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
     def deploy(from: Group): Future[DeploymentPlan] = {
@@ -132,6 +126,6 @@ class GroupManager @Singleton @Inject() (
         log.warn(s"Deployment failed for change: $version")
         eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
     }
-    deployment.map(_.target)
+    deployment
   }
 }

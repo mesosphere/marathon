@@ -9,23 +9,31 @@ import org.scalatest.ConfigMap
   */
 case class IntegrationTestConfig(
 
-  //current working directory for all processes to span: defaults to .
-  cwd: String,
+    //current working directory for all processes to span: defaults to .
+    cwd: String,
 
-  //zookeeper url. defaults to zk://localhost:2181/test
-  zk: String,
+    //zookeeper url. defaults to zk://localhost:2181/test
+    zk: String,
 
-  //url to mesos master. defaults to local
-  master: String,
+    //url to mesos master. defaults to local
+    master: String,
 
-  //mesosLib: path to the native mesos lib. Defaults to /usr/local/lib/libmesos.dylib
-  mesosLib: String,
+    //mesosLib: path to the native mesos lib. Defaults to /usr/local/lib/libmesos.dylib
+    mesosLib: String,
 
-  //for single marathon tests, the marathon port to use.
-  singleMarathonPort: Int,
+    //for single marathon tests, the marathon port to use.
+    singleMarathonPort: Int,
 
-  //the port for the local http interface. Defaults dynamically to a port [11211-11311]
-  httpPort: Int)
+    //the port for the local http interface. Defaults dynamically to a port [11211-11311]
+    httpPort: Int) {
+
+  private val hostAndPort = """[A-z0-9-.]+(?::\d+)?"""
+  private val zkNode = """[^/]+"""
+  private val zkURLPattern = s"""^zk://($hostAndPort(?:,$hostAndPort)*)(/$zkNode(?:/$zkNode)*)$$""".r
+
+  def zkHost = zk match { case zkURLPattern(server, _) => server }
+  def zkPath = zk match { case zkURLPattern(_, path) => path }
+}
 
 object IntegrationTestConfig {
   def apply(config: ConfigMap): IntegrationTestConfig = {

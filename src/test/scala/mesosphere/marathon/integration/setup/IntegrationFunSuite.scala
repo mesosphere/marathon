@@ -2,6 +2,7 @@ package mesosphere.marathon.integration.setup
 
 import java.io.File
 import mesosphere.marathon.state.PathId
+import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
 import org.scalatest._
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -9,6 +10,7 @@ import scala.util.Try
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.api.v1.AppDefinition
 import org.joda.time.DateTime
+import scala.collection.JavaConverters._
 
 /**
   * All integration tests should be marked with this tag.
@@ -108,17 +110,17 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
   override protected def beforeAll(configMap: ConfigMap): Unit = {
     config = IntegrationTestConfig(configMap)
     super.beforeAll(configMap)
+    cleanMarathonState()
     ProcessKeeper.startMesosLocal()
     startMarathon(config.singleMarathonPort, "--master", config.master, "--event_subscriber", "http_callback")
     ProcessKeeper.startHttpService(config.httpPort, config.cwd)
     ExternalMarathonIntegrationTest.listener += this
-    marathon.cleanUp(withSubscribers = true)
     marathon.subscribe(s"http://localhost:${config.httpPort}/callback")
   }
 
   override protected def afterAll(configMap: ConfigMap): Unit = {
     super.afterAll(configMap)
-    marathon.cleanUp(withSubscribers = true)
+    cleanUp(withSubscribers = true)
     ExternalMarathonIntegrationTest.listener -= this
     ExternalMarathonIntegrationTest.healthChecks.clear()
     ProcessKeeper.stopAllServices()
@@ -126,9 +128,28 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     ProcessKeeper.stopOSProcesses("mesosphere.marathon.integration.setup.AppMock")
   }
 
+  def cleanMarathonState() {
+    val watcher = new Watcher { override def process(event: WatchedEvent): Unit = println(event) }
+    val zooKeeper = new ZooKeeper(config.zkHost, 30 * 1000, watcher)
+    def deletePath(path: String) {
+      if (zooKeeper.exists(path, false) != null) {
+        val children = zooKeeper.getChildren(path, false)
+        children.asScala.foreach(sub => deletePath(s"$path/$sub"))
+        zooKeeper.delete(path, -1)
+      }
+    }
+    deletePath(config.zkPath)
+    zooKeeper.close()
+  }
+
   override def handleEvent(event: CallbackEvent): Unit = events.enqueue(event)
 
-  def waitForEvent(kind: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
+  def waitForEvent(kind: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
+  def waitForChange(change: RestResult[ITDeploymentResult], maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
+    waitForEventWith("deployment_success", _.info.getOrElse("id", "") == change.value.deploymentId, maxWait)
+  }
+
+  def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
     def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
       val event = events.dequeue()
       if (event.eventType == kind) Some(event) else None
@@ -187,6 +208,9 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     //this is used for all instances, as long as there is no specific instance check
     //the specific instance check has also a specific port, which is assigned by mesos
     val check = new IntegrationHealthCheck(appId, versionId, 0, state)
+    ExternalMarathonIntegrationTest.healthChecks
+      .filter(c => c.appId == appId && c.versionId == versionId)
+      .foreach(ExternalMarathonIntegrationTest.healthChecks -= _)
     ExternalMarathonIntegrationTest.healthChecks += check
     check
   }
@@ -202,11 +226,12 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     }
   }
 
-  def cleanUp(maxWait: FiniteDuration = 30.seconds) {
+  def cleanUp(withSubscribers: Boolean = false, maxWait: FiniteDuration = 30.seconds) {
     events.clear()
-    marathon.deleteRoot(force = true)
-    val event = waitForEvent("deployment_success")
+    ExternalMarathonIntegrationTest.healthChecks.clear()
+    waitForChange(marathon.deleteRoot(force = true))
     waitUntil("cleanUp", maxWait) { marathon.listApps.value.isEmpty && marathon.listGroups.value.isEmpty }
+    if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
     events.clear()
   }
 }

@@ -5,6 +5,7 @@ import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, SingleMarath
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.UpgradeStrategy
 import org.scalatest._
+import spray.httpx.UnsuccessfulResponseException
 
 import scala.concurrent.duration._
 
@@ -27,8 +28,7 @@ class GroupDeployIntegrationTest
 
     Then("The group is created. A success event for this group is send.")
     result.code should be(201) //created
-    val event = waitForEvent("group_change_success")
-    event.info("groupId") should be(group.id.get.toString)
+    val event = waitForChange(result)
   }
 
   test("update empty group successfully") {
@@ -36,12 +36,10 @@ class GroupDeployIntegrationTest
     val name = "test2".toRootPath
     val group = GroupUpdate.empty(name)
     val dependencies = Set("/test".toPath)
-    marathon.createGroup(group)
-    waitForEvent("group_change_success")
+    waitForChange(marathon.createGroup(group))
 
     When("The group gets updated")
-    marathon.updateGroup(name, group.copy(dependencies = Some(dependencies)))
-    waitForEvent("group_change_success")
+    waitForChange(marathon.updateGroup(name, group.copy(dependencies = Some(dependencies))))
 
     Then("The group is updated")
     val result = marathon.group("test2".toRootPath)
@@ -52,12 +50,11 @@ class GroupDeployIntegrationTest
   test("deleting an existing group gives a 200 http response") {
     Given("An existing group")
     val group = GroupUpdate.empty("test3".toRootPath)
-    marathon.createGroup(group)
-    waitForEvent("group_change_success")
+    waitForChange(marathon.createGroup(group))
 
     When("The group gets deleted")
     val result = marathon.deleteGroup(group.id.get)
-    waitForEvent("group_change_success")
+    waitForChange(result)
 
     Then("The group is deleted")
     result.code should be(200)
@@ -66,10 +63,12 @@ class GroupDeployIntegrationTest
 
   test("delete a non existing group should give a 404 http response") {
     When("A non existing group is deleted")
-    val missing = marathon.deleteGroup("does_not_exist".toRootPath)
+    val result = intercept[UnsuccessfulResponseException] {
+      val missing = marathon.deleteGroup("does_not_exist".toRootPath)
+    }
 
-    Then("We get a 204 http resonse code")
-    missing.code should be(404)
+    Then("We get a 404 http resonse code")
+    result.response.status.intValue should be(404)
   }
 
   test("create a group with applications to start") {
@@ -78,8 +77,7 @@ class GroupDeployIntegrationTest
     val group = GroupUpdate("/test".toRootPath, Set(app))
 
     When("The group is created")
-    marathon.createGroup(group)
-    waitForEvent("deployment_success")
+    waitForChange(marathon.createGroup(group))
 
     Then("A success event is send and the application has been started")
     val tasks = waitForTasks(app.id, app.instances)
@@ -91,14 +89,12 @@ class GroupDeployIntegrationTest
     val id = "test".toRootPath
     val appId = id / "app"
     val app1V1 = appProxy(appId, "v1", 2, withHealth = false)
-    marathon.createGroup(GroupUpdate(id, Set(app1V1)))
-    waitForEvent("deployment_success")
+    waitForChange(marathon.createGroup(GroupUpdate(id, Set(app1V1))))
     waitForTasks(app1V1.id, app1V1.instances)
 
     When("The group is updated, with a changed application")
     val app1V2 = appProxy(appId, "v2", 2, withHealth = false)
-    marathon.updateGroup(id, GroupUpdate(id, Set(app1V2)))
-    waitForEvent("deployment_success")
+    waitForChange(marathon.updateGroup(id, GroupUpdate(id, Set(app1V2))))
 
     Then("A success event is send and the application has been started")
     waitForTasks(app1V2.id, app1V2.instances)
@@ -112,10 +108,10 @@ class GroupDeployIntegrationTest
     val group = GroupUpdate(id, Set(proxy))
 
     When("The group is created")
-    marathon.createGroup(group)
+    val create = marathon.createGroup(group)
 
     Then("A success event is send and the application has been started")
-    waitForEvent("deployment_success")
+    waitForChange(create)
   }
 
   test("upgrade a group with application with health checks") {
@@ -124,17 +120,16 @@ class GroupDeployIntegrationTest
     val appId = id / "app"
     val proxy = appProxy(appId, "v1", 1)
     val group = GroupUpdate(id, Set(proxy))
-    marathon.createGroup(group)
-    waitForEvent("deployment_success")
+    waitForChange(marathon.createGroup(group))
     val check = appProxyCheck(proxy.id, "v1", state = true)
 
     When("The group is updated")
     check.afterDelay(1.second, state = false)
     check.afterDelay(3.seconds, state = true)
-    marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 1)))))
+    val update = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 1)))))
 
     Then("A success event is send and the application has been started")
-    waitForEvent("deployment_success")
+    waitForChange(update)
   }
 
   test("rollback from an upgrade of group") {
@@ -144,21 +139,19 @@ class GroupDeployIntegrationTest
     val proxy = appProxy(appId, "v1", 2)
     val group = GroupUpdate(gid, Set(proxy))
     val create = marathon.createGroup(group)
-    waitForEvent("deployment_success")
+    waitForChange(create)
     waitForTasks(proxy.id, proxy.instances)
     val v1Checks = appProxyCheck(appId, "v1", state = true)
 
     When("The group is updated")
-    marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
-    waitForEvent("deployment_success")
+    waitForChange(marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v2", 2))))))
 
     Then("The new version is deployed")
     val v2Checks = appProxyCheck(appId, "v2", state = true)
     validFor("all v2 apps are available", 10.seconds) { v2Checks.pingSince(2.seconds) }
 
     When("A rollback to the first version is initiated")
-    marathon.rollbackGroup(gid, create.value.version)
-    waitForEvent("deployment_success")
+    waitForChange(marathon.rollbackGroup(gid, create.value.version))
 
     Then("The rollback will be performed and the old version is available")
     v1Checks.healthy
@@ -171,14 +164,14 @@ class GroupDeployIntegrationTest
     val appId = id / "app"
     val proxy = appProxy(appId, "v1", 2).copy(upgradeStrategy = UpgradeStrategy(1, None))
     val group = GroupUpdate(id, Set(proxy))
-    marathon.createGroup(group)
-    waitForEvent("deployment_success")
+    val create = marathon.createGroup(group)
+    waitForChange(create)
     waitForTasks(appId, proxy.instances)
     val v1Check = appProxyCheck(appId, "v1", state = true)
 
     When("The new application is not healthy")
     val v2Check = appProxyCheck(appId, "v2", state = false) //will always fail
-    marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
+    val update = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
 
     Then("All v1 applications are kept alive")
     v1Check.healthy
@@ -186,7 +179,7 @@ class GroupDeployIntegrationTest
 
     When("The new application becomes healthy")
     v2Check.state = true //make v2 healthy, so the app can be cleaned
-    waitForEvent("deployment_success")
+    waitForChange(update)
   }
 
   test("An upgrade in progress can not be interrupted without force") {
@@ -195,21 +188,23 @@ class GroupDeployIntegrationTest
     val appId = id / "app"
     val proxy = appProxy(appId, "v1", 2)
     val group = GroupUpdate(id, Set(proxy))
-    marathon.createGroup(group)
-    waitForEvent("deployment_success")
+    val create = marathon.createGroup(group)
+    waitForChange(create)
     appProxyCheck(appId, "v2", state = false) //will always fail
     marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
 
     When("Another upgrade is triggered, while the old one is not completed")
-    marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v3", 2)))))
+    intercept[UnsuccessfulResponseException] {
+      marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v3", 2)))))
+    }
 
     Then("An error is indicated")
     waitForEvent("group_change_failed")
 
     When("Another upgrade is triggered with force, while the old one is not completed")
-    marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v4", 2)))), force = true)
+    val force = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v4", 2)))), force = true)
 
     Then("The update is performed")
-    waitForEvent("deployment_success")
+    waitForChange(force)
   }
 }

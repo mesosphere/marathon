@@ -2,7 +2,6 @@ package mesosphere.marathon.api.v2
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import java.lang.{ Double => JDouble }
 
@@ -15,7 +14,6 @@ case class GroupUpdate(
     scaleBy: Option[JDouble] = None,
     version: Option[Timestamp] = None) {
 
-  //TODO: fallback, if no id is given
   def groupId: PathId = id.getOrElse(throw new IllegalArgumentException("No group id was given!"))
 
   def apply(current: Group, timestamp: Timestamp): Group = {
@@ -36,19 +34,19 @@ case class GroupUpdate(
         .map(update => update.toGroup(update.groupId.canonicalPath(current.id), timestamp))
       groupUpdates.toSet ++ groupAdditions
     }
-    val effectiveApps = apps.getOrElse(current.apps).map(toApp(current.id, _))
+    val effectiveApps = apps.getOrElse(current.apps).map(toApp(current.id, _, timestamp))
     val effectiveDependencies = dependencies.fold(current.dependencies)(_.map(_.canonicalPath(current.id)))
     Group(current.id, effectiveApps, effectiveGroups, effectiveDependencies, timestamp)
   }
 
-  def toApp(gid: PathId, app: AppDefinition): AppDefinition = {
+  def toApp(gid: PathId, app: AppDefinition, version: Timestamp): AppDefinition = {
     val appId = app.id.canonicalPath(gid)
-    app.copy(id = appId, dependencies = app.dependencies.map(_.canonicalPath(appId)))
+    app.copy(id = appId, dependencies = app.dependencies.map(_.canonicalPath(appId)), version = version)
   }
 
   def toGroup(gid: PathId, version: Timestamp): Group = Group(
     gid,
-    apps.getOrElse(Set.empty).map(toApp(gid, _)),
+    apps.getOrElse(Set.empty).map(toApp(gid, _, version)),
     groups.getOrElse(Set.empty).map(sub => sub.toGroup(sub.groupId.canonicalPath(gid), version)),
     dependencies.fold(Set.empty[PathId])(_.map(_.canonicalPath(gid))),
     version

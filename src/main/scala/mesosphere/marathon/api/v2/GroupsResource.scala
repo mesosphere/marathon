@@ -3,6 +3,7 @@ package mesosphere.marathon.api.v2
 import java.net.URI
 import javax.inject.Inject
 import javax.ws.rs._
+import javax.ws.rs.core.Response.ResponseBuilder
 import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
@@ -10,6 +11,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.Responses
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
+import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.{ Await, Awaitable }
 
@@ -58,7 +60,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def create(update: GroupUpdate): Response = createUpdate("", update, force = false)
+  def create(update: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response = createUpdate("", update, force)
 
   /**
     * Create or update a group.
@@ -75,8 +77,8 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
                    update: GroupUpdate,
                    @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     requireValid(checkGroupUpdate(update, needsId = true))
-    val (path, version) = updateOrCreate(id.toRootPath, update, force)
-    Response.created(new URI(path.toString)).entity(Map("version" -> version)).build()
+    val (deployment, path, version) = updateOrCreate(id.toRootPath, update, force)
+    deploymentResult(deployment, Response.created(new URI(path.toString)))
   }
 
   @PUT
@@ -99,16 +101,16 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
              update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     requireValid(checkGroupUpdate(update, needsId = false))
-    val (_, version) = updateOrCreate(id.toRootPath, update, force)
-    Response.ok(Map("version" -> version)).build()
+    val (deployment, _, _) = updateOrCreate(id.toRootPath, update, force)
+    deploymentResult(deployment)
   }
 
   @DELETE
   @Timed
   def delete(@DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val version = Timestamp.now()
-    result(groupManager.update(PathId.empty, root => root.copy(apps = Set.empty, groups = Set.empty), version, force))
-    Response.ok(Map("version" -> version)).build()
+    val deployment = result(groupManager.update(PathId.empty, root => root.copy(apps = Set.empty, groups = Set.empty), version, force))
+    deploymentResult(deployment)
   }
 
   /**
@@ -125,12 +127,12 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     val groupId = id.toRootPath
     result(groupManager.group(groupId)).fold(Responses.unknownGroup(groupId)) { group =>
       val version = Timestamp.now()
-      result(groupManager.update(groupId.parent, _.remove(groupId, version), version, force))
-      Response.ok(Map("version" -> version)).build()
+      val deployment = result(groupManager.update(groupId.parent, _.remove(groupId, version), version, force))
+      deploymentResult(deployment)
     }
   }
 
-  private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): (PathId, Timestamp) = {
+  private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): (DeploymentPlan, PathId, Timestamp) = {
     val version = Timestamp.now()
     def groupChange(group: Group): Group = {
       val versionChange = update.version.map { version =>
@@ -145,9 +147,12 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     }
 
     val effectivePath = update.id.map(_.canonicalPath(id)).getOrElse(id)
-    result(groupManager.update(effectivePath, groupChange, version, force))
-    (effectivePath, version)
+    val deployment = result(groupManager.update(effectivePath, groupChange, version, force))
+    (deployment, effectivePath, version)
   }
 
+  private def deploymentResult(d: DeploymentPlan, response: ResponseBuilder = Response.ok()) = {
+    response.entity(Map("version" -> d.version, "deploymentId" -> d.id)).build()
+  }
   private def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 }
