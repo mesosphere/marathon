@@ -150,7 +150,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     toKill
   }
 
-  def expungeOrphanedTasks {
+  def expungeOrphanedTasks () {
     // Remove tasks that don't have any tasks associated with them. Expensive!
     log.info("Expunging orphaned tasks from store")
     val stateTaskKeys = state.names.get.asScala.filter(_.startsWith(PREFIX))
