@@ -61,6 +61,8 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
 
   case class HealthStatusChange(deadLine: Deadline, state: Boolean)
   private[this] var changes = List.empty[HealthStatusChange]
+  private[this] var healthAction = (check: IntegrationHealthCheck) => {}
+  var pinged = false
 
   def afterDelay(delay: FiniteDuration, state: Boolean) {
     val item = HealthStatusChange(delay.fromNow, state)
@@ -71,7 +73,14 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
     changes = insert(changes)
   }
 
+  def withHealthAction(fn: (IntegrationHealthCheck) => Unit): this.type = {
+    healthAction = fn
+    this
+  }
+
   def healthy: Boolean = {
+    healthAction(this)
+    pinged = true
     val (past, future) = changes.partition(_.deadLine.isOverdue())
     state = past.reverse.headOption.fold(state)(_.state)
     changes = future
@@ -166,6 +175,10 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     waitFor(s"$num tasks to launch", maxWait)(checkTasks)
   }
 
+  def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = 30.seconds) = {
+    waitUntil("Health check to get queried", maxWait) { check.pinged }
+  }
+
   def validFor(description: String, until: FiniteDuration)(valid: => Boolean): Boolean = {
     val deadLine = until.fromNow
     def checkValid(): Boolean = {
@@ -196,13 +209,13 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     next()
   }
 
-  def appProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true): AppDefinition = {
+  def appProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[AppMock].getName
     val exec = s"""$javaExecutable -classpath $classPath $main $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId"""
     val health = if (withHealth) Set(HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)) else Set.empty[HealthCheck]
-    AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128, healthChecks = health)
+    AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128, healthChecks = health, dependencies = dependencies)
   }
 
   def appProxyCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {

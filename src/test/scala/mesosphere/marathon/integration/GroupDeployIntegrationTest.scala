@@ -1,10 +1,12 @@
 package mesosphere.marathon.integration
 
+import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.GroupUpdate
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, SingleMarathonIntegrationTest }
+import mesosphere.marathon.integration.setup.{ IntegrationHealthCheck, IntegrationFunSuite, SingleMarathonIntegrationTest }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.UpgradeStrategy
+import mesosphere.marathon.state.{ PathId, UpgradeStrategy }
 import org.scalatest._
+import spray.http.DateTime
 import spray.httpx.UnsuccessfulResponseException
 
 import scala.concurrent.duration._
@@ -206,5 +208,121 @@ class GroupDeployIntegrationTest
 
     Then("The update is performed")
     waitForChange(force)
+  }
+
+  test("Groups with Applications with circular dependencies can not get deployed") {
+    Given("A group with 3 circular dependent applications")
+    val db = appProxy("/test/db".toPath, "v1", 1, dependencies = Set("/test/frontend1".toPath))
+    val service = appProxy("/test/service".toPath, "v1", 1, dependencies = Set(db.id))
+    val frontend = appProxy("/test/frontend1".toPath, "v1", 1, dependencies = Set(service.id))
+    val group = GroupUpdate("test".toPath, Set(db, service, frontend))
+
+    When("The group gets posted")
+    val exception = intercept[UnsuccessfulResponseException] {
+      marathon.createGroup(group)
+    }
+
+    Then("An unsuccessfull response has been posted, with an error indicating cyclic dependencies")
+    exception.response.entity.asString should include("cyclic dependencies")
+  }
+
+  test("Applications with dependencies get deployed in the correct order") {
+    Given("A group with 3 dependent applications")
+    val db = appProxy("/test/db".toPath, "v1", 1)
+    val service = appProxy("/test/service".toPath, "v1", 1, dependencies = Set(db.id))
+    val frontend = appProxy("/test/frontend1".toPath, "v1", 1, dependencies = Set(service.id))
+    val group = GroupUpdate("test".toPath, Set(db, service, frontend))
+
+    When("The group gets deployed")
+    var ping = Map.empty[PathId, DateTime]
+    def storeFirst(health: IntegrationHealthCheck) {
+      if (!ping.contains(health.appId)) ping += health.appId -> DateTime.now
+    }
+    val dbHealth = appProxyCheck(db.id, "v1", state = true).withHealthAction(storeFirst)
+    val serviceHealth = appProxyCheck(service.id, "v1", state = true).withHealthAction(storeFirst)
+    val frontendHealth = appProxyCheck(frontend.id, "v1", state = true).withHealthAction(storeFirst)
+    waitForChange(marathon.createGroup(group))
+
+    Then("The correct order is maintained")
+    ping should have size 3
+    ping(db.id) should be < ping(service.id)
+    ping(service.id) should be < ping(frontend.id)
+  }
+
+  test("Groups with dependencies get deployed in the correct order") {
+    Given("A group with 3 dependent applications")
+    val db = appProxy("/test/db/db1".toPath, "v1", 1)
+    val service = appProxy("/test/service/service1".toPath, "v1", 1)
+    val frontend = appProxy("/test/frontend/frontend1".toPath, "v1", 1)
+    val group = GroupUpdate("test".toPath, Set.empty[AppDefinition], Set(
+      GroupUpdate("db".toPath, apps = Set(db)),
+      GroupUpdate("service".toPath, apps = Set(service)).copy(dependencies = Some(Set("/test/db".toPath))),
+      GroupUpdate("frontend".toPath, apps = Set(frontend)).copy(dependencies = Some(Set("/test/service".toPath)))
+    ))
+
+    When("The group gets deployed")
+    var ping = Map.empty[PathId, DateTime]
+    def storeFirst(health: IntegrationHealthCheck) {
+      if (!ping.contains(health.appId)) ping += health.appId -> DateTime.now
+    }
+    val dbHealth = appProxyCheck(db.id, "v1", state = true).withHealthAction(storeFirst)
+    val serviceHealth = appProxyCheck(service.id, "v1", state = true).withHealthAction(storeFirst)
+    val frontendHealth = appProxyCheck(frontend.id, "v1", state = true).withHealthAction(storeFirst)
+    waitForChange(marathon.createGroup(group))
+
+    Then("The correct order is maintained")
+    ping should have size 3
+    ping(db.id) should be < ping(service.id)
+    ping(service.id) should be < ping(frontend.id)
+  }
+
+  test("Groups with dependant Applications get upgraded in the correct order with maintained upgrade strategy") {
+    var ping = Map.empty[String, DateTime]
+    def key(health: IntegrationHealthCheck) = s"${health.appId}_${health.versionId}"
+    def storeFirst(health: IntegrationHealthCheck) {
+      if (!ping.contains(key(health))) ping += key(health) -> DateTime.now
+    }
+    def create(version: String) = {
+      val db = appProxy("/test/db".toPath, version, 1)
+      val service = appProxy("/test/service".toPath, version, 1, dependencies = Set(db.id))
+      val frontend = appProxy("/test/frontend1".toPath, version, 1, dependencies = Set(service.id))
+      (GroupUpdate("test".toPath, Set(db, service, frontend)),
+        appProxyCheck(db.id, version, state = true).withHealthAction(storeFirst),
+        appProxyCheck(service.id, version, state = true).withHealthAction(storeFirst),
+        appProxyCheck(frontend.id, version, state = true).withHealthAction(storeFirst))
+    }
+
+    Given("A group with 3 dependent applications")
+    val (groupV1, dbV1, serviceV1, frontendV1) = create("v1")
+    waitForChange(marathon.createGroup(groupV1))
+
+    When("The group gets updated, where frontend2 is not healthy")
+    val (groupV2, dbV2, serviceV2, frontendV2) = create("v2")
+    frontendV2.state = false
+    val upgrade = marathon.updateGroup(PathId.empty, groupV2)
+    //it is the last in the dependency chain
+    waitForHealthCheck(frontendV2)
+
+    Then("The correct order is maintained")
+    ping should have size 6
+    ping(key(dbV1)) should be < ping(key(serviceV1))
+    ping(key(serviceV1)) should be < ping(key(frontendV1))
+    ping(key(dbV2)) should be < ping(key(serviceV2))
+    ping(key(serviceV2)) should be < ping(key(frontendV2))
+    validFor("all v1 apps are available as well as db v2 and service v2", 15.seconds) {
+      dbV1.pingSince(2.seconds) && serviceV1.pingSince(2.seconds) && frontendV1.pingSince(2.seconds) &&
+        dbV2.pingSince(2.seconds) && serviceV2.pingSince(2.seconds)
+    }
+
+    When("The v2 frontend becomes healthy")
+    frontendV2.state = true
+
+    Then("The deployment can be finished. All v1 apps are destroyed and all v2 apps are healthy.")
+    waitForChange(upgrade)
+    List(dbV1, serviceV1, frontendV1).foreach(_.pinged = false)
+    validFor("all v1 apps are gone and all v2 apps are alive", 15.seconds) {
+      !dbV1.pingSince(2.seconds) && !serviceV1.pingSince(2.seconds) && !frontendV1.pingSince(2.seconds) &&
+        dbV2.pingSince(2.seconds) && serviceV2.pingSince(2.seconds) && frontendV2.pingSince(2.seconds)
+    }
   }
 }
