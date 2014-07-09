@@ -153,7 +153,7 @@ use. Note that you still need to run Zookeeper for storing state. The following
 command launches Marathon on Mesos in *local mode*. Point your web browser to
 `http://localhost:8080`, and you should see the Marathon UI.
 
-    ./bin/start --master local --zk zk://localhost:2181/marathon
+    ./bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
 
 ### Command Line Options
 
