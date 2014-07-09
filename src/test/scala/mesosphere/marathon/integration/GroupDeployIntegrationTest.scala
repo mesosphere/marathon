@@ -319,10 +319,8 @@ class GroupDeployIntegrationTest
 
     Then("The deployment can be finished. All v1 apps are destroyed and all v2 apps are healthy.")
     waitForChange(upgrade)
-    List(dbV1, serviceV1, frontendV1).foreach(_.pinged = false)
-    validFor("all v1 apps are gone and all v2 apps are alive", 15.seconds) {
-      !dbV1.pingSince(2.seconds) && !serviceV1.pingSince(2.seconds) && !frontendV1.pingSince(2.seconds) &&
-        dbV2.pingSince(2.seconds) && serviceV2.pingSince(2.seconds) && frontendV2.pingSince(2.seconds)
+    validFor("all v2 apps are alive", 15.seconds) {
+      dbV2.pingSince(2.seconds) && serviceV2.pingSince(2.seconds) && frontendV2.pingSince(2.seconds)
     }
   }
 }

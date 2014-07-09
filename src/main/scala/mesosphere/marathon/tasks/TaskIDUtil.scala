@@ -11,16 +11,20 @@ import org.apache.mesos.Protos.TaskID
 object TaskIDUtil {
 
   val taskDelimiter = "."
-  val uuidGenerator =
-    Generators.timeBasedGenerator(EthernetAddress.fromInterface())
+  val TaskId = """^(.+)\.(.+)$""".r
+  val OldTaskId = """^(.+)[_](.+)$""".r
+  val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
   def taskId(appId: PathId): String = {
     appId.safePath + taskDelimiter + uuidGenerator.generate()
   }
 
   def appID(taskId: TaskID): PathId = {
-    val taskIdString = taskId.getValue
-    val appIdString = taskIdString.substring(0, taskIdString.lastIndexOf(taskDelimiter))
-    PathId.fromSafePath(appIdString)
+    taskId.getValue match {
+      //new task ids contain . as delimiter but _ for the safe path
+      case TaskId(appId, uuid)    => PathId.fromSafePath(appId)
+      //version 0.5 and below use _ as delimiter
+      case OldTaskId(appId, uuid) => PathId.fromSafePath(appId)
+    }
   }
 }

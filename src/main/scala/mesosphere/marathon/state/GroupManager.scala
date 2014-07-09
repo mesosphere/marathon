@@ -31,7 +31,7 @@ class GroupManager @Singleton @Inject() (
   private[this] val log = Logger.getLogger(getClass.getName)
   private[this] val zkName = "root"
 
-  def root: Future[Group] = groupRepo.group(zkName).map(_.getOrElse(Group.empty))
+  def root(withLatestApps: Boolean = true): Future[Group] = groupRepo.group(zkName, withLatestApps).map(_.getOrElse(Group.empty))
 
   /**
     * Get all available versions for given group identifier.
@@ -54,7 +54,7 @@ class GroupManager @Singleton @Inject() (
     * @return the group if it is found, otherwise None
     */
   def group(id: PathId): Future[Option[Group]] = {
-    root.map(_.findGroup(_.id == id))
+    root().map(_.findGroup(_.id == id))
   }
 
   /**
@@ -112,10 +112,9 @@ class GroupManager @Singleton @Inject() (
     }
 
     val deployment = for {
-      current <- root
+      current <- root(withLatestApps = false) //ignore the state of the scheduler
       plan <- deploy(current)
-      actualState <- root //the update could take a long time, so we apply the change to the current state
-      storedGroup <- groupRepo.store(zkName, fn(actualState))
+      storedGroup <- groupRepo.store(zkName, plan.target)
     } yield plan
 
     deployment.onComplete {

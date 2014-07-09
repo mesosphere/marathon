@@ -28,7 +28,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     */
   @GET
   @Timed
-  def root(): Group = result(groupManager.root)
+  def root(): Group = result(groupManager.root())
 
   /**
     * Get a specific group, optionally with specific version

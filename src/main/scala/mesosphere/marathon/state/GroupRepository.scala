@@ -5,14 +5,16 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class GroupRepository(val store: PersistenceStore[Group], appRepo: AppRepository) extends EntityRepository[Group] {
 
-  def group(id: String): Future[Option[Group]] = fetch(id)
+  def group(id: String, withLatestApps: Boolean = true): Future[Option[Group]] = {
+    if (withLatestApps) fetchWithLatestApp(id) else this.store.fetch(id)
+  }
 
   def group(id: String, version: Timestamp): Future[Option[Group]] = entity(id, version)
 
-  override def currentVersion(id: String): Future[Option[Group]] = fetch(id)
+  override def currentVersion(id: String): Future[Option[Group]] = fetchWithLatestApp(id)
 
   //fetch group, while fetching latest app definitions from app repository
-  private def fetch(key: String): Future[Option[Group]] = {
+  private def fetchWithLatestApp(key: String): Future[Option[Group]] = {
     this.store.fetch(key).flatMap {
       case Some(group) =>
         Future.sequence(group.transitiveApps.map(app => appRepo.currentVersion(app.id))).map { apps =>
