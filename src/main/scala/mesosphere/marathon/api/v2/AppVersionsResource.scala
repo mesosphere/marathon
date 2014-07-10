@@ -9,7 +9,7 @@ import org.apache.log4j.Logger
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))

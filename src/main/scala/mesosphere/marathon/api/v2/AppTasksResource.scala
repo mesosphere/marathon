@@ -8,12 +8,12 @@ import com.codahale.metrics.annotation.Timed
 import org.apache.log4j.Logger
 
 import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.api.{EndpointsHelper, RestResource}
+import mesosphere.marathon.api.{ EndpointsHelper, RestResource }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{GroupManager, PathId}
+import mesosphere.marathon.state.{ GroupManager, PathId }
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
 /**
   * @author Tobi Knaup
@@ -94,7 +94,8 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
         service.killTasks(pathId, Seq(task), scale)
         ok(Map("task" -> task))
       }
-    } else {
+    }
+    else {
       unknownApp(pathId)
     }
   }

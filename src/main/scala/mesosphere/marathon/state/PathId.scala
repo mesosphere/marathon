@@ -41,7 +41,7 @@ case class PathId(path: List[String], absolute: Boolean = true) {
     require(base.absolute, "Base path is not absolute, canonical path can not be computed!")
     def in(remaining: List[String], result: List[String] = Nil): List[String] = remaining match {
       case head :: tail if head == "."  => in(tail, result)
-      case head :: tail if head == ".." => in(tail, result.tail)
+      case head :: tail if head == ".." => in(tail, if (result.nonEmpty) result.tail else Nil)
       case head :: tail                 => in(tail, head :: result)
       case Nil                          => result.reverse
     }

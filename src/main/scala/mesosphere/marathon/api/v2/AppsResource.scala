@@ -1,5 +1,6 @@
 package mesosphere.marathon.api.v2
 
+import java.net.URI
 import javax.inject.{ Inject, Named }
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
@@ -46,8 +47,8 @@ class AppsResource @Inject() (
     requireValid(checkApp(app, baseId.parent))
     maybePostEvent(req, app)
     val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
-    result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
-    created(baseId.toString)
+    val deployment = result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
+    deploymentResult(deployment, Response.created(new URI(baseId.toString)))
   }
 
   @GET
@@ -88,8 +89,8 @@ class AppsResource @Inject() (
         val update = updateWithId.version.flatMap(v => service.getApp(appId, v)).orElse(Some(updateWithId(app)))
         val response = update.map { updatedApp =>
           maybePostEvent(req, updatedApp)
-          result(groupManager.updateApp(appId, _ => updatedApp, updatedApp.version, force))
-          noContent
+          val deployment = result(groupManager.updateApp(appId, _ => updatedApp, updatedApp.version, force))
+          deploymentResult(deployment)
         }
         response.getOrElse(unknownApp(appId, updateWithId.version))
 
@@ -112,8 +113,8 @@ class AppsResource @Inject() (
         case None     => group
       }
     }
-    result(groupManager.update(PathId.empty, updateGroup, version, force))
-    noContent
+    val deployment = result(groupManager.update(PathId.empty, updateGroup, version, force))
+    deploymentResult(deployment)
   }
 
   @DELETE
@@ -124,8 +125,8 @@ class AppsResource @Inject() (
              @PathParam("id") id: String): Response = {
     val appId = id.toRootPath
     maybePostEvent(req, AppDefinition(id = appId))
-    result(groupManager.update(appId.parent, _.removeApplication(appId), force = force))
-    noContent
+    val deployment = result(groupManager.update(appId.parent, _.removeApplication(appId), force = force))
+    deploymentResult(deployment)
   }
 
   @Path("{appId:.+}/tasks")
