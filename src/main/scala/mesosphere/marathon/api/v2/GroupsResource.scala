@@ -20,8 +20,11 @@ import scala.concurrent.{ Await, Awaitable }
 class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf) extends ModelValidation {
 
   val ListApps = """^((?:.+/)|)apps$""".r
+  val ListRootApps = """^apps$""".r
   val ListVersionsRE = """^(.+)/versions$""".r
-  val GetVersionRE = """^(.+)/versions/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$""".r
+  val ListRootVersionRE = """^versions$""".r
+  val GetVersionRE = """^(.+)/versions/(.+)$""".r
+  val GetRootVersionRE = """^versions/(.+)$""".r
 
   /**
     * Get root group.
@@ -42,13 +45,16 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
     def groupResponse[T](id: PathId, fn: Group => T, version: Option[Timestamp] = None) = {
       result(version.map(groupManager.group(id, _)).getOrElse(groupManager.group(id))) match {
         case Some(group) => Response.ok(fn(group)).build()
-        case None        => Responses.unknownGroup(id)
+        case None        => Responses.unknownGroup(id, version)
       }
     }
     id match {
       case ListApps(gid)              => groupResponse(gid.toRootPath, _.transitiveApps)
+      case ListRootApps()             => groupResponse(PathId.empty, _.transitiveApps)
       case ListVersionsRE(gid)        => Response.ok(result(groupManager.versions(gid.toRootPath))).build()
+      case ListRootVersionRE()        => Response.ok(result(groupManager.versions(PathId.empty))).build()
       case GetVersionRE(gid, version) => groupResponse(gid.toRootPath, identity, version = Some(Timestamp(version)))
+      case GetRootVersionRE(version)  => groupResponse(PathId.empty, identity, version = Some(Timestamp(version)))
       case _                          => groupResponse(id.toRootPath, identity)
     }
   }
@@ -135,8 +141,9 @@ class GroupsResource @Inject() (groupManager: GroupManager, config: MarathonConf
   private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): (DeploymentPlan, PathId, Timestamp) = {
     val version = Timestamp.now()
     def groupChange(group: Group): Group = {
-      val versionChange = update.version.map { version =>
-        result(groupManager.group(id, version)).getOrElse(throw new IllegalArgumentException(s"Group $id not available in version $version"))
+      val versionChange = update.version.map { updateVersion =>
+        val versionedGroup = result(groupManager.group(id, updateVersion)).map(_.update(id, identity, version))
+        versionedGroup.getOrElse(throw new IllegalArgumentException(s"Group $id not available in version $updateVersion"))
       }
       val scaleChange = update.scaleBy.map { scale =>
         group.transitiveApps.foldLeft(group) { (changedGroup, app) =>

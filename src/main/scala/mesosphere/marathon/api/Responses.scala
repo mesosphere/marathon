@@ -11,7 +11,9 @@ import mesosphere.marathon.state.{ Timestamp, PathId }
 
 object Responses {
 
-  def unknownGroup(id: PathId): Response = notFound(s"Group '$id' does not exist")
+  def unknownGroup(id: PathId, version: Option[Timestamp] = None): Response = {
+    notFound(s"Group '$id' does not exist" + version.fold("")(v => s" in version $v"))
+  }
 
   def unknownTask(id: String): Response = notFound(s"Task '$id' does not exist")
 
