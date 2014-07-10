@@ -17,7 +17,6 @@ import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.RateLimiters
-import mesosphere.marathon.upgrade.DeploymentPlan
 import akka.event.EventStream
 import mesosphere.marathon.event.EventModule
 import akka.routing.RoundRobinRouter

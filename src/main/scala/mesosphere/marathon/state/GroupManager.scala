@@ -6,8 +6,8 @@ import akka.event.EventStream
 import com.google.inject.Singleton
 import com.google.inject.name.Named
 import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.api.v2.ModelValidation
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade._

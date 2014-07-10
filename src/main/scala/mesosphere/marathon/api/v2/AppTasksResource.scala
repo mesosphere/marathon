@@ -1,18 +1,19 @@
 package mesosphere.marathon.api.v2
 
-import javax.ws.rs._
-import com.codahale.metrics.annotation.Timed
-import javax.ws.rs.core.{ MediaType, Response }
-import mesosphere.marathon.state.{ PathId, GroupManager }
-import mesosphere.marathon.state.PathId._
 import javax.inject.Inject
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.{ Responses, EndpointsHelper }
+import javax.ws.rs._
+import javax.ws.rs.core.MediaType
+
+import com.codahale.metrics.annotation.Timed
 import org.apache.log4j.Logger
-import mesosphere.marathon.health.HealthCheckManager
-import scala.concurrent.{ Awaitable, Await }
+
 import mesosphere.marathon.api.v2.json.EnrichedTask
+import mesosphere.marathon.api.{EndpointsHelper, RestResource}
+import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{GroupManager, PathId}
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
 
 /**
   * @author Tobi Knaup
@@ -23,8 +24,8 @@ import mesosphere.marathon.api.v2.json.EnrichedTask
 class AppTasksResource @Inject() (service: MarathonSchedulerService,
                                   taskTracker: TaskTracker,
                                   healthCheckManager: HealthCheckManager,
-                                  config: MarathonConf,
-                                  groupManager: GroupManager) {
+                                  val config: MarathonConf,
+                                  groupManager: GroupManager) extends RestResource {
 
   val log = Logger.getLogger(getClass.getName)
   val GroupTasks = """^((?:.+/)|)\*$""".r
@@ -46,7 +47,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
 
     val running = matchingApps.filter(taskTracker.contains)
 
-    if (running.isEmpty) Responses.unknownApp(appId.toRootPath) else Response.ok(Map("tasks" -> tasks(running))).build
+    if (running.isEmpty) unknownApp(appId.toRootPath) else ok(Map("tasks" -> tasks(running)))
   }
 
   @GET
@@ -54,14 +55,8 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @Timed
   def indexTxt(@PathParam("appId") appId: String) = {
     val id = appId.toRootPath
-    service.getApp(id).fold(Responses.unknownApp(id)) { app =>
-      Response.ok(
-        EndpointsHelper.appsToEndpointString(
-          taskTracker,
-          Seq(app),
-          "\t"
-        )
-      ).build
+    service.getApp(id).fold(unknownApp(id)) { app =>
+      ok(EndpointsHelper.appsToEndpointString(taskTracker, Seq(app), "\t"))
     }
   }
 
@@ -79,10 +74,10 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
       }
 
       service.killTasks(id, toKill, scale)
-      Response.ok(Map("tasks" -> toKill)).build
+      ok(Map("tasks" -> toKill))
     }
     else {
-      Responses.unknownApp(id)
+      unknownApp(id)
     }
   }
 
@@ -95,15 +90,12 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
     val pathId = appId.toRootPath
     if (taskTracker.contains(pathId)) {
       val tasks = taskTracker.get(pathId)
-      tasks.find(_.getId == id).fold(Responses.unknownTask(id)) { task =>
+      tasks.find(_.getId == id).fold(unknownTask(id)) { task =>
         service.killTasks(pathId, Seq(task), scale)
-        Response.ok(Map("task" -> task)).build
+        ok(Map("task" -> task))
       }
-    }
-    else {
-      Responses.unknownApp(pathId)
+    } else {
+      unknownApp(pathId)
     }
   }
-
-  private def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 }

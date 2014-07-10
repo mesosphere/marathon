@@ -1,15 +1,17 @@
 package mesosphere.marathon.api.v1
 
-import javax.ws.rs.{ PathParam, GET, Produces, Path }
-import javax.ws.rs.core.{ Response, MediaType }
 import javax.inject.Inject
-import mesosphere.marathon.MarathonSchedulerService
+import javax.ws.rs.core.Response.Status
+import javax.ws.rs.core.{ MediaType, Response }
+import javax.ws.rs.{ GET, Path, PathParam, Produces }
+import scala.collection.JavaConverters._
+
+import com.codahale.metrics.annotation.Timed
+
+import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
-import com.codahale.metrics.annotation.Timed
-import javax.ws.rs.core.Response.Status
-import mesosphere.marathon.api.Responses
-import scala.collection.JavaConverters._
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
 /**
   * @author Tobi Knaup
@@ -18,7 +20,8 @@ import scala.collection.JavaConverters._
 @Path("v1/endpoints")
 class EndpointsResource @Inject() (
     schedulerService: MarathonSchedulerService,
-    taskTracker: TaskTracker) {
+    taskTracker: TaskTracker,
+    val config: MarathonConf) extends RestResource {
 
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
@@ -41,8 +44,8 @@ class EndpointsResource @Inject() (
   @Timed
   def endpointsForApp(@PathParam("id") id: String): Response = {
     schedulerService.getApp(id.toRootPath) match {
-      case Some(app) => Response.ok(appsToEndpointString(Seq(app))).build
-      case None      => Response.status(Status.NOT_FOUND).entity(s"App '$id' does not exist").build
+      case Some(app) => ok(appsToEndpointString(Seq(app)))
+      case None      => unknownApp(id.toRootPath)
     }
   }
 
@@ -59,9 +62,9 @@ class EndpointsResource @Inject() (
           "id" -> app.id,
           "ports" -> app.ports,
           "instances" -> instances)
-        Response.ok(body).build
+        ok(body)
       }
-      case None => Responses.unknownApp(appId)
+      case None => unknownApp(appId)
     }
   }
 

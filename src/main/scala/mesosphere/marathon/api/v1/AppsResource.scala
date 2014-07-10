@@ -8,15 +8,14 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.api.Responses
+import org.apache.log4j.Logger
+
+import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
-import org.apache.log4j.Logger
-
-import scala.concurrent.{ Await, Awaitable }
 
 /**
   * @author Tobi Knaup
@@ -28,7 +27,7 @@ class AppsResource @Inject() (
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupManager: GroupManager,
-    config: MarathonConf) {
+    val config: MarathonConf) extends RestResource {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -43,7 +42,7 @@ class AppsResource @Inject() (
     maybePostEvent(req, app)
     val withRootId = app.copy(id = app.id.canonicalPath())
     result(groupManager.updateApp(withRootId.id, _ => withRootId))
-    Response.noContent.build
+    noContent
   }
 
   @POST
@@ -53,7 +52,7 @@ class AppsResource @Inject() (
     maybePostEvent(req, app)
     val appId = app.id.canonicalPath()
     result(groupManager.update(appId.parent, _.removeApplication(appId)))
-    Response.noContent.build
+    noContent
   }
 
   @POST
@@ -62,7 +61,7 @@ class AppsResource @Inject() (
   def scale(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
     maybePostEvent(req, app)
     result(groupManager.updateApp(app.id.canonicalPath(), _.copy(instances = app.instances)))
-    Response.noContent.build
+    noContent
   }
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) {
@@ -91,12 +90,10 @@ class AppsResource @Inject() (
     if (taskTracker.contains(pathId)) {
       val tasks = taskTracker.get(pathId)
       val result = Map(appId -> tasks)
-      Response.ok(result).build
+      ok(result)
     }
     else {
-      Responses.unknownApp(pathId)
+      unknownApp(pathId)
     }
   }
-
-  private def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 }

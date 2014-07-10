@@ -1,6 +1,5 @@
 package mesosphere.marathon.api.v2
 
-import java.net.URI
 import javax.inject.{ Inject, Named }
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
@@ -8,16 +7,15 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.api.Responses
+
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.{ ModelValidation, RestResource }
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
-
-import scala.concurrent.{ Await, Awaitable }
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -27,8 +25,8 @@ class AppsResource @Inject() (
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
-    config: MarathonConf,
-    groupManager: GroupManager) extends ModelValidation {
+    val config: MarathonConf,
+    groupManager: GroupManager) extends RestResource with ModelValidation {
 
   val ListApps = """^((?:.+/)|)\*$""".r
 
@@ -49,7 +47,7 @@ class AppsResource @Inject() (
     maybePostEvent(req, app)
     val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
     result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
-    Response.created(new URI(s"$baseId")).build
+    created(baseId.toString)
   }
 
   @GET
@@ -59,11 +57,11 @@ class AppsResource @Inject() (
     def transitiveApps(gid: PathId) = {
       val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
       val withTasks = apps.map(_.withTasks(taskTracker))
-      Response.ok(Map("*" -> withTasks)).build()
+      ok(Map("*" -> withTasks))
     }
     def app() = service.getApp(id.toRootPath) match {
-      case Some(app) => Response.ok(Map("app" -> app.withTasks(taskTracker))).build
-      case None      => Responses.unknownApp(id.toRootPath)
+      case Some(app) => ok(Map("app" -> app.withTasks(taskTracker)))
+      case None      => unknownApp(id.toRootPath)
     }
     id match {
       case ListApps(gid) => transitiveApps(gid.toRootPath)
@@ -91,9 +89,9 @@ class AppsResource @Inject() (
         val response = update.map { updatedApp =>
           maybePostEvent(req, updatedApp)
           result(groupManager.updateApp(appId, _ => updatedApp, updatedApp.version, force))
-          Response.noContent.build
+          noContent
         }
-        response.getOrElse(Responses.unknownApp(appId, updateWithId.version))
+        response.getOrElse(unknownApp(appId, updateWithId.version))
 
       case None => create(req, updateWithId(AppDefinition(appId)), force)
     }
@@ -115,7 +113,7 @@ class AppsResource @Inject() (
       }
     }
     result(groupManager.update(PathId.empty, updateGroup, version, force))
-    Response.noContent.build
+    noContent
   }
 
   @DELETE
@@ -127,19 +125,17 @@ class AppsResource @Inject() (
     val appId = id.toRootPath
     maybePostEvent(req, AppDefinition(id = appId))
     result(groupManager.update(appId.parent, _.removeApplication(appId), force = force))
-    Response.noContent.build
+    noContent
   }
 
   @Path("{appId:.+}/tasks")
   def appTasksResource() = new AppTasksResource(service, taskTracker, healthCheckManager, config, groupManager)
 
   @Path("{appId:.+}/versions")
-  def appVersionsResource() = new AppVersionsResource(service)
+  def appVersionsResource() = new AppVersionsResource(service, config)
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
-
-  private def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 
   private def search(cmd: String, id: String): Iterable[AppDefinition] = {
     /** Returns true iff `a` is a prefix of `b`, case-insensitively */

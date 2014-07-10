@@ -5,7 +5,7 @@ import javax.validation.Validation
 import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.ServiceDefinition
-import mesosphere.marathon.api.v2.ModelValidation
+import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.CommandInfo
