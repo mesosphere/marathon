@@ -135,13 +135,13 @@ difficult situation!
 ### Running in Production Mode
 
 To launch Marathon in *production mode*, you need to have both
-[Zookeeper][Zookeeper] and Mesos running. The following command launches
+[ZooKeeper][ZooKeeper] and Mesos running. The following command launches
 Marathon on Mesos in *production mode*. Point your web browser to
 `localhost:8080` and you should see the Marathon UI.
 
     ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
 
-Marathon uses `--master` to find the Mesos masters, and `--zk` to find Zookeepers
+Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeepers
 for storing state. They are separate options because Mesos masters can be
 discovered in other ways as well.
 
@@ -149,7 +149,7 @@ discovered in other ways as well.
 
 Mesos local mode allows you to run Marathon without launching a full Mesos
 cluster. It is meant for experimentation and not recommended for production
-use. Note that you still need to run Zookeeper for storing state. The following
+use. Note that you still need to run ZooKeeper for storing state. The following
 command launches Marathon on Mesos in *local mode*. Point your web browser to
 `http://localhost:8080`, and you should see the Marathon UI.
 
