@@ -14,6 +14,6 @@ class QueueResource @Inject() (taskQueue: TaskQueue) {
   @Timed
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index() = {
-    Map("queue" -> taskQueue.queue)
+    Map("queue" -> taskQueue.list)
   }
 }

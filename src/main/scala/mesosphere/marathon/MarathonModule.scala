@@ -25,7 +25,6 @@ import mesosphere.marathon.health.{
   DelegatingHealthCheckManager
 }
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.RateLimiters
 
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
@@ -63,8 +62,6 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
       .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
 
-    val rateLimiters = new RateLimiters()
-    bind(classOf[RateLimiters]).toInstance(rateLimiters)
   }
 
   @Provides
