@@ -100,15 +100,8 @@ trait ModelValidation extends BeanValidation {
   }
 
   def healthErrors[T](t: T, upgradeStrategy: UpgradeStrategy, path: String)(implicit ct: ClassTag[T]) = {
-    val capacityErrors = {
-      if (upgradeStrategy.minimumHealthCapacity < 0) Some("is less than 0")
-      else if (upgradeStrategy.minimumHealthCapacity > 1) Some("is greater than 1")
-      else None
-    } map { violation(t, upgradeStrategy, path + ".minimumHealthCapacity", _) }
-    val scalingErrors = upgradeStrategy.maximumRunningFactor.collect {
-      case x if x < 1                                      => "is less than 1"
-      case x if x <= upgradeStrategy.minimumHealthCapacity => "is less than or equal to minimumHealthCapacity"
-    } map { violation(t, upgradeStrategy, path + ".maximumRunningFactor", _) }
-    capacityErrors ++ scalingErrors
-  }
+    if (upgradeStrategy.minimumHealthCapacity < 0) Some("is less than 0")
+    else if (upgradeStrategy.minimumHealthCapacity > 1) Some("is greater than 1")
+    else None
+  } map { violation(t, upgradeStrategy, path + ".minimumHealthCapacity", _) }
 }

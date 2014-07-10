@@ -114,7 +114,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   test("Deployment") {
     val probe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5, None), version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
     val appNew = app.copy(cmd = "cmd new", version = Timestamp(1000))
@@ -137,7 +137,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   test("Deployment fail to acquire lock") {
     val probe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5, None), version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
     val appNew = app.copy(cmd = "cmd new", version = Timestamp(1000))

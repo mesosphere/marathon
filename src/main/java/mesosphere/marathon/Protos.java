@@ -9591,16 +9591,6 @@ public final class Protos {
      * <code>required double minimumHealthCapacity = 1;</code>
      */
     double getMinimumHealthCapacity();
-
-    // optional double maximumRunningFactor = 2;
-    /**
-     * <code>optional double maximumRunningFactor = 2;</code>
-     */
-    boolean hasMaximumRunningFactor();
-    /**
-     * <code>optional double maximumRunningFactor = 2;</code>
-     */
-    double getMaximumRunningFactor();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.UpgradeStrategyDefinition}
@@ -9656,11 +9646,6 @@ public final class Protos {
             case 9: {
               bitField0_ |= 0x00000001;
               minimumHealthCapacity_ = input.readDouble();
-              break;
-            }
-            case 17: {
-              bitField0_ |= 0x00000002;
-              maximumRunningFactor_ = input.readDouble();
               break;
             }
           }
@@ -9719,25 +9704,8 @@ public final class Protos {
       return minimumHealthCapacity_;
     }
 
-    // optional double maximumRunningFactor = 2;
-    public static final int MAXIMUMRUNNINGFACTOR_FIELD_NUMBER = 2;
-    private double maximumRunningFactor_;
-    /**
-     * <code>optional double maximumRunningFactor = 2;</code>
-     */
-    public boolean hasMaximumRunningFactor() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    /**
-     * <code>optional double maximumRunningFactor = 2;</code>
-     */
-    public double getMaximumRunningFactor() {
-      return maximumRunningFactor_;
-    }
-
     private void initFields() {
       minimumHealthCapacity_ = 0D;
-      maximumRunningFactor_ = 0D;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -9758,9 +9726,6 @@ public final class Protos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeDouble(1, minimumHealthCapacity_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeDouble(2, maximumRunningFactor_);
-      }
       getUnknownFields().writeTo(output);
     }
 
@@ -9773,10 +9738,6 @@ public final class Protos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeDoubleSize(1, minimumHealthCapacity_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeDoubleSize(2, maximumRunningFactor_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -9896,8 +9857,6 @@ public final class Protos {
         super.clear();
         minimumHealthCapacity_ = 0D;
         bitField0_ = (bitField0_ & ~0x00000001);
-        maximumRunningFactor_ = 0D;
-        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -9930,10 +9889,6 @@ public final class Protos {
           to_bitField0_ |= 0x00000001;
         }
         result.minimumHealthCapacity_ = minimumHealthCapacity_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.maximumRunningFactor_ = maximumRunningFactor_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -9952,9 +9907,6 @@ public final class Protos {
         if (other == mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance()) return this;
         if (other.hasMinimumHealthCapacity()) {
           setMinimumHealthCapacity(other.getMinimumHealthCapacity());
-        }
-        if (other.hasMaximumRunningFactor()) {
-          setMaximumRunningFactor(other.getMaximumRunningFactor());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -10016,39 +9968,6 @@ public final class Protos {
       public Builder clearMinimumHealthCapacity() {
         bitField0_ = (bitField0_ & ~0x00000001);
         minimumHealthCapacity_ = 0D;
-        onChanged();
-        return this;
-      }
-
-      // optional double maximumRunningFactor = 2;
-      private double maximumRunningFactor_ ;
-      /**
-       * <code>optional double maximumRunningFactor = 2;</code>
-       */
-      public boolean hasMaximumRunningFactor() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      /**
-       * <code>optional double maximumRunningFactor = 2;</code>
-       */
-      public double getMaximumRunningFactor() {
-        return maximumRunningFactor_;
-      }
-      /**
-       * <code>optional double maximumRunningFactor = 2;</code>
-       */
-      public Builder setMaximumRunningFactor(double value) {
-        bitField0_ |= 0x00000002;
-        maximumRunningFactor_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional double maximumRunningFactor = 2;</code>
-       */
-      public Builder clearMaximumRunningFactor() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        maximumRunningFactor_ = 0D;
         onChanged();
         return this;
       }
@@ -11735,14 +11654,14 @@ public final class Protos {
       "\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\")\n\020Even" +
       "tSubscribers\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016S" +
       "torageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 " +
-      "\002(\r\022\r\n\005patch\030\003 \002(\r\"X\n\031UpgradeStrategyDef" +
-      "inition\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\034" +
-      "\n\024maximumRunningFactor\030\002 \001(\001\"\260\001\n\017GroupDe" +
-      "finition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n",
-      "\004apps\030\003 \003(\0132&.mesosphere.marathon.Servic" +
-      "eDefinition\0224\n\006groups\030\004 \003(\0132$.mesosphere" +
-      ".marathon.GroupDefinition\022\024\n\014dependencie" +
-      "s\030\005 \003(\tB\035\n\023mesosphere.marathonB\006Protos"
+      "\002(\r\022\r\n\005patch\030\003 \002(\r\":\n\031UpgradeStrategyDef" +
+      "inition\022\035\n\025minimumHealthCapacity\030\001 \002(\001\"\260" +
+      "\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versio" +
+      "n\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere.marat",
+      "hon.ServiceDefinition\0224\n\006groups\030\004 \003(\0132$." +
+      "mesosphere.marathon.GroupDefinition\022\024\n\014d" +
+      "ependencies\030\005 \003(\tB\035\n\023mesosphere.marathon" +
+      "B\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11802,7 +11721,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_UpgradeStrategyDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_UpgradeStrategyDefinition_descriptor,
-              new java.lang.String[] { "MinimumHealthCapacity", "MaximumRunningFactor", });
+              new java.lang.String[] { "MinimumHealthCapacity", });
           internal_static_mesosphere_marathon_GroupDefinition_descriptor =
             getDescriptor().getMessageTypes().get(9);
           internal_static_mesosphere_marathon_GroupDefinition_fieldAccessorTable = new

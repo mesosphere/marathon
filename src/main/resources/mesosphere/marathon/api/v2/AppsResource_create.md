@@ -50,8 +50,7 @@ The full JSON format of an application resource is as follows:
     }],
     "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
     "upgradeStrategy": {
-        "minimumHealthCapacity": 0.5,
-        "maximumRunningFactor": 2.0
+        "minimumHealthCapacity": 0.5
     },
     "version": "2014-03-01T23:29:30.158Z"
 }

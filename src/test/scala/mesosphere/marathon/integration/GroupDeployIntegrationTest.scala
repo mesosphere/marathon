@@ -69,7 +69,7 @@ class GroupDeployIntegrationTest
       val missing = marathon.deleteGroup("does_not_exist".toRootPath)
     }
 
-    Then("We get a 404 http resonse code")
+    Then("We get a 404 http response code")
     result.response.status.intValue should be(404)
   }
 
@@ -164,7 +164,7 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val id = "test".toRootPath
     val appId = id / "app"
-    val proxy = appProxy(appId, "v1", 2).copy(upgradeStrategy = UpgradeStrategy(1, None))
+    val proxy = appProxy(appId, "v1", 2).copy(upgradeStrategy = UpgradeStrategy(1))
     val group = GroupUpdate(id, Set(proxy))
     val create = marathon.createGroup(group)
     waitForChange(create)

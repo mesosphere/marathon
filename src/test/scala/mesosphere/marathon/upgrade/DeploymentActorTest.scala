@@ -143,7 +143,7 @@ class DeploymentActorTest
   test("Restart app") {
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5, None), version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
     val appNew = app.copy(cmd = "cmd new", version = Timestamp(1000))

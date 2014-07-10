@@ -11,26 +11,18 @@ import org.jgrapht.traverse.TopologicalOrderIterator
 
 import scala.collection.JavaConversions._
 
-case class UpgradeStrategy(
-    minimumHealthCapacity: Double,
-    maximumRunningFactor: Option[Double]) {
+case class UpgradeStrategy(minimumHealthCapacity: Double) {
 
   def toProto: UpgradeStrategyDefinition = {
-    val strategy = UpgradeStrategyDefinition.newBuilder()
+    UpgradeStrategyDefinition.newBuilder()
       .setMinimumHealthCapacity(minimumHealthCapacity)
-    maximumRunningFactor.foreach(strategy.setMaximumRunningFactor)
-    strategy.build()
+      .build()
   }
 }
 
 object UpgradeStrategy {
-  def empty: UpgradeStrategy = UpgradeStrategy(1, None)
-  def fromProto(upgradeStrategy: UpgradeStrategyDefinition) = {
-    UpgradeStrategy(
-      upgradeStrategy.getMinimumHealthCapacity,
-      if (upgradeStrategy.hasMaximumRunningFactor) Some(upgradeStrategy.getMaximumRunningFactor) else None
-    )
-  }
+  def empty: UpgradeStrategy = UpgradeStrategy(1)
+  def fromProto(upgradeStrategy: UpgradeStrategyDefinition) = UpgradeStrategy(upgradeStrategy.getMinimumHealthCapacity)
 }
 
 case class Group(
