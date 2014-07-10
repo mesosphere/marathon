@@ -4,7 +4,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 
 import mesosphere.util.ThreadPoolContext.context
 import scala.concurrent.Future
-class AppRepository(val store: PersistenceStore[AppDefinition]) extends EntityRepository[AppDefinition] {
+class AppRepository(val store: PersistenceStore[AppDefinition], val maxVersions: Option[Int] = None) extends EntityRepository[AppDefinition] {
 
   def allPathIds(): Future[Iterable[PathId]] = allIds().map(_.map(PathId.fromSafePath))
 

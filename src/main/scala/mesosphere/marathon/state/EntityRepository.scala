@@ -1,13 +1,14 @@
 package mesosphere.marathon.state
 
-import scala.concurrent.duration.{ Duration, SECONDS }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
 import mesosphere.marathon.StorageException
 
 trait EntityRepository[T <: MarathonState[_, T]] {
 
   def store: PersistenceStore[T]
+  def maxVersions: Option[Int]
 
   protected val ID_DELIMITER = ":"
 
@@ -71,10 +72,20 @@ trait EntityRepository[T <: MarathonState[_, T]] {
       Future.sequence(currentDeleteResult +: versionsDeleteResult.toSeq)
     }
 
+  def limitNumberOfVersions(id: String): Future[Iterable[Boolean]] = {
+    val maximum = maxVersions.map { maximum =>
+      listVersions(id).flatMap { versions =>
+        Future.sequence(versions.drop(maximum).map(version => store.expunge(id + ID_DELIMITER + version)))
+      }
+    }
+    maximum.getOrElse(Future.successful(Nil))
+  }
+
   protected def storeWithVersion(id: String, version: Timestamp, t: T): Future[T] = {
     for {
       alias <- this.store.store(id, t) if alias.isDefined
       result <- this.store.store(id + ID_DELIMITER + version, t)
+      limit <- limitNumberOfVersions(id)
     } yield result.getOrElse(throw new StorageException(s"Can not persist $t"))
   }
 }

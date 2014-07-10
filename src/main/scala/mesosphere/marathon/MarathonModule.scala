@@ -125,14 +125,14 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideAppRepository(state: State): AppRepository = new AppRepository(
-    new MarathonStore[AppDefinition](state, () => AppDefinition.apply())
+  def provideAppRepository(state: State, conf: MarathonConf): AppRepository = new AppRepository(
+    new MarathonStore[AppDefinition](state, () => AppDefinition.apply()), conf.zooKeeperMaxVersions.get
   )
 
   @Provides
   @Singleton
-  def provideGroupRepository(state: State, appRepository: AppRepository): GroupRepository = new GroupRepository(
-    new MarathonStore[Group](state, () => Group.empty, "group:"), appRepository
+  def provideGroupRepository(state: State, appRepository: AppRepository, conf: MarathonConf): GroupRepository = new GroupRepository(
+    new MarathonStore[Group](state, () => Group.empty, "group:"), appRepository, conf.zooKeeperMaxVersions.get
   )
 
   @Provides

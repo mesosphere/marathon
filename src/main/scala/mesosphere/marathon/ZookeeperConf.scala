@@ -34,6 +34,10 @@ trait ZookeeperConf extends ScallopConf {
     validate = (in) => zkURLPattern.pattern.matcher(in).matches()
   )
 
+  val zooKeeperMaxVersions = opt[Int]("zk_max_versions",
+    descr = "Limit the number of versions, stored for one entity."
+  )
+
   //do not allow mixing of hostState and url
   conflicts(zooKeeperHostString, List(zooKeeperUrl))
   conflicts(zooKeeperPath, List(zooKeeperUrl))
