@@ -51,8 +51,10 @@ class TaskBuilder(app: AppDefinition,
       Executor.dispatch(app.executor)
     }
 
-    TaskBuilder.getPorts(offer, app.ports.size).map { portsResource =>
-      val ports = portsResource.ranges.flatMap(_.asScala())
+    val appPorts = app.ports.map(p => p: Int)
+
+    TaskBuilder.getPorts(offer, appPorts).map { portsResource =>
+      val ports = portsResource.ranges.flatMap(_.asScala)
 
       val taskId = newTaskId(app.id)
       val builder = TaskInfo.newBuilder
@@ -204,31 +206,21 @@ object TaskBuilder {
     builder.build()
   }
 
-  def getPorts(offer: Offer, numPorts: Int): Option[RangesResource] = {
+  def getPorts(offer: Offer, appPorts: Seq[Int]): Option[RangesResource] = {
     offer.getResourcesList.asScala
       .find(_.getName == Resource.PORTS)
-      .flatMap(getPorts(_, numPorts))
+      .flatMap(getPorts(_, appPorts))
   }
 
   def getPorts(resource: org.apache.mesos.Protos.Resource,
-               numPorts: Int): Option[RangesResource] = {
-    if (numPorts == 0) {
+               appPorts: Seq[Int]): Option[RangesResource] = {
+    if (appPorts.isEmpty) {
       return Some(RangesResource(Resource.PORTS, Nil))
     }
 
-    val ranges = Random.shuffle(resource.getRanges.getRangeList.asScala)
-    for (range <- ranges) {
-      // TODO use multiple ranges if one is not enough
-      if (range.getEnd - range.getBegin + 1 >= numPorts) {
-        val maxOffset = (range.getEnd - range.getBegin - numPorts + 2).toInt
-        val firstPort = range.getBegin.toInt + Random.nextInt(maxOffset)
-        val rangeProto = protos.Range(firstPort, firstPort + numPorts - 1)
-        return Some(
-          RangesResource(Resource.PORTS, Seq(rangeProto), resource.getRole)
-        )
-      }
+    getAppPorts(resource, appPorts).orElse {
+      getRandomPorts(resource, appPorts)
     }
-    None
   }
 
   def portsEnv(ports: Seq[Long]): scala.collection.Map[String, String] = {
@@ -245,5 +237,40 @@ object TaskBuilder {
     env += ("PORT" -> ports.head.toString)
     env += ("PORTS" -> ports.mkString(","))
     env
+  }
+
+  private def getAppPorts(resource: org.apache.mesos.Protos.Resource,
+                          appPorts: Seq[Int]): Option[RangesResource] = {
+    // Does the range contain all app ports?
+    resource.getRanges.getRangeList.asScala.find { range =>
+      appPorts.forall(port => range.getBegin <= port && range.getEnd >= port)
+    }.map { range =>
+      // Monotonically increasing ports
+      val sortedPorts = appPorts.sorted
+      if (sortedPorts.head + sortedPorts.size - 1 == sortedPorts.last) {
+        RangesResource(Resource.PORTS, Seq(protos.Range(appPorts.head, appPorts.last)))
+      }
+      else {
+        val portRanges = appPorts.map(p => protos.Range(p, p))
+        RangesResource(Resource.PORTS, portRanges)
+      }
+    }
+  }
+
+  private def getRandomPorts(resource: org.apache.mesos.Protos.Resource,
+                             appPorts: Seq[Int]): Option[RangesResource] = {
+    val ranges = Random.shuffle(resource.getRanges.getRangeList.asScala)
+    for (range <- ranges) {
+      // TODO use multiple ranges if one is not enough
+      if (range.getEnd - range.getBegin + 1 >= appPorts.length) {
+        val maxOffset = (range.getEnd - range.getBegin - appPorts.length + 2).toInt
+        val firstPort = range.getBegin.toInt + Random.nextInt(maxOffset)
+        val rangeProto = protos.Range(firstPort, firstPort + appPorts.length - 1)
+        return Some(
+          RangesResource(Resource.PORTS, Seq(rangeProto), resource.getRole)
+        )
+      }
+    }
+    None
   }
 }
