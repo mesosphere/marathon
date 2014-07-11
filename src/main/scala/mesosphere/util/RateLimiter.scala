@@ -8,9 +8,13 @@ import scala.concurrent.duration.{
 }
 import scala.util.Try
 
+import org.apache.log4j.Logger
+
 import mesosphere.marathon.api.v1.AppDefinition
 
 class RateLimiter {
+
+  private val log = Logger.getLogger(getClass.getName)
 
   protected case class Delay(
     current: FiniteDuration,
@@ -31,11 +35,17 @@ class RateLimiter {
         durations(app.launchDelay, app.launchDelayFactor)
       )
     }
+
+    log.info(s"Task launch delay for [${app.id}] is now [${newDelay.current.toSeconds}] seconds")
+
     taskLaunchDelays = taskLaunchDelays + (app.id -> newDelay)
   }
 
-  def resetDelay(appId: String): Unit =
+  def resetDelay(appId: String): Unit = {
+    if (taskLaunchDelays contains appId)
+      log.info(s"Task launch delay for [${appId}] reset to zero")
     taskLaunchDelays = taskLaunchDelays - appId
+  }
 
   /**
     * Returns an infinite lazy stream of exponentially increasing durations.

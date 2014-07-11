@@ -2,10 +2,14 @@ package mesosphere.util
 
 import scala.concurrent.duration.{ FiniteDuration, SECONDS }
 
+import org.apache.log4j.Logger
+
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.MarathonSpec
 
 class RateLimiterTest extends MarathonSpec {
+
+  private val log = Logger.getLogger(getClass.getName)
 
   /**
     * Returns `true` iff the supplied sequence is nondecreasing.
@@ -20,7 +24,7 @@ class RateLimiterTest extends MarathonSpec {
   test("Durations") {
     val rl = new RateLimiter()
 
-    val firstDuration = FiniteDuration(1, SECONDS)
+    val firstDuration = FiniteDuration(2, SECONDS)
 
     val ds = rl.durations(
       initial = firstDuration,
@@ -35,7 +39,11 @@ class RateLimiterTest extends MarathonSpec {
 
   test("AddDelay") {
     val rl = new RateLimiter()
-    val app = AppDefinition(id = "myApp")
+    val app = AppDefinition(
+      id = "my-app",
+      launchDelay = FiniteDuration(2, SECONDS),
+      launchDelayFactor = 2.0
+    )
 
     rl addDelay app
     val delay = rl getDelay app
@@ -44,7 +52,11 @@ class RateLimiterTest extends MarathonSpec {
 
   test("GetDelay") {
     val rl = new RateLimiter()
-    val app = AppDefinition(id = "myApp")
+    val app = AppDefinition(
+      id = "my-app",
+      launchDelay = FiniteDuration(2, SECONDS),
+      launchDelayFactor = 2.0
+    )
 
     assert(rl.getDelay(app).isOverdue)
     rl addDelay app
@@ -53,7 +65,11 @@ class RateLimiterTest extends MarathonSpec {
 
   test("ResetDelay") {
     val rl = new RateLimiter()
-    val app = AppDefinition(id = "myApp")
+    val app = AppDefinition(
+      id = "my-app",
+      launchDelay = FiniteDuration(2, SECONDS),
+      launchDelayFactor = 2.0
+    )
 
     rl addDelay app
     rl addDelay app
