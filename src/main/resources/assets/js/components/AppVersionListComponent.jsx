@@ -30,7 +30,7 @@ define([
     getInitialState: function() {
       return {
         currentPage: 0,
-        itemsPerPage: 20,
+        itemsPerPage: 10,
         noVisiblePages: 6
       };
     },
