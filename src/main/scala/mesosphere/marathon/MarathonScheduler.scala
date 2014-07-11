@@ -146,7 +146,7 @@ class MarathonScheduler @Inject() (
 
     val appId = TaskIDUtil.appID(status.getTaskId)
 
-    import TaskState.{ TASK_STAGING, TASK_RUNNING, TASK_FAILED, TASK_FINISHED, TASK_KILLED, TASK_LOST }
+    import TaskState._
 
     if (status.getState == TASK_FAILED || status.getState == TASK_LOST)
       currentAppVersion(appId).foreach {

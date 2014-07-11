@@ -1,15 +1,14 @@
 package mesosphere.util
 
-import mesosphere.marathon.api.v1.AppDefinition
-
 import scala.concurrent.duration.{
   Deadline,
   FiniteDuration,
   HOURS,
   MILLISECONDS
 }
-
 import scala.util.Try
+
+import mesosphere.marathon.api.v1.AppDefinition
 
 class RateLimiter {
 
@@ -46,7 +45,7 @@ class RateLimiter {
     *                 element in the resulting stream
     * @param limit    the maximum length of any duration in the stream
     */
-  protected[this] def durations(
+  protected[util] def durations(
     initial: FiniteDuration,
     factor: Double,
     limit: FiniteDuration = maxLaunchDelay): Iterator[FiniteDuration] =
