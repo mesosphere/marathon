@@ -218,6 +218,13 @@ class MarathonScheduler @Inject() (
     }
   }
 
+  def unhealthyTaskKilled(appId: String, taskId: String): Unit = {
+    log.warn(s"Task [$taskId] for app [$appId] was killed for failing too many health checks")
+    currentAppVersion(appId).foreach {
+      _.foreach { app => taskQueue.rateLimiter.addDelay(app) }
+    }
+  }
+
   override def disconnected(driver: SchedulerDriver) {
     log.warn("Disconnected")
 
