@@ -34,7 +34,7 @@
         }
       }.bind(this);
       options.success = function(model, response) {
-        this.validationError = [];
+        this.clearValidation();
         if (_.isFunction(successCallback)) {
           successCallback(model, response);
         }

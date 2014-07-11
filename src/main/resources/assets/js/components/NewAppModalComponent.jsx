@@ -105,19 +105,17 @@ define([
       var model = this.state.model;
       var collection = this.props.collection;
 
-      var errors;
-      var errorBlock;
+      var errors = [];
+
       if (collection.validationError != null) {
         errors = collection.validationError.filter(function(e) {
           return (e.attribute === "general");
         });
       }
 
-      if (errors != null && errors.length > 0) {
-        errorBlock = errors.map(function(error, i) {
-          return <p key={i} className="text-danger"><strong>{error.message}</strong></p>;
-        });
-      }
+      var errorBlock = errors.map(function(error, i) {
+        return <p key={i} className="text-danger"><strong>{error.message}</strong></p>;
+      });
 
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
