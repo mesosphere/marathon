@@ -3,8 +3,11 @@
 define([
   "React"
 ], function(React) {
+  "use strict";
+
   return React.createClass({
     propTypes: {
+      errors: React.PropTypes.array,
       children: React.PropTypes.component.isRequired,
       model: React.PropTypes.object.isRequired
     },
@@ -28,11 +31,10 @@ define([
         });
       }
 
-      // Also check its collection for errors
-      if (this.props.model.collection != null &&
-          this.props.model.collection.validationError != null) {
+      // Also check for passed in errors
+      if (this.props.errors != null) {
         errors = errors.concat(
-          this.props.model.collection.validationError.filter(function(e) {
+          this.props.errors.filter(function(e) {
             return (e.attribute === attribute);
           })
         );

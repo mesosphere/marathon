@@ -77,8 +77,7 @@ define([
         modal: React.renderComponent(
           <NewAppModalComponent
             onCreate={this.handleAppCreate}
-            onDestroy={this.handleModalDestroy}
-            collection={this.state.collection} />,
+            onDestroy={this.handleModalDestroy} />,
           document.getElementById("lightbox"),
           function() { this.refs.appList.stopPolling(); }.bind(this)
         )

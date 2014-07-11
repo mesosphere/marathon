@@ -10,11 +10,16 @@ define([
   "jsx!components/ModalComponent"
 ], function($, _, React, BackboneMixin, App, FormGroupComponent,
       ModalComponent) {
+  "use strict";
+
+  function ValidationError(attribute, message) {
+    this.attribute = attribute;
+    this.message = message;
+  }
 
   return React.createClass({
     mixins: [BackboneMixin],
     propTypes: {
-      collection: React.PropTypes.object.isRequired,
       onCreate: React.PropTypes.func,
       onDestroy: React.PropTypes.func
     },
@@ -28,7 +33,8 @@ define([
 
     getInitialState: function() {
       return {
-        model: new App()
+        model: new App(),
+        errors: []
       };
     },
 
@@ -40,6 +46,29 @@ define([
 
     getResource: function() {
       return this.state.model;
+    },
+
+    clearValidation: function() {
+      this.setState({errors: []});
+    },
+
+    validateResponse: function(response) {
+      var errors = [];
+
+      if (response.status === 422) {
+        errors.push(
+          new ValidationError("id", "An app with this ID already exists")
+        );
+      } else if (response.status >= 500) {
+        errors.push(
+          new ValidationError("general", "Server error, could not create")
+        );
+      } else {
+        errors.push(
+          new ValidationError("general", "Creation unsuccessful")
+        );
+      }
+      this.setState({errors: errors});
     },
 
     onSubmit: function(event) {
@@ -82,19 +111,19 @@ define([
       this.state.model.set(modelAttrs);
 
       if (this.state.model.isValid()) {
-        var collection = this.props.collection;
         this.props.onCreate(
           this.state.model,
           {
             error: function(model, response) {
+              this.validateResponse(response);
               if (response.status < 300) {
+                this.clearValidation();
                 this.destroy();
-                collection.clearValidation();
               }
             }.bind(this),
             success: function() {
+              this.clearValidation();
               this.destroy();
-              collection.clearValidation();
             }.bind(this)
           }
         );
@@ -103,17 +132,14 @@ define([
 
     render: function() {
       var model = this.state.model;
-      var collection = this.props.collection;
 
-      var errors = [];
+      var errors = this.state.errors;
 
-      if (collection.validationError != null) {
-        errors = collection.validationError.filter(function(e) {
+      var generalErrors = errors.filter(function(e) {
           return (e.attribute === "general");
         });
-      }
 
-      var errorBlock = errors.map(function(error, i) {
+      var errorBlock = generalErrors.map(function(error, i) {
         return <p key={i} className="text-danger"><strong>{error.message}</strong></p>;
       });
 
@@ -129,7 +155,8 @@ define([
               <FormGroupComponent
                   attribute="id"
                   label="ID"
-                  model={model}>
+                  model={model}
+                  errors={errors}>
                 <input
                   autoFocus
                   pattern={App.VALID_ID_PATTERN}
@@ -139,25 +166,29 @@ define([
               <FormGroupComponent
                   attribute="cpus"
                   label="CPUs"
-                  model={model}>
+                  model={model}
+                  errors={errors}>
                 <input min="0" step="any" type="number" required />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="mem"
                   label="Memory (MB)"
-                  model={model}>
+                  model={model}
+                  errors={errors}>
                 <input min="0" step="any" type="number" required />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="disk"
                   label="Disk Space (MB)"
-                  model={model}>
+                  model={model}
+                  errors={errors}>
               <input min="0" step="any" type="number" required />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="instances"
                   label="Instances"
-                  model={model}>
+                  model={model}
+                  errors={errors}>
                 <input min="1" step="1" type="number" required />
               </FormGroupComponent>
               <hr />
@@ -165,27 +196,31 @@ define([
               <FormGroupComponent
                   attribute="cmd"
                   label="Command"
-                  model={model}>
+                  model={model}
+                  errors={errors}>
                 <textarea style={{resize: "vertical"}} />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="executor"
                   label="Executor"
-                  model={model}>
+                  model={model}
+                  errors={errors}>
                 <input />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="ports"
                   help="Comma-separated list of numbers. 0's (zeros) assign random ports. (Default: one random port)"
                   label="Ports"
-                  model={model}>
+                  model={model}
+                  errors={errors}>
                 <input />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="uris"
                   help="Comma-separated list of valid URIs."
                   label="URIs"
-                  model={model}>
+                  model={model}
+                  errors={errors}>
                 <input />
               </FormGroupComponent>
               <div>
