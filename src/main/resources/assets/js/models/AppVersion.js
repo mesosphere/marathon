@@ -1,7 +1,9 @@
 define([
   "Backbone"
 ], function(Backbone) {
-  return Backbone.Model.extend({
+  "use strict";
+
+  var AppVersion = Backbone.Model.extend({
     idAttribute: "version",
 
     initialize: function(options) {
@@ -16,4 +18,22 @@ define([
       return "/v2/apps/" + this.options.appId + "/versions/" + this.get("version");
     }
   });
+
+  // creates an AppVersion Model of an App
+  AppVersion.fromApp = function fromApp(app) {
+    var appVersion = new AppVersion();
+    appVersion.set(app.attributes);
+    // make suer date is a string
+    appVersion.set({
+      "version": appVersion.get("version").toISOString()
+    });
+    // transfer app id
+    appVersion.options = {
+      appId: app.get("id")
+    };
+
+    return appVersion;
+  };
+
+  return AppVersion;
 });

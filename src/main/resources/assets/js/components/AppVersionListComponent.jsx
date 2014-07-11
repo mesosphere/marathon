@@ -3,11 +3,12 @@
 define([
   "React",
   "models/App",
+  "models/AppVersion",
   "mixins/BackboneMixin",
   "jsx!components/AppVersionListItemComponent",
   "jsx!components/PagedNavComponent",
   "jsx!components/PagedContentComponent",
-], function(React, App, BackboneMixin, AppVersionListItemComponent,
+], function(React, App, AppVersion, BackboneMixin, AppVersionListItemComponent,
     PagedNavComponent, PagedContentComponent) {
   "use strict";
 
@@ -57,7 +58,7 @@ define([
           <div>
             <AppVersionListItemComponent
               app={this.props.app}
-              appVersion={this.props.app}
+              appVersion={AppVersion.fromApp(this.props.app)}
               currentVersion={true} />
             <PagedContentComponent
               currentPage={currentPage}
