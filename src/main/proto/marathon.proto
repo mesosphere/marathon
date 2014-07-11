@@ -50,10 +50,12 @@ message ServiceDefinition {
   repeated uint32 ports = 6;
   repeated Constraint constraints = 7;
   required string executor = 8 [default = ""];
-  optional double taskRateLimit = 9 [default = 1];
+  // optional double taskRateLimit = 9 [default = 1];
   optional ContainerInfo OBSOLETE_container = 10;
   optional string version = 11 [default = "1970-01-01T00:00:00.000Z"]; //a version is required since version 0.5
   repeated HealthCheckDefinition healthChecks = 12;
+  optional int64 launchDelay = 13 [default = 1000]; // stored as Millis
+  optional double launchDelayFactor = 14 [default = 1.15];
 }
 
 message MarathonTask {

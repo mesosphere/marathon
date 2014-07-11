@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.{
 }
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.{ FiniteDuration, SECONDS }
+import scala.concurrent.duration.{ FiniteDuration, SECONDS, MILLISECONDS }
 import java.lang.{ Integer => JInt, Double => JDouble }
 
 @PortIndices
@@ -85,6 +85,8 @@ case class AppDefinition(
       .setCmd(commandInfo)
       .setInstances(instances)
       .addAllPorts(ports.asJava)
+      .setLaunchDelay(launchDelay.toMillis)
+      .setLaunchDelayFactor(launchDelayFactor)
       .setExecutor(executor)
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
@@ -113,6 +115,8 @@ case class AppDefinition(
       executor = proto.getExecutor,
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
+      launchDelay = FiniteDuration(proto.getLaunchDelay, MILLISECONDS),
+      launchDelayFactor = proto.getLaunchDelayFactor,
       constraints = proto.getConstraintsList.asScala.toSet,
       cpus = resourcesMap.get(Resource.CPUS).getOrElse(this.cpus),
       mem = resourcesMap.get(Resource.MEM).getOrElse(this.mem),
