@@ -15,13 +15,17 @@ define([
       noItems: React.PropTypes.number.isRequired,
       noVisiblePages: React.PropTypes.number,
       useArrows: React.PropTypes.bool,
-      useEndArrows: React.PropTypes.bool
+      useEndArrows: React.PropTypes.bool,
+      useItemNumbers: React.PropTypes.bool,
+      usePages: React.PropTypes.bool
     },
 
     getDefaultProps: function() {
       return {
         noVisiblePages: 6,
-        itemsPerPage: 20
+        itemsPerPage: 10,
+        useArrows: true,
+        useItemNumbers: true
       };
     },
 
@@ -38,37 +42,49 @@ define([
 
     render: function() {
       var noItems = this.props.noItems;
+      var itemsPerPage = this.props.itemsPerPage;
+
       var currentPage = this.props.currentPage;
       var pageNumber = 0;
       var pagesOnEachSide = Math.floor(this.props.noVisiblePages/2);
       var noPages = Math.ceil(noItems / this.props.itemsPerPage);
-      var lowerBound = Math.max(0, currentPage - pagesOnEachSide);
-      var upperBound = Math.min(noPages, currentPage + pagesOnEachSide);
+
+      var pageLBound = Math.max(0, currentPage - pagesOnEachSide);
+      var pageUBound = Math.min(noPages, currentPage + pagesOnEachSide);
+
       if (currentPage < pagesOnEachSide) {
-        upperBound += pagesOnEachSide - currentPage;
+        pageUBound += pagesOnEachSide - currentPage;
       }
       if (noPages < currentPage + pagesOnEachSide) {
-        lowerBound -= currentPage + pagesOnEachSide - noPages;
+        pageLBound -= currentPage + pagesOnEachSide - noPages;
       }
       var pagination = [];
-      for (var i = 0; i < noItems; i++) {
-        // create a page per each number of items on a single page
-        if (i % this.props.itemsPerPage === 0) {
-          // only draw those within the bounds
-          if (pageNumber >= lowerBound && pageNumber <= upperBound) {
-            pagination.push(
-              <li className={pageNumber === currentPage ? "success disabled" : ""}
-                  key={pageNumber}>
-                <a href="#"
-                  onClick={this.handlePageChange.bind(this, pageNumber)}>
-                  {pageNumber + 1}
-                </a>
-              </li>
-            );
+      if (this.props.usePages) {
+        for (var i = 0; i < noItems; i++) {
+          // create a page per each number of items on a single page
+          if (i % itemsPerPage === 0) {
+            // only draw those within the bounds
+            if (pageNumber >= pageLBound && pageNumber <= pageUBound) {
+              pagination.push(
+                <li className={pageNumber === currentPage ? "success disabled" : ""}
+                    key={pageNumber}>
+                  <a href="#"
+                    onClick={this.handlePageChange.bind(this, pageNumber)}>
+                    {pageNumber + 1}
+                  </a>
+                </li>
+              );
+            }
+            pageNumber++;
           }
-          pageNumber++;
         }
       }
+      var itemsLBound = currentPage * itemsPerPage;
+      var itemsUBound = Math.min(currentPage * itemsPerPage + itemsPerPage, noItems);
+      var itemNumbers =
+        this.props.useItemNumbers ?
+          <div className="itemNumbers pull-left">{itemsLBound}-{itemsUBound} of {noItems}</div> :
+          null;
 
       var leftArrowsClassSet = React.addons.classSet({
         "disabled": currentPage === 0
@@ -112,13 +128,16 @@ define([
           null;
 
       return (
-        <ul className="pagination pagination-sm pagination-unstyled">
-          {leftEndArrow}
-          {leftArrow}
-          {pagination}
-          {rightArrow}
-          {rightEndArrow}
-        </ul>
+        <div>
+          <ul className="pagination pagination-sm pagination-unstyled">
+            {leftEndArrow}
+            {leftArrow}
+            {pagination}
+            {rightArrow}
+            {rightEndArrow}
+          </ul>
+          {itemNumbers}
+        </div>
       );
     }
   });

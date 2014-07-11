@@ -411,6 +411,11 @@ fieldset[disabled] .btn-info.active {
   margin-bottom: 0;
 }
 
+.itemNumbers {
+  padding: 5px 10px;
+  margin: 0 0 10px;
+}
+
 .pagination > li > a,
 .pagination > li > span {
   color: #f6f6f6;
