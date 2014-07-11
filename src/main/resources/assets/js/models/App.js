@@ -100,30 +100,6 @@ define([
       }
       return null;
     },
-    hasSaveError: function(obj, response) {
-      if(this.validationError == null) {
-        this.validationError = [];
-      }
-      // handling success as well
-      if (response.status < 300) {
-        return false;
-      } else if (response.status === 422) {
-        this.validationError.push(
-          new ValidationError("id", "An app with this ID already exists")
-        );
-        return true;
-      } else if (response.status >= 500) {
-        this.validationError.push(
-          new ValidationError("general", "Server error, could not create")
-        );
-        return true;
-      } else {
-        this.validationError.push(
-          new ValidationError("general", "Creation unsuccessful")
-        );
-        return true;
-      }
-    },
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
      * "version" value, which when sent prevents any other attributes from being
@@ -211,7 +187,6 @@ define([
           );
         }
       }
-
       if (errors.length > 0) { return errors; }
     }
   }, {

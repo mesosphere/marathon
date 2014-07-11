@@ -14,8 +14,9 @@ define([
     },
 
     render: function() {
-      var errorBlock, errors, helpBlock;
+      var errorBlock, helpBlock;
 
+      var errors = [];
       var attribute = this.props.attribute;
       var className = "form-group";
       var fieldId = attribute + "-field";
@@ -27,10 +28,20 @@ define([
         });
       }
 
-      if (errors != null && errors.length > 0) {
+      // Also check its collection for errors
+      if (this.props.model.collection != null &&
+          this.props.model.collection.validationError != null) {
+        errors = errors.concat(
+          this.props.model.collection.validationError.filter(function(e) {
+            return (e.attribute === attribute);
+          })
+        );
+      }
+
+      if (errors.length > 0) {
         className += " has-error";
-        errorBlock = errors.map(function(error) {
-          return <div className="help-block"><strong>{error.message}</strong></div>;
+        errorBlock = errors.map(function(error, i) {
+          return <div key={i} className="help-block"><strong>{error.message}</strong></div>;
         });
       }
 
