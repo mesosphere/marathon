@@ -41,11 +41,48 @@ define([
 
     render: function() {
       var appVersions = this.props.appVersions.models;
+
       var itemsPerPage = this.state.itemsPerPage;
       var currentPage = this.state.currentPage;
-      // var currentVersion = this.props.appVersions.at(0);
+
       var useEndArrows =
         Math.ceil(appVersions.length / itemsPerPage) > this.state.noVisiblePages;
+
+      var content;
+
+      if (this.props.fetchState === this.props.STATES.STATE_LOADING) {
+        content = <p className="text-muted text-center">Loading versions...</p>;
+      } else if (this.props.fetchState === this.props.STATES.STATE_SUCCESS) {
+        content =
+          <div>
+            <AppVersionListItemComponent
+              app={this.props.app}
+              appVersion={this.props.app}
+              currentVersion={true} />
+            <PagedContentComponent
+              currentPage={currentPage}
+              itemsPerPage={itemsPerPage}>
+              {
+                appVersions.map(function(v, i) {
+                  if (i > 0) {
+                    return (
+                        <AppVersionListItemComponent
+                          app={this.props.app}
+                          appVersion={v}
+                          currentVersion={false}
+                          key={v.get("version")}
+                          onRollback={this.props.onRollback} />
+                    );
+                  }
+                }, this)
+              }
+            </PagedContentComponent>
+          </div>
+      } else {
+        content =
+          <p className="text-danger text-center">Error fetching app versions</p>;
+      }
+
       return (
         <div>
           <p>
@@ -79,36 +116,7 @@ define([
                 </div>
               </div>
             </div>
-              {
-                this.props.fetchState === this.props.STATES.STATE_LOADING ?
-                  <p className="text-muted text-center">Loading versions...</p> :
-                  this.props.fetchState === this.props.STATES.STATE_SUCCESS ?
-                    <div>
-                      <AppVersionListItemComponent
-                        app={this.props.app}
-                        appVersion={this.props.app}
-                        currentVersion={true} />
-                      <PagedContentComponent
-                        currentPage={currentPage}
-                        itemsPerPage={itemsPerPage}>
-                        {
-                          appVersions.map(function(v, i) {
-                            if (i > 0) {
-                              return (
-                                  <AppVersionListItemComponent
-                                    app={this.props.app}
-                                    appVersion={v}
-                                    currentVersion={false}
-                                    key={v.get("version")}
-                                    onRollback={this.props.onRollback} />
-                              );
-                            }
-                          }, this)
-                        }
-                      </PagedContentComponent>
-                    </div> :
-                    <p className="text-danger text-center">Error fetching app versions</p>
-              }
+              {content}
           </div>
         </div>
       );
