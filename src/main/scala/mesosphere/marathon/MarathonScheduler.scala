@@ -194,6 +194,13 @@ class MarathonScheduler @Inject() (
     }
   }
 
+  def unhealthyTaskKilled(appId: String, taskId: String): Unit = {
+    log.warn(s"Task [$taskId] for app [$appId] was killed for failing too many health checks")
+    currentAppVersion(appId).foreach {
+      _.foreach { app => taskQueue.rateLimiter.addDelay(app) }
+    }
+  }
+
   override def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]) {
     log.info("Received framework message %s %s %s ".format(executor, slave, message))
     eventBus.foreach(_.post(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message)))
