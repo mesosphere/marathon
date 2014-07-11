@@ -14,6 +14,7 @@ define([
   return React.createClass({
     mixins: [BackboneMixin],
     propTypes: {
+      collection: React.PropTypes.object.isRequired,
       onCreate: React.PropTypes.func,
       onDestroy: React.PropTypes.func
     },
@@ -81,16 +82,19 @@ define([
       this.state.model.set(modelAttrs);
 
       if (this.state.model.isValid()) {
+        var collection = this.props.collection;
         this.props.onCreate(
           this.state.model,
           {
-            error: function(obj, response) {
-              if (!this.state.model.hasSaveError(obj, response)) {
+            error: function(model, response) {
+              if (response.status < 300) {
                 this.destroy();
+                collection.clearValidation();
               }
             }.bind(this),
             success: function() {
               this.destroy();
+              collection.clearValidation();
             }.bind(this)
           }
         );
@@ -99,12 +103,12 @@ define([
 
     render: function() {
       var model = this.state.model;
+      var collection = this.props.collection;
 
       var errors;
       var errorBlock;
-
-      if (model.validationError != null) {
-        errors = model.validationError.filter(function(e) {
+      if (collection.validationError != null) {
+        errors = collection.validationError.filter(function(e) {
           return (e.attribute === "general");
         });
       }
