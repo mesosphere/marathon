@@ -117,6 +117,34 @@ class AppStopActorTest
     expectTerminated(ref)
   }
 
+  test("Task synchronization") {
+    val app = AppDefinition(id = PathId("app"), instances = 2)
+    val promise = Promise[Unit]()
+    val tasks = mutable.Set(marathonTask("task_a"), marathonTask("task_b"))
+
+    when(taskTracker.fetchApp(app.id))
+      .thenReturn(new TaskTracker.App(app.id, tasks, false))
+      .thenReturn(new TaskTracker.App(app.id, mutable.Set.empty, false))
+
+    val ref = system.actorOf(
+      Props(
+        new AppStopActor(
+          driver,
+          scheduler,
+          taskTracker,
+          system.eventStream,
+          app,
+          promise
+        ))
+    )
+    watch(ref)
+
+    Await.result(promise.future, 10.seconds)
+
+    verify(scheduler).stopApp(driver, app)
+    expectTerminated(ref)
+  }
+
   def marathonTask(name: String): MarathonTask = {
     MarathonTask
       .newBuilder
