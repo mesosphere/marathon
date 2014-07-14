@@ -129,7 +129,7 @@ define([
           null;
 
       return (
-        <span>
+        <div>
           {itemNumbers}
           <ul className="pagination pagination-sm pagination-unstyled">
             {leftEndArrow}
@@ -138,7 +138,7 @@ define([
             {rightArrow}
             {rightEndArrow}
           </ul>
-        </span>
+        </div>
       );
     }
   });
