@@ -96,14 +96,9 @@ class MarathonScheduler @Inject() (
         log.debug(s"Received offer $offer")
 
         val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
-        var i = 0
-        var found = false
 
-        while (i < queuedTasks.size && !found) {
-          // TODO launch multiple tasks if the offer is big enough
-          val QueuedTask(app, delay) = queuedTasks(i)
-
-          if (delay.isOverdue) {
+        val launchedTasks: Seq[QueuedTask] = queuedTasks.collect {
+          case qt @ QueuedTask(app, delay) if delay.isOverdue =>
             newTask(app, offer) match {
               case Some((task, ports)) =>
                 val taskInfos = Lists.newArrayList(task)
@@ -112,27 +107,21 @@ class MarathonScheduler @Inject() (
                 val marathonTask = MarathonTasks.makeTask(
                   task.getTaskId.getValue, offer.getHostname, ports,
                   offer.getAttributesList.asScala.toList, app.version)
+
                 taskTracker.starting(app.id, marathonTask)
                 driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
-                found = true
+                Some(qt)
 
-              case None =>
-                taskQueue.add(app)
+              case _ => None
             }
-          }
+        }.flatten
 
-          i += 1
-        }
+        // put unscheduled tasks back in the queue
+        taskQueue.addAll(queuedTasks diff launchedTasks)
 
-        if (!found) {
+        if (launchedTasks.isEmpty) {
           log.debug("Offer doesn't match request. Declining.")
-          // Add it back into the queue so the we can try again
-          taskQueue.addAll(queuedTasks)
           driver.declineOffer(offer.getId)
-        }
-        else {
-          val (prefix, suffix) = (queuedTasks take i - 1, queuedTasks drop i)
-          taskQueue.addAll(prefix ++ suffix)
         }
       }
       catch {
