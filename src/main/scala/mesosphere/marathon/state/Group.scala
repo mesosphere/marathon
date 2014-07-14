@@ -53,6 +53,8 @@ case class Group(
     if (fn(this)) Some(this) else in(groups.toList)
   }
 
+  def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.find(_.id == appId))
+
   def group(gid: PathId): Option[Group] = {
     if (id == gid) Some(this) else {
       val restPath = gid.restOf(id)

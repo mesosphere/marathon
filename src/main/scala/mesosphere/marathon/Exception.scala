@@ -17,8 +17,8 @@ class BadRequestException(msg: String) extends Exception(msg)
 class AppLockedException extends Exception("App is locked by another operation")
 
 class PortRangeExhaustedException(
-  minPort: Int,
-  maxPort: Int) extends Exception(s"All ports in the range $minPort-$maxPort are already in use")
+  val minPort: Int,
+  val maxPort: Int) extends Exception(s"All ports in the range $minPort-$maxPort are already in use")
 
 case class UpgradeInProgressException(msg: String) extends Exception(msg)
 

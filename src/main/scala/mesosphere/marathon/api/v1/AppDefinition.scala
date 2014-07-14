@@ -142,6 +142,8 @@ case class AppDefinition(
     )
   }
 
+  def hasDynamicPort = ports.contains(0)
+
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
     mergeFromProto(proto)

@@ -1,21 +1,21 @@
 package mesosphere.marathon.state
 
 import javax.inject.Inject
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 import akka.event.EventStream
 import com.google.inject.Singleton
 import com.google.inject.name.Named
-import mesosphere.marathon.MarathonSchedulerService
+import org.apache.log4j.Logger
+
 import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade._
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
 import mesosphere.util.ThreadPoolContext.context
-import org.apache.log4j.Logger
-
-import scala.concurrent.Future
-import scala.util.{ Failure, Success }
 
 /**
   * The group manager is the facade for all group related actions.
@@ -26,6 +26,7 @@ class GroupManager @Singleton @Inject() (
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
     appRepo: AppRepository,
+    config: MarathonConf,
     @Named(EventModule.busName) eventBus: EventStream) extends ModelValidation {
 
   private[this] val log = Logger.getLogger(getClass.getName)
@@ -102,11 +103,11 @@ class GroupManager @Singleton @Inject() (
     upgrade(appId.parent, _.updateApp(appId, fn, version), version, force)
   }
 
-  private def upgrade(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = {
+  private def upgrade(gid: PathId, change: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = synchronized {
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
     def deploy(from: Group): Future[DeploymentPlan] = {
-      val to = fn(from)
+      val to = assignDynamicAppPort(from, change(from))
       requireValid(checkGroup(to))
       val plan = DeploymentPlan(from, to, version)
       scheduler.deploy(plan, force).map(_ => plan)
@@ -127,5 +128,19 @@ class GroupManager @Singleton @Inject() (
         eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
     }
     deployment
+  }
+
+  private[state] def assignDynamicAppPort(from: Group, to: Group): Group = {
+    val portRange = Range(config.localPortMin(), config.localPortMax())
+    var taken = from.transitiveApps.flatMap(_.ports)
+    def nextFreePort: Integer = {
+      val port = portRange.find(!taken.contains(_)).getOrElse(throw new PortRangeExhaustedException(config.localPortMin(), config.localPortMax()))
+      log.info(s"Take next free port: $port")
+      taken += port
+      port
+    }
+    val dynamicApps = to.transitiveApps.filter(_.hasDynamicPort)
+    val assignedPorts = dynamicApps.map { app => app.copy(ports = app.ports.map { port => if (port == 0) nextFreePort else port }) }
+    assignedPorts.foldLeft(to) { (update, app) => update.updateApp(app.id, _ => app, app.version) }
   }
 }
