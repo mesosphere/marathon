@@ -3,8 +3,11 @@
 define([
   "React"
 ], function(React) {
+  "use strict";
+
   return React.createClass({
     propTypes: {
+      errors: React.PropTypes.array,
       children: React.PropTypes.component.isRequired,
       model: React.PropTypes.object.isRequired
     },
@@ -14,8 +17,9 @@ define([
     },
 
     render: function() {
-      var errorBlock, errors, helpBlock;
+      var errorBlock, helpBlock;
 
+      var errors = [];
       var attribute = this.props.attribute;
       var className = "form-group";
       var fieldId = attribute + "-field";
@@ -27,10 +31,19 @@ define([
         });
       }
 
-      if (errors != null && errors.length > 0) {
+      // Also check for passed in errors
+      if (this.props.errors != null) {
+        errors = errors.concat(
+          this.props.errors.filter(function(e) {
+            return (e.attribute === attribute);
+          })
+        );
+      }
+
+      if (errors.length > 0) {
         className += " has-error";
-        errorBlock = errors.map(function(error) {
-          return <div className="help-block"><strong>{error.message}</strong></div>;
+        errorBlock = errors.map(function(error, i) {
+          return <div key={i} className="help-block"><strong>{error.message}</strong></div>;
         });
       }
 

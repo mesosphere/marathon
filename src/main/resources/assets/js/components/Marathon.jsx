@@ -38,8 +38,8 @@ define([
       }.bind(this));
     },
 
-    handleAppCreate: function(appModel) {
-      this.state.collection.create(appModel);
+    handleAppCreate: function(appModel, options) {
+      this.state.collection.create(appModel, options);
     },
 
     handleModalDestroy: function() {
