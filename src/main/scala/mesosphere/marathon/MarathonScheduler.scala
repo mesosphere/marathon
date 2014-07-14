@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
-import mesosphere.util.{ ThreadPoolContext, RateLimiters }
+import mesosphere.util.ThreadPoolContext
 import mesosphere.marathon.health.HealthCheckManager
 import scala.util.{ Success, Failure }
 import org.apache.log4j.Logger
@@ -45,7 +45,6 @@ class MarathonScheduler @Inject() (
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
-    rateLimiters: RateLimiters,
     config: MarathonConf) extends Scheduler {
 
   private val log = Logger.getLogger(getClass.getName)
@@ -81,44 +80,40 @@ class MarathonScheduler @Inject() (
       for (task <- toKill)
         driver.killTask(protos.TaskID(task.getId))
     }
+
+    import TaskQueue.QueuedTask
+
     for (offer <- offers.asScala) {
       try {
         log.debug("Received offer %s".format(offer))
 
-        val apps = taskQueue.removeAll()
-        var i = 0
-        var found = false
+        val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
 
-        while (i < apps.size && !found) {
-          // TODO launch multiple tasks if the offer is big enough
-          val app = apps(i)
+        val launchedTasks: Seq[QueuedTask] = queuedTasks.collect {
+          case qt @ QueuedTask(app, delay) if delay.isOverdue =>
+            newTask(app, offer) match {
+              case Some((task, ports)) =>
+                val taskInfos = Lists.newArrayList(task)
+                log.debug("Launching tasks: " + taskInfos)
 
-          newTask(app, offer) match {
-            case Some((task, ports)) =>
-              val taskInfos = Lists.newArrayList(task)
-              log.debug("Launching tasks: " + taskInfos)
+                val marathonTask = MarathonTasks.makeTask(
+                  task.getTaskId.getValue, offer.getHostname, ports,
+                  offer.getAttributesList.asScala.toList, app.version)
 
-              val marathonTask = MarathonTasks.makeTask(
-                task.getTaskId.getValue, offer.getHostname, ports,
-                offer.getAttributesList.asScala.toList, app.version)
-              taskTracker.starting(app.id, marathonTask)
-              driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
-              found = true
+                taskTracker.starting(app.id, marathonTask)
+                driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
+                Some(qt)
 
-            case None =>
-              taskQueue.add(app)
-          }
+              case _ => None
+            }
+        }.flatten
 
-          i += 1
-        }
+        // put unscheduled tasks back in the queue
+        taskQueue.addAll(queuedTasks diff launchedTasks)
 
-        if (!found) {
+        if (launchedTasks.isEmpty) {
           log.debug("Offer doesn't match request. Declining.")
-          // Add it back into the queue so the we can try again
           driver.declineOffer(offer.getId)
-        }
-        else {
-          taskQueue.addAll(apps.drop(i))
         }
       }
       catch {
@@ -138,53 +133,60 @@ class MarathonScheduler @Inject() (
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
-    val appID = TaskIDUtil.appID(status.getTaskId)
+    val appId = TaskIDUtil.appID(status.getTaskId)
 
-    if (status.getState.eq(TaskState.TASK_FAILED)
-      || status.getState.eq(TaskState.TASK_FINISHED)
-      || status.getState.eq(TaskState.TASK_KILLED)
-      || status.getState.eq(TaskState.TASK_LOST)) {
+    import TaskState._
 
-      // Remove from our internal list
-      taskTracker.terminated(appID, status).foreach(taskOption => {
-        taskOption match {
-          case Some(task) => postEvent(status, task)
-          case None       => log.warn(s"Couldn't post event for ${status.getTaskId}")
-        }
-
-        if (rateLimiters.tryAcquire(appID)) {
-          scale(driver, appID)
-        }
-        else {
-          log.warn(s"Rate limit reached for $appID")
-        }
-      })
-    }
-    else if (status.getState.eq(TaskState.TASK_RUNNING)) {
-      taskTracker.running(appID, status).onComplete {
-        case Success(task) => postEvent(status, task)
-        case Failure(t) =>
-          log.warn(s"Couldn't post event for ${status.getTaskId}", t)
-          log.warn(s"Killing task ${status.getTaskId}")
-          driver.killTask(status.getTaskId)
+    if (status.getState == TASK_FAILED)
+      currentAppVersion(appId).foreach {
+        _.foreach(taskQueue.rateLimiter.addDelay(_))
       }
-    }
-    else if (status.getState.eq(TaskState.TASK_STAGING) && !taskTracker.contains(appID)) {
-      log.warn(s"Received status update for unknown app $appID")
-      log.warn(s"Killing task ${status.getTaskId}")
-      driver.killTask(status.getTaskId)
-    }
-    else {
-      taskTracker.statusUpdate(appID, status).onComplete {
-        case Success(t) =>
-          t match {
-            case None =>
-              log.warn(s"Killing task ${status.getTaskId}")
-              driver.killTask(status.getTaskId)
-            case _ =>
+
+    status.getState match {
+      case TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
+        // Remove from our internal list
+        taskTracker.terminated(appId, status).foreach(taskOption => {
+          taskOption match {
+            case Some(task) => postEvent(status, task)
+            case None       => log.warn(s"Couldn't post event for ${status.getTaskId}")
           }
-        case _ =>
-      }
+
+          scale(driver, appId)
+        })
+
+      case TASK_RUNNING =>
+        taskQueue.rateLimiter.resetDelay(appId)
+        taskTracker.running(appId, status).onComplete {
+          case Success(task) => postEvent(status, task)
+          case Failure(t) =>
+            log.warn(s"Couldn't post event for ${status.getTaskId}", t)
+            log.warn(s"Killing task ${status.getTaskId}")
+            driver.killTask(status.getTaskId)
+        }
+
+      case TASK_STAGING if !taskTracker.contains(appId) =>
+        log.warn(s"Received status update for unknown app $appId")
+        log.warn(s"Killing task ${status.getTaskId}")
+        driver.killTask(status.getTaskId)
+
+      case _ =>
+        taskTracker.statusUpdate(appId, status).onComplete {
+          case Success(t) =>
+            t match {
+              case None =>
+                log.warn(s"Killing task ${status.getTaskId}")
+                driver.killTask(status.getTaskId)
+              case _ =>
+            }
+          case _ =>
+        }
+    }
+  }
+
+  def unhealthyTaskKilled(appId: String, taskId: String): Unit = {
+    log.warn(s"Task [$taskId] for app [$appId] was killed for failing too many health checks")
+    currentAppVersion(appId).foreach {
+      _.foreach { app => taskQueue.rateLimiter.addDelay(app) }
     }
   }
 
@@ -221,7 +223,6 @@ class MarathonScheduler @Inject() (
 
       val persistenceResult = appRepository.store(app).map { _ =>
         log.info(s"Starting app ${app.id}")
-        rateLimiters.setPermits(app.id, app.taskRateLimit)
         scale(driver, app)
       }
 
@@ -244,7 +245,7 @@ class MarathonScheduler @Inject() (
         log.info(s"Killing task ${task.getId}")
         driver.killTask(protos.TaskID(task.getId))
       }
-      taskQueue.purge(app)
+      taskQueue.purge(app.id)
       taskTracker.shutDown(app.id)
       // TODO after all tasks have been killed we should remove the app from taskTracker
     }
@@ -254,11 +255,13 @@ class MarathonScheduler @Inject() (
     driver: SchedulerDriver,
     id: String,
     appUpdate: AppUpdate): Future[AppDefinition] = {
-    appRepository.currentVersion(id).flatMap {
+    currentAppVersion(id).flatMap {
       case Some(currentVersion) =>
         val updatedApp = appUpdate(currentVersion)
 
         healthCheckManager.reconcileWith(updatedApp)
+        taskQueue.purge(id)
+        taskQueue.rateLimiter.resetDelay(id)
 
         appRepository.store(updatedApp).map { _ =>
           update(driver, updatedApp, appUpdate)
@@ -351,7 +354,7 @@ class MarathonScheduler @Inject() (
       }
       else if (targetCount < currentCount) {
         log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
-        taskQueue.purge(app)
+        taskQueue.purge(app.id)
 
         val toKill = taskTracker.take(app.id, currentCount - targetCount)
         log.info(s"Killing tasks: ${toKill.map(_.getId)}")

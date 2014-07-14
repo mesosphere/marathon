@@ -95,8 +95,14 @@ class HealthCheckActor(
     if (consecutiveFailures >= maxFailures) {
       log.info(f"Killing task ${task.getId} on host ${task.getHost}")
 
+      // kill the task
       MarathonSchedulerDriver.driver.foreach { driver =>
         driver.killTask(TaskID(task.getId))
+      }
+
+      // increase the task launch delay for this questionably healthy app
+      MarathonSchedulerDriver.scheduler.foreach { scheduler =>
+        scheduler.unhealthyTaskKilled(appId, task.getId)
       }
     }
   }

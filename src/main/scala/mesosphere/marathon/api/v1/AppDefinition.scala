@@ -1,6 +1,5 @@
 package mesosphere.marathon.api.v1
 
-import mesosphere.mesos.TaskBuilder
 import mesosphere.marathon.{ ContainerInfo, Protos }
 import mesosphere.marathon.state.{ Migration, MarathonState, Timestamp, Timestamped }
 import mesosphere.marathon.Protos.{ StorageVersion, MarathonTask, Constraint }
@@ -8,6 +7,8 @@ import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.PortIndices
+import mesosphere.mesos.TaskBuilder
+import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import com.fasterxml.jackson.annotation.{
   JsonIgnore,
   JsonIgnoreProperties,
@@ -15,8 +16,8 @@ import com.fasterxml.jackson.annotation.{
 }
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 import java.lang.{ Integer => JInt, Double => JDouble }
-import mesosphere.mesos.protos.{ Resource, ScalarResource }
 
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -44,12 +45,9 @@ case class AppDefinition(
 
   @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
-  /**
-  * Number of new tasks this app may spawn per second in response to
-  * terminated tasks. This prevents frequently failing apps from spamming
-  * the cluster.
-  */
-  taskRateLimit: JDouble = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
+  @FieldJsonProperty("launchDelaySeconds") launchDelay: FiniteDuration = AppDefinition.DEFAULT_LAUNCH_DELAY,
+
+  launchDelayFactor: JDouble = AppDefinition.DEFAULT_LAUNCH_FACTOR,
 
   container: Option[ContainerInfo] = None,
 
@@ -87,8 +85,9 @@ case class AppDefinition(
       .setCmd(commandInfo)
       .setInstances(instances)
       .addAllPorts(ports.asJava)
+      .setLaunchDelay(launchDelay.toMillis)
+      .setLaunchDelayFactor(launchDelayFactor)
       .setExecutor(executor)
-      .setTaskRateLimit(taskRateLimit)
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
@@ -114,9 +113,10 @@ case class AppDefinition(
       id = proto.getId,
       cmd = proto.getCmd.getValue,
       executor = proto.getExecutor,
-      taskRateLimit = proto.getTaskRateLimit,
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
+      launchDelay = proto.getLaunchDelay.milliseconds,
+      launchDelayFactor = proto.getLaunchDelayFactor,
       constraints = proto.getConstraintsList.asScala.toSet,
       cpus = resourcesMap.get(Resource.CPUS).getOrElse(this.cpus),
       mem = resourcesMap.get(Resource.MEM).getOrElse(this.mem),
@@ -154,22 +154,27 @@ case class AppDefinition(
 
 object AppDefinition {
   val DEFAULT_CPUS = 1.0
+
   val DEFAULT_MEM = 128.0
+
   val DEFAULT_DISK = 0.0
 
   val RANDOM_PORT_VALUE = 0
+
   val DEFAULT_PORTS: Seq[JInt] = Seq(RANDOM_PORT_VALUE)
 
   val DEFAULT_INSTANCES = 0
 
-  val DEFAULT_TASK_RATE_LIMIT = 1.0
+  val DEFAULT_LAUNCH_DELAY = 1.second
+
+  val DEFAULT_LAUNCH_FACTOR = 1.15
 
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
     app: AppDefinition) extends AppDefinition(
-    app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.disk, app.executor,
-    app.constraints, app.uris, app.ports, app.taskRateLimit, app.container,
-    app.healthChecks, app.version
+    app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.disk,
+    app.executor, app.constraints, app.uris, app.ports, app.launchDelay,
+    app.launchDelayFactor, app.container, app.healthChecks, app.version
   ) {
 
     /**
