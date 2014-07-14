@@ -5,7 +5,7 @@ import mesosphere.util.RateLimiter
 
 import javax.inject.Inject
 
-import scala.collection.mutable
+import scala.collection.mutable.SynchronizedPriorityQueue
 import scala.concurrent.duration.Deadline
 import scala.util.Try
 
@@ -13,12 +13,13 @@ import scala.util.Try
   * Utility class to stage tasks before they get scheduled
   */
 class TaskQueue {
+
   import TaskQueue._
 
   protected[marathon] val rateLimiter = new RateLimiter
 
   protected[tasks] var queue =
-    new mutable.PriorityQueue[QueuedTask]()(AppConstraintsOrdering)
+    new SynchronizedPriorityQueue[QueuedTask]()(AppConstraintsOrdering)
 
   def list(): Seq[QueuedTask] = queue.to[scala.collection.immutable.Seq]
 
@@ -37,8 +38,11 @@ class TaskQueue {
     */
   def count(app: AppDefinition): Int = queue.count(_.app.id == app.id)
 
-  def purge(appId: String): Unit =
-    queue = queue.filterNot(_.app.id == appId)
+  def purge(appId: String): Unit = {
+    val retained = queue.filterNot(_.app.id == appId)
+    removeAll()
+    queue ++= retained
+  }
 
   def addAll(xs: Seq[QueuedTask]): Unit = queue ++= xs
 
@@ -54,5 +58,4 @@ object TaskQueue {
     def compare(t1: QueuedTask, t2: QueuedTask): Int =
       t1.app.constraints.size compare t2.app.constraints.size
   }
-
 }
