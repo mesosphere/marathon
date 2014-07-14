@@ -20,11 +20,7 @@ class TaskQueue {
   protected[tasks] var queue =
     new mutable.PriorityQueue[QueuedTask]()(AppConstraintsOrdering)
 
-  def list(): Seq[QueuedTask] = {
-    val items = removeAll()
-    addAll(items)
-    items
-  }
+  def list(): Seq[QueuedTask] = queue.to[scala.collection.immutable.Seq]
 
   def listApps(): Seq[AppDefinition] = list.map(_.app)
 
