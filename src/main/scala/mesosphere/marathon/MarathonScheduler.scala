@@ -137,7 +137,7 @@ class MarathonScheduler @Inject() (
 
     import TaskState._
 
-    if (status.getState == TASK_FAILED || status.getState == TASK_LOST)
+    if (status.getState == TASK_FAILED)
       currentAppVersion(appId).foreach {
         _.foreach(taskQueue.rateLimiter.addDelay(_))
       }
