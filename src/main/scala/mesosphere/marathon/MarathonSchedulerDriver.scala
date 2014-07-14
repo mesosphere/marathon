@@ -15,7 +15,7 @@ object MarathonSchedulerDriver {
   val frameworkName = s"marathon-${BuildInfo.version}"
 
   def newDriver(config: MarathonConf,
-                scheduler: MarathonScheduler,
+                newScheduler: MarathonScheduler,
                 frameworkId: Option[FrameworkID]): SchedulerDriver = {
     val builder = FrameworkInfo.newBuilder()
       .setName(frameworkName)
@@ -30,12 +30,12 @@ object MarathonSchedulerDriver {
     frameworkId.foreach(builder.setId)
 
     val newDriver = new MesosSchedulerDriver(
-      scheduler,
+      newScheduler,
       builder.build(),
       config.mesosMaster()
     )
-    this.driver = Some(newDriver)
-    this.scheduler = Some(scheduler)
+    driver = Some(newDriver)
+    scheduler = Some(newScheduler)
     newDriver
   }
 }
