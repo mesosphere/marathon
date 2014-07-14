@@ -192,14 +192,14 @@ The following options can influence how Marathon works:
 
 ### Configuration Options
 
-* `MESOS_NATIVE_LIBRARY`: `bin/start` searches the common installation paths,
+* `MESOS_NATIVE_JAVA_LIBRARY`: `bin/start` searches the common installation paths,
     `/usr/lib` and `/usr/local/lib`, for the Mesos native library. If the
     library lives elsewhere in your configuration, set the environment variable
-    `MESOS_NATIVE_LIBRARY` to its full path.
+    `MESOS_NATIVE_JAVA_LIBRARY` to its full path.
 
   For example:
 
-      MESOS_NATIVE_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
+      MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
 
 Run `./bin/start --help` for a full list of configuration options.
 
