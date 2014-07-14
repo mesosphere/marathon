@@ -408,7 +408,7 @@ fieldset[disabled] .btn-info.active {
 
 .pagination-unstyled {
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: -11px;
 }
 
 .itemNumbers {
@@ -421,6 +421,7 @@ fieldset[disabled] .btn-info.active {
   color: #f6f6f6;
   background-color: #5b6067;
   border-color: #323539;
+  line-height: 1.5;
 }
 
 .pagination > li > a:hover,

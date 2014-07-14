@@ -25,7 +25,8 @@ define([
         noVisiblePages: 6,
         itemsPerPage: 10,
         useArrows: true,
-        useItemNumbers: true
+        useItemNumbers: true,
+        usePages: false
       };
     },
 
@@ -67,7 +68,7 @@ define([
             if (pageNumber >= pageLBound && pageNumber <= pageUBound) {
               pagination.push(
                 <li className={pageNumber === currentPage ? "success disabled" : ""}
-                    key={pageNumber}>
+                    key={pageNumber + 1}>
                   <a href="#"
                     onClick={this.handlePageChange.bind(this, pageNumber)}>
                     {pageNumber + 1}
@@ -83,7 +84,7 @@ define([
       var itemsUBound = Math.min(currentPage * itemsPerPage + itemsPerPage, noItems);
       var itemNumbers =
         this.props.useItemNumbers ?
-          <div className="itemNumbers pull-left">{itemsLBound}-{itemsUBound} of {noItems}</div> :
+          <span className="itemNumbers">{itemsLBound + 1}-{itemsUBound} of {noItems}</span> :
           null;
 
       var leftArrowsClassSet = React.addons.classSet({
@@ -128,7 +129,8 @@ define([
           null;
 
       return (
-        <div>
+        <span>
+          {itemNumbers}
           <ul className="pagination pagination-sm pagination-unstyled">
             {leftEndArrow}
             {leftArrow}
@@ -136,8 +138,7 @@ define([
             {rightArrow}
             {rightEndArrow}
           </ul>
-          {itemNumbers}
-        </div>
+        </span>
       );
     }
   });

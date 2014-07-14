@@ -38,7 +38,7 @@ define([
 
     getInitialState: function() {
       return {
-        open: !!this.props.currentVersion,
+        open: false,
         fetchState: STATES.STATE_LOADING
       };
     },
@@ -91,9 +91,9 @@ define([
         versionNode =
         <div className="panel-body">
           <AppVersionComponent
+            className="dl-unstyled"
             app={this.props.app}
             appVersion={this.props.appVersion}
-            currentVersion={this.props.currentVersion}
             onRollback={this.props.onRollback} />
         </div>;
       }
@@ -101,15 +101,10 @@ define([
         <div className="panel panel-inverse">
           <div className="panel-heading clickable" onClick={this.handleDetailsClick}>
             <div className="row">
-              <div className="col-xs-9">
+              <div className="col-xs-11">
                 <time dateTime={versionDate.toISOString()} title={versionDate.toISOString()}>
                   {versionDate.toLocaleString()}</time>
               </div>
-              {
-                this.props.currentVersion ?
-                  <div className="text-muted col-xs-2">Current version</div> :
-                  <div className="text-muted col-xs-2">&nbsp;</div>
-              }
               <div className={caretClassSet}>
                 <span className="caret"></span>
               </div>

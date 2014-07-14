@@ -85,7 +85,7 @@ define([
         });
       return (
         <div>
-          <dl className="dl-horizontal dl-unstyled">
+          <dl className={"dl-horizontal " + this.props.className}>
             <dt>Command</dt>
             {cmdNode}
             <dt>Constraints</dt>
