@@ -3,6 +3,7 @@ package mesosphere.marathon.state
 import javax.inject.Inject
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+import scala.collection.mutable
 
 import akka.event.EventStream
 import com.google.inject.Singleton
@@ -133,14 +134,19 @@ class GroupManager @Singleton @Inject() (
   private[state] def assignDynamicAppPort(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.ports)
-    def nextFreePort: Integer = {
+    def nextGlobalFreePort: Integer = {
       val port = portRange.find(!taken.contains(_)).getOrElse(throw new PortRangeExhaustedException(config.localPortMin(), config.localPortMax()))
-      log.info(s"Take next free port: $port")
+      log.info(s"Take next configured free port: $port")
       taken += port
       port
     }
-    val dynamicApps = to.transitiveApps.filter(_.hasDynamicPort)
-    val assignedPorts = dynamicApps.map { app => app.copy(ports = app.ports.map { port => if (port == 0) nextFreePort else port }) }
-    assignedPorts.foldLeft(to) { (update, app) => update.updateApp(app.id, _ => app, app.version) }
+    def appPorts(app: AppDefinition) = {
+      val alreadyAssigned = mutable.Queue(from.app(app.id).map(_.ports).getOrElse(Nil).filter(portRange.contains): _*)
+      def nextFreeAppPort = if (alreadyAssigned.nonEmpty) alreadyAssigned.dequeue() else nextGlobalFreePort
+      val ports = app.ports.map { port => if (port == 0) nextFreeAppPort else port }
+      app.copy(ports = ports)
+    }
+    val dynamicApps = to.transitiveApps.filter(_.hasDynamicPort).map(appPorts)
+    dynamicApps.foldLeft(to) { (update, app) => update.updateApp(app.id, _ => app, app.version) }
   }
 }
