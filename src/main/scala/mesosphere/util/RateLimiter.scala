@@ -1,11 +1,6 @@
 package mesosphere.util
 
-import scala.concurrent.duration.{
-  Deadline,
-  FiniteDuration,
-  HOURS,
-  MILLISECONDS
-}
+import scala.concurrent.duration._
 import scala.util.Try
 
 import org.apache.log4j.Logger
@@ -20,7 +15,7 @@ class RateLimiter {
     current: FiniteDuration,
     future: Iterator[FiniteDuration])
 
-  protected[this] val maxLaunchDelay = FiniteDuration(1, HOURS)
+  protected[this] val maxLaunchDelay = 1.hour
 
   protected[this] var taskLaunchDelays = Map[String, Delay]()
 
@@ -62,7 +57,7 @@ class RateLimiter {
     Iterator.iterate(initial) { interval =>
       Try {
         val millis: Long = (interval.toMillis * factor).toLong
-        FiniteDuration(millis, MILLISECONDS) min limit
+        millis.milliseconds min limit
       }.getOrElse(limit)
     }
 

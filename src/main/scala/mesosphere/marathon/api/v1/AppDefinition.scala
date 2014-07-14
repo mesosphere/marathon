@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.{
 }
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.{ FiniteDuration, SECONDS, MILLISECONDS }
+import scala.concurrent.duration._
 import java.lang.{ Integer => JInt, Double => JDouble }
 
 @PortIndices
@@ -115,7 +115,7 @@ case class AppDefinition(
       executor = proto.getExecutor,
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
-      launchDelay = FiniteDuration(proto.getLaunchDelay, MILLISECONDS),
+      launchDelay = proto.getLaunchDelay.milliseconds,
       launchDelayFactor = proto.getLaunchDelayFactor,
       constraints = proto.getConstraintsList.asScala.toSet,
       cpus = resourcesMap.get(Resource.CPUS).getOrElse(this.cpus),
@@ -165,7 +165,7 @@ object AppDefinition {
 
   val DEFAULT_INSTANCES = 0
 
-  val DEFAULT_LAUNCH_DELAY = FiniteDuration(1, SECONDS)
+  val DEFAULT_LAUNCH_DELAY = 1.second
 
   val DEFAULT_LAUNCH_FACTOR = 1.15
 

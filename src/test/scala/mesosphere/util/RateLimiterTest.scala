@@ -1,6 +1,6 @@
 package mesosphere.util
 
-import scala.concurrent.duration.{ FiniteDuration, SECONDS }
+import scala.concurrent.duration._
 
 import org.apache.log4j.Logger
 
@@ -24,7 +24,7 @@ class RateLimiterTest extends MarathonSpec {
   test("Durations") {
     val rl = new RateLimiter()
 
-    val firstDuration = FiniteDuration(2, SECONDS)
+    val firstDuration = 2.seconds
 
     val ds = rl.durations(
       initial = firstDuration,
@@ -41,7 +41,7 @@ class RateLimiterTest extends MarathonSpec {
     val rl = new RateLimiter()
     val app = AppDefinition(
       id = "my-app",
-      launchDelay = FiniteDuration(2, SECONDS),
+      launchDelay = 2.seconds,
       launchDelayFactor = 2.0
     )
 
@@ -54,7 +54,7 @@ class RateLimiterTest extends MarathonSpec {
     val rl = new RateLimiter()
     val app = AppDefinition(
       id = "my-app",
-      launchDelay = FiniteDuration(2, SECONDS),
+      launchDelay = 2.seconds,
       launchDelayFactor = 2.0
     )
 
@@ -67,7 +67,7 @@ class RateLimiterTest extends MarathonSpec {
     val rl = new RateLimiter()
     val app = AppDefinition(
       id = "my-app",
-      launchDelay = FiniteDuration(2, SECONDS),
+      launchDelay = 2.seconds,
       launchDelayFactor = 2.0
     )
 
