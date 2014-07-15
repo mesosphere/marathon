@@ -48,7 +48,6 @@ Transfer-Encoding: chunked
             15092, 
             14566
         ], 
-        "taskRateLimit": 1.0, 
         "tasks": [
             {
                 "host": "mesos.vm", 

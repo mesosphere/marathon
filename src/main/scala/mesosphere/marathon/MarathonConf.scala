@@ -55,13 +55,6 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
       "the TASK_RUNNING state before killing it",
     default = Some(60000L)) // 60 seconds
 
-  lazy val taskRateLimit = opt[Long]("task_rate_limit",
-    descr = "This is the time window within which instances may be launched " +
-      "for a given app.  For example, if an app has 5 instances, it will " +
-      "only launch 5 instances within 60s regardless of " +
-      "whether they succeed or fail.",
-    default = Some(60000L)) // 60 seconds
-
   lazy val reconciliationInitialDelay = opt[Long]("reconciliation_initial_delay",
     descr = "This is the length of time, in milliseconds, before Marathon " +
       "begins to periodically perform task reconciliation operations",
