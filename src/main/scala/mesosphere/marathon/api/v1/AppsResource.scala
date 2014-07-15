@@ -15,9 +15,6 @@ import scala.concurrent.Await
 import org.apache.log4j.Logger
 import mesosphere.marathon.api.Responses
 
-/**
-  * @author Tobi Knaup
-  */
 @Path("v1/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject() (

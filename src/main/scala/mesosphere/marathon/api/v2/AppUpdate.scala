@@ -1,12 +1,13 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.marathon.api.validation.FieldConstraints.FieldPortsArray
+import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.state.Timestamp
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import scala.concurrent.duration.FiniteDuration
 import java.lang.{ Integer => JInt, Double => JDouble }
 
 // TODO: Accept a task restart strategy as a constructor parameter here, to be
@@ -26,6 +27,10 @@ case class AppUpdate(
     uris: Option[Seq[String]] = None,
 
     @FieldPortsArray ports: Option[Seq[JInt]] = None,
+
+    @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
+
+    backoffFactor: Option[JDouble] = None,
 
     constraints: Option[Set[Constraint]] = None,
 
@@ -51,6 +56,8 @@ case class AppUpdate(
     for (v <- mem) updated = updated.copy(mem = v)
     for (v <- uris) updated = updated.copy(uris = v)
     for (v <- ports) updated = updated.copy(ports = v)
+    for (v <- backoff) updated = updated.copy(backoff = v)
+    for (v <- backoffFactor) updated = updated.copy(backoffFactor = v)
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
     for (v <- healthChecks) updated = updated.copy(healthChecks = v)
@@ -76,6 +83,8 @@ object AppUpdate {
       mem = Option(app.mem),
       uris = Option(app.uris),
       ports = Option(app.ports),
+      backoff = Option(app.backoff),
+      backoffFactor = Option(app.backoffFactor),
       constraints = Option(app.constraints),
       executor = Option(app.executor),
       container = app.container,

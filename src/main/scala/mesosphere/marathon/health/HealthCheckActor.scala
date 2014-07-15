@@ -56,13 +56,21 @@ class HealthCheckActor(
   protected[this] case object Tick
 
   protected[this] def purgeStatusOfDoneTasks(): Unit = {
-    log.debug("Purging status of done tasks")
+    log.debug(
+      "Purging health status of done tasks for app [{}] and healthCheck [{}]",
+      appId,
+      healthCheck
+    )
     val activeTaskIds = taskTracker.get(appId).map(_.getId)
     taskHealth = taskHealth.filterKeys(activeTaskIds)
   }
 
   protected[this] def scheduleNextHealthCheck(): Unit = {
-    log.debug("Scheduling next health check")
+    log.debug(
+      "Scheduling next health check for app [{}] and healthCheck [{}]",
+      appId,
+      healthCheck
+    )
     nextScheduledCheck = Some(
       context.system.scheduler.scheduleOnce(healthCheck.interval) {
         self ! Tick
@@ -87,8 +95,14 @@ class HealthCheckActor(
     if (consecutiveFailures >= maxFailures) {
       log.info(f"Killing task ${task.getId} on host ${task.getHost}")
 
+      // kill the task
       MarathonSchedulerDriver.driver.foreach { driver =>
         driver.killTask(TaskID(task.getId))
+      }
+
+      // increase the task launch delay for this questionably healthy app
+      MarathonSchedulerDriver.scheduler.foreach { scheduler =>
+        scheduler.unhealthyTaskKilled(appId, task.getId)
       }
     }
   }

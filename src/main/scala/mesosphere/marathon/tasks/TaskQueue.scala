@@ -1,26 +1,34 @@
 package mesosphere.marathon.tasks
 
-import java.util.concurrent.PriorityBlockingQueue
 import mesosphere.marathon.api.v1.AppDefinition
-import scala.collection.JavaConverters._
-import scala.collection.immutable.IndexedSeq
-import java.util
-import java.util.Comparator
+import mesosphere.util.RateLimiter
+
+import javax.inject.Inject
+
+import scala.collection.mutable.SynchronizedPriorityQueue
+import scala.concurrent.duration.Deadline
+import scala.util.Try
 
 /**
   * Utility class to stage tasks before they get scheduled
-  *
-  * @author Tobi Knaup
   */
-
 class TaskQueue {
+
   import TaskQueue._
 
-  val queue = new PriorityBlockingQueue[AppDefinition](1, AppDefinitionPriority)
+  protected[marathon] val rateLimiter = new RateLimiter
 
-  def poll(): AppDefinition = queue.poll()
+  protected[tasks] var queue =
+    new SynchronizedPriorityQueue[QueuedTask]()(AppConstraintsOrdering)
 
-  def add(app: AppDefinition): Boolean = queue.add(app)
+  def list(): Seq[QueuedTask] = queue.to[scala.collection.immutable.Seq]
+
+  def listApps(): Seq[AppDefinition] = list.map(_.app)
+
+  def poll(): Option[QueuedTask] = Try(queue.dequeue()).toOption
+
+  def add(app: AppDefinition): Unit =
+    queue += QueuedTask(app, rateLimiter.getDelay(app))
 
   /**
     * Number of tasks in the queue for the given app
@@ -28,29 +36,26 @@ class TaskQueue {
     * @param app The app
     * @return count
     */
-  def count(app: AppDefinition): Int = queue.asScala.count(_.id == app.id)
+  def count(app: AppDefinition): Int = queue.count(_.app.id == app.id)
 
-  def purge(app: AppDefinition): Unit = {
-    val toRemove = queue.asScala.filter(_.id == app.id)
-    toRemove foreach queue.remove
+  def purge(appId: String): Unit = {
+    val retained = queue.filterNot(_.app.id == appId)
+    removeAll()
+    queue ++= retained
   }
 
-  def addAll(xs: Seq[AppDefinition]): Boolean = queue.addAll(xs.asJava)
+  def addAll(xs: Seq[QueuedTask]): Unit = queue ++= xs
 
-  def removeAll(): IndexedSeq[AppDefinition] = {
-    val size = queue.size()
-    val res = new util.ArrayList[AppDefinition](size)
+  def removeAll(): Seq[QueuedTask] = queue.dequeueAll
 
-    queue.drainTo(res, size)
-
-    res.asScala.to[IndexedSeq]
-  }
 }
 
 object TaskQueue {
-  private object AppDefinitionPriority extends Comparator[AppDefinition] {
-    override def compare(a1: AppDefinition, a2: AppDefinition): Int = {
-      a2.constraints.size - a1.constraints.size
-    }
+
+  protected[marathon] case class QueuedTask(app: AppDefinition, delay: Deadline)
+
+  protected object AppConstraintsOrdering extends Ordering[QueuedTask] {
+    def compare(t1: QueuedTask, t2: QueuedTask): Int =
+      t1.app.constraints.size compare t2.app.constraints.size
   }
 }

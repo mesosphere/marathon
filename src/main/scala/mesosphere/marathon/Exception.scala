@@ -1,9 +1,5 @@
 package mesosphere.marathon
 
-/**
-  * @author Tobi Knaup
-  */
-
 class Exception(msg: String) extends scala.RuntimeException(msg)
 
 class StorageException(msg: String) extends Exception(msg)

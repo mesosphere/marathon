@@ -26,8 +26,6 @@ import mesosphere.util.{ BackToTheFuture, ThreadPoolContext }
 
 /**
   * Wrapper class for the scheduler
-  *
-  * @author Tobi Knaup
   */
 class MarathonSchedulerService @Inject() (
   healthCheckManager: HealthCheckManager,
@@ -171,7 +169,6 @@ class MarathonSchedulerService @Inject() (
 
   def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = {
     log.info("Running driver")
-    listApps foreach healthCheckManager.reconcileWith
 
     // The following block asynchronously runs the driver. Note that driver.run()
     // blocks until the driver has been stopped (or aborted).
@@ -256,6 +253,9 @@ class MarathonSchedulerService @Inject() (
     // Note that abdication command will be ran upon driver shutdown.
     leader.set(false)
 
+    // Stop all health checks
+    healthCheckManager.removeAll()
+
     stopDriver()
   }
 
@@ -265,6 +265,9 @@ class MarathonSchedulerService @Inject() (
     // We have been elected as leader. Thus, update leadership and run the driver.
     leader.set(true)
     runDriver(abdicateOption)
+
+    // Create health checks for any existing apps
+    listApps foreach healthCheckManager.reconcileWith
   }
 
   def abdicateLeadership(): Unit = {

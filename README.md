@@ -101,7 +101,12 @@ difficult situation!
 
 1.  Download and unpack the latest release.
 
-    **For Mesos 0.17.0 and later:**
+    **For Mesos 0.19.0:**
+
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.6.0/marathon-0.6.0.tgz
+        tar xzf marathon-0.6.0.tgz
+
+    **For Mesos 0.17.0 to 0.18.2:**
 
         curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz
         tar xzf marathon-0.5.1.tgz
@@ -130,13 +135,13 @@ difficult situation!
 ### Running in Production Mode
 
 To launch Marathon in *production mode*, you need to have both
-[Zookeeper][Zookeeper] and Mesos running. The following command launches
+[ZooKeeper][ZooKeeper] and Mesos running. The following command launches
 Marathon on Mesos in *production mode*. Point your web browser to
 `localhost:8080` and you should see the Marathon UI.
 
     ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
 
-Marathon uses `--master` to find the Mesos masters, and `--zk` to find Zookeepers
+Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeepers
 for storing state. They are separate options because Mesos masters can be
 discovered in other ways as well.
 
@@ -144,11 +149,18 @@ discovered in other ways as well.
 
 Mesos local mode allows you to run Marathon without launching a full Mesos
 cluster. It is meant for experimentation and not recommended for production
-use. Note that you still need to run Zookeeper for storing state. The following
+use. Note that you still need to run ZooKeeper for storing state. The following
 command launches Marathon on Mesos in *local mode*. Point your web browser to
 `http://localhost:8080`, and you should see the Marathon UI.
 
     ./bin/start --master local --zk zk://localhost:2181/marathon
+    
+### Running with a standalone Mesos master
+
+The released version 0.19.0 of Mesos does not allow frameworks to launch an in-process master. This will be fixed in the next release. In the meantime, you can still run Marathon locally if you launch a master in a separate console and either point Marathon directly at the master itself or at the same Zookeeper (if you specified this when launching the master):
+
+    ./bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
+    ./bin/start --master localhost:5050 --zk zk://localhost:2181/marathon
 
 ### Command Line Options
 
@@ -180,14 +192,14 @@ The following options can influence how Marathon works:
 
 ### Configuration Options
 
-* `MESOS_NATIVE_LIBRARY`: `bin/start` searches the common installation paths,
+* `MESOS_NATIVE_JAVA_LIBRARY`: `bin/start` searches the common installation paths,
     `/usr/lib` and `/usr/local/lib`, for the Mesos native library. If the
     library lives elsewhere in your configuration, set the environment variable
-    `MESOS_NATIVE_LIBRARY` to its full path.
+    `MESOS_NATIVE_JAVA_LIBRARY` to its full path.
 
   For example:
 
-      MESOS_NATIVE_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
+      MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
 
 Run `./bin/start --help` for a full list of configuration options.
 
@@ -264,7 +276,7 @@ Marathon was created by [Tobias Knaup](https://github.com/guenter) and
 developed by the team at Mesosphere and by many contributors from
 the community.
 
-[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
+[![githalytics.com alpha](https://cruel-carlota.gopagoda.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"

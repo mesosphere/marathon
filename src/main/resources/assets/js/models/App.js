@@ -188,21 +188,18 @@ define([
       }
 
       if (!_.isString(attrs.cmd) || attrs.cmd.length < 1) {
-        // Prevent erroring out on UPDATE operations like scale/suspend.
-        // If cmd string is empty, then don't error out if an executor and
-        // container are provided.
-        if (!_.isString(attrs.executor) || attrs.executor.length < 1 ||
-            attrs.container == null || !_.isString(attrs.container.image) ||
+        // If `cmd` string is empty, a `container` must be present otherwise the
+        // app will not be runnable.
+        if (attrs.container == null || !_.isString(attrs.container.image) ||
             attrs.container.image.length < 1 ||
             attrs.container.image.indexOf('docker') != 0) {
           errors.push(
             new ValidationError("cmd",
-              "Command must be a non-empty String if executor and container image are not provided"
+              "Command must be a non-empty String if no container image is provided"
             )
           );
         }
       }
-
       if (errors.length > 0) { return errors; }
     }
   }, {

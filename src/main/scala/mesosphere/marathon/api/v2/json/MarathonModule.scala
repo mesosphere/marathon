@@ -17,10 +17,6 @@ import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
-/**
-  * @author Tobi Knaup
-  */
-
 class MarathonModule extends Module {
   import MarathonModule._
 
@@ -235,6 +231,10 @@ object MarathonModule {
 
       @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
+      @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
+
+      backoffFactor: Option[JDouble] = None,
+
       constraints: Option[Set[Constraint]] = None,
 
       executor: Option[String] = None,
@@ -245,8 +245,8 @@ object MarathonModule {
 
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      cmd, instances, cpus, mem, uris, ports, constraints,
-      executor, container, healthChecks, version
+      cmd, instances, cpus, mem, uris, ports, backoff, backoffFactor,
+      constraints, executor, container, healthChecks, version
     )
   }
 }

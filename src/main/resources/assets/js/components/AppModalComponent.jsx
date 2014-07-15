@@ -125,39 +125,35 @@ define([
 
     render: function() {
       var model = this.props.model;
-      var hasHealth =
-        model.get("healthChecks") != null &&
+      var hasHealth = model.get("healthChecks") != null &&
         model.get("healthChecks").length > 0;
+
+      // If `cmd` is a blank string, print a non-breaking space to ensure the
+      // floating <dd> element takes up vertical space.
+      //
+      // See: https://github.com/mesosphere/marathon/issues/366
       var cmdNode = (model.get("cmd") == null) ?
         <dd className="text-muted">Unspecified</dd> :
-        <dd>{model.get("cmd")}</dd>;
+          model.get("cmd") === "" ?
+            <dd>&nbsp;</dd> :
+            <dd>{model.get("cmd")}</dd>;
+
       var constraintsNode = (model.get("constraints").length < 1) ?
         <dd className="text-muted">Unspecified</dd> :
         model.get("constraints").map(function(c) {
-
-          // Only include constraint parts if they are not empty Strings. For
-          // example, a hostname uniqueness constraint looks like:
-          //
-          //     ["hostname", "UNIQUE", ""]
-          //
-          // it should print "hostname:UNIQUE" instead of "hostname:UNIQUE:", no
-          // trailing colon.
-          return (
-            <dd key={c}>
-              {c.filter(function(s) { return s !== ""; }).join(":")}
-            </dd>
-          );
+          return <dd key={c}>{c.join(":")}</dd>;
         });
       var containerNode = (model.get("container") == null) ?
         <dd className="text-muted">Unspecified</dd> :
         <dd>{JSON.stringify(model.get("container"))}</dd>;
+
+      // Print environment variables as key value pairs like "key=value"
       var envNode = (Object.keys(model.get("env")).length === 0) ?
         <dd className="text-muted">Unspecified</dd> :
-
-        // Print environment variables as key value pairs like "key=value"
         Object.keys(model.get("env")).map(function(k) {
           return <dd key={k}>{k + "=" + model.get("env")[k]}</dd>
         });
+
       var executorNode = (model.get("executor") === "") ?
         <dd className="text-muted">Unspecified</dd> :
         <dd>{model.get("executor")}</dd>;
@@ -321,23 +317,27 @@ define([
         });
       }
     },
+
     showTaskDetails: function(task) {
       this.setState({
         activeTask: task,
         activeViewIndex: 1
       });
     },
+
     showTaskList: function() {
       this.setState({
         activeTask: null,
         activeViewIndex: 0
       });
     },
+
     startPolling: function() {
       if (this._interval == null) {
         this._interval = setInterval(this.fetchTasks, UPDATE_INTERVAL);
       }
     },
+
     stopPolling: function() {
       clearInterval(this._interval);
       this._interval = null;

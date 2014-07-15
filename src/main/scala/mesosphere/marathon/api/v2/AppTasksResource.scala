@@ -17,10 +17,6 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.duration.SECONDS
 import mesosphere.marathon.api.v2.json.EnrichedTask
 
-/**
-  * @author Tobi Knaup
-  */
-
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class AppTasksResource @Inject() (service: MarathonSchedulerService,

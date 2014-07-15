@@ -7,19 +7,17 @@ import mesosphere.marathon.state.{ Timestamp, AppRepository }
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import org.apache.mesos.SchedulerDriver
 import com.google.common.collect.Lists
 import org.apache.mesos.Protos.{ OfferID, TaskID, TaskInfo }
 import org.mockito.{ Matchers, ArgumentCaptor }
 import mesosphere.marathon.Protos.MarathonTask
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.Deadline
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.RateLimiters
 import scala.collection.mutable
 
-/**
-  * @author Tobi Knaup
-  */
 class MarathonSchedulerTest extends MarathonSpec {
 
   var repo: AppRepository = null
@@ -28,7 +26,6 @@ class MarathonSchedulerTest extends MarathonSpec {
   var queue: TaskQueue = null
   var scheduler: MarathonScheduler = null
   var frameworkIdUtil: FrameworkIdUtil = null
-  var rateLimiters: RateLimiters = null
   var config: MarathonConf = null
 
   before {
@@ -37,7 +34,6 @@ class MarathonSchedulerTest extends MarathonSpec {
     tracker = mock[TaskTracker]
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
-    rateLimiters = mock[RateLimiters]
     config = mock[MarathonConf]
     scheduler = new MarathonScheduler(
       None,
@@ -47,7 +43,6 @@ class MarathonSchedulerTest extends MarathonSpec {
       tracker,
       queue,
       frameworkIdUtil,
-      rateLimiters,
       config
     )
   }
@@ -63,13 +58,17 @@ class MarathonSchedulerTest extends MarathonSpec {
       ports = Seq(8080),
       version = now
     )
+    val queuedTask = QueuedTask(app, Deadline.now)
+    val list = Vector(queuedTask)
     val allApps = Vector(app)
 
     when(tracker.newTaskId("testOffers"))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
     when(tracker.checkStagedTasks).thenReturn(Seq())
-    when(queue.poll()).thenReturn(app)
-    when(queue.removeAll()).thenReturn(allApps)
+    when(queue.poll()).thenReturn(Some(queuedTask))
+    when(queue.list()).thenReturn(list)
+    when(queue.removeAll()).thenReturn(list)
+    when(queue.listApps()).thenReturn(allApps)
 
     scheduler.resourceOffers(driver, offers)
 
@@ -115,7 +114,7 @@ class MarathonSchedulerTest extends MarathonSpec {
 
     scheduler.scale(driver, app)
 
-    verify(queue).purge(same(app))
+    verify(queue).purge(same(app.id))
     verify(driver).killTask(Matchers.eq(TaskID.newBuilder.setValue("down_0").build))
   }
 }

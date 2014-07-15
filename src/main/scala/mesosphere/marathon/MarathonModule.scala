@@ -16,11 +16,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.RateLimiters
 
-/**
-  * @author Tobi Knaup
-  */
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
   final val NAMED_LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
@@ -51,8 +47,6 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
       .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
 
-    val rateLimiters = new RateLimiters()
-    bind(classOf[RateLimiters]).toInstance(rateLimiters)
   }
 
   @Provides

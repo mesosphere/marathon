@@ -10,10 +10,6 @@ import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
 import org.apache.log4j.Logger
 
-/**
-  * @author Tobi Knaup
-  */
-
 @Provider
 class MarathonExceptionMapper extends ExceptionMapper[Exception] {
 

@@ -4,10 +4,6 @@ import org.apache.mesos.Protos.Offer
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.mesos.protos._
 
-/**
-  * @author Tobi Knaup
-  */
-
 trait MarathonTestHelper {
 
   import mesosphere.mesos.protos.Implicits._

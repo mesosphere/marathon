@@ -32,11 +32,7 @@ function load_options_and_log {
   # Load Marathon options from Mesos and Marathon conf files that are present.
   # Launch main program with Syslog enabled.
   local cmd=( run_jar )
-  if [[ -s /etc/mesos/zk ]]
-  then
-    cmd+=( --zk "$(cut -d / -f 1-3 /etc/mesos/zk)/marathon"
-           --master "$(cat /etc/mesos/zk)" )
-  fi
+  # Load custom options
   if [[ -d $conf_dir ]]
   then
     while read -u 9 -r -d '' path
@@ -48,11 +44,23 @@ function load_options_and_log {
       esac
     done 9< <(cd "$conf_dir" && find . -type f -not -name '.*' -print0)
   fi
+  # Default zk and master option
+  if [[ -s /etc/mesos/zk ]]
+  then
+    if [[ "${cmd[@]}" != *'--zk'* ]]
+    then
+      cmd+=( --zk "$(cut -d / -f 1-3 /etc/mesos/zk)/marathon" )
+    fi
+    if [[ "${cmd[@]}" != *'--master'* ]]
+    then
+      cmd+=( --master "$(cat /etc/mesos/zk)" )
+    fi
+  fi
   logged marathon "${cmd[@]}" "$@"
 }
 
 function run_jar {
-  local log_format='%2$s %5$s%6$s%n' # Class name, message, exception
+  local log_format='%2$s%5$s%6$s%n' # Class name, message, exception
   ulimit -n 8192
   export PATH=/usr/local/bin:"$PATH"
   local vm_opts=( -Xmx512m

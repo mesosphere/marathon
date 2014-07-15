@@ -2,10 +2,6 @@ package mesosphere.marathon.state
 
 import scala.concurrent.Future
 
-/**
-  * @author Tobi Knaup
-  */
-
 trait PersistenceStore[T] {
 
   def fetch(key: String): Future[Option[T]]

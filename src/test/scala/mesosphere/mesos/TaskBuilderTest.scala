@@ -14,10 +14,6 @@ import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import mesosphere.mesos.protos._
 
-/**
-  * @author Tobi Knaup
-  */
-
 class TaskBuilderTest extends MarathonSpec {
 
   import mesosphere.mesos.protos.Implicits._

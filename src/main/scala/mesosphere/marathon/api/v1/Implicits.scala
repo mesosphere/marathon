@@ -5,8 +5,6 @@ import scala.language.implicitConversions
 
 /**
   * Implicits for the API
-  *
-  * @author Tobi Knaup
   */
 
 object Implicits {
