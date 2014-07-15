@@ -28,9 +28,9 @@ case class AppUpdate(
 
     @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
-    @FieldJsonProperty("launchDelaySeconds") launchDelay: Option[FiniteDuration] = None,
+    @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
 
-    launchDelayFactor: Option[JDouble] = None,
+    backoffFactor: Option[JDouble] = None,
 
     constraints: Option[Set[Constraint]] = None,
 
@@ -56,7 +56,8 @@ case class AppUpdate(
     for (v <- mem) updated = updated.copy(mem = v)
     for (v <- uris) updated = updated.copy(uris = v)
     for (v <- ports) updated = updated.copy(ports = v)
-    for (v <- launchDelay) updated = updated.copy(launchDelay = v)
+    for (v <- backoff) updated = updated.copy(backoff = v)
+    for (v <- backoffFactor) updated = updated.copy(backoffFactor = v)
     for (v <- constraints) updated = updated.copy(constraints = v)
     for (v <- executor) updated = updated.copy(executor = v)
     for (v <- healthChecks) updated = updated.copy(healthChecks = v)
@@ -82,8 +83,8 @@ object AppUpdate {
       mem = Option(app.mem),
       uris = Option(app.uris),
       ports = Option(app.ports),
-      launchDelay = Option(app.launchDelay),
-      launchDelayFactor = Option(app.launchDelayFactor),
+      backoff = Option(app.backoff),
+      backoffFactor = Option(app.backoffFactor),
       constraints = Option(app.constraints),
       executor = Option(app.executor),
       container = app.container,

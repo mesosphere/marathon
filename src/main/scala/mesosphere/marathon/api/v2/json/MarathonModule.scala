@@ -231,9 +231,9 @@ object MarathonModule {
 
       @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
-      @FieldJsonProperty("launchDelaySeconds") launchDelay: Option[FiniteDuration] = None,
+      @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
 
-      launchDelayFactor: Option[JDouble] = None,
+      backoffFactor: Option[JDouble] = None,
 
       constraints: Option[Set[Constraint]] = None,
 
@@ -245,7 +245,7 @@ object MarathonModule {
 
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      cmd, instances, cpus, mem, uris, ports, launchDelay, launchDelayFactor,
+      cmd, instances, cpus, mem, uris, ports, backoff, backoffFactor,
       constraints, executor, container, healthChecks, version
     )
   }
