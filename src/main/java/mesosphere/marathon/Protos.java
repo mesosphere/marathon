@@ -2414,33 +2414,33 @@ public final class Protos {
     mesosphere.marathon.Protos.HealthCheckDefinitionOrBuilder getHealthChecksOrBuilder(
         int index);
 
-    // optional int64 launchDelay = 13 [default = 1000];
+    // optional int64 backoff = 13 [default = 1000];
     /**
-     * <code>optional int64 launchDelay = 13 [default = 1000];</code>
+     * <code>optional int64 backoff = 13 [default = 1000];</code>
      *
      * <pre>
      * stored as Millis
      * </pre>
      */
-    boolean hasLaunchDelay();
+    boolean hasBackoff();
     /**
-     * <code>optional int64 launchDelay = 13 [default = 1000];</code>
+     * <code>optional int64 backoff = 13 [default = 1000];</code>
      *
      * <pre>
      * stored as Millis
      * </pre>
      */
-    long getLaunchDelay();
+    long getBackoff();
 
-    // optional double launchDelayFactor = 14 [default = 1.15];
+    // optional double backoffFactor = 14 [default = 1.15];
     /**
-     * <code>optional double launchDelayFactor = 14 [default = 1.15];</code>
+     * <code>optional double backoffFactor = 14 [default = 1.15];</code>
      */
-    boolean hasLaunchDelayFactor();
+    boolean hasBackoffFactor();
     /**
-     * <code>optional double launchDelayFactor = 14 [default = 1.15];</code>
+     * <code>optional double backoffFactor = 14 [default = 1.15];</code>
      */
-    double getLaunchDelayFactor();
+    double getBackoffFactor();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -2591,12 +2591,12 @@ public final class Protos {
             }
             case 104: {
               bitField0_ |= 0x00000080;
-              launchDelay_ = input.readInt64();
+              backoff_ = input.readInt64();
               break;
             }
             case 113: {
               bitField0_ |= 0x00000100;
-              launchDelayFactor_ = input.readDouble();
+              backoffFactor_ = input.readDouble();
               break;
             }
           }
@@ -3038,44 +3038,44 @@ public final class Protos {
       return healthChecks_.get(index);
     }
 
-    // optional int64 launchDelay = 13 [default = 1000];
-    public static final int LAUNCHDELAY_FIELD_NUMBER = 13;
-    private long launchDelay_;
+    // optional int64 backoff = 13 [default = 1000];
+    public static final int BACKOFF_FIELD_NUMBER = 13;
+    private long backoff_;
     /**
-     * <code>optional int64 launchDelay = 13 [default = 1000];</code>
+     * <code>optional int64 backoff = 13 [default = 1000];</code>
      *
      * <pre>
      * stored as Millis
      * </pre>
      */
-    public boolean hasLaunchDelay() {
+    public boolean hasBackoff() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
     /**
-     * <code>optional int64 launchDelay = 13 [default = 1000];</code>
+     * <code>optional int64 backoff = 13 [default = 1000];</code>
      *
      * <pre>
      * stored as Millis
      * </pre>
      */
-    public long getLaunchDelay() {
-      return launchDelay_;
+    public long getBackoff() {
+      return backoff_;
     }
 
-    // optional double launchDelayFactor = 14 [default = 1.15];
-    public static final int LAUNCHDELAYFACTOR_FIELD_NUMBER = 14;
-    private double launchDelayFactor_;
+    // optional double backoffFactor = 14 [default = 1.15];
+    public static final int BACKOFFFACTOR_FIELD_NUMBER = 14;
+    private double backoffFactor_;
     /**
-     * <code>optional double launchDelayFactor = 14 [default = 1.15];</code>
+     * <code>optional double backoffFactor = 14 [default = 1.15];</code>
      */
-    public boolean hasLaunchDelayFactor() {
+    public boolean hasBackoffFactor() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
     /**
-     * <code>optional double launchDelayFactor = 14 [default = 1.15];</code>
+     * <code>optional double backoffFactor = 14 [default = 1.15];</code>
      */
-    public double getLaunchDelayFactor() {
-      return launchDelayFactor_;
+    public double getBackoffFactor() {
+      return backoffFactor_;
     }
 
     private void initFields() {
@@ -3090,8 +3090,8 @@ public final class Protos {
       oBSOLETEContainer_ = mesosphere.marathon.Protos.ContainerInfo.getDefaultInstance();
       version_ = "1970-01-01T00:00:00.000Z";
       healthChecks_ = java.util.Collections.emptyList();
-      launchDelay_ = 1000L;
-      launchDelayFactor_ = 1.15D;
+      backoff_ = 1000L;
+      backoffFactor_ = 1.15D;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3183,10 +3183,10 @@ public final class Protos {
         output.writeMessage(12, healthChecks_.get(i));
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        output.writeInt64(13, launchDelay_);
+        output.writeInt64(13, backoff_);
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeDouble(14, launchDelayFactor_);
+        output.writeDouble(14, backoffFactor_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -3248,11 +3248,11 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(13, launchDelay_);
+          .computeInt64Size(13, backoff_);
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeDoubleSize(14, launchDelayFactor_);
+          .computeDoubleSize(14, backoffFactor_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3417,9 +3417,9 @@ public final class Protos {
         } else {
           healthChecksBuilder_.clear();
         }
-        launchDelay_ = 1000L;
+        backoff_ = 1000L;
         bitField0_ = (bitField0_ & ~0x00000800);
-        launchDelayFactor_ = 1.15D;
+        backoffFactor_ = 1.15D;
         bitField0_ = (bitField0_ & ~0x00001000);
         return this;
       }
@@ -3520,11 +3520,11 @@ public final class Protos {
         if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
           to_bitField0_ |= 0x00000080;
         }
-        result.launchDelay_ = launchDelay_;
+        result.backoff_ = backoff_;
         if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
           to_bitField0_ |= 0x00000100;
         }
-        result.launchDelayFactor_ = launchDelayFactor_;
+        result.backoffFactor_ = backoffFactor_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3658,11 +3658,11 @@ public final class Protos {
             }
           }
         }
-        if (other.hasLaunchDelay()) {
-          setLaunchDelay(other.getLaunchDelay());
+        if (other.hasBackoff()) {
+          setBackoff(other.getBackoff());
         }
-        if (other.hasLaunchDelayFactor()) {
-          setLaunchDelayFactor(other.getLaunchDelayFactor());
+        if (other.hasBackoffFactor()) {
+          setBackoffFactor(other.getBackoffFactor());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5144,84 +5144,84 @@ public final class Protos {
         return healthChecksBuilder_;
       }
 
-      // optional int64 launchDelay = 13 [default = 1000];
-      private long launchDelay_ = 1000L;
+      // optional int64 backoff = 13 [default = 1000];
+      private long backoff_ = 1000L;
       /**
-       * <code>optional int64 launchDelay = 13 [default = 1000];</code>
+       * <code>optional int64 backoff = 13 [default = 1000];</code>
        *
        * <pre>
        * stored as Millis
        * </pre>
        */
-      public boolean hasLaunchDelay() {
+      public boolean hasBackoff() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
       }
       /**
-       * <code>optional int64 launchDelay = 13 [default = 1000];</code>
+       * <code>optional int64 backoff = 13 [default = 1000];</code>
        *
        * <pre>
        * stored as Millis
        * </pre>
        */
-      public long getLaunchDelay() {
-        return launchDelay_;
+      public long getBackoff() {
+        return backoff_;
       }
       /**
-       * <code>optional int64 launchDelay = 13 [default = 1000];</code>
+       * <code>optional int64 backoff = 13 [default = 1000];</code>
        *
        * <pre>
        * stored as Millis
        * </pre>
        */
-      public Builder setLaunchDelay(long value) {
+      public Builder setBackoff(long value) {
         bitField0_ |= 0x00000800;
-        launchDelay_ = value;
+        backoff_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 launchDelay = 13 [default = 1000];</code>
+       * <code>optional int64 backoff = 13 [default = 1000];</code>
        *
        * <pre>
        * stored as Millis
        * </pre>
        */
-      public Builder clearLaunchDelay() {
+      public Builder clearBackoff() {
         bitField0_ = (bitField0_ & ~0x00000800);
-        launchDelay_ = 1000L;
+        backoff_ = 1000L;
         onChanged();
         return this;
       }
 
-      // optional double launchDelayFactor = 14 [default = 1.15];
-      private double launchDelayFactor_ = 1.15D;
+      // optional double backoffFactor = 14 [default = 1.15];
+      private double backoffFactor_ = 1.15D;
       /**
-       * <code>optional double launchDelayFactor = 14 [default = 1.15];</code>
+       * <code>optional double backoffFactor = 14 [default = 1.15];</code>
        */
-      public boolean hasLaunchDelayFactor() {
+      public boolean hasBackoffFactor() {
         return ((bitField0_ & 0x00001000) == 0x00001000);
       }
       /**
-       * <code>optional double launchDelayFactor = 14 [default = 1.15];</code>
+       * <code>optional double backoffFactor = 14 [default = 1.15];</code>
        */
-      public double getLaunchDelayFactor() {
-        return launchDelayFactor_;
+      public double getBackoffFactor() {
+        return backoffFactor_;
       }
       /**
-       * <code>optional double launchDelayFactor = 14 [default = 1.15];</code>
+       * <code>optional double backoffFactor = 14 [default = 1.15];</code>
        */
-      public Builder setLaunchDelayFactor(double value) {
+      public Builder setBackoffFactor(double value) {
         bitField0_ |= 0x00001000;
-        launchDelayFactor_ = value;
+        backoffFactor_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional double launchDelayFactor = 14 [default = 1.15];</code>
+       * <code>optional double backoffFactor = 14 [default = 1.15];</code>
        */
-      public Builder clearLaunchDelayFactor() {
+      public Builder clearBackoffFactor() {
         bitField0_ = (bitField0_ & ~0x00001000);
-        launchDelayFactor_ = 1.15D;
+        backoffFactor_ = 1.15D;
         onChanged();
         return this;
       }
@@ -9638,7 +9638,7 @@ public final class Protos {
       "timeoutSeconds\030\005 \001(\r:\00220\022\017\n\004path\030\006 \001(\t:\001" +
       "/\022!\n\026maxConsecutiveFailures\030\007 \001(\r:\0013\022#\n\007" +
       "command\030\010 \001(\0132\022.mesos.CommandInfo\"*\n\010Pro" +
-      "tocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND\020\002\"\316\003" +
+      "tocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND\020\002\"\306\003" +
       "\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002" +
       " \002(\0132\022.mesos.CommandInfo\022\021\n\tinstances\030\003 " +
       "\002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Resource\022" +
@@ -9649,19 +9649,19 @@ public final class Protos {
       "ContainerInfo\022)\n\007version\030\013 \001(\t:\0301970-01-" +
       "01T00:00:00.000Z\022@\n\014healthChecks\030\014 \003(\0132*" +
       ".mesosphere.marathon.HealthCheckDefiniti" +
-      "on\022\031\n\013launchDelay\030\r \001(\003:\0041000\022\037\n\021launchD" +
-      "elayFactor\030\016 \001(\001:\0041.15\"\272\001\n\014MarathonTask\022" +
-      "\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r" +
-      "\022$\n\nattributes\030\004 \003(\0132\020.mesos.Attribute\022\021" +
-      "\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n" +
-      "\010statuses\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007ve",
-      "rsion\030\010 \001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t" +
-      "\0220\n\005tasks\030\002 \003(\0132!.mesosphere.marathon.Ma" +
-      "rathonTask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002" +
-      "(\014:\000\022\017\n\007options\030\002 \003(\014\")\n\020EventSubscriber" +
-      "s\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016StorageVersi" +
-      "on\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patc" +
-      "h\030\003 \002(\rB\035\n\023mesosphere.marathonB\006Protos"
+      "on\022\025\n\007backoff\030\r \001(\003:\0041000\022\033\n\rbackoffFact" +
+      "or\030\016 \001(\001:\0041.15\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 " +
+      "\002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattr" +
+      "ibutes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged" +
+      "_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuse" +
+      "s\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 ",
+      "\001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005task" +
+      "s\030\002 \003(\0132!.mesosphere.marathon.MarathonTa" +
+      "sk\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007" +
+      "options\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcal" +
+      "lback_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005ma" +
+      "jor\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\rB" +
+      "\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9685,7 +9685,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "LaunchDelay", "LaunchDelayFactor", });
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", });
           internal_static_mesosphere_marathon_MarathonTask_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new

@@ -41,8 +41,8 @@ class RateLimiterTest extends MarathonSpec {
     val rl = new RateLimiter()
     val app = AppDefinition(
       id = "my-app",
-      launchDelay = 2.seconds,
-      launchDelayFactor = 2.0
+      backoff = 2.seconds,
+      backoffFactor = 2.0
     )
 
     rl addDelay app
@@ -54,8 +54,8 @@ class RateLimiterTest extends MarathonSpec {
     val rl = new RateLimiter()
     val app = AppDefinition(
       id = "my-app",
-      launchDelay = 2.seconds,
-      launchDelayFactor = 2.0
+      backoff = 2.seconds,
+      backoffFactor = 2.0
     )
 
     assert(rl.getDelay(app).isOverdue)
@@ -67,8 +67,8 @@ class RateLimiterTest extends MarathonSpec {
     val rl = new RateLimiter()
     val app = AppDefinition(
       id = "my-app",
-      launchDelay = 2.seconds,
-      launchDelayFactor = 2.0
+      backoff = 2.seconds,
+      backoffFactor = 2.0
     )
 
     rl addDelay app

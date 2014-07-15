@@ -45,9 +45,9 @@ case class AppDefinition(
 
   @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
-  @FieldJsonProperty("launchDelaySeconds") launchDelay: FiniteDuration = AppDefinition.DEFAULT_LAUNCH_DELAY,
+  @FieldJsonProperty("backoffSeconds") backoff: FiniteDuration = AppDefinition.DEFAULT_BACKOFF,
 
-  launchDelayFactor: JDouble = AppDefinition.DEFAULT_LAUNCH_FACTOR,
+  backoffFactor: JDouble = AppDefinition.DEFAULT_BACKOFF_FACTOR,
 
   container: Option[ContainerInfo] = None,
 
@@ -85,8 +85,8 @@ case class AppDefinition(
       .setCmd(commandInfo)
       .setInstances(instances)
       .addAllPorts(ports.asJava)
-      .setLaunchDelay(launchDelay.toMillis)
-      .setLaunchDelayFactor(launchDelayFactor)
+      .setBackoff(backoff.toMillis)
+      .setBackoffFactor(backoffFactor)
       .setExecutor(executor)
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
@@ -115,8 +115,8 @@ case class AppDefinition(
       executor = proto.getExecutor,
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
-      launchDelay = proto.getLaunchDelay.milliseconds,
-      launchDelayFactor = proto.getLaunchDelayFactor,
+      backoff = proto.getBackoff.milliseconds,
+      backoffFactor = proto.getBackoffFactor,
       constraints = proto.getConstraintsList.asScala.toSet,
       cpus = resourcesMap.get(Resource.CPUS).getOrElse(this.cpus),
       mem = resourcesMap.get(Resource.MEM).getOrElse(this.mem),
@@ -165,16 +165,16 @@ object AppDefinition {
 
   val DEFAULT_INSTANCES = 0
 
-  val DEFAULT_LAUNCH_DELAY = 1.second
+  val DEFAULT_BACKOFF = 1.second
 
-  val DEFAULT_LAUNCH_FACTOR = 1.15
+  val DEFAULT_BACKOFF_FACTOR = 1.15
 
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
     app: AppDefinition) extends AppDefinition(
     app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.disk,
-    app.executor, app.constraints, app.uris, app.ports, app.launchDelay,
-    app.launchDelayFactor, app.container, app.healthChecks, app.version
+    app.executor, app.constraints, app.uris, app.ports, app.backoff,
+    app.backoffFactor, app.container, app.healthChecks, app.version
   ) {
 
     /**
