@@ -26,8 +26,8 @@ class RateLimiter {
     val newDelay = taskLaunchDelays.get(app.id) match {
       case Some(Delay(current, future)) => Delay(future.next, future)
       case None => Delay(
-        app.launchDelay,
-        durations(app.launchDelay, app.launchDelayFactor)
+        app.backoff,
+        durations(app.backoff, app.backoffFactor)
       )
     }
 
