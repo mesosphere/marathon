@@ -183,9 +183,6 @@ The following options can influence how Marathon works:
 * `--mesos_role`: Mesos role for this framework.
 * `--task_launch_timeout`: Time, in milliseconds, to wait for a task to enter the
     TASK_RUNNING state before killing it.
-* `--task_rate_limit`: This is the time window within which instances may be launched
-    for a given app.  For example, if an app has 5 instances, it will only launch 5
-    instances within 60s regardless of whether they succeed or fail.
 * `--reconciliation_initial_delay`: This is the length of time, in milliseconds, before
     Marathon begins to periodically perform task reconciliation operations.
 * `--mesos_user`: Mesos user for this framework. Defaults to current user.
