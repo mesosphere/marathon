@@ -152,7 +152,10 @@ class MarathonScheduler @Inject() (
 
     import TaskState._
 
-    if (status.getState == TASK_FAILED)
+    val killedForFailingHealthChecks =
+      status.getState == TASK_KILLED && status.hasHealthy && !status.getHealthy
+
+    if (status.getState == TASK_FAILED || killedForFailingHealthChecks)
       currentAppVersion(appId).foreach {
         _.foreach(taskQueue.rateLimiter.addDelay(_))
       }
