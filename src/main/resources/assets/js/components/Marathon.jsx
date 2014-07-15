@@ -3,11 +3,12 @@
 define([
   "mousetrap",
   "React",
+  "Underscore",
   "models/AppCollection",
   "jsx!components/AppListComponent",
   "jsx!components/AppModalComponent",
   "jsx!components/NewAppModalComponent"
-], function(Mousetrap, React, AppCollection, AppListComponent,
+], function(Mousetrap, React, _, AppCollection, AppListComponent,
     AppModalComponent, NewAppModalComponent) {
   "use strict";
 
