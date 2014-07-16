@@ -407,8 +407,9 @@ fieldset[disabled] .btn-info.active {
 }
 
 .pagination-unstyled {
-  margin-top: 0;
-  margin-bottom: -11px;
+  margin-bottom: -9px;
+  margin-right: -15px;
+  margin-top: -6px;
 }
 
 .itemNumbers {
