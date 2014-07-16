@@ -68,7 +68,7 @@ define([
 
     render: function() {
       var caretClassSet = React.addons.classSet({
-        "clickable text-center col-xs-1": true,
+        "clickable text-right col-xs-2": true,
         "dropup": this.state.open
       });
       var versionDate = new Date(this.props.appVersion.get("version"));
@@ -101,7 +101,7 @@ define([
         <div className="panel panel-inverse">
           <div className="panel-heading clickable" onClick={this.handleDetailsClick}>
             <div className="row">
-              <div className="col-xs-11">
+              <div className="col-xs-10">
                 <time dateTime={versionDate.toISOString()} title={versionDate.toISOString()}>
                   {versionDate.toLocaleString()}</time>
               </div>
