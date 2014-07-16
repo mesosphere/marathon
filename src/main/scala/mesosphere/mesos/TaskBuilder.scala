@@ -1,18 +1,21 @@
 package mesosphere.mesos
 
-import org.apache.log4j.Logger
-import java.io.ByteArrayOutputStream
-import scala.collection._
+import scala.util.{ Try, Success, Failure, Random }
 import scala.collection.JavaConverters._
-import org.apache.mesos.Protos._
-import org.apache.mesos.Protos.Environment._
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon._
+import scala.collection.mutable
+
+import java.io.ByteArrayOutputStream
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
-import scala.util.{ Try, Success, Failure, Random }
-import mesosphere.mesos.protos.{ RangesResource, ScalarResource, Resource }
+import org.apache.log4j.Logger
+import org.apache.mesos.Protos.Environment._
+import org.apache.mesos.Protos._
+
+import mesosphere.marathon._
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 
 class TaskBuilder(app: AppDefinition,
                   newTaskId: String => TaskID,
@@ -185,6 +188,8 @@ object TaskBuilder {
       builder.addAllUris(uriProtos.asJava)
     }
 
+    app.user.foreach(builder.setUser)
+
     builder.build
   }
 
@@ -226,7 +231,7 @@ object TaskBuilder {
     None
   }
 
-  def portsEnv(ports: Seq[Long]): Map[String, String] = {
+  def portsEnv(ports: Seq[Long]): scala.collection.Map[String, String] = {
     if (ports.isEmpty) {
       return Map.empty
     }
