@@ -27,6 +27,8 @@ case class AppDefinition(
 
   cmd: String = "",
 
+  user: Option[String] = None,
+
   env: Map[String, String] = Map.empty,
 
   @FieldMin(0) instances: JInt = AppDefinition.DEFAULT_INSTANCES,
@@ -111,6 +113,7 @@ case class AppDefinition(
 
     AppDefinition(
       id = proto.getId,
+      user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = proto.getCmd.getValue,
       executor = proto.getExecutor,
       instances = proto.getInstances,
@@ -172,7 +175,7 @@ object AppDefinition {
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
     app: AppDefinition) extends AppDefinition(
-    app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.disk,
+    app.id, app.cmd, app.user, app.env, app.instances, app.cpus, app.mem, app.disk,
     app.executor, app.constraints, app.uris, app.ports, app.backoff,
     app.backoffFactor, app.container, app.healthChecks, app.version
   ) {

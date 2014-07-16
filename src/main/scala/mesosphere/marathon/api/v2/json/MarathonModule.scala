@@ -224,6 +224,8 @@ object MarathonModule {
   case class AppUpdateBuilder(
       cmd: Option[String] = None,
 
+      user: Option[String] = None,
+
       instances: Option[JInt] = None,
 
       cpus: Option[JDouble] = None,
@@ -248,7 +250,7 @@ object MarathonModule {
 
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      cmd, instances, cpus, mem, uris, ports, backoff, backoffFactor,
+      cmd, user, instances, cpus, mem, uris, ports, backoff, backoffFactor,
       constraints, executor, container, healthChecks, version
     )
   }
