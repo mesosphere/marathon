@@ -38,7 +38,7 @@ class DelegatingHealthCheckManager @Inject() (
 
   override def reconcileWith(app: AppDefinition): Unit = addAllFor(app)
 
-  override def update(taskStatus: TaskStatus): Health = {
+  override def update(taskStatus: TaskStatus): Unit = {
     val taskId = taskStatus.getTaskId.getValue
     val oldHealth: Health = taskHealth.getOrElse(taskId, Health(taskId))
     val newHealth =
@@ -72,8 +72,6 @@ class DelegatingHealthCheckManager @Inject() (
     }
 
     taskHealth = taskHealth + (taskId -> newHealth)
-
-    newHealth
   }
 
   override def status(

@@ -51,7 +51,7 @@ trait HealthCheckManager {
     * Notifies this health check manager of health information received
     * from Mesos.
     */
-  def update(taskStatus: TaskStatus): Health
+  def update(taskStatus: TaskStatus): Unit
 
   /**
     * Returns the health status of the supplied task.

@@ -147,8 +147,8 @@ class MarathonScheduler @Inject() (
 
     val appId = TaskIDUtil.appID(status.getTaskId)
 
-    // conditionally forward health changes to the health check manager
-    if (config.executorHealthChecks()) healthCheckManager.update(status)
+    // forward health changes to the health check manager
+    healthCheckManager.update(status)
 
     import TaskState._
 

@@ -89,8 +89,7 @@ class MarathonHealthCheckManager @Inject() (
     for (hc <- toAdd) add(app.id, hc)
   }
 
-  override def update(taskStatus: TaskStatus): Health =
-    Health(taskStatus.getTaskId.getValue)
+  override def update(taskStatus: TaskStatus): Unit = {}
 
   override def status(
     appId: String,
