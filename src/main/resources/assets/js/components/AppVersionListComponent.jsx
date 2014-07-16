@@ -97,10 +97,10 @@ define([
             <div className="panel panel-header panel-inverse">
               <div className="panel-heading">
                 <div className="row">
-                  <div className="col-xs-8">
+                  <div className="col-xs-6">
                     Older versions
                   </div>
-                  <div className="text-right">
+                  <div className="col-xs-6 text-right">
                     {pagedNav}
                   </div>
                 </div>
