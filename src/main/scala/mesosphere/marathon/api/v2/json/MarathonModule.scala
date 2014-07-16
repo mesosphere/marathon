@@ -177,10 +177,13 @@ class MarathonModule extends Module {
       val oc = json.getCodec
       val tree: JsonNode = oc.readTree(json)
 
-      if (tree.has("image") && tree.has("options")) {
+      if (tree.has("image")) {
         ContainerInfo(
           image = tree.get("image").asText(),
-          options = tree.get("options").elements().asScala.map(_.asText()).toList)
+          options =
+            if (tree.has("options")) tree.get("options").elements().asScala.map(_.asText()).toList
+            else Nil
+        )
       }
       else {
         EmptyContainerInfo
