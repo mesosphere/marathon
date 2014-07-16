@@ -1,12 +1,25 @@
 package mesosphere.marathon
 
 import org.apache.mesos.Protos.Offer
+import org.rogach.scallop.ScallopConf
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.mesos.protos._
 
 trait MarathonTestHelper {
 
   import mesosphere.mesos.protos.Implicits._
+
+  def makeConfig(args: String*): MarathonConf = {
+    val opts = new ScallopConf(args) with MarathonConf {
+      // scallop will trigger sys exit
+      override protected def onError(e: Throwable): Unit = throw e
+    }
+    opts.afterInit()
+    opts
+  }
+
+  def defaultConfig(): MarathonConf =
+    makeConfig("--master", "127.0.0.1:5050")
 
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
                      beginPort: Int = 31000, endPort: Int = 32000) = {
@@ -51,7 +64,7 @@ trait MarathonTestHelper {
   }
 
   def makeBasicApp() = AppDefinition(
-    id = "testApp",
+    id = "test-app",
     cpus = 1,
     mem = 64,
     disk = 1,

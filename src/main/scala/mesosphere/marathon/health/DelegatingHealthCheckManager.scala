@@ -3,6 +3,7 @@ package mesosphere.marathon.health
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event._
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.tasks.TaskIDUtil
 
 import com.google.common.eventbus.EventBus
 import org.apache.mesos.Protos.TaskStatus
@@ -58,7 +59,7 @@ class DelegatingHealthCheckManager @Inject() (
         oldHealth
       }
 
-    val appId = taskId take taskId.lastIndexOf('.')
+    val appId = TaskIDUtil.appID(taskStatus.getTaskId)
 
     for (
       bus <- eventBus;

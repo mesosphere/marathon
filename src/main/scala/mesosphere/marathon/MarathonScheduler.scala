@@ -345,42 +345,17 @@ class MarathonScheduler @Inject() (
   private def newTask(app: AppDefinition,
                       offer: Offer): Option[(TaskInfo, Seq[Long])] = {
     // TODO this should return a MarathonTask
-    val builder = new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper)
+    val builder = new TaskBuilder(
+      app,
+      taskTracker.newTaskId,
+      taskTracker,
+      config,
+      mapper
+    )
 
     builder.buildIfMatches(offer) map {
       case (task, ports) =>
         val taskBuilder = task.toBuilder
-
-        if (config.executorHealthChecks()) {
-          import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-
-          // Mesos supports at most one health check, and only COMMAND checks
-          // are currently implemented.
-          val mesosHealthCheck: Option[org.apache.mesos.Protos.HealthCheck] =
-            app.healthChecks.collectFirst {
-              case healthCheck if healthCheck.protocol == Protocol.COMMAND =>
-                Try(healthCheck.toMesos(ports.map(_.toInt))) match {
-                  case Success(mesosHealthCheck) => Some(mesosHealthCheck)
-                  case Failure(cause) =>
-                    log.warn(
-                      s"An error occurred with health check [$healthCheck]\n" +
-                        s"Error: [${cause.getMessage}]")
-                    None
-                }
-            }.flatten
-
-          mesosHealthCheck foreach taskBuilder.setHealthCheck
-
-          if (mesosHealthCheck.size < app.healthChecks.size) {
-            val numUnusedChecks = app.healthChecks.size - mesosHealthCheck.size
-            log.warn(
-              "Mesos supports one command health check per task.\n" +
-                s"Task [${task.getTaskId.getValue}] will run without " +
-                s"$numUnusedChecks of its defined health checks."
-            )
-          }
-        }
-
         taskBuilder.build -> ports
     }
   }
