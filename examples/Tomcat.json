@@ -1,6 +1,6 @@
 {
   "id": "tomcat",
-  "cmd": "mv *.war apache-tomcat-*/webapps && cd apache-tomcat-* && ./bin/catalina.sh run",
+  "cmd": "mv *.war apache-tomcat-*/webapps && cd apache-tomcat-* && sed \"s/8080/$PORT/g\" < ./conf/server.xml > ./conf/server-mesos.xml && ./bin/catalina.sh run -config ./conf/server-mesos.xml",
   "mem": 512,
   "cpus": 1.0,
   "instances": 1,
