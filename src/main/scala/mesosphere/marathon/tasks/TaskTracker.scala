@@ -82,25 +82,26 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   def terminated(appName: String,
                  status: TaskStatus): Future[Option[MarathonTask]] = {
     val appTasks = get(appName)
+    val app = apps(appName)
     val taskId = status.getTaskId.getValue
 
     appTasks.find(_.getId == taskId) match {
       case Some(task) =>
-        apps(appName).tasks = appTasks - task
+        app.tasks = appTasks - task
 
         val variable = fetchFromState(getKey(appName, taskId))
         state.expunge(variable)
 
         log.info(s"Task ${taskId} expunged and removed from TaskTracker")
 
-        if (apps(appName).shutdown && apps(appName).tasks.isEmpty) {
+        if (app.shutdown && app.tasks.isEmpty) {
           // Are we shutting down this app? If so, remove it
           remove(appName)
         }
 
         Future.successful(Some(task))
       case None =>
-        if (apps(appName).shutdown && apps(appName).tasks.isEmpty) {
+        if (app.shutdown && app.tasks.isEmpty) {
           // Are we shutting down this app? If so, remove it
           remove(appName)
         }
@@ -150,7 +151,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     toKill
   }
 
-  def expungeOrphanedTasks () {
+  def expungeOrphanedTasks() {
     // Remove tasks that don't have any tasks associated with them. Expensive!
     log.info("Expunging orphaned tasks from store")
     val stateTaskKeys = state.names.get.asScala.filter(_.startsWith(PREFIX))

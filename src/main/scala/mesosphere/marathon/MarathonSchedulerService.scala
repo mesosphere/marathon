@@ -317,7 +317,7 @@ class MarathonSchedulerService @Inject() (
     reconciliationTimer.schedule(
       new TimerTask {
         def run() {
-          taskTracker.expungeOrphanedTasks
+          taskTracker.expungeOrphanedTasks()
         }
       },
       reconciliationInitialDelay.toMillis + reconciliationInterval.toMillis
