@@ -14,6 +14,7 @@ define([
     "executor", "id", "instances", "mem", "disk", "ports", "uris"];
   var VALID_ID_PATTERN = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
   var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
+  var VALID_CONSTRAINTS = ["unique", "cluster", "group_by"];
 
   function findHealthCheckMsg(healthCheckResults, context) {
     return healthCheckResults.map(function (hc, index) {
@@ -29,6 +30,15 @@ define([
           ".";
       }
     }, context);
+  }
+
+  function isValidConstraint(p) {
+    if (p.length < 2 || p.length > 3) {
+      return false;
+    }
+    /* awful, should be dynamic. It should be in scala but it's impossible to return an error on a specific field */
+    var operator = p[1];
+    return (_.indexOf(VALID_CONSTRAINTS, operator.toLowerCase()) != -1);
   }
 
   return Backbone.Model.extend({
@@ -187,6 +197,12 @@ define([
           );
         }
       }
+
+      if (!_.every(attrs.constraints, function(p) { return isValidConstraint(p); })) {
+        errors.push(
+          new ValidationError("constraints", "Supported operators are '" + VALID_CONSTRAINTS + "'. See https://github.com/mesosphere/marathon/wiki/Constraints"));
+      }
+
       if (errors.length > 0) { return errors; }
     }
   }, {
