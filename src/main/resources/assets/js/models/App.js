@@ -164,7 +164,7 @@ define([
       });
       // transfer app id
       appVersion.options = {
-        appId: app.get("id")
+        appId: this.get("id")
       };
 
       return appVersion;
