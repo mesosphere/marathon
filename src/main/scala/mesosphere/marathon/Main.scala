@@ -55,7 +55,7 @@ object Main extends App {
         protected override val resourceCacheControlHeader = Some("max-age=0, must-revalidate")
       },
       new MetricsModule,
-      new MarathonModule(conf, zk),
+      new MarathonModule(conf, conf, zk),
       new MarathonRestModule,
       new EventModule(conf)
     ) ++ getEventsModule
