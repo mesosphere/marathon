@@ -1,6 +1,6 @@
 package mesosphere.marathon.health
 
-import javax.inject.{Inject, Named}
+import javax.inject.{ Inject, Named }
 import scala.concurrent.Future
 
 import akka.event.EventStream

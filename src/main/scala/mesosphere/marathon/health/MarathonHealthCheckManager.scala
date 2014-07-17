@@ -1,17 +1,17 @@
 package mesosphere.marathon.health
 
-import javax.inject.{Inject, Named}
+import javax.inject.{ Inject, Named }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
 import org.apache.mesos.Protos.TaskStatus
 
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.event.{AddHealthCheck, EventModule, RemoveHealthCheck}
+import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.util.ThreadPoolContext.context
