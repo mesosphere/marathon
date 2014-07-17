@@ -4,6 +4,7 @@ import org.apache.mesos.Protos.Offer
 import org.rogach.scallop.ScallopConf
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.mesos.protos._
+import mesosphere.marathon.state.PathId._
 
 trait MarathonTestHelper {
 
@@ -64,7 +65,7 @@ trait MarathonTestHelper {
   }
 
   def makeBasicApp() = AppDefinition(
-    id = "test-app",
+    id = "test-app".toPath,
     cpus = 1,
     mem = 64,
     disk = 1,

@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import scala.util.{ Try, Success, Failure, Random }
+import mesosphere.marathon.state.PathId
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -17,8 +17,10 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 
+import scala.util.{ Random, Failure, Success, Try }
+
 class TaskBuilder(app: AppDefinition,
-                  newTaskId: String => TaskID,
+                  newTaskId: PathId => TaskID,
                   taskTracker: TaskTracker,
                   config: MarathonConf,
                   mapper: ObjectMapper = new ObjectMapper()) {
@@ -50,7 +52,7 @@ class TaskBuilder(app: AppDefinition,
     }
 
     TaskBuilder.getPorts(offer, app.ports.size).map { portsResource =>
-      val ports = portsResource.ranges.flatMap(_.asScala)
+      val ports = portsResource.ranges.flatMap(_.asScala())
 
       val taskId = newTaskId(app.id)
       val builder = TaskInfo.newBuilder
@@ -65,11 +67,10 @@ class TaskBuilder(app: AppDefinition,
       }
 
       executor match {
-        case CommandExecutor() => {
+        case CommandExecutor() =>
           builder.setCommand(TaskBuilder.commandInfo(app, ports))
-        }
 
-        case PathExecutor(path) => {
+        case PathExecutor(path) =>
           val executorId = f"marathon-${taskId.getValue}" // Fresh executor
           val escaped = "'" + path + "'" // TODO: Really escape this.
           val shell = f"chmod ug+rx $escaped && exec $escaped ${app.cmd}"
@@ -84,7 +85,6 @@ class TaskBuilder(app: AppDefinition,
           val binary = new ByteArrayOutputStream()
           mapper.writeValue(binary, app)
           builder.setData(ByteString.copyFrom(binary.toByteArray))
-        }
       }
 
       if (config.executorHealthChecks()) {

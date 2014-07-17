@@ -2,18 +2,18 @@ package mesosphere.marathon.event.http
 
 import akka.actor._
 import akka.pattern.ask
-import spray.client.pipelining.sendReceive
-import scala.concurrent.Future
-import spray.httpx.Json4sJacksonSupport
-import org.json4s.{ DefaultFormats, FieldSerializer }
-import spray.client.pipelining._
-import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.api.v1.AppDefinition
-import spray.http.HttpRequest
-import spray.http.HttpResponse
-import scala.util.Success
-import scala.util.Failure
+import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
+import mesosphere.marathon.state.PathId
+import org.json4s.JsonAST.JString
+import org.json4s.{ CustomSerializer, DefaultFormats, FieldSerializer }
+import spray.client.pipelining.{ sendReceive, _ }
+import spray.http.{ HttpRequest, HttpResponse }
+import spray.httpx.Json4sJacksonSupport
+
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLogging with Json4sJacksonSupport {
 
@@ -40,6 +40,7 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
 
   def post(urlString: String, event: MarathonEvent) {
     log.info("Sending POST to:" + urlString)
+
     val request = Post(urlString, event)
     val response = pipeline(request)
 
@@ -54,6 +55,11 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     }
   }
 
-  implicit def json4sJacksonFormats = DefaultFormats + FieldSerializer[AppDefinition]()
+  class PathIdSerializer extends CustomSerializer[PathId](format => (
+    { case JString(path) => PathId(path) },
+    { case path: PathId => JString(path.toString) }
+  ))
+
+  implicit def json4sJacksonFormats = DefaultFormats + FieldSerializer[AppDefinition]() + new PathIdSerializer
 }
 

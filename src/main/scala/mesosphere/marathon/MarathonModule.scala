@@ -1,10 +1,11 @@
 package mesosphere.marathon
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.inject._
 import org.apache.mesos.state.{ ZooKeeperState, State }
 import java.util.concurrent.TimeUnit
 import com.twitter.common.zookeeper.{
-  Group,
+  Group => ZGroup,
   CandidateImpl,
   Candidate,
   ZooKeeperClient
@@ -15,8 +16,8 @@ import org.apache.log4j.Logger
 import javax.inject.Named
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
-import akka.actor.ActorSystem
-import mesosphere.marathon.state.{ MarathonStore, AppRepository }
+import akka.actor.{ OneForOneStrategy, Props, ActorRef, ActorSystem }
+import mesosphere.marathon.state._
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.health.{
@@ -25,6 +26,10 @@ import mesosphere.marathon.health.{
   DelegatingHealthCheckManager
 }
 import mesosphere.mesos.util.FrameworkIdUtil
+import akka.event.EventStream
+import mesosphere.marathon.event.EventModule
+import akka.routing.RoundRobinRouter
+import akka.actor.SupervisorStrategy.Resume
 
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
@@ -45,6 +50,7 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
 
+    bind(classOf[GroupManager]).in(Scopes.SINGLETON)
     bind(classOf[HealthCheckManager]).to(
       conf.executorHealthChecks() match {
         case false => classOf[MarathonHealthCheckManager]
@@ -75,6 +81,38 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     )
   }
 
+  @Named("schedulerActor")
+  @Provides
+  @Singleton
+  @Inject
+  def provideSchedulerActor(
+    @Named("restMapper") mapper: ObjectMapper,
+    system: ActorSystem,
+    appRepository: AppRepository,
+    healthCheckManager: HealthCheckManager,
+    taskTracker: TaskTracker,
+    taskQueue: TaskQueue,
+    frameworkIdUtil: FrameworkIdUtil,
+    @Named(EventModule.busName) eventBus: EventStream,
+    config: MarathonConf): ActorRef = {
+    val supervision = OneForOneStrategy() {
+      case _ => Resume
+    }
+
+    system.actorOf(
+      Props(
+        classOf[MarathonSchedulerActor],
+        mapper,
+        appRepository,
+        healthCheckManager,
+        taskTracker,
+        taskQueue,
+        frameworkIdUtil,
+        eventBus,
+        config).withRouter(RoundRobinRouter(nrOfInstances = 1, supervisorStrategy = supervision)),
+      "MarathonScheduler")
+  }
+
   @Named(ModuleNames.NAMED_CANDIDATE)
   @Provides
   @Singleton
@@ -82,7 +120,7 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     if (Main.conf.highlyAvailable()) {
       log.info("Registering in Zookeeper with hostname:"
         + Main.conf.hostname())
-      val candidate = new CandidateImpl(new Group(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+      val candidate = new CandidateImpl(new ZGroup(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE,
         Main.conf.zooKeeperLeaderPath),
         new Supplier[Array[Byte]] {
           def get() = {
@@ -98,8 +136,14 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideAppRepository(state: State): AppRepository = new AppRepository(
-    new MarathonStore[AppDefinition](state, () => AppDefinition.apply())
+  def provideAppRepository(state: State, conf: MarathonConf): AppRepository = new AppRepository(
+    new MarathonStore[AppDefinition](state, () => AppDefinition.apply()), conf.zooKeeperMaxVersions.get
+  )
+
+  @Provides
+  @Singleton
+  def provideGroupRepository(state: State, appRepository: AppRepository, conf: MarathonConf): GroupRepository = new GroupRepository(
+    new MarathonStore[Group](state, () => Group.empty, "group:"), appRepository, conf.zooKeeperMaxVersions.get
   )
 
   @Provides
@@ -111,4 +155,8 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
   def provideFrameworkIdUtil(state: State): FrameworkIdUtil =
     new FrameworkIdUtil(state)
 
+  @Provides
+  @Singleton
+  def provideMigration(state: State, appRepo: AppRepository, groupRepo: GroupRepository, config: MarathonConf): Migration =
+    new Migration(state, appRepo, groupRepo, config)
 }

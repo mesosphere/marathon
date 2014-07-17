@@ -38,7 +38,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         case Failure(t) =>
           replyTo ! Unhealthy(
             task.getId,
-            Timestamp.now(),
+            task.getVersion,
             s"${t.getClass.getSimpleName}: ${t.getMessage}"
           )
 
@@ -49,14 +49,14 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   def doCheck(task: MarathonTask, check: HealthCheck): Future[HealthResult] =
     task.getPortsList.asScala.lift(check.portIndex) match {
       case None =>
-        Future { Unhealthy(task.getId, Timestamp.now(), "Invalid port index") }
+        Future { Unhealthy(task.getId, task.getVersion, "Invalid port index") }
 
       case Some(port) => check.protocol match {
         case HTTP => http(task, check, port)
         case TCP  => tcp(task, check, port)
         case COMMAND =>
           Future.failed {
-            val message = s"${COMMAND} health checks are only supported when " +
+            val message = s"$COMMAND health checks are only supported when " +
               "running Marathon with --executor_health_checks enabled"
             log.warning(message)
             new UnsupportedOperationException(message)
@@ -85,9 +85,9 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Healthy(task.getId, Timestamp.now())
+        Healthy(task.getId, task.getVersion)
       else
-        Unhealthy(task.getId, Timestamp.now(), response.status.toString())
+        Unhealthy(task.getId, task.getVersion, response.status.toString())
     }
   }
 
@@ -102,7 +102,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       val socket = new Socket
       socket.connect(address, timeoutMillis)
       socket.close()
-      Healthy(task.getId, Timestamp.now())
+      Healthy(task.getId, task.getVersion, Timestamp.now())
     }
   }
 
@@ -114,5 +114,4 @@ object HealthCheckWorker {
   protected[health] val acceptableResponses = Range(200, 400)
 
   case class HealthCheckJob(task: MarathonTask, check: HealthCheck)
-
 }

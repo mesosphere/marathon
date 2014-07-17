@@ -1,43 +1,50 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.TaskID
-import org.apache.log4j.Logger
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.{ AppRepository, Timestamp }
-import com.google.common.util.concurrent.AbstractExecutionThreadService
-import javax.inject.{ Named, Inject }
-import java.util.{ TimerTask, Timer }
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration.MILLISECONDS
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.{ Timer, TimerTask }
+import javax.inject.{ Inject, Named }
+
+import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.pattern.ask
+import akka.util.Timeout
+import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.twitter.common.base.ExceptionalCommand
-import com.twitter.common.zookeeper.Group.JoinException
-import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
-import scala.util.{ Failure, Success, Random }
-import mesosphere.mesos.util.FrameworkIdUtil
+import com.twitter.common.zookeeper.Group.JoinException
+import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.health.HealthCheckManager
-import scala.concurrent.duration._
-import java.util.concurrent.CountDownLatch
-import mesosphere.util.{ BackToTheFuture, ThreadPoolContext }
+import mesosphere.marathon.state.{ Migration, AppRepository, PathId, Timestamp }
+import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.PromiseActor
+import org.apache.log4j.Logger
+import org.apache.mesos.Protos.TaskID
+
+import scala.concurrent.duration.{ MILLISECONDS, _ }
+import scala.concurrent.{ Await, Future, Promise }
+import scala.util.{ Failure, Random, Success }
 
 /**
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
-  healthCheckManager: HealthCheckManager,
-  @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
-  config: MarathonConf,
-  frameworkIdUtil: FrameworkIdUtil,
-  @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
-  appRepository: AppRepository,
-  scheduler: MarathonScheduler)
-    extends AbstractExecutionThreadService with Leader {
+    healthCheckManager: HealthCheckManager,
+    @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
+    config: MarathonConf,
+    frameworkIdUtil: FrameworkIdUtil,
+    @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
+    appRepository: AppRepository,
+    scheduler: MarathonScheduler,
+    system: ActorSystem,
+    migration: Migration,
+    @Named("schedulerActor") schedulerActor: ActorRef) extends AbstractExecutionThreadService with Leader {
 
-  import ThreadPoolContext.context
+  import mesosphere.util.ThreadPoolContext.context
 
   implicit val zkTimeout = config.zkFutureTimeout
 
@@ -68,50 +75,48 @@ class MarathonSchedulerService @Inject() (
   // we have to allocate a new driver before each run or after each stop.
   var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
 
-  def startApp(app: AppDefinition): Future[_] = {
-    // Backwards compatibility
-    val oldPorts = app.ports
-    val newPorts = oldPorts.map(p => if (p == 0) newAppPort(app) else p)
+  implicit val timeout: Timeout = 5.seconds
 
-    if (oldPorts != newPorts) {
-      val asMsg = Seq(oldPorts, newPorts).map("[" + _.mkString(", ") + "]")
-      log.info(s"Assigned some ports for ${app.id}: ${asMsg.mkString(" -> ")}")
+  def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
+    log.info(s"Deploy plan:$plan with force:$force")
+    val promise = Promise[AnyRef]()
+    val receiver = system.actorOf(Props(classOf[PromiseActor], promise))
+
+    schedulerActor.tell(Deploy(plan, force), receiver)
+
+    promise.future.map {
+      case DeploymentStarted(_) => ()
+      case CommandFailed(_, t)  => throw t
     }
-
-    scheduler.startApp(driver, app.copy(ports = newPorts))
   }
-
-  def stopApp(app: AppDefinition): Future[_] = {
-    scheduler.stopApp(driver, app)
-  }
-
-  def updateApp(appName: String, appUpdate: AppUpdate): Future[_] =
-    scheduler.updateApp(driver, appName, appUpdate).map { updatedApp =>
-      scheduler.scale(driver, updatedApp)
-    }
 
   def listApps(): Iterable[AppDefinition] =
-    Await.result(appRepository.apps, config.zkTimeoutDuration)
+    Await.result(appRepository.apps(), config.zkTimeoutDuration)
 
-  def listAppVersions(appName: String): Iterable[Timestamp] =
-    Await.result(appRepository.listVersions(appName), config.zkTimeoutDuration)
+  def listAppVersions(appId: PathId): Iterable[Timestamp] =
+    Await.result(appRepository.listVersions(appId), config.zkTimeoutDuration)
 
-  def getApp(appName: String): Option[AppDefinition] = {
-    Await.result(appRepository.currentVersion(appName), config.zkTimeoutDuration)
+  def listRunningDeployments(): Future[Seq[DeploymentPlan]] =
+    (schedulerActor ? RetrieveRunningDeployments)
+      .mapTo[RunningDeployments]
+      .map(_.plans)
+
+  def getApp(appId: PathId): Option[AppDefinition] = {
+    Await.result(appRepository.currentVersion(appId), config.zkTimeoutDuration)
   }
 
-  def getApp(appName: String, version: Timestamp): Option[AppDefinition] = {
-    Await.result(appRepository.app(appName, version), config.zkTimeoutDuration)
+  def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
+    Await.result(appRepository.app(appId, version), config.zkTimeoutDuration)
   }
 
   def killTasks(
-    appName: String,
+    appId: PathId,
     tasks: Iterable[MarathonTask],
     scale: Boolean): Iterable[MarathonTask] = {
     if (scale) {
-      getApp(appName) foreach { app =>
+      getApp(appId) foreach { app =>
         val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
-        Await.result(scheduler.updateApp(driver, appName, appUpdate), config.zkTimeoutDuration)
+        Await.result(schedulerActor ? UpdateApp(appId, appUpdate), timeout.duration)
       }
     }
 
@@ -241,6 +246,9 @@ class MarathonSchedulerService @Inject() (
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
     log.info("Elected (Leader Interface)")
 
+    //execute tasks, only the leader is allowed to
+    migration.migrate()
+
     // We have been elected. Thus, elect leadership with the abdication command.
     electLeadership(Some(abdicateCmd))
   }
@@ -301,7 +309,7 @@ class MarathonSchedulerService @Inject() (
       new TimerTask {
         def run() {
           if (isLeader) {
-            scheduler.reconcileTasks(driver)
+            schedulerActor ! ReconcileTasks
           }
           else log.info("Not leader therefore not reconciling tasks")
         }
@@ -313,10 +321,16 @@ class MarathonSchedulerService @Inject() (
 
   private def newAppPort(app: AppDefinition): Integer = {
     // TODO this is pretty expensive, find a better way
-    val assignedPorts = listApps().map(_.ports).flatten.toSeq
+    val assignedPorts = listApps().flatMap(_.ports).toSet
+    val portSum = config.localPortMax() - config.localPortMin()
+
+    // prevent infinite loop if all ports are taken
+    if (assignedPorts.size >= portSum)
+      throw new PortRangeExhaustedException(config.localPortMin(), config.localPortMax())
+
     var port = 0
     do {
-      port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
+      port = config.localPortMin() + Random.nextInt(portSum)
     } while (assignedPorts.contains(port))
     port
   }

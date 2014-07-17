@@ -3,12 +3,12 @@ package mesosphere.marathon.event
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheck
 import org.rogach.scallop.ScallopConf
-import com.google.inject.{ Singleton, Provides, AbstractModule }
-import com.google.common.eventbus.{ AsyncEventBus, EventBus }
-import java.util.concurrent.Executors
+import com.google.inject.{ Inject, Singleton, Provides, AbstractModule }
+import akka.event.EventStream
 import javax.inject.Named
 import org.apache.log4j.Logger
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
+import akka.actor.ActorSystem
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]
@@ -32,17 +32,8 @@ class EventModule(conf: EventConfiguration) extends AbstractModule {
   @Named(EventModule.busName)
   @Provides
   @Singleton
-  def provideEventBus(): Option[EventBus] = {
-    if (conf.eventSubscriber.isSupplied) {
-      log.info("Creating Event Bus.")
-      val pool = Executors.newCachedThreadPool()
-      val bus = new AsyncEventBus(pool)
-      Some(bus)
-    }
-    else {
-      None
-    }
-  }
+  @Inject
+  def provideEventBus(system: ActorSystem): EventStream = system.eventStream
 }
 
 object EventModule {
@@ -92,23 +83,71 @@ case class AddHealthCheck(
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
 
 case class RemoveHealthCheck(
-  appId: String,
+  appId: PathId,
   eventType: String = "remove_health_check_event",
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
 
 case class FailedHealthCheck(
-  appId: String,
+  appId: PathId,
   taskId: String,
   healthCheck: HealthCheck,
   eventType: String = "failed_health_check_event",
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
 
 case class HealthStatusChanged(
-  appId: String,
+  appId: PathId,
   taskId: String,
+  version: String,
   alive: Boolean,
   eventType: String = "health_status_changed_event",
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
+
+// upgrade messages
+
+trait UpgradeEvent extends MarathonEvent
+
+case class GroupChangeSuccess(
+  groupId: PathId,
+  version: String,
+  eventType: String = "group_change_success",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
+case class GroupChangeFailed(
+  groupId: PathId,
+  version: String,
+  reason: String,
+  eventType: String = "group_change_failed",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
+case class RestartSuccess(
+  appId: PathId,
+  eventType: String = "restart_success",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
+case class RestartFailed(
+  appId: PathId,
+  eventType: String = "restart_failed",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
+case class DeploymentSuccess(
+  id: String,
+  eventType: String = "deployment_success",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
+case class DeploymentFailed(
+  id: String,
+  eventType: String = "deployment_failed",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
+case class RollbackSuccess(
+  appId: PathId,
+  eventType: String = "rollback_success",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
+case class RollbackFailed(
+  appId: PathId,
+  eventType: String = "rollback_failed",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 // Mesos scheduler
 
@@ -116,9 +155,10 @@ case class MesosStatusUpdateEvent(
   slaveId: String,
   taskId: String,
   taskStatus: String,
-  appId: String,
+  appId: PathId,
   host: String,
   ports: Iterable[Integer],
+  version: String,
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 

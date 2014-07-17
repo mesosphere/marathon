@@ -1,6 +1,7 @@
 package mesosphere.marathon.health
 
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
 
 import org.apache.log4j.Logger
@@ -15,12 +16,12 @@ trait HealthCheckManager {
   /**
     * Returns the active health checks for the app with the supplied id.
     */
-  def list(appId: String): Set[HealthCheck]
+  def list(appId: PathId): Set[HealthCheck]
 
   /**
     * Adds a health check for the app with the supplied id.
     */
-  def add(appId: String, healthCheck: HealthCheck): Unit
+  def add(appId: PathId, healthCheck: HealthCheck): Unit
 
   /**
     * Adds all health checks for the supplied app.
@@ -30,7 +31,7 @@ trait HealthCheckManager {
   /**
     * Removes a health check from the app with the supplied id.
     */
-  def remove(appId: String, healthCheck: HealthCheck): Unit
+  def remove(appId: PathId, healthCheck: HealthCheck): Unit
 
   /**
     * Removes all health checks.
@@ -40,7 +41,7 @@ trait HealthCheckManager {
   /**
     * Removes all health checks for the app with the supplied id.
     */
-  def removeAllFor(appId: String): Unit
+  def removeAllFor(appId: PathId): Unit
 
   /**
     * Reconciles active health checks with those defined by the supplied app.
@@ -51,11 +52,11 @@ trait HealthCheckManager {
     * Notifies this health check manager of health information received
     * from Mesos.
     */
-  def update(taskStatus: TaskStatus): Unit
+  def update(taskStatus: TaskStatus, version: String): Unit
 
   /**
     * Returns the health status of the supplied task.
     */
-  def status(appId: String, taskId: String): Future[Seq[Option[Health]]]
+  def status(appId: PathId, taskId: String): Future[Seq[Option[Health]]]
 
 }

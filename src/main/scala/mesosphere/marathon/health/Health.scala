@@ -15,20 +15,20 @@ case class Health(
     consecutiveFailures: Int = 0) {
 
   @JsonProperty
-  def alive(): Boolean = lastSuccess.exists { successTime =>
+  def alive: Boolean = lastSuccess.exists { successTime =>
     lastFailure.isEmpty || successTime > lastFailure.get
   }
 
   def update(result: HealthResult): Health = result match {
-    case Healthy(_, time) => this.copy(
-      firstSuccess = this.firstSuccess.orElse(Some(time)),
+    case Healthy(_, _, time) => copy(
+      firstSuccess = firstSuccess.orElse(Some(time)),
       lastSuccess = Some(time),
       consecutiveFailures = 0
     )
-    case Unhealthy(_, time, cause) => this.copy(
+    case Unhealthy(_, _, cause, time) => copy(
       lastFailure = Some(time),
       lastFailureCause = Some(cause),
-      consecutiveFailures = this.consecutiveFailures + 1
+      consecutiveFailures = consecutiveFailures + 1
     )
   }
 }
