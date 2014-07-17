@@ -1,9 +1,10 @@
 define([
   "Backbone",
   "Underscore",
+  "models/AppVersion",
   "models/Task",
   "models/TaskCollection"
-], function(Backbone, _, Task, TaskCollection) {
+], function(Backbone, _, AppVersion, Task, TaskCollection) {
   function ValidationError(attribute, message) {
     this.attribute = attribute;
     this.message = message;
@@ -49,6 +50,7 @@ define([
         uris: []
       };
     },
+
     initialize: function(options) {
       _.bindAll(this, 'formatTaskHealthMessage');
       // If this model belongs to a collection when it is instantiated, it has
@@ -67,16 +69,20 @@ define([
         }
       });
     },
+
     isNew: function() {
       return !this.persisted;
     },
+
     allInstancesBooted: function() {
       return this.get("tasksRunning") === this.get("instances");
     },
+
     formatTasksRunning: function() {
       var tasksRunning = this.get("tasksRunning");
       return tasksRunning == null ? "-" : tasksRunning;
     },
+
     formatTaskHealthMessage: function(task) {
       if (task) {
         var msg;
@@ -100,6 +106,7 @@ define([
       }
       return null;
     },
+
     parse: function(data) {
       // When PUTing the response is a 204 (No content) and should not be
       // parsed.
@@ -110,6 +117,7 @@ define([
 
       return data;
     },
+
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
      * "version" value, which when sent prevents any other attributes from being
@@ -142,12 +150,30 @@ define([
       return Backbone.Model.prototype.save.call(
         this, allowedAttrs, options);
     },
+
     setAppVersion: function(appVersion) {
       this.set(_.pick(appVersion.attributes, EDITABLE_ATTRIBUTES));
     },
+
+    getCurrentVersion: function() {
+      var appVersion = new AppVersion();
+      appVersion.set(this.attributes);
+      // make suer date is a string
+      appVersion.set({
+        "version": appVersion.get("version").toISOString()
+      });
+      // transfer app id
+      appVersion.options = {
+        appId: app.get("id")
+      };
+
+      return appVersion;
+    },
+
     suspend: function(options) {
       this.save({instances: 0}, options);
     },
+
     validate: function(attrs, options) {
       var errors = [];
 
@@ -200,6 +226,7 @@ define([
           );
         }
       }
+
       if (errors.length > 0) { return errors; }
     }
   }, {

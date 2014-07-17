@@ -120,7 +120,7 @@ define([
           </h5>
           <AppVersionComponent
             app={this.props.app}
-            appVersion={AppVersion.fromApp(this.props.app)}
+            appVersion={this.props.app.getCurrentVersion()}
             currentVersion={true} />
           {versionTable}
         </div>
