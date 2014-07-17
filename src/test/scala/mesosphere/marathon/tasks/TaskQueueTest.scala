@@ -2,14 +2,15 @@ package mesosphere.marathon.tasks
 
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import scala.concurrent.duration.Deadline
 
 class TaskQueueTest extends MarathonSpec {
-  val app1 = AppDefinition(id = "app1", constraints = Set.empty)
-  val app2 = AppDefinition(id = "app2", constraints = Set(buildConstraint("hostname", "UNIQUE"), buildConstraint("rack_id", "CLUSTER", "rack-1")))
-  val app3 = AppDefinition(id = "app3", constraints = Set(buildConstraint("hostname", "UNIQUE")))
+  val app1 = AppDefinition(id = "app1".toPath, constraints = Set.empty)
+  val app2 = AppDefinition(id = "app2".toPath, constraints = Set(buildConstraint("hostname", "UNIQUE"), buildConstraint("rack_id", "CLUSTER", "rack-1")))
+  val app3 = AppDefinition(id = "app3".toPath, constraints = Set(buildConstraint("hostname", "UNIQUE")))
 
   def buildConstraint(field: String, operator: String, value: String = ""): Constraint = {
     Constraint.newBuilder()

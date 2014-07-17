@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import com.fasterxml.jackson.databind._
 import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ UpgradeStrategy, PathId, Timestamp }
 import mesosphere.marathon.health.HealthCheck
 import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind.Module.SetupContext
@@ -12,10 +12,11 @@ import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS
 import mesosphere.marathon.{ EmptyContainerInfo, ContainerInfo }
 import scala.collection.JavaConverters._
-import mesosphere.marathon.api.v2.AppUpdate
+import mesosphere.marathon.api.v2._
 import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import PathId._
 
 class MarathonModule extends Module {
   import MarathonModule._
@@ -27,6 +28,7 @@ class MarathonModule extends Module {
   private val finiteDurationClass = classOf[FiniteDuration]
   private val containerInfoClass = classOf[ContainerInfo]
   private val appUpdateClass = classOf[AppUpdate]
+  private val groupIdClass = classOf[PathId]
 
   def getModuleName: String = "MarathonModule"
 
@@ -45,6 +47,7 @@ class MarathonModule extends Module {
         else if (matches(timestampClass)) TimestampSerializer
         else if (matches(finiteDurationClass)) FiniteDurationSerializer
         else if (matches(containerInfoClass)) ContainerInfoSerializer
+        else if (matches(groupIdClass)) PathIdSerializer
         else null
       }
     })
@@ -61,6 +64,7 @@ class MarathonModule extends Module {
         else if (matches(finiteDurationClass)) FiniteDurationDeserializer
         else if (matches(containerInfoClass)) ContainerInfoDeserializer
         else if (matches(appUpdateClass)) AppUpdateDeserializer
+        else if (matches(groupIdClass)) PathIdDeserializer
         else null
       }
     })
@@ -157,6 +161,12 @@ class MarathonModule extends Module {
     }
   }
 
+  object PathIdSerializer extends JsonSerializer[PathId] {
+    def serialize(id: PathId, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeString(id.toString)
+    }
+  }
+
   object ContainerInfoSerializer extends JsonSerializer[ContainerInfo] {
     def serialize(container: ContainerInfo, jgen: JsonGenerator, provider: SerializerProvider) {
       jgen.writeStartObject()
@@ -215,6 +225,13 @@ class MarathonModule extends Module {
       appUpdate.copy(container = containerInfo).build
     }
   }
+
+  object PathIdDeserializer extends JsonDeserializer[PathId] {
+    def deserialize(json: JsonParser, context: DeserializationContext): PathId = {
+      val tree: JsonNode = json.getCodec.readTree(json)
+      tree.textValue().toPath
+    }
+  }
 }
 
 object MarathonModule {
@@ -222,9 +239,14 @@ object MarathonModule {
   // of the 'AppUpdate' class and remove this workaround.
   @JsonIgnoreProperties(ignoreUnknown = true)
   case class AppUpdateBuilder(
+
+      id: Option[PathId] = None, //needed for updates inside a group
+
       cmd: Option[String] = None,
 
       user: Option[String] = None,
+
+      env: Option[Map[String, String]] = None,
 
       instances: Option[JInt] = None,
 
@@ -232,13 +254,15 @@ object MarathonModule {
 
       mem: Option[JDouble] = None,
 
+      disk: Option[JDouble] = None,
+
       uris: Option[Seq[String]] = None,
 
       @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
-      @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
+      @FieldJsonProperty("backoffSeconds") backOff: Option[FiniteDuration] = None,
 
-      backoffFactor: Option[JDouble] = None,
+      backOffFactor: Option[JDouble] = None,
 
       constraints: Option[Set[Constraint]] = None,
 
@@ -248,10 +272,14 @@ object MarathonModule {
 
       healthChecks: Option[Set[HealthCheck]] = None,
 
+      dependencies: Option[Set[PathId]] = None,
+
+      upgradeStrategy: Option[UpgradeStrategy] = None,
+
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      cmd, user, instances, cpus, mem, uris, ports, backoff, backoffFactor,
-      constraints, executor, container, healthChecks, version
+      id, cmd, user, env, instances, cpus, mem, disk, uris, ports, backOff, backOffFactor,
+      constraints, executor, container, healthChecks, dependencies, upgradeStrategy, version
     )
   }
 }

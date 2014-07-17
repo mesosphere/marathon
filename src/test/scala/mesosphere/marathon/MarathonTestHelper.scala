@@ -1,12 +1,26 @@
 package mesosphere.marathon
 
 import org.apache.mesos.Protos.Offer
+import org.rogach.scallop.ScallopConf
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.mesos.protos._
+import mesosphere.marathon.state.PathId._
 
 trait MarathonTestHelper {
 
   import mesosphere.mesos.protos.Implicits._
+
+  def makeConfig(args: String*): MarathonConf = {
+    val opts = new ScallopConf(args) with MarathonConf {
+      // scallop will trigger sys exit
+      override protected def onError(e: Throwable): Unit = throw e
+    }
+    opts.afterInit()
+    opts
+  }
+
+  def defaultConfig(): MarathonConf =
+    makeConfig("--master", "127.0.0.1:5050")
 
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
                      beginPort: Int = 31000, endPort: Int = 32000) = {
@@ -36,9 +50,9 @@ trait MarathonTestHelper {
       Seq(Range(beginPort, endPort)),
       role
     )
-    val cpusResource = ScalarResource("cpus", cpus, role)
-    val memResource = ScalarResource("mem", mem, role)
-    val diskResource = ScalarResource("disk", disk, role)
+    val cpusResource = ScalarResource(Resource.CPUS, cpus, role)
+    val memResource = ScalarResource(Resource.MEM, mem, role)
+    val diskResource = ScalarResource(Resource.DISK, disk, role)
     Offer.newBuilder
       .setId(OfferID("1"))
       .setFrameworkId(FrameworkID("marathon"))
@@ -51,7 +65,7 @@ trait MarathonTestHelper {
   }
 
   def makeBasicApp() = AppDefinition(
-    id = "testApp",
+    id = "test-app".toPath,
     cpus = 1,
     mem = 64,
     disk = 1,
