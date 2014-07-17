@@ -1,19 +1,19 @@
 package mesosphere.marathon.health
 
+import javax.inject.{Inject, Named}
+import scala.concurrent.Future
+
+import akka.event.EventStream
+import org.apache.mesos.Protos.TaskStatus
+
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event._
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskIDUtil
 
-import com.google.common.eventbus.EventBus
-import org.apache.mesos.Protos.TaskStatus
-
-import scala.concurrent.Future
-import javax.inject.{ Named, Inject }
-
 class DelegatingHealthCheckManager @Inject() (
-  @Named(EventModule.busName) eventBus: Option[EventBus])
+  @Named(EventModule.busName) eventBus: EventStream)
     extends HealthCheckManager {
 
   protected[this] var taskHealth = Map[String, Health]()
@@ -62,15 +62,9 @@ class DelegatingHealthCheckManager @Inject() (
 
     val appId = TaskIDUtil.appID(taskStatus.getTaskId)
 
-    for (
-      bus <- eventBus;
-      healthCheck <- firstCommandCheck(appId)
-    ) {
-      if (!newHealth.alive)
-        bus post FailedHealthCheck(appId, taskId, healthCheck)
-
-      if (newHealth.alive != oldHealth.alive)
-        bus post HealthStatusChanged(appId, taskId, version, newHealth.alive)
+    for (healthCheck <- firstCommandCheck(appId)) {
+      if (!newHealth.alive) eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
+      if (newHealth.alive != oldHealth.alive) eventBus.publish(HealthStatusChanged(appId, taskId, version, newHealth.alive))
     }
 
     taskHealth = taskHealth + (taskId -> newHealth)

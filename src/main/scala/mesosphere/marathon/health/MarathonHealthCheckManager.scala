@@ -1,24 +1,24 @@
 package mesosphere.marathon.health
 
-import javax.inject.{ Inject, Named }
-
-import akka.actor.{ ActorRef, ActorSystem, Props }
-import akka.pattern.ask
-import akka.util.Timeout
-import com.google.common.eventbus.EventBus
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.util.ThreadPoolContext.context
-import org.apache.mesos.Protos.TaskStatus
-
+import javax.inject.{Inject, Named}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.event.EventStream
+import akka.pattern.ask
+import akka.util.Timeout
+import org.apache.mesos.Protos.TaskStatus
+
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.event.{AddHealthCheck, EventModule, RemoveHealthCheck}
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.util.ThreadPoolContext.context
+
 class MarathonHealthCheckManager @Inject() (
     system: ActorSystem,
-    @Named(EventModule.busName) eventBus: Option[EventBus],
+    @Named(EventModule.busName) eventBus: EventStream,
     taskTracker: TaskTracker) extends HealthCheckManager {
 
   protected[this] case class ActiveHealthCheck(
@@ -52,7 +52,7 @@ class MarathonHealthCheckManager @Inject() (
       appHealthChecks += (appId -> newHealthChecksForApp)
     }
 
-    eventBus.foreach(_.post(AddHealthCheck(healthCheck)))
+    eventBus.publish(AddHealthCheck(healthCheck))
   }
 
   override def addAllFor(app: AppDefinition): Unit =
@@ -70,7 +70,7 @@ class MarathonHealthCheckManager @Inject() (
         else appHealthChecks + (appId -> newHealthChecksForApp)
     }
 
-    eventBus.foreach(_.post(RemoveHealthCheck(appId)))
+    eventBus.publish(RemoveHealthCheck(appId))
   }
 
   override def removeAll(): Unit = appHealthChecks.keys foreach removeAllFor
