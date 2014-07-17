@@ -3,6 +3,7 @@ package mesosphere.marathon
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
+import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v1.AppDefinition
@@ -15,7 +16,6 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.RateLimiters
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito._
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
@@ -35,7 +35,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var tracker: TaskTracker = _
   var queue: TaskQueue = _
   var frameworkIdUtil: FrameworkIdUtil = _
-  var rateLimiters: RateLimiters = _
   var schedulerActor: TestActorRef[MarathonSchedulerActor] = _
   var driver: SchedulerDriver = _
 
@@ -49,16 +48,16 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     tracker = mock[TaskTracker]
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
-    rateLimiters = mock[RateLimiters]
     schedulerActor = TestActorRef[MarathonSchedulerActor](Props(
       classOf[MarathonSchedulerActor],
+      new ObjectMapper(),
       repo,
       hcManager,
       tracker,
       queue,
       frameworkIdUtil,
-      rateLimiters,
-      system.eventStream
+      system.eventStream,
+      mock[MarathonConf]
     ))
   }
 

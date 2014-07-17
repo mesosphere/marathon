@@ -43,10 +43,6 @@ th {
   color: #8e929b;
 }
 
-dt {
-  font-weight: normal;
-}
-
 dd {
   color: #f6f6f6;
 }
@@ -114,23 +110,15 @@ a,
   display: block;
 }
 
-.modal-body {
-  background-color: #323539;
-}
-
 .modal-body-no-top {
   padding-top: 0;
 }
 
-.modal-footer {
-  border-top: none;
-  margin-top: 0;
-  padding-top: 0;
-  background-color: #323539;
-}
-
 .modal-header {
+  background-color: #222224;
   border-bottom: none;
+  -webkit-border-radius: 6px 6px 0 0;
+  border-radius: 6px 6px 0 0;
 }
 
 .modal-header .btn + .btn {
@@ -139,7 +127,7 @@ a,
 }
 
 .modal-content {
-  background-color: #222224;
+  background-color: #323539;
 }
 
 .has-error .help-block,
@@ -374,7 +362,8 @@ fieldset[disabled] .btn-info.active {
 }
 
 @media (min-width: 768px) {
-  .navbar>.container .navbar-brand, .navbar>.container-fluid .navbar-brand {
+  .navbar > .container .navbar-brand,
+  .navbar > .container-fluid .navbar-brand {
     margin-left: 0;
   }
 }
@@ -405,8 +394,24 @@ fieldset[disabled] .btn-info.active {
   margin-top: 14px;
 }
 
+.table-badged > thead > tr > th,
+.table-badged > tbody > tr > th,
+.table-badged > tfoot > tr > th,
+.table-badged > thead > tr > td,
+.table-badged > tbody > tr > td,
+.table-badged > tfoot > tr > td {
+  /* Match the 28px height of badges in tables that contain badged (like the
+   * AppList table).
+   */
+  line-height: 2;
+}
+
 .table-fixed {
   table-layout: fixed;
+}
+
+.table-unstyled {
+  margin-bottom: 0;
 }
 
 .table > tbody > tr.active > td,

@@ -36,7 +36,6 @@ Transfer-Encoding: chunked
         18027, 
         13200
     ], 
-    "taskRateLimit": 1.0, 
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
     ], 

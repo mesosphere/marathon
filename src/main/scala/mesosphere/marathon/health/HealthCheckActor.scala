@@ -1,16 +1,13 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonInclude.Include
-import mesosphere.marathon.event._
-import mesosphere.marathon.MarathonSchedulerDriver
 import akka.event.EventStream
-import mesosphere.mesos.protos.TaskID
+import mesosphere.marathon.MarathonSchedulerDriver
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.event._
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.mesos.protos.TaskID
 
 class HealthCheckActor(
     appId: PathId,
@@ -18,9 +15,9 @@ class HealthCheckActor(
     taskTracker: TaskTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
 
-  import HealthCheckActor.{ GetTaskHealth, Health }
-  import HealthCheckWorker.{ HealthCheckJob, HealthResult, Healthy, Unhealthy }
-  import context.dispatcher // execution context
+  import context.dispatcher
+  import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
+  import mesosphere.marathon.health.HealthCheckWorker.HealthCheckJob
   import mesosphere.mesos.protos.Implicits._
 
   protected[this] var nextScheduledCheck: Option[Cancellable] = None
@@ -56,13 +53,21 @@ class HealthCheckActor(
   protected[this] case object Tick
 
   protected[this] def purgeStatusOfDoneTasks(): Unit = {
-    log.debug("Purging status of done tasks")
+    log.debug(
+      "Purging health status of done tasks for app [{}] and healthCheck [{}]",
+      appId,
+      healthCheck
+    )
     val activeTaskIds = taskTracker.get(appId).map(_.getId)
     taskHealth = taskHealth.filterKeys(activeTaskIds)
   }
 
   protected[this] def scheduleNextHealthCheck(): Unit = {
-    log.debug("Scheduling next health check")
+    log.debug(
+      "Scheduling next health check for app [{}] and healthCheck [{}]",
+      appId,
+      healthCheck
+    )
     nextScheduledCheck = Some(
       context.system.scheduler.scheduleOnce(healthCheck.interval) {
         self ! Tick
@@ -87,8 +92,14 @@ class HealthCheckActor(
     if (consecutiveFailures >= maxFailures) {
       log.info(f"Killing task ${task.getId} on host ${task.getHost}")
 
+      // kill the task
       MarathonSchedulerDriver.driver.foreach { driver =>
         driver.killTask(TaskID(task.getId))
+      }
+
+      // increase the task launch delay for this questionably healthy app
+      MarathonSchedulerDriver.scheduler.foreach { scheduler =>
+        scheduler.unhealthyTaskKilled(appId, task.getId)
       }
     }
   }
@@ -136,48 +147,18 @@ class HealthCheckActor(
 
       taskHealth += (taskId -> newHealth)
 
-      if (health.alive() != newHealth.alive()) {
+      if (health.alive != newHealth.alive) {
         eventBus.publish(
           HealthStatusChanged(
             appId = appId,
             taskId = taskId,
             version = result.version,
-            alive = newHealth.alive())
+            alive = newHealth.alive)
         )
       }
   }
 }
 
 object HealthCheckActor {
-
   case class GetTaskHealth(taskId: String)
-
-  case class Health(
-      taskId: String,
-      firstSuccess: Option[Timestamp] = None,
-      lastSuccess: Option[Timestamp] = None,
-      lastFailure: Option[Timestamp] = None,
-      @FieldJsonInclude(Include.NON_NULL) lastFailureCause: Option[String] = None,
-      consecutiveFailures: Int = 0) {
-    import HealthCheckWorker.{ HealthResult, Healthy, Unhealthy }
-
-    @JsonProperty
-    def alive(): Boolean = lastSuccess.exists { successTime =>
-      lastFailure.isEmpty || successTime > lastFailure.get
-    }
-
-    def update(result: HealthResult): Health = result match {
-      case Healthy(_, _, time) => this.copy(
-        firstSuccess = this.firstSuccess.orElse(Some(time)),
-        lastSuccess = Some(time),
-        consecutiveFailures = 0
-      )
-      case Unhealthy(_, _, time, cause) => this.copy(
-        lastFailure = Some(time),
-        lastFailureCause = Some(cause),
-        consecutiveFailures = this.consecutiveFailures + 1
-      )
-    }
-  }
-
 }

@@ -15,9 +15,6 @@ import scala.collection.JavaConverters._
 import java.util.Properties
 import org.apache.log4j.Logger
 
-/**
-  * @author Tobi Knaup
-  */
 object Main extends App {
   val log = Logger.getLogger(getClass.getName)
   log.info(s"Starting Marathon ${BuildInfo.version}")

@@ -1,9 +1,15 @@
 package mesosphere.marathon
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.inject._
 import org.apache.mesos.state.{ ZooKeeperState, State }
 import java.util.concurrent.TimeUnit
-import com.twitter.common.zookeeper.{ Group => ZGroup, CandidateImpl, Candidate, ZooKeeperClient }
+import com.twitter.common.zookeeper.{
+  Group => ZGroup,
+  CandidateImpl,
+  Candidate,
+  ZooKeeperClient
+}
 import org.apache.zookeeper.ZooDefs
 import com.twitter.common.base.Supplier
 import org.apache.log4j.Logger
@@ -14,17 +20,17 @@ import akka.actor.{ OneForOneStrategy, Props, ActorRef, ActorSystem }
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.health.{
+  HealthCheckManager,
+  MarathonHealthCheckManager,
+  DelegatingHealthCheckManager
+}
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.RateLimiters
 import akka.event.EventStream
 import mesosphere.marathon.event.EventModule
 import akka.routing.RoundRobinRouter
 import akka.actor.SupervisorStrategy.Resume
 
-/**
-  * @author Tobi Knaup
-  */
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
   final val NAMED_LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
@@ -43,21 +49,25 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
-    bind(classOf[HealthCheckManager]).in(Scopes.SINGLETON)
+
     bind(classOf[GroupManager]).in(Scopes.SINGLETON)
+    bind(classOf[HealthCheckManager]).to(
+      conf.executorHealthChecks() match {
+        case false => classOf[MarathonHealthCheckManager]
+        case true  => classOf[DelegatingHealthCheckManager]
+      }
+    )
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))
       .toInstance(conf.zooKeeperServerSetPath)
 
-    //If running in single scheduler mode, this node is the leader.
+    // If running in single scheduler mode, this node is the leader.
     val leader = new AtomicBoolean(!conf.highlyAvailable())
     bind(classOf[AtomicBoolean])
       .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
 
-    val rateLimiters = new RateLimiters()
-    bind(classOf[RateLimiters]).toInstance(rateLimiters)
   }
 
   @Provides
@@ -76,14 +86,15 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
   @Singleton
   @Inject
   def provideSchedulerActor(
+    @Named("restMapper") mapper: ObjectMapper,
     system: ActorSystem,
     appRepository: AppRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
-    rateLimiters: RateLimiters,
-    @Named(EventModule.busName) eventBus: EventStream): ActorRef = {
+    @Named(EventModule.busName) eventBus: EventStream,
+    config: MarathonConf): ActorRef = {
     val supervision = OneForOneStrategy() {
       case _ => Resume
     }
@@ -91,13 +102,14 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     system.actorOf(
       Props(
         classOf[MarathonSchedulerActor],
+        mapper,
         appRepository,
         healthCheckManager,
         taskTracker,
         taskQueue,
         frameworkIdUtil,
-        rateLimiters,
-        eventBus).withRouter(RoundRobinRouter(nrOfInstances = 1, supervisorStrategy = supervision)),
+        eventBus,
+        config).withRouter(RoundRobinRouter(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }
 

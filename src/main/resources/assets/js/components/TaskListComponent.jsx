@@ -91,7 +91,7 @@ define([
         });
 
       return (
-        <table className="table">
+        <table className="table table-unstyled">
           <thead>
             <tr>
               <th className={headerClassSet} width="1" onClick={this.handleThToggleClick}>
@@ -106,7 +106,7 @@ define([
                   ID {(sortKey === "id") ? <span className="caret"></span> : null}
                 </span>
               </th>
-              <th>
+              <th className="text-center">
                 <span onClick={this.sortCollectionBy.bind(null, "status")}
                       className={headerClassSet}>
                   Status {(sortKey === "status") ? <span className="caret"></span> : null}

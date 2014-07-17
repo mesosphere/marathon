@@ -1,12 +1,13 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.marathon.api.validation.FieldConstraints.FieldPortsArray
+import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.state.{ UpgradeStrategy, PathId, Timestamp }
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import scala.concurrent.duration.FiniteDuration
 import java.lang.{ Integer => JInt, Double => JDouble }
 
 // TODO: Accept a task restart strategy as a constructor parameter here, to be
@@ -19,6 +20,8 @@ case class AppUpdate(
 
     cmd: Option[String] = None,
 
+    user: Option[String] = None,
+
     env: Option[Map[String, String]] = None,
 
     instances: Option[JInt] = None,
@@ -27,11 +30,15 @@ case class AppUpdate(
 
     mem: Option[JDouble] = None,
 
+    disk: Option[JDouble] = None,
+
     uris: Option[Seq[String]] = None,
 
     @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
-    taskRateLimit: Option[JDouble] = None,
+    @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
+
+    backoffFactor: Option[JDouble] = None,
 
     constraints: Option[Set[Constraint]] = None,
 
@@ -54,46 +61,23 @@ case class AppUpdate(
   def apply(app: AppDefinition): AppDefinition = app.copy(
     app.id,
     cmd.getOrElse(app.cmd),
+    user,
     env.getOrElse(app.env),
     instances.getOrElse(app.instances),
     cpus.getOrElse(app.cpus),
     mem.getOrElse(app.mem),
+    disk.getOrElse(app.disk),
     executor.getOrElse(app.executor),
     constraints.getOrElse(app.constraints),
     uris.getOrElse(app.uris),
     ports.getOrElse(app.ports),
-    taskRateLimit.getOrElse(app.taskRateLimit),
+    backoff.getOrElse(app.backoff),
+    backoffFactor.getOrElse(app.backoffFactor),
     container.orElse(app.container),
     healthChecks.getOrElse(app.healthChecks),
     dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy.getOrElse(app.upgradeStrategy),
-    Timestamp.now()
+    version.getOrElse(Timestamp.now())
   )
 
-}
-
-object AppUpdate {
-
-  /**
-    * Creates an AppUpdate from the supplied AppDefinition
-    */
-  def fromAppDefinition(app: AppDefinition): AppUpdate =
-    AppUpdate(
-      Option(app.id),
-      Option(app.cmd),
-      Option(app.env),
-      Option(app.instances),
-      Option(app.cpus),
-      Option(app.mem),
-      Option(app.uris),
-      Option(app.ports),
-      Option(app.taskRateLimit),
-      Option(app.constraints),
-      Option(app.executor),
-      app.container,
-      Option(app.healthChecks),
-      Option(app.dependencies),
-      Option(app.upgradeStrategy),
-      Option(app.version)
-    )
 }

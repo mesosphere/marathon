@@ -29,6 +29,7 @@ message HealthCheckDefinition {
   enum Protocol {
     HTTP = 0;
     TCP = 1;
+    COMMAND = 2;
   }
   required Protocol protocol = 1;
   required uint32 portIndex = 2 [default = 0];
@@ -37,6 +38,7 @@ message HealthCheckDefinition {
   optional uint32 timeoutSeconds = 5 [default = 20];
   optional string path = 6 [default = "/"]; // used for HTTP only
   optional uint32 maxConsecutiveFailures = 7 [default = 3];
+  optional mesos.CommandInfo command = 8;
 }
 
 message ServiceDefinition {
@@ -48,12 +50,15 @@ message ServiceDefinition {
   repeated uint32 ports = 6;
   repeated Constraint constraints = 7;
   required string executor = 8 [default = ""];
-  optional double taskRateLimit = 9 [default = 1];
+  // optional double taskRateLimit = 9 [default = 1];
   optional ContainerInfo OBSOLETE_container = 10;
   optional string version = 11 [default = "1970-01-01T00:00:00.000Z"]; //a version is required since version 0.5
   repeated HealthCheckDefinition healthChecks = 12;
-  optional UpgradeStrategyDefinition upgradeStrategy = 13;
-  repeated string dependencies = 14;
+  optional int64 backoff = 13 [default = 1000]; // stored as Millis
+  optional double backoffFactor = 14 [default = 1.15];
+  optional UpgradeStrategyDefinition upgradeStrategy = 15;
+  repeated string dependencies = 16;
+
 }
 
 message MarathonTask {

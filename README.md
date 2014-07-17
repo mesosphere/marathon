@@ -62,7 +62,7 @@ three applications, each with a different number of tasks: Search (1), Jetty
 ![Marathon1](https://raw.github.com/mesosphere/marathon/master/docs/img/marathon1.png "Initial Marathon")
 
 As the website gains traction and the user base grows, we decide to scale-out
-the search service and our Rails-based application. This is done via a simple
+the search service and our Rails-based application. This is done via a
 REST call to the Marathon API to add more tasks. Marathon will take care of
 placing the new tasks on machines with spare capacity, honoring the
 constraints we previously set.
@@ -91,17 +91,22 @@ difficult situation!
 
 1.  Install [Mesos][Mesos]. One easy way is via your system's package manager.
     Current builds for major Linux distributions and Mac OS X are available
-    from Mesosphere on their [downloads page](http://mesosphere.io/downloads/).
+    from on the Mesosphere [downloads page](http://mesosphere.io/downloads/).
 
     If building from source, see the
-    [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
+    Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
     [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
     for details. Running `make install` will install Mesos in `/usr/local` in
     the same way as these packages do.
 
 1.  Download and unpack the latest release.
 
-    **For Mesos 0.17.0 and later:**
+    **For Mesos 0.19.0:**
+
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.6.0/marathon-0.6.0.tgz
+        tar xzf marathon-0.6.0.tgz
+
+    **For Mesos 0.17.0 to 0.18.2:**
 
         curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz
         tar xzf marathon-0.5.1.tgz
@@ -116,7 +121,7 @@ difficult situation!
 
 #### Building From Source
 
-1.  If you want to build Marathon from source, check out this repo and use sbt to build a JAR:
+1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
 
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
@@ -130,13 +135,13 @@ difficult situation!
 ### Running in Production Mode
 
 To launch Marathon in *production mode*, you need to have both
-[Zookeeper][Zookeeper] and Mesos running. The following command launches
+[ZooKeeper][ZooKeeper] and Mesos running. The following command launches
 Marathon on Mesos in *production mode*. Point your web browser to
 `localhost:8080` and you should see the Marathon UI.
 
     ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
 
-Marathon uses `--master` to find the Mesos masters, and `--zk` to find Zookeepers
+Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeepers
 for storing state. They are separate options because Mesos masters can be
 discovered in other ways as well.
 
@@ -144,40 +149,22 @@ discovered in other ways as well.
 
 Mesos local mode allows you to run Marathon without launching a full Mesos
 cluster. It is meant for experimentation and not recommended for production
-use. Note that you still need to run Zookeeper for storing state. The following
+use. Note that you still need to run ZooKeeper for storing state. The following
 command launches Marathon on Mesos in *local mode*. Point your web browser to
 `http://localhost:8080`, and you should see the Marathon UI.
 
     ./bin/start --master local --zk zk://localhost:2181/marathon
+    
+### Running with a standalone Mesos master
 
-#### Working on assets
+The released version 0.19.0 of Mesos does not allow frameworks to launch an in-process master. This will be fixed in the next release. In the meantime, you can still run Marathon locally if you launch a master in a separate console and either point Marathon directly at the master itself or at the same Zookeeper (if you specified this when launching the master):
 
-When editing assets like CSS and JavaScript locally, they are loaded from the
-packaged JAR by default and are not editable. To load them from a directory for
-easy editing, set the `assets_path` flag when running Marathon:
-
-    ./bin/start --master local --zk zk://localhost:2181/marathon --assets_path src/main/resources/assets/
-
-#### Compiling Assets
-
-*Note: You only need to follow these steps if you plan to edit the JavaScript source.*
-
-1. Install [NPM](https://npmjs.org/)
-2. Change to the assets directory
-
-        cd src/main/resources/assets
-3. Install dev dependencies
-
-        npm install
-4. Build the assets
-
-        ./bin/build
-
-The main JS file will be written to `src/main/resources/assets/js/dist/main.js`.
+    ./bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
+    ./bin/start --master localhost:5050 --zk zk://localhost:2181/marathon
 
 ### Command Line Options
 
-There are some command line options that can influence how Marathon works.
+The following options can influence how Marathon works:
 
 * `--master`: The URL of the Mesos master. The format is a comma-delimited list of
     of hosts like `zk://host1:port,host2:port/mesos`. Pay particular attention to the
@@ -196,23 +183,20 @@ There are some command line options that can influence how Marathon works.
 * `--mesos_role`: Mesos role for this framework.
 * `--task_launch_timeout`: Time, in milliseconds, to wait for a task to enter the
     TASK_RUNNING state before killing it.
-* `--task_rate_limit`: This is the time window within which instances may be launched
-    for a given app.  For example, if an app has 5 instances, it will only launch 5
-    instances within 60s regardless of whether they succeed or fail.
 * `--reconciliation_initial_delay`: This is the length of time, in milliseconds, before
     Marathon begins to periodically perform task reconciliation operations.
 * `--mesos_user`: Mesos user for this framework. Defaults to current user.
 
 ### Configuration Options
 
-* `MESOS_NATIVE_LIBRARY`: `bin/start` searches the common installation paths,
+* `MESOS_NATIVE_JAVA_LIBRARY`: `bin/start` searches the common installation paths,
     `/usr/lib` and `/usr/local/lib`, for the Mesos native library. If the
     library lives elsewhere in your configuration, set the environment variable
-    `MESOS_NATIVE_LIBRARY` to its full path.
+    `MESOS_NATIVE_JAVA_LIBRARY` to its full path.
 
   For example:
 
-      MESOS_NATIVE_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
+      MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
 
 Run `./bin/start --help` for a full list of configuration options.
 
@@ -226,15 +210,15 @@ Marathon API can do.
     # Start an app with 128 MB memory, 1 CPU, and 1 instance
     curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
         localhost:8080/v2/apps \
-        -d '{"id": "app_123", "cmd": "sleep 600", "instances": 1, "mem": 128, "cpus": 1}'
+        -d '{"id": "app-123", "cmd": "sleep 600", "instances": 1, "mem": 128, "cpus": 1}'
 
     # Scale the app to 2 instances
     curl -X PUT -H "Accept: application/json" -H "Content-Type: application/json" \
-        localhost:8080/v2/apps/app_123 \
-        -d '{"id": "app_123", "cmd": "sleep 600", "instances": 2, "mem": 128, "cpus": 1}'
+        localhost:8080/v2/apps/app-123 \
+        -d '{"id": "app-123", "cmd": "sleep 600", "instances": 2, "mem": 128, "cpus": 1}'
 
     # Stop the app
-    curl -X DELETE localhost:8080/v2/apps/app_123
+    curl -X DELETE localhost:8080/v2/apps/app-123
 
 ##### Example starting an app using constraints
 
@@ -289,7 +273,7 @@ Marathon was created by [Tobias Knaup](https://github.com/guenter) and
 developed by the team at Mesosphere and by many contributors from
 the community.
 
-[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
+[![githalytics.com alpha](https://cruel-carlota.gopagoda.com/678b61f70ab36917caf159d22ba55f76 "githalytics.com")](http://githalytics.com/mesosphere/marathon)
 
 [Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"

@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v1
 import java.lang.{ Double => JDouble, Integer => JInt }
 
 import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
-import mesosphere.marathon.Protos.{ Constraint, MarathonTask, StorageVersion }
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.PortIndices
 import mesosphere.marathon.health.HealthCheck
@@ -16,6 +16,7 @@ import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.TaskState
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -26,6 +27,8 @@ case class AppDefinition(
 
   cmd: String = "",
 
+  user: Option[String] = None,
+
   env: Map[String, String] = Map.empty,
 
   @FieldMin(0) instances: JInt = AppDefinition.DEFAULT_INSTANCES,
@@ -33,6 +36,8 @@ case class AppDefinition(
   cpus: JDouble = AppDefinition.DEFAULT_CPUS,
 
   mem: JDouble = AppDefinition.DEFAULT_MEM,
+
+  disk: JDouble = AppDefinition.DEFAULT_DISK,
 
   @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = "",
 
@@ -42,12 +47,9 @@ case class AppDefinition(
 
   @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
-  /**
-  * Number of new tasks this app may spawn per second in response to
-  * terminated tasks. This prevents frequently failing apps from spamming
-  * the cluster.
-  */
-  taskRateLimit: JDouble = AppDefinition.DEFAULT_TASK_RATE_LIMIT,
+  @FieldJsonProperty("backoffSeconds") backoff: FiniteDuration = AppDefinition.DEFAULT_BACKOFF,
+
+  backoffFactor: JDouble = AppDefinition.DEFAULT_BACKOFF_FACTOR,
 
   container: Option[ContainerInfo] = None,
 
@@ -82,17 +84,20 @@ case class AppDefinition(
     val commandInfo = TaskBuilder.commandInfo(this, Seq())
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
+    val diskResource = ScalarResource(Resource.DISK, disk)
 
     val builder = Protos.ServiceDefinition.newBuilder
       .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
       .addAllPorts(ports.asJava)
+      .setBackoff(backoff.toMillis)
+      .setBackoffFactor(backoffFactor)
       .setExecutor(executor)
-      .setTaskRateLimit(taskRateLimit)
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
+      .addResources(diskResource)
       .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
       .setVersion(version.toString)
       .setUpgradeStrategy(upgradeStrategy.toProto)
@@ -114,14 +119,17 @@ case class AppDefinition(
 
     AppDefinition(
       id = proto.getId.toPath,
+      user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = proto.getCmd.getValue,
       executor = proto.getExecutor,
-      taskRateLimit = proto.getTaskRateLimit,
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
+      backoff = proto.getBackoff.milliseconds,
+      backoffFactor = proto.getBackoffFactor,
       constraints = proto.getConstraintsList.asScala.toSet,
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
+      disk = resourcesMap.get(Resource.DISK).getOrElse(this.disk),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
       container = if (proto.getCmd.hasContainer) {
@@ -168,7 +176,8 @@ case class AppDefinition(
       ports.toSet != to.ports.toSet ||
       executor != to.executor ||
       healthChecks != to.healthChecks ||
-      taskRateLimit != to.taskRateLimit ||
+      backoff != to.backoff ||
+      backoffFactor != to.backoffFactor ||
       dependencies != to.dependencies ||
       upgradeStrategy != to.upgradeStrategy
   }
@@ -176,24 +185,30 @@ case class AppDefinition(
 
 object AppDefinition {
   val DEFAULT_CPUS = 1.0
+
   val DEFAULT_MEM = 128.0
 
+  val DEFAULT_DISK = 0.0
+
   val RANDOM_PORT_VALUE = 0
+
   val DEFAULT_PORTS: Seq[JInt] = Seq(RANDOM_PORT_VALUE)
 
   val DEFAULT_INSTANCES = 0
 
-  val DEFAULT_TASK_RATE_LIMIT = 1.0
+  val DEFAULT_BACKOFF = 1.second
+
+  val DEFAULT_BACKOFF_FACTOR = 1.15
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition = AppDefinition().mergeFromProto(proto)
 
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
     app: AppDefinition) extends AppDefinition(
-    app.id, app.cmd, app.env, app.instances, app.cpus, app.mem, app.executor,
-    app.constraints, app.uris, app.ports, app.taskRateLimit, app.container,
-    app.healthChecks, app.dependencies, app.upgradeStrategy, app.version
-  ) {
+    app.id, app.cmd, app.user, app.env, app.instances, app.cpus, app.mem, app.disk,
+    app.executor, app.constraints, app.uris, app.ports, app.backoff,
+    app.backoffFactor, app.container, app.healthChecks, app.dependencies, app.upgradeStrategy,
+    app.version) {
 
     /**
       * Snapshot of the known tasks for this app

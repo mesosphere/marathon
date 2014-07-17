@@ -2,10 +2,6 @@ package mesosphere.marathon
 
 import mesosphere.marathon.state.PathId
 
-/**
-  * @author Tobi Knaup
-  */
-
 class Exception(msg: String) extends scala.RuntimeException(msg)
 
 class StorageException(msg: String) extends Exception(msg)

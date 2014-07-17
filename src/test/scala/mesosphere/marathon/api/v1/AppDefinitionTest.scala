@@ -13,9 +13,6 @@ import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
 
-/**
-  * @author Tobi Knaup
-  */
 class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation {
 
   test("ToProto") {
@@ -152,6 +149,30 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     val readResult = mapper.readValue(json, classOf[AppDefinition])
 
     assert(readResult == original)
+
+    val json2 =
+      """
+      {
+        "id": "toggle",
+        "cmd": "python toggle.py $PORT0",
+        "cpus": 0.2,
+        "disk": 0.0,
+        "healthChecks": [
+          {
+            "protocol": "COMMAND",
+            "command": { "value": "env && http http://$HOST:$PORT0/" }
+          }
+        ],
+        "instances": 2,
+        "mem": 32.0,
+        "ports": [0],
+        "uris": ["http://downloads.mesosphere.io/misc/toggle.tgz"]
+      }
+      """
+
+    val readResult2 = mapper.readValue(json2, classOf[AppDefinition])
+    assert(readResult2.healthChecks.head.command.isDefined)
+
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {

@@ -1,6 +1,7 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.state.PathId
+import org.apache.mesos.Protos
 import scala.collection._
 import scala.collection.JavaConverters._
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }
@@ -141,6 +142,12 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     }
     else {
       new App(appId, new mutable.HashSet[MarathonTask](), false)
+    }
+  }
+
+  def getTask(taskId: Protos.TaskID): Option[MarathonTask] = {
+    apps.get(TaskIDUtil.appID(taskId)) flatMap { app =>
+      app.tasks.find(_.getId == taskId.getValue)
     }
   }
 

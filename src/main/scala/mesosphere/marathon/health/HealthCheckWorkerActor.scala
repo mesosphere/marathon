@@ -2,7 +2,11 @@ package mesosphere.marathon.health
 
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{ HTTP, TCP }
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{
+  COMMAND,
+  HTTP,
+  TCP
+}
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.util.Timeout
@@ -35,7 +39,6 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
           replyTo ! Unhealthy(
             task.getId,
             task.getVersion,
-            Timestamp.now(),
             s"${t.getClass.getSimpleName}: ${t.getMessage}"
           )
 
@@ -46,11 +49,24 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   def doCheck(task: MarathonTask, check: HealthCheck): Future[HealthResult] =
     task.getPortsList.asScala.lift(check.portIndex) match {
       case None =>
-        Future { Unhealthy(task.getId, task.getVersion, Timestamp.now(), "Invalid port index") }
+        Future { Unhealthy(task.getId, task.getVersion, "Invalid port index") }
 
       case Some(port) => check.protocol match {
         case HTTP => http(task, check, port)
         case TCP  => tcp(task, check, port)
+        case COMMAND =>
+          Future.failed {
+            val message = s"$COMMAND health checks are only supported when " +
+              "running Marathon with --executor_health_checks enabled"
+            log.warning(message)
+            new UnsupportedOperationException(message)
+          }
+        case _ =>
+          Future.failed {
+            val message = s"Unknown health check protocol: [${check.protocol}]"
+            log.warning(message)
+            new UnsupportedOperationException(message)
+          }
       }
     }
 
@@ -69,9 +85,9 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Healthy(task.getId, task.getVersion, Timestamp.now())
+        Healthy(task.getId, task.getVersion)
       else
-        Unhealthy(task.getId, task.getVersion, Timestamp.now(), response.status.toString())
+        Unhealthy(task.getId, task.getVersion, response.status.toString())
     }
   }
 
@@ -98,22 +114,4 @@ object HealthCheckWorker {
   protected[health] val acceptableResponses = Range(200, 400)
 
   case class HealthCheckJob(task: MarathonTask, check: HealthCheck)
-
-  sealed trait HealthResult {
-    def taskId: String
-    def time: Timestamp
-    def version: String
-  }
-
-  case class Healthy(
-    taskId: String,
-    version: String,
-    time: Timestamp = Timestamp.now()) extends HealthResult
-
-  case class Unhealthy(
-    taskId: String,
-    version: String,
-    time: Timestamp = Timestamp.now(),
-    cause: String) extends HealthResult
-
 }

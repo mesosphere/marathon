@@ -1,9 +1,11 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.tasks.TaskQueue.QueuedTask
+import scala.concurrent.duration.Deadline
 
 class TaskQueueTest extends MarathonSpec {
   val app1 = AppDefinition(id = "app1".toPath, constraints = Set.empty)
@@ -25,9 +27,9 @@ class TaskQueueTest extends MarathonSpec {
     queue.add(app2)
     queue.add(app3)
 
-    assert(app2 == queue.poll(), s"Should return $app2")
-    assert(app3 == queue.poll(), s"Should return $app3")
-    assert(app1 == queue.poll(), s"Should return $app1")
+    assert(app2 == queue.poll().get.app, s"Should return $app2")
+    assert(app3 == queue.poll().get.app, s"Should return $app3")
+    assert(app1 == queue.poll().get.app, s"Should return $app1")
   }
 
   test("RemoveAll") {
@@ -37,7 +39,7 @@ class TaskQueueTest extends MarathonSpec {
     queue.add(app2)
     queue.add(app3)
 
-    val res = queue.removeAll()
+    val res = queue.removeAll().map(_.app)
 
     assert(Vector(app2, app3, app1) == res, s"Should return all elements in correct order.")
     assert(queue.queue.isEmpty, "TaskQueue should be empty.")
@@ -46,15 +48,15 @@ class TaskQueueTest extends MarathonSpec {
   test("AddAll") {
     val queue = new TaskQueue
 
-    queue.addAll(Seq(app1, app2, app3))
+    queue.addAll(Seq(
+      QueuedTask(app1, Deadline.now),
+      QueuedTask(app2, Deadline.now),
+      QueuedTask(app3, Deadline.now)
+    ))
 
-    assert(queue.queue.size() == 3, "Queue should contain 3 elements.")
-    assert(queue.queue.contains(app1), s"Queue should contain $app1.")
-    assert(queue.queue.contains(app2), s"Queue should contain $app2.")
-    assert(queue.queue.contains(app3), s"Queue should contain $app3.")
-
-    val res = queue.removeAll()
-
-    assert(Vector(app2, app3, app1) == res, s"Should return all elements in correct order.")
+    assert(queue.list.size == 3, "Queue should contain 3 elements.")
+    assert(queue.count(app1) == 1, s"Queue should contain $app1.")
+    assert(queue.count(app2) == 1, s"Queue should contain $app2.")
+    assert(queue.count(app3) == 1, s"Queue should contain $app3.")
   }
 }

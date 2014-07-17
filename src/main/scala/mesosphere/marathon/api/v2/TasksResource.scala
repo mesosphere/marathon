@@ -10,11 +10,7 @@ import mesosphere.marathon.api.EndpointsHelper
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import org.apache.log4j.Logger
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.health.HealthCheckActor.Health
-
-/**
-  * @author Tobi Knaup
-  */
+import mesosphere.marathon.health.Health
 
 @Path("v2/tasks")
 class TasksResource @Inject() (service: MarathonSchedulerService,

@@ -6,10 +6,6 @@ import mesosphere.marathon.api.v2.json.MarathonModule
 import com.google.inject.Scopes
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
-/**
-  * @author Tobi Knaup
-  */
-
 class MarathonRestModule extends RestModule {
 
   override val jacksonModules = Seq(
@@ -33,6 +29,7 @@ class MarathonRestModule extends RestModule {
     bind(classOf[v2.EventSubscriptionsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.QueueResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.GroupsResource]).in(Scopes.SINGLETON)
+    bind(classOf[v2.InfoResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.DeploymentsResource]).in(Scopes.SINGLETON)
 
     // This filter will redirect to the master if running in HA mode.

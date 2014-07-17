@@ -17,9 +17,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
-/**
-  * @author Tobi Knaup
-  */
 @Path("v1/apps")
 @Produces(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject() (

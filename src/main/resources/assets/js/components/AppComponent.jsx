@@ -1,8 +1,9 @@
 /** @jsx React.DOM */
 
 define([
-  "React"
-], function(React) {
+  "React",
+  "jsx!components/BadgeComponent"
+], function(React, BadgeComponent) {
   return React.createClass({
     onClick: function() {
       this.props.onClick(this.props.model);
@@ -10,11 +11,6 @@ define([
 
     render: function() {
       var model = this.props.model;
-
-      var instancesClassSet = React.addons.classSet({
-        "badge badge-circlet": true,
-        "badge-circlet-default": !model.allInstancesBooted()
-      });
 
       return (
         // Set `title` on cells that potentially overflow so hovering on the
@@ -29,10 +25,9 @@ define([
           <td className="text-right">{model.get("mem")}</td>
           <td className="text-right">{model.get("cpus")}</td>
           <td className="text-right">
-            <span className={instancesClassSet}>
-              {model.allInstancesBooted() ? null : <span className="health-dot health-dot-warning"></span>}
+            <BadgeComponent types={{"warning": !model.allInstancesBooted()}}>
               {model.formatTasksRunning()} / {model.get("instances")}
-            </span>
+            </BadgeComponent>
           </td>
         </tr>
       );

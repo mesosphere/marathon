@@ -49,6 +49,9 @@ class AppsResource @Inject() (
     val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
     val deployment = result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
     deploymentResult(deployment, Response.created(new URI(baseId.toString)))
+    // header with value 0, which would tell clients to parse the body as JSON.
+    // An empty string (response body with length 0) is invalid JSON.
+    Response.created(new URI(s"${app.id}")).entity(None).build
   }
 
   @GET

@@ -74,7 +74,8 @@ The full JSON format of an application resource is as follows:
         8080,
         9000
     ],
-    "taskRateLimit": 1.0,
+    "backoffSeconds": 1,
+    "backoffFactor": 1.15,
     "tasksRunning": 3, 
     "tasksStaged": 0, 
     "uris": [
@@ -94,8 +95,7 @@ the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constrai
 
 Additional data passed to the container on application launch. These consist of
 an "image" and an array of string options. The meaning of this data is fully
-dependent upon the executor. Furthermore, _it is invalid to pass container
-options when using the default command executor_.
+dependent upon the executor.
 
 ##### `healthChecks`
 
@@ -109,7 +109,7 @@ A health check is considered passing if (1) its HTTP response code is between
 `timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
 health checks consecutively, that task is killed.
 
-Each health check supports the following options:
+###### Health Check Options
 
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
   ignored within this number of seconds of the task being started or until the
@@ -146,6 +146,14 @@ arbitrary free ports for each application instance, pass zeros as port
 values. Each port value is exposed to the instance via environment variables
 `$PORT0`, `$PORT1`, etc. Ports assigned to running instances are also available
 via the task resource.
+
+##### `backoffSeconds` and `backoffFactor`
+
+Configures exponential backoff behavior when launching potentially sick apps.
+This prevents sandboxes associated with consecutively failing tasks from
+filling up the hard disk on Mesos slaves. The backoff period is multiplied by
+the factor for each consecutive failure.  This applies also to tasks that are
+killed due to failing too many health checks.
 
 ##### Example
 
@@ -251,7 +259,6 @@ Transfer-Encoding: chunked
                 13321, 
                 10982
             ], 
-            "taskRateLimit": 1.0, 
             "tasksRunning": 1, 
             "tasksStaged": 0, 
             "uris": [
@@ -314,7 +321,6 @@ Transfer-Encoding: chunked
                 13321, 
                 10982
             ], 
-            "taskRateLimit": 1.0, 
             "tasksRunning": 1, 
             "tasksStaged": 0, 
             "uris": [
@@ -376,7 +382,6 @@ Transfer-Encoding: chunked
             13321, 
             10982
         ], 
-        "taskRateLimit": 1.0, 
         "tasks": [
             {
                 "host": "agouti.local", 
@@ -472,7 +477,6 @@ Transfer-Encoding: chunked
         18027, 
         13200
     ], 
-    "taskRateLimit": 1.0, 
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
     ], 
@@ -1049,7 +1053,6 @@ Transfer-Encoding: chunked
             13024, 
             16512
         ], 
-        "taskRateLimit": 1.0, 
         "tasksRunning": 2, 
         "tasksStaged": 0, 
         "uris": [
@@ -1164,7 +1167,6 @@ Transfer-Encoding: chunked
             17753, 
             18445
         ], 
-        "taskRateLimit": 1.0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ], 
@@ -1211,7 +1213,6 @@ Transfer-Encoding: chunked
             17753, 
             18445
         ], 
-        "taskRateLimit": 1.0, 
         "uris": [
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ], 

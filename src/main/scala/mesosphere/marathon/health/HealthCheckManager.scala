@@ -4,102 +4,59 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
-import akka.pattern.ask
-import akka.util.Timeout
-import javax.inject.{ Named, Inject, Singleton }
+import org.apache.log4j.Logger
+import org.apache.mesos.Protos.TaskStatus
+
 import scala.concurrent.Future
-import scala.concurrent.duration._
-import mesosphere.util.ThreadPoolContext.context
-import akka.event.EventStream
-import mesosphere.marathon.event.{ RemoveHealthCheck, AddHealthCheck, EventModule }
-import org.apache.mesos.MesosSchedulerDriver
-import mesosphere.marathon.MarathonSchedulerDriver
 
-case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
+trait HealthCheckManager {
 
-class HealthCheckManager @Singleton @Inject() (
-    system: ActorSystem,
-    @Named(EventModule.busName) eventBus: EventStream,
-    taskTracker: TaskTracker) {
+  protected[this] val log = Logger.getLogger(getClass.getName)
 
-  import HealthCheckActor.{ GetTaskHealth, Health }
+  /**
+    * Returns the active health checks for the app with the supplied id.
+    */
+  def list(appId: PathId): Set[HealthCheck]
 
-  protected[this] var appHealthChecks = Map[PathId, Set[ActiveHealthCheck]]()
+  /**
+    * Adds a health check for the app with the supplied id.
+    */
+  def add(appId: PathId, healthCheck: HealthCheck): Unit
 
-  def list(appId: PathId): Set[HealthCheck] =
-    appHealthChecks.get(appId).fold(Set[HealthCheck]()) { activeHealthChecks =>
-      activeHealthChecks.map(_.healthCheck)
-    }
+  /**
+    * Adds all health checks for the supplied app.
+    */
+  def addAllFor(app: AppDefinition): Unit
 
-  protected[this] def find(
-    appId: PathId,
-    healthCheck: HealthCheck): Option[ActiveHealthCheck] =
-    appHealthChecks.get(appId).flatMap {
-      _.find { _.healthCheck == healthCheck }
-    }
+  /**
+    * Removes a health check from the app with the supplied id.
+    */
+  def remove(appId: PathId, healthCheck: HealthCheck): Unit
 
-  def add(appId: PathId, healthCheck: HealthCheck): Unit = {
-    val healthChecksForApp =
-      appHealthChecks.get(appId).getOrElse(Set[ActiveHealthCheck]())
+  /**
+    * Removes all health checks.
+    */
+  def removeAll(): Unit
 
-    if (!healthChecksForApp.exists { _.healthCheck == healthCheck }) {
-      val ref = system.actorOf(
-        Props(classOf[HealthCheckActor], appId, healthCheck, taskTracker, eventBus)
-      )
-      val newHealthChecksForApp =
-        healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
-      appHealthChecks += (appId -> newHealthChecksForApp)
-    }
+  /**
+    * Removes all health checks for the app with the supplied id.
+    */
+  def removeAllFor(appId: PathId): Unit
 
-    eventBus.publish(AddHealthCheck(healthCheck))
-  }
+  /**
+    * Reconciles active health checks with those defined by the supplied app.
+    */
+  def reconcileWith(app: AppDefinition): Unit
 
-  def addAllFor(app: AppDefinition): Unit =
-    app.healthChecks.foreach(add(app.id, _))
+  /**
+    * Notifies this health check manager of health information received
+    * from Mesos.
+    */
+  def update(taskStatus: TaskStatus, version: String): Unit
 
-  def remove(appId: PathId, healthCheck: HealthCheck): Unit = {
-    for (activeHealthChecks <- appHealthChecks.get(appId)) {
-      activeHealthChecks.find(_.healthCheck == healthCheck) foreach deactivate
-
-      val newHealthChecksForApp =
-        activeHealthChecks.filterNot { _.healthCheck == healthCheck }
-
-      appHealthChecks =
-        if (newHealthChecksForApp.isEmpty) appHealthChecks - appId
-        else appHealthChecks + (appId -> newHealthChecksForApp)
-    }
-
-    eventBus.publish(RemoveHealthCheck(appId))
-  }
-
-  def removeAllFor(appId: PathId): Unit =
-    for {
-      activeHealthChecks <- appHealthChecks.get(appId)
-      ahc <- activeHealthChecks
-    } remove(appId, ahc.healthCheck)
-
-  def reconcileWith(app: AppDefinition): Unit = {
-    val existingHealthChecks = list(app.id)
-    val toRemove = existingHealthChecks -- app.healthChecks
-    val toAdd = app.healthChecks -- existingHealthChecks
-    for (hc <- toRemove) remove(app.id, hc)
-    for (hc <- toAdd) add(app.id, hc)
-  }
-
-  def status(appId: PathId, taskId: String): Future[Seq[Option[Health]]] = {
-    implicit val timeout: Timeout = Timeout(2, SECONDS)
-    appHealthChecks.get(appId) match {
-      case Some(activeHealthCheckSet) => Future.sequence(
-        activeHealthCheckSet.toSeq.map {
-          case ActiveHealthCheck(_, actor) => (actor ? GetTaskHealth(taskId)).mapTo[Option[Health]]
-        }
-      )
-      case None => Future.successful(Nil)
-    }
-  }
-
-  protected[this] def deactivate(healthCheck: ActiveHealthCheck): Unit =
-    system stop healthCheck.actor
+  /**
+    * Returns the health status of the supplied task.
+    */
+  def status(appId: PathId, taskId: String): Future[Seq[Option[Health]]]
 
 }
