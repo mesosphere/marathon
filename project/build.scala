@@ -89,8 +89,10 @@ object Dependencies {
     jodaTime % "compile",
     jodaConvert % "compile",
     jerseyServlet % "compile",
+    jerseyMultiPart % "compile",
     uuidGenerator % "compile",
     jGraphT % "compile",
+    hadoopClient % "compile",
 
     // test
     Test.scalatest % "test",
@@ -110,12 +112,13 @@ object Dependency {
     val Spray = "1.2.1"
     val Json4s = "3.2.5"
     val TwitterCommons = "0.0.52"
-    val TwitterZkCLient = "0.0.43"
+    val TwitterZKClient = "0.0.43"
     val Jersey = "1.18.1"
     val JodaTime = "2.3"
     val JodaConvert = "1.6"
     val UUIDGenerator = "3.1.3"
     val JGraphT = "0.9.1"
+    val Hadoop = "1.2.1"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -131,13 +134,15 @@ object Dependency {
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
+  val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
   val mesos = "org.apache.mesos" % "mesos" % V.Mesos
   val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
-  val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZkCLient
+  val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZKClient
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
+  val hadoopClient =  "org.apache.hadoop" % "hadoop-client" % V.Hadoop
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

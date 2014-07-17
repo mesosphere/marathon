@@ -1,7 +1,6 @@
 package mesosphere.marathon
 
 import org.rogach.scallop.ScallopConf
-import java.net.InetSocketAddress
 import scala.sys.SystemProperties
 
 trait MarathonConf extends ScallopConf with ZookeeperConf {
@@ -42,7 +41,7 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
   lazy val hostname = opt[String]("hostname",
     descr = "The advertised hostname stored in ZooKeeper so another standby " +
       "host can redirect to this elected leader",
-    default = Some(java.net.InetAddress.getLocalHost().getHostName()))
+    default = Some(java.net.InetAddress.getLocalHost.getHostName))
 
   def executor: Executor = Executor.dispatch(defaultExecutor())
 
@@ -73,4 +72,9 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
   lazy val mesosUser = opt[String]("mesos_user",
     descr = "Mesos user for this framework",
     default = new SystemProperties().get("user.name")) // Current logged in user
+
+  lazy val artifactStore = opt[String]("artifact_store",
+    descr = "URL to the artifact store.",
+    noshort = true
+  )
 }

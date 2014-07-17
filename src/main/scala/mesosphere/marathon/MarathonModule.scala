@@ -1,35 +1,34 @@
 package mesosphere.marathon
 
+import java.io.File
+import java.net.URI
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import javax.inject.Named
+
+import akka.actor.SupervisorStrategy.Resume
+import akka.actor.{ActorRef, ActorSystem, OneForOneStrategy, Props}
+import akka.event.EventStream
+import akka.routing.RoundRobinRouter
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.inject._
-import org.apache.mesos.state.{ ZooKeeperState, State }
-import java.util.concurrent.TimeUnit
-import com.twitter.common.zookeeper.{
-  Group => ZGroup,
-  CandidateImpl,
-  Candidate,
-  ZooKeeperClient
-}
-import org.apache.zookeeper.ZooDefs
-import com.twitter.common.base.Supplier
-import org.apache.log4j.Logger
-import javax.inject.Named
-import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.name.Names
-import akka.actor.{ OneForOneStrategy, Props, ActorRef, ActorSystem }
-import mesosphere.marathon.state._
+import com.twitter.common.base.Supplier
+import com.twitter.common.zookeeper.{Candidate, CandidateImpl, ZooKeeperClient, Group => ZGroup}
+import org.apache.hadoop.conf.Configuration
+import org.apache.log4j.Logger
+import org.apache.mesos.state.{State, ZooKeeperState}
+import org.apache.zookeeper.ZooDefs
+
+import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
-import mesosphere.marathon.health.{
-  HealthCheckManager,
-  MarathonHealthCheckManager,
-  DelegatingHealthCheckManager
-}
-import mesosphere.mesos.util.FrameworkIdUtil
-import akka.event.EventStream
 import mesosphere.marathon.event.EventModule
-import akka.routing.RoundRobinRouter
-import akka.actor.SupervisorStrategy.Resume
+import mesosphere.marathon.health.{DelegatingHealthCheckManager, HealthCheckManager, MarathonHealthCheckManager}
+import mesosphere.marathon.io.storage.{FileStorageProvider, HDFSStorageProvider, NoStorageProvider, StorageProvider}
+import mesosphere.marathon.state._
+import mesosphere.marathon.tasks.{TaskQueue, TaskTracker}
+import mesosphere.mesos.util.FrameworkIdUtil
 
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
@@ -37,13 +36,14 @@ object ModuleNames {
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
 }
 
-class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
+class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     extends AbstractModule {
 
   val log = Logger.getLogger(getClass.getName)
 
   def configure() {
     bind(classOf[MarathonConf]).toInstance(conf)
+    bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[ZooKeeperClient]).toInstance(zk)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
@@ -166,4 +166,16 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideTaskIdUtil(): TaskIdUtil = new TaskIdUtil
+  
+  @Provides
+  @Singleton
+  def provideStorageProvider(config: MarathonConf, http: HttpConf): StorageProvider = {
+    val HDFS = "^(hdfs://[^/]+)(.*)$".r // hdfs://host:port/path
+    val FILE = "^file://(.*)$".r // file:///local/artifact/path
+    config.artifactStore.get.getOrElse("") match {
+      case HDFS(uri, base) => new HDFSStorageProvider(new URI(uri), base, new Configuration())
+      case FILE(base)      => new FileStorageProvider("http://" + config.hostname.get.get + ":" + http.httpPort.get.get + "/v2/artifacts", new File(base))
+      case _               => new NoStorageProvider()
+    }
+  }
 }
