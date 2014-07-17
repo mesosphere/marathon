@@ -18,6 +18,8 @@ case class AppUpdate(
 
     cmd: Option[String] = None,
 
+    user: Option[String] = None,
+
     instances: Option[JInt] = None,
 
     cpus: Option[JDouble] = None,
@@ -63,8 +65,9 @@ case class AppUpdate(
     for (v <- healthChecks) updated = updated.copy(healthChecks = v)
 
     updated.copy(
-      container = this.container.orElse(app.container),
-      version = Timestamp.now
+      user = user,
+      container = container.orElse(app.container),
+      version = Timestamp.now()
     )
   }
 
