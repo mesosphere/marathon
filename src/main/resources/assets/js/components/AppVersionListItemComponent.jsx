@@ -47,7 +47,7 @@ define([
       this.props.appVersion.fetch({
         error: function() {
           this.setState({fetchState: STATES.STATE_ERROR});
-        },
+        }.bind(this),
         success: function() {
           this.setState({fetchState: STATES.STATE_SUCCESS});
         }.bind(this)

@@ -59,26 +59,26 @@ define([
         tableContents = <p className="text-muted text-center">Loading versions...</p>;
       } else if (this.props.fetchState === this.props.STATES.STATE_SUCCESS) {
         tableContents =
-          <div>
-            <PagedContentComponent
-              currentPage={currentPage}
-              itemsPerPage={itemsPerPage}>
-              {
-                appVersions.map(function(v) {
-                  return (
-                      <AppVersionListItemComponent
-                        app={this.props.app}
-                        appVersion={v}
-                        key={v.get("version")}
-                        onRollback={this.props.onRollback} />
-                  );
-                }, this)
-              }
-            </PagedContentComponent>
-          </div>
+          <PagedContentComponent
+            currentPage={currentPage}
+            itemsPerPage={itemsPerPage}>
+            {
+              appVersions.map(function(v) {
+                return (
+                    <AppVersionListItemComponent
+                      app={this.props.app}
+                      appVersion={v}
+                      key={v.get("version")}
+                      onRollback={this.props.onRollback} />
+                );
+              }, this)
+            }
+          </PagedContentComponent>;
       } else {
         tableContents =
-          <p className="text-danger text-center">Error fetching app versions</p>;
+          <p className="text-danger text-center">
+            Error fetching app versions
+          </p>;
       }
 
       // at least two pages
@@ -94,29 +94,29 @@ define([
       // at least one older version
       var versionTable = appVersions.length > 0 ?
         <div className="panel-group">
-            <div className="panel panel-header panel-inverse">
-              <div className="panel-heading">
-                <div className="row">
-                  <div className="col-xs-6">
-                    Older versions
-                  </div>
-                  <div className="col-xs-6 text-right">
-                    {pagedNav}
-                  </div>
+          <div className="panel panel-header panel-inverse">
+            <div className="panel-heading">
+              <div className="row">
+                <div className="col-xs-6">
+                  Older versions
+                </div>
+                <div className="col-xs-6 text-right">
+                  {pagedNav}
                 </div>
               </div>
             </div>
-              {tableContents}
-          </div> :
-          null;
+          </div>
+          {tableContents}
+        </div> :
+        null;
 
       return (
         <div>
           <h5>
             Current Version
             <button className="btn btn-sm btn-info pull-right" onClick={this.handleRefresh}>
-            ↻ Refresh
-          </button>
+              ↻ Refresh
+            </button>
           </h5>
           <AppVersionComponent
             app={this.props.app}
