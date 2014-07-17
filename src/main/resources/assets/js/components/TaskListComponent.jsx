@@ -8,7 +8,9 @@ define([
 
   return React.createClass({
     displayName: "TaskListComponent",
-    mixins:[BackboneMixin],
+
+    mixins: [BackboneMixin],
+
     propTypes: {
       fetchState: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
@@ -16,15 +18,17 @@ define([
       STATES: React.PropTypes.object.isRequired,
       tasks: React.PropTypes.object.isRequired
     },
+
     getResource: function() {
       return this.props.tasks;
     },
+
     getInitialState: function() {
       return {
-        fetchState: this.props.STATES.STATE_LOADING,
-        showTimestamps: false
+        fetchState: this.props.STATES.STATE_LOADING
       };
     },
+
     handleThToggleClick: function(event) {
       // If the click happens on the checkbox, let the checkbox's onchange event
       // handler handle it and skip handling the event here.
@@ -32,6 +36,17 @@ define([
         this.props.toggleAllTasks();
       }
     },
+
+    sortCollectionBy: function(comparator) {
+      var collection = this.props.tasks;
+      comparator =
+        collection.sortKey === comparator && !collection.sortReverse ?
+        "-" + comparator :
+        comparator;
+      collection.setComparator(comparator);
+      collection.sort();
+    },
+
     render: function() {
       var taskNodes;
       var tasksLength = this.props.tasks.length;
@@ -45,21 +60,21 @@ define([
       if (this.props.fetchState === this.props.STATES.STATE_LOADING) {
         taskNodes =
           <tr>
-            <td className="text-center text-muted" colSpan="5">
+            <td className="text-center text-muted" colSpan="7">
               Loading tasks...
             </td>
           </tr>;
       } else if (this.props.fetchState === this.props.STATES.STATE_ERROR) {
         taskNodes =
           <tr>
-            <td className="text-center text-danger" colSpan="5">
+            <td className="text-center text-danger" colSpan="7">
               Error fetching tasks. Refresh the list to try again.
             </td>
           </tr>;
       } else if (tasksLength === 0) {
         taskNodes =
           <tr>
-            <td className="text-center" colSpan="5">
+            <td className="text-center" colSpan="7">
               No tasks running.
             </td>
           </tr>;
@@ -113,6 +128,11 @@ define([
                 </span>
               </th>
               <th className="text-right">
+                <span className={headerClassSet} onClick={this.sortCollectionBy.bind(null, "version")}>
+                  {(sortKey === "version") ? <span className="caret"></span> : null} Version
+                </span>
+              </th>
+              <th className="text-right">
                 <span onClick={this.sortCollectionBy.bind(null, "updatedAt")}
                       className={headerClassSet}>
                   {(sortKey === "updatedAt") ? <span className="caret"></span> : null} Updated
@@ -135,18 +155,6 @@ define([
           </tbody>
         </table>
       );
-    },
-    sortCollectionBy: function(comparator) {
-      var collection = this.props.tasks;
-      comparator =
-        collection.sortKey === comparator && !collection.sortReverse ?
-        "-" + comparator :
-        comparator;
-      collection.setComparator(comparator);
-      collection.sort();
-    },
-    toggleShowTimestamps: function() {
-      this.setState({showTimestamps: !this.state.showTimestamps});
     }
   });
 });
