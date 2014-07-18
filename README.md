@@ -103,8 +103,8 @@ difficult situation!
 
     **For Mesos 0.19.0:**
 
-        curl -O http://downloads.mesosphere.io/marathon/marathon-0.6.0/marathon-0.6.0.tgz
-        tar xzf marathon-0.6.0.tgz
+        curl -O http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz
+        tar xzf marathon-0.6.1.tgz
 
     **For Mesos 0.17.0 to 0.18.2:**
 
