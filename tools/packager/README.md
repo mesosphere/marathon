@@ -25,7 +25,7 @@ gem install fpm
 * Install packaging tools particular to your platform.
 
 ```bash
-apt-get install build-essential			## On Debian/Ubuntu
+apt-get install build-essential rpm		## On Debian/Ubuntu
 ```
 
 ```bash
