@@ -34,7 +34,7 @@ class MarathonSchedulerTest extends MarathonSpec {
     tracker = mock[TaskTracker]
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
-    config = mock[MarathonConf]
+    config = defaultConfig()
     scheduler = new MarathonScheduler(
       None,
       new ObjectMapper,

@@ -29,6 +29,7 @@ message HealthCheckDefinition {
   enum Protocol {
     HTTP = 0;
     TCP = 1;
+    COMMAND = 2;
   }
   required Protocol protocol = 1;
   required uint32 portIndex = 2 [default = 0];
@@ -37,6 +38,7 @@ message HealthCheckDefinition {
   optional uint32 timeoutSeconds = 5 [default = 20];
   optional string path = 6 [default = "/"]; // used for HTTP only
   optional uint32 maxConsecutiveFailures = 7 [default = 3];
+  optional mesos.CommandInfo command = 8;
 }
 
 message ServiceDefinition {

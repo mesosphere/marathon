@@ -19,7 +19,7 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos
 import mesosphere.util.ThreadPoolContext
 import mesosphere.marathon.health.HealthCheckManager
-import scala.util.{ Success, Failure }
+import scala.util.{ Try, Success, Failure }
 import org.apache.log4j.Logger
 
 trait SchedulerCallbacks {
@@ -27,14 +27,18 @@ trait SchedulerCallbacks {
 }
 
 object MarathonScheduler {
-  private class MarathonSchedulerCallbacksImpl(serviceOption: Option[MarathonSchedulerService]) extends SchedulerCallbacks {
+
+  private class MarathonSchedulerCallbacksImpl(
+      serviceOption: Option[MarathonSchedulerService]) extends SchedulerCallbacks {
     override def disconnected(): Unit = {
       // Abdicate leadership when we become disconnected from the Mesos master.
       serviceOption.foreach(_.abdicateLeadership())
     }
   }
 
-  val callbacks: SchedulerCallbacks = new MarathonSchedulerCallbacksImpl(Some(Main.injector.getInstance(classOf[MarathonSchedulerService])))
+  val callbacks: SchedulerCallbacks = new MarathonSchedulerCallbacksImpl(
+    Some(Main.injector.getInstance(classOf[MarathonSchedulerService]))
+  )
 }
 
 class MarathonScheduler @Inject() (
@@ -61,8 +65,11 @@ class MarathonScheduler @Inject() (
   protected[marathon] def currentAppVersion(
     appId: String): Future[Option[AppDefinition]] = appRepository.currentVersion(appId)
 
-  override def registered(driver: SchedulerDriver, frameworkId: FrameworkID, master: MasterInfo) {
-    log.info("Registered as %s to master '%s'".format(frameworkId.getValue, master.getId))
+  override def registered(
+    driver: SchedulerDriver,
+    frameworkId: FrameworkID,
+    master: MasterInfo) {
+    log.info(s"Registered as ${frameworkId.getValue} to master '${master.getId}'")
     frameworkIdUtil.store(frameworkId)
   }
 
@@ -74,6 +81,7 @@ class MarathonScheduler @Inject() (
     // Check for any tasks which were started but never entered TASK_RUNNING
     // TODO resourceOffers() doesn't feel like the right place to run this
     val toKill = taskTracker.checkStagedTasks
+
     if (toKill.nonEmpty) {
       log.warn(s"There are ${toKill.size} tasks stuck in staging which will be killed")
       log.info(s"About to kill these tasks: $toKill")
@@ -85,7 +93,7 @@ class MarathonScheduler @Inject() (
 
     for (offer <- offers.asScala) {
       try {
-        log.debug("Received offer %s".format(offer))
+        log.debug(s"Received offer $offer")
 
         val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
 
@@ -97,8 +105,12 @@ class MarathonScheduler @Inject() (
                 log.debug("Launching tasks: " + taskInfos)
 
                 val marathonTask = MarathonTasks.makeTask(
-                  task.getTaskId.getValue, offer.getHostname, ports,
-                  offer.getAttributesList.asScala.toList, app.version)
+                  task.getTaskId.getValue,
+                  offer.getHostname,
+                  ports,
+                  offer.getAttributesList.asScala.toList,
+                  app.version
+                )
 
                 taskTracker.starting(app.id, marathonTask)
                 driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
@@ -135,9 +147,15 @@ class MarathonScheduler @Inject() (
 
     val appId = TaskIDUtil.appID(status.getTaskId)
 
+    // forward health changes to the health check manager
+    healthCheckManager.update(status)
+
     import TaskState._
 
-    if (status.getState == TASK_FAILED)
+    val killedForFailingHealthChecks =
+      status.getState == TASK_KILLED && status.hasHealthy && !status.getHealthy
+
+    if (status.getState == TASK_FAILED || killedForFailingHealthChecks)
       currentAppVersion(appId).foreach {
         _.foreach(taskQueue.rateLimiter.addDelay(_))
       }
@@ -183,6 +201,19 @@ class MarathonScheduler @Inject() (
     }
   }
 
+  override def frameworkMessage(
+    driver: SchedulerDriver,
+    executor: ExecutorID,
+    slave: SlaveID,
+    message: Array[Byte]) {
+    log.info(s"Received framework message $executor $slave $message")
+    eventBus foreach {
+      _.post(
+        MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message)
+      )
+    }
+  }
+
   def unhealthyTaskKilled(appId: String, taskId: String): Unit = {
     log.warn(s"Task [$taskId] for app [$appId] was killed for failing too many health checks")
     currentAppVersion(appId).foreach {
@@ -190,24 +221,24 @@ class MarathonScheduler @Inject() (
     }
   }
 
-  override def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]) {
-    log.info("Received framework message %s %s %s ".format(executor, slave, message))
-    eventBus.foreach(_.post(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message)))
-  }
-
   override def disconnected(driver: SchedulerDriver) {
     log.warn("Disconnected")
 
-    // Disconnection from the Mesos master has occurred. Thus, call the scheduler callbacks.
+    // Disconnection from the Mesos master has occurred.
+    // Thus, call the scheduler callbacks.
     MarathonScheduler.callbacks.disconnected()
   }
 
   override def slaveLost(driver: SchedulerDriver, slave: SlaveID) {
-    log.info("Lost slave %s".format(slave))
+    log.info(s"Lost slave $slave")
   }
 
-  override def executorLost(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, p4: Int) {
-    log.info("Lost executor %s %s %s ".format(executor, slave, p4))
+  override def executorLost(
+    driver: SchedulerDriver,
+    executor: ExecutorID,
+    slave: SlaveID,
+    p4: Int) {
+    log.info(s"Lost executor $executor slave $p4")
   }
 
   override def error(driver: SchedulerDriver, message: String) {
@@ -233,7 +264,7 @@ class MarathonScheduler @Inject() (
   def stopApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
     appRepository.expunge(app.id).map { successes =>
       if (!successes.forall(_ == true)) {
-        throw new StorageException("Error expunging " + app.id)
+        throw new StorageException(s"Error expunging ${app.id}")
       }
 
       healthCheckManager.removeAllFor(app.id)
@@ -291,7 +322,10 @@ class MarathonScheduler @Inject() (
         }
 
         for (unknownAppId <- taskTracker.list.keySet -- appIds) {
-          log.warn(s"App $unknownAppId exists in TaskTracker, but not App store. The app was likely terminated. Will now expunge.")
+          log.warn(
+            s"App $unknownAppId exists in TaskTracker, but not App store. " +
+              "The app was likely terminated. Will now expunge."
+          )
           for (orphanTask <- taskTracker.get(unknownAppId)) {
             log.info(s"Killing task ${orphanTask.getId}")
             driver.killTask(protos.TaskID(orphanTask.getId))
@@ -311,7 +345,19 @@ class MarathonScheduler @Inject() (
   private def newTask(app: AppDefinition,
                       offer: Offer): Option[(TaskInfo, Seq[Long])] = {
     // TODO this should return a MarathonTask
-    new TaskBuilder(app, taskTracker.newTaskId, taskTracker, mapper).buildIfMatches(offer)
+    val builder = new TaskBuilder(
+      app,
+      taskTracker.newTaskId,
+      taskTracker,
+      config,
+      mapper
+    )
+
+    builder.buildIfMatches(offer) map {
+      case (task, ports) =>
+        val taskBuilder = task.toBuilder
+        taskBuilder.build -> ports
+    }
   }
 
   /**
@@ -323,7 +369,10 @@ class MarathonScheduler @Inject() (
     * @param updatedApp
     * @param appUpdate
     */
-  private def update(driver: SchedulerDriver, updatedApp: AppDefinition, appUpdate: AppUpdate): Unit = {
+  private def update(
+    driver: SchedulerDriver,
+    updatedApp: AppDefinition,
+    appUpdate: AppUpdate): Unit = {
     // TODO: implement app instance restart logic
   }
 
@@ -349,7 +398,7 @@ class MarathonScheduler @Inject() (
             taskQueue.add(app)
         }
         else {
-          log.info("Already queued %d tasks for %s. Not scaling.".format(queuedCount, app.id))
+          log.info(s"Already queued $queuedCount tasks for ${app.id}. Not scaling.")
         }
       }
       else if (targetCount < currentCount) {
@@ -371,7 +420,7 @@ class MarathonScheduler @Inject() (
   private def scale(driver: SchedulerDriver, appName: String): Unit = {
     currentAppVersion(appName).onSuccess {
       case Some(app) => scale(driver, app)
-      case _         => log.warn("App %s does not exist. Not scaling.".format(appName))
+      case _         => log.warn(s"App $appName does not exist. Not scaling.")
     }
   }
 

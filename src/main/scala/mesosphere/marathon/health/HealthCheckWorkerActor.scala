@@ -2,7 +2,11 @@ package mesosphere.marathon.health
 
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{ HTTP, TCP }
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{
+  COMMAND,
+  HTTP,
+  TCP
+}
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.util.Timeout
@@ -50,6 +54,19 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       case Some(port) => check.protocol match {
         case HTTP => http(task, check, port)
         case TCP  => tcp(task, check, port)
+        case COMMAND =>
+          Future.failed {
+            val message = s"${COMMAND} health checks are only supported when " +
+              "running Marathon with --executor_health_checks enabled"
+            log.warning(message)
+            new UnsupportedOperationException(message)
+          }
+        case _ =>
+          Future.failed {
+            val message = s"Unknown health check protocol: [${check.protocol}]"
+            log.warning(message)
+            new UnsupportedOperationException(message)
+          }
       }
     }
 
@@ -97,19 +114,5 @@ object HealthCheckWorker {
   protected[health] val acceptableResponses = Range(200, 400)
 
   case class HealthCheckJob(task: MarathonTask, check: HealthCheck)
-
-  sealed trait HealthResult {
-    val taskId: String
-    val time: Timestamp
-  }
-
-  case class Healthy(
-    taskId: String,
-    time: Timestamp = Timestamp.now()) extends HealthResult
-
-  case class Unhealthy(
-    taskId: String,
-    time: Timestamp = Timestamp.now(),
-    cause: String) extends HealthResult
 
 }

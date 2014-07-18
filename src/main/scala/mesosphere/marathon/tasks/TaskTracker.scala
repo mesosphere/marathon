@@ -8,7 +8,6 @@ import org.apache.mesos.state.{ Variable, State }
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.{ MarathonConf, Main }
 import java.io._
-import scala.Some
 import scala.concurrent.Future
 import org.apache.log4j.Logger
 import mesosphere.util.{ ThreadPoolContext, BackToTheFuture }

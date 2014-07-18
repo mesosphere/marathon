@@ -964,6 +964,20 @@ public final class Protos {
      * <code>optional uint32 maxConsecutiveFailures = 7 [default = 3];</code>
      */
     int getMaxConsecutiveFailures();
+
+    // optional .mesos.CommandInfo command = 8;
+    /**
+     * <code>optional .mesos.CommandInfo command = 8;</code>
+     */
+    boolean hasCommand();
+    /**
+     * <code>optional .mesos.CommandInfo command = 8;</code>
+     */
+    org.apache.mesos.Protos.CommandInfo getCommand();
+    /**
+     * <code>optional .mesos.CommandInfo command = 8;</code>
+     */
+    org.apache.mesos.Protos.CommandInfoOrBuilder getCommandOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.HealthCheckDefinition}
@@ -1057,6 +1071,19 @@ public final class Protos {
               maxConsecutiveFailures_ = input.readUInt32();
               break;
             }
+            case 66: {
+              org.apache.mesos.Protos.CommandInfo.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000080) == 0x00000080)) {
+                subBuilder = command_.toBuilder();
+              }
+              command_ = input.readMessage(org.apache.mesos.Protos.CommandInfo.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(command_);
+                command_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000080;
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -1109,6 +1136,10 @@ public final class Protos {
        * <code>TCP = 1;</code>
        */
       TCP(1, 1),
+      /**
+       * <code>COMMAND = 2;</code>
+       */
+      COMMAND(2, 2),
       ;
 
       /**
@@ -1119,6 +1150,10 @@ public final class Protos {
        * <code>TCP = 1;</code>
        */
       public static final int TCP_VALUE = 1;
+      /**
+       * <code>COMMAND = 2;</code>
+       */
+      public static final int COMMAND_VALUE = 2;
 
 
       public final int getNumber() { return value; }
@@ -1127,6 +1162,7 @@ public final class Protos {
         switch (value) {
           case 0: return HTTP;
           case 1: return TCP;
+          case 2: return COMMAND;
           default: return null;
         }
       }
@@ -1330,6 +1366,28 @@ public final class Protos {
       return maxConsecutiveFailures_;
     }
 
+    // optional .mesos.CommandInfo command = 8;
+    public static final int COMMAND_FIELD_NUMBER = 8;
+    private org.apache.mesos.Protos.CommandInfo command_;
+    /**
+     * <code>optional .mesos.CommandInfo command = 8;</code>
+     */
+    public boolean hasCommand() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional .mesos.CommandInfo command = 8;</code>
+     */
+    public org.apache.mesos.Protos.CommandInfo getCommand() {
+      return command_;
+    }
+    /**
+     * <code>optional .mesos.CommandInfo command = 8;</code>
+     */
+    public org.apache.mesos.Protos.CommandInfoOrBuilder getCommandOrBuilder() {
+      return command_;
+    }
+
     private void initFields() {
       protocol_ = mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.HTTP;
       portIndex_ = 0;
@@ -1338,6 +1396,7 @@ public final class Protos {
       timeoutSeconds_ = 20;
       path_ = "/";
       maxConsecutiveFailures_ = 3;
+      command_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1351,6 +1410,12 @@ public final class Protos {
       if (!hasPortIndex()) {
         memoizedIsInitialized = 0;
         return false;
+      }
+      if (hasCommand()) {
+        if (!getCommand().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -1379,6 +1444,9 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeUInt32(7, maxConsecutiveFailures_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeMessage(8, command_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -1416,6 +1484,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(7, maxConsecutiveFailures_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, command_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1525,6 +1597,7 @@ public final class Protos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getCommandFieldBuilder();
         }
       }
       private static Builder create() {
@@ -1547,6 +1620,12 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000020);
         maxConsecutiveFailures_ = 3;
         bitField0_ = (bitField0_ & ~0x00000040);
+        if (commandBuilder_ == null) {
+          command_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
+        } else {
+          commandBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
@@ -1603,6 +1682,14 @@ public final class Protos {
           to_bitField0_ |= 0x00000040;
         }
         result.maxConsecutiveFailures_ = maxConsecutiveFailures_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        if (commandBuilder_ == null) {
+          result.command_ = command_;
+        } else {
+          result.command_ = commandBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1642,6 +1729,9 @@ public final class Protos {
         if (other.hasMaxConsecutiveFailures()) {
           setMaxConsecutiveFailures(other.getMaxConsecutiveFailures());
         }
+        if (other.hasCommand()) {
+          mergeCommand(other.getCommand());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -1654,6 +1744,12 @@ public final class Protos {
         if (!hasPortIndex()) {
           
           return false;
+        }
+        if (hasCommand()) {
+          if (!getCommand().isInitialized()) {
+            
+            return false;
+          }
         }
         return true;
       }
@@ -1974,6 +2070,123 @@ public final class Protos {
         maxConsecutiveFailures_ = 3;
         onChanged();
         return this;
+      }
+
+      // optional .mesos.CommandInfo command = 8;
+      private org.apache.mesos.Protos.CommandInfo command_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.CommandInfo, org.apache.mesos.Protos.CommandInfo.Builder, org.apache.mesos.Protos.CommandInfoOrBuilder> commandBuilder_;
+      /**
+       * <code>optional .mesos.CommandInfo command = 8;</code>
+       */
+      public boolean hasCommand() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional .mesos.CommandInfo command = 8;</code>
+       */
+      public org.apache.mesos.Protos.CommandInfo getCommand() {
+        if (commandBuilder_ == null) {
+          return command_;
+        } else {
+          return commandBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .mesos.CommandInfo command = 8;</code>
+       */
+      public Builder setCommand(org.apache.mesos.Protos.CommandInfo value) {
+        if (commandBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          command_ = value;
+          onChanged();
+        } else {
+          commandBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.CommandInfo command = 8;</code>
+       */
+      public Builder setCommand(
+          org.apache.mesos.Protos.CommandInfo.Builder builderForValue) {
+        if (commandBuilder_ == null) {
+          command_ = builderForValue.build();
+          onChanged();
+        } else {
+          commandBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.CommandInfo command = 8;</code>
+       */
+      public Builder mergeCommand(org.apache.mesos.Protos.CommandInfo value) {
+        if (commandBuilder_ == null) {
+          if (((bitField0_ & 0x00000080) == 0x00000080) &&
+              command_ != org.apache.mesos.Protos.CommandInfo.getDefaultInstance()) {
+            command_ =
+              org.apache.mesos.Protos.CommandInfo.newBuilder(command_).mergeFrom(value).buildPartial();
+          } else {
+            command_ = value;
+          }
+          onChanged();
+        } else {
+          commandBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.CommandInfo command = 8;</code>
+       */
+      public Builder clearCommand() {
+        if (commandBuilder_ == null) {
+          command_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
+          onChanged();
+        } else {
+          commandBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000080);
+        return this;
+      }
+      /**
+       * <code>optional .mesos.CommandInfo command = 8;</code>
+       */
+      public org.apache.mesos.Protos.CommandInfo.Builder getCommandBuilder() {
+        bitField0_ |= 0x00000080;
+        onChanged();
+        return getCommandFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .mesos.CommandInfo command = 8;</code>
+       */
+      public org.apache.mesos.Protos.CommandInfoOrBuilder getCommandOrBuilder() {
+        if (commandBuilder_ != null) {
+          return commandBuilder_.getMessageOrBuilder();
+        } else {
+          return command_;
+        }
+      }
+      /**
+       * <code>optional .mesos.CommandInfo command = 8;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.CommandInfo, org.apache.mesos.Protos.CommandInfo.Builder, org.apache.mesos.Protos.CommandInfoOrBuilder> 
+          getCommandFieldBuilder() {
+        if (commandBuilder_ == null) {
+          commandBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.mesos.Protos.CommandInfo, org.apache.mesos.Protos.CommandInfo.Builder, org.apache.mesos.Protos.CommandInfoOrBuilder>(
+                  command_,
+                  getParentForChildren(),
+                  isClean());
+          command_ = null;
+        }
+        return commandBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.HealthCheckDefinition)
@@ -9417,37 +9630,38 @@ public final class Protos {
       "\022:\n\010operator\030\002 \002(\0162(.mesosphere.marathon" +
       ".Constraint.Operator\022\r\n\005value\030\003 \001(\t\";\n\010O" +
       "perator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007CLUSTER" +
-      "\020\002\022\014\n\010GROUP_BY\020\003\"\240\002\n\025HealthCheckDefiniti" +
+      "\020\002\022\014\n\010GROUP_BY\020\003\"\322\002\n\025HealthCheckDefiniti" +
       "on\022E\n\010protocol\030\001 \002(\01623.mesosphere.marath" +
       "on.HealthCheckDefinition.Protocol\022\024\n\tpor" +
       "tIndex\030\002 \002(\r:\0010\022\036\n\022gracePeriodSeconds\030\003 " +
       "\001(\r:\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00210\022\032\n\016",
       "timeoutSeconds\030\005 \001(\r:\00220\022\017\n\004path\030\006 \001(\t:\001" +
-      "/\022!\n\026maxConsecutiveFailures\030\007 \001(\r:\0013\"\035\n\010" +
-      "Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\"\306\003\n\021ServiceD" +
-      "efinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mes" +
-      "os.CommandInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tres" +
-      "ources\030\004 \003(\0132\017.mesos.Resource\022\023\n\013descrip" +
-      "tion\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013constraints" +
-      "\030\007 \003(\0132\037.mesosphere.marathon.Constraint\022" +
-      "\022\n\010executor\030\010 \002(\t:\000\022>\n\022OBSOLETE_containe" +
-      "r\030\n \001(\0132\".mesosphere.marathon.ContainerI",
-      "nfo\022)\n\007version\030\013 \001(\t:\0301970-01-01T00:00:0" +
-      "0.000Z\022@\n\014healthChecks\030\014 \003(\0132*.mesospher" +
-      "e.marathon.HealthCheckDefinition\022\025\n\007back" +
-      "off\030\r \001(\003:\0041000\022\033\n\rbackoffFactor\030\016 \001(\001:\004" +
-      "1.15\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004hos" +
-      "t\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004 \003" +
-      "(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001(\003\022" +
-      "\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007 \003(\0132\021." +
-      "mesos.TaskStatus\022\017\n\007version\030\010 \001(\t\"M\n\013Mar" +
-      "athonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.",
-      "mesosphere.marathon.MarathonTask\"1\n\rCont" +
-      "ainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 " +
-      "\003(\014\")\n\020EventSubscribers\022\025\n\rcallback_urls" +
-      "\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022" +
-      "\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\rB\035\n\023mesosph" +
-      "ere.marathonB\006Protos"
+      "/\022!\n\026maxConsecutiveFailures\030\007 \001(\r:\0013\022#\n\007" +
+      "command\030\010 \001(\0132\022.mesos.CommandInfo\"*\n\010Pro" +
+      "tocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND\020\002\"\306\003" +
+      "\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002" +
+      " \002(\0132\022.mesos.CommandInfo\022\021\n\tinstances\030\003 " +
+      "\002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Resource\022" +
+      "\023\n\013description\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013c" +
+      "onstraints\030\007 \003(\0132\037.mesosphere.marathon.C" +
+      "onstraint\022\022\n\010executor\030\010 \002(\t:\000\022>\n\022OBSOLET",
+      "E_container\030\n \001(\0132\".mesosphere.marathon." +
+      "ContainerInfo\022)\n\007version\030\013 \001(\t:\0301970-01-" +
+      "01T00:00:00.000Z\022@\n\014healthChecks\030\014 \003(\0132*" +
+      ".mesosphere.marathon.HealthCheckDefiniti" +
+      "on\022\025\n\007backoff\030\r \001(\003:\0041000\022\033\n\rbackoffFact" +
+      "or\030\016 \001(\001:\0041.15\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 " +
+      "\002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattr" +
+      "ibutes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged" +
+      "_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuse" +
+      "s\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 ",
+      "\001(\t\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005task" +
+      "s\030\002 \003(\0132!.mesosphere.marathon.MarathonTa" +
+      "sk\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007" +
+      "options\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcal" +
+      "lback_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005ma" +
+      "jor\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\rB" +
+      "\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9465,7 +9679,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_HealthCheckDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor,
-              new java.lang.String[] { "Protocol", "PortIndex", "GracePeriodSeconds", "IntervalSeconds", "TimeoutSeconds", "Path", "MaxConsecutiveFailures", });
+              new java.lang.String[] { "Protocol", "PortIndex", "GracePeriodSeconds", "IntervalSeconds", "TimeoutSeconds", "Path", "MaxConsecutiveFailures", "Command", });
           internal_static_mesosphere_marathon_ServiceDefinition_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
