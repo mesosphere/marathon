@@ -73,7 +73,6 @@ class MarathonScheduler @Inject() (
     // Check for any tasks which were started but never entered TASK_RUNNING
     // TODO resourceOffers() doesn't feel like the right place to run this
     val toKill = taskTracker.checkStagedTasks
-
     if (toKill.nonEmpty) {
       log.warn(s"There are ${toKill.size} tasks stuck in staging which will be killed")
       log.info(s"About to kill these tasks: $toKill")
@@ -83,48 +82,35 @@ class MarathonScheduler @Inject() (
 
     import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 
-    val toLaunch = Seq.newBuilder[(Seq[OfferID], Seq[TaskInfo])]
-
     for (offer <- offers.asScala) {
       try {
         log.debug("Received offer %s".format(offer))
 
-        val apps = taskQueue.removeAll()
-        var i = 0
-        var found = false
+        val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
 
-        while (i < apps.size && !found) {
-          // TODO launch multiple tasks if the offer is big enough
-          val QueuedTask(app, delay) = apps(i)
+        val withTaskInfos: Seq[(QueuedTask, Option[(TaskInfo, Seq[Long])])] =
+          queuedTasks.view.map { qt => qt -> newTask(qt.app, offer) }
 
-          if (delay.isOverdue()) {
-            newTask(app, offer) match {
-              case Some((task, ports)) =>
-                val taskInfos = Seq(task)
-                log.debug("Launching tasks: " + taskInfos)
+        val launchedTask: Option[QueuedTask] = withTaskInfos.collectFirst {
+          case (qt, Some((taskInfo, ports))) if qt.delay.isOverdue =>
+            val taskInfos = Seq(taskInfo)
+            log.debug("Launching tasks: " + taskInfos)
 
-                val marathonTask = MarathonTasks.makeTask(
-                  task.getTaskId.getValue, offer.getHostname, ports,
-                  offer.getAttributesList.asScala.toList, app.version)
-                taskTracker.starting(app.id, marathonTask)
-                toLaunch += Seq(offer.getId) -> taskInfos
-                found = true
+            val marathonTask = MarathonTasks.makeTask(
+              taskInfo.getTaskId.getValue, offer.getHostname, ports,
+              offer.getAttributesList.asScala, qt.app.version)
 
-              case None =>
-                taskQueue.add(app)
-            }
-          }
-
-          i += 1
+            taskTracker.starting(qt.app.id, marathonTask)
+            driver.launchTasks(Seq(offer.getId).asJava, taskInfos.asJava)
+            qt
         }
 
-        if (!found) {
+        // put unscheduled tasks back in the queue
+        taskQueue.addAll(queuedTasks diff launchedTask.toSeq)
+
+        if (launchedTask.isEmpty) {
           log.debug("Offer doesn't match request. Declining.")
-          // Add it back into the queue so the we can try again
           driver.declineOffer(offer.getId)
-        }
-        else {
-          taskQueue.addAll(apps.drop(i))
         }
       }
       catch {
@@ -133,11 +119,6 @@ class MarathonScheduler @Inject() (
           // Ensure that we always respond
           driver.declineOffer(offer.getId)
       }
-    }
-
-    toLaunch.result().foreach {
-      case (id, task) =>
-        driver.launchTasks(id.asJava, task.asJava)
     }
   }
 
