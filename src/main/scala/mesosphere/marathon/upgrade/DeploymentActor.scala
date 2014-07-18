@@ -1,17 +1,17 @@
 package mesosphere.marathon.upgrade
 
 import akka.actor._
-import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.SchedulerActions
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import akka.event.EventStream
-import mesosphere.marathon.event.DeploymentSuccess
-import scala.concurrent.{ Promise, Future }
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.Protos.MarathonTask
-import scala.util.{ Failure, Success }
-import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
+import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.AppRepository
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
+import org.apache.mesos.SchedulerDriver
+
+import scala.concurrent.{ Future, Promise }
+import scala.util.{ Failure, Success }
 
 class DeploymentActor(
     parent: ActorRef,
@@ -25,8 +25,7 @@ class DeploymentActor(
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
-
-  import DeploymentActor._
+  import mesosphere.marathon.upgrade.DeploymentActor._
 
   val steps = plan.steps.iterator
 
@@ -81,7 +80,7 @@ class DeploymentActor(
 
   def startApp(app: AppDefinition, scaleTo: Int): Future[Unit] = {
     val promise = Promise[Unit]()
-    context.actorOf(Props(classOf[AppStartActor], driver, scheduler, eventBus, app, scaleTo, promise))
+    context.actorOf(Props(classOf[AppStartActor], driver, scheduler, taskQueue, eventBus, app, scaleTo, promise))
     storeOnSuccess(app, promise.future)
   }
 

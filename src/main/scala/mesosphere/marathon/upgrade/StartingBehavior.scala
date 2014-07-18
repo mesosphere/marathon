@@ -4,6 +4,7 @@ import mesosphere.marathon.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEv
 import akka.actor.{ ActorLogging, Actor }
 import mesosphere.marathon.api.v1.AppDefinition
 import akka.event.EventStream
+import mesosphere.marathon.tasks.TaskQueue
 
 trait StartingBehavior { this: Actor with ActorLogging =>
 
@@ -11,6 +12,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   val app: AppDefinition
   def expectedSize: Int
   def withHealthChecks: Boolean
+  def taskQueue: TaskQueue
   val Version = app.version.toString
   var healthyTasks = Set.empty[String]
   var runningTasks = 0
@@ -29,9 +31,12 @@ trait StartingBehavior { this: Actor with ActorLogging =>
     checkFinished()
   }
 
-  final def receive =
-    if (withHealthChecks) checkForHealthy
-    else checkForRunning
+  final def receive = {
+    val behavior =
+      if (withHealthChecks) checkForHealthy
+      else checkForRunning
+    behavior orElse rescheduleOnFailure
+  }
 
   final def checkForHealthy: Receive = {
     case HealthStatusChanged(app.`id`, taskId, Version, true, _, _) if !healthyTasks(taskId) =>
@@ -49,6 +54,12 @@ trait StartingBehavior { this: Actor with ActorLogging =>
       checkFinished()
 
     case x => log.debug(s"Received $x")
+  }
+
+  def rescheduleOnFailure: Receive = {
+    case MesosStatusUpdateEvent(_, taskId, "TASK_FAILED" | "TASK_LOST" | "TASK_KILLED", app.`id`, _, _, Version, _, _) =>
+      log.warning(s"Failed to start $taskId for app ${app.id}. Rescheduling.")
+      taskQueue.add(app)
   }
 
   def checkFinished(): Unit = {

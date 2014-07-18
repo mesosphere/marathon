@@ -5,13 +5,12 @@ import javax.inject.{ Inject, Named }
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ PathId, AppRepository }
+import mesosphere.marathon.state.{ AppRepository, PathId }
 import mesosphere.marathon.tasks._
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.{ TaskBuilder, protos }
@@ -87,41 +86,48 @@ class MarathonScheduler @Inject() (
 
     import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 
+    val toLaunch = Seq.newBuilder[(Seq[OfferID], Seq[TaskInfo])]
+
     for (offer <- offers.asScala) {
       try {
-        log.debug(s"Received offer $offer")
+        log.debug("Received offer %s".format(offer))
 
-        val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
+        val apps = taskQueue.removeAll()
+        var i = 0
+        var found = false
 
-        val launchedTasks: Seq[QueuedTask] = queuedTasks.collect {
-          case qt @ QueuedTask(app, delay) if delay.isOverdue =>
+        while (i < apps.size && !found) {
+          // TODO launch multiple tasks if the offer is big enough
+          val QueuedTask(app, delay) = apps(i)
+
+          if (delay.isOverdue()) {
             newTask(app, offer) match {
               case Some((task, ports)) =>
-                val taskInfos = Lists.newArrayList(task)
+                val taskInfos = Seq(task)
                 log.debug("Launching tasks: " + taskInfos)
 
                 val marathonTask = MarathonTasks.makeTask(
-                  task.getTaskId.getValue,
-                  offer.getHostname,
-                  ports,
-                  offer.getAttributesList.asScala.toList,
-                  app.version
-                )
-
+                  task.getTaskId.getValue, offer.getHostname, ports,
+                  offer.getAttributesList.asScala.toList, app.version)
                 taskTracker.starting(app.id, marathonTask)
-                driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
-                Some(qt)
+                toLaunch += Seq(offer.getId) -> taskInfos
+                found = true
 
-              case _ => None
+              case None =>
+                taskQueue.add(app)
             }
-        }.flatten
+          }
 
-        // put unscheduled tasks back in the queue
-        taskQueue.addAll(queuedTasks diff launchedTasks)
+          i += 1
+        }
 
-        if (launchedTasks.isEmpty) {
+        if (!found) {
           log.debug("Offer doesn't match request. Declining.")
+          // Add it back into the queue so the we can try again
           driver.declineOffer(offer.getId)
+        }
+        else {
+          taskQueue.addAll(apps.drop(i))
         }
       }
       catch {
@@ -130,6 +136,11 @@ class MarathonScheduler @Inject() (
           // Ensure that we always respond
           driver.declineOffer(offer.getId)
       }
+    }
+
+    toLaunch.result().foreach {
+      case (id, task) =>
+        driver.launchTasks(id.asJava, task.asJava)
     }
   }
 

@@ -1,17 +1,18 @@
 package mesosphere.marathon.upgrade
 
-import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
+import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.tasks.TaskQueue
+import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
+import org.apache.mesos.SchedulerDriver
+
 import scala.concurrent.Promise
-import akka.actor._
-import mesosphere.marathon.event.{ HealthStatusChanged, MarathonHealthCheckEvent, MesosStatusUpdateEvent }
-import akka.actor.Actor.Receive
 
 class AppStartActor(
     driver: SchedulerDriver,
     scheduler: SchedulerActions,
+    val taskQueue: TaskQueue,
     val eventBus: EventStream,
     val app: AppDefinition,
     scaleTo: Int,

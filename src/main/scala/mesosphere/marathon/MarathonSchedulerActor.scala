@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor._
 import akka.event.EventStream
 import com.fasterxml.jackson.databind.ObjectMapper
+import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess }
@@ -120,6 +121,7 @@ class MarathonSchedulerActor(
       log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
       f andThen {
         case _ =>
+          log.debug(s"Releasing locks for $appIds")
           locks.foreach(_.release())
       }
     }
@@ -129,6 +131,7 @@ class MarathonSchedulerActor(
         log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
         f andThen {
           case _ =>
+            log.debug(s"Releasing locks for $appIds")
             acquiredLocks.foreach(_.release())
         }
       }
@@ -293,7 +296,7 @@ class SchedulerActions(
       case Success(appIds) =>
         log.info("Syncing tasks for all apps")
 
-        for (appId <- appIds) scale(driver, appId)
+        for (appId <- appIds) schedulerActor ! ScaleApp(appId)
 
         val knownTaskStatuses = appIds.flatMap { appId =>
           taskTracker.get(appId).flatMap(_.getStatusesList.asScala.lastOption)

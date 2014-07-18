@@ -1,15 +1,15 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.tasks.TaskQueue
+import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
+import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.tasks.TaskQueue
+
 import scala.concurrent.Promise
-import akka.actor.{ ActorLogging, Actor }
-import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.{ TaskUpgradeCanceledException, TaskFailedException }
 
 class TaskStartActor(
-    taskQueue: TaskQueue,
+    val taskQueue: TaskQueue,
     val eventBus: EventStream,
     val app: AppDefinition,
     nrToStart: Int,

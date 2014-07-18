@@ -153,7 +153,7 @@ class GroupDeployIntegrationTest
     validFor("all v2 apps are available", 10.seconds) { v2Checks.pingSince(2.seconds) }
 
     When("A rollback to the first version is initiated")
-    waitForChange(marathon.rollbackGroup(gid, create.value.version))
+    waitForChange(marathon.rollbackGroup(gid, create.value.version), 120.seconds)
 
     Then("The rollback will be performed and the old version is available")
     v1Checks.healthy
@@ -310,8 +310,11 @@ class GroupDeployIntegrationTest
     ping(key(dbV2)) should be < ping(key(serviceV2))
     ping(key(serviceV2)) should be < ping(key(frontendV2))
     validFor("all v1 apps are available as well as db v2 and service v2", 15.seconds) {
-      dbV1.pingSince(2.seconds) && serviceV1.pingSince(2.seconds) && frontendV1.pingSince(2.seconds) &&
-        dbV2.pingSince(2.seconds) && serviceV2.pingSince(2.seconds)
+      dbV1.pingSince(2.seconds) &&
+      serviceV1.pingSince(2.seconds) &&
+      frontendV1.pingSince(2.seconds) &&
+      dbV2.pingSince(2.seconds) &&
+      serviceV2.pingSince(2.seconds)
     }
 
     When("The v2 frontend becomes healthy")
