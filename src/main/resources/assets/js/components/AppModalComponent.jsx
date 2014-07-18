@@ -3,28 +3,34 @@
 define([
   "React",
   "mixins/BackboneMixin",
+  "models/AppVersionCollection",
+  "jsx!components/AppVersionListComponent",
   "jsx!components/ModalComponent",
   "jsx!components/StackedViewComponent",
   "jsx!components/TabPaneComponent",
   "jsx!components/TaskDetailComponent",
   "jsx!components/TaskViewComponent",
   "jsx!components/TogglableTabsComponent"
-], function(React, BackboneMixin, ModalComponent, StackedViewComponent, TabPaneComponent,
-    TaskDetailComponent, TaskViewComponent, TogglableTabsComponent) {
+], function(React, BackboneMixin, AppVersionCollection, AppVersionListComponent,
+    ModalComponent, StackedViewComponent, TabPaneComponent, TaskDetailComponent,
+    TaskViewComponent, TogglableTabsComponent) {
 
   var STATES = {
-      STATE_LOADING: 0,
-      STATE_ERROR: 1,
-      STATE_SUCCESS: 2
-    };
+    STATE_LOADING: 0,
+    STATE_ERROR: 1,
+    STATE_SUCCESS: 2
+  };
   var UPDATE_INTERVAL = 2000;
 
   return React.createClass({
     displayName: "AppModalComponent",
-    mixins:[BackboneMixin],
+
+    mixins: [BackboneMixin],
 
     componentWillMount: function() {
       this.fetchTasks();
+      var appVersions = new AppVersionCollection(null, {appId: this.props.model.id});
+      this.setState({appVersions: appVersions});
     },
 
     componentDidMount: function() {
@@ -35,28 +41,39 @@ define([
       this.stopPolling();
     },
 
+    fetchAppVersions: function() {
+      this.state.appVersions.fetch({
+        error: function() {
+          this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+        }.bind(this),
+        success: function() {
+          this.setState({appVersionsFetchState: STATES.STATE_SUCCESS});
+        }.bind(this)
+      });
+    },
+
+    getResource: function() {
+      return this.props.model;
+    },
+
     getInitialState: function() {
       return {
         activeTask: null,
         activeViewIndex: 0,
-        fetchState: STATES.STATE_LOADING
+        appVersions: null,
+        tasksFetchState: STATES.STATE_LOADING,
+        appVersionsFetchState: STATES.STATE_LOADING
       };
     },
 
-    getResource: function () {
-      return this.props.model;
-    },
-
     fetchTasks: function() {
-      var _this = this;
-
       this.props.model.tasks.fetch({
         error: function() {
-          _this.setState({fetchState: STATES.STATE_ERROR});
-        },
+          this.setState({tasksFetchState: STATES.STATE_ERROR});
+        }.bind(this),
         success: function() {
-          _this.setState({fetchState: STATES.STATE_SUCCESS});
-        }
+          this.setState({tasksFetchState: STATES.STATE_SUCCESS});
+        }.bind(this)
       });
     },
 
@@ -71,17 +88,39 @@ define([
       }
     },
 
-    onTasksKilled:  function(options) {
+    onTasksKilled: function(options) {
       var instances;
       var _options = options || {};
       if (_options.scale) {
         instances = this.props.model.get("instances");
         this.props.model.set("instances", instances - 1);
+        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
+        // refresh app versions
+        this.fetchAppVersions();
       }
 
       // Force an update since React doesn't know a key was removed from
       // `selectedTasks`.
       this.forceUpdate();
+    },
+
+    refreshTaskList: function() {
+      this.refs.taskList.fetchTasks();
+    },
+
+    rollbackToAppVersion: function(appVersion) {
+      this.props.model.setAppVersion(appVersion);
+      this.props.model.save(
+        null,
+        {
+          error: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+          }.bind(this),
+          success: function() {
+            // refresh app versions
+            this.fetchAppVersions();
+          }.bind(this)
+        });
     },
 
     render: function() {
@@ -167,7 +206,7 @@ define([
                 activeViewIndex={this.state.activeViewIndex}>
                 <TaskViewComponent
                   collection={model.tasks}
-                  fetchState={this.state.fetchState}
+                  fetchState={this.state.tasksFetchState}
                   fetchTasks={this.fetchTasks}
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   hasHealth={hasHealth}
@@ -175,7 +214,7 @@ define([
                   onTaskDetailSelect={this.showTaskDetails}
                   STATES={STATES} />
                 <TaskDetailComponent
-                  fetchState={this.state.fetchState}
+                  fetchState={this.state.tasksFetchState}
                   taskHealthMessage={model.formatTaskHealthMessage(this.state.activeTask)}
                   hasHealth={hasHealth}
                   STATES={STATES}
@@ -183,33 +222,16 @@ define([
                   task={this.state.activeTask} />
               </StackedViewComponent>
             </TabPaneComponent>
-            <TabPaneComponent id="configuration">
-              <dl className="dl-horizontal">
-                <dt>Command</dt>
-                {cmdNode}
-                <dt>Constraints</dt>
-                {constraintsNode}
-                <dt>Container</dt>
-                {containerNode}
-                <dt>CPUs</dt>
-                <dd>{model.get("cpus")}</dd>
-                <dt>Environment</dt>
-                {envNode}
-                <dt>Executor</dt>
-                {executorNode}
-                <dt>Instances</dt>
-                <dd>{model.get("instances")}</dd>
-                <dt>Memory (MB)</dt>
-                <dd>{model.get("mem")}</dd>
-                <dt>Disk Space (MB)</dt>
-                <dd>{model.get("disk")}</dd>
-                <dt>Ports</dt>
-                {portsNode}
-                <dt>URIs</dt>
-                {urisNode}
-                <dt>Version</dt>
-                {versionNode}
-              </dl>
+            <TabPaneComponent
+              id="configuration"
+              onActivate={this.fetchAppVersions} >
+              <AppVersionListComponent
+                app={model}
+                appVersions={this.state.appVersions}
+                fetchAppVersions={this.fetchAppVersions}
+                fetchState={this.state.appVersionsFetchState}
+                onRollback={this.rollbackToAppVersion}
+                STATES={STATES} />
             </TabPaneComponent>
           </TogglableTabsComponent>
         </ModalComponent>
@@ -225,7 +247,18 @@ define([
       // perform the action only if a value is submitted.
       if (instancesString != null && instancesString !== "") {
         var instances = parseInt(instancesString, 10);
-        model.save({instances: instances});
+        model.save(
+          {instances: instances},
+          {
+            error: function() {
+              this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+            },
+            success: function() {
+              // refresh app versions
+              this.fetchAppVersions();
+            }.bind(this)
+          }
+        );
 
         if (model.validationError != null) {
           // If the model is not valid, revert the changes to prevent the UI
@@ -273,7 +306,15 @@ define([
 
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
-        this.props.model.suspend();
+        this.props.model.suspend({
+          error: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+          }.bind(this),
+          success: function() {
+            // refresh app versions
+            this.fetchAppVersions();
+          }.bind(this)
+        });
       }
     },
 

@@ -173,11 +173,9 @@ a,
   line-height: 1.1;
 }
 
-.nav-tabs > li > a:hover {
+.nav-tabs > li > a:hover,
+.nav-tabs > li > a:focus {
   color: #f6f6f6;
-}
-
-.nav-tabs > li > a:hover {
   border-color: transparent;
 }
 
@@ -187,8 +185,13 @@ a,
   background-color: #3e4146;
 }
 
-.table > thead > tr > th {
-  border-bottom-color: #3d4045;
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+  background-color: transparent;
+  border-color: #555;
+  border-bottom-color: #222224;
+  color: #f6f6f6;
 }
 
 .table > thead > tr > th,
@@ -197,16 +200,7 @@ a,
 .table > thead > tr > td,
 .table > tbody > tr > td,
 .table > tfoot > tr > td {
-  border-top-color: #3d4045;
-}
-
-.nav-tabs > li.active > a,
-.nav-tabs > li.active > a:hover,
-.nav-tabs > li.active > a:focus {
-  background-color: transparent;
-  border-color: #555;
-  border-bottom-color: #222224;
-  color: #f6f6f6;
+  border-color: #3d4045;
 }
 
 .list-inline > li {
@@ -375,6 +369,94 @@ fieldset[disabled] .btn-info.active {
   padding-left: 0;
 }
 
+.panel-group .panel-inverse {
+  border-radius: 0;
+  border-top: solid 1px #3d4045;
+  border-bottom-width: 0;
+  -webkit-box-shadow: none;
+  box-shadow: none;
+}
+
+.panel-group .panel-header {
+  color: #8e929b;
+  font-weight: bold;
+  border-top: solid 0 transparent;
+  border-bottom: solid 1px #3d4045;
+}
+
+.panel-group .panel-inverse + .panel-inverse {
+  margin-top: 0;
+}
+
+.panel-inverse {
+  background-color: transparent;
+  border-color: transparent;
+}
+
+.panel-body {
+  background-color: #222224;
+}
+
+.panel-inverse:not(.panel-header) .panel-heading:hover {
+  background-color: #454a50;
+}
+
+.panel-inverse .panel-body {
+  border-radius: 0 0 4px 4px;
+  margin-bottom: 15px;
+}
+
+.pagination-unstyled {
+  margin-bottom: -9px;
+  margin-right: -15px;
+  margin-top: -6px;
+}
+
+.itemNumbers {
+  padding: 5px 10px;
+  margin: 0 0 10px;
+}
+
+.pagination > li > a,
+.pagination > li > span {
+  color: #f6f6f6;
+  background-color: #5b6067;
+  border-color: #323539;
+  line-height: 1.5;
+}
+
+.pagination > li > a:hover,
+.pagination > li > span:hover,
+.pagination > li > a:focus,
+.pagination > li > span:focus {
+  color: #f6f6f6;
+  background-color: #8e929b;
+  border-color: #323539;
+}
+
+.pagination > .disabled > span,
+.pagination > .disabled > span:hover,
+.pagination > .disabled > span:focus,
+.pagination > .disabled > a,
+.pagination > .disabled > a:hover,
+.pagination > .disabled > a:focus {
+  color: #838a93;
+  background-color: #454a50;
+  border-color: #323539;
+}
+
+.pagination > .success > span,
+.pagination > .success > span:hover,
+.pagination > .success > span:focus,
+.pagination > .success > a,
+.pagination > .success > a:hover,
+.pagination > .success > a:focus {
+  color: #f6f6f6;
+  background-color: #00b482;
+}
+
+
+
 .nav-tabs > li.active > a,
 .nav-tabs > li.active > a:hover,
 .nav-tabs > li.active > a:focus {
@@ -386,8 +468,8 @@ fieldset[disabled] .btn-info.active {
 }
 
 .nav-tabs > li > a {
-  margin-top: 3px;
   border-radius: 0;
+  padding-top: 13px;
 }
 
 .header-btn {
@@ -421,6 +503,10 @@ fieldset[disabled] .btn-info.active {
 
 .table-selectable tr > td {
   cursor: pointer;
+}
+
+.dl-unstyled {
+  margin-bottom: 0;
 }
 
 .badge-circlet {

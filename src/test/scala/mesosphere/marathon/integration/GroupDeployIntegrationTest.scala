@@ -311,10 +311,10 @@ class GroupDeployIntegrationTest
     ping(key(serviceV2)) should be < ping(key(frontendV2))
     validFor("all v1 apps are available as well as db v2 and service v2", 15.seconds) {
       dbV1.pingSince(2.seconds) &&
-      serviceV1.pingSince(2.seconds) &&
-      frontendV1.pingSince(2.seconds) &&
-      dbV2.pingSince(2.seconds) &&
-      serviceV2.pingSince(2.seconds)
+        serviceV1.pingSince(2.seconds) &&
+        frontendV1.pingSince(2.seconds) &&
+        dbV2.pingSince(2.seconds) &&
+        serviceV2.pingSince(2.seconds)
     }
 
     When("The v2 frontend becomes healthy")
