@@ -1,26 +1,25 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos._
-import org.apache.mesos.{ SchedulerDriver, Scheduler }
-import scala.collection.JavaConverters._
-import mesosphere.mesos.TaskBuilder
+import javax.inject.{ Inject, Named }
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.common.eventbus.EventBus
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.state.AppRepository
-import scala.concurrent.Future
-import com.google.common.collect.Lists
-import javax.inject.{ Named, Inject }
-import com.google.common.eventbus.EventBus
 import mesosphere.marathon.event._
-import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue, TaskIDUtil, MarathonTasks }
-import com.fasterxml.jackson.databind.ObjectMapper
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.mesos.protos
-import mesosphere.util.ThreadPoolContext
 import mesosphere.marathon.health.HealthCheckManager
-import scala.util.{ Success, Failure }
+import mesosphere.marathon.state.AppRepository
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskIDUtil, TaskQueue, TaskTracker }
+import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.mesos.{ TaskBuilder, protos }
 import org.apache.log4j.Logger
+import org.apache.mesos.Protos._
+import org.apache.mesos.{ Scheduler, SchedulerDriver }
+
+import scala.collection.JavaConverters._
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -49,8 +48,8 @@ class MarathonScheduler @Inject() (
 
   private val log = Logger.getLogger(getClass.getName)
 
-  import ThreadPoolContext.context
   import mesosphere.mesos.protos.Implicits._
+  import mesosphere.util.ThreadPoolContext.context
 
   implicit val zkTimeout = config.zkFutureTimeout
 
@@ -70,10 +69,11 @@ class MarathonScheduler @Inject() (
     log.info("Re-registered to %s".format(master))
   }
 
-  override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]) {
+  override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
     // Check for any tasks which were started but never entered TASK_RUNNING
     // TODO resourceOffers() doesn't feel like the right place to run this
     val toKill = taskTracker.checkStagedTasks
+
     if (toKill.nonEmpty) {
       log.warn(s"There are ${toKill.size} tasks stuck in staging which will be killed")
       log.info(s"About to kill these tasks: $toKill")
@@ -81,39 +81,50 @@ class MarathonScheduler @Inject() (
         driver.killTask(protos.TaskID(task.getId))
     }
 
-    import TaskQueue.QueuedTask
+    import mesosphere.marathon.tasks.TaskQueue.QueuedTask
+
+    val toLaunch = Seq.newBuilder[(Seq[OfferID], Seq[TaskInfo])]
 
     for (offer <- offers.asScala) {
       try {
         log.debug("Received offer %s".format(offer))
 
-        val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
+        val apps = taskQueue.removeAll()
+        var i = 0
+        var found = false
 
-        val launchedTasks: Seq[QueuedTask] = queuedTasks.collect {
-          case qt @ QueuedTask(app, delay) if delay.isOverdue =>
+        while (i < apps.size && !found) {
+          // TODO launch multiple tasks if the offer is big enough
+          val QueuedTask(app, delay) = apps(i)
+
+          if (delay.isOverdue()) {
             newTask(app, offer) match {
               case Some((task, ports)) =>
-                val taskInfos = Lists.newArrayList(task)
+                val taskInfos = Seq(task)
                 log.debug("Launching tasks: " + taskInfos)
 
                 val marathonTask = MarathonTasks.makeTask(
                   task.getTaskId.getValue, offer.getHostname, ports,
                   offer.getAttributesList.asScala.toList, app.version)
-
                 taskTracker.starting(app.id, marathonTask)
-                driver.launchTasks(Lists.newArrayList(offer.getId), taskInfos)
-                Some(qt)
+                toLaunch += Seq(offer.getId) -> taskInfos
+                found = true
 
-              case _ => None
+              case None =>
+                taskQueue.add(app)
             }
-        }.flatten
+          }
 
-        // put unscheduled tasks back in the queue
-        taskQueue.addAll(queuedTasks diff launchedTasks)
+          i += 1
+        }
 
-        if (launchedTasks.isEmpty) {
+        if (!found) {
           log.debug("Offer doesn't match request. Declining.")
+          // Add it back into the queue so the we can try again
           driver.declineOffer(offer.getId)
+        }
+        else {
+          taskQueue.addAll(apps.drop(i))
         }
       }
       catch {
@@ -122,6 +133,11 @@ class MarathonScheduler @Inject() (
           // Ensure that we always respond
           driver.declineOffer(offer.getId)
       }
+    }
+
+    toLaunch.result().foreach {
+      case (id, task) =>
+        driver.launchTasks(id.asJava, task.asJava)
     }
   }
 
@@ -135,7 +151,7 @@ class MarathonScheduler @Inject() (
 
     val appId = TaskIDUtil.appID(status.getTaskId)
 
-    import TaskState._
+    import org.apache.mesos.Protos.TaskState._
 
     if (status.getState == TASK_FAILED)
       currentAppVersion(appId).foreach {
