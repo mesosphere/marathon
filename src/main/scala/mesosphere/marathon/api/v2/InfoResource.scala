@@ -4,9 +4,7 @@ import javax.ws.rs.core.{ MediaType, Response }
 import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
-import mesosphere.marathon.{ MarathonSchedulerService, BuildInfo, MarathonConf, ZookeeperConf }
-import mesosphere.marathon.event.EventConfiguration
-import mesosphere.marathon.event.http.HttpEventConfiguration
+import mesosphere.marathon.{ MarathonSchedulerService, BuildInfo, MarathonConf }
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
