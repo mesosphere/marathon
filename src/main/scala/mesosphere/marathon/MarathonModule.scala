@@ -175,7 +175,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     val HDFS = "^(hdfs://[^/]+)(.*)$".r // hdfs://host:port/path
     val FILE = "^file://(.*)$".r // file:///local/artifact/path
     config.artifactStore.get.getOrElse("") match {
-      case HDFS(uri, base) => new HDFSStorageProvider(new URI(uri), base, new Configuration())
+      case HDFS(uri, base) => new HDFSStorageProvider(new URI(uri), if (base.isEmpty) "/" else base, new Configuration())
       case FILE(base)      => new FileStorageProvider("http://" + config.hostname.get.get + ":" + http.httpPort.get.get + "/v2/artifacts", new File(base))
       case _               => new NoStorageProvider()
     }
