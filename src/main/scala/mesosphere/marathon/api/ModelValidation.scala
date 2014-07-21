@@ -1,5 +1,6 @@
 package mesosphere.marathon.api
 
+import java.net.{ HttpURLConnection, URL }
 import javax.validation.ConstraintViolation
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
@@ -47,7 +48,7 @@ trait ModelValidation extends BeanValidation {
   }
 
   def checkGroupUpdates(groups: Iterable[GroupUpdate], path: String = "res", parent: PathId = PathId.empty) = {
-    groups.zipWithIndex.flatMap{ case (group, pos) => checkGroupUpdate(group, true, s"$path[$pos].", parent) }
+    groups.zipWithIndex.flatMap{ case (group, pos) => checkGroupUpdate(group, needsId = true, s"$path[$pos].", parent) }
   }
 
   def checkGroups(groups: Iterable[Group], path: String = "res", parent: PathId = PathId.empty) = {
@@ -71,7 +72,8 @@ trait ModelValidation extends BeanValidation {
     validate(app,
       defined(app, app.id, "id", (b: AppUpdate, p: PathId, i: String) => idErrors(b, PathId.empty, p, i), needsId),
       defined(app, app.upgradeStrategy, "upgradeStrategy", (b: AppUpdate, p: UpgradeStrategy, i: String) => healthErrors(b, p, i)),
-      defined(app, app.dependencies, "dependencies", (b: AppUpdate, p: Set[PathId], i: String) => dependencyErrors(b, PathId.empty, p, i))
+      defined(app, app.dependencies, "dependencies", (b: AppUpdate, p: Set[PathId], i: String) => dependencyErrors(b, PathId.empty, p, i)),
+      defined(app, app.resolveUrls, "resolveUrls", (b: AppUpdate, p: Seq[String], i: String) => urlsCanBeResolved(b, p, i))
     )
   }
 
@@ -80,8 +82,18 @@ trait ModelValidation extends BeanValidation {
       idErrors(app, parent, app.id, path + "id"),
       checkPath(app, parent, app.id, path + "id"),
       healthErrors(app, app.upgradeStrategy, path + "upgradeStrategy"),
-      dependencyErrors(app, parent, app.dependencies, path + "dependencies")
+      dependencyErrors(app, parent, app.dependencies, path + "dependencies"),
+      urlsCanBeResolved(app, app.resolveUrls, path + "resolveUrls")
     )
+  }
+
+  def urlsCanBeResolved[T](t: T, urls: Seq[String], path: String)(implicit ct: ClassTag[T]): List[ConstraintViolation[T]] = {
+    def urlIsValid(url: String) = Try {
+      val connection = new URL(url).openConnection().asInstanceOf[HttpURLConnection]
+      connection.setRequestMethod("HEAD")
+      connection.getResponseCode == HttpURLConnection.HTTP_OK
+    }.getOrElse(false)
+    urls.toList.zipWithIndex.collect{ case (url, pos) if !urlIsValid(url) => violation(t, urls, s"$path[$pos]", s"Can not resolve url $url") }
   }
 
   def idErrors[T](t: T, base: PathId, id: PathId, path: String)(implicit ct: ClassTag[T]): List[ConstraintViolation[T]] = {

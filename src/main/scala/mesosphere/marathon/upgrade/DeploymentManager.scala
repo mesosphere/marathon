@@ -3,6 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, SchedulerActions }
@@ -16,6 +17,7 @@ class DeploymentManager(
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     scheduler: SchedulerActions,
+    storage: StorageProvider,
     eventBus: EventStream) extends Actor with ActorLogging {
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentManager._
@@ -56,7 +58,7 @@ class DeploymentManager(
       runningDeployments -= id
 
     case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.id) =>
-      val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, appRepository, driver, scheduler, plan, taskTracker, taskQueue, eventBus))
+      val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, appRepository, driver, scheduler, plan, taskTracker, taskQueue, storage, eventBus))
       runningDeployments += plan.id -> DeploymentInfo(ref, plan)
 
     case _: PerformDeployment =>

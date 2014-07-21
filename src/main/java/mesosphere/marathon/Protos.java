@@ -2475,6 +2475,26 @@ public final class Protos {
      */
     com.google.protobuf.ByteString
         getDependenciesBytes(int index);
+
+    // repeated string resolveUrls = 17;
+    /**
+     * <code>repeated string resolveUrls = 17;</code>
+     */
+    java.util.List<java.lang.String>
+    getResolveUrlsList();
+    /**
+     * <code>repeated string resolveUrls = 17;</code>
+     */
+    int getResolveUrlsCount();
+    /**
+     * <code>repeated string resolveUrls = 17;</code>
+     */
+    java.lang.String getResolveUrls(int index);
+    /**
+     * <code>repeated string resolveUrls = 17;</code>
+     */
+    com.google.protobuf.ByteString
+        getResolveUrlsBytes(int index);
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -2654,6 +2674,14 @@ public final class Protos {
               dependencies_.add(input.readBytes());
               break;
             }
+            case 138: {
+              if (!((mutable_bitField0_ & 0x00008000) == 0x00008000)) {
+                resolveUrls_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00008000;
+              }
+              resolveUrls_.add(input.readBytes());
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -2676,6 +2704,9 @@ public final class Protos {
         }
         if (((mutable_bitField0_ & 0x00004000) == 0x00004000)) {
           dependencies_ = new com.google.protobuf.UnmodifiableLazyStringList(dependencies_);
+        }
+        if (((mutable_bitField0_ & 0x00008000) == 0x00008000)) {
+          resolveUrls_ = new com.google.protobuf.UnmodifiableLazyStringList(resolveUrls_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -3188,6 +3219,36 @@ public final class Protos {
       return dependencies_.getByteString(index);
     }
 
+    // repeated string resolveUrls = 17;
+    public static final int RESOLVEURLS_FIELD_NUMBER = 17;
+    private com.google.protobuf.LazyStringList resolveUrls_;
+    /**
+     * <code>repeated string resolveUrls = 17;</code>
+     */
+    public java.util.List<java.lang.String>
+        getResolveUrlsList() {
+      return resolveUrls_;
+    }
+    /**
+     * <code>repeated string resolveUrls = 17;</code>
+     */
+    public int getResolveUrlsCount() {
+      return resolveUrls_.size();
+    }
+    /**
+     * <code>repeated string resolveUrls = 17;</code>
+     */
+    public java.lang.String getResolveUrls(int index) {
+      return resolveUrls_.get(index);
+    }
+    /**
+     * <code>repeated string resolveUrls = 17;</code>
+     */
+    public com.google.protobuf.ByteString
+        getResolveUrlsBytes(int index) {
+      return resolveUrls_.getByteString(index);
+    }
+
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -3204,6 +3265,7 @@ public final class Protos {
       backoffFactor_ = 1.15D;
       upgradeStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
       dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      resolveUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3312,6 +3374,9 @@ public final class Protos {
       for (int i = 0; i < dependencies_.size(); i++) {
         output.writeBytes(16, dependencies_.getByteString(i));
       }
+      for (int i = 0; i < resolveUrls_.size(); i++) {
+        output.writeBytes(17, resolveUrls_.getByteString(i));
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -3390,6 +3455,15 @@ public final class Protos {
         }
         size += dataSize;
         size += 2 * getDependenciesList().size();
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < resolveUrls_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(resolveUrls_.getByteString(i));
+        }
+        size += dataSize;
+        size += 2 * getResolveUrlsList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3567,6 +3641,8 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00002000);
         dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00004000);
+        resolveUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00008000);
         return this;
       }
 
@@ -3685,6 +3761,12 @@ public final class Protos {
           bitField0_ = (bitField0_ & ~0x00004000);
         }
         result.dependencies_ = dependencies_;
+        if (((bitField0_ & 0x00008000) == 0x00008000)) {
+          resolveUrls_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              resolveUrls_);
+          bitField0_ = (bitField0_ & ~0x00008000);
+        }
+        result.resolveUrls_ = resolveUrls_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3834,6 +3916,16 @@ public final class Protos {
           } else {
             ensureDependenciesIsMutable();
             dependencies_.addAll(other.dependencies_);
+          }
+          onChanged();
+        }
+        if (!other.resolveUrls_.isEmpty()) {
+          if (resolveUrls_.isEmpty()) {
+            resolveUrls_ = other.resolveUrls_;
+            bitField0_ = (bitField0_ & ~0x00008000);
+          } else {
+            ensureResolveUrlsIsMutable();
+            resolveUrls_.addAll(other.resolveUrls_);
           }
           onChanged();
         }
@@ -5611,6 +5703,99 @@ public final class Protos {
   }
   ensureDependenciesIsMutable();
         dependencies_.add(value);
+        onChanged();
+        return this;
+      }
+
+      // repeated string resolveUrls = 17;
+      private com.google.protobuf.LazyStringList resolveUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureResolveUrlsIsMutable() {
+        if (!((bitField0_ & 0x00008000) == 0x00008000)) {
+          resolveUrls_ = new com.google.protobuf.LazyStringArrayList(resolveUrls_);
+          bitField0_ |= 0x00008000;
+         }
+      }
+      /**
+       * <code>repeated string resolveUrls = 17;</code>
+       */
+      public java.util.List<java.lang.String>
+          getResolveUrlsList() {
+        return java.util.Collections.unmodifiableList(resolveUrls_);
+      }
+      /**
+       * <code>repeated string resolveUrls = 17;</code>
+       */
+      public int getResolveUrlsCount() {
+        return resolveUrls_.size();
+      }
+      /**
+       * <code>repeated string resolveUrls = 17;</code>
+       */
+      public java.lang.String getResolveUrls(int index) {
+        return resolveUrls_.get(index);
+      }
+      /**
+       * <code>repeated string resolveUrls = 17;</code>
+       */
+      public com.google.protobuf.ByteString
+          getResolveUrlsBytes(int index) {
+        return resolveUrls_.getByteString(index);
+      }
+      /**
+       * <code>repeated string resolveUrls = 17;</code>
+       */
+      public Builder setResolveUrls(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureResolveUrlsIsMutable();
+        resolveUrls_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string resolveUrls = 17;</code>
+       */
+      public Builder addResolveUrls(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureResolveUrlsIsMutable();
+        resolveUrls_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string resolveUrls = 17;</code>
+       */
+      public Builder addAllResolveUrls(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureResolveUrlsIsMutable();
+        super.addAll(values, resolveUrls_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string resolveUrls = 17;</code>
+       */
+      public Builder clearResolveUrls() {
+        resolveUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00008000);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string resolveUrls = 17;</code>
+       */
+      public Builder addResolveUrlsBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureResolveUrlsIsMutable();
+        resolveUrls_.add(value);
         onChanged();
         return this;
       }
@@ -12017,7 +12202,7 @@ public final class Protos {
       "timeoutSeconds\030\005 \001(\r:\00220\022\017\n\004path\030\006 \001(\t:\001" +
       "/\022!\n\026maxConsecutiveFailures\030\007 \001(\r:\0013\022#\n\007" +
       "command\030\010 \001(\0132\022.mesos.CommandInfo\"*\n\010Pro" +
-      "tocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND\020\002\"\245\004" +
+      "tocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND\020\002\"\272\004" +
       "\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002" +
       " \002(\0132\022.mesos.CommandInfo\022\021\n\tinstances\030\003 " +
       "\002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Resource\022" +
@@ -12031,25 +12216,25 @@ public final class Protos {
       "on\022\025\n\007backoff\030\r \001(\003:\0041000\022\033\n\rbackoffFact" +
       "or\030\016 \001(\001:\0041.15\022G\n\017upgradeStrategy\030\017 \001(\0132" +
       "..mesosphere.marathon.UpgradeStrategyDef" +
-      "inition\022\024\n\014dependencies\030\020 \003(\t\"\272\001\n\014Marath" +
-      "onTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005port" +
-      "s\030\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos.Attr",
-      "ibute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006" +
-      " \001(\003\022#\n\010statuses\030\007 \003(\0132\021.mesos.TaskStatu" +
-      "s\022\017\n\007version\030\010 \001(\t\"M\n\013MarathonApp\022\014\n\004nam" +
-      "e\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.mara" +
-      "thon.MarathonTask\"1\n\rContainerInfo\022\017\n\005im" +
-      "age\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\")\n\020EventSub" +
-      "scribers\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016Stora" +
-      "geVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022" +
-      "\r\n\005patch\030\003 \002(\r\":\n\031UpgradeStrategyDefinit" +
-      "ion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\"\260\001\n\017G",
-      "roupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 " +
-      "\002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere.marathon." +
-      "ServiceDefinition\0224\n\006groups\030\004 \003(\0132$.meso" +
-      "sphere.marathon.GroupDefinition\022\024\n\014depen" +
-      "dencies\030\005 \003(\tB\035\n\023mesosphere.marathonB\006Pr" +
-      "otos"
+      "inition\022\024\n\014dependencies\030\020 \003(\t\022\023\n\013resolve" +
+      "Urls\030\021 \003(\t\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022" +
+      "\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattribut",
+      "es\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030" +
+      "\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007 " +
+      "\003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 \001(\t\"" +
+      "M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 " +
+      "\003(\0132!.mesosphere.marathon.MarathonTask\"1" +
+      "\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opti" +
+      "ons\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcallbac" +
+      "k_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030" +
+      "\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\":\n\031U" +
+      "pgradeStrategyDefinition\022\035\n\025minimumHealt",
+      "hCapacity\030\001 \002(\001\"\260\001\n\017GroupDefinition\022\n\n\002i" +
+      "d\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&" +
+      ".mesosphere.marathon.ServiceDefinition\0224" +
+      "\n\006groups\030\004 \003(\0132$.mesosphere.marathon.Gro" +
+      "upDefinition\022\024\n\014dependencies\030\005 \003(\tB\035\n\023me" +
+      "sosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12073,7 +12258,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", });
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "ResolveUrls", });
           internal_static_mesosphere_marathon_MarathonTask_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new

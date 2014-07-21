@@ -7,6 +7,7 @@ import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
 import akka.testkit.{ TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppRepository, Group, MarathonStore }
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -41,6 +42,7 @@ class DeploymentManagerTest
   var taskTracker: TaskTracker = _
   var scheduler: SchedulerActions = _
   var appRepo: AppRepository = _
+  var storage: StorageProvider = _
 
   before {
     driver = mock[SchedulerDriver]
@@ -49,11 +51,12 @@ class DeploymentManagerTest
     config = mock[MarathonConf]
     taskTracker = new TaskTracker(new InMemoryState, config)
     scheduler = mock[SchedulerActions]
+    storage = mock[StorageProvider]
     appRepo = new AppRepository(new MarathonStore[AppDefinition](new InMemoryState, () => AppDefinition()))
   }
 
   test("deploy") {
-    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, eventBus))
+    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, storage, eventBus))
 
     val app = AppDefinition("app".toRootPath)
 
@@ -70,7 +73,7 @@ class DeploymentManagerTest
   }
 
   test("StopActor") {
-    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, eventBus))
+    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, storage, eventBus))
     val probe = TestProbe()
 
     probe.setAutoPilot(new AutoPilot {
@@ -89,7 +92,7 @@ class DeploymentManagerTest
   }
 
   test("Cancel deployment") {
-    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, eventBus))
+    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, storage, eventBus))
 
     implicit val timeout = Timeout(1.minute)
 

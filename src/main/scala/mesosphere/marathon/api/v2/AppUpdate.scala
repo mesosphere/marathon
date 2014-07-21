@@ -38,6 +38,8 @@ case class AppUpdate(
 
     uris: Option[Seq[String]] = None,
 
+    resolveUrls: Option[Seq[String]] = None,
+
     @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
     @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
@@ -70,6 +72,7 @@ case class AppUpdate(
     executor.getOrElse(app.executor),
     constraints.getOrElse(app.constraints),
     uris.getOrElse(app.uris),
+    resolveUrls.getOrElse(app.resolveUrls),
     ports.getOrElse(app.ports),
     backoff.getOrElse(app.backoff),
     backoffFactor.getOrElse(app.backoffFactor),

@@ -10,6 +10,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppRepository, PathId }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
@@ -34,6 +35,7 @@ class MarathonSchedulerActor(
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
     taskIdUtil: TaskIdUtil,
+    storage: StorageProvider,
     eventBus: EventStream,
     config: MarathonConf) extends Actor with ActorLogging {
   import context.dispatcher
@@ -58,7 +60,7 @@ class MarathonSchedulerActor(
       config)
 
     upgradeManager = context.actorOf(
-      Props(classOf[DeploymentManager], appRepository, taskTracker, taskQueue, scheduler, eventBus), "UpgradeManager")
+      Props(classOf[DeploymentManager], appRepository, taskTracker, taskQueue, scheduler, storage, eventBus), "UpgradeManager")
 
   }
 
