@@ -6,6 +6,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ FunSuite, Matchers }
 
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ PortRangeExhaustedException, MarathonConf, MarathonSchedulerService }
@@ -57,6 +58,7 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
     val groupRepo = mock[GroupRepository]
     val appRepo = mock[AppRepository]
     val eventBus = mock[EventStream]
-    new GroupManager(scheduler, taskTracker, groupRepo, appRepo, config, eventBus)
+    val provider = mock[StorageProvider]
+    new GroupManager(scheduler, taskTracker, groupRepo, appRepo, provider, config, eventBus)
   }
 }

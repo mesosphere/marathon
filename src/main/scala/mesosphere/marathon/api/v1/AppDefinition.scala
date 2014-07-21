@@ -45,6 +45,8 @@ case class AppDefinition(
 
   uris: Seq[String] = Seq.empty,
 
+  resolveUrls: Seq[String] = Seq.empty,
+
   @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
   @FieldJsonProperty("backoffSeconds") backoff: FiniteDuration = AppDefinition.DEFAULT_BACKOFF,
@@ -86,7 +88,7 @@ case class AppDefinition(
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
 
-    val builder = Protos.ServiceDefinition.newBuilder
+    Protos.ServiceDefinition.newBuilder
       .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
@@ -102,8 +104,8 @@ case class AppDefinition(
       .setVersion(version.toString)
       .setUpgradeStrategy(upgradeStrategy.toProto)
       .addAllDependencies(dependencies.map(_.toString).asJava)
-
-    builder.build
+      .addAllResolveUrls(resolveUrls.asJava)
+      .build
   }
 
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
@@ -116,7 +118,16 @@ case class AppDefinition(
       proto.getResourcesList.asScala.map {
         r => r.getName -> (r.getScalar.getValue: JDouble)
       }.toMap
-
+    val containerOption = if (proto.getCmd.hasContainer) {
+      Some(ContainerInfo(proto.getCmd.getContainer))
+    }
+    else if (proto.hasOBSOLETEContainer) {
+      val oldContainer = proto.getOBSOLETEContainer
+      Some(ContainerInfo(oldContainer.getImage.toStringUtf8, oldContainer.getOptionsList.asScala.toSeq.map(_.toStringUtf8)))
+    }
+    else {
+      None
+    }
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -129,21 +140,12 @@ case class AppDefinition(
       constraints = proto.getConstraintsList.asScala.toSet,
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
-      disk = resourcesMap.get(Resource.DISK).getOrElse(this.disk),
+      disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
-      container = if (proto.getCmd.hasContainer) {
-        Some(ContainerInfo(proto.getCmd.getContainer))
-      }
-      else if (proto.hasOBSOLETEContainer) {
-        val oldContainer = proto.getOBSOLETEContainer
-        Some(ContainerInfo(oldContainer.getImage.toStringUtf8, oldContainer.getOptionsList.asScala.toSeq.map(_.toStringUtf8)))
-      }
-      else {
-        None
-      },
-      healthChecks =
-        proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
+      resolveUrls = proto.getResolveUrlsList.asScala,
+      container = containerOption,
+      healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion),
       upgradeStrategy = if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy) else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet
@@ -206,7 +208,7 @@ object AppDefinition {
     taskTracker: TaskTracker,
     app: AppDefinition) extends AppDefinition(
     app.id, app.cmd, app.user, app.env, app.instances, app.cpus, app.mem, app.disk,
-    app.executor, app.constraints, app.uris, app.ports, app.backoff,
+    app.executor, app.constraints, app.uris, app.resolveUrls, app.ports, app.backoff,
     app.backoffFactor, app.container, app.healthChecks, app.dependencies, app.upgradeStrategy,
     app.version) {
 

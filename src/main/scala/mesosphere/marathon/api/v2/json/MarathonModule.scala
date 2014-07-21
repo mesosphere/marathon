@@ -258,6 +258,8 @@ object MarathonModule {
 
       uris: Option[Seq[String]] = None,
 
+      resolveUrls: Option[Seq[String]] = None,
+
       @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
       @FieldJsonProperty("backoffSeconds") backOff: Option[FiniteDuration] = None,
@@ -278,7 +280,7 @@ object MarathonModule {
 
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      id, cmd, user, env, instances, cpus, mem, disk, uris, ports, backOff, backOffFactor,
+      id, cmd, user, env, instances, cpus, mem, disk, uris, resolveUrls, ports, backOff, backOffFactor,
       constraints, executor, container, healthChecks, dependencies, upgradeStrategy, version
     )
   }

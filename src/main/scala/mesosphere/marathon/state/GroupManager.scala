@@ -13,6 +13,8 @@ import org.apache.log4j.Logger
 import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
+import mesosphere.marathon.io.PathFun
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
@@ -27,8 +29,9 @@ class GroupManager @Singleton @Inject() (
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
     appRepo: AppRepository,
+    storage: StorageProvider,
     config: MarathonConf,
-    @Named(EventModule.busName) eventBus: EventStream) extends ModelValidation {
+    @Named(EventModule.busName) eventBus: EventStream) extends ModelValidation with PathFun {
 
   private[this] val log = Logger.getLogger(getClass.getName)
   private[this] val zkName = "root"
@@ -108,9 +111,9 @@ class GroupManager @Singleton @Inject() (
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
     def deploy(from: Group): Future[DeploymentPlan] = {
-      val to = assignDynamicAppPort(from, change(from))
+      val (to, resolve) = resolveUrls(assignDynamicAppPort(from, change(from)))
       requireValid(checkGroup(to))
-      val plan = DeploymentPlan(from, to, version)
+      val plan = DeploymentPlan(from, to, resolve, version)
       scheduler.deploy(plan, force).map(_ => plan)
     }
 
@@ -129,6 +132,19 @@ class GroupManager @Singleton @Inject() (
         eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
     }
     deployment
+  }
+
+  private[state] def resolveUrls(group: Group): (Group, Seq[ResolveArtifacts]) = {
+    def assetURL(url: String) = storage.item(uniquePath(url)).url
+    var actions = List.empty[ResolveArtifacts]
+    group.updateApp(group.version) { app =>
+      if (app.resolveUrls.isEmpty) app else {
+        val resolvable = app.resolveUrls.map(assetURL)
+        val resolved = app.copy(uris = app.uris ++ resolvable, resolveUrls = Seq.empty)
+        actions ::= ResolveArtifacts(resolved, app.resolveUrls.distinct)
+        resolved
+      }
+    } -> actions
   }
 
   private[state] def assignDynamicAppPort(from: Group, to: Group): Group = {

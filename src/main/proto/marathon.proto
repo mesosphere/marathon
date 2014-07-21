@@ -58,7 +58,7 @@ message ServiceDefinition {
   optional double backoffFactor = 14 [default = 1.15];
   optional UpgradeStrategyDefinition upgradeStrategy = 15;
   repeated string dependencies = 16;
-
+  repeated string resolveUrls = 17;
 }
 
 message MarathonTask {
