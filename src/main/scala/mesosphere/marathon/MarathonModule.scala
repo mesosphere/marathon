@@ -1,7 +1,5 @@
 package mesosphere.marathon
 
-import java.io.File
-import java.net.URI
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Named
@@ -15,7 +13,6 @@ import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, ZooKeeperClient, Group => ZGroup }
-import org.apache.hadoop.conf.Configuration
 import org.apache.log4j.Logger
 import org.apache.mesos.state.{ State, ZooKeeperState }
 import org.apache.zookeeper.ZooDefs
@@ -24,7 +21,7 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.health.{ DelegatingHealthCheckManager, HealthCheckManager, MarathonHealthCheckManager }
-import mesosphere.marathon.io.storage.{ FileStorageProvider, HDFSStorageProvider, NoStorageProvider, StorageProvider }
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
@@ -163,13 +160,5 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideStorageProvider(config: MarathonConf, http: HttpConf): StorageProvider = {
-    val HDFS = "^(hdfs://[^/]+)(.*)$".r // hdfs://host:port/path
-    val FILE = "^file://(.*)$".r // file:///local/artifact/path
-    config.artifactStore.get.getOrElse("") match {
-      case HDFS(uri, base) => new HDFSStorageProvider(new URI(uri), if (base.isEmpty) "/" else base, new Configuration())
-      case FILE(base)      => new FileStorageProvider("http://" + config.hostname.get.get + ":" + http.httpPort.get.get + "/v2/artifacts", new File(base))
-      case _               => new NoStorageProvider()
-    }
-  }
+  def provideStorageProvider(config: MarathonConf, http: HttpConf): StorageProvider = StorageProvider.provider(config, http)
 }
