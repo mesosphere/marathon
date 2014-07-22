@@ -1,19 +1,23 @@
 package mesosphere.marathon.api.v1
 
-import javax.ws.rs.{ PathParam, GET, Produces, Path }
-import javax.ws.rs.core.{ Response, MediaType }
 import javax.inject.Inject
-import mesosphere.marathon.MarathonSchedulerService
-import mesosphere.marathon.tasks.TaskTracker
-import com.codahale.metrics.annotation.Timed
 import javax.ws.rs.core.Response.Status
-import mesosphere.marathon.api.Responses
+import javax.ws.rs.core.{ MediaType, Response }
+import javax.ws.rs.{ GET, Path, PathParam, Produces }
 import scala.collection.JavaConverters._
+
+import com.codahale.metrics.annotation.Timed
+
+import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
 @Path("v1/endpoints")
 class EndpointsResource @Inject() (
     schedulerService: MarathonSchedulerService,
-    taskTracker: TaskTracker) {
+    taskTracker: TaskTracker,
+    val config: MarathonConf) extends RestResource {
 
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
@@ -24,7 +28,7 @@ class EndpointsResource @Inject() (
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
   def endpointsJson() = {
-    for (app <- schedulerService.listApps) yield {
+    for (app <- schedulerService.listApps()) yield {
       val instances = taskTracker.get(app.id)
       Map("id" -> app.id, "ports" -> app.ports, "instances" -> instances)
     }
@@ -34,28 +38,31 @@ class EndpointsResource @Inject() (
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Path("{id}")
   @Timed
-  def endpointsForApp(@PathParam("id") id: String): Response =
-    schedulerService.getApp(id) match {
-      case Some(app) => Response.ok(appsToEndpointString(Seq(app))).build
-      case None      => Response.status(Status.NOT_FOUND).entity(s"App '$id' does not exist").build
+  def endpointsForApp(@PathParam("id") id: String): Response = {
+    schedulerService.getApp(id.toRootPath) match {
+      case Some(app) => ok(appsToEndpointString(Seq(app)))
+      case None      => unknownApp(id.toRootPath)
     }
+  }
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Path("{id}")
   @Timed
-  def endpointsForAppJson(@PathParam("id") id: String): Response =
-    schedulerService.getApp(id) match {
+  def endpointsForAppJson(@PathParam("id") id: String): Response = {
+    val appId = id.toRootPath
+    schedulerService.getApp(appId) match {
       case Some(app) => {
-        val instances = taskTracker.get(id)
+        val instances = taskTracker.get(appId)
         val body = Map(
           "id" -> app.id,
           "ports" -> app.ports,
           "instances" -> instances)
-        Response.ok(body).build
+        ok(body)
       }
-      case None => Responses.unknownApp(id)
+      case None => unknownApp(appId)
     }
+  }
 
   /**
     * Produces a script-friendly string representation of the supplied
@@ -64,11 +71,11 @@ class EndpointsResource @Inject() (
   private def appsToEndpointString(apps: Seq[AppDefinition]): String = {
     val sb = new StringBuilder
     for (app <- apps) {
-      val cleanId = app.id.replaceAll("\\s+", "_")
+      val cleanId = app.id.toString.replaceAll("\\s+", "_")
       val tasks = taskTracker.get(app.id)
 
       if (app.ports.isEmpty) {
-        sb.append(s"${cleanId}   ")
+        sb.append(s"$cleanId   ")
         tasks.foreach { task =>
           sb.append(s"${task.getHost} ")
         }

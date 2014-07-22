@@ -1,49 +1,45 @@
 package mesosphere.marathon.api.v2
 
-import scala.language.postfixOps
-import com.google.inject.Inject
+import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType }
+
 import com.codahale.metrics.annotation.Timed
-import javax.servlet.http.HttpServletRequest
-import org.apache.log4j.Logger
-import mesosphere.marathon.event.{ Unsubscribe, Subscribe }
-import mesosphere.marathon.event.http.{ HttpEventModule, HttpCallbackSubscriptionService }
-import scala.concurrent.Await
-import mesosphere.marathon.BadRequestException
+import com.google.inject.Inject
+
+import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.event.http.HttpCallbackSubscriptionService
+import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
+import mesosphere.marathon.{ BadRequestException, MarathonConf }
 
 @Path("v2/eventSubscriptions")
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class EventSubscriptionsResource {
-  // TODO(everpeace) this should be configurable option?
-  val timeout = HttpEventModule.timeout.duration
-  val log = Logger.getLogger(getClass.getName)
+class EventSubscriptionsResource @Inject() (val config: MarathonConf) extends RestResource {
 
-  @Inject(optional = true)
-  val service: HttpCallbackSubscriptionService = null
+  @Inject(optional = true) val service: HttpCallbackSubscriptionService = null
 
   @GET
   @Timed
   def listSubscribers(@Context req: HttpServletRequest) = {
-    validateSubscriptionService
-    Await.result(service.getSubscribers, timeout)
+    validateSubscriptionService()
+    result(service.getSubscribers)
   }
 
   @POST
   @Timed
   def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String) = {
-    validateSubscriptionService
+    validateSubscriptionService()
     val future = service.handleSubscriptionEvent(Subscribe(req.getRemoteAddr, callbackUrl))
-    Await.result(future, timeout)
+    result(future)
   }
 
   @DELETE
   @Timed
   def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String) = {
-    validateSubscriptionService
+    validateSubscriptionService()
     val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
-    Await.result(future, timeout)
+    result(future)
   }
 
   private def validateSubscriptionService() = {

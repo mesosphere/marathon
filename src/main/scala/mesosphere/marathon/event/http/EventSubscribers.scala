@@ -1,6 +1,6 @@
 package mesosphere.marathon.event.http
 
-import mesosphere.marathon.state.{ Migration, MarathonState }
+import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos
 import collection.JavaConversions._
 
@@ -25,10 +25,3 @@ case class EventSubscribers(
   }
 }
 
-object EventSubscribers {
-  implicit object EventSubscribersMigration extends Migration[EventSubscribers] {
-    override def needsMigration(version: StorageVersion): Boolean = false
-
-    override def migrate(version: StorageVersion, obj: EventSubscribers): EventSubscribers = obj
-  }
-}

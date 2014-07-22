@@ -200,7 +200,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
 
 ### Managed Scaling
 
-- There is a `/v2/groups/.../someGroup/scale` endpoint that updates the instances parameter of each descendent application, maintaining the relative ratios among the
+- There is an endpoint that updates the instances parameter of each descendent application, maintaining the relative ratios among the
   members and taking into account inter-group dependencies
 
 - **TODO**: _More clearly define scaling semantics_
@@ -261,21 +261,20 @@ POST /v2/apps/product-a/frontend
 }
 ```
 
-Creating a multitude of apps:  
-**Beware:** This _replaces_ the collection of apps in the `frontend` collection.
+Creating or updating a multitude of apps:  
 
 ```
-PUT /v2/apps/product-a/frontend/*
+PUT /v2/apps
 ```
 ```json
 [
   {
-    "id": "play",
+    "id": "/product-a/frontend/play",
     "cmd": "tar -xf *.tgz && bin/start-play.sh",
     "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz"
   },
   {
-    "id": "fun",
+    "id": "/product-a/frontend/fun",
     "cmd": "tar -xf *.tgz && bin/start-play.sh",
     "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz",
     "healthChecks": [
@@ -287,42 +286,6 @@ PUT /v2/apps/product-a/frontend/*
         "maxConsecutiveFailures": 0
       }
     ]
-  }
-]
-```
-
-OR  
-**Beware:** This _replaces_ the collection of apps in the `frontend` collection.
-
-```
-PUT /v2/apps/*
-```
-```json
-[
-  {
-    "id": "product-a/frontend/play",
-    "cmd": "tar -xf *.tgz && bin/start-play.sh",
-    "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz"
-  },
-  {
-    "id": "product-a/frontend/fun",
-    "cmd": "tar -xf *.tgz && bin/start-play.sh",
-    "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz"
-  }
-]
-```
-
-however, the following fails with a `400: Bad Request` because absolute paths may only be created at the root of the group hierarchy:
-
-```
-PUT /v2/apps/product-a/frontend/*
-```
-```json
-[
-  {
-    "id": "/product-a/frontend/play",
-    "cmd": "tar -xf *.tgz && bin/start-play.sh",
-    "uri": "http://artifacts.acme.com/rel/app-1.2.3.tgz"
   }
 ]
 ```
@@ -341,7 +304,7 @@ PUT /v2/groups/product-a/frontend
 or from an app to a group
 
 ```
-PUT /v2/groups/product-a/frontend/play
+PUT /v2/apps/product-a/frontend/play
 ```
 ```json
 { "dependencies": ["../backend"] }
@@ -357,7 +320,7 @@ POST /v2/groups/test
 ```json
 {
   "id": "product-a",
-  "scalingStrategy": {
+  "upgradeStrategy": {
     "minimumHealthCapacity": 0.5
   },
   "apps": [
@@ -484,13 +447,11 @@ PUT /v2/groups/myGroup
 
 ##### Scale a group, maintaining relative instance ratios (creates a new version of the group and its apps)
 
-**TODO:**: _What does this mean, specifically?_
-
 ```
-POST /v2/groups/myGroup/scale
+PUT /v2/groups/myGroup
 ```
 ```json
-{ "factor": 3.0 }
+{ "scaleBy": 2 }
 ```
 
 ##### Destroy a group
@@ -574,13 +535,15 @@ GET /v2/apps/product-a/frontend/*
 ##### Get a list of tasks in a subtree
 
 ```
-GET /v2/tasks/*
-GET /v2/tasks/product-a/*
-GET /v2/tasks/product-a/frontend/*
-GET /v2/tasks/product-a/frontend/play/*
+GET /v2/apps/*/task
+GET /v2/apps/product-a/*/task
+GET /v2/apps/product-a/frontend/*/task
+GET /v2/apps/product-a/frontend/play/*/task
 ```
 
-##### Check the health of a task
+
+
+##### Check the health of a task (not implemented)
 
 A task is healthy if its latest health check passed.
 
@@ -588,7 +551,7 @@ A task is healthy if its latest health check passed.
 GET /v2/health/product-a/frontend/play/task_xxxx
 ```
 
-##### Check the health of an app
+##### Check the health of an app (not implemented)
 
 An app's health is one of ["healthy", "unhealthy", "scaling"]
 
@@ -596,7 +559,7 @@ An app's health is one of ["healthy", "unhealthy", "scaling"]
 GET /v2/health/product-a/frontend/play
 ```
 
-##### Check the health of a group
+##### Check the health of a group (not implemented)
 
 A group is "healthy" iff all of its apps are healthy.
 
@@ -604,13 +567,13 @@ A group is "healthy" iff all of its apps are healthy.
 GET /v2/health/groups/product-a
 ```
 
-##### List the health of all apps in a group
+##### List the health of all apps in a group (not implemented)
 
 ```
 GET /v2/health/groups/product-a/*
 ```
 
-##### Get a stream of events for an app
+##### Get a stream of events for an app (not implemented)
 
 ```
 GET /v2/events/product-a/frontend/play

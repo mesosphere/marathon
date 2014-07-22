@@ -1,110 +1,142 @@
 package mesosphere.marathon.api.v2
 
-import javax.ws.rs._
-import scala.Array
-import javax.ws.rs.core.{ Response, Context, MediaType }
-import javax.inject.{ Named, Inject }
-import mesosphere.marathon.event.EventModule
-import com.google.common.eventbus.EventBus
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
-import mesosphere.marathon.tasks.TaskTracker
-import com.codahale.metrics.annotation.Timed
-import javax.servlet.http.HttpServletRequest
-import javax.validation.Valid
-import mesosphere.marathon.api.v1.AppDefinition
-import scala.concurrent.Await
-import mesosphere.marathon.event.ApiPostEvent
 import java.net.URI
+import javax.inject.{ Inject, Named }
+import javax.servlet.http.HttpServletRequest
+import javax.ws.rs._
+import javax.ws.rs.core.{ Context, MediaType, Response }
+
+import akka.event.EventStream
+import com.codahale.metrics.annotation.Timed
+
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.api.{ ModelValidation, RestResource }
+import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.api.Responses
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state._
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
+@Produces(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject() (
-    @Named(EventModule.busName) eventBus: Option[EventBus],
+    @Named(EventModule.busName) eventBus: EventStream,
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
-    config: MarathonConf) {
+    val config: MarathonConf,
+    groupManager: GroupManager) extends RestResource with ModelValidation {
+
+  val ListApps = """^((?:.+/)|)\*$""".r
 
   @GET
   @Timed
-  @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@QueryParam("cmd") cmd: String,
             @QueryParam("id") id: String) = {
-    val apps = if (cmd != null || id != null) {
-      search(cmd, id)
-    }
-    else {
-      service.listApps()
-    }
-
+    val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
     Map("apps" -> apps.map(_.withTaskCounts(taskTracker)))
   }
 
   @POST
   @Timed
-  @Produces(Array(MediaType.APPLICATION_JSON))
-  def create(@Context req: HttpServletRequest, @Valid app: AppDefinition): Response = {
+  def create(@Context req: HttpServletRequest, app: AppDefinition,
+             @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    val baseId = app.id.canonicalPath()
+    requireValid(checkApp(app, baseId.parent))
     maybePostEvent(req, app)
-    Await.result(service.startApp(app), config.zkTimeoutDuration)
-
-    // Set content to `None` so the response does not set a `Content-Length`
-    // header with value 0, which would tell clients to parse the body as JSON.
-    // An empty string (response body with length 0) is invalid JSON.
-    Response.created(new URI(s"${app.id}")).entity(None).build
+    val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
+    val deployment = result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
+    deploymentResult(deployment, Response.created(new URI(baseId.toString)))
   }
 
   @GET
-  @Path("{id}")
+  @Path("""{id:.+}""")
   @Timed
-  @Produces(Array(MediaType.APPLICATION_JSON))
-  def show(@PathParam("id") id: String): Response = service.getApp(id) match {
-    case Some(app) =>
-      Response.ok(Map("app" -> app.withTasks(taskTracker))).build
-
-    case None => Responses.unknownApp(id)
-  }
-
-  @PUT
-  @Path("{id}")
-  @Timed
-  def replace(
-    @Context req: HttpServletRequest,
-    @PathParam("id") id: String,
-    @Valid appUpdate: AppUpdate): Response = {
-    val updatedApp = appUpdate.apply(AppDefinition(id))
-
-    service.getApp(id) match {
-      case Some(app) =>
-        maybePostEvent(req, updatedApp)
-        Await.result(service.updateApp(id, appUpdate), config.zkTimeoutDuration)
-        Response.noContent.build
-
-      case None => create(req, updatedApp)
+  def show(@PathParam("id") id: String): Response = {
+    def transitiveApps(gid: PathId) = {
+      val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
+      val withTasks = apps.map(_.withTasks(taskTracker))
+      ok(Map("*" -> withTasks))
+    }
+    def app() = service.getApp(id.toRootPath) match {
+      case Some(app) => ok(Map("app" -> app.withTasks(taskTracker)))
+      case None      => unknownApp(id.toRootPath)
+    }
+    id match {
+      case ListApps(gid) => transitiveApps(gid.toRootPath)
+      case _             => app()
     }
   }
 
-  @DELETE
-  @Path("{id}")
+  @PUT
+  @Path("""{id:.+}""")
   @Timed
-  def delete(@Context req: HttpServletRequest, @PathParam("id") id: String): Response = {
-    val app = AppDefinition(id = id)
-    maybePostEvent(req, app)
-    Await.result(service.stopApp(app), config.zkTimeoutDuration)
-    Response.noContent.build
+  def replace(@Context req: HttpServletRequest,
+              @PathParam("id") id: String,
+              @DefaultValue("false")@QueryParam("force") force: Boolean,
+              appUpdate: AppUpdate): Response = {
+
+    val appId = appUpdate.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
+    val updateWithId = appUpdate.copy(id = Some(appId))
+
+    requireValid(checkUpdate(updateWithId, needsId = false))
+
+    service.getApp(appId) match {
+      case Some(app) =>
+        //if version is defined, replace with version
+        val update = updateWithId.version.flatMap(v => service.getApp(appId, v)).orElse(Some(updateWithId(app)))
+        val response = update.map { updatedApp =>
+          maybePostEvent(req, updatedApp)
+          val deployment = result(groupManager.updateApp(appId, _ => updatedApp, updatedApp.version, force))
+          deploymentResult(deployment)
+        }
+        response.getOrElse(unknownApp(appId, updateWithId.version))
+
+      case None => create(req, updateWithId(AppDefinition(appId)), force)
+    }
   }
 
-  @Path("{appId}/tasks")
-  @Produces(Array(MediaType.APPLICATION_JSON))
-  def appTasksResource() = new AppTasksResource(service, taskTracker, healthCheckManager)
+  @PUT
+  @Timed
+  def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean,
+                      updates: Seq[AppUpdate]): Response = {
+    requireValid(checkUpdates(updates))
+    val version = Timestamp.now()
+    def updateApp(update: AppUpdate, app: AppDefinition): AppDefinition = {
+      update.version.flatMap(v => service.getApp(app.id, v)).orElse(Some(update(app))).getOrElse(app)
+    }
+    def updateGroup(root: Group) = updates.foldLeft(root) { (group, update) =>
+      update.id match {
+        case Some(id) => group.updateApp(id.canonicalPath(), updateApp(update, _), version)
+        case None     => group
+      }
+    }
+    val deployment = result(groupManager.update(PathId.empty, updateGroup, version, force))
+    deploymentResult(deployment)
+  }
 
-  @Path("{appId}/versions")
-  @Produces(Array(MediaType.APPLICATION_JSON))
-  def appVersionsResource() = new AppVersionsResource(service)
+  @DELETE
+  @Path("""{id:.+}""")
+  @Timed
+  def delete(@Context req: HttpServletRequest,
+             @DefaultValue("false")@QueryParam("force") force: Boolean,
+             @PathParam("id") id: String): Response = {
+    val appId = id.toRootPath
+    maybePostEvent(req, AppDefinition(id = appId))
+    val deployment = result(groupManager.update(appId.parent, _.removeApplication(appId), force = force))
+    deploymentResult(deployment)
+  }
+
+  @Path("{appId:.+}/tasks")
+  def appTasksResource() = new AppTasksResource(service, taskTracker, healthCheckManager, config, groupManager)
+
+  @Path("{appId:.+}/versions")
+  def appVersionsResource() = new AppVersionsResource(service, config)
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
-    eventBus.foreach(_.post(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app)))
+    eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
   private def search(cmd: String, id: String): Iterable[AppDefinition] = {
     /** Returns true iff `a` is a prefix of `b`, case-insensitively */
@@ -113,7 +145,7 @@ class AppsResource @Inject() (
 
     service.listApps().filter { app =>
       val appMatchesCmd = cmd != null && cmd.nonEmpty && isPrefix(cmd, app.cmd)
-      val appMatchesId = id != null && id.nonEmpty && isPrefix(id, app.id)
+      val appMatchesId = id != null && id.nonEmpty && isPrefix(id, app.id.toString)
 
       appMatchesCmd || appMatchesId
     }

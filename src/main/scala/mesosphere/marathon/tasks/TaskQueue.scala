@@ -1,9 +1,8 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.PathId
 import mesosphere.util.RateLimiter
-
-import javax.inject.Inject
 
 import scala.collection.mutable.SynchronizedPriorityQueue
 import scala.concurrent.duration.Deadline
@@ -14,7 +13,7 @@ import scala.util.Try
   */
 class TaskQueue {
 
-  import TaskQueue._
+  import mesosphere.marathon.tasks.TaskQueue._
 
   protected[marathon] val rateLimiter = new RateLimiter
 
@@ -38,7 +37,7 @@ class TaskQueue {
     */
   def count(app: AppDefinition): Int = queue.count(_.app.id == app.id)
 
-  def purge(appId: String): Unit = {
+  def purge(appId: PathId): Unit = {
     val retained = queue.filterNot(_.app.id == appId)
     removeAll()
     queue ++= retained
