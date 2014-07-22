@@ -3,6 +3,8 @@ package mesosphere.marathon
 import org.rogach.scallop.ScallopConf
 import scala.sys.SystemProperties
 
+import mesosphere.marathon.io.storage.StorageProvider
+
 trait MarathonConf extends ScallopConf with ZookeeperConf {
 
   lazy val mesosMaster = opt[String]("master",
@@ -74,7 +76,8 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     default = new SystemProperties().get("user.name")) // Current logged in user
 
   lazy val artifactStore = opt[String]("artifact_store",
-    descr = "URL to the artifact store.",
+    descr = s"""URL to the artifact store. Supported store types ${StorageProvider.examples.keySet.mkString(", ")}. Example: ${StorageProvider.examples.values.mkString(", ")}""",
+    validate = StorageProvider.isValidUrl,
     noshort = true
   )
 }

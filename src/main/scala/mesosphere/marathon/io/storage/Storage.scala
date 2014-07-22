@@ -1,7 +1,12 @@
 package mesosphere.marathon.io.storage
 
-import java.io.{ FileInputStream, File, OutputStream, InputStream }
+import java.io.{ File, FileInputStream, InputStream, OutputStream }
+import java.net.URI
 
+import org.apache.hadoop.conf.Configuration
+
+import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.io.IO
 
 /**
@@ -88,5 +93,27 @@ trait StorageItem extends IO {
   */
 trait StorageProvider {
   def item(path: String): StorageItem
+}
+
+object StorageProvider {
+  val HDFS = "^(hdfs://[^/]+)(.*)$".r // hdfs://host:port/path
+  val FILE = "^file://(.*)$".r // file:///local/artifact/path
+
+  def provider(config: MarathonConf, http: HttpConf): StorageProvider = config.artifactStore.get.getOrElse("") match {
+    case HDFS(uri, base) => new HDFSStorageProvider(new URI(uri), if (base.isEmpty) "/" else base, new Configuration())
+    case FILE(base)      => new FileStorageProvider("http://" + config.hostname.get.get + ":" + http.httpPort.get.get + "/v2/artifacts", new File(base))
+    case _               => new NoStorageProvider()
+  }
+
+  def isValidUrl(url: String): Boolean = url match {
+    case HDFS(_, _) => true
+    case FILE(_)    => true
+    case _          => false
+  }
+
+  def examples: Map[String, String] = Map (
+    "hdfs" -> "hdfs://localhost:54310/path/to/store",
+    "file" -> "file:///var/log/store"
+  )
 }
 
