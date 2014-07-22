@@ -35,12 +35,9 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
   @POST
   @Path("{path:.+}")
   @Consumes(Array(MediaType.MULTIPART_FORM_DATA))
-  def uploadFile(
-    @PathParam("path") path: String,
-    @FormDataParam("file") upload: InputStream,
-    @FormDataParam("file") fileDetail: FormDataContentDisposition) = {
-    require(upload != null && fileDetail != null, "Please use 'file' as form parameter name!")
-    created(storage.item(path + "/" + fileDetail.getFileName).store(upload).url)
+  def uploadFile(@PathParam("path") path: String, @FormDataParam("file") upload: InputStream) = {
+    require(upload != null, "Please use 'file' as form parameter name!")
+    created(storage.item(path).store(upload).url)
   }
 
   /**
