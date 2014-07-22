@@ -172,6 +172,7 @@ case class AppDefinition(
       env != to.env ||
       cpus != to.cpus ||
       mem != to.mem ||
+      disk != to.disk ||
       uris.toSet != to.uris.toSet ||
       constraints != to.constraints ||
       container != to.container ||
@@ -181,7 +182,11 @@ case class AppDefinition(
       backoff != to.backoff ||
       backoffFactor != to.backoffFactor ||
       dependencies != to.dependencies ||
-      upgradeStrategy != to.upgradeStrategy
+      upgradeStrategy != to.upgradeStrategy ||
+      resolveUrls.toSet != to.resolveUrls.toSet ||
+      user != to.user ||
+      backoff != to.backoff ||
+      backoffFactor != to.backoffFactor
   }
 }
 
