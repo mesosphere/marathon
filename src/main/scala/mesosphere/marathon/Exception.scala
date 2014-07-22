@@ -18,6 +18,8 @@ class PortRangeExhaustedException(
 
 case class UpgradeInProgressException(msg: String) extends Exception(msg)
 
+case class CanceledActionException(msg: String) extends Exception(msg)
+
 /*
  * Task upgrade specific exceptions
  */
@@ -38,3 +40,4 @@ abstract class DeploymentFailedException(msg: String) extends Exception(msg)
 class DeploymentCanceledException(msg: String) extends DeploymentFailedException(msg)
 class AppStartCanceledException(msg: String) extends DeploymentFailedException(msg)
 class AppStopCanceledException(msg: String) extends DeploymentFailedException(msg)
+class ResolveArtifactsCanceledException(msg: String) extends DeploymentFailedException(msg)
