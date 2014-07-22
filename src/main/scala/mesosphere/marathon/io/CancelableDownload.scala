@@ -12,7 +12,7 @@ import mesosphere.util.ThreadPoolContext.context
 /**
   * Download given url to given path of given storage provider.
   * Note: the url stream is persisted in a temporary file in the same location as the path.
-  * The temporary file is moved, if the
+  * The temporary file is moved, when the download is complete.
   * @param url the url to download
   * @param provider the storage provider
   * @param path the path inside the storage, to store the content of the url stream.
@@ -31,8 +31,7 @@ final class CancelableDownload(val url: URL, val provider: StorageProvider, val 
     if (!canceled) {
       log.info(s"Download finished from $url to path $path")
       tempItem.moveTo(path)
-    }
-    else {
+    } else {
       log.info(s"Cancel download of $url. Remove temporary storage item $tempItem")
       tempItem.delete()
       throw new CanceledActionException(s"Download of $path from $url has been canceled")

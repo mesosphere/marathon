@@ -59,7 +59,7 @@ object MarathonBuild extends Build {
       .setPreference(MultilineScaladocCommentsStartOnFirstLine, false)
       .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
       .setPreference(PreserveDanglingCloseParenthesis, true)
-      .setPreference(CompactControlReadability, true)
+      .setPreference(CompactControlReadability, false)
       .setPreference(AlignSingleLineCaseStatements, true)
       .setPreference(PreserveSpaceBeforeArguments, true)
       .setPreference(SpaceBeforeColon, false)
