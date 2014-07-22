@@ -28,8 +28,10 @@ trait IO {
   }
 
   protected def createDirectory(dir: File) {
-    val result = dir.mkdirs()
-    if (!result || !dir.isDirectory || !dir.exists) throw new IOException("Can not create Directory: " + dir.getAbsolutePath)
+    if (!dir.exists()) {
+      val result = dir.mkdirs()
+      if (!result || !dir.isDirectory || !dir.exists) throw new IOException("Can not create Directory: " + dir.getAbsolutePath)
+    }
   }
 
   protected def delete(file: File) {
@@ -39,12 +41,12 @@ trait IO {
     file.delete()
   }
 
-  protected def transfer(in: InputStream, out: OutputStream, close: Boolean = true) {
+  protected def transfer(in: InputStream, out: OutputStream, close: Boolean = true, continue: => Boolean = true) {
     try {
       val buffer = new Array[Byte](BufferSize)
       @tailrec def read() {
         val byteCount = in.read(buffer)
-        if (byteCount >= 0) {
+        if (byteCount >= 0 && continue) {
           out.write(buffer, 0, byteCount)
           read()
         }

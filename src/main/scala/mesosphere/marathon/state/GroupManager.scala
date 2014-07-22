@@ -125,7 +125,7 @@ class GroupManager @Singleton @Inject() (
 
     deployment.onComplete {
       case Success(plan) =>
-        log.info(s"Deployment finished for change: $plan")
+        log.info(s"Deployment acknowledged. Waiting to get processed: $plan")
         eventBus.publish(GroupChangeSuccess(gid, version.toString))
       case Failure(ex) =>
         log.warn(s"Deployment failed for change: $version")
