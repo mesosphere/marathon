@@ -101,7 +101,7 @@ object StorageProvider {
 
   def provider(config: MarathonConf, http: HttpConf): StorageProvider = config.artifactStore.get.getOrElse("") match {
     case HDFS(uri, base) => new HDFSStorageProvider(new URI(uri), if (base.isEmpty) "/" else base, new Configuration())
-    case FILE(base)      => new FileStorageProvider("http://" + config.hostname.get.get + ":" + http.httpPort.get.get + "/v2/artifacts", new File(base))
+    case FILE(base)      => new FileStorageProvider(s"http://${config.hostname.get.get}:${http.httpPort.get.get}/v2/artifacts", new File(base))
     case _               => new NoStorageProvider()
   }
 
