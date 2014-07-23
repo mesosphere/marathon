@@ -1,7 +1,11 @@
 package mesosphere.marathon.io
 
 import java.io._
+import java.math.BigInteger
+import java.security.{ MessageDigest, DigestInputStream }
 import scala.annotation.tailrec
+
+import com.google.common.io.ByteStreams
 
 trait IO {
 
@@ -39,6 +43,12 @@ trait IO {
       file.listFiles().foreach(delete)
     }
     file.delete()
+  }
+
+  protected def mdSum(in: InputStream, mdName: String = "SHA-1", out: OutputStream = ByteStreams.nullOutputStream()): String = {
+    val md = MessageDigest.getInstance(mdName)
+    transfer(new DigestInputStream(in, md), out)
+    new BigInteger(1, md.digest()).toString(16)
   }
 
   protected def transfer(in: InputStream, out: OutputStream, close: Boolean = true, continue: => Boolean = true) {

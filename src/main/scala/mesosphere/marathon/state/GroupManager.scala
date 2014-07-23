@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import java.net.URL
 import javax.inject.Inject
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -110,8 +111,7 @@ class GroupManager @Singleton @Inject() (
   private def upgrade(gid: PathId, change: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = synchronized {
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
-    def deploy(from: Group): Future[DeploymentPlan] = {
-      val (to, resolve) = resolveStoreUrls(assignDynamicAppPort(from, change(from)))
+    def deploy(from: Group, to: Group, resolve: Seq[ResolveArtifacts]): Future[DeploymentPlan] = {
       requireValid(checkGroup(to))
       val plan = DeploymentPlan(from, to, resolve, version)
       scheduler.deploy(plan, force).map(_ => plan)
@@ -119,7 +119,8 @@ class GroupManager @Singleton @Inject() (
 
     val deployment = for {
       current <- root(withLatestApps = false) //ignore the state of the scheduler
-      plan <- deploy(current)
+      (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(current, change(current)))
+      plan <- deploy(current, to, resolve)
       storedGroup <- groupRepo.store(zkName, plan.target)
     } yield plan
 
@@ -134,17 +135,28 @@ class GroupManager @Singleton @Inject() (
     deployment
   }
 
-  private[state] def resolveStoreUrls(group: Group): (Group, Seq[ResolveArtifacts]) = {
-    def assetURL(url: String) = storage.item(uniquePath(url)).url
-    var actions = List.empty[ResolveArtifacts]
-    group.updateApp(group.version) { app =>
-      if (app.storeUrls.isEmpty) app else {
-        val resolvable = app.storeUrls.map(assetURL)
-        val resolved = app.copy(uris = app.uris ++ resolvable, storeUrls = Seq.empty)
-        actions ::= ResolveArtifacts(resolved, app.storeUrls.distinct)
-        resolved
-      }
-    } -> actions
+  private[state] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
+    def url2Path(url: String) = contentPath(new URL(url)).map { url -> _ }
+
+    val downloadsFuture = Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path)).map {
+      //Filter out all items with already existing path.
+      //Since the path is derived from the content itself,
+      //it will only change, if the content changes.
+      _.filterNot{ case (url, path) => storage.item(path).exists }.toMap
+    }
+
+    downloadsFuture.map { downloads =>
+      var actions = List.empty[ResolveArtifacts]
+      group.updateApp(group.version) { app =>
+        if (app.storeUrls.isEmpty) app else {
+          val storageUrls = app.storeUrls.map(downloads).map(storage.item(_).url)
+          val resolved = app.copy(uris = app.uris ++ storageUrls, storeUrls = Seq.empty)
+          val appDownloads = downloads.filter(k => app.storeUrls.contains(k._1)).map(k => new URL(k._1) -> k._2)
+          actions ::= ResolveArtifacts(resolved, appDownloads)
+          resolved
+        }
+      } -> actions
+    }
   }
 
   private[state] def assignDynamicAppPort(from: Group, to: Group): Group = {

@@ -1,5 +1,6 @@
 package mesosphere.marathon.upgrade
 
+import java.net.URL
 import java.util.UUID
 
 import mesosphere.marathon.api.v1.AppDefinition
@@ -23,7 +24,7 @@ final case class KillAllOldTasksOf(app: AppDefinition) extends DeploymentAction
 //application is there but should be replaced
 final case class RestartApplication(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int) extends DeploymentAction
 //resolve and store artifacts for given app
-final case class ResolveArtifacts(app: AppDefinition, urls: Seq[String]) extends DeploymentAction
+final case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends DeploymentAction
 
 final case class DeploymentStep(actions: List[DeploymentAction]) {
   def +(step: DeploymentStep) = DeploymentStep(actions ++ step.actions)
