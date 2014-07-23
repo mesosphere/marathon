@@ -1,11 +1,10 @@
 package mesosphere.marathon.api.v2
 
 import java.io.InputStream
-import java.text.SimpleDateFormat
-import java.util.{ TimeZone, Locale }
+import java.util.Date
 import javax.inject.Inject
-import javax.ws.rs.core.{ Response, MediaType }
 import javax.ws.rs._
+import javax.ws.rs.core.{MediaType, Response}
 
 import com.sun.jersey.core.header.FormDataContentDisposition
 import com.sun.jersey.multipart.FormDataParam
@@ -55,8 +54,8 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
       val mediaType = path.replaceFirst(".*\\.", "")
       Response.
         ok(item.inputStream(), mediaMime(mediaType)).
+        lastModified(new Date(item.lastModified)).
         header("Content-Length", item.length).
-        header("Last-Modified", internetDateFormatter.format(item.lastModified)).
         build()
     }
   }
@@ -71,13 +70,6 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
     val item = storage.item(path)
     if (item.exists) item.delete()
     ok()
-  }
-
-  private def internetDateFormatter = {
-    val utc = TimeZone.getTimeZone("UTC")
-    val ret = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss 'GMT'", Locale.US)
-    ret.setTimeZone(utc)
-    ret
   }
 
   private val mediaMime = Map(
