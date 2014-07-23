@@ -73,7 +73,7 @@ trait ModelValidation extends BeanValidation {
       defined(app, app.id, "id", (b: AppUpdate, p: PathId, i: String) => idErrors(b, PathId.empty, p, i), needsId),
       defined(app, app.upgradeStrategy, "upgradeStrategy", (b: AppUpdate, p: UpgradeStrategy, i: String) => healthErrors(b, p, i)),
       defined(app, app.dependencies, "dependencies", (b: AppUpdate, p: Set[PathId], i: String) => dependencyErrors(b, PathId.empty, p, i)),
-      defined(app, app.resolveUrls, "resolveUrls", (b: AppUpdate, p: Seq[String], i: String) => urlsCanBeResolved(b, p, i))
+      defined(app, app.storeUrls, "storeUrls", (b: AppUpdate, p: Seq[String], i: String) => urlsCanBeResolved(b, p, i))
     )
   }
 
@@ -83,7 +83,7 @@ trait ModelValidation extends BeanValidation {
       checkPath(app, parent, app.id, path + "id"),
       healthErrors(app, app.upgradeStrategy, path + "upgradeStrategy"),
       dependencyErrors(app, parent, app.dependencies, path + "dependencies"),
-      urlsCanBeResolved(app, app.resolveUrls, path + "resolveUrls")
+      urlsCanBeResolved(app, app.storeUrls, path + "storeUrls")
     )
   }
 

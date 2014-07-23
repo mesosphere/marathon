@@ -111,7 +111,7 @@ class GroupManager @Singleton @Inject() (
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
     def deploy(from: Group): Future[DeploymentPlan] = {
-      val (to, resolve) = resolveUrls(assignDynamicAppPort(from, change(from)))
+      val (to, resolve) = resolveStoreUrls(assignDynamicAppPort(from, change(from)))
       requireValid(checkGroup(to))
       val plan = DeploymentPlan(from, to, resolve, version)
       scheduler.deploy(plan, force).map(_ => plan)
@@ -134,14 +134,14 @@ class GroupManager @Singleton @Inject() (
     deployment
   }
 
-  private[state] def resolveUrls(group: Group): (Group, Seq[ResolveArtifacts]) = {
+  private[state] def resolveStoreUrls(group: Group): (Group, Seq[ResolveArtifacts]) = {
     def assetURL(url: String) = storage.item(uniquePath(url)).url
     var actions = List.empty[ResolveArtifacts]
     group.updateApp(group.version) { app =>
-      if (app.resolveUrls.isEmpty) app else {
-        val resolvable = app.resolveUrls.map(assetURL)
-        val resolved = app.copy(uris = app.uris ++ resolvable, resolveUrls = Seq.empty)
-        actions ::= ResolveArtifacts(resolved, app.resolveUrls.distinct)
+      if (app.storeUrls.isEmpty) app else {
+        val resolvable = app.storeUrls.map(assetURL)
+        val resolved = app.copy(uris = app.uris ++ resolvable, storeUrls = Seq.empty)
+        actions ::= ResolveArtifacts(resolved, app.storeUrls.distinct)
         resolved
       }
     } -> actions
