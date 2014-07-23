@@ -246,6 +246,7 @@ as it did before being deprecated. Details on the V1 API can be found in the
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
 * [Python client](https://github.com/thefactory/marathon-python), developed at [The Factory](http://www.thefactory.com)
 * [Python client](https://github.com/Wizcorp/marathon-client.py), developed at [Wizcorp](http://www.wizcorp.jp)
+* [Go client](https://github.com/jbdalido/gomarathon) by Jean-Baptiste Dalido
 
 ## Companies using Marathon
 
