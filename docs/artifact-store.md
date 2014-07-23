@@ -138,6 +138,9 @@ Server: Jetty(8.1.11.v20130520)
 ## Automatic Artifact Storing
 
 An AppDefinition holds a sequence of URIs, that get fetched on each instance, that gets started.
+The artifact could be fetched directly from the source, or put into the artifact store.
+One simple way to do this is automatic artifact storing.
+
 The AppDefinition has a field storeUrls, which holds an array of URL strings.
 Every URL here is processed in this way:
 
@@ -146,7 +149,7 @@ Every URL here is processed in this way:
 * The asset store url is added to the AppDefinition uris list
 * The url is removed from the storeUrls array
 
-As a result, all storeUrls urls are accessible from the artifact store.
+As a result, all storeUrls are accessible from the artifact store.
 All instances that will run the application, will load the needed assets from the artifact store.
 
 
@@ -222,7 +225,7 @@ Transfer-Encoding: chunked
         ], 
         "storeUrls": [], 
         "uris": [
-            "hdfs://localhost:54310/artifact/10f271c27fd780a37b4319c2c12f0ba5/toggle.tgz"
+            "hdfs://localhost:54310/artifact/f1cc046e4b603a94d0932eb818854fcc52e1b563/toggle.tgz"
         ] 
     }
 }
@@ -234,11 +237,20 @@ Transfer-Encoding: chunked
  
 The path in the asset store is computed that way:
 
-* MD5 sum of the complete URL builds the folder
+* HEAD Request to the asset
+* if ETag is available, take ETag HTTP Header
+* if ETag is not available (dumb HTTP server), download the resource and compute the Sha-1 hash manually
 * filename of the url remains the same
 
-The complete path is {artifact store base}/{md5 of url}/{filename of asset}
+The complete path is {artifact store base}/{ETag or ContentHash}/{filename of asset}
+This effectively will create a path, that is unique to the content of the resource.
+If the same URL holds a different entity, a new path is created.
+The same path is downloaded only once. 
+In other words if the path is available in the artifact store, it is not downloaded again.
+
 
 ### Prerequisites
 
 To use this feature, all assets need to be resolvable by marathon itself.
+To circumvent manual content hash creation, the http server should support HTTP ETag Header. 
+
