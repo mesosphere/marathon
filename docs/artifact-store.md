@@ -135,18 +135,18 @@ Server: Jetty(8.1.11.v20130520)
 ```
 
 
-## Automatic Artifact Resolving
+## Automatic Artifact Storing
 
 An AppDefinition holds a sequence of URIs, that get fetched on each instance, that gets started.
-The AppDefinition has a field resolveUrls, which holds an array of URL strings.
+The AppDefinition has a field storeUrls, which holds an array of URL strings.
 Every URL here is processed in this way:
 
 * The URL gets downloaded
 * The byte stream is stored in the asset store
 * The asset store url is added to the AppDefinition uris list
-* The url is removed from the resolveUrls array
+* The url is removed from the storeUrls array
 
-As a result, all resolveUrls urls are accessible from the artifact store.
+As a result, all storeUrls urls are accessible from the artifact store.
 All instances that will run the application, will load the needed assets from the artifact store.
 
 
@@ -171,7 +171,7 @@ User-Agent: HTTPie/0.8.0
     "ports": [
         0
     ], 
-    "resolveUrls": [
+    "storeUrls": [
         "http://downloads.mesosphere.io/misc/toggle.tgz"
     ]
 }
@@ -191,7 +191,7 @@ Transfer-Encoding: chunked
 }
 ```
 
-When the app gets deployed, all resolveUrls will be stored in the artifact store and
+When the app gets deployed, all storeUrls will be stored in the artifact store and
 the definition will be adapted and will look like this:
 
 **Request:**
@@ -220,7 +220,7 @@ Transfer-Encoding: chunked
         "ports": [
             10001
         ], 
-        "resolveUrls": [], 
+        "storeUrls": [], 
         "uris": [
             "hdfs://localhost:54310/artifact/10f271c27fd780a37b4319c2c12f0ba5/toggle.tgz"
         ] 

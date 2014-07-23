@@ -45,7 +45,7 @@ case class AppDefinition(
 
   uris: Seq[String] = Seq.empty,
 
-  resolveUrls: Seq[String] = Seq.empty,
+  storeUrls: Seq[String] = Seq.empty,
 
   @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
@@ -104,7 +104,7 @@ case class AppDefinition(
       .setVersion(version.toString)
       .setUpgradeStrategy(upgradeStrategy.toProto)
       .addAllDependencies(dependencies.map(_.toString).asJava)
-      .addAllResolveUrls(resolveUrls.asJava)
+      .addAllStoreUrls(storeUrls.asJava)
       .build
   }
 
@@ -120,12 +120,10 @@ case class AppDefinition(
       }.toMap
     val containerOption = if (proto.getCmd.hasContainer) {
       Some(ContainerInfo(proto.getCmd.getContainer))
-    }
-    else if (proto.hasOBSOLETEContainer) {
+    } else if (proto.hasOBSOLETEContainer) {
       val oldContainer = proto.getOBSOLETEContainer
       Some(ContainerInfo(oldContainer.getImage.toStringUtf8, oldContainer.getOptionsList.asScala.toSeq.map(_.toStringUtf8)))
-    }
-    else {
+    } else {
       None
     }
     AppDefinition(
@@ -143,7 +141,7 @@ case class AppDefinition(
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
-      resolveUrls = proto.getResolveUrlsList.asScala,
+      storeUrls = proto.getStoreUrlsList.asScala,
       container = containerOption,
       healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion),
@@ -183,7 +181,7 @@ case class AppDefinition(
       backoffFactor != to.backoffFactor ||
       dependencies != to.dependencies ||
       upgradeStrategy != to.upgradeStrategy ||
-      resolveUrls.toSet != to.resolveUrls.toSet ||
+      storeUrls.toSet != to.storeUrls.toSet ||
       user != to.user ||
       backoff != to.backoff ||
       backoffFactor != to.backoffFactor
@@ -213,7 +211,7 @@ object AppDefinition {
     taskTracker: TaskTracker,
     app: AppDefinition) extends AppDefinition(
     app.id, app.cmd, app.user, app.env, app.instances, app.cpus, app.mem, app.disk,
-    app.executor, app.constraints, app.uris, app.resolveUrls, app.ports, app.backoff,
+    app.executor, app.constraints, app.uris, app.storeUrls, app.ports, app.backoff,
     app.backoffFactor, app.container, app.healthChecks, app.dependencies, app.upgradeStrategy,
     app.version) {
 
