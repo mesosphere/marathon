@@ -89,9 +89,14 @@ trait ModelValidation extends BeanValidation {
 
   def urlsCanBeResolved[T](t: T, urls: Seq[String], path: String)(implicit ct: ClassTag[T]): List[ConstraintViolation[T]] = {
     def urlIsValid(url: String) = Try {
-      val connection = new URL(url).openConnection().asInstanceOf[HttpURLConnection]
-      connection.setRequestMethod("HEAD")
-      connection.getResponseCode == HttpURLConnection.HTTP_OK
+      new URL(url).openConnection() match {
+        case http: HttpURLConnection =>
+          http.setRequestMethod("HEAD")
+          http.getResponseCode == HttpURLConnection.HTTP_OK
+        case other =>
+          other.getInputStream
+          true //if we come here, we could read the stream
+      }
     }.getOrElse(false)
     urls.toList.zipWithIndex.collect{ case (url, pos) if !urlIsValid(url) => violation(t, urls, s"$path[$pos]", s"Can not resolve url $url") }
   }
