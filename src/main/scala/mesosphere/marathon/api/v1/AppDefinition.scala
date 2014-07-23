@@ -120,10 +120,12 @@ case class AppDefinition(
       }.toMap
     val containerOption = if (proto.getCmd.hasContainer) {
       Some(ContainerInfo(proto.getCmd.getContainer))
-    } else if (proto.hasOBSOLETEContainer) {
+    }
+    else if (proto.hasOBSOLETEContainer) {
       val oldContainer = proto.getOBSOLETEContainer
       Some(ContainerInfo(oldContainer.getImage.toStringUtf8, oldContainer.getOptionsList.asScala.toSeq.map(_.toStringUtf8)))
-    } else {
+    }
+    else {
       None
     }
     AppDefinition(
