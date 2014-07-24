@@ -1,6 +1,5 @@
 package mesosphere.marathon.integration.setup
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
 import scala.concurrent.duration._
 import scala.concurrent.Await.result
@@ -30,6 +29,7 @@ case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[In
   * @param url the url of the remote marathon instance
   */
 class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends JacksonSprayMarshaller {
+  import mesosphere.util.ThreadPoolContext.context
 
   implicit val system = ActorSystem()
   implicit val appDefMarshaller = marshaller[AppDefinition]

@@ -1,11 +1,11 @@
 package mesosphere.marathon.state
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 import mesosphere.marathon.StorageException
 
 trait EntityRepository[T <: MarathonState[_, T]] {
+  import mesosphere.util.ThreadPoolContext.context
 
   def store: PersistenceStore[T]
   def maxVersions: Option[Int]

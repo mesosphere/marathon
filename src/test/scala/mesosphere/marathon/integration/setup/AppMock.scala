@@ -9,9 +9,9 @@ import akka.actor.ActorSystem
 import spray.client.pipelining._
 import scala.concurrent.Await._
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class AppMock(appId: String, version: String, url: String) extends AbstractHandler {
+  import mesosphere.util.ThreadPoolContext.context
 
   implicit val system = ActorSystem()
   val pipeline = sendReceive
