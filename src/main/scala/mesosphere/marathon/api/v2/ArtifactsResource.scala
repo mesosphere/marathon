@@ -4,7 +4,7 @@ import java.io.InputStream
 import java.util.Date
 import javax.inject.Inject
 import javax.ws.rs._
-import javax.ws.rs.core.{MediaType, Response}
+import javax.ws.rs.core.{ MediaType, Response }
 
 import com.sun.jersey.core.header.FormDataContentDisposition
 import com.sun.jersey.multipart.FormDataParam
