@@ -137,22 +137,18 @@ class GroupManager @Singleton @Inject() (
 
   private[state] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
     def url2Path(url: String) = contentPath(new URL(url)).map { url -> _ }
-
-    val downloadsFuture = Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path)).map {
+    Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path)).map(_.toMap).map { paths =>
       //Filter out all items with already existing path.
       //Since the path is derived from the content itself,
       //it will only change, if the content changes.
-      _.filterNot{ case (url, path) => storage.item(path).exists }.toMap
-    }
-
-    downloadsFuture.map { downloads =>
-      var actions = List.empty[ResolveArtifacts]
+      val downloads = mutable.Map(paths.toSeq.filterNot{ case (url, path) => storage.item(path).exists }: _*)
+      val actions = mutable.ListBuffer.empty[ResolveArtifacts]
       group.updateApp(group.version) { app =>
         if (app.storeUrls.isEmpty) app else {
-          val storageUrls = app.storeUrls.map(downloads).map(storage.item(_).url)
+          val storageUrls = app.storeUrls.map(paths).map(storage.item(_).url)
           val resolved = app.copy(uris = app.uris ++ storageUrls, storeUrls = Seq.empty)
-          val appDownloads = downloads.filter(k => app.storeUrls.contains(k._1)).map(k => new URL(k._1) -> k._2)
-          actions ::= ResolveArtifacts(resolved, appDownloads)
+          val appDownloads = app.storeUrls.flatMap(url => downloads.remove(url).map(path => new URL(url) -> path)).toMap
+          if (appDownloads.nonEmpty) actions += ResolveArtifacts(resolved, appDownloads)
           resolved
         }
       } -> actions
