@@ -252,6 +252,7 @@ as it did before being deprecated. Details on the V1 API can be found in the
 
 * [Airbnb](https://www.airbnb.com/)
 * [eBay](http://www.ebay.com/)
+* [The Factory](https://github.com/thefactory/)
 * [Guidewire](http://www.guidewire.com/)
 * [OpenTable](http://www.opentable.com/)
 * [PayPal](https://www.paypal.com)
