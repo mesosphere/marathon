@@ -14,7 +14,7 @@ object MarathonBuild extends Build {
   lazy val root = Project(
     id = "marathon",
     base = file("."),
-    settings = baseSettings ++ assemblySettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ revolverSettings ++ Seq(
+    settings = baseSettings ++ asmSettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ revolverSettings ++ Seq(
       libraryDependencies ++= Dependencies.root,
       parallelExecution in Test := false,
       fork in Test := true
@@ -41,6 +41,25 @@ object MarathonBuild extends Build {
     fork in Test := true,
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
     buildInfoPackage := "mesosphere.marathon"
+  )
+
+  lazy val asmSettings = assemblySettings ++ Seq(
+    mergeStrategy in assembly <<= (mergeStrategy in assembly) { old =>
+      {
+        case "application.conf"                                 => MergeStrategy.concat
+        case "META-INF/jersey-module-version"                   => MergeStrategy.first
+        case "log4j.properties"                                 => MergeStrategy.concat
+        case x                                                  => old(x)
+      }
+    },
+    excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+      val exclude = Set(
+        "commons-beanutils-1.7.0.jar",
+        "stax-api-1.0.1.jar",
+        "commons-beanutils-core-1.8.0.jar"
+      )
+      cp filter { x => exclude(x.data.getName) }
+    }
   )
 
   lazy val publishSettings = S3Resolver.defaults ++ Seq(
@@ -93,6 +112,7 @@ object Dependencies {
     uuidGenerator % "compile",
     jGraphT % "compile",
     hadoopClient % "compile",
+    beanUtils % "compile",
 
     // test
     Test.scalatest % "test",
@@ -143,6 +163,7 @@ object Dependency {
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val hadoopClient =  "org.apache.hadoop" % "hadoop-client" % V.Hadoop
+  val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.2"
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
