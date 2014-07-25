@@ -1,16 +1,17 @@
-## POST `/v2/artifacts/{path}`
+## PUT|POST `/v2/artifacts/{path}`
 
 Upload an artifact to the artifact store.
 A multipart form upload request has to be performed.
 The form parameter name has to be ```file```.
 The path used to store the file is taken from the url path.
 The response holds the URL of the artifact in the artifact store in the Location Header.
+Either PUT or POST requests are allowed to perform this operation.
 
 **Request:**
 
 
 ```
-POST /v2/artifacts/special/file/name.txt HTTP/1.1
+PUT /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Content-Length: 158
