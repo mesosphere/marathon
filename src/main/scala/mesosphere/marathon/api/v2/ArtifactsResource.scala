@@ -6,8 +6,8 @@ import javax.inject.Inject
 import javax.ws.rs._
 import javax.ws.rs.core.{ MediaType, Response }
 
-import com.sun.jersey.core.header.FormDataContentDisposition
-import com.sun.jersey.multipart.FormDataParam
+import com.sun.jersey.core.header.{ FormDataContentDisposition => FormInfo }
+import com.sun.jersey.multipart.{ FormDataParam => FormParam }
 import org.eclipse.jetty.http.MimeTypes
 
 import mesosphere.marathon.MarathonConf
@@ -22,22 +22,27 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
     */
   @POST
   @Consumes(Array(MediaType.MULTIPART_FORM_DATA))
-  def uploadFile(
-    @FormDataParam("file") upload: InputStream,
-    @FormDataParam("file") fileDetail: FormDataContentDisposition) = {
-    require(upload != null && fileDetail != null, "Please use 'file' as form parameter name!")
-    created(storage.item(fileDetail.getFileName).store(upload).url)
-  }
+  def uploadFile(@FormParam("file") upload: InputStream, @FormParam("file") info: FormInfo) = storeFile(info.getFileName, upload)
 
   /**
     * Upload to a specific path inside artifact store.
     */
+  @PUT
+  @Path("{path:.+}")
+  @Consumes(Array(MediaType.MULTIPART_FORM_DATA))
+  def uploadFilePut(@PathParam("path") path: String, @FormParam("file") upload: InputStream) = storeFile(path, upload)
+
   @POST
   @Path("{path:.+}")
   @Consumes(Array(MediaType.MULTIPART_FORM_DATA))
-  def uploadFile(@PathParam("path") path: String, @FormDataParam("file") upload: InputStream) = {
+  def uploadFilePost(@PathParam("path") path: String, @FormParam("file") upload: InputStream) = storeFile(path, upload)
+
+  private def storeFile(path: String, upload: InputStream) = {
     require(upload != null, "Please use 'file' as form parameter name!")
-    created(storage.item(path).store(upload).url)
+    val item = storage.item(path)
+    val exists = item.exists
+    item.store(upload)
+    if (exists) ok() else created(item.url)
   }
 
   /**
