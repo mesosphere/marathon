@@ -27,7 +27,7 @@ class DelegatingHealthCheckManager @Inject() (
     healthChecks = healthChecks + (appId -> (list(appId) + healthCheck))
 
   override def addAllFor(app: AppDefinition): Unit =
-    healthChecks = healthChecks + (app.id -> app.healthChecks)
+    app.healthChecks foreach { hc => add(app.id, hc) }
 
   override def remove(appId: PathId, healthCheck: HealthCheck): Unit =
     healthChecks = healthChecks + (appId -> (list(appId) - healthCheck))
@@ -38,12 +38,15 @@ class DelegatingHealthCheckManager @Inject() (
   override def removeAllFor(appId: PathId): Unit =
     healthChecks = healthChecks - appId
 
-  override def reconcileWith(app: AppDefinition): Unit = addAllFor(app)
+  override def reconcileWith(app: AppDefinition): Unit = {
+    removeAllFor(app.id)
+    addAllFor(app)
+  }
 
   override def update(taskStatus: TaskStatus, version: String): Unit = {
     val taskId = taskStatus.getTaskId.getValue
-    val oldHealth: Health = taskHealth.getOrElse(taskId, Health(taskId))
-    val newHealth =
+    val oldHealth: Option[Health] = taskHealth.get(taskId)
+    val newHealth: Option[Health] =
       if (taskStatus.hasHealthy) {
         val healthy = taskStatus.getHealthy
         log.info(s"Received status for [$taskId] with healthy=[$healthy]")
@@ -52,22 +55,29 @@ class DelegatingHealthCheckManager @Inject() (
           case true  => Healthy(taskId, version)
           case false => Unhealthy(taskId, version, "")
         }
-        oldHealth update healthResult
+        oldHealth match {
+          case Some(health) => Some(health update healthResult)
+          case None         => Some(Health(taskId) update healthResult)
+        }
       }
       else {
         log.info(s"Ignoring status for [$taskId] with no health information")
         log.debug(s"TaskStatus:\n$taskStatus")
-        oldHealth
+        None
       }
 
     val appId = TaskIDUtil.appID(taskStatus.getTaskId)
 
-    for (healthCheck <- firstCommandCheck(appId)) {
-      if (!newHealth.alive) eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
-      if (newHealth.alive != oldHealth.alive) eventBus.publish(HealthStatusChanged(appId, taskId, version, newHealth.alive))
-    }
+    for (healthCheck <- firstCommandCheck(appId); hPrime <- newHealth) {
+      if (!hPrime.alive) {
+        eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
+      }
+      if (oldHealth.isEmpty || hPrime.alive != oldHealth.get.alive) {
+        eventBus.publish(HealthStatusChanged(appId, taskId, version, hPrime.alive))
+      }
 
-    taskHealth = taskHealth + (taskId -> newHealth)
+      taskHealth = taskHealth + (taskId -> hPrime)
+    }
   }
 
   override def status(

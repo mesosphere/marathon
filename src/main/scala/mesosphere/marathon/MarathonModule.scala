@@ -51,12 +51,13 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
 
     bind(classOf[GroupManager]).in(Scopes.SINGLETON)
+
     bind(classOf[HealthCheckManager]).to(
       conf.executorHealthChecks() match {
         case false => classOf[MarathonHealthCheckManager]
         case true  => classOf[DelegatingHealthCheckManager]
       }
-    )
+    ).asEagerSingleton()
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))
