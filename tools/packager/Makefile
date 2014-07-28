@@ -24,7 +24,10 @@ FPM_OPTS := -s dir -n marathon -v $(PKG_VER) --iteration $(PKG_REL) \
 	--maintainer "Mesosphere Package Builder <support@mesosphere.io>" \
 	--vendor "Mesosphere, Inc."
 FPM_OPTS_DEB := -t deb \
-	-d 'java7-runtime-headless | java6-runtime-headless'
+	-d 'java7-runtime-headless | java6-runtime-headless' \
+	--deb-init marathon.init \
+	--after-install marathon.postinst \
+	--after-remove marathon.postrm
 FPM_OPTS_RPM := -t rpm \
 	-d coreutils -d 'java >= 1.6'
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
@@ -54,7 +57,10 @@ fedora: toor/fedora/$(PREFIX)/bin/marathon
 
 .PHONY: deb
 deb: toor/deb/etc/init/marathon.conf
+deb: toor/deb/etc/init.d/marathon
 deb: toor/deb/$(PREFIX)/bin/marathon
+deb: marathon.postinst
+deb: marathon.postrm
 	fpm -C toor/deb --config-files etc/ $(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: osx
@@ -64,6 +70,10 @@ osx: toor/osx/$(PREFIX)/bin/marathon
 toor/%/etc/init/marathon.conf: marathon.conf
 	mkdir -p "$(dir $@)"
 	cp marathon.conf "$@"
+
+toor/%/etc/init.d/marathon: marathon.init
+	mkdir -p "$(dir $@)"
+	cp marathon.init "$@"
 
 toor/%/usr/lib/systemd/system/marathon.service: marathon.service
 	mkdir -p "$(dir $@)"

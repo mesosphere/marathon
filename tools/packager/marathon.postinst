@@ -1,0 +1,30 @@
+#!/bin/sh
+set -e
+
+codename () {
+  out $(lsb_release -cs)
+}
+
+out () { printf '%s\n' "$*" ;}
+
+case "$1" in
+
+  configure)
+    if [ "$(codename)" = "wheezy" ]; then
+      # Enable the SYSV links (only used on select systems).
+      update-rc.d marathon defaults
+    fi
+    ;;
+
+  configure|abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0
