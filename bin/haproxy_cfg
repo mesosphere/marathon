@@ -21,6 +21,7 @@ global
   log 127.0.0.1 local0
   log 127.0.0.1 local1 notice
   maxconn 4096
+  ulimit-n 8203
 
 defaults
   log         global
