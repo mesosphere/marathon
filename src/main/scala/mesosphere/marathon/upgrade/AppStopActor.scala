@@ -22,7 +22,7 @@ class AppStopActor(
   import AppStopActor._
   import context.dispatcher
 
-  var idsToKill = taskTracker.fetchApp(app.id).tasks.map(_.getId).to[Set]
+  var idsToKill = taskTracker.get(app.id).map(_.getId).to[Set]
   var periodicalCheck: Cancellable = _
 
   override def preStart(): Unit = {
@@ -47,7 +47,7 @@ class AppStopActor(
       checkFinished()
 
     case SynchronizeTasks =>
-      val trackerIds = taskTracker.fetchApp(app.id).tasks.map(_.getId).toSet
+      val trackerIds = taskTracker.get(app.id).map(_.getId).toSet
       idsToKill = idsToKill.filter(trackerIds)
       scheduleSynchronization()
       checkFinished()

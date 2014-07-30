@@ -19,6 +19,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ Migration, AppRepository, PathId, Timestamp }
+import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
@@ -39,6 +40,7 @@ class MarathonSchedulerService @Inject() (
     frameworkIdUtil: FrameworkIdUtil,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
     appRepository: AppRepository,
+    taskTracker: TaskTracker,
     scheduler: MarathonScheduler,
     system: ActorSystem,
     migration: Migration,
@@ -55,8 +57,8 @@ class MarathonSchedulerService @Inject() (
     Duration(config.reconciliationInitialDelay(), MILLISECONDS)
 
   // Interval between task reconciliation operations
-  val reconciliationFrequency =
-    Duration(config.reconciliationFrequency(), MILLISECONDS)
+  val reconciliationInterval =
+    Duration(config.reconciliationInterval(), MILLISECONDS)
 
   val reconciliationTimer = new Timer("reconciliationTimer")
 
@@ -144,7 +146,7 @@ class MarathonSchedulerService @Inject() (
     offerLeadership()
 
     // Start the timer that handles reconciliation
-    scheduleTaskReconciliation()
+    schedulePeriodicOperations()
 
     // Block on the latch which will be countdown only when shutdown has been
     // triggered. This is to prevent run()
@@ -304,7 +306,7 @@ class MarathonSchedulerService @Inject() (
     }
   }
 
-  private def scheduleTaskReconciliation(): Unit = {
+  private def schedulePeriodicOperations(): Unit = {
     reconciliationTimer.schedule(
       new TimerTask {
         def run() {
@@ -315,7 +317,19 @@ class MarathonSchedulerService @Inject() (
         }
       },
       reconciliationInitialDelay.toMillis,
-      reconciliationFrequency.toMillis
+      reconciliationInterval.toMillis
+    )
+
+    // Tasks are only expunged once after the application launches
+    // Wait until reconciliation is definitely finished so that we are guaranteed
+    // to have loaded in all apps
+    reconciliationTimer.schedule(
+      new TimerTask {
+        def run() {
+          taskTracker.expungeOrphanedTasks()
+        }
+      },
+      reconciliationInitialDelay.toMillis + reconciliationInterval.toMillis
     )
   }
 

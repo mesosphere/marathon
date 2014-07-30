@@ -19,7 +19,7 @@ import com.google.inject.name.Names
 import akka.actor.{ OneForOneStrategy, Props, ActorRef, ActorSystem }
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.health.{
   HealthCheckManager,
   MarathonHealthCheckManager,
@@ -94,6 +94,7 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
+    taskIdUtil: TaskIdUtil,
     @Named(EventModule.busName) eventBus: EventStream,
     config: MarathonConf): ActorRef = {
     val supervision = OneForOneStrategy() {
@@ -109,6 +110,7 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
         taskTracker,
         taskQueue,
         frameworkIdUtil,
+        taskIdUtil,
         eventBus,
         config).withRouter(RoundRobinRouter(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
@@ -160,4 +162,8 @@ class MarathonModule(conf: MarathonConf, zk: ZooKeeperClient)
   @Singleton
   def provideMigration(state: State, appRepo: AppRepository, groupRepo: GroupRepository, config: MarathonConf): Migration =
     new Migration(state, appRepo, groupRepo, config)
+
+  @Provides
+  @Singleton
+  def provideTaskIdUtil(): TaskIdUtil = new TaskIdUtil
 }

@@ -8,8 +8,7 @@ import org.apache.mesos.Protos.TaskID
   * Utility functions for dealing with TaskIDs
   */
 
-object TaskIDUtil {
-
+class TaskIdUtil {
   val taskDelimiter = "."
   val TaskId = """^(.+)\.(.+)$""".r
   val OldTaskId = """^(.+)[_](.+)$""".r
@@ -19,12 +18,18 @@ object TaskIDUtil {
     appId.safePath + taskDelimiter + uuidGenerator.generate()
   }
 
-  def appID(taskId: TaskID): PathId = {
+  def appId(taskId: TaskID): PathId = {
     taskId.getValue match {
       //new task ids contain . as delimiter but _ for the safe path
       case TaskId(appId, uuid)    => PathId.fromSafePath(appId)
       //version 0.5 and below use _ as delimiter
       case OldTaskId(appId, uuid) => PathId.fromSafePath(appId)
     }
+  }
+
+  def newTaskId(appId: PathId): TaskID = {
+    TaskID.newBuilder()
+      .setValue(taskId(appId))
+      .build
   }
 }

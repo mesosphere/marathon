@@ -10,11 +10,11 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event._
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.tasks.TaskIDUtil
+import mesosphere.marathon.tasks.TaskIdUtil
 
 class DelegatingHealthCheckManager @Inject() (
-  @Named(EventModule.busName) eventBus: EventStream)
-    extends HealthCheckManager {
+    @Named(EventModule.busName) eventBus: EventStream,
+    taskIdUtil: TaskIdUtil) extends HealthCheckManager {
 
   protected[this] var taskHealth = Map[String, Health]()
 
@@ -66,9 +66,13 @@ class DelegatingHealthCheckManager @Inject() (
         None
       }
 
-    val appId = TaskIDUtil.appID(taskStatus.getTaskId)
+    val appId = taskIdUtil.appId(taskStatus.getTaskId)
+    val c = firstCommandCheck(appId)
 
-    for (healthCheck <- firstCommandCheck(appId); hPrime <- newHealth) {
+    for {
+      healthCheck <- c
+      hPrime <- newHealth
+    } {
       if (!hPrime.alive) {
         eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
       }
@@ -87,7 +91,9 @@ class DelegatingHealthCheckManager @Inject() (
 
   private[this] def firstCommandCheck(appId: PathId): Option[HealthCheck] =
     healthChecks.get(appId).flatMap {
-      _.collectFirst { case hc if hc.protocol == Protocol.COMMAND => hc }
+      _.collectFirst {
+        case hc if hc.protocol == Protocol.COMMAND => hc
+      }
     }
 
 }

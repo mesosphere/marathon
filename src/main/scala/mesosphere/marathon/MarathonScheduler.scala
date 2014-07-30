@@ -27,9 +27,7 @@ trait SchedulerCallbacks {
 }
 
 object MarathonScheduler {
-
-  private class MarathonSchedulerCallbacksImpl(
-      serviceOption: Option[MarathonSchedulerService]) extends SchedulerCallbacks {
+  private class MarathonSchedulerCallbacksImpl(serviceOption: Option[MarathonSchedulerService]) extends SchedulerCallbacks {
     override def disconnected(): Unit = {
       // Abdicate leadership when we become disconnected from the Mesos master.
       serviceOption.foreach(_.abdicateLeadership())
@@ -50,6 +48,7 @@ class MarathonScheduler @Inject() (
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
+    taskIdUtil: TaskIdUtil,
     system: ActorSystem,
     config: MarathonConf) extends Scheduler {
 
@@ -104,7 +103,7 @@ class MarathonScheduler @Inject() (
               taskInfo.getTaskId.getValue, offer.getHostname, ports,
               offer.getAttributesList.asScala, qt.app.version)
 
-            taskTracker.starting(qt.app.id, marathonTask)
+            taskTracker.created(qt.app.id, marathonTask)
             driver.launchTasks(Seq(offer.getId).asJava, taskInfos.asJava)
             qt
         }
@@ -135,10 +134,10 @@ class MarathonScheduler @Inject() (
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
-    val appId = TaskIDUtil.appID(status.getTaskId)
+    val appId = taskIdUtil.appId(status.getTaskId)
 
     // forward health changes to the health check manager
-    val taskOption = taskTracker.getTask(status.getTaskId).map(_.getVersion)
+    val taskOption = taskTracker.fetchTask(status.getTaskId.getValue).map(_.getVersion)
     healthCheckManager.update(status, taskOption.getOrElse(""))
 
     import org.apache.mesos.Protos.TaskState._
@@ -241,7 +240,7 @@ class MarathonScheduler @Inject() (
         status.getSlaveId.getValue,
         status.getTaskId.getValue,
         status.getState.name,
-        TaskIDUtil.appID(status.getTaskId),
+        taskIdUtil.appId(status.getTaskId),
         task.getHost,
         task.getPortsList.asScala,
         task.getVersion
@@ -253,6 +252,6 @@ class MarathonScheduler @Inject() (
     app: AppDefinition,
     offer: Offer): Option[(TaskInfo, Seq[Long])] = {
     // TODO this should return a MarathonTask
-    new TaskBuilder(app, taskTracker.newTaskId, taskTracker, config, mapper).buildIfMatches(offer)
+    new TaskBuilder(app, taskIdUtil.newTaskId, taskTracker, config, mapper).buildIfMatches(offer)
   }
 }

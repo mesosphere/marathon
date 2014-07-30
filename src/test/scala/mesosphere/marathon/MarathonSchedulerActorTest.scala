@@ -11,7 +11,7 @@ import mesosphere.marathon.event.{ DeploymentSuccess, UpgradeEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
@@ -37,6 +37,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var frameworkIdUtil: FrameworkIdUtil = _
   var schedulerActor: TestActorRef[MarathonSchedulerActor] = _
   var driver: SchedulerDriver = _
+  var taskIdUtil: TaskIdUtil = _
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -48,6 +49,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     tracker = mock[TaskTracker]
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
+    taskIdUtil = new TaskIdUtil
     schedulerActor = TestActorRef[MarathonSchedulerActor](Props(
       classOf[MarathonSchedulerActor],
       new ObjectMapper(),
@@ -56,6 +58,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       tracker,
       queue,
       frameworkIdUtil,
+      taskIdUtil,
       system.eventStream,
       mock[MarathonConf]
     ))
@@ -91,7 +94,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     expectMsg(5.seconds, TasksReconciled)
 
-    verify(tracker).expunge("nope".toPath)
+    verify(tracker).shutdown("nope".toPath)
     verify(queue).add(app)
     verify(driver).killTask(TaskID("task_a"))
   }

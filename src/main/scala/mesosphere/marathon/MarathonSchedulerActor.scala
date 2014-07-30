@@ -11,7 +11,7 @@ import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppRepository, PathId }
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import mesosphere.mesos.protos.Offer
@@ -27,14 +27,15 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.{ Failure, Success }
 
 class MarathonSchedulerActor(
-    val mapper: ObjectMapper,
-    val appRepository: AppRepository,
-    val healthCheckManager: HealthCheckManager,
-    val taskTracker: TaskTracker,
-    val taskQueue: TaskQueue,
-    val frameworkIdUtil: FrameworkIdUtil,
-    val eventBus: EventStream,
-    val config: MarathonConf) extends Actor with ActorLogging {
+    mapper: ObjectMapper,
+    appRepository: AppRepository,
+    healthCheckManager: HealthCheckManager,
+    taskTracker: TaskTracker,
+    taskQueue: TaskQueue,
+    frameworkIdUtil: FrameworkIdUtil,
+    taskIdUtil: TaskIdUtil,
+    eventBus: EventStream,
+    config: MarathonConf) extends Actor with ActorLogging {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
 
@@ -50,6 +51,7 @@ class MarathonSchedulerActor(
       appRepository,
       healthCheckManager,
       taskTracker,
+      taskIdUtil,
       taskQueue,
       eventBus,
       self,
@@ -240,6 +242,7 @@ class SchedulerActions(
     appRepository: AppRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
+    taskIdUtil: TaskIdUtil,
     taskQueue: TaskQueue,
     eventBus: EventStream,
     schedulerActor: ActorRef,
@@ -279,7 +282,7 @@ class SchedulerActions(
         driver.killTask(protos.TaskID(task.getId))
       }
       taskQueue.purge(app.id)
-      taskTracker.shutDown(app.id)
+      taskTracker.shutdown(app.id)
       // TODO after all tasks have been killed we should remove the app from taskTracker
     }
   }
@@ -311,7 +314,7 @@ class SchedulerActions(
             log.info(s"Killing task ${orphanTask.getId}")
             driver.killTask(protos.TaskID(orphanTask.getId))
           }
-          taskTracker.expunge(unknownAppId)
+          taskTracker.shutdown(unknownAppId)
         }
 
         log.info("Requesting task reconciliation with the Mesos master")
@@ -328,7 +331,7 @@ class SchedulerActions(
     // TODO this should return a MarathonTask
     val builder = new TaskBuilder(
       app,
-      taskTracker.newTaskId,
+      taskIdUtil.newTaskId,
       taskTracker,
       config,
       mapper

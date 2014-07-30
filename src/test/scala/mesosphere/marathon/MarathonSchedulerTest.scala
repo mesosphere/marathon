@@ -3,6 +3,7 @@ package mesosphere.marathon
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.{ TestKit, TestProbe }
+import com.codahale.metrics.MetricRegistry
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.MarathonTask
@@ -11,7 +12,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppRepository, Timestamp }
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
 import org.apache.mesos.Protos.{ OfferID, TaskID, TaskInfo }
 import org.apache.mesos.SchedulerDriver
@@ -32,7 +33,10 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
   var scheduler: MarathonScheduler = _
   var frameworkIdUtil: FrameworkIdUtil = _
   var probe: TestProbe = _
+  var taskIdUtil: TaskIdUtil = _
   var config: MarathonConf = _
+
+  val metricRegistry = new MetricRegistry
 
   before {
     repo = mock[AppRepository]
@@ -41,6 +45,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     config = defaultConfig()
+    taskIdUtil = mock[TaskIdUtil]
     probe = TestProbe()
     scheduler = new MarathonScheduler(
       mock[EventStream],
@@ -51,6 +56,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       tracker,
       queue,
       frameworkIdUtil,
+      taskIdUtil,
       mock[ActorSystem],
       config
     )
@@ -75,7 +81,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     val list = Vector(queuedTask)
     val allApps = Vector(app)
 
-    when(tracker.newTaskId("testOffers".toRootPath))
+    when(taskIdUtil.newTaskId("testOffers".toRootPath))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
     when(tracker.checkStagedTasks).thenReturn(Seq())
     when(queue.poll()).thenReturn(Some(queuedTask))
@@ -90,7 +96,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     val marathonTaskCaptor = ArgumentCaptor.forClass(classOf[MarathonTask])
 
     verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
-    verify(tracker).starting(same(app.id), marathonTaskCaptor.capture())
+    verify(tracker).created(same(app.id), marathonTaskCaptor.capture())
 
     assert(1 == offersCaptor.getValue.size())
     assert(offer.getId == offersCaptor.getValue.get(0))

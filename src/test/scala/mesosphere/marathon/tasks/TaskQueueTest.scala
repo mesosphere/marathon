@@ -1,16 +1,25 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.api.v1.AppDefinition
+import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
+
 import scala.concurrent.duration.Deadline
 
 class TaskQueueTest extends MarathonSpec {
   val app1 = AppDefinition(id = "app1".toPath, constraints = Set.empty)
   val app2 = AppDefinition(id = "app2".toPath, constraints = Set(buildConstraint("hostname", "UNIQUE"), buildConstraint("rack_id", "CLUSTER", "rack-1")))
   val app3 = AppDefinition(id = "app3".toPath, constraints = Set(buildConstraint("hostname", "UNIQUE")))
+
+  var queue: TaskQueue = null
+
+  before {
+    val metricRegistry = new MetricRegistry
+    queue = new TaskQueue()
+  }
 
   def buildConstraint(field: String, operator: String, value: String = ""): Constraint = {
     Constraint.newBuilder()
@@ -21,8 +30,6 @@ class TaskQueueTest extends MarathonSpec {
   }
 
   test("Priority") {
-    val queue = new TaskQueue
-
     queue.add(app1)
     queue.add(app2)
     queue.add(app3)
@@ -33,8 +40,6 @@ class TaskQueueTest extends MarathonSpec {
   }
 
   test("RemoveAll") {
-    val queue = new TaskQueue
-
     queue.add(app1)
     queue.add(app2)
     queue.add(app3)

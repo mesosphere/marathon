@@ -9,7 +9,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.tasks.TaskTracker.App
-import mesosphere.marathon.{ MarathonConf, BuildInfo, StorageException }
+import mesosphere.marathon.{ BuildInfo, MarathonConf, StorageException }
 import mesosphere.util.BackToTheFuture.futureToFutureOption
 import mesosphere.util.ThreadPoolContext.context
 import mesosphere.util.{ BackToTheFuture, Logging }
@@ -101,18 +101,16 @@ class Migration @Inject() (
       val bytes = state.fetch("tasks:" + appId.safePath).get().value
       if (bytes.length > 0) {
         val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
-        val fetchedTasks = taskTracker.deserialize(appId, source)
+        val fetchedTasks = taskTracker.legacyDeserialize(appId, source)
         Some(new App(appId, fetchedTasks, false))
       }
       else None
     }
-    def store(app: App): Future[Variable] = {
+    def store(app: App): Future[Seq[Variable]] = {
       val oldVar = state.fetch("tasks:" + app.appName.safePath).get()
       val bytes = new ByteArrayOutputStream()
       val output = new ObjectOutputStream(bytes)
-      taskTracker.serialize(app.appName, app.tasks, output)
-      val newVar = oldVar.mutate(bytes.toByteArray)
-      BackToTheFuture.futureToFuture(state.store(newVar))
+      Future.sequence(app.tasks.toSeq.map(taskTracker.store(app.appName, _)))
     }
     appRepo.allPathIds().flatMap { apps =>
       val res = apps.flatMap(fetchApp).map{ app => store(fn(app)) }

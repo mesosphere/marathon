@@ -1,54 +1,65 @@
 package mesosphere.marathon.health
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import akka.event.EventStream
-import org.apache.mesos.Protos
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.state.PathId.StringPathId
+import mesosphere.marathon.tasks.TaskIdUtil
+import org.apache.mesos.Protos
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class DelegatingHealthCheckManagerTest extends MarathonSpec {
 
-  var hcManager: DelegatingHealthCheckManager = null
+  var hcManager: DelegatingHealthCheckManager = _
+  var taskIdUtil: TaskIdUtil = _
 
   before {
-    hcManager = new DelegatingHealthCheckManager(mock[EventStream])
+    taskIdUtil = new TaskIdUtil
+    hcManager = new DelegatingHealthCheckManager(mock[EventStream], taskIdUtil)
   }
 
   test("Add") {
     val healthCheck = HealthCheck()
-    hcManager.add(PathId("test"), healthCheck)
-    assert(hcManager.list(PathId("test")).size == 1)
+    hcManager.add("test".toRootPath, healthCheck)
+    assert(hcManager.list("test".toRootPath).size == 1)
   }
 
   test("Update") {
+    val appId = "test".toRootPath
+    val taskId = taskIdUtil.newTaskId(appId)
     val taskStatus = Protos.TaskStatus.newBuilder
-      .setTaskId(Protos.TaskID.newBuilder.setValue("test.1234"))
+      .setTaskId(taskId)
       .setState(Protos.TaskState.TASK_RUNNING)
+      .setHealthy(false)
       .build
 
-    hcManager.update(taskStatus, "")
+    val healthCheck = HealthCheck(protocol = Protocol.COMMAND)
+    hcManager.add(appId, healthCheck)
 
-    hcManager.status(PathId("test"), "test.1234") foreach {
-      case List(Some(health)) =>
-        assert(health.lastFailure.isEmpty)
-        assert(health.lastSuccess.isEmpty)
+    Await.result(hcManager.status(appId, taskId.getValue), 5.seconds) match {
+      case List(None) =>
+      case _          => fail()
     }
 
     hcManager.update(taskStatus.toBuilder.setHealthy(false).build, "")
 
-    hcManager.status(PathId("test"), "test.1234") foreach {
+    Await.result(hcManager.status(appId, taskId.getValue), 5.seconds) match {
       case List(Some(health)) =>
         assert(health.lastFailure.isDefined)
         assert(health.lastSuccess.isEmpty)
+      case _ => fail()
     }
 
     hcManager.update(taskStatus.toBuilder.setHealthy(true).build, "")
 
-    hcManager.status(PathId("test"), "test.1234") foreach {
+    Await.result(hcManager.status(appId, taskId.getValue), 5.seconds) match {
       case List(Some(health)) =>
         assert(health.lastFailure.isDefined)
         assert(health.lastSuccess.isDefined)
         assert(health.lastSuccess > health.lastFailure)
+      case _ => fail()
     }
 
   }

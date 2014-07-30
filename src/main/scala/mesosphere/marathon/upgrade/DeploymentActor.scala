@@ -68,7 +68,7 @@ class DeploymentActor(
         case ScaleApplication(app, scaleTo) => scaleApp(app, scaleTo)
         case StopApplication(app)           => stopApp(app)
         case KillAllOldTasksOf(app) =>
-          val runningTasks = taskTracker.fetchApp(app.id).tasks.toSeq
+          val runningTasks = taskTracker.get(app.id).toSeq
           killTasks(runningTasks.filterNot(_.getVersion == app.version.toString))
 
         case RestartApplication(app, scaleOldTo, scaleNewTo) => restartApp(app, scaleOldTo, scaleNewTo)
@@ -85,7 +85,7 @@ class DeploymentActor(
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int): Future[Unit] = {
-    val runningTasks = taskTracker.fetchApp(app.id).tasks
+    val runningTasks = taskTracker.get(app.id)
     val res = if (scaleTo == runningTasks.size) {
       Future.successful(())
     }
@@ -118,7 +118,7 @@ class DeploymentActor(
   def restartApp(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int): Future[Unit] = {
     val startPromise = Promise[Boolean]()
     val stopPromise = Promise[Boolean]()
-    val runningTasks = taskTracker.fetchApp(app.id).tasks.toSeq.sortBy(_.getStartedAt)
+    val runningTasks = taskTracker.get(app.id).toSeq.sortBy(_.getStartedAt)
     val tasksToKill = runningTasks.filterNot(_.getVersion == app.version.toString).drop(scaleOldTo)
     val runningNew = runningTasks.filter(_.getVersion == app.version.toString)
     val nrToStart = scaleNewTo - runningNew.size
