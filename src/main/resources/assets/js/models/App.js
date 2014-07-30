@@ -39,7 +39,7 @@ define([
     }
     /* awful, should be dynamic. It should be in scala but it's impossible to return an error on a specific field */
     var operator = p[1];
-    return (_.indexOf(VALID_CONSTRAINTS, operator.toLowerCase()) != -1);
+    return (_.indexOf(VALID_CONSTRAINTS, operator.toLowerCase()) !== -1);
   }
 
   return Backbone.Model.extend({
