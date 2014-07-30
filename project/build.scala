@@ -46,17 +46,21 @@ object MarathonBuild extends Build {
   lazy val asmSettings = assemblySettings ++ Seq(
     mergeStrategy in assembly <<= (mergeStrategy in assembly) { old =>
       {
-        case "application.conf"                                 => MergeStrategy.concat
-        case "META-INF/jersey-module-version"                   => MergeStrategy.first
-        case "log4j.properties"                                 => MergeStrategy.concat
-        case x                                                  => old(x)
+        case "application.conf"                                             => MergeStrategy.concat
+        case "META-INF/jersey-module-version"                               => MergeStrategy.first
+        case "log4j.properties"                                             => MergeStrategy.concat
+        case "org/apache/hadoop/yarn/util/package-info.class"               => MergeStrategy.first
+        case "org/apache/hadoop/yarn/factories/package-info.class"          => MergeStrategy.first
+        case "org/apache/hadoop/yarn/factory/providers/package-info.class"  => MergeStrategy.first
+        case x                                                              => old(x)
       }
     },
     excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
       val exclude = Set(
         "commons-beanutils-1.7.0.jar",
         "stax-api-1.0.1.jar",
-        "commons-beanutils-core-1.8.0.jar"
+        "commons-beanutils-core-1.8.0.jar",
+        "servlet-api-2.5.jar"
       )
       cp filter { x => exclude(x.data.getName) }
     }
@@ -138,7 +142,7 @@ object Dependency {
     val JodaConvert = "1.6"
     val UUIDGenerator = "3.1.3"
     val JGraphT = "0.9.1"
-    val Hadoop = "1.2.1"
+    val Hadoop = "2.4.1"
 
     // test deps versions
     val Mockito = "1.9.5"
