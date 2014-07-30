@@ -92,11 +92,11 @@ define([
       // Constraints should be a Set of Strings.
       if ("constraints" in modelAttrs) {
         var constraintsArray = modelAttrs.constraints.split(",");
-        
-        modelAttrs.constraints = [];
-        for (var i = 0; i < constraintsArray.length; i++) {
-        	modelAttrs.constraints[i] = constraintsArray[i].split(":");
-        }
+        modelAttrs.constraints = _.map(constraintsArray, function(constraint) {
+          return constraint.split(":").map(function(value) {
+            return _.trim(value);
+          });
+        });
       } else {
          modelAttrs.constraints = [];
       }
