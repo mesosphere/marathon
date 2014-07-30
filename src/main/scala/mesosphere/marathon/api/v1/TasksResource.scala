@@ -2,6 +2,7 @@ package mesosphere.marathon.api.v1
 
 import javax.ws.rs._
 import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
 import javax.ws.rs.core.{ Response, MediaType }
 import javax.inject.Inject
@@ -25,7 +26,8 @@ class TasksResource @Inject() (
                 @QueryParam("host") host: String,
                 @QueryParam("id") id: String = "*",
                 @QueryParam("scale") scale: Boolean = false) = {
-    val tasks = taskTracker.get(appId)
+    val pathId = appId.toRootPath
+    val tasks = taskTracker.get(pathId)
     val toKill = tasks.filter(x =>
       x.getHost == host || x.getId == id || host == "*"
     )
@@ -33,6 +35,6 @@ class TasksResource @Inject() (
     if (toKill.size == 0)
       Response.status(Status.NOT_FOUND).entity(Map("message" -> "No tasks matched your filters")).build
     else
-      service.killTasks(appId, toKill, scale)
+      service.killTasks(pathId, toKill, scale)
   }
 }

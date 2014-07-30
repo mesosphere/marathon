@@ -7,7 +7,7 @@ List the versions of the application with id `appId`.
 **Request:**
 
 ```
-GET /v2/apps/myApp/versions HTTP/1.1
+GET /v2/apps/product/service/myapp/versions HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8

@@ -1,26 +1,23 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.tasks.TaskTracker
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.google.common.eventbus.EventBus
-import mesosphere.marathon.event._
+import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerDriver
-import mesosphere.mesos.protos.TaskID
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.event._
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.mesos.protos.TaskID
 
 class HealthCheckActor(
-    appId: String,
+    appId: PathId,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
-    eventBus: Option[EventBus]) extends Actor with ActorLogging {
+    eventBus: EventStream) extends Actor with ActorLogging {
 
-  import HealthCheckActor.{ GetTaskHealth, Health }
-  import HealthCheckWorker.{ HealthCheckJob, HealthResult, Healthy, Unhealthy }
-  import context.dispatcher // execution context
+  import context.dispatcher
+  import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
+  import mesosphere.marathon.health.HealthCheckWorker.HealthCheckJob
   import mesosphere.mesos.protos.Implicits._
 
   protected[this] var nextScheduledCheck: Option[Cancellable] = None
@@ -128,9 +125,9 @@ class HealthCheckActor(
       val health = taskHealth.getOrElse(taskId, Health(taskId))
 
       val newHealth = result match {
-        case Healthy(_, _) =>
+        case Healthy(_, _, _) =>
           health.update(result)
-        case Unhealthy(_, _, _) =>
+        case Unhealthy(_, _, _, _) =>
           taskTracker.get(appId).find(_.getId == taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
@@ -138,7 +135,7 @@ class HealthCheckActor(
                 health
               }
               else {
-                eventBus.foreach(_.post(FailedHealthCheck(appId, taskId, healthCheck)))
+                eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
                 checkConsecutiveFailures(task, health)
                 health.update(result)
               }
@@ -150,48 +147,18 @@ class HealthCheckActor(
 
       taskHealth += (taskId -> newHealth)
 
-      if (health.alive() != newHealth.alive()) {
-        eventBus.foreach(_.post(
+      if (health.alive != newHealth.alive) {
+        eventBus.publish(
           HealthStatusChanged(
             appId = appId,
             taskId = taskId,
-            alive = newHealth.alive())
-        )
+            version = result.version,
+            alive = newHealth.alive)
         )
       }
   }
 }
 
 object HealthCheckActor {
-
   case class GetTaskHealth(taskId: String)
-
-  case class Health(
-      taskId: String,
-      firstSuccess: Option[Timestamp] = None,
-      lastSuccess: Option[Timestamp] = None,
-      lastFailure: Option[Timestamp] = None,
-      @FieldJsonInclude(Include.NON_NULL) lastFailureCause: Option[String] = None,
-      consecutiveFailures: Int = 0) {
-    import HealthCheckWorker.{ HealthResult, Healthy, Unhealthy }
-
-    @JsonProperty
-    def alive(): Boolean = lastSuccess.exists { successTime =>
-      lastFailure.isEmpty || successTime > lastFailure.get
-    }
-
-    def update(result: HealthResult): Health = result match {
-      case Healthy(_, time) => this.copy(
-        firstSuccess = this.firstSuccess.orElse(Some(time)),
-        lastSuccess = Some(time),
-        consecutiveFailures = 0
-      )
-      case Unhealthy(_, time, cause) => this.copy(
-        lastFailure = Some(time),
-        lastFailureCause = Some(cause),
-        consecutiveFailures = this.consecutiveFailures + 1
-      )
-    }
-  }
-
 }

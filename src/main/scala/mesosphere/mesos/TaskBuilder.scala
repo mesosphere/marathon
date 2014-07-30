@@ -1,24 +1,28 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.state.PathId
+import scala.collection.JavaConverters._
+import scala.collection.mutable
+
 import java.io.ByteArrayOutputStream
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
-import mesosphere.marathon._
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
 
-import scala.collection.JavaConverters._
-import scala.collection._
-import scala.util.Random
+import mesosphere.marathon._
+import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
+
+import scala.util.{ Random, Failure, Success, Try }
 
 class TaskBuilder(app: AppDefinition,
-                  newTaskId: String => TaskID,
+                  newTaskId: PathId => TaskID,
                   taskTracker: TaskTracker,
+                  config: MarathonConf,
                   mapper: ObjectMapper = new ObjectMapper()) {
 
   import mesosphere.mesos.protos.Implicits._
@@ -48,7 +52,7 @@ class TaskBuilder(app: AppDefinition,
     }
 
     TaskBuilder.getPorts(offer, app.ports.size).map { portsResource =>
-      val ports = portsResource.ranges.flatMap(_.asScala)
+      val ports = portsResource.ranges.flatMap(_.asScala())
 
       val taskId = newTaskId(app.id)
       val builder = TaskInfo.newBuilder
@@ -63,11 +67,10 @@ class TaskBuilder(app: AppDefinition,
       }
 
       executor match {
-        case CommandExecutor() => {
+        case CommandExecutor() =>
           builder.setCommand(TaskBuilder.commandInfo(app, ports))
-        }
 
-        case PathExecutor(path) => {
+        case PathExecutor(path) =>
           val executorId = f"marathon-${taskId.getValue}" // Fresh executor
           val escaped = "'" + path + "'" // TODO: Really escape this.
           val shell = f"chmod ug+rx $escaped && exec $escaped ${app.cmd}"
@@ -82,6 +85,35 @@ class TaskBuilder(app: AppDefinition,
           val binary = new ByteArrayOutputStream()
           mapper.writeValue(binary, app)
           builder.setData(ByteString.copyFrom(binary.toByteArray))
+      }
+
+      if (config.executorHealthChecks()) {
+        import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+
+        // Mesos supports at most one health check, and only COMMAND checks
+        // are currently implemented.
+        val mesosHealthCheck: Option[org.apache.mesos.Protos.HealthCheck] =
+          app.healthChecks.collectFirst {
+            case healthCheck if healthCheck.protocol == Protocol.COMMAND =>
+              Try(healthCheck.toMesos(ports.map(_.toInt))) match {
+                case Success(mhc) => Some(mhc)
+                case Failure(cause) =>
+                  log.warn(
+                    s"An error occurred with health check [$healthCheck]\n" +
+                      s"Error: [${cause.getMessage}]")
+                  None
+              }
+          }.flatten
+
+        mesosHealthCheck foreach builder.setHealthCheck
+
+        if (mesosHealthCheck.size < app.healthChecks.size) {
+          val numUnusedChecks = app.healthChecks.size - mesosHealthCheck.size
+          log.warn(
+            "Mesos supports one command health check per task.\n" +
+              s"Task [$taskId] will run without " +
+              s"$numUnusedChecks of its defined health checks."
+          )
         }
       }
 
@@ -199,7 +231,7 @@ object TaskBuilder {
     None
   }
 
-  def portsEnv(ports: Seq[Long]): Map[String, String] = {
+  def portsEnv(ports: Seq[Long]): scala.collection.Map[String, String] = {
     if (ports.isEmpty) {
       return Map.empty
     }

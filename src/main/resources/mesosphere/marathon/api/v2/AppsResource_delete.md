@@ -7,7 +7,7 @@ Destroy an application. All data about that application will be deleted.
 **Request:**
 
 ```
-DELETE /v2/apps/myApp HTTP/1.1
+DELETE /v2/apps/myapp HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Length: 0
