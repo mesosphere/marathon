@@ -166,7 +166,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     log.debug(s"Fetching app from store ${appId}")
     val names = state.names().get.asScala.toSet
     val tasks: mutable.Set[MarathonTask] = new mutable.HashSet[MarathonTask]
-    val taskKeys = names.filter(name => name.startsWith(PREFIX + appId.toString + ID_DELIMITER))
+    val taskKeys = names.filter(name => name.startsWith(PREFIX + appId.safePath + ID_DELIMITER))
     for (taskKey <- taskKeys) {
       fetchTask(taskKey) match {
         case Some(task) => tasks += task
