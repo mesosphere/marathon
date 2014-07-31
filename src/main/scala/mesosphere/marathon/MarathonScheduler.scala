@@ -137,7 +137,7 @@ class MarathonScheduler @Inject() (
     val appId = taskIdUtil.appId(status.getTaskId)
 
     // forward health changes to the health check manager
-    val taskOption = taskTracker.fetchTask(status.getTaskId.getValue).map(_.getVersion)
+    val taskOption = taskTracker.fetchTask(appId, status.getTaskId.getValue).map(_.getVersion)
     healthCheckManager.update(status, taskOption.getOrElse(""))
 
     import org.apache.mesos.Protos.TaskState._

@@ -29,10 +29,10 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
 
   private[this] val apps = new mutable.HashMap[PathId, App] with mutable.SynchronizedMap[PathId, App]
 
-  private[tasks] def fetchFromState(key: String) = state.fetch(key).get()
+  private[tasks] def fetchFromState(id: String) = state.fetch(id).get()
 
   private[tasks] def getKey(appId: PathId, taskId: String): String = {
-    PREFIX + appId.toString + ID_DELIMITER + taskId
+    PREFIX + appId.safePath + ID_DELIMITER + taskId
   }
 
   def get(appId: PathId): mutable.Set[MarathonTask] =
@@ -176,7 +176,10 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     new App(appId, tasks, false)
   }
 
-  def fetchTask(taskKey: String): Option[MarathonTask] = {
+  def fetchTask(appId: PathId, taskId: String): Option[MarathonTask] =
+    fetchTask(getKey(appId, taskId))
+
+  private[tasks] def fetchTask(taskKey: String): Option[MarathonTask] = {
     val bytes = fetchFromState(taskKey).value
     if (bytes.length > 0) {
       val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
