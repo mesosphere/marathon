@@ -51,7 +51,7 @@ object Constraints {
 
       // Order groupings by smallest first
       val orderedByCount = groupedTasks.toSeq.sortBy(_._2.size)
-      def minValue = orderedByCount.headOption.map(_._1).getOrElse("")
+      def minValue = orderedByCount.headOption.flatMap(_._1).getOrElse("")
 
       // Return true if any of these are also true:
       // a) this offer matches the smallest grouping when there

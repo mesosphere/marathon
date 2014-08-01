@@ -251,4 +251,61 @@ class ConstraintsTest extends MarathonSpec {
 
     assert(!uniqueRackNotMet, "Should not meet unique constraint for rack.")
   }
+
+  test("RackGroupedByConstraints2") {
+    val task1_rack1 = makeSampleTask("task1", Map("rackid" -> "rack-1"))
+    val task2_rack2 = makeSampleTask("task2", Map("rackid" -> "rack-2"))
+    val task3_rack3 = makeSampleTask("task3", Map("rackid" -> "rack-3"))
+    val task4_rack1 = makeSampleTask("task4", Map("rackid" -> "rack-1"))
+    val task5_rack2 = makeSampleTask("task5", Map("rackid" -> "rack-2"))
+
+    var groupRack = Set[MarathonTask]()
+
+    val groupByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "3")
+
+    val clusterFreshRackMet = Constraints.meetsConstraint(
+      groupRack,
+      makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
+      groupByRack)
+
+    assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
+
+    groupRack ++= Set(task1_rack1)
+
+    val clusterRackMet1 = Constraints.meetsConstraint(
+      groupRack,
+      makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
+      groupByRack)
+
+    assert(clusterRackMet1, "Should meet clustered-in-rack constraints.")
+
+    groupRack ++= Set(task2_rack2)
+
+    val clusterRackMet2 = Constraints.meetsConstraint(
+      groupRack,
+      makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-3"))),
+      groupByRack)
+
+    assert(clusterRackMet2, "Should meet clustered-in-rack constraints.")
+
+    groupRack ++= Set(task3_rack3)
+
+
+    val clusterRackMet3 = Constraints.meetsConstraint(
+      groupRack,
+      makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
+      groupByRack)
+
+    assert(clusterRackMet3, "Should meet clustered-in-rack constraints.")
+
+    groupRack ++= Set(task4_rack1)
+
+
+    val clusterRackMet4 = Constraints.meetsConstraint(
+      groupRack,
+      makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
+      groupByRack)
+
+    assert(clusterRackMet4, "Should meet clustered-in-rack constraints.")
+  }
 }
