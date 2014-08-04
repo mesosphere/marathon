@@ -14,7 +14,9 @@ object MarathonBuild extends Build {
     id = "marathon",
     base = file("."),
     settings = baseSettings ++ assemblySettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ Seq(
-      libraryDependencies ++= Dependencies.root
+      libraryDependencies ++= Dependencies.root,
+      parallelExecution in Test := false,
+      fork in Test := true
     )
   )
 
