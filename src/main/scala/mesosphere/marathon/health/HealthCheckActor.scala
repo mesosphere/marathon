@@ -107,8 +107,9 @@ class HealthCheckActor(
   protected[this] def ignoreFailures(task: MarathonTask,
                                      health: Health): Boolean = {
     // Ignore failures during the grace period, until the task becomes green
-    // for the first time.
-    health.firstSuccess.isEmpty &&
+    // for the first time.  Also ignore failures while the task is staging.
+    !task.hasStartedAt ||
+      health.firstSuccess.isEmpty &&
       task.getStartedAt + healthCheck.gracePeriod.toMillis > System.currentTimeMillis()
   }
 
