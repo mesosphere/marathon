@@ -5,7 +5,7 @@ import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ UpgradeStrategy, PathId, Timestamp }
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import scala.concurrent.duration.FiniteDuration
 import java.lang.{ Integer => JInt, Double => JDouble }
@@ -15,6 +15,8 @@ import java.lang.{ Integer => JInt, Double => JDouble }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppUpdate(
+
+    id: Option[PathId] = None,
 
     cmd: Option[String] = None,
 
@@ -46,6 +48,10 @@ case class AppUpdate(
 
     healthChecks: Option[Set[HealthCheck]] = None,
 
+    dependencies: Option[Set[PathId]] = None,
+
+    upgradeStrategy: Option[UpgradeStrategy] = None,
+
     version: Option[Timestamp] = None) {
 
   /**
@@ -69,33 +75,9 @@ case class AppUpdate(
     backoffFactor.getOrElse(app.backoffFactor),
     container.orElse(app.container),
     healthChecks.getOrElse(app.healthChecks),
+    dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
+    upgradeStrategy.getOrElse(app.upgradeStrategy),
     version.getOrElse(Timestamp.now())
   )
-
-}
-
-object AppUpdate {
-
-  /**
-    * Creates an AppUpdate from the supplied AppDefinition
-    */
-  def fromAppDefinition(app: AppDefinition): AppUpdate =
-    AppUpdate(
-      cmd = Option(app.cmd),
-      user = app.user,
-      env = Option(app.env),
-      instances = Option(app.instances),
-      cpus = Option(app.cpus),
-      mem = Option(app.mem),
-      disk = Option(app.disk),
-      executor = Option(app.executor),
-      constraints = Option(app.constraints),
-      uris = Option(app.uris),
-      ports = Option(app.ports),
-      backoff = Option(app.backoff),
-      backoffFactor = Option(app.backoffFactor),
-      container = app.container,
-      healthChecks = Option(app.healthChecks)
-    )
 
 }

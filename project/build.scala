@@ -8,17 +8,23 @@ import ohnosequences.sbt.SbtS3Resolver.S3Resolver
 import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
+import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
 
 object MarathonBuild extends Build {
   lazy val root = Project(
     id = "marathon",
     base = file("."),
-    settings = baseSettings ++ assemblySettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ Seq(
+    settings = baseSettings ++ assemblySettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ revolverSettings ++ Seq(
       libraryDependencies ++= Dependencies.root,
       parallelExecution in Test := false,
       fork in Test := true
-    )
-  )
+    ))
+    .configs(IntegrationTest)
+    .settings(inConfig(IntegrationTest)(Defaults.testTasks): _*)
+    .settings(testOptions in Test := Seq(Tests.Argument("-l", "integration")))
+    .settings(testOptions in IntegrationTest := Seq(Tests.Argument("-n", "integration")))
+
+  lazy val IntegrationTest = config("integration") extend Test
 
   lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
     organization := "mesosphere",
@@ -26,11 +32,13 @@ object MarathonBuild extends Build {
     scalacOptions in Compile ++= Seq("-encoding", "UTF-8", "-target:jvm-1.6", "-deprecation", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint"),
     javacOptions in Compile ++= Seq("-encoding", "UTF-8", "-source", "1.6", "-target", "1.6", "-Xlint:unchecked", "-Xlint:deprecation"),
     resolvers ++= Seq(
-      "Mesosphere Public Repo" at "http://downloads.mesosphere.io/maven",
+      "Mesosphere Public Repo"    at "http://downloads.mesosphere.io/maven",
       "Twitter Maven2 Repository" at "http://maven.twttr.com/",
-      "Spray Maven Repository" at "http://repo.spray.io/"
+      "Spray Maven Repository"    at "http://repo.spray.io/",
+      "Local Maven"               at s"${Path.userHome.asFile.toURI.toURL}.m2/repository"
     ),
     sourceGenerators in Compile <+= buildInfo,
+    fork in Test := true,
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
     buildInfoPackage := "mesosphere.marathon"
   )
@@ -82,10 +90,12 @@ object Dependencies {
     jodaConvert % "compile",
     jerseyServlet % "compile",
     uuidGenerator % "compile",
+    jGraphT % "compile",
 
     // test
     Test.scalatest % "test",
-    Test.mockito % "test"
+    Test.mockito % "test",
+    Test.akkaTestKit % "test"
   )
 }
 
@@ -94,7 +104,7 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.5.6"
     val JacksonCCM = "0.1.0"
-    val Mesos = "0.19.0"
+    val Mesos = "0.20.0-SNAPSHOT"
     val MesosUtils = "0.19.0-1"
     val Akka = "2.2.4"
     val Spray = "1.2.1"
@@ -103,8 +113,9 @@ object Dependency {
     val TwitterZkCLient = "0.0.43"
     val Jersey = "1.18.1"
     val JodaTime = "2.3"
-    val JodaConvert = "1.5"
+    val JodaConvert = "1.6"
     val UUIDGenerator = "3.1.3"
+    val JGraphT = "0.9.1"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -126,10 +137,12 @@ object Dependency {
   val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
   val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZkCLient
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
+  val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
+    val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
   }
 }
 

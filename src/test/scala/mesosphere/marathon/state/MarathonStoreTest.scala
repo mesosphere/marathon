@@ -9,13 +9,15 @@ import java.lang.{ Boolean => JBoolean }
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import mesosphere.marathon.{ MarathonSpec, StorageException }
+import scala.language.postfixOps
+import PathId._
 
 class MarathonStoreTest extends MarathonSpec {
   test("Fetch") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
-    val appDef = AppDefinition(id = "testApp")
+    val appDef = AppDefinition(id = "testApp".toPath)
 
     when(variable.value()).thenReturn(appDef.toProtoByteArray)
     when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
@@ -53,9 +55,9 @@ class MarathonStoreTest extends MarathonSpec {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
-    val appDef = AppDefinition(id = "testApp")
+    val appDef = AppDefinition(id = "testApp".toPath)
 
-    val newAppDef = appDef.copy(id = "newTestApp")
+    val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[Variable]
     val newFuture = mock[JFuture[Variable]]
 
@@ -83,9 +85,9 @@ class MarathonStoreTest extends MarathonSpec {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
-    val appDef = AppDefinition(id = "testApp")
+    val appDef = AppDefinition(id = "testApp".toPath)
 
-    val newAppDef = appDef.copy(id = "newTestApp")
+    val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[Variable]
     val newFuture = mock[JFuture[Variable]]
 
@@ -192,7 +194,7 @@ class MarathonStoreTest extends MarathonSpec {
 
     val store = new MarathonStore[AppDefinition](state, () => AppDefinition())
 
-    Await.ready(store.store("foo", AppDefinition(id = "foo", instances = 0)), 2.seconds)
+    Await.ready(store.store("foo", AppDefinition(id = "foo".toPath, instances = 0)), 2.seconds)
 
     def plusOne() = {
       store.modify("foo") { f =>
