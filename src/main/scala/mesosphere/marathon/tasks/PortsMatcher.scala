@@ -19,29 +19,27 @@ class PortsMatcher(app: AppDefinition, offer: Offer) {
     .getOrElse(Nil)
   val role = portsResource.map(_.getRole).getOrElse("*")
 
-  def portRanges(): Option[RangesResource] = {
+  def portRanges: Option[RangesResource] = {
     if (app.ports.isEmpty) {
       Some(RangesResource(Resource.PORTS, Nil))
     }
     else if (app.requirePorts) {
-      appPortRanges()
+      appPortRanges
     }
     else {
-      appPortRanges().orElse {
-        randomPortRanges()
-      }
+      appPortRanges.orElse(randomPortRanges)
     }
   }
 
-  def matches(): Boolean = {
-    portRanges().isDefined
+  def matches: Boolean = {
+    portRanges.isDefined
   }
 
-  def ports(): Seq[Long] = {
-    portRanges().map(_.ranges.flatMap(_.asScala)).getOrElse(Nil)
+  def ports: Seq[Long] = {
+    portRanges.map(_.ranges.flatMap(_.asScala())).getOrElse(Nil)
   }
 
-  private def appPortRanges(): Option[RangesResource] = {
+  private def appPortRanges: Option[RangesResource] = {
     val sortedPorts = app.ports.sorted
     val firstPort = sortedPorts.head
     val lastPort = sortedPorts.last
@@ -60,7 +58,7 @@ class PortsMatcher(app: AppDefinition, offer: Offer) {
     }
   }
 
-  private def randomPortRanges(): Option[RangesResource] = {
+  private def randomPortRanges: Option[RangesResource] = {
     for (range <- offeredPortRanges) {
       // TODO use multiple ranges if one is not enough
       if (range.getEnd - range.getBegin + 1 >= app.ports.length) {

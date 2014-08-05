@@ -53,7 +53,7 @@ class TaskBuilder(app: AppDefinition,
       Executor.dispatch(app.executor)
     }
 
-    val ports = portsResource.ranges.flatMap(_.asScala)
+    val ports = portsResource.ranges.flatMap(_.asScala())
 
     val taskId = newTaskId(app.id)
     val builder = TaskInfo.newBuilder
@@ -149,7 +149,7 @@ class TaskBuilder(app: AppDefinition,
       return None
     }
 
-    if (!portMatcher.matches()) {
+    if (!portMatcher.matches) {
       log.warn("App ports are not available in the offer.")
       return None
     }
@@ -165,7 +165,7 @@ class TaskBuilder(app: AppDefinition,
       }
       log.info("Met all constraints.")
     }
-    Some((cpuRole, memRole, diskRole, portMatcher.portRanges().get))
+    Some((cpuRole, memRole, diskRole, portMatcher.portRanges.get))
   }
 }
 

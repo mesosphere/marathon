@@ -18,8 +18,8 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(matcher.matches())
-    assert(2 == matcher.ports().size)
+    assert(matcher.matches)
+    assert(2 == matcher.ports.size)
   }
 
   test("get ports from multiple ranges") {
@@ -37,8 +37,8 @@ class PortsMatcherTest extends MarathonSpec {
       .build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(matcher.matches())
-    assert(5 == matcher.ports().size)
+    assert(matcher.matches)
+    assert(5 == matcher.ports.size)
   }
 
   test("get no ports") {
@@ -46,10 +46,10 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = makeBasicOffer().build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(matcher.matches())
+    assert(matcher.matches)
     assert(
       Some(RangesResource(Resource.PORTS, Nil)) ==
-        matcher.portRanges()
+        matcher.portRanges
     )
   }
 
@@ -58,7 +58,7 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = makeBasicOffer(beginPort = 31000, endPort = 31001).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(!matcher.matches())
+    assert(!matcher.matches)
   }
 
   test("get app ports if available") {
@@ -68,7 +68,7 @@ class PortsMatcherTest extends MarathonSpec {
 
     assert(
       Some(RangesResource(Resource.PORTS, Seq(protos.Range(80, 82)))) ==
-        matcher.portRanges()
+        matcher.portRanges
     )
   }
 
@@ -77,7 +77,7 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(!matcher.matches())
-    assert(None == matcher.portRanges())
+    assert(!matcher.matches)
+    assert(None == matcher.portRanges)
   }
 }
