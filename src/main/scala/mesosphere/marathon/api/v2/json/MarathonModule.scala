@@ -235,51 +235,35 @@ class MarathonModule extends Module {
 }
 
 object MarathonModule {
+
   // TODO: make @JsonDeserialize work on the 'container' field
   // of the 'AppUpdate' class and remove this workaround.
   @JsonIgnoreProperties(ignoreUnknown = true)
   case class AppUpdateBuilder(
-
       id: Option[PathId] = None, //needed for updates inside a group
-
       cmd: Option[String] = None,
-
       user: Option[String] = None,
-
       env: Option[Map[String, String]] = None,
-
       instances: Option[JInt] = None,
-
       cpus: Option[JDouble] = None,
-
       mem: Option[JDouble] = None,
-
       disk: Option[JDouble] = None,
-
-      uris: Option[Seq[String]] = None,
-
-      @FieldPortsArray ports: Option[Seq[JInt]] = None,
-
-      @FieldJsonProperty("backoffSeconds") backOff: Option[FiniteDuration] = None,
-
-      backOffFactor: Option[JDouble] = None,
-
-      constraints: Option[Set[Constraint]] = None,
-
       executor: Option[String] = None,
-
+      constraints: Option[Set[Constraint]] = None,
+      uris: Option[Seq[String]] = None,
+      @FieldPortsArray ports: Option[Seq[JInt]] = None,
+      @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
+      backoffFactor: Option[JDouble] = None,
       container: Option[ContainerInfo] = None,
-
       healthChecks: Option[Set[HealthCheck]] = None,
-
       dependencies: Option[Set[PathId]] = None,
-
       upgradeStrategy: Option[UpgradeStrategy] = None,
-
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      id, cmd, user, env, instances, cpus, mem, disk, uris, ports, backOff, backOffFactor,
-      constraints, executor, container, healthChecks, dependencies, upgradeStrategy, version
+      id, cmd, user, env, instances, cpus, mem, disk, executor, constraints,
+      uris, ports, backoff, backoffFactor, container, healthChecks,
+      dependencies, upgradeStrategy, version
     )
   }
+
 }

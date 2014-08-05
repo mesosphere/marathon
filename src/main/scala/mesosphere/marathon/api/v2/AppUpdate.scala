@@ -32,6 +32,10 @@ case class AppUpdate(
 
     disk: Option[JDouble] = None,
 
+    executor: Option[String] = None,
+
+    constraints: Option[Set[Constraint]] = None,
+
     uris: Option[Seq[String]] = None,
 
     @FieldPortsArray ports: Option[Seq[JInt]] = None,
@@ -39,10 +43,6 @@ case class AppUpdate(
     @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
 
     backoffFactor: Option[JDouble] = None,
-
-    constraints: Option[Set[Constraint]] = None,
-
-    executor: Option[String] = None,
 
     container: Option[ContainerInfo] = None,
 
@@ -61,7 +61,7 @@ case class AppUpdate(
   def apply(app: AppDefinition): AppDefinition = app.copy(
     app.id,
     cmd.getOrElse(app.cmd),
-    user,
+    user.orElse(app.user),
     env.getOrElse(app.env),
     instances.getOrElse(app.instances),
     cpus.getOrElse(app.cpus),
