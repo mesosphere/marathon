@@ -30,7 +30,7 @@ class AppsResource @Inject() (
     groupManager: GroupManager) extends RestResource with ModelValidation {
 
   val ListApps = """^((?:.+/)|)\*$""".r
-  val EmbedTasks = "tasks"
+  val EmbedTasks = "apps.tasks"
 
   @GET
   @Timed
@@ -40,7 +40,8 @@ class AppsResource @Inject() (
     val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
     if (embed == EmbedTasks) {
       Map("apps" -> apps.map(_.withTasks(taskTracker)))
-    } else {
+    }
+    else {
       Map("apps" -> apps.map(_.withTaskCounts(taskTracker)))
     }
   }
