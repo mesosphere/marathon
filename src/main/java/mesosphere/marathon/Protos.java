@@ -2495,6 +2495,16 @@ public final class Protos {
      */
     com.google.protobuf.ByteString
         getStoreUrlsBytes(int index);
+
+    // optional bool require_ports = 18 [default = false];
+    /**
+     * <code>optional bool require_ports = 18 [default = false];</code>
+     */
+    boolean hasRequirePorts();
+    /**
+     * <code>optional bool require_ports = 18 [default = false];</code>
+     */
+    boolean getRequirePorts();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -2680,6 +2690,11 @@ public final class Protos {
                 mutable_bitField0_ |= 0x00008000;
               }
               storeUrls_.add(input.readBytes());
+              break;
+            }
+            case 144: {
+              bitField0_ |= 0x00000400;
+              requirePorts_ = input.readBool();
               break;
             }
           }
@@ -3249,6 +3264,22 @@ public final class Protos {
       return storeUrls_.getByteString(index);
     }
 
+    // optional bool require_ports = 18 [default = false];
+    public static final int REQUIRE_PORTS_FIELD_NUMBER = 18;
+    private boolean requirePorts_;
+    /**
+     * <code>optional bool require_ports = 18 [default = false];</code>
+     */
+    public boolean hasRequirePorts() {
+      return ((bitField0_ & 0x00000400) == 0x00000400);
+    }
+    /**
+     * <code>optional bool require_ports = 18 [default = false];</code>
+     */
+    public boolean getRequirePorts() {
+      return requirePorts_;
+    }
+
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -3266,6 +3297,7 @@ public final class Protos {
       upgradeStrategy_ = mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance();
       dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       storeUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      requirePorts_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3377,6 +3409,9 @@ public final class Protos {
       for (int i = 0; i < storeUrls_.size(); i++) {
         output.writeBytes(17, storeUrls_.getByteString(i));
       }
+      if (((bitField0_ & 0x00000400) == 0x00000400)) {
+        output.writeBool(18, requirePorts_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -3464,6 +3499,10 @@ public final class Protos {
         }
         size += dataSize;
         size += 2 * getStoreUrlsList().size();
+      }
+      if (((bitField0_ & 0x00000400) == 0x00000400)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(18, requirePorts_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3643,6 +3682,8 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00004000);
         storeUrls_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00008000);
+        requirePorts_ = false;
+        bitField0_ = (bitField0_ & ~0x00010000);
         return this;
       }
 
@@ -3767,6 +3808,10 @@ public final class Protos {
           bitField0_ = (bitField0_ & ~0x00008000);
         }
         result.storeUrls_ = storeUrls_;
+        if (((from_bitField0_ & 0x00010000) == 0x00010000)) {
+          to_bitField0_ |= 0x00000400;
+        }
+        result.requirePorts_ = requirePorts_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3928,6 +3973,9 @@ public final class Protos {
             storeUrls_.addAll(other.storeUrls_);
           }
           onChanged();
+        }
+        if (other.hasRequirePorts()) {
+          setRequirePorts(other.getRequirePorts());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5796,6 +5844,39 @@ public final class Protos {
   }
   ensureStoreUrlsIsMutable();
         storeUrls_.add(value);
+        onChanged();
+        return this;
+      }
+
+      // optional bool require_ports = 18 [default = false];
+      private boolean requirePorts_ ;
+      /**
+       * <code>optional bool require_ports = 18 [default = false];</code>
+       */
+      public boolean hasRequirePorts() {
+        return ((bitField0_ & 0x00010000) == 0x00010000);
+      }
+      /**
+       * <code>optional bool require_ports = 18 [default = false];</code>
+       */
+      public boolean getRequirePorts() {
+        return requirePorts_;
+      }
+      /**
+       * <code>optional bool require_ports = 18 [default = false];</code>
+       */
+      public Builder setRequirePorts(boolean value) {
+        bitField0_ |= 0x00010000;
+        requirePorts_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool require_ports = 18 [default = false];</code>
+       */
+      public Builder clearRequirePorts() {
+        bitField0_ = (bitField0_ & ~0x00010000);
+        requirePorts_ = false;
         onChanged();
         return this;
       }
@@ -12202,7 +12283,7 @@ public final class Protos {
       "timeoutSeconds\030\005 \001(\r:\00220\022\017\n\004path\030\006 \001(\t:\001" +
       "/\022!\n\026maxConsecutiveFailures\030\007 \001(\r:\0013\022#\n\007" +
       "command\030\010 \001(\0132\022.mesos.CommandInfo\"*\n\010Pro" +
-      "tocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND\020\002\"\270\004" +
+      "tocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND\020\002\"\326\004" +
       "\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002" +
       " \002(\0132\022.mesos.CommandInfo\022\021\n\tinstances\030\003 " +
       "\002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Resource\022" +
@@ -12217,24 +12298,25 @@ public final class Protos {
       "or\030\016 \001(\001:\0041.15\022G\n\017upgradeStrategy\030\017 \001(\0132" +
       "..mesosphere.marathon.UpgradeStrategyDef" +
       "inition\022\024\n\014dependencies\030\020 \003(\t\022\021\n\tstoreUr" +
-      "ls\030\021 \003(\t\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n" +
-      "\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes",
-      "\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 " +
-      "\001(\003\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007 \003(" +
-      "\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 \001(\t\"M\n" +
-      "\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(" +
-      "\0132!.mesosphere.marathon.MarathonTask\"1\n\r" +
-      "ContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007option" +
-      "s\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcallback_" +
-      "urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030\001 " +
-      "\002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\":\n\031Upg" +
-      "radeStrategyDefinition\022\035\n\025minimumHealthC",
-      "apacity\030\001 \002(\001\"\260\001\n\017GroupDefinition\022\n\n\002id\030" +
-      "\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.m" +
-      "esosphere.marathon.ServiceDefinition\0224\n\006" +
-      "groups\030\004 \003(\0132$.mesosphere.marathon.Group" +
-      "Definition\022\024\n\014dependencies\030\005 \003(\tB\035\n\023meso" +
-      "sphere.marathonB\006Protos"
+      "ls\030\021 \003(\t\022\034\n\rrequire_ports\030\022 \001(\010:\005false\"\272" +
+      "\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(",
+      "\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.m" +
+      "esos.Attribute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nsta" +
+      "rted_at\030\006 \001(\003\022#\n\010statuses\030\007 \003(\0132\021.mesos." +
+      "TaskStatus\022\017\n\007version\030\010 \001(\t\"M\n\013MarathonA" +
+      "pp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosp" +
+      "here.marathon.MarathonTask\"1\n\rContainerI" +
+      "nfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\")\n" +
+      "\020EventSubscribers\022\025\n\rcallback_urls\030\001 \003(\t" +
+      "\"=\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005min" +
+      "or\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\":\n\031UpgradeStrate",
+      "gyDefinition\022\035\n\025minimumHealthCapacity\030\001 " +
+      "\002(\001\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007v" +
+      "ersion\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere." +
+      "marathon.ServiceDefinition\0224\n\006groups\030\004 \003" +
+      "(\0132$.mesosphere.marathon.GroupDefinition" +
+      "\022\024\n\014dependencies\030\005 \003(\tB\035\n\023mesosphere.mar" +
+      "athonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12258,7 +12340,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", });
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", });
           internal_static_mesosphere_marathon_MarathonTask_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new

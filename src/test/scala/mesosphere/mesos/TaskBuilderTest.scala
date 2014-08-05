@@ -276,41 +276,6 @@ class TaskBuilderTest extends MarathonSpec {
     shouldBuildTask("Should take offer with spark:enabled", offerHostB)
   }
 
-  test("GetPortsSingleRange") {
-    val offered = RangesResource(
-      Resource.PORTS,
-      Seq(protos.Range(31000, 32000))
-    )
-    val portRanges = TaskBuilder.getPorts(offered, 2).get.ranges
-
-    assert(1 == portRanges.size)
-    assert(2 == portRanges.head.asScala.size)
-  }
-
-  test("GetPortsMultipleRanges") {
-    val offered = RangesResource(
-      Resource.PORTS,
-      Seq(protos.Range(30000, 30003), protos.Range(31000, 31009))
-    )
-    val portRanges = TaskBuilder.getPorts(offered, 5).get.ranges
-
-    assert(1 == portRanges.size)
-    assert(5 == portRanges.head.asScala.size)
-  }
-
-  test("GetNoPorts") {
-    val portsResource = RangesResource(Resource.PORTS, Seq(protos.Range(31000, 32000)))
-    assert(
-      Some(RangesResource(Resource.PORTS, Seq())) ==
-        TaskBuilder.getPorts(portsResource, 0)
-    )
-  }
-
-  test("GetTooManyPorts") {
-    val portsResource = RangesResource(Resource.PORTS, Seq(protos.Range(31000, 32000)))
-    assert(TaskBuilder.getPorts(portsResource, 10002).isEmpty)
-  }
-
   test("PortsEnv") {
     val env = TaskBuilder.portsEnv(Seq(1001, 1002))
     assert("1001" == env("PORT"))
