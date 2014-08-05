@@ -13,19 +13,17 @@ import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, ZooKeeperClient, Group => ZGroup }
-import org.apache.log4j.Logger
-import org.apache.mesos.state.{ State, ZooKeeperState }
-import org.apache.zookeeper.ZooDefs
-
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.health.{ DelegatingHealthCheckManager, HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
+import org.apache.log4j.Logger
+import org.apache.mesos.state.{ State, ZooKeeperState }
+import org.apache.zookeeper.ZooDefs
 
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
@@ -165,7 +163,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideTaskIdUtil(): TaskIdUtil = new TaskIdUtil
-  
+
   @Provides
   @Singleton
   def provideStorageProvider(config: MarathonConf, http: HttpConf): StorageProvider = StorageProvider.provider(config, http)

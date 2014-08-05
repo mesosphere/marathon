@@ -262,9 +262,9 @@ object MarathonModule {
       upgradeStrategy: Option[UpgradeStrategy] = None,
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      id, cmd, user, env, instances, cpus, mem, disk, uris, storeUrls, ports, backOff, backOffFactor,
-      constraints, executor, container, healthChecks, dependencies, upgradeStrategy, version
-    )
+      id, cmd, user, env, instances, cpus, mem, disk, executor, constraints,
+      uris, storeUrls, ports, backoff, backoffFactor, container, healthChecks,
+      dependencies, upgradeStrategy, version
     )
   }
 
