@@ -10,9 +10,10 @@ import scala.collection.mutable
 import scala.collection.JavaConverters._
 import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import mesosphere.mesos.protos._
+import mesosphere.marathon.state.PathId._
 
 class TaskBuilderTest extends MarathonSpec {
 
@@ -28,7 +29,7 @@ class TaskBuilderTest extends MarathonSpec {
     val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
       AppDefinition(
-        id = "testApp",
+        id = "testApp".toPath,
         cpus = 1,
         mem = 64,
         disk = 1,
@@ -69,7 +70,7 @@ class TaskBuilderTest extends MarathonSpec {
     val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
       AppDefinition(
-        id = "testApp",
+        id = "testApp".toPath,
         cpus = 2,
         mem = 200,
         disk = 2,
@@ -110,7 +111,7 @@ class TaskBuilderTest extends MarathonSpec {
     val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
       AppDefinition(
-        id = "testApp",
+        id = "testApp".toPath,
         cpus = 1,
         mem = 64,
         disk = 1,
@@ -161,7 +162,8 @@ class TaskBuilderTest extends MarathonSpec {
     when(taskTracker.get(app.id)).thenReturn(s)
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s), taskTracker)
+      s => TaskID(s.toString), taskTracker, defaultConfig())
+
     val task = builder.buildIfMatches(offer)
 
     assert(task.isDefined)
@@ -184,7 +186,7 @@ class TaskBuilderTest extends MarathonSpec {
     when(taskTracker.get(app.id)).thenReturn(runningTasks)
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s), taskTracker)
+      s => TaskID(s.toString), taskTracker, defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
       val tupleOption = builder.buildIfMatches(offer)
@@ -243,7 +245,7 @@ class TaskBuilderTest extends MarathonSpec {
     when(taskTracker.get(app.id)).thenReturn(runningTasks)
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s), taskTracker)
+      s => TaskID(s.toString), taskTracker, defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
       val tupleOption = builder.buildIfMatches(offer)
@@ -323,16 +325,18 @@ class TaskBuilderTest extends MarathonSpec {
 
   def buildIfMatches(offer: Offer, app: AppDefinition) = {
     val taskTracker = mock[TaskTracker]
+
     val builder = new TaskBuilder(app,
-      s => TaskID(s), taskTracker)
+      s => TaskID(s.toString), taskTracker, defaultConfig())
+
     builder.buildIfMatches(offer)
   }
 
-  def makeSampleTask(id: String, attr: String, attrVal: String) = {
+  def makeSampleTask(id: PathId, attr: String, attrVal: String) = {
     MarathonTask.newBuilder()
       .setHost("host")
       .addAllPorts(Lists.newArrayList(999))
-      .setId(id)
+      .setId(id.toString)
       .addAttributes(TextAttribute(attr, attrVal))
       .build()
   }

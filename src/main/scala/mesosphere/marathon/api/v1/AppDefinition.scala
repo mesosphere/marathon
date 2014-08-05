@@ -1,29 +1,29 @@
 package mesosphere.marathon.api.v1
 
-import mesosphere.marathon.{ ContainerInfo, Protos }
-import mesosphere.marathon.state.{ Migration, MarathonState, Timestamp, Timestamped }
-import mesosphere.marathon.Protos.{ StorageVersion, MarathonTask, Constraint }
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.health.HealthCheck
+import java.lang.{ Double => JDouble, Integer => JInt }
+
+import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.PortIndices
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state._
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{ ContainerInfo, Protos }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
-import com.fasterxml.jackson.annotation.{
-  JsonIgnore,
-  JsonIgnoreProperties,
-  JsonProperty
-}
 import org.apache.mesos.Protos.TaskState
+
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-import java.lang.{ Integer => JInt, Double => JDouble }
 
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class AppDefinition(
 
-  @FieldNotEmpty @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$") id: String = "",
+  //@FieldNotEmpty @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$") id: String = "",
+  id: PathId = PathId.empty,
 
   cmd: String = "",
 
@@ -41,9 +41,9 @@ case class AppDefinition(
 
   @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = "",
 
-  constraints: Set[Constraint] = Set(),
+  constraints: Set[Constraint] = Set.empty,
 
-  uris: Seq[String] = Seq(),
+  uris: Seq[String] = Seq.empty,
 
   @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
@@ -53,15 +53,19 @@ case class AppDefinition(
 
   container: Option[ContainerInfo] = None,
 
-  healthChecks: Set[HealthCheck] = Set(),
+  healthChecks: Set[HealthCheck] = Set.empty,
 
-  version: Timestamp = Timestamp.now) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
+  dependencies: Set[PathId] = Set.empty,
+
+  upgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty,
+
+  version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {
 
   import mesosphere.mesos.protos.Implicits._
 
   assert(
-    portIndicesAreValid,
+    portIndicesAreValid(),
     "Port indices must address an element of this app's ports array."
   )
 
@@ -83,7 +87,7 @@ case class AppDefinition(
     val diskResource = ScalarResource(Resource.DISK, disk)
 
     val builder = Protos.ServiceDefinition.newBuilder
-      .setId(id)
+      .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
       .addAllPorts(ports.asJava)
@@ -96,6 +100,8 @@ case class AppDefinition(
       .addResources(diskResource)
       .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
       .setVersion(version.toString)
+      .setUpgradeStrategy(upgradeStrategy.toProto)
+      .addAllDependencies(dependencies.map(_.toString).asJava)
 
     builder.build
   }
@@ -112,7 +118,7 @@ case class AppDefinition(
       }.toMap
 
     AppDefinition(
-      id = proto.getId,
+      id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = proto.getCmd.getValue,
       executor = proto.getExecutor,
@@ -121,8 +127,8 @@ case class AppDefinition(
       backoff = proto.getBackoff.milliseconds,
       backoffFactor = proto.getBackoffFactor,
       constraints = proto.getConstraintsList.asScala.toSet,
-      cpus = resourcesMap.get(Resource.CPUS).getOrElse(this.cpus),
-      mem = resourcesMap.get(Resource.MEM).getOrElse(this.mem),
+      cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
+      mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.get(Resource.DISK).getOrElse(this.disk),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
@@ -138,9 +144,13 @@ case class AppDefinition(
       },
       healthChecks =
         proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
-      version = Timestamp(proto.getVersion)
+      version = Timestamp(proto.getVersion),
+      upgradeStrategy = if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy) else UpgradeStrategy.empty,
+      dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet
     )
   }
+
+  def hasDynamicPort = ports.contains(0)
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
@@ -153,6 +163,24 @@ case class AppDefinition(
   def withTasks(taskTracker: TaskTracker): AppDefinition.WithTasks =
     new AppDefinition.WithTasks(taskTracker, this)
 
+  def isOnlyScaleChange(to: AppDefinition): Boolean = !isUpgrade(to) && (instances != to.instances)
+
+  def isUpgrade(to: AppDefinition): Boolean = {
+    cmd != to.cmd ||
+      env != to.env ||
+      cpus != to.cpus ||
+      mem != to.mem ||
+      uris.toSet != to.uris.toSet ||
+      constraints != to.constraints ||
+      container != to.container ||
+      ports.toSet != to.ports.toSet ||
+      executor != to.executor ||
+      healthChecks != to.healthChecks ||
+      backoff != to.backoff ||
+      backoffFactor != to.backoffFactor ||
+      dependencies != to.dependencies ||
+      upgradeStrategy != to.upgradeStrategy
+  }
 }
 
 object AppDefinition {
@@ -172,13 +200,15 @@ object AppDefinition {
 
   val DEFAULT_BACKOFF_FACTOR = 1.15
 
+  def fromProto(proto: Protos.ServiceDefinition): AppDefinition = AppDefinition().mergeFromProto(proto)
+
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
     app: AppDefinition) extends AppDefinition(
     app.id, app.cmd, app.user, app.env, app.instances, app.cpus, app.mem, app.disk,
     app.executor, app.constraints, app.uris, app.ports, app.backoff,
-    app.backoffFactor, app.container, app.healthChecks, app.version
-  ) {
+    app.backoffFactor, app.container, app.healthChecks, app.dependencies, app.upgradeStrategy,
+    app.version) {
 
     /**
       * Snapshot of the known tasks for this app
@@ -211,28 +241,5 @@ object AppDefinition {
       app: AppDefinition) extends WithTaskCounts(taskTracker, app) {
     @JsonProperty
     def tasks = appTasks
-  }
-
-  implicit object AppDefinitionMigration extends Migration[AppDefinition] {
-    override def needsMigration(version: StorageVersion): Boolean = {
-      if (version.getMajor == 0 && version.getMinor < 6) {
-        true
-      }
-      // add other migration cases
-      else {
-        false
-      }
-    }
-
-    override def migrate(version: StorageVersion, obj: AppDefinition): AppDefinition = {
-      if (version.getMajor == 0 && version.getMinor < 6) {
-        // container changes are handled in the AppDefinition object
-        obj.copy(id = obj.id.toLowerCase().replaceAll("_", "-"))
-      }
-      // add other migration cases
-      else {
-        obj
-      }
-    }
   }
 }

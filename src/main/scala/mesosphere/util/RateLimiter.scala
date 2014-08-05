@@ -1,5 +1,7 @@
 package mesosphere.util
 
+import mesosphere.marathon.state.PathId
+
 import scala.concurrent.duration._
 import scala.util.Try
 
@@ -17,7 +19,7 @@ class RateLimiter {
 
   protected[this] val maxLaunchDelay = 1.hour
 
-  protected[this] var taskLaunchDelays = Map[String, Delay]()
+  protected[this] var taskLaunchDelays = Map[PathId, Delay]()
 
   def getDelay(app: AppDefinition): Deadline =
     taskLaunchDelays.get(app.id).map(_.current.fromNow) getOrElse Deadline.now
@@ -36,7 +38,7 @@ class RateLimiter {
     taskLaunchDelays = taskLaunchDelays + (app.id -> newDelay)
   }
 
-  def resetDelay(appId: String): Unit = {
+  def resetDelay(appId: PathId): Unit = {
     if (taskLaunchDelays contains appId)
       log.info(s"Task launch delay for [${appId}] reset to zero")
     taskLaunchDelays = taskLaunchDelays - appId
