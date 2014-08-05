@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import java.net.URL
 import javax.inject.Inject
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -13,6 +14,8 @@ import org.apache.log4j.Logger
 import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
+import mesosphere.marathon.io.PathFun
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
@@ -27,8 +30,9 @@ class GroupManager @Singleton @Inject() (
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
     appRepo: AppRepository,
+    storage: StorageProvider,
     config: MarathonConf,
-    @Named(EventModule.busName) eventBus: EventStream) extends ModelValidation {
+    @Named(EventModule.busName) eventBus: EventStream) extends ModelValidation with PathFun {
 
   private[this] val log = Logger.getLogger(getClass.getName)
   private[this] val zkName = "root"
@@ -107,28 +111,48 @@ class GroupManager @Singleton @Inject() (
   private def upgrade(gid: PathId, change: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = synchronized {
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
-    def deploy(from: Group): Future[DeploymentPlan] = {
-      val to = assignDynamicAppPort(from, change(from))
+    def deploy(from: Group, to: Group, resolve: Seq[ResolveArtifacts]): Future[DeploymentPlan] = {
       requireValid(checkGroup(to))
-      val plan = DeploymentPlan(from, to, version)
+      val plan = DeploymentPlan(from, to, resolve, version)
       scheduler.deploy(plan, force).map(_ => plan)
     }
 
     val deployment = for {
       current <- root(withLatestApps = false) //ignore the state of the scheduler
-      plan <- deploy(current)
+      (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(current, change(current)))
+      plan <- deploy(current, to, resolve)
       storedGroup <- groupRepo.store(zkName, plan.target)
     } yield plan
 
     deployment.onComplete {
       case Success(plan) =>
-        log.info(s"Deployment finished for change: $plan")
+        log.info(s"Deployment acknowledged. Waiting to get processed: $plan")
         eventBus.publish(GroupChangeSuccess(gid, version.toString))
       case Failure(ex) =>
         log.warn(s"Deployment failed for change: $version")
         eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
     }
     deployment
+  }
+
+  private[state] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
+    def url2Path(url: String) = contentPath(new URL(url)).map { url -> _ }
+    Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path)).map(_.toMap).map { paths =>
+      //Filter out all items with already existing path.
+      //Since the path is derived from the content itself,
+      //it will only change, if the content changes.
+      val downloads = mutable.Map(paths.toSeq.filterNot{ case (url, path) => storage.item(path).exists }: _*)
+      val actions = mutable.ListBuffer.empty[ResolveArtifacts]
+      group.updateApp(group.version) { app =>
+        if (app.storeUrls.isEmpty) app else {
+          val storageUrls = app.storeUrls.map(paths).map(storage.item(_).url)
+          val resolved = app.copy(uris = app.uris ++ storageUrls, storeUrls = Seq.empty)
+          val appDownloads = app.storeUrls.flatMap(url => downloads.remove(url).map(path => new URL(url) -> path)).toMap
+          if (appDownloads.nonEmpty) actions += ResolveArtifacts(resolved, appDownloads)
+          resolved
+        }
+      } -> actions
+    }
   }
 
   private[state] def assignDynamicAppPort(from: Group, to: Group): Group = {

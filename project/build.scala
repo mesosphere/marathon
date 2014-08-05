@@ -14,7 +14,7 @@ object MarathonBuild extends Build {
   lazy val root = Project(
     id = "marathon",
     base = file("."),
-    settings = baseSettings ++ assemblySettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ revolverSettings ++ Seq(
+    settings = baseSettings ++ asmSettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ revolverSettings ++ Seq(
       libraryDependencies ++= Dependencies.root,
       parallelExecution in Test := false,
       fork in Test := true
@@ -43,6 +43,29 @@ object MarathonBuild extends Build {
     buildInfoPackage := "mesosphere.marathon"
   )
 
+  lazy val asmSettings = assemblySettings ++ Seq(
+    mergeStrategy in assembly <<= (mergeStrategy in assembly) { old =>
+      {
+        case "application.conf"                                             => MergeStrategy.concat
+        case "META-INF/jersey-module-version"                               => MergeStrategy.first
+        case "log4j.properties"                                             => MergeStrategy.concat
+        case "org/apache/hadoop/yarn/util/package-info.class"               => MergeStrategy.first
+        case "org/apache/hadoop/yarn/factories/package-info.class"          => MergeStrategy.first
+        case "org/apache/hadoop/yarn/factory/providers/package-info.class"  => MergeStrategy.first
+        case x                                                              => old(x)
+      }
+    },
+    excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+      val exclude = Set(
+        "commons-beanutils-1.7.0.jar",
+        "stax-api-1.0.1.jar",
+        "commons-beanutils-core-1.8.0.jar",
+        "servlet-api-2.5.jar"
+      )
+      cp filter { x => exclude(x.data.getName) }
+    }
+  )
+
   lazy val publishSettings = S3Resolver.defaults ++ Seq(
     publishTo := Some(s3resolver.value(
       "Mesosphere Public Repo (S3)",
@@ -59,7 +82,7 @@ object MarathonBuild extends Build {
       .setPreference(MultilineScaladocCommentsStartOnFirstLine, false)
       .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
       .setPreference(PreserveDanglingCloseParenthesis, true)
-      .setPreference(CompactControlReadability, true)
+      .setPreference(CompactControlReadability, true) //MV: should be false!
       .setPreference(AlignSingleLineCaseStatements, true)
       .setPreference(PreserveSpaceBeforeArguments, true)
       .setPreference(SpaceBeforeColon, false)
@@ -89,8 +112,11 @@ object Dependencies {
     jodaTime % "compile",
     jodaConvert % "compile",
     jerseyServlet % "compile",
+    jerseyMultiPart % "compile",
     uuidGenerator % "compile",
     jGraphT % "compile",
+    hadoopClient % "compile",
+    beanUtils % "compile",
 
     // test
     Test.scalatest % "test",
@@ -110,12 +136,13 @@ object Dependency {
     val Spray = "1.2.1"
     val Json4s = "3.2.5"
     val TwitterCommons = "0.0.52"
-    val TwitterZkCLient = "0.0.43"
+    val TwitterZKClient = "0.0.43"
     val Jersey = "1.18.1"
     val JodaTime = "2.3"
     val JodaConvert = "1.6"
     val UUIDGenerator = "3.1.3"
     val JGraphT = "0.9.1"
+    val Hadoop = "2.4.1"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -131,13 +158,16 @@ object Dependency {
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
+  val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
   val mesos = "org.apache.mesos" % "mesos" % V.Mesos
   val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
-  val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZkCLient
+  val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZKClient
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
+  val hadoopClient =  "org.apache.hadoop" % "hadoop-client" % V.Hadoop
+  val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.2"
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

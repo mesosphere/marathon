@@ -9,6 +9,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.{ DeploymentSuccess, UpgradeEvent }
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
@@ -38,6 +39,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var schedulerActor: TestActorRef[MarathonSchedulerActor] = _
   var driver: SchedulerDriver = _
   var taskIdUtil: TaskIdUtil = _
+  var storage: StorageProvider = _
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -50,6 +52,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     queue = mock[TaskQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     taskIdUtil = new TaskIdUtil
+    storage = mock[StorageProvider]
     schedulerActor = TestActorRef[MarathonSchedulerActor](Props(
       classOf[MarathonSchedulerActor],
       new ObjectMapper(),
@@ -59,6 +62,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       queue,
       frameworkIdUtil,
       taskIdUtil,
+      storage,
       system.eventStream,
       mock[MarathonConf]
     ))

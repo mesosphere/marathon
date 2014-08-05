@@ -1,17 +1,20 @@
 package mesosphere.marathon.upgrade
 
+import java.net.URL
+import scala.concurrent.{ Future, Promise }
+import scala.util.{ Failure, Success }
+
 import akka.actor._
 import akka.event.EventStream
+import org.apache.mesos.SchedulerDriver
+
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
-import org.apache.mesos.SchedulerDriver
-
-import scala.concurrent.{ Future, Promise }
-import scala.util.{ Failure, Success }
 
 class DeploymentActor(
     parent: ActorRef,
@@ -22,6 +25,7 @@ class DeploymentActor(
     plan: DeploymentPlan,
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
+    storage: StorageProvider,
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
@@ -70,8 +74,8 @@ class DeploymentActor(
         case KillAllOldTasksOf(app) =>
           val runningTasks = taskTracker.get(app.id).toSeq
           killTasks(runningTasks.filterNot(_.getVersion == app.version.toString))
-
         case RestartApplication(app, scaleOldTo, scaleNewTo) => restartApp(app, scaleOldTo, scaleNewTo)
+        case ResolveArtifacts(app, urls)                     => resolveArtifacts(app, urls)
       }
 
       Future.sequence(futures).map(_ => ())
@@ -129,6 +133,12 @@ class DeploymentActor(
 
     val res = startPromise.future.zip(stopPromise.future).map(_ => ())
     storeOnSuccess(app, res)
+  }
+
+  def resolveArtifacts(app: AppDefinition, urls: Map[URL, String]): Future[Unit] = {
+    val promise = Promise[Boolean]()
+    context.actorOf(Props(classOf[ResolveArtifactsActor], app, urls, promise, storage))
+    promise.future.map(_ => ())
   }
 
   def storeOnSuccess[A](app: AppDefinition, future: Future[A]): Future[A] = for {

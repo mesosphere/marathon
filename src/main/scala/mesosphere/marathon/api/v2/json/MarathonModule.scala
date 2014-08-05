@@ -251,6 +251,8 @@ object MarathonModule {
       executor: Option[String] = None,
       constraints: Option[Set[Constraint]] = None,
       uris: Option[Seq[String]] = None,
+      storeUrls: Option[Seq[String]] = None,
+
       @FieldPortsArray ports: Option[Seq[JInt]] = None,
       @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
       backoffFactor: Option[JDouble] = None,
@@ -261,7 +263,7 @@ object MarathonModule {
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
       id, cmd, user, env, instances, cpus, mem, disk, executor, constraints,
-      uris, ports, backoff, backoffFactor, container, healthChecks,
+      uris, storeUrls, ports, backoff, backoffFactor, container, healthChecks,
       dependencies, upgradeStrategy, version
     )
   }

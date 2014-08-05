@@ -1,5 +1,6 @@
 package mesosphere.marathon.upgrade
 
+import java.net.URL
 import java.util.UUID
 
 import mesosphere.marathon.api.v1.AppDefinition
@@ -22,6 +23,8 @@ final case class StopApplication(app: AppDefinition) extends DeploymentAction
 final case class KillAllOldTasksOf(app: AppDefinition) extends DeploymentAction
 //application is there but should be replaced
 final case class RestartApplication(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int) extends DeploymentAction
+//resolve and store artifacts for given app
+final case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends DeploymentAction
 
 final case class DeploymentStep(actions: List[DeploymentAction]) {
   def +(step: DeploymentStep) = DeploymentStep(actions ++ step.actions)
@@ -51,6 +54,7 @@ final case class DeploymentPlan(
       case ScaleApplication(app, scale)      => s"Scale(${appString(app)}, $scale)"
       case KillAllOldTasksOf(app)            => s"KillOld(${appString(app)})"
       case RestartApplication(app, from, to) => s"Restart(${appString(app)}, $from, $to)"
+      case ResolveArtifacts(app, urls)       => s"Resolve(${appString(app)}, $urls})"
     }
     val stepString = steps.map("Step(" + _.actions.map(actionString) + ")").mkString("(", ", ", ")")
     s"DeploymentPlan($version, $stepString)"
@@ -60,7 +64,7 @@ final case class DeploymentPlan(
 object DeploymentPlan extends Logging {
   def empty() = DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
 
-  def apply(original: Group, target: Group, version: Timestamp = Timestamp.now()): DeploymentPlan = {
+  def apply(original: Group, target: Group, resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty, version: Timestamp = Timestamp.now()): DeploymentPlan = {
     log.info(s"Compute DeploymentPlan from $original to $target")
 
     //lookup maps for original and target apps
@@ -140,7 +144,10 @@ object DeploymentPlan extends Logging {
       if (stops.nonEmpty) List(DeploymentStep(stops.map(originalApp).map(StopApplication).toList)) else Nil
     }
 
-    var finalSteps = nonDependentSteps ++ dependentSteps ++ unhandledStops
+    //resolve artifact dependencies .
+    val toResolve = List(DeploymentStep(resolveArtifacts.toList))
+
+    var finalSteps = toResolve ++ nonDependentSteps ++ dependentSteps ++ unhandledStops
 
     DeploymentPlan(UUID.randomUUID().toString, original, target, finalSteps.filter(_.nonEmpty), version)
   }
