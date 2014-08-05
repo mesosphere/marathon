@@ -218,40 +218,31 @@ class MarathonModule extends Module {
 }
 
 object MarathonModule {
+
   // TODO: make @JsonDeserialize work on the 'container' field
   // of the 'AppUpdate' class and remove this workaround.
   @JsonIgnoreProperties(ignoreUnknown = true)
   case class AppUpdateBuilder(
       cmd: Option[String] = None,
-
       user: Option[String] = None,
-
+      env: Option[Map[String, String]] = None,
       instances: Option[JInt] = None,
-
       cpus: Option[JDouble] = None,
-
       mem: Option[JDouble] = None,
-
-      uris: Option[Seq[String]] = None,
-
-      @FieldPortsArray ports: Option[Seq[JInt]] = None,
-
-      @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
-
-      backoffFactor: Option[JDouble] = None,
-
-      constraints: Option[Set[Constraint]] = None,
-
+      disk: Option[JDouble] = None,
       executor: Option[String] = None,
-
+      constraints: Option[Set[Constraint]] = None,
+      uris: Option[Seq[String]] = None,
+      @FieldPortsArray ports: Option[Seq[JInt]] = None,
+      @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
+      backoffFactor: Option[JDouble] = None,
       container: Option[ContainerInfo] = None,
-
       healthChecks: Option[Set[HealthCheck]] = None,
-
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      cmd, user, instances, cpus, mem, uris, ports, backoff, backoffFactor,
-      constraints, executor, container, healthChecks, version
+      cmd, user, env, instances, cpus, mem, disk, executor, constraints, uris,
+      ports, backoff, backoffFactor, container, healthChecks, version
     )
   }
+
 }
