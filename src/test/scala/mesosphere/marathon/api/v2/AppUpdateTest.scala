@@ -5,7 +5,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import mesosphere.marathon.{ ContainerInfo, MarathonSpec }
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp, UpgradeStrategy }
 
 class AppUpdateTest extends MarathonSpec {
 
@@ -68,13 +68,12 @@ class AppUpdateTest extends MarathonSpec {
         ContainerInfo(image = "docker:///group/image", options = Seq("-h"))
       ),
       healthChecks = Some(Set[HealthCheck]()),
+      dependencies = Some(Set[PathId]()),
+      upgradeStrategy = Some(UpgradeStrategy.empty),
       version = Some(Timestamp.now)
     )
     val json1 = mapper.writeValueAsString(update1)
     val readResult1 = mapper.readValue(json1, classOf[AppUpdate])
-    assert(readResult1 == update1)
-
-    println(json0)
 
     val update2 = AppUpdate(container = Some(ContainerInfo()))
     val json2 = """
@@ -94,6 +93,7 @@ class AppUpdateTest extends MarathonSpec {
         "backoffFactor": null,
         "container": null,
         "healthChecks": null,
+        "dependencies": null,
         "version": null
       }
     """
