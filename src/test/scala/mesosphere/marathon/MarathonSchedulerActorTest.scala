@@ -16,9 +16,12 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
 import mesosphere.mesos.util.FrameworkIdUtil
+import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito._
 import org.mockito.Matchers.any
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.mutable
@@ -148,10 +151,15 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(tracker.count(app.id)).thenReturn(0)
     when(repo.store(any())).thenReturn(Future.successful(app))
 
-    schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
-    schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
+    when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", app.id, "", Nil, app.version.toString))
+        Status.DRIVER_RUNNING
+      }
+    })
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", PathId.empty, "", Nil, ""))
+    schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
+    schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
 
     expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
     expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
