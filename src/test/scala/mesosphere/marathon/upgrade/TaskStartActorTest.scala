@@ -24,7 +24,7 @@ class TaskStartActorTest
 
   test("Start success") {
     val taskQueue = new TaskQueue
-    val promise = Promise[Boolean]()
+    val promise = Promise[Unit]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
     val ref = TestActorRef(Props(
@@ -43,7 +43,7 @@ class TaskStartActorTest
     for (task <- taskQueue.removeAll())
       system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", app.id, "", Nil, app.version.toString))
 
-    Await.result(promise.future, 1.second) should be(true)
+    Await.result(promise.future, 1.second) should be(())
 
     expectTerminated(ref)
   }
@@ -64,7 +64,7 @@ class TaskStartActorTest
 
     watch(ref)
 
-    Await.result(promise.future, 1.second) should be(true)
+    Await.result(promise.future, 1.second) should be(())
 
     expectTerminated(ref)
   }
@@ -90,7 +90,7 @@ class TaskStartActorTest
     for ((_, i) <- taskQueue.removeAll().zipWithIndex)
       system.eventStream.publish(HealthStatusChanged(app.id, s"task_${i}", app.version.toString, true))
 
-    Await.result(promise.future, 1.second) should be(true)
+    Await.result(promise.future, 1.second) should be(())
 
     expectTerminated(ref)
   }
@@ -111,7 +111,7 @@ class TaskStartActorTest
 
     watch(ref)
 
-    Await.result(promise.future, 1.second) should be(true)
+    Await.result(promise.future, 1.second) should be(())
 
     expectTerminated(ref)
   }

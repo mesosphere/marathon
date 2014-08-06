@@ -1,19 +1,20 @@
 package mesosphere.marathon.upgrade
 
+import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
-import akka.actor.{ Props, ActorSystem }
-import mesosphere.marathon.{ AppStopCanceledException, SchedulerActions, MarathonSpec }
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
-import org.scalatest.mock.MockitoSugar
-import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.state.{ AppDefinition, PathId }
-import scala.concurrent.{ Await, Promise }
-import mesosphere.marathon.event.MesosStatusUpdateEvent
-import org.mockito.Mockito._
-import scala.concurrent.duration._
-import mesosphere.marathon.tasks.TaskTracker
-import scala.collection.mutable
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{ MarathonSpec, SchedulerActions, TaskUpgradeCanceledException }
+import org.apache.mesos.SchedulerDriver
+import org.mockito.Mockito._
+import org.scalatest.mock.MockitoSugar
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
+
+import scala.collection.mutable
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Promise }
 
 class AppStopActorTest
     extends TestKit(ActorSystem("System"))
@@ -108,7 +109,7 @@ class AppStopActorTest
 
     ref.stop()
 
-    intercept[AppStopCanceledException] {
+    intercept[TaskUpgradeCanceledException] {
       Await.result(promise.future, 5.seconds)
     }
 
@@ -127,18 +128,18 @@ class AppStopActorTest
 
     val ref = system.actorOf(
       Props(
-        new AppStopActor(
-          driver,
-          scheduler,
-          taskTracker,
-          system.eventStream,
-          app,
-          promise
-        ))
+        classOf[AppStopActor],
+        driver,
+        scheduler,
+        taskTracker,
+        system.eventStream,
+        app,
+        promise
+      )
     )
     watch(ref)
 
-    Await.result(promise.future, 10.seconds)
+    Await.result(promise.future, 10.seconds) should be(())
 
     verify(scheduler).stopApp(driver, app)
     expectTerminated(ref)

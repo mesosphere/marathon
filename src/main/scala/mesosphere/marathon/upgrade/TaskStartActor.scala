@@ -14,7 +14,7 @@ class TaskStartActor(
     val app: AppDefinition,
     nrToStart: Int,
     val withHealthChecks: Boolean,
-    promise: Promise[Boolean]) extends Actor with ActorLogging with StartingBehavior {
+    promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
   var running: Int = 0
   val AppID = app.id
@@ -35,7 +35,7 @@ class TaskStartActor(
 
   override def success(): Unit = {
     log.info(s"Successfully started $nrToStart instances of ${app.id}")
-    promise.success(true)
+    promise.success(())
     context.stop(self)
   }
 
