@@ -1,4 +1,4 @@
-package mesosphere.marathon.api.v1
+package mesosphere.marathon.state
 
 import javax.validation.Validation
 
@@ -7,7 +7,6 @@ import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.CommandInfo
 import org.scalatest.Matchers
 

@@ -12,7 +12,6 @@ import com.google.inject.name.Named
 import org.apache.log4j.Logger
 
 import mesosphere.marathon.api.ModelValidation
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider

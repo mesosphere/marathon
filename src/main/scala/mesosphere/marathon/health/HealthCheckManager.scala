@@ -1,7 +1,6 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 
 import org.apache.log4j.Logger

@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import org.apache.mesos.SchedulerDriver
 import mesosphere.marathon.{ AppStopCanceledException, SchedulerActions }
 import akka.event.EventStream
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import scala.concurrent.Promise
 import akka.actor._
 import mesosphere.marathon.event.MesosStatusUpdateEvent

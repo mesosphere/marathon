@@ -8,7 +8,7 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.util.Try
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import org.joda.time.DateTime
 import scala.collection.JavaConverters._
 

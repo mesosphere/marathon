@@ -1,10 +1,9 @@
 package mesosphere.marathon.health
 
 import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.api.v2.Command
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.state.MarathonState
+import mesosphere.marathon.state.{ Command, MarathonState }
 import mesosphere.marathon.api.validation.ValidHealthCheck
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties

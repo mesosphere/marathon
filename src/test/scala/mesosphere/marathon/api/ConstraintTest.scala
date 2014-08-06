@@ -1,4 +1,4 @@
-package mesosphere.marathon.api.v1.json
+package mesosphere.marathon.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.Constraint

@@ -15,10 +15,9 @@ import com.twitter.common.zookeeper.Candidate.Leader
 import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ Migration, AppRepository, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil

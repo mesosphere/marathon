@@ -1,4 +1,4 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.state.MarathonState
@@ -10,7 +10,6 @@ import scala.collection.JavaConverters._
 // TODO (if supported in the future):
 //   - user
 //   - URIs
-//   - container info\
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class Command(value: String)

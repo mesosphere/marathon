@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.validation
 
-import mesosphere.marathon.api.v1.AppDefinition.RANDOM_PORT_VALUE
+import mesosphere.marathon.state.AppDefinition.RANDOM_PORT_VALUE
 import scala.collection.JavaConverters._
 import javax.validation.{ ConstraintValidator, ConstraintValidatorContext }
 

@@ -7,9 +7,8 @@ import akka.event.EventStream
 import org.apache.mesos.Protos.TaskStatus
 
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskIdUtil
 
 class DelegatingHealthCheckManager @Inject() (

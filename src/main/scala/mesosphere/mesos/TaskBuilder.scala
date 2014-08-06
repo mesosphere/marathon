@@ -13,7 +13,7 @@ import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
 
 import mesosphere.marathon._
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 

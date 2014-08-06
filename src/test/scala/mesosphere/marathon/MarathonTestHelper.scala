@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import org.apache.mesos.Protos.Offer
 import org.rogach.scallop.ScallopConf
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.protos._
 import mesosphere.marathon.state.PathId._
 

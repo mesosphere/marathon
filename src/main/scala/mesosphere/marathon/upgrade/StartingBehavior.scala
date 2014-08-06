@@ -1,9 +1,9 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent, HealthStatusChanged }
 import akka.actor.{ ActorLogging, Actor }
-import mesosphere.marathon.api.v1.AppDefinition
 import akka.event.EventStream
+import mesosphere.marathon.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent, HealthStatusChanged }
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.TaskQueue
 
 trait StartingBehavior { this: Actor with ActorLogging =>

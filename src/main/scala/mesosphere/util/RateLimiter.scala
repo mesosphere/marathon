@@ -1,13 +1,11 @@
 package mesosphere.util
 
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 
 import scala.concurrent.duration._
 import scala.util.Try
 
 import org.apache.log4j.Logger
-
-import mesosphere.marathon.api.v1.AppDefinition
 
 class RateLimiter {
 

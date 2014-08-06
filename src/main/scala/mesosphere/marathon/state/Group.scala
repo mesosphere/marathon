@@ -2,7 +2,6 @@ package mesosphere.marathon.state
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import mesosphere.marathon.Protos.{ GroupDefinition, UpgradeStrategyDefinition, StorageVersion }
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.PathId._
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector

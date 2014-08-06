@@ -3,7 +3,7 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 

@@ -2,9 +2,9 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
-import mesosphere.marathon.TaskUpgradeCanceledException
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.TaskQueue
+import mesosphere.marathon.TaskUpgradeCanceledException
 
 import scala.concurrent.Promise
 

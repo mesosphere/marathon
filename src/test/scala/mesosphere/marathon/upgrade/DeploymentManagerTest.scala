@@ -6,10 +6,9 @@ import akka.pattern.ask
 import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
 import akka.testkit.{ TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppRepository, Group, MarathonStore }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, PerformDeployment }

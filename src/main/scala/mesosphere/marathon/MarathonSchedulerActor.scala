@@ -6,12 +6,11 @@ import akka.actor._
 import akka.event.EventStream
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ AppRepository, PathId }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }

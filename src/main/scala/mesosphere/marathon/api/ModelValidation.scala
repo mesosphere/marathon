@@ -5,9 +5,8 @@ import javax.validation.ConstraintViolation
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
 
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.{ AppUpdate, GroupUpdate }
-import mesosphere.marathon.state.{ Group, PathId, UpgradeStrategy }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, UpgradeStrategy }
 
 /**
   * Specific validation helper for specific model classes.

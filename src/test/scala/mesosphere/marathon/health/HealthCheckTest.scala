@@ -1,7 +1,7 @@
 package mesosphere.marathon.health
 
 import mesosphere.marathon.{ MarathonSpec, Protos }
-import mesosphere.marathon.api.v2.Command
+import mesosphere.marathon.state.Command
 import mesosphere.jackson.CaseClassModule
 import Protos.HealthCheckDefinition.Protocol
 import scala.concurrent.duration.FiniteDuration

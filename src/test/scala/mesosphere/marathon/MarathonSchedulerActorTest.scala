@@ -6,7 +6,6 @@ import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.{ DeploymentSuccess, UpgradeEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider

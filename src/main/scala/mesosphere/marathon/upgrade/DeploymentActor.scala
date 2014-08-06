@@ -10,9 +10,8 @@ import org.apache.mesos.SchedulerDriver
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.SchedulerActions
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.AppRepository
+import mesosphere.marathon.state.{ AppDefinition, AppRepository }
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
 

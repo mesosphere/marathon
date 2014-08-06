@@ -1,4 +1,4 @@
-package mesosphere.marathon.api.v1
+package mesosphere.marathon.state
 
 import java.lang.{ Double => JDouble, Integer => JInt }
 

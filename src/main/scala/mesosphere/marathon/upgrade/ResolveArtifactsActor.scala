@@ -8,9 +8,9 @@ import akka.actor.Status.Failure
 import akka.pattern.pipe
 
 import mesosphere.marathon.ResolveArtifactsCanceledException
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.io.{ CancelableDownload, IO, PathFun }
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.util.Logging
 
 class ResolveArtifactsActor(app: AppDefinition, url2Path: Map[URL, String], promise: Promise[Boolean], storage: StorageProvider) extends Actor with IO with PathFun with Logging {

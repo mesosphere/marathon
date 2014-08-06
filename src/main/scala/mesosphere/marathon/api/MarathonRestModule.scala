@@ -16,12 +16,8 @@ class MarathonRestModule extends RestModule {
   protected override def configureServlets() {
     super.configureServlets()
 
-    // V1 API
-    bind(classOf[v1.AppsResource]).in(Scopes.SINGLETON)
-    bind(classOf[v1.DebugResource]).in(Scopes.SINGLETON)
-    bind(classOf[v1.EndpointsResource]).in(Scopes.SINGLETON)
-    bind(classOf[v1.TasksResource]).in(Scopes.SINGLETON)
-    bind(classOf[v1.MarathonExceptionMapper]).asEagerSingleton()
+    // Map some exceptions to HTTP responses
+    bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
 
     // V2 API
     bind(classOf[v2.AppsResource]).in(Scopes.SINGLETON)

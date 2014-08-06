@@ -1,7 +1,6 @@
 package mesosphere.marathon.api.v2
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state._
 import java.lang.{ Double => JDouble }
 

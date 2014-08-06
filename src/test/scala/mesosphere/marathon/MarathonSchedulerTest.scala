@@ -7,10 +7,9 @@ import com.codahale.metrics.MetricRegistry
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppRepository, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil

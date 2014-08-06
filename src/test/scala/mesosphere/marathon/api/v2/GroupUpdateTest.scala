@@ -1,7 +1,6 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.{ Timestamp, PathId, Group }
+import mesosphere.marathon.state.{ AppDefinition, Timestamp, PathId, Group }
 import org.scalatest.{ GivenWhenThen, Matchers, FunSuite }
 import PathId._
 

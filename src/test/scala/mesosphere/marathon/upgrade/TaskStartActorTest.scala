@@ -5,7 +5,7 @@ import mesosphere.marathon.state.PathId._
 import org.scalatest.{ BeforeAndAfterAll, Matchers, FunSuiteLike }
 import akka.actor.{ Props, ActorSystem }
 import mesosphere.marathon.tasks.TaskQueue
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
