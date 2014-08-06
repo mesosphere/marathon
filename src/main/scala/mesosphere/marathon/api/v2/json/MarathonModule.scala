@@ -88,8 +88,16 @@ class MarathonModule extends Module {
       json.nextToken() // skip [
       builder.setField(json.getText)
       json.nextToken()
-      builder.setOperator(Constraint.Operator.valueOf(json.getText.toUpperCase))
+
+      val operatorString = json.getText.toUpperCase
+      try {
+        builder.setOperator(Constraint.Operator.valueOf(operatorString))
+      } catch {
+        case e: IllegalArgumentException =>
+          throw new JsonParseException(s"Invalid operator: '$operatorString'", json.getCurrentLocation)
+      }
       json.nextToken()
+
       if (json.getCurrentToken == JsonToken.VALUE_STRING) {
         builder.setValue(json.getText)
         json.nextToken()
