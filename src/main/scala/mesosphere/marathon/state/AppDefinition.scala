@@ -49,6 +49,8 @@ case class AppDefinition(
 
   @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
+  requirePorts: Boolean = AppDefinition.DEFAULT_REQUIRE_PORTS,
+
   @FieldJsonProperty("backoffSeconds") backoff: FiniteDuration = AppDefinition.DEFAULT_BACKOFF,
 
   backoffFactor: JDouble = AppDefinition.DEFAULT_BACKOFF_FACTOR,
@@ -93,6 +95,7 @@ case class AppDefinition(
       .setCmd(commandInfo)
       .setInstances(instances)
       .addAllPorts(ports.asJava)
+      .setRequirePorts(requirePorts)
       .setBackoff(backoff.toMillis)
       .setBackoffFactor(backoffFactor)
       .setExecutor(executor)
@@ -135,6 +138,7 @@ case class AppDefinition(
       executor = proto.getExecutor,
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
+      requirePorts = proto.getRequirePorts,
       backoff = proto.getBackoff.milliseconds,
       backoffFactor = proto.getBackoffFactor,
       constraints = proto.getConstraintsList.asScala.toSet,
@@ -177,6 +181,7 @@ case class AppDefinition(
       constraints != to.constraints ||
       container != to.container ||
       ports.toSet != to.ports.toSet ||
+      requirePorts != to.requirePorts ||
       executor != to.executor ||
       healthChecks != to.healthChecks ||
       backoff != to.backoff ||
@@ -201,6 +206,8 @@ object AppDefinition {
 
   val DEFAULT_PORTS: Seq[JInt] = Seq(RANDOM_PORT_VALUE)
 
+  val DEFAULT_REQUIRE_PORTS = false
+
   val DEFAULT_INSTANCES = 0
 
   val DEFAULT_BACKOFF = 1.second
@@ -212,8 +219,8 @@ object AppDefinition {
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
     app: AppDefinition) extends AppDefinition(
-    app.id, app.cmd, app.user, app.env, app.instances, app.cpus, app.mem, app.disk,
-    app.executor, app.constraints, app.uris, app.storeUrls, app.ports, app.backoff,
+    app.id, app.cmd, app.user, app.env, app.instances, app.cpus, app.mem, app.disk, app.executor,
+    app.constraints, app.uris, app.storeUrls, app.ports, app.requirePorts, app.backoff,
     app.backoffFactor, app.container, app.healthChecks, app.dependencies, app.upgradeStrategy,
     app.version) {
 

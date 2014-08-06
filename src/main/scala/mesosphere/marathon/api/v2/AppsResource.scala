@@ -29,13 +29,20 @@ class AppsResource @Inject() (
     groupManager: GroupManager) extends RestResource with ModelValidation {
 
   val ListApps = """^((?:.+/)|)\*$""".r
+  val EmbedTasks = "apps.tasks"
 
   @GET
   @Timed
   def index(@QueryParam("cmd") cmd: String,
-            @QueryParam("id") id: String) = {
+            @QueryParam("id") id: String,
+            @QueryParam("embed") embed: String) = {
     val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
-    Map("apps" -> apps.map(_.withTaskCounts(taskTracker)))
+    if (embed == EmbedTasks) {
+      Map("apps" -> apps.map(_.withTasks(taskTracker)))
+    }
+    else {
+      Map("apps" -> apps.map(_.withTaskCounts(taskTracker)))
+    }
   }
 
   @POST

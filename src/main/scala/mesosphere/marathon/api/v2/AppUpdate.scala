@@ -41,6 +41,8 @@ case class AppUpdate(
 
     @FieldPortsArray ports: Option[Seq[JInt]] = None,
 
+    requirePorts: Option[Boolean] = None,
+
     @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
 
     backoffFactor: Option[JDouble] = None,
@@ -73,6 +75,7 @@ case class AppUpdate(
     uris.getOrElse(app.uris),
     storeUrls.getOrElse(app.storeUrls),
     ports.getOrElse(app.ports),
+    requirePorts.getOrElse(app.requirePorts),
     backoff.getOrElse(app.backoff),
     backoffFactor.getOrElse(app.backoffFactor),
     container.orElse(app.container),
