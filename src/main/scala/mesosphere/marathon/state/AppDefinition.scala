@@ -8,7 +8,6 @@ import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.PortIndices
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ ContainerInfo, Protos }
 import mesosphere.mesos.TaskBuilder
@@ -25,7 +24,7 @@ case class AppDefinition(
   //@FieldNotEmpty @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$") id: String = "",
   id: PathId = PathId.empty,
 
-  cmd: String = "",
+  @FieldNotEmpty cmd: String = "",
 
   user: Option[String] = None,
 
