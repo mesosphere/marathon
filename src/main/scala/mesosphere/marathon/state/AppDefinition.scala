@@ -5,10 +5,9 @@ import java.lang.{ Double => JDouble, Integer => JInt }
 import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.api.validation.PortIndices
+import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ ContainerInfo, Protos }
 import mesosphere.mesos.TaskBuilder
@@ -20,6 +19,7 @@ import scala.concurrent.duration._
 
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
+@ValidAppDefinition
 case class AppDefinition(
 
   //@FieldNotEmpty @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$") id: String = "",

@@ -8,7 +8,6 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
-
 import mesosphere.marathon.api.{ ModelValidation, RestResource }
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.health.HealthCheckManager
@@ -54,7 +53,7 @@ class AppsResource @Inject() (
     maybePostEvent(req, app)
     val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
     val deployment = result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
-    deploymentResult(deployment, Response.created(new URI(baseId.toString)))
+    Response.created(new URI(baseId.toString)).entity(managed).build()
   }
 
   @GET
