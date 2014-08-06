@@ -7,10 +7,9 @@ import akka.event.EventStream
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ AppRepository, PathId }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
 import mesosphere.marathon.tasks._
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.{ TaskBuilder, protos }

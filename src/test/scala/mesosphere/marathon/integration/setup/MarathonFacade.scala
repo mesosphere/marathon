@@ -8,7 +8,7 @@ import spray.http.HttpResponse
 import mesosphere.marathon.state.{ Timestamp, PathId, Group }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Unsubscribe, Subscribe }
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import java.util.Date
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import mesosphere.marathon.api.v2.GroupUpdate

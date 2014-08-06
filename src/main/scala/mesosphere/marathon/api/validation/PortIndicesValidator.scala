@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.validation
 
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import javax.validation.{ ConstraintValidator, ConstraintValidatorContext }
 
 class PortIndicesValidator

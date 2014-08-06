@@ -1,7 +1,7 @@
 package mesosphere.marathon.api
 
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.api.v1.AppDefinition
 import scala.collection.JavaConverters._
 
 object EndpointsHelper {

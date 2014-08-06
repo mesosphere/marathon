@@ -1,7 +1,6 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.util.RateLimiter
 
 import scala.collection.mutable.SynchronizedPriorityQueue

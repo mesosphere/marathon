@@ -1,9 +1,8 @@
 package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ UpgradeStrategy, Group, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp, UpgradeStrategy }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {

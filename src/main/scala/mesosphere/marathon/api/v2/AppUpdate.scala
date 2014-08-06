@@ -1,11 +1,10 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.state.{ UpgradeStrategy, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy, PathId, Timestamp }
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import scala.concurrent.duration.FiniteDuration
 import java.lang.{ Integer => JInt, Double => JDouble }

@@ -9,7 +9,6 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
 
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.{ ModelValidation, RestResource }
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.health.HealthCheckManager

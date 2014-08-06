@@ -3,8 +3,7 @@ package mesosphere.marathon.upgrade
 import java.net.URL
 import java.util.UUID
 
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.{ Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.util.Logging
 
 import scala.collection.mutable.ListBuffer

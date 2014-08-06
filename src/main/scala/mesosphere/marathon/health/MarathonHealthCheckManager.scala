@@ -10,9 +10,8 @@ import akka.pattern.ask
 import akka.util.Timeout
 import org.apache.mesos.Protos.TaskStatus
 
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.util.ThreadPoolContext.context
 

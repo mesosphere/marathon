@@ -1,4 +1,4 @@
-package mesosphere.marathon.api.v1
+package mesosphere.marathon.api
 
 import javax.ws.rs.ext.{ Provider, ExceptionMapper }
 import javax.ws.rs.core.{ MediaType, Response }

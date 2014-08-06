@@ -1,10 +1,9 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.api.v2.GroupUpdate
 import mesosphere.marathon.integration.setup.{ IntegrationHealthCheck, IntegrationFunSuite, SingleMarathonIntegrationTest }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ PathId, UpgradeStrategy }
+import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
 import org.scalatest._
 import spray.http.DateTime
 import spray.httpx.UnsuccessfulResponseException

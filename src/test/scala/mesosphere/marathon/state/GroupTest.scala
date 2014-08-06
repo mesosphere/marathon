@@ -1,6 +1,5 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.api.v1.AppDefinition
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 import PathId._
 

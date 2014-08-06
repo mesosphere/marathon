@@ -14,7 +14,6 @@ import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, ZooKeeperClient, Group => ZGroup }
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.health.{ DelegatingHealthCheckManager, HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider

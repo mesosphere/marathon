@@ -2,10 +2,9 @@ package mesosphere.marathon.event.http
 
 import akka.actor._
 import akka.pattern.ask
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import org.json4s.JsonAST.JString
 import org.json4s.{ CustomSerializer, DefaultFormats, FieldSerializer }
 import spray.client.pipelining.{ sendReceive, _ }

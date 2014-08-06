@@ -5,7 +5,6 @@ import org.rogach.scallop.ScallopConf
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ FunSuite, Matchers }
 
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker

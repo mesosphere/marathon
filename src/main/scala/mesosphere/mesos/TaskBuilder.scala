@@ -12,10 +12,10 @@ import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
 
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.tasks.{ PortsMatcher, TaskTracker }
 import mesosphere.marathon._
-import mesosphere.mesos.protos.{ RangesResource, ScalarResource, Resource }
+import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.tasks.{ PortsMatcher, TaskTracker }
+import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 
 import scala.util.{ Failure, Success, Try }
 

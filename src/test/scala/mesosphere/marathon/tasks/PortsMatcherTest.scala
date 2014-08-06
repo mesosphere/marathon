@@ -3,7 +3,7 @@ package mesosphere.marathon.tasks
 import mesosphere.marathon.MarathonSpec
 import mesosphere.mesos.protos._
 import mesosphere.mesos.protos
-import mesosphere.marathon.api.v1.AppDefinition
+import mesosphere.marathon.state.AppDefinition
 import org.apache.mesos.Protos.Offer
 import mesosphere.mesos.protos.OfferID
 import mesosphere.mesos.protos.FrameworkID

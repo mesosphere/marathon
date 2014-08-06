@@ -6,8 +6,7 @@ import mesosphere.marathon.{ AppStopCanceledException, SchedulerActions, Maratho
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 import org.scalatest.mock.MockitoSugar
 import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import scala.concurrent.{ Await, Promise }
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import org.mockito.Mockito._

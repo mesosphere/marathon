@@ -4,7 +4,6 @@ import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream,
 import javax.inject.Inject
 
 import mesosphere.marathon.Protos.StorageVersion
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.tasks.TaskTracker

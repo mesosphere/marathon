@@ -1,13 +1,12 @@
 package mesosphere.marathon.event
 
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.health.HealthCheck
 import org.rogach.scallop.ScallopConf
 import com.google.inject.{ Inject, Singleton, Provides, AbstractModule }
 import akka.event.EventStream
 import javax.inject.Named
 import org.apache.log4j.Logger
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import akka.actor.ActorSystem
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {

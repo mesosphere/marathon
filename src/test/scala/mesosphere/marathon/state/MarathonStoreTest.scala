@@ -1,6 +1,5 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.api.v1.AppDefinition
 import org.mockito.Mockito._
 import org.mockito.Matchers._
 import org.apache.mesos.state.{ InMemoryState, Variable, State }

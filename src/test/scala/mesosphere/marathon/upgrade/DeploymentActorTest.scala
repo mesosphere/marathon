@@ -3,7 +3,6 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
-import mesosphere.marathon.api.v1.AppDefinition
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._

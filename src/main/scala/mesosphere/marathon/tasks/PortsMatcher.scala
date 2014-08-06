@@ -1,10 +1,10 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.api.v1.AppDefinition
-import mesosphere.mesos.protos
 import scala.util.Random
 import org.apache.mesos.Protos.Offer
+import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{ RangesResource, Resource }
+import mesosphere.marathon.state.AppDefinition
 import scala.collection.JavaConverters._
 
 /**
