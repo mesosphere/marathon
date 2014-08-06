@@ -92,8 +92,7 @@ class MarathonModule extends Module {
       val operatorString = json.getText.toUpperCase
       try {
         builder.setOperator(Constraint.Operator.valueOf(operatorString))
-      }
-      catch {
+      } catch {
         case e: IllegalArgumentException =>
           throw new JsonParseException(s"Invalid operator: '$operatorString'", json.getCurrentLocation)
       }
