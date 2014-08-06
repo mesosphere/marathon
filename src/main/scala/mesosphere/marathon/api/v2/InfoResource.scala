@@ -23,7 +23,7 @@ class InfoResource @Inject() (schedulerService: MarathonSchedulerService, marath
     "mesos_role" -> marathonConf.mesosRole.get,
     "task_launch_timeout" -> marathonConf.taskLaunchTimeout.get,
     "reconciliation_initial_delay" -> marathonConf.reconciliationInitialDelay.get,
-    "reconciliation_frequency" -> marathonConf.reconciliationFrequency.get,
+    "reconciliation_interval" -> marathonConf.reconciliationInterval.get,
     "mesos_user" -> marathonConf.mesosUser.get)
 
   // Zookeeper congiurations
