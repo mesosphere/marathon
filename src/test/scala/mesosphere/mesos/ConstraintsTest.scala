@@ -290,7 +290,6 @@ class ConstraintsTest extends MarathonSpec {
 
     groupRack ++= Set(task3_rack3)
 
-
     val clusterRackMet3 = Constraints.meetsConstraint(
       groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
@@ -299,7 +298,6 @@ class ConstraintsTest extends MarathonSpec {
     assert(clusterRackMet3, "Should meet clustered-in-rack constraints.")
 
     groupRack ++= Set(task4_rack1)
-
 
     val clusterRackMet4 = Constraints.meetsConstraint(
       groupRack,

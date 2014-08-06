@@ -13,7 +13,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
+import mesosphere.marathon.upgrade.{ TaskKillActor, DeploymentManager, DeploymentPlan }
 import mesosphere.mesos.protos.Offer
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.{ TaskBuilder, protos }
@@ -99,6 +99,24 @@ class MarathonSchedulerActor(
         val res = deploy(driver, plan)
         origSender ! cmd.answer
         res
+      }
+
+    case cmd @ KillTasks(appId, taskIds, scale) =>
+      val origSender = sender
+      locking(appId, origSender, cmd, blocking = true) {
+        val promise = Promise[Unit]()
+        val tasksToKill = taskIds.flatMap(taskTracker.fetchTask(appId, _)).toSet
+        val actor = context.actorOf(Props(new TaskKillActor(driver, appId, taskTracker, eventBus, tasksToKill, promise)))
+        val res = if (scale) {
+          for {
+            _ <- promise.future
+            currentApp <- appRepository.currentVersion(appId)
+            _ <- currentApp.map(app => appRepository.store(app.copy(instances = app.instances - tasksToKill.size))).getOrElse(Future.successful(()))
+          } yield ()
+        }
+        else promise.future
+
+        res.sendAnswer(origSender, cmd)
       }
 
     case ConflictingDeploymentsCanceled(id) =>
@@ -211,6 +229,10 @@ object MarathonSchedulerActor {
     def answer = AppUpdated(appId)
   }
 
+  case class KillTasks(appId: PathId, taskIds: Set[String], scale: Boolean) extends Command {
+    def answer = TasksKilled(appId, taskIds)
+  }
+
   case object RetrieveRunningDeployments
 
   sealed trait Event
@@ -218,6 +240,7 @@ object MarathonSchedulerActor {
   case object TasksReconciled extends Event
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
   case class AppUpdated(appId: PathId) extends Event
+  case class TasksKilled(appId: PathId, taskIds: Set[String]) extends Event
 
   case class RunningDeployments(plans: Seq[DeploymentPlan])
 

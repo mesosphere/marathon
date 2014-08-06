@@ -6,7 +6,7 @@ import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.event.{ DeploymentSuccess, UpgradeEvent }
+import mesosphere.marathon.event.{ MesosStatusUpdateEvent, DeploymentSuccess, UpgradeEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
@@ -18,6 +18,7 @@ import mesosphere.mesos.protos.TaskID
 import mesosphere.mesos.util.FrameworkIdUtil
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito._
+import org.mockito.Matchers.any
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.mutable
@@ -115,6 +116,51 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     verify(queue).add(app)
 
     expectMsg(5.seconds, AppScaled(app.id))
+  }
+
+  test("Kill tasks with scaling") {
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
+
+    val schedulerActor = system.actorOf(Props(
+      classOf[MarathonSchedulerActor],
+      new ObjectMapper(),
+      repo,
+      hcManager,
+      tracker,
+      queue,
+      frameworkIdUtil,
+      taskIdUtil,
+      storage,
+      system.eventStream,
+      mock[MarathonConf]
+    ))
+
+    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
+    when(tracker.get(app.id)).thenReturn(mutable.Set[MarathonTask](taskA))
+    when(tracker.fetchTask(app.id, taskA.getId))
+      .thenReturn(Some(taskA))
+      .thenReturn(None)
+
+    when(repo.currentVersion(app.id))
+      .thenReturn(Future.successful(Some(app)))
+      .thenReturn(Future.successful(Some(app.copy(instances = 0))))
+    when(tracker.count(app.id)).thenReturn(0)
+    when(repo.store(any())).thenReturn(Future.successful(app))
+
+    schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
+    schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
+
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", PathId.empty, "", Nil, ""))
+
+    expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
+    expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
+
+    schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
+
+    expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
+
+    verify(repo, times(3)).store(app.copy(instances = 0))
   }
 
   test("Deployment") {

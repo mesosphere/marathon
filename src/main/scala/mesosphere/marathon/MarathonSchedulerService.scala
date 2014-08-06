@@ -15,7 +15,6 @@ import com.twitter.common.zookeeper.Candidate.Leader
 import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
@@ -23,7 +22,6 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
 import org.apache.log4j.Logger
-import org.apache.mesos.Protos.TaskID
 
 import scala.concurrent.duration.{ MILLISECONDS, _ }
 import scala.concurrent.{ Await, Future, Promise }
@@ -114,17 +112,7 @@ class MarathonSchedulerService @Inject() (
     appId: PathId,
     tasks: Iterable[MarathonTask],
     scale: Boolean): Iterable[MarathonTask] = {
-    if (scale) {
-      getApp(appId) foreach { app =>
-        val appUpdate = AppUpdate(instances = Some(app.instances - tasks.size))
-        Await.result(schedulerActor ? UpdateApp(appId, appUpdate), timeout.duration)
-      }
-    }
-
-    tasks.foreach { task =>
-      log.info(f"Killing task ${task.getId} on host ${task.getHost}")
-      driver.killTask(TaskID.newBuilder.setValue(task.getId).build)
-    }
+    schedulerActor ! KillTasks(appId, tasks.map(_.getId).toSet, scale)
 
     tasks
   }
