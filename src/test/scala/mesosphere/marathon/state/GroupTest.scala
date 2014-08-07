@@ -127,8 +127,8 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       Given("a group with subgroups")
       val current = Group.empty.copy(groups = Set(
         Group("/test".toPath, groups = Set(
-          Group("/test/group1".toPath, Set(AppDefinition("/test/group1/app1".toPath))),
-          Group("/test/group2".toPath, Set(AppDefinition("/test/group2/app2".toPath)))
+          Group("/test/group1".toPath, Set(AppDefinition("/test/group1/app1".toPath, args = Some(Seq("a", "b", "c"))))),
+          Group("/test/group2".toPath, Set(AppDefinition("/test/group2/app2".toPath, args = Some(Seq("a", "b")))))
         ))))
 
       When("the group is marshalled and unmarshalled again")

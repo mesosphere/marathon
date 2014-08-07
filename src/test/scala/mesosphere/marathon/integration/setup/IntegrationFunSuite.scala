@@ -213,7 +213,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[AppMock].getName
-    val exec = s"""$javaExecutable -classpath $classPath $main $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId"""
+    val exec = Some(s"""$javaExecutable -classpath $classPath $main $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId""")
     val health = if (withHealth) Set(HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)) else Set.empty[HealthCheck]
     AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128, healthChecks = health, dependencies = dependencies)
   }

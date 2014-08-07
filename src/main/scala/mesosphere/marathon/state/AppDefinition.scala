@@ -9,7 +9,7 @@ import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{ ContainerInfo, Protos }
+import mesosphere.marathon.Protos
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.TaskState
@@ -25,7 +25,9 @@ case class AppDefinition(
   //@FieldNotEmpty @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$") id: String = "",
   id: PathId = PathId.empty,
 
-  cmd: String = "",
+  cmd: Option[String] = None,
+
+  args: Option[Seq[String]] = None,
 
   user: Option[String] = None,
 
@@ -55,7 +57,7 @@ case class AppDefinition(
 
   backoffFactor: JDouble = AppDefinition.DEFAULT_BACKOFF_FACTOR,
 
-  container: Option[ContainerInfo] = None,
+  container: Option[Container] = None,
 
   healthChecks: Set[HealthCheck] = Set.empty,
 
@@ -90,7 +92,7 @@ case class AppDefinition(
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
 
-    Protos.ServiceDefinition.newBuilder
+    val builder = Protos.ServiceDefinition.newBuilder
       .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
@@ -108,7 +110,10 @@ case class AppDefinition(
       .setUpgradeStrategy(upgradeStrategy.toProto)
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
-      .build
+
+    container.foreach { c => builder.setContainer(c.toProto) }
+
+    builder.build
   }
 
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
@@ -121,20 +126,31 @@ case class AppDefinition(
       proto.getResourcesList.asScala.map {
         r => r.getName -> (r.getScalar.getValue: JDouble)
       }.toMap
-    val containerOption = if (proto.getCmd.hasContainer) {
-      Some(ContainerInfo(proto.getCmd.getContainer))
-    }
-    else if (proto.hasOBSOLETEContainer) {
-      val oldContainer = proto.getOBSOLETEContainer
-      Some(ContainerInfo(oldContainer.getImage.toStringUtf8, oldContainer.getOptionsList.asScala.toSeq.map(_.toStringUtf8)))
-    }
-    else {
-      None
-    }
+
+    val commandOption =
+      if (proto.getCmd.hasValue && proto.getCmd.getValue.nonEmpty)
+        Some(proto.getCmd.getValue)
+      else None
+
+    val argsOption =
+      if (commandOption.isEmpty)
+        Some(proto.getCmd.getArgumentsList.asScala)
+      else None
+
+    val containerOption =
+      if (proto.hasContainer)
+        Some(Container(proto.getContainer))
+      else if (proto.getCmd.hasContainer)
+        Some(Container(proto.getCmd.getContainer))
+      else if (proto.hasOBSOLETEContainer)
+        Some(Container(proto.getOBSOLETEContainer))
+      else None
+
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
-      cmd = proto.getCmd.getValue,
+      cmd = commandOption,
+      args = argsOption,
       executor = proto.getExecutor,
       instances = proto.getInstances,
       ports = proto.getPortsList.asScala,
@@ -219,7 +235,7 @@ object AppDefinition {
   protected[marathon] class WithTaskCounts(
     taskTracker: TaskTracker,
     app: AppDefinition) extends AppDefinition(
-    app.id, app.cmd, app.user, app.env, app.instances, app.cpus, app.mem, app.disk, app.executor,
+    app.id, app.cmd, app.args, app.user, app.env, app.instances, app.cpus, app.mem, app.disk, app.executor,
     app.constraints, app.uris, app.storeUrls, app.ports, app.requirePorts, app.backoff,
     app.backoffFactor, app.container, app.healthChecks, app.dependencies, app.upgradeStrategy,
     app.version) {

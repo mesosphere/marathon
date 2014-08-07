@@ -1,11 +1,13 @@
 package mesosphere.marathon.api.v2
 
 import javax.validation.Validation
+import org.apache.mesos.{ Protos => mesos }
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-import mesosphere.marathon.{ ContainerInfo, MarathonSpec }
+import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state.Container._
 
 class AppUpdateTest extends MarathonSpec {
 
@@ -45,13 +47,14 @@ class AppUpdateTest extends MarathonSpec {
     mapper.registerModule(new MarathonModule)
     mapper.registerModule(CaseClassModule)
 
-    val update0 = AppUpdate(container = Some(ContainerInfo()))
+    val update0 = AppUpdate(container = Some(Container.Empty))
     val json0 = mapper.writeValueAsString(update0)
     val readResult0 = mapper.readValue(json0, classOf[AppUpdate])
     assert(readResult0 == update0)
 
     val update1 = AppUpdate(
       cmd = Some("sleep 60"),
+      args = None,
       user = Some("nobody"),
       env = Some(Map("LANG" -> "en-US")),
       instances = Some(16),
@@ -65,7 +68,11 @@ class AppUpdateTest extends MarathonSpec {
       backoff = Some(2.seconds),
       backoffFactor = Some(1.2),
       container = Some(
-        ContainerInfo(image = "docker:///group/image", options = Seq("-h"))
+        Container(
+          `type` = mesos.ContainerInfo.Type.DOCKER,
+          volumes = Nil,
+          docker = Some(Docker(image = "docker:///group/image"))
+        )
       ),
       healthChecks = Some(Set[HealthCheck]()),
       dependencies = Some(Set[PathId]()),
@@ -76,7 +83,7 @@ class AppUpdateTest extends MarathonSpec {
     val readResult1 = mapper.readValue(json1, classOf[AppUpdate])
     assert(readResult1 == update1)
 
-    val update2 = AppUpdate(container = Some(ContainerInfo()))
+    val update2 = AppUpdate(container = Some(Container.Empty))
     val json2 = """
       {
         "cmd": null,
@@ -105,6 +112,11 @@ class AppUpdateTest extends MarathonSpec {
     val json3 = "{}"
     val readResult3 = mapper.readValue(json3, classOf[AppUpdate])
     assert(readResult3 == update3)
+
+    val update4 = AppUpdate(args = Some(Seq("a", "b", "c")))
+    val json4 = """{ "args": ["a", "b", "c"] }"""
+    val readResult4 = mapper.readValue(json4, classOf[AppUpdate])
+    assert(readResult4 == update4)
 
   }
 }

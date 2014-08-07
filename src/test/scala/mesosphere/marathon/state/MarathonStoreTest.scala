@@ -16,7 +16,7 @@ class MarathonStoreTest extends MarathonSpec {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
-    val appDef = AppDefinition(id = "testApp".toPath)
+    val appDef = AppDefinition(id = "testApp".toPath, args = Some(Seq("arg")))
 
     when(variable.value()).thenReturn(appDef.toProtoByteArray)
     when(future.get(anyLong, any[TimeUnit])).thenReturn(variable)
@@ -54,7 +54,7 @@ class MarathonStoreTest extends MarathonSpec {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
-    val appDef = AppDefinition(id = "testApp".toPath)
+    val appDef = AppDefinition(id = "testApp".toPath, args = Some(Seq("arg")))
 
     val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[Variable]
@@ -84,7 +84,7 @@ class MarathonStoreTest extends MarathonSpec {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
-    val appDef = AppDefinition(id = "testApp".toPath)
+    val appDef = AppDefinition(id = "testApp".toPath, args = Some(Seq("arg")))
 
     val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[Variable]

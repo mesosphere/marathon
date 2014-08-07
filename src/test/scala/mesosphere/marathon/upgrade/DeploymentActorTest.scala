@@ -57,14 +57,14 @@ class DeploymentActorTest
   test("Deploy") {
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app1 = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, version = Timestamp(0))
-    val app2 = AppDefinition(id = PathId("app2"), cmd = "cmd", instances = 1, version = Timestamp(0))
-    val app3 = AppDefinition(id = PathId("app3"), cmd = "cmd", instances = 1, version = Timestamp(0))
-    val app4 = AppDefinition(id = PathId("app4"), cmd = "cmd", version = Timestamp(0))
+    val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, version = Timestamp(0))
+    val app2 = AppDefinition(id = PathId("app2"), cmd = Some("cmd"), instances = 1, version = Timestamp(0))
+    val app3 = AppDefinition(id = PathId("app3"), cmd = Some("cmd"), instances = 1, version = Timestamp(0))
+    val app4 = AppDefinition(id = PathId("app4"), cmd = Some("cmd"), version = Timestamp(0))
     val origGroup = Group(PathId("/foo/bar"), Set(app1, app2, app4))
 
     val app1New = app1.copy(instances = 1, version = Timestamp(1000))
-    val app2New = app2.copy(instances = 2, cmd = "otherCmd", version = Timestamp(1000))
+    val app2New = app2.copy(instances = 2, cmd = Some("otherCmd"), version = Timestamp(1000))
 
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New, app2New, app3))
 
@@ -146,10 +146,10 @@ class DeploymentActorTest
   test("Restart app") {
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = "cmd", instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
-    val appNew = app.copy(cmd = "cmd new", version = Timestamp(1000))
+    val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
 
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 

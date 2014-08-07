@@ -6,7 +6,7 @@ package mesosphere.marathon;
 option java_package = "mesosphere.marathon";
 option java_outer_classname = "Protos";
 
-import "mesos.proto";
+import "mesos/mesos.proto";
 
 message Constraint {
   required string field = 1;
@@ -60,6 +60,7 @@ message ServiceDefinition {
   repeated string dependencies = 16;
   repeated string storeUrls = 17;
   optional bool require_ports = 18 [default = false];
+  optional mesos.ContainerInfo container = 19;
 }
 
 message MarathonTask {

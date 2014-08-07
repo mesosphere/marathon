@@ -1,10 +1,15 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.ContainerInfo
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy, PathId, Timestamp }
+import mesosphere.marathon.state.{
+  AppDefinition,
+  Container,
+  PathId,
+  UpgradeStrategy,
+  Timestamp
+}
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import scala.concurrent.duration.FiniteDuration
 import java.lang.{ Integer => JInt, Double => JDouble }
@@ -18,6 +23,8 @@ case class AppUpdate(
     id: Option[PathId] = None,
 
     cmd: Option[String] = None,
+
+    args: Option[Seq[String]] = None,
 
     user: Option[String] = None,
 
@@ -47,7 +54,7 @@ case class AppUpdate(
 
     backoffFactor: Option[JDouble] = None,
 
-    container: Option[ContainerInfo] = None,
+    container: Option[Container] = None,
 
     healthChecks: Option[Set[HealthCheck]] = None,
 
@@ -63,7 +70,8 @@ case class AppUpdate(
     */
   def apply(app: AppDefinition): AppDefinition = app.copy(
     app.id,
-    cmd.getOrElse(app.cmd),
+    cmd.orElse(app.cmd),
+    args.orElse(app.args),
     user.orElse(app.user),
     env.getOrElse(app.env),
     instances.getOrElse(app.instances),
@@ -78,7 +86,7 @@ case class AppUpdate(
     requirePorts.getOrElse(app.requirePorts),
     backoff.getOrElse(app.backoff),
     backoffFactor.getOrElse(app.backoffFactor),
-    container.orElse(app.container),
+    container.filterNot(_ == Container.Empty).orElse(app.container),
     healthChecks.getOrElse(app.healthChecks),
     dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy.getOrElse(app.upgradeStrategy),
