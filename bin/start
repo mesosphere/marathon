@@ -13,7 +13,7 @@ then
   export MESOS_NATIVE_LIBRARY=$MESOS_NATIVE_JAVA_LIBRARY
 fi
 
-echo "MESOS_NATIVE_LIBRARY, MESOS_NATIVE_JAVA_LIBRARY set to $MESOS_NATIVE_JAVA_LIBRARY"
+echo "MESOS_NATIVE_LIBRARY, MESOS_NATIVE_JAVA_LIBRARY set to '$MESOS_NATIVE_JAVA_LIBRARY'"
 
 addJava() { java_args=( "${java_args[@]}" "$1" ); }
 addApplication() { app_args=( "${app_args[@]}" "$1" ); }
