@@ -89,16 +89,14 @@ define([
         modelAttrs.uris = [];
       }
       
-      // Constraints should be a Set of Strings.
+      // Constraints should be an Array of Strings.
       if ("constraints" in modelAttrs) {
         var constraintsArray = modelAttrs.constraints.split(",");
-        modelAttrs.constraints = _.map(constraintsArray, function(constraint) {
+        modelAttrs.constraints = constraintsArray.map(function(constraint) {
           return constraint.split(":").map(function(value) {
-            return _.trim(value);
+            return value.trim();
           });
         });
-      } else {
-         modelAttrs.constraints = [];
       }
 
       // Ports should always be an Array.
@@ -237,7 +235,7 @@ define([
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="constraints"
-                  help="Comma-separated list of valid Constraints. Valid constraint format is 'field:operator[:value]')"
+                  help='Comma-separated list of valid constraints. Valid constraint format is "field:operator[:value]".'
                   label="Constraints"
                   model={model}
                   errors={errors}>
