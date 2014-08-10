@@ -13,7 +13,7 @@ define([
   var DEFAULT_HEALTH_MSG = "Unknown";
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
     "executor", "id", "instances", "mem", "disk", "ports", "uris"];
-  var VALID_ID_PATTERN = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
+  var VALID_ID_PATTERN = "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
   var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
   var VALID_CONSTRAINTS = ["unique", "cluster", "group_by"];
 
