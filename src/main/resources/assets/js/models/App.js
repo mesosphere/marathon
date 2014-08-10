@@ -37,7 +37,10 @@ define([
     if (p.length < 2 || p.length > 3) {
       return false;
     }
-    /* awful, should be dynamic. It should be in scala but it's impossible to return an error on a specific field */
+
+    /* TODO: should be dynamic. It should be in Scala, but it's impossible to
+     * return an error on a specific field.
+     */
     var operator = p[1];
     return (_.indexOf(VALID_CONSTRAINTS, operator.toLowerCase()) !== -1);
   }
@@ -168,10 +171,12 @@ define([
     getCurrentVersion: function() {
       var appVersion = new AppVersion();
       appVersion.set(this.attributes);
-      // make suer date is a string
+
+      // make sure date is a string
       appVersion.set({
         "version": appVersion.get("version").toISOString()
       });
+
       // transfer app id
       appVersion.options = {
         appId: this.get("id")
@@ -237,9 +242,12 @@ define([
         }
       }
 
-      if (!_.every(attrs.constraints, function(p) { return isValidConstraint(p); })) {
-        errors.push(
-          new ValidationError("constraints", "Supported operators are '" + VALID_CONSTRAINTS + "'. See https://github.com/mesosphere/marathon/wiki/Constraints"));
+      if (!attrs.constraints.every(isValidConstraint)) {
+        errors.push(new ValidationError("constraints",
+          "Invalid constraints format or operator. Supported operators are " +
+          VALID_CONSTRAINTS.map(function(c) { return "`" + c + "`" }).join(", ") +
+          ". See https://github.com/mesosphere/marathon/wiki/Constraints.")
+        );
       }
 
       if (errors.length > 0) { return errors; }
