@@ -1,6 +1,6 @@
 # Marathon [![Build Status](https://travis-ci.org/mesosphere/marathon.png?branch=master)](https://travis-ci.org/mesosphere/marathon)
 
-__New detailed documentation for Mesos + Marathon available via the [Mesosphere Website](http://mesosphere.io/docs/)__
+__Detailed documentation for Mesos + Marathon available via the [Mesosphere Website](http://mesosphere.io/docs/)__
 
 Marathon is an [Apache Mesos][Mesos] framework for long-running applications. Given that
 you have Mesos running as the kernel for your datacenter, Marathon is the
