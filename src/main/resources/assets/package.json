@@ -14,6 +14,6 @@
   "devDependencies": {
     "envify": "^1.2.1",
     "requirejs": "^2.1.11",
-    "react-tools": "^0.10.0"
+    "react-tools": "^0.11.1"
   }
 }
