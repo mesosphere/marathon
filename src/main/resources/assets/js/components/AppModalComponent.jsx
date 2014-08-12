@@ -1,6 +1,7 @@
 /** @jsx React.DOM */
 
 define([
+  "Underscore",
   "React",
   "mixins/BackboneMixin",
   "models/AppVersionCollection",
@@ -11,9 +12,10 @@ define([
   "jsx!components/TaskDetailComponent",
   "jsx!components/TaskViewComponent",
   "jsx!components/TogglableTabsComponent"
-], function(React, BackboneMixin, AppVersionCollection, AppVersionListComponent,
-    ModalComponent, StackedViewComponent, TabPaneComponent, TaskDetailComponent,
-    TaskViewComponent, TogglableTabsComponent) {
+], function(_, React, BackboneMixin, AppVersionCollection,
+    AppVersionListComponent, ModalComponent, StackedViewComponent,
+    TabPaneComponent, TaskDetailComponent, TaskViewComponent,
+    TogglableTabsComponent) {
 
   var STATES = {
     STATE_LOADING: 0,
@@ -83,7 +85,12 @@ define([
 
     destroyApp: function() {
       if (confirm("Destroy app '" + this.props.model.get("id") + "'?\nThis is irreversible.")) {
-        this.props.model.destroy();
+        // Send force option to ensure the UI is always able to kill apps
+        // regardless of deployment state.
+        this.props.model.destroy({
+          url: _.result(this.props.model, "url") + "?force=true"
+        });
+
         this.refs.modalComponent.destroy();
       }
     },
