@@ -43,7 +43,7 @@ class MarathonSchedulerActor(
   val appLocks = LockManager[PathId]()
   var scheduler: SchedulerActions = _
 
-  var upgradeManager: ActorRef = _
+  var deploymentManager: ActorRef = _
 
   override def preStart(): Unit = {
 
@@ -58,7 +58,7 @@ class MarathonSchedulerActor(
       self,
       config)
 
-    upgradeManager = context.actorOf(
+    deploymentManager = context.actorOf(
       Props(classOf[DeploymentManager], appRepository, taskTracker, taskQueue, scheduler, storage, eventBus), "UpgradeManager")
 
   }
@@ -94,7 +94,7 @@ class MarathonSchedulerActor(
       val origSender = sender
       val ids = plan.affectedApplicationIds
 
-      upgradeManager ! CancelConflictingDeployments(plan, new DeploymentCanceledException("The upgrade has been cancelled"))
+      deploymentManager ! CancelConflictingDeployments(plan, new DeploymentCanceledException("The upgrade has been cancelled"))
       locking(ids, origSender, cmd, blocking = true) {
         val res = deploy(driver, plan)
         origSender ! cmd.answer
@@ -123,7 +123,7 @@ class MarathonSchedulerActor(
       log.info(s"Conflicting deployments for deployment $id have been canceled")
 
     case msg @ RetrieveRunningDeployments =>
-      upgradeManager forward msg
+      deploymentManager forward msg
   }
 
   /**
@@ -159,7 +159,25 @@ class MarathonSchedulerActor(
       else {
         log.debug(s"Failed to acquire some of the locks for $appIds to perform cmd: $cmd")
         acquiredLocks.foreach(_.release())
-        origSender ! CommandFailed(cmd, new AppLockedException)
+
+        import akka.pattern.ask
+        import akka.util.Timeout
+        import scala.concurrent.duration._
+
+        deploymentManager.ask(RetrieveRunningDeployments)(Timeout(2.seconds))
+          .mapTo[RunningDeployments]
+          .foreach {
+            case RunningDeployments(plans) =>
+              val relatedDeploymentIds: Seq[String] = plans.collect {
+                case p if distinctIds(p).toSet.intersect(appIds).nonEmpty =>
+                  p.id
+              }
+
+              origSender ! CommandFailed(
+                cmd,
+                AppLockedException(relatedDeploymentIds)
+              )
+          }
       }
     }
   }
@@ -180,7 +198,7 @@ class MarathonSchedulerActor(
     val promise = Promise[Any]()
     val promiseActor = context.actorOf(Props(classOf[PromiseActor], promise))
     val msg = PerformDeployment(driver, plan)
-    upgradeManager.tell(msg, promiseActor)
+    deploymentManager.tell(msg, promiseActor)
 
     val res = promise.future.map(_ => ())
 
