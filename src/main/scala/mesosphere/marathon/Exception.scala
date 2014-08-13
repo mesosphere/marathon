@@ -10,7 +10,8 @@ class UnknownAppException(id: PathId) extends Exception(s"App '$id' does not exi
 
 class BadRequestException(msg: String) extends Exception(msg)
 
-class AppLockedException extends Exception("App is locked by another operation")
+case class AppLockedException(deploymentIds: Seq[String] = Nil)
+  extends Exception("App is locked by another operation")
 
 class PortRangeExhaustedException(
   val minPort: Int,
