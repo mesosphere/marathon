@@ -189,6 +189,7 @@ object TaskBuilder {
       val uriProtos = app.uris.map(uri => {
         CommandInfo.URI.newBuilder()
           .setValue(uri)
+          .setExtract(isExtract(uri))
           .build()
       })
       builder.addAllUris(uriProtos.asJava)
@@ -197,6 +198,21 @@ object TaskBuilder {
     app.user.foreach(builder.setUser)
 
     builder.build
+  }
+
+  private def isExtract(stringuri: String): Boolean = {
+    if (stringuri.endsWith(".tgz") ||
+      stringuri.endsWith(".tar.gz") ||
+      stringuri.endsWith(".tbz2") ||
+      stringuri.endsWith(".tar.bz2") ||
+      stringuri.endsWith(".txz") ||
+      stringuri.endsWith(".tar.xz")) {
+      return true;
+    }
+    else {
+      return false;
+    }
+
   }
 
   def environment(vars: Map[String, String]) = {
