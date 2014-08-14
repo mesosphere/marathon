@@ -129,9 +129,14 @@ class AppsResource @Inject() (
              @DefaultValue("false")@QueryParam("force") force: Boolean,
              @PathParam("id") id: String): Response = {
     val appId = id.toRootPath
-    maybePostEvent(req, AppDefinition(id = appId))
-    val deployment = result(groupManager.update(appId.parent, _.removeApplication(appId), force = force))
-    deploymentResult(deployment)
+    service.getApp(appId) match {
+      case Some(app) =>
+        maybePostEvent(req, AppDefinition(id = appId))
+        val deployment = result(groupManager.update(appId.parent, _.removeApplication(appId), force = force))
+        deploymentResult(deployment)
+
+      case None => unknownApp(appId)
+    }
   }
 
   @Path("{appId:.+}/tasks")
