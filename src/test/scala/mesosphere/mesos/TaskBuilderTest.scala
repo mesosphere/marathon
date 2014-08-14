@@ -286,6 +286,29 @@ class TaskBuilderTest extends MarathonSpec {
     assert(Map.empty == env)
   }
 
+  test("TaskNoURIExtraction") {
+
+    val command =
+      TaskBuilder.commandInfo(AppDefinition(
+        id = "testApp".toPath,
+        cpus = 1,
+        mem = 64,
+        disk = 1,
+        executor = "//cmd",
+        uris = Seq("http://www.example.com", "http://www.example.com/test.tgz",
+          "example.tar.gz"),
+        ports = Seq(8080, 8081)
+      ), Seq(1000, 1001))
+
+    val uriinfo1 = command.getUris(0)
+    assert(uriinfo1.getExtract == false)
+    val uriinfo2 = command.getUris(1)
+    assert(uriinfo2.getExtract == true)
+    val uriinfo3 = command.getUris(2)
+    assert(uriinfo3.getExtract == true)
+
+  }
+
   def buildIfMatches(offer: Offer, app: AppDefinition) = {
     val taskTracker = mock[TaskTracker]
 
