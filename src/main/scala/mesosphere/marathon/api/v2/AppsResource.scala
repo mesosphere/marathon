@@ -126,7 +126,7 @@ class AppsResource @Inject() (
   @Path("""{id:.+}""")
   @Timed
   def delete(@Context req: HttpServletRequest,
-             @DefaultValue("false")@QueryParam("force") force: Boolean,
+             @DefaultValue("true")@QueryParam("force") force: Boolean,
              @PathParam("id") id: String): Response = {
     val appId = id.toRootPath
     service.getApp(appId) match {
