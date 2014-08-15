@@ -224,7 +224,7 @@ object AppDefinition {
 
   val DEFAULT_REQUIRE_PORTS = false
 
-  val DEFAULT_INSTANCES = 0
+  val DEFAULT_INSTANCES = 1
 
   val DEFAULT_BACKOFF = 1.second
 
