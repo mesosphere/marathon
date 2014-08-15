@@ -7,6 +7,7 @@ import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.Protos
@@ -185,6 +186,11 @@ case class AppDefinition(
   def withTasks(taskTracker: TaskTracker): AppDefinition.WithTasks =
     new AppDefinition.WithTasks(taskTracker, this)
 
+  def withTasksAndDeployments(
+    service: MarathonSchedulerService,
+    taskTracker: TaskTracker): AppDefinition.WithTasks =
+    new AppDefinition.WithTasksAndDeployments(service, taskTracker, this)
+
   def isOnlyScaleChange(to: AppDefinition): Boolean = !isUpgrade(to) && (instances != to.instances)
 
   def isUpgrade(to: AppDefinition): Boolean = {
@@ -272,4 +278,27 @@ object AppDefinition {
     @JsonProperty
     def tasks = appTasks
   }
+
+  protected[marathon] class WithTasksAndDeployments(
+      service: MarathonSchedulerService,
+      taskTracker: TaskTracker,
+      app: AppDefinition) extends WithTasks(taskTracker, app) {
+    import scala.concurrent.Await
+    @JsonProperty
+    def deployments: Seq[String] = {
+      val deployments = Await.result(service.listRunningDeployments, 2.seconds)
+
+      println(s"deployments: $deployments")
+
+      val relatedDeploymentIds = deployments.collect {
+        case deployment if deployment.affectedApplicationIds contains app.id =>
+          deployment.id
+      }
+
+      println(s"relatedDeploymentIds: $relatedDeploymentIds")
+
+      relatedDeploymentIds
+    }
+  }
+
 }
