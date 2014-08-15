@@ -82,8 +82,9 @@ class AppsResource @Inject() (
               @PathParam("id") id: String,
               @DefaultValue("false")@QueryParam("force") force: Boolean,
               appUpdate: AppUpdate): Response = {
-
-    val appId = appUpdate.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
+    // prefer the id from the AppUpdate over that in the UI
+    val appId = appUpdate.id.map(_.canonicalPath()).getOrElse(id.toRootPath)
+    // TODO error if they're not the same?
     val updateWithId = appUpdate.copy(id = Some(appId))
 
     requireValid(checkUpdate(updateWithId, needsId = false))
