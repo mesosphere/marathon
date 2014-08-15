@@ -66,7 +66,7 @@ class AppsResource @Inject() (
       ok(Map("*" -> withTasks))
     }
     def app() = service.getApp(id.toRootPath) match {
-      case Some(app) => ok(Map("app" -> app.withTasks(taskTracker)))
+      case Some(app) => ok(Map("app" -> app.withTasksAndDeployments(service, taskTracker)))
       case None      => unknownApp(id.toRootPath)
     }
     id match {
