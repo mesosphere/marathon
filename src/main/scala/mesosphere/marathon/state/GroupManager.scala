@@ -119,8 +119,8 @@ class GroupManager @Singleton @Inject() (
     val deployment = for {
       current <- root(withLatestApps = false) //ignore the state of the scheduler
       (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(current, change(current)))
+      _ <- groupRepo.store(zkName, to)
       plan <- deploy(current, to, resolve)
-      storedGroup <- groupRepo.store(zkName, plan.target)
     } yield plan
 
     deployment.onComplete {
