@@ -28,7 +28,6 @@ class GroupManager @Singleton @Inject() (
     scheduler: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
-    appRepo: AppRepository,
     storage: StorageProvider,
     config: MarathonConf,
     @Named(EventModule.busName) eventBus: EventStream) extends ModelValidation with PathFun {
@@ -117,10 +116,10 @@ class GroupManager @Singleton @Inject() (
     }
 
     val deployment = for {
-      current <- root(withLatestApps = false) //ignore the state of the scheduler
-      (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(current, change(current)))
-      plan <- deploy(current, to, resolve)
-      storedGroup <- groupRepo.store(zkName, plan.target)
+      from <- root(withLatestApps = false) //ignore the state of the scheduler
+      (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(from, change(from)))
+      _ <- groupRepo.store(zkName, to)
+      plan <- deploy(from, to, resolve)
     } yield plan
 
     deployment.onComplete {

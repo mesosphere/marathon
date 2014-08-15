@@ -84,7 +84,7 @@ class DeploymentActor(
   def startApp(app: AppDefinition, scaleTo: Int): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(Props(classOf[AppStartActor], driver, scheduler, taskQueue, eventBus, app, scaleTo, promise))
-    storeOnSuccess(app, promise.future)
+    storeAndThen(app, promise.future)
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int): Future[Unit] = {
@@ -101,7 +101,7 @@ class DeploymentActor(
       killTasks(app.id, runningTasks.toSeq.sortBy(_.getStartedAt).drop(scaleTo))
     }
 
-    storeOnSuccess(app, res)
+    storeAndThen(app, res)
   }
 
   def killTasks(appId: PathId, tasks: Seq[MarathonTask]): Future[Unit] = {
@@ -131,7 +131,7 @@ class DeploymentActor(
     context.actorOf(Props(classOf[TaskKillActor], driver, app.id, taskTracker, eventBus, tasksToKill.toSet, stopPromise))
 
     val res = startPromise.future.zip(stopPromise.future).map(_ => ())
-    storeOnSuccess(app, res)
+    storeAndThen(app, res)
   }
 
   def resolveArtifacts(app: AppDefinition, urls: Map[URL, String]): Future[Unit] = {
@@ -140,9 +140,9 @@ class DeploymentActor(
     promise.future.map(_ => ())
   }
 
-  def storeOnSuccess[A](app: AppDefinition, future: Future[A]): Future[A] = for {
-    x <- future
+  def storeAndThen[A](app: AppDefinition, future: Future[A]): Future[A] = for {
     _ <- appRepository.store(app)
+    x <- future
   } yield x
 }
 

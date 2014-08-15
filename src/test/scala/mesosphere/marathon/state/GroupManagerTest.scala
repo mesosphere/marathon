@@ -55,9 +55,8 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
     val scheduler = mock[MarathonSchedulerService]
     val taskTracker = mock[TaskTracker]
     val groupRepo = mock[GroupRepository]
-    val appRepo = mock[AppRepository]
     val eventBus = mock[EventStream]
     val provider = mock[StorageProvider]
-    new GroupManager(scheduler, taskTracker, groupRepo, appRepo, provider, config, eventBus)
+    new GroupManager(scheduler, taskTracker, groupRepo, provider, config, eventBus)
   }
 }
