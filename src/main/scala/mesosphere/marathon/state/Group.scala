@@ -10,20 +10,6 @@ import org.jgrapht.traverse.TopologicalOrderIterator
 
 import scala.collection.JavaConversions._
 
-case class UpgradeStrategy(minimumHealthCapacity: Double) {
-
-  def toProto: UpgradeStrategyDefinition = {
-    UpgradeStrategyDefinition.newBuilder()
-      .setMinimumHealthCapacity(minimumHealthCapacity)
-      .build()
-  }
-}
-
-object UpgradeStrategy {
-  def empty: UpgradeStrategy = UpgradeStrategy(1)
-  def fromProto(upgradeStrategy: UpgradeStrategyDefinition) = UpgradeStrategy(upgradeStrategy.getMinimumHealthCapacity)
-}
-
 case class Group(
     id: PathId,
     apps: Set[AppDefinition] = Set.empty,

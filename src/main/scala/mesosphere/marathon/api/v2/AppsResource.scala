@@ -154,8 +154,14 @@ class AppsResource @Inject() (
       b.toLowerCase contains a.toLowerCase
 
     service.listApps().filter { app =>
-      val appMatchesCmd = cmd != null && cmd.nonEmpty && isPrefix(cmd, app.cmd)
-      val appMatchesId = id != null && id.nonEmpty && isPrefix(id, app.id.toString)
+      val appMatchesCmd =
+        cmd != null &&
+          cmd.nonEmpty &&
+          app.cmd.map(isPrefix(cmd, _)).getOrElse(false)
+
+      val appMatchesId =
+        id != null &&
+          id.nonEmpty && isPrefix(id, app.id.toString)
 
       appMatchesCmd || appMatchesId
     }

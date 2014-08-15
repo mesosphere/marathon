@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import com.fasterxml.jackson.databind._
 import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
-import mesosphere.marathon.state.{ UpgradeStrategy, PathId, Timestamp }
+import mesosphere.marathon.state.{ Container, PathId, UpgradeStrategy, Timestamp }
 import mesosphere.marathon.health.HealthCheck
 import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind.Module.SetupContext
@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ser.Serializers
 import com.fasterxml.jackson.databind.deser.Deserializers
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit.SECONDS
-import mesosphere.marathon.{ EmptyContainerInfo, ContainerInfo }
 import scala.collection.JavaConverters._
 import mesosphere.marathon.api.v2._
 import java.lang.{ Integer => JInt, Double => JDouble }
@@ -26,7 +25,6 @@ class MarathonModule extends Module {
   private val enrichedTaskClass = classOf[EnrichedTask]
   private val timestampClass = classOf[Timestamp]
   private val finiteDurationClass = classOf[FiniteDuration]
-  private val containerInfoClass = classOf[ContainerInfo]
   private val appUpdateClass = classOf[AppUpdate]
   private val groupIdClass = classOf[PathId]
 
@@ -46,7 +44,6 @@ class MarathonModule extends Module {
         else if (matches(enrichedTaskClass)) EnrichedTaskSerializer
         else if (matches(timestampClass)) TimestampSerializer
         else if (matches(finiteDurationClass)) FiniteDurationSerializer
-        else if (matches(containerInfoClass)) ContainerInfoSerializer
         else if (matches(groupIdClass)) PathIdSerializer
         else null
       }
@@ -62,7 +59,6 @@ class MarathonModule extends Module {
         else if (matches(marathonTaskClass)) MarathonTaskDeserializer
         else if (matches(timestampClass)) TimestampDeserializer
         else if (matches(finiteDurationClass)) FiniteDurationDeserializer
-        else if (matches(containerInfoClass)) ContainerInfoDeserializer
         else if (matches(appUpdateClass)) AppUpdateDeserializer
         else if (matches(groupIdClass)) PathIdDeserializer
         else null
@@ -176,37 +172,10 @@ class MarathonModule extends Module {
     }
   }
 
-  object ContainerInfoSerializer extends JsonSerializer[ContainerInfo] {
-    def serialize(container: ContainerInfo, jgen: JsonGenerator, provider: SerializerProvider) {
-      jgen.writeStartObject()
-
-      container match {
-        case EmptyContainerInfo => // nothing to do here
-        case _ =>
-          jgen.writeStringField("image", container.image)
-          jgen.writeObjectField("options", container.options)
-      }
-
-      jgen.writeEndObject()
-    }
-  }
-
-  object ContainerInfoDeserializer extends JsonDeserializer[ContainerInfo] {
-    def deserialize(json: JsonParser, context: DeserializationContext): ContainerInfo = {
-      val oc = json.getCodec
-      val tree: JsonNode = oc.readTree(json)
-
-      if (tree.has("image")) {
-        ContainerInfo(
-          image = tree.get("image").asText(),
-          options =
-            if (tree.has("options")) tree.get("options").elements().asScala.map(_.asText()).toList
-            else Nil
-        )
-      }
-      else {
-        EmptyContainerInfo
-      }
+  object PathIdDeserializer extends JsonDeserializer[PathId] {
+    def deserialize(json: JsonParser, context: DeserializationContext): PathId = {
+      val tree: JsonNode = json.getCodec.readTree(json)
+      tree.textValue().toPath
     }
   }
 
@@ -214,31 +183,18 @@ class MarathonModule extends Module {
     override def deserialize(json: JsonParser, context: DeserializationContext): AppUpdate = {
       val oc = json.getCodec
       val tree: JsonNode = oc.readTree(json)
+      val containerDeserializer = context.findRootValueDeserializer(
+        context.constructType(classOf[Container])
+      ).asInstanceOf[JsonDeserializer[Container]]
 
-      val containerInfo = if (tree.has("container")) {
-        val container = tree.get("container")
+      val emptyContainer = tree.has("container") && tree.get("container").isNull
 
-        if (container.isNull) {
-          Some(EmptyContainerInfo)
-        }
-        else {
-          Option(ContainerInfoDeserializer.deserialize(container.traverse(oc), context))
-        }
-      }
-      else {
-        None
-      }
+      val appUpdate =
+        tree.traverse(oc).readValueAs(classOf[AppUpdateBuilder]).build
 
-      val appUpdate = tree.traverse(oc).readValueAs(classOf[AppUpdateBuilder])
-
-      appUpdate.copy(container = containerInfo).build
-    }
-  }
-
-  object PathIdDeserializer extends JsonDeserializer[PathId] {
-    def deserialize(json: JsonParser, context: DeserializationContext): PathId = {
-      val tree: JsonNode = json.getCodec.readTree(json)
-      tree.textValue().toPath
+      if (emptyContainer)
+        appUpdate.copy(container = Some(Container.Empty))
+      else appUpdate
     }
   }
 }
@@ -251,6 +207,7 @@ object MarathonModule {
   case class AppUpdateBuilder(
       id: Option[PathId] = None, //needed for updates inside a group
       cmd: Option[String] = None,
+      args: Option[Seq[String]] = None,
       user: Option[String] = None,
       env: Option[Map[String, String]] = None,
       instances: Option[JInt] = None,
@@ -265,13 +222,13 @@ object MarathonModule {
       requirePorts: Option[Boolean] = None,
       @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
       backoffFactor: Option[JDouble] = None,
-      container: Option[ContainerInfo] = None,
+      container: Option[Container] = None,
       healthChecks: Option[Set[HealthCheck]] = None,
       dependencies: Option[Set[PathId]] = None,
       upgradeStrategy: Option[UpgradeStrategy] = None,
       version: Option[Timestamp] = None) {
     def build = AppUpdate(
-      id, cmd, user, env, instances, cpus, mem, disk, executor, constraints,
+      id, cmd, args, user, env, instances, cpus, mem, disk, executor, constraints,
       uris, storeUrls, ports, requirePorts, backoff, backoffFactor, container, healthChecks,
       dependencies, upgradeStrategy, version
     )

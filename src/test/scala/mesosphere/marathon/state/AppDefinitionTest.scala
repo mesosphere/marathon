@@ -3,21 +3,23 @@ package mesosphere.marathon.state
 import javax.validation.Validation
 
 import com.google.common.collect.Lists
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.api.ModelValidation
+import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
 import mesosphere.marathon.state.PathId._
 import org.apache.mesos.Protos.CommandInfo
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation {
 
   test("ToProto") {
-    val app = AppDefinition(
+    val app1 = AppDefinition(
       id = "play".toPath,
-      cmd = "bash foo-*/start -Dhttp.port=$PORT",
+      cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
       cpus = 4,
       mem = 256,
       instances = 5,
@@ -25,22 +27,51 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       executor = "//cmd"
     )
 
-    val proto = app.toProto
-    assert("play" == proto.getId)
-    assert("bash foo-*/start -Dhttp.port=$PORT" == proto.getCmd.getValue)
-    assert(5 == proto.getInstances)
-    assert(Lists.newArrayList(8080, 8081) == proto.getPortsList)
-    assert("//cmd" == proto.getExecutor)
-    assert(4 == getScalarResourceValue(proto, "cpus"), 1e-6)
-    assert(256 == getScalarResourceValue(proto, "mem"), 1e-6)
-    // TODO test CommandInfo
+    val proto1 = app1.toProto
+    assert("play" == proto1.getId)
+    assert(proto1.getCmd.hasValue)
+    assert(proto1.getCmd.getShell)
+    assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
+    assert(5 == proto1.getInstances)
+    assert(Lists.newArrayList(8080, 8081) == proto1.getPortsList)
+    assert("//cmd" == proto1.getExecutor)
+    assert(4 == getScalarResourceValue(proto1, "cpus"), 1e-6)
+    assert(256 == getScalarResourceValue(proto1, "mem"), 1e-6)
+    assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
+    assert(!proto1.hasContainer)
+
+    val app2 = AppDefinition(
+      id = "play".toPath,
+      cmd = None,
+      args = Some(Seq("a", "b", "c")),
+      container = Some(
+        Container(docker = Some(Container.Docker("group/image")))
+      ),
+      cpus = 4,
+      mem = 256,
+      instances = 5,
+      ports = Seq(8080, 8081),
+      executor = "//cmd"
+    )
+
+    val proto2 = app2.toProto
+    assert("play" == proto2.getId)
+    assert(!proto2.getCmd.hasValue)
+    assert(!proto2.getCmd.getShell)
+    assert(Seq("a", "b", "c") == proto2.getCmd.getArgumentsList.asScala)
+    assert(5 == proto2.getInstances)
+    assert(Lists.newArrayList(8080, 8081) == proto2.getPortsList)
+    assert("//cmd" == proto2.getExecutor)
+    assert(4 == getScalarResourceValue(proto2, "cpus"), 1e-6)
+    assert(256 == getScalarResourceValue(proto2, "mem"), 1e-6)
+    assert(proto2.hasContainer)
   }
 
   test("MergeFromProto") {
     val cmd = CommandInfo.newBuilder
       .setValue("bash foo-*/start -Dhttp.port=$PORT")
 
-    val proto = ServiceDefinition.newBuilder
+    val proto1 = ServiceDefinition.newBuilder
       .setId("play")
       .setCmd(cmd)
       .setInstances(3)
@@ -48,12 +79,30 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       .setVersion(Timestamp.now.toString)
       .build
 
-    val mergeResult = AppDefinition().mergeFromProto(proto)
+    val app1 = AppDefinition().mergeFromProto(proto1)
 
-    assert("play" == mergeResult.id.toString)
-    assert(3 == mergeResult.instances)
-    assert("//cmd" == mergeResult.executor)
-    assert("bash foo-*/start -Dhttp.port=$PORT" == mergeResult.cmd)
+    assert("play" == app1.id.toString)
+    assert(3 == app1.instances)
+    assert("//cmd" == app1.executor)
+    assert(Some("bash foo-*/start -Dhttp.port=$PORT") == app1.cmd)
+  }
+
+  test("ProtoRoundtrip") {
+    val app1 = AppDefinition(
+      id = "play".toPath,
+      cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
+      cpus = 4,
+      mem = 256,
+      instances = 5,
+      ports = Seq(8080, 8081),
+      executor = "//cmd"
+    )
+    val result1 = AppDefinition().mergeFromProto(app1.toProto)
+    assert(result1 == app1)
+
+    val app2 = AppDefinition(cmd = None, args = Some(Seq("a", "b", "c")))
+    val result2 = AppDefinition().mergeFromProto(app2.toProto)
+    assert(result2 == app2)
   }
 
   test("Validation") {
@@ -61,8 +110,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
 
     def shouldViolate(app: AppDefinition, path: String, template: String) = {
       val violations = checkApp(app, PathId.empty)
-      assert(violations.exists(v =>
-        v.getPropertyPath.toString == path && v.getMessageTemplate == template))
+      assert(
+        violations.exists { v =>
+          v.getPropertyPath.toString == path && v.getMessageTemplate.toString == template
+        }
+      )
     }
 
     def shouldNotViolate(app: AppDefinition, path: String, template: String) = {
@@ -130,6 +182,19 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       "executor",
       "{javax.validation.constraints.Pattern.message}"
     )
+
+    shouldViolate(
+      correct.copy(cmd = Some("command"), args = Some(Seq("a", "b", "c"))),
+      "",
+      "AppDefinition must either contain a 'cmd' or a 'container'."
+    )
+
+    shouldNotViolate(
+      correct.copy(cmd = None, args = Some(Seq("a", "b", "c"))),
+      "",
+      "AppDefinition must either contain a 'cmd' or a 'container'."
+    )
+
   }
 
   test("SerializationRoundtrip") {
@@ -143,14 +208,14 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     mapper.registerModule(new MarathonModule)
     mapper.registerModule(CaseClassModule)
 
-    val original = AppDefinition()
-    val json = mapper.writeValueAsString(original)
-    val readResult = mapper.readValue(json, classOf[AppDefinition])
+    val app1 = AppDefinition()
+    assert(app1.cmd.isEmpty)
+    assert(app1.args.isEmpty)
+    val json1 = mapper.writeValueAsString(app1)
+    val readResult1 = mapper.readValue(json1, classOf[AppDefinition])
+    assert(readResult1 == app1)
 
-    assert(readResult == original)
-
-    val json2 =
-      """
+    val json2 = """
       {
         "id": "toggle",
         "cmd": "python toggle.py $PORT0",
@@ -167,10 +232,43 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
         "ports": [0],
         "uris": ["http://downloads.mesosphere.io/misc/toggle.tgz"]
       }
-      """
-
+    """
     val readResult2 = mapper.readValue(json2, classOf[AppDefinition])
     assert(readResult2.healthChecks.head.command.isDefined)
+
+    val app3 = AppDefinition(
+      id = PathId("/prod/product/frontend/my-app"),
+      cmd = Some("sleep 30"),
+      user = Some("nobody"),
+      env = Map("key1" -> "value1", "key2" -> "value2"),
+      instances = 5,
+      cpus = 5.0,
+      mem = 55.0,
+      disk = 550.0,
+      executor = "",
+      constraints = Set(
+        Constraint.newBuilder
+          .setField("attribute")
+          .setOperator(Constraint.Operator.GROUP_BY)
+          .setValue("value")
+          .build
+      ),
+      uris = Seq("hdfs://path/to/resource.zip"),
+      storeUrls = Seq("http://my.org.com/artifacts/foo.bar"),
+      ports = Seq(9001, 9002),
+      requirePorts = true,
+      backoff = 5.seconds,
+      backoffFactor = 1.5,
+      container = Some(
+        Container(docker = Some(Container.Docker("group/image")))
+      ),
+      healthChecks = Set(HealthCheck()),
+      dependencies = Set(PathId("/prod/product/backend")),
+      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.75)
+    )
+    val json3 = mapper.writeValueAsString(app3)
+    val readResult3 = mapper.readValue(json3, classOf[AppDefinition])
+    assert(readResult3 == app3)
 
   }
 
