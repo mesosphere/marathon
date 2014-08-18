@@ -180,7 +180,7 @@ health checks consecutively, that task is killed.
 * `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
   check failures after which the unhealthy task should be killed.
 * `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
-  performed. One of "HTTP", "TCP", or "Command".
+  performed. One of "HTTP", "TCP", or "COMMAND".
 * `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
   will provide health  status. Example: "/path/to/health".
   _Note: only used if `protocol == "HTTP"`._
