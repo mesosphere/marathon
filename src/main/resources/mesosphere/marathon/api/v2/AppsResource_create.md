@@ -7,10 +7,25 @@ The full JSON format of an application resource is as follows:
 ```
 {
     "id": "/product/service/myApp",
-    "cmd": "(env && sleep 300)",
+    "cmd": "env && sleep 300",
+    "args": ["/bin/sh", "-c", "env && sleep 300"]
     "container": {
-        "image": "docker:///zaiste/postgresql",
-        "options": ["-e", "X=7"]
+        "type": "DOCKER",
+        "docker": {
+            "image": "group/image"
+        },
+        "volumes": [
+            {
+                "containerPath": "/etc/a",
+                "hostPath": "/var/data/a",
+                "mode": "RO"
+            },
+            {
+                "containerPath": "/etc/b",
+                "hostPath": "/var/data/b",
+                "mode": "RW"
+            }
+        ]
     },
     "cpus": 1.5,
     "mem": 256.0,
@@ -36,6 +51,10 @@ The full JSON format of an application resource is as follows:
             "intervalSeconds": 5,
             "portIndex": 1,
             "timeoutSeconds": 5
+        },
+        {
+            "protocol": "COMMAND",
+            "command": { "value": "curl -f -X GET http://$HOST:$PORT0/health" }
         }
     ],
     "id": "my-app",
@@ -76,14 +95,15 @@ The full JSON format of an application resource is as follows:
 }
 ```
 
-##### `constraints`
 
 _id:_ [String] The identifier of the application. This identifier is a path. If the identifier does not start with a slash, 
 than it is interpreted as relative path and will be translated into an absolute path.
 
-_cmd:_ [String] The command that is executed on the shell.
+_cmd:_ [String] The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${app.cmd}`.  Either `cmd` or `args` must be supplied. It is invalid to supply both `cmd` and `args` in the same app.
 
-_container:_ [Container] Additional data passed to the container on application launch.  These consist of an "image" and an array of string options.  The meaning of this data is fully dependent upon the executor.  Furthermore, _it is invalid to pass container options when using the default command executor_.
+_args:_ [Array[String]] An alternative mode of specifying the command to run. This was motivated by safe usage of containerizer features like a custom Docker ENTRYPOINT. This args field may be used in place of cmd even when using the default command executor. This change mirrors API and semantics changes in the Mesos CommandInfo protobuf message starting with version `0.20.0`.  Either `cmd` or `args` must be supplied. It is invalid to supply both `cmd` and `args` in the same app.
+
+_container:_ [Container] Additional data passed to the containerizer on application launch.  These consist of a type, zero or more volumes, and additional type-specific options.  Volumes and type are optional (the default type is DOCKER).  In order to make use of the docker containerizer, specify `--containerizers=docker,mesos` to the Mesos slave.
 
 _cpus:_: [Float] the number of CPU`s this application needs per instance. This number does not have to be integer, but can be a fraction.
 
@@ -99,18 +119,16 @@ _instances:_: The number of instances of this application to start. Please note:
 
 _ports:_ An array of required port resources on the host.  To generate one or more arbitrary free ports for each application instance, pass zeros as port values.  Each port value is exposed to the instance via environment variables `$PORT0`, `$PORT1`, etc.  Ports assigned to running instances are also available via the task resource.
 
-_taskRateLimit:_  Number of new tasks this app may spawn per second in response to terminated tasks. This prevents frequently failing apps from spamming the cluster.
-
 _taskRunning:_ [Integer] the number of tasks running for this application definition. This parameter can not be set.
 
 _tasksStaged:_ [Integer] the number of tasks staged to run. This parameter can not be set.
 
 _uris:_ [Array[String]] uris defined here are resolved, before the application gets started. If the application has external dependencies, they should be defined here.
 
-_healthChecks:_ [[Array[HealthCheck]] healt checks are sensing elements to the health of the application. An application is considered healthy, if all instances are running and all health checks pass. To use this feature, the application needs either a http endpoint or a tcp socket to listen to.
+_healthChecks:_ [[Array[HealthCheck]] Methods of probing a task to determine its health. An application is considered healthy, if all instances are running and all health checks pass. To use this feature, tasks need either an http endpoint or a tcp socket to listen to.
 
-_dependencies:_ [Array[String]] an application can have dependencies to other applications. The correct dependecy order can be insured via the start/stops and especially upgrades of the application.
-E.g. an application /a relies on the services /b which itself relies on /c. To start all 3 applications, first /c is started than /b than /a.
+_dependencies:_ [Array[String]] an application can have dependencies to other applications. An order is derived from the dependencies for performing start/stop and upgrade of the application.
+For example, an application /a relies on the services /b which itself relies on /c. To start all 3 applications, first /c is started than /b than /a.
 
 _upgradeStrategy:_ [UpgradeStrategy] during an upgrade all instances of an application get replaced by a new version. 
 The minimumHealthCapacity defines the minimum number of healthy nodes, that do not sacrifice overall application purpose. 
@@ -140,9 +158,13 @@ options when using the default command executor_.
 An array of checks to be performed on running tasks to determine if they are
 operating as expected. Health checks begin immediately upon task launch. For
 design details, refer to the [health checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)
-wiki page.
+wiki page.  By default, health checks are executed by the Marathon scheduler.
+It's possible with Mesos `0.20.0` and higher to execute health checks on the hosts where
+the tasks are running by supplying the `--executor_health_checks` flag to Marathon.
+In this case, the only supported protocol is `COMMAND` and each app is limited to
+at most one defined health check.
 
-A health check is considered passing if (1) its HTTP response code is between
+An HTTP health check is considered passing if (1) its HTTP response code is between
 200 and 399, inclusive, and (2) its response is received within the
 `timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
 health checks consecutively, that task is killed.
@@ -156,21 +178,25 @@ health checks consecutively, that task is killed.
   health checks.
 * `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
   check failures after which the unhealthy task should be killed.
+* `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
+  performed. One of "HTTP", "TCP", or "Command".
 * `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
   will provide health  status. Example: "/path/to/health".
   _Note: only used if `protocol == "HTTP"`._
+* `command`: Command to run in order to determine the health of a task.
+  _Note: only used if `protocol == "COMMAND"`, and only available if Marathon is
+  started with the `--executor_health_checks` flag.
 * `portIndex` (Optional. Default: 0): Index in this app's `ports` array to be
   used for health requests. An index is used so the app can use random ports,
   like "[0, 0, 0]" for example, and tasks could be started with port environment
   variables like `$PORT1`.
-* `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
-  performed. One of "HTTP" or "TCP".
 * `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
   health check is considered a failure regardless of the response.
 
 ##### `id`
 
-Unique string identifier for the app. It must be at least 1 character and may
+Unique identifier for the app consisting of a series of names separated by slashes.
+Each name must be at least 1 character and may
 only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters
 (`a-z`). The name may not begin or end with a dash.
 
@@ -187,7 +213,7 @@ via the task resource.
 
 ##### `backoffSeconds` and `backoffFactor`
 
-Configures exponential backoff behavior when launching potentially sick apps.
+Configure exponential backoff behavior when launching potentially sick apps.
 This prevents sandboxes associated with consecutively failing tasks from
 filling up the hard disk on Mesos slaves. The backoff period is multiplied by
 the factor for each consecutive failure.  This applies also to tasks that are

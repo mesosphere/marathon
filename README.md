@@ -188,6 +188,10 @@ The following options can influence how Marathon works:
 * `--reconciliation_initial_delay`: This is the length of time, in milliseconds, before
     Marathon begins to periodically perform task reconciliation operations.
 * `--mesos_user`: Mesos user for this framework. Defaults to current user.
+* `--executor_health_checks`: If this flag is supplied, health checks are executed
+    on the slaves that the tasks are running on.  Requires Mesos `0.20.0` or higher.
+    Use of this option limits app health checks to at most one.  The only protocol
+    supported by Mesos is COMMAND.
 
 ### Configuration Options
 
