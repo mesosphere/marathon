@@ -218,35 +218,47 @@ A value of `0` means take all instances down immediately and replace with the ne
 ```
 POST /v2/apps HTTP/1.1
 Accept: application/json
-Accept-Encoding: gzip, deflate, compress
-Content-Length: 273
+Accept-Encoding: gzip, deflate
+Content-Length: 562
 Content-Type: application/json; charset=utf-8
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
 
 {
-    "cmd": "env && sleep 60", 
+    "cmd": "env && python3 -m http.server $PORT0", 
     "constraints": [
         [
             "hostname", 
-            "UNIQUE", 
-            ""
+            "UNIQUE"
         ]
     ], 
-    "cpus": "0.1", 
-    "env": {
-        "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
+    "container": {
+        "docker": {
+            "image": "python:3"
+        }, 
+        "type": "DOCKER"
     }, 
+    "cpus": 0.25, 
+    "healthChecks": [
+        {
+            "gracePeriodSeconds": 3, 
+            "intervalSeconds": 10, 
+            "maxConsecutiveFailures": 3, 
+            "path": "/", 
+            "portIndex": 0, 
+            "protocol": "HTTP", 
+            "timeoutSeconds": 5
+        }
+    ], 
     "id": "my-app", 
-    "instances": "3", 
-    "mem": "5", 
+    "instances": 2, 
+    "mem": 50, 
     "ports": [
-        0, 
         0
     ], 
-    "uris": [
-        "https://raw.github.com/mesosphere/marathon/master/README.md"
-    ]
+    "upgradeStrategy": {
+        "minimumHealthCapacity": 0.5
+    }
 }
 ```
 
@@ -254,13 +266,63 @@ User-Agent: HTTPie/0.7.2
 
 
 ```
+
 HTTP/1.1 201 Created
-Content-Length: 0
 Content-Type: application/json
-Location: http://localhost:8080/v2/apps/my-app
+Location: http://mesos.vm:8080/v2/apps/my-app
 Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
 
-
+{
+    "args": null, 
+    "backoffFactor": 1.15, 
+    "backoffSeconds": 1, 
+    "cmd": "env && python3 -m http.server $PORT0", 
+    "constraints": [
+        [
+            "hostname", 
+            "UNIQUE"
+        ]
+    ], 
+    "container": {
+        "docker": {
+            "image": "python:3"
+        }, 
+        "type": "DOCKER", 
+        "volumes": []
+    }, 
+    "cpus": 0.25, 
+    "dependencies": [], 
+    "disk": 0.0, 
+    "env": {}, 
+    "executor": "", 
+    "healthChecks": [
+        {
+            "command": null, 
+            "gracePeriodSeconds": 3, 
+            "intervalSeconds": 10, 
+            "maxConsecutiveFailures": 3, 
+            "path": "/", 
+            "portIndex": 0, 
+            "protocol": "HTTP", 
+            "timeoutSeconds": 5
+        }
+    ], 
+    "id": "/my-app", 
+    "instances": 2, 
+    "mem": 50.0, 
+    "ports": [
+        0
+    ], 
+    "requirePorts": false, 
+    "storeUrls": [], 
+    "upgradeStrategy": {
+        "minimumHealthCapacity": 0.5
+    }, 
+    "uris": [], 
+    "user": null, 
+    "version": "2014-08-18T22:36:41.451Z"
+}
 ```
 
 #### GET `/v2/apps`
@@ -273,13 +335,10 @@ List all running applications.
 
 ```
 GET /v2/apps HTTP/1.1
-Accept: application/json
-Accept-Encoding: gzip, deflate, compress
-Content-Type: application/json; charset=utf-8
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
-
-
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
 ```
 
 **Response:**
@@ -293,33 +352,56 @@ Transfer-Encoding: chunked
 {
     "apps": [
         {
-            "cmd": "env && sleep 60", 
+            "args": null, 
+            "backoffFactor": 1.15, 
+            "backoffSeconds": 1, 
+            "cmd": "env && python3 -m http.server $PORT0", 
             "constraints": [
                 [
                     "hostname", 
-                    "UNIQUE", 
-                    ""
+                    "UNIQUE"
                 ]
             ], 
-            "container": null, 
-            "cpus": 0.1, 
-            "env": {
-                "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
+            "container": {
+                "docker": {
+                    "image": "python:3"
+                }, 
+                "type": "DOCKER", 
+                "volumes": []
             }, 
+            "cpus": 0.25, 
+            "dependencies": [], 
+            "disk": 0.0, 
+            "env": {}, 
             "executor": "", 
-            "id": "my-app", 
-            "instances": 3, 
-            "mem": 5.0, 
-            "ports": [
-                13321, 
-                10982
+            "healthChecks": [
+                {
+                    "command": null, 
+                    "gracePeriodSeconds": 3, 
+                    "intervalSeconds": 10, 
+                    "maxConsecutiveFailures": 3, 
+                    "path": "/", 
+                    "portIndex": 0, 
+                    "protocol": "HTTP", 
+                    "timeoutSeconds": 5
+                }
             ], 
+            "id": "/my-app", 
+            "instances": 2, 
+            "mem": 50.0, 
+            "ports": [
+                10000
+            ], 
+            "requirePorts": false, 
+            "storeUrls": [], 
             "tasksRunning": 1, 
             "tasksStaged": 0, 
-            "uris": [
-                "https://raw.github.com/mesosphere/marathon/master/README.md"
-            ], 
-            "version": "2014-04-04T06:25:31.399Z"
+            "upgradeStrategy": {
+                "minimumHealthCapacity": 0.5
+            }, 
+            "uris": [], 
+            "user": null, 
+            "version": "2014-08-18T22:36:41.451Z"
         }
     ]
 }
@@ -340,7 +422,6 @@ Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-
 
 ```
 
