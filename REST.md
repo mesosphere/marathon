@@ -74,18 +74,21 @@ The full JSON format of an application resource is as follows:
             "gracePeriodSeconds": 3,
             "intervalSeconds": 10,
             "portIndex": 0,
-            "timeoutSeconds": 10
+            "timeoutSeconds": 10,
+            "maxConsecutiveFailures": 3
         },
         {
             "protocol": "TCP",
             "gracePeriodSeconds": 3,
             "intervalSeconds": 5,
             "portIndex": 1,
-            "timeoutSeconds": 5
+            "timeoutSeconds": 5,
+            "maxConsecutiveFailures": 3
         },
         {
             "protocol": "COMMAND",
-            "command": { "value": "curl -f -X GET http://$HOST:$PORT0/health" }
+            "command": { "value": "curl -f -X GET http://$HOST:$PORT0/health" },
+            "maxConsecutiveFailures": 3
         }
     ],
     "id": "my-app",
@@ -102,22 +105,6 @@ The full JSON format of an application resource is as follows:
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
     ],
-    "healthChecks": [{
-        "protocol": "http",
-        "path": "/",
-        "portIndex": 0,
-        "gracePeriodSeconds": 15,
-        "intervalSeconds": 10,
-        "timeoutSeconds": 20,
-        "maxConsecutiveFailures": 3
-    },{
-        "protocol": "tcp",
-        "portIndex": 0,
-        "gracePeriodSeconds": 15,
-        "intervalSeconds": 10,
-        "timeoutSeconds": 20,
-        "maxConsecutiveFailures": 3
-    }],
     "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5
