@@ -120,8 +120,8 @@ Each name must be at least 1 character and may
 only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters
 (`a-z`). The name may not begin or end with a dash.
 
-(The allowable format is represented by the regular expression
-`^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$`.)
+The allowable format is represented by the following regular expression  
+`^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$`
 
 ##### `cmd`
 
