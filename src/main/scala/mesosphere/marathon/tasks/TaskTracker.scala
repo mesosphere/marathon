@@ -12,6 +12,7 @@ import org.apache.mesos.state.{ State, Variable }
 
 import scala.collection.JavaConverters._
 import scala.collection._
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 
 class TaskTracker @Inject() (state: State, config: MarathonConf) {
@@ -27,7 +28,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   val PREFIX = "task:"
   val ID_DELIMITER = ":"
 
-  private[this] val apps = new mutable.HashMap[PathId, App] with mutable.SynchronizedMap[PathId, App]
+  private[this] val apps = TrieMap[PathId, App]()
 
   private[tasks] def fetchFromState(id: String) = state.fetch(id).get()
 
@@ -38,7 +39,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   def get(appId: PathId): mutable.Set[MarathonTask] =
     apps.getOrElseUpdate(appId, fetchApp(appId)).tasks
 
-  def list: mutable.HashMap[PathId, App] = apps
+  def list: Map[PathId, App] = apps.toMap
 
   def count(appId: PathId): Int = get(appId).size
 
@@ -46,12 +47,12 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
 
   def take(appId: PathId, n: Int): Set[MarathonTask] = get(appId).take(n)
 
-  def created(appId: PathId, task: MarathonTask): Unit = {
+  def created(appId: PathId, task: MarathonTask): Unit = synchronized {
     // Keep this here so running() can pick it up
     get(appId) += task
   }
 
-  def running(appId: PathId, status: TaskStatus): Future[MarathonTask] = {
+  def running(appId: PathId, status: TaskStatus): Future[MarathonTask] = synchronized {
     val taskId = status.getTaskId.getValue
     val task = get(appId).find(_.getId == taskId) match {
       case Some(stagedTask) =>
@@ -75,7 +76,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     store(appId, task).map(_ => task)
   }
 
-  def terminated(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = {
+  def terminated(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = synchronized {
     val appTasks = get(appId)
     val app = apps(appId)
     val taskId = status.getTaskId.getValue
@@ -87,7 +88,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
         val variable = fetchFromState(getKey(appId, taskId))
         state.expunge(variable)
 
-        log.info(s"Task ${taskId} expunged and removed from TaskTracker")
+        log.info(s"Task $taskId expunged and removed from TaskTracker")
 
         if (app.shutdown && app.tasks.isEmpty) {
           // Are we shutting down this app? If so, remove it
@@ -104,17 +105,17 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     }
   }
 
-  def shutdown(appId: PathId): Unit = {
+  def shutdown(appId: PathId): Unit = synchronized {
     apps.getOrElseUpdate(appId, fetchApp(appId)).shutdown = true
     if (apps(appId).tasks.isEmpty) remove(appId)
   }
 
-  private[this] def remove(appId: PathId) {
+  private[this] def remove(appId: PathId): Unit = synchronized {
     apps.remove(appId)
-    log.warn(s"App ${appId} removed from TaskTracker")
+    log.warn(s"App $appId removed from TaskTracker")
   }
 
-  def statusUpdate(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = {
+  def statusUpdate(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = synchronized {
     val taskId = status.getTaskId.getValue
     get(appId).find(_.getId == taskId) match {
       case Some(task) =>
@@ -126,7 +127,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
         store(appId, updatedTask).map(_ => Some(updatedTask))
 
       case _ =>
-        log.warn(s"No task for ID ${taskId}")
+        log.warn(s"No task for ID $taskId")
         Future.successful(None)
     }
   }
@@ -145,7 +146,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     toKill
   }
 
-  def expungeOrphanedTasks() {
+  def expungeOrphanedTasks(): Unit = synchronized {
     // Remove tasks that don't have any tasks associated with them. Expensive!
     log.info("Expunging orphaned tasks from store")
     val stateTaskKeys = state.names.get.asScala.filter(_.startsWith(PREFIX))
@@ -155,7 +156,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
 
     for (stateTaskKey <- stateTaskKeys) {
       if (!appsTaskKeys.contains(stateTaskKey)) {
-        log.info(s"Expunging orphaned task with key ${stateTaskKey}")
+        log.info(s"Expunging orphaned task with key $stateTaskKey")
         val variable = state.fetch(stateTaskKey).get
         state.expunge(variable)
       }
@@ -163,7 +164,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   }
 
   private[tasks] def fetchApp(appId: PathId): App = {
-    log.debug(s"Fetching app from store ${appId}")
+    log.debug(s"Fetching app from store $appId")
     val names = state.names().get.asScala.toSet
     val tasks: mutable.Set[MarathonTask] = new mutable.HashSet[MarathonTask]
     val taskKeys = names.filter(name => name.startsWith(PREFIX + appId.safePath + ID_DELIMITER))
@@ -237,7 +238,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     val size = task.getSerializedSize
     sink.writeInt(size)
     sink.write(task.toByteArray)
-    sink.flush
+    sink.flush()
   }
 
   def store(appId: PathId, task: MarathonTask): Future[Variable] = {
