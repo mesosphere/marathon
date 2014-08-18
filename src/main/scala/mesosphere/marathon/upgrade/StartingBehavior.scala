@@ -43,8 +43,6 @@ trait StartingBehavior { this: Actor with ActorLogging =>
       healthyTasks += taskId
       log.info(s"$taskId is now healthy")
       checkFinished()
-
-    case x => log.debug(s"Received $x")
   }
 
   final def checkForRunning: Receive = {
@@ -52,8 +50,6 @@ trait StartingBehavior { this: Actor with ActorLogging =>
       runningTasks += 1
       log.info(s"Started $taskId")
       checkFinished()
-
-    case x => log.debug(s"Received $x")
   }
 
   def rescheduleOnFailure: Receive = {
