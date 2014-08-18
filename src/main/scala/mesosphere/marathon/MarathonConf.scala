@@ -64,7 +64,7 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
   lazy val reconciliationInterval = opt[Long]("reconciliation_interval",
     descr = "This is the length of time, in milliseconds, between task " +
       "reconciliation operations.",
-    default = Some(30000L)) // 30 seconds
+    default = Some(60000L)) // 60 seconds
 
   lazy val executorHealthChecks = opt[Boolean]("executor_health_checks",
     descr = "If enabled, health checks are performed by the executor " +
