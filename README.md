@@ -172,13 +172,16 @@ The following options can influence how Marathon works:
 
 * `--master` (Required): The URL of the Mesos master. The format is a
     comma-delimited list of of hosts like `zk://host1:port,host2:port/mesos`.
-    Pay particular attention to the leading `zk://` and trailing `/mesos`!
+    If using ZooKeeper, pay particular attention to the leading `zk://` and
+    trailing `/mesos`! If not using ZooKeeper, standard URLs like
+    `http://localhost` are also acceptable.
 
 #### Optional Flags
 
 * `--artifact_store` (Optional. Default: None): URL to the artifact store.
     Examples: `"hdfs://localhost:54310/path/to/store"`,
-    `"file:///var/log/store"`.
+    `"file:///var/log/store"`. For details, see the
+    [artifact store](docs/artifact-store.md) docs.
 * `--checkpoint` (Optional. Default: false): Enable checkpointing of tasks.
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and upgrades.
