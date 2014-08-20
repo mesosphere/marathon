@@ -168,13 +168,13 @@ The released version 0.19.0 of Mesos does not allow frameworks to launch an in-p
 
 The following options can influence how Marathon works:
 
-#### Required Command Line Flags
+#### Required Flags
 
 * `--master` (Required): The URL of the Mesos master. The format is a
     comma-delimited list of of hosts like `zk://host1:port,host2:port/mesos`.
     Pay particular attention to the leading `zk://` and trailing `/mesos`!
 
-#### Optional Command Line Flags
+#### Optional Flags
 
 * `--artifact_store` (Optional. Default: None): URL to the artifact store.
     Examples: `"hdfs://localhost:54310/path/to/store"`,
@@ -219,6 +219,23 @@ The following options can influence how Marathon works:
     stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
     in milliseconds.
+
+#### Optional Flags Inherited from [Chaos](https://github.com/mesosphere/chaos)
+
+* `--assets_path` (Optional. Default: None): Local file system path from which
+    to load assets for the web UI. If not supplied, assets are loaded from the
+    packaged JAR.
+* `--http_credentials` (Optional. Default: None): Credentials for accessing the
+    HTTP service in the format of `username:password`. The username may not
+    contain a colon (:).
+* `--http_port` (Optional. Default: 8080): The port on which to listen for HTTP
+    requests.
+* `--https_port` (Optional. Default: 8443): The port on which to listen for
+    HTTPS requests.
+* `--ssl_keystore_password` (Optional. Default: None): Password for the keystore
+    supplied with the `ssl_keystore_path` option.
+* `--ssl_keystore_path` (Optional. Default: None): Path to the SSL keystore. SSL
+    will be enabled if this option is supplied.
 
 ### Configuration Options
 
