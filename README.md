@@ -164,34 +164,55 @@ The released version 0.19.0 of Mesos does not allow frameworks to launch an in-p
     ./bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
     ./bin/start --master localhost:5050 --zk zk://localhost:2181/marathon
 
-### Command Line Options
+### Command Line Flags
 
 The following options can influence how Marathon works:
 
-* `--master`: The URL of the Mesos master. The format is a comma-delimited list of
-    of hosts like `zk://host1:port,host2:port/mesos`. Pay particular attention to the
-    leading `zk://` and trailing `/mesos`!
-* `--failover_timeout`: The failover_timeout for mesos in seconds (default: 1 week)
-* `--ha`: Runs Marathon in HA mode with leader election. Allows starting an arbitrary
-    number of other Marathons but all need to be started in HA mode. This mode
-    requires a running ZooKeeper. See `--master`.
-* `--checkpoint`: Enable checkpointing of tasks. Requires checkpointing enabled on
-    slaves. Allows tasks to continue running during mesos-slave restarts and upgrades.
-* `--local_port_min`: Min port number to use when assigning ports to apps.
-* `--local_port_max`: Max port number to use when assigning ports to apps.
-* `--executor`: Executor to use when none is specified.
-* `--hostname`: The advertised hostname stored in ZooKeeper so another standby host
-    can redirect to the elected leader.
-* `--mesos_role`: Mesos role for this framework.
-* `--task_launch_timeout`: Time, in milliseconds, to wait for a task to enter the
-    TASK_RUNNING state before killing it.
-* `--reconciliation_initial_delay`: This is the length of time, in milliseconds, before
-    Marathon begins to periodically perform task reconciliation operations.
-* `--mesos_user`: Mesos user for this framework. Defaults to current user.
-* `--executor_health_checks`: If this flag is supplied, health checks are executed
-    on the slaves that the tasks are running on.  Requires Mesos `0.20.0` or higher.
-    Use of this option limits app health checks to at most one.  The only protocol
-    supported by Mesos is COMMAND.
+#### Required Command Line Flags
+
+* `--master` (Required): The URL of the Mesos master. The format is a
+    comma-delimited list of of hosts like `zk://host1:port,host2:port/mesos`.
+    Pay particular attention to the leading `zk://` and trailing `/mesos`!
+
+#### Optional Command Line Flags
+
+* `--artifact_store` (Optional. Default: None): URL to the artifact store.
+    Examples: `"hdfs://localhost:54310/path/to/store"`,
+    `"file:///var/log/store"`.
+* `--checkpoint` (Optional. Default: false): Enable checkpointing of tasks.
+    Requires checkpointing enabled on slaves. Allows tasks to continue running
+    during mesos-slave restarts and upgrades.
+* `--executor` (Optional. Default: "//cmd"): Executor to use when none is
+    specified.
+* `--executor_health_checks` (Optional. Default: false)): If this flag is supplied,
+    health checks are executed on the slaves on which the tasks are running.
+    Requires Mesos `0.20.0` or higher. Use of this option limits app health
+    checks to at most one. The only protocol supported by Mesos is COMMAND.
+* `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
+    failover_timeout for Mesos in seconds.
+* `--ha` (Optional. Default: true): Runs Marathon in HA mode with leader election.
+    Allows starting an arbitrary number of other Marathons but all need to be
+    started in HA mode. This mode requires a running ZooKeeper. See `--master`.
+* `--hostname` (Optional. Default: hostname of machine): The advertised hostname
+    stored in ZooKeeper so another standby host can redirect to the elected leader.
+    _Note: Default is determined by
+    [`InetAddress.getLocalHost`](http://docs.oracle.com/javase/7/docs/api/java/net/InetAddress.html#getLocalHost())._
+* `--local_port_max` (Optional. Default: 20000): Max port number to use when
+    assigning ports to apps.
+* `--local_port_min` (Optional. Default: 10000): Min port number to use when
+    assigning ports to apps.
+* `--mesos_role` (Optional. Default: None): Mesos role for this framework.
+* `--mesos_user` (Optional. Default: current user): Mesos user for
+    this framework. _Note: Default is determined by
+    [`SystemProperties.get("user.name")`](http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String])._
+* `--reconciliation_initial_delay` (Optional. Default: 30000 (30 seconds)): The
+    delay, in milliseconds, before Marathon begins to periodically perform task
+    reconciliation operations.
+* `--reconciliation_interval` (Optional. Default: 30000 (30 seconds)): The
+    period, in milliseconds, between task reconciliation operations.
+* `--task_launch_timeout` (Optional. Default: 60000 (60 seconds)): Time,
+    in milliseconds, to wait for a task to enter the TASK_RUNNING state before
+    killing it.
 
 ### Configuration Options
 
