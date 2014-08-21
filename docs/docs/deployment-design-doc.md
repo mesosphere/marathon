@@ -1,3 +1,6 @@
+---
+---
+
 # Advanced Deployment with Marathon
 
 ## Problem Statement
@@ -103,7 +106,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
     - `r` is the number of running instances
     - `h` is the number of healthy instances
 
-    ![lifecycle](./img/app-state.png?raw=true "Application health lifecycle")  
+    ![lifecycle](/img/app-state.png?raw=true "Application health lifecycle")  
     Figure 1: The Application Health Lifecycle
 
 
@@ -195,7 +198,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
     - Figure 2 (below) illustrates a simple group hierarchy with a single dependency
       defined.
 
-      ![hierarchy](./img/apps.png?raw=true "Namespaced Application Groups with a Dependency")      
+      ![hierarchy](/img/apps.png?raw=true "Namespaced Application Groups with a Dependency")      
       Figure 2: Namespaced Application Groups with a Dependency
 
 ### Managed Scaling

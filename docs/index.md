@@ -1,0 +1,63 @@
+---
+---
+
+<div class="text-center">
+  <h1>Marathon</h1>
+  <p class="lead">
+    A cluster-wide init and control system for services in cgroups or Docker
+  </p>
+  <p>
+    <a href="http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz"
+        class="btn btn-lg btn-primary">
+      Download Marathon v0.6.1
+    </a>
+  </p>
+  <a href="http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz.sha256">
+    v0.6.1 SHA-256 Checksum
+  </a>
+</div>
+
+---
+
+## Overview
+
+The graphic shown below depicts how Marathon runs on top of Mesos together with
+the Chronos framework. In this case, Marathon is the first framework to be
+launched and it runs alongside Mesos. In other words, the Marathon scheduler
+processes were started outside of Mesos using `init`, `upstart`, or a similar
+tool. Marathon launches two instances of the Chronos scheduler as a Marathon
+task. If either of the two Chronos tasks dies -- due to underlying slave
+crashes, power loss in the cluster, etc. -- Marathon will re-start a Chronos
+instance on another slave. This approach ensures that two Chronos processes are
+always running.
+
+Since Chronos itself is a framework and receives Mesos resource offers, it can
+start tasks on Mesos. In the use case shown below, Chronos is currently running
+two tasks. One dumps a production MySQL database to S3, while another sends an
+email newsletter to all customers via Rake. Meanwhile, Marathon also runs the
+other applications that make up our website, such as JBoss servers, a Jetty
+service, Sinatra, Rails, and so on.
+
+![architecture](/img/architecture.png "Marathon on Mesos")
+
+The next graphic shows a more application-centric view of Marathon running
+three applications, each with a different number of tasks: Search (1), Jetty
+(3), and Rails (5).
+
+![Marathon1](/img/marathon1.png "Initial Marathon")
+
+As the website gains traction and the user base grows, we decide to scale-out
+the search service and our Rails-based application. This is done via a
+REST call to the Marathon API to add more tasks. Marathon will take care of
+placing the new tasks on machines with spare capacity, honoring the
+constraints we previously set.
+
+![Marathon2](/img/marathon2.png "Marathon scale-out")
+
+Imagine that one of the datacenter workers trips over a power cord and a server
+gets unplugged. No problem for Marathon, it moves the affected search service
+and Rails tasks to a node that has spare capacity. The engineer may be
+temporarily embarrased, but Marathon saves him from having to explain a
+difficult situation!
+
+![Marathon3](/img/marathon3.png "Marathon recovering an application")
