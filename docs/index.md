@@ -22,8 +22,10 @@ title: A cluster-wide init and control system for services in cgroups or Docker
 
 ## Overview
 
-The graphic shown below depicts how Marathon runs on top of Mesos together with
-the Chronos framework. In this case, Marathon is the first framework to be
+The graphic shown below depicts how Marathon runs on top of
+<a href="https://mesos.apache.org/">Apache Mesos</a> together with
+the <a href="https://github.com/airbnb/chronos">Chronos</a> framework.
+In this case, Marathon is the first framework to be
 launched and it runs alongside Mesos. In other words, the Marathon scheduler
 processes were started outside of Mesos using `init`, `upstart`, or a similar
 tool. Marathon launches two instances of the Chronos scheduler as a Marathon
