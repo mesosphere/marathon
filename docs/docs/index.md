@@ -25,7 +25,7 @@
     for details. Running `make install` will install Mesos in `/usr/local` in
     the same way as these packages do.
 
-1.  Download and unpack the latest release.
+1.  Download and unpack the latest Marathon release.
 
     **For Mesos 0.19.0:**
 

@@ -13,6 +13,7 @@ defaults:
 sass:
   style: :compressed
 
+baseurl: "/marathon"
 highlighter: pygments
 lsi: false
 markdown: redcarpet

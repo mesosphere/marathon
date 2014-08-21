@@ -38,13 +38,17 @@ email newsletter to all customers via Rake. Meanwhile, Marathon also runs the
 other applications that make up our website, such as JBoss servers, a Jetty
 service, Sinatra, Rails, and so on.
 
-![architecture](/img/architecture.png "Marathon on Mesos")
+<p class="text-center">
+  <img src="{{ site.baseurl}}/img/architecture.png" width="423" height="477" alt="">
+</p>
 
 The next graphic shows a more application-centric view of Marathon running
 three applications, each with a different number of tasks: Search (1), Jetty
 (3), and Rails (5).
 
-![Marathon1](/img/marathon1.png "Initial Marathon")
+<p class="text-center">
+  <img src="{{ site.baseurl}}/img/marathon1.png" width="420" height="269" alt="">
+</p>
 
 As the website gains traction and the user base grows, we decide to scale-out
 the search service and our Rails-based application. This is done via a
@@ -52,7 +56,9 @@ REST call to the Marathon API to add more tasks. Marathon will take care of
 placing the new tasks on machines with spare capacity, honoring the
 constraints we previously set.
 
-![Marathon2](/img/marathon2.png "Marathon scale-out")
+<p class="text-center">
+  <img src="{{ site.baseurl}}/img/marathon2.png" width="420" height="269" alt="">
+</p>
 
 Imagine that one of the datacenter workers trips over a power cord and a server
 gets unplugged. No problem for Marathon, it moves the affected search service
@@ -60,4 +66,6 @@ and Rails tasks to a node that has spare capacity. The engineer may be
 temporarily embarrased, but Marathon saves him from having to explain a
 difficult situation!
 
-![Marathon3](/img/marathon3.png "Marathon recovering an application")
+<p class="text-center">
+  <img src="{{ site.baseurl}}/img/marathon3.png" width="417" height="268" alt="">
+</p>
