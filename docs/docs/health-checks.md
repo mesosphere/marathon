@@ -1,4 +1,5 @@
 ---
+title: Health Checks
 ---
 
 # Health Checks

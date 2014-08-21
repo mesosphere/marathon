@@ -1,4 +1,5 @@
 ---
+title: Event Bus
 ---
 
 # Event Bus

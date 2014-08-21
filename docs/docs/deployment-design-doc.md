@@ -1,4 +1,5 @@
 ---
+title: Advanced Deployment Design
 ---
 
 # Advanced Deployment with Marathon

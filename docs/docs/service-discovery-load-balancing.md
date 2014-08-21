@@ -1,4 +1,5 @@
 ---
+title: Service Discovery & Load Balancing
 ---
 
 # Service Discovery & Load Balancing

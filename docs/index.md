@@ -1,4 +1,5 @@
 ---
+title: A cluster-wide init and control system for services in cgroups or Docker
 ---
 
 <div class="text-center">

@@ -1,4 +1,5 @@
 ---
+title: Artifact Store
 ---
 
 # Artifact Store
