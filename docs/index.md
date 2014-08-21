@@ -2,7 +2,7 @@
 title: A cluster-wide init and control system for services in cgroups or Docker containers
 ---
 
-<div class="text-center">
+<div class="jumbotron text-center">
   <h1>Marathon</h1>
   <p class="lead">
     A cluster-wide init and control system for services in cgroups or Docker containers
@@ -17,8 +17,6 @@ title: A cluster-wide init and control system for services in cgroups or Docker 
     v0.6.1 SHA-256 Checksum
   </a>
 </div>
-
----
 
 ## Overview
 
