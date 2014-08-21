@@ -56,6 +56,7 @@ define([
         return;
       }
 
+      /* jshint trailing:false, quotmark:false, newcap:false */
       this.setState({
         modal: React.renderComponent(
           <AppModalComponent model={app} onDestroy={this.handleModalDestroy} />,
@@ -75,6 +76,7 @@ define([
         return;
       }
 
+      /* jshint trailing:false, quotmark:false, newcap:false */
       this.setState({
         modal: React.renderComponent(
           <NewAppModalComponent

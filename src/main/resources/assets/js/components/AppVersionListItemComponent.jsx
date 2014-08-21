@@ -88,6 +88,8 @@ define([
             </p>
           </div>;
       } else {
+
+        /* jshint trailing:false, quotmark:false, newcap:false */
         versionNode =
         <div className="panel-body">
           <AppVersionComponent

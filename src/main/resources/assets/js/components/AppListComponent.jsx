@@ -114,6 +114,8 @@ define([
             <td className="text-center" colSpan="5">No running apps.</td>
           </tr>;
       } else {
+
+        /* jshint trailing:false, quotmark:false, newcap:false */
         appNodes = this.props.collection.map(function(model) {
           return <AppComponent key={model.id} model={model} onClick={this.onClickApp} />;
         }, this);

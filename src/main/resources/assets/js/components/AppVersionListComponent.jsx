@@ -58,6 +58,8 @@ define([
       if (this.props.fetchState === this.props.STATES.STATE_LOADING) {
         tableContents = <p className="text-muted text-center">Loading versions...</p>;
       } else if (this.props.fetchState === this.props.STATES.STATE_SUCCESS) {
+
+        /* jshint trailing:false, quotmark:false, newcap:false */
         tableContents =
           <PagedContentComponent
             currentPage={currentPage}

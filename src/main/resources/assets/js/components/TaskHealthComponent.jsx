@@ -32,6 +32,8 @@ define([
               }
             ];
             var timeFields = timeNodes.map(function(timeNode, index) {
+
+              /* jshint trailing:false, quotmark:false, newcap:false */
               return (
                 <TimeFieldComponent
                   key={index}

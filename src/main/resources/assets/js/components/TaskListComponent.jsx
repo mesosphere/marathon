@@ -86,6 +86,7 @@ define([
           var isActive = this.props.selectedTasks[task.id] === true;
           if (!isActive) { allTasksSelected = false; }
 
+          /* jshint trailing:false, quotmark:false, newcap:false */
           return (
               <TaskListItemComponent
                 isActive={isActive}
@@ -105,6 +106,7 @@ define([
           "clickable": true,
           "dropup": this.props.tasks.sortReverse
         });
+
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <table className="table table-unstyled">

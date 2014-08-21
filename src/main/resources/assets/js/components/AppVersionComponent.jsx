@@ -7,6 +7,7 @@ define([
   "models/AppVersion"
 ], function(_, React, App, AppVersion) {
   "use strict";
+
   var UNSPECIFIED_NODE =
     React.createClass({
       render: function() {
