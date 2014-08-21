@@ -89,7 +89,8 @@ class HealthCheckActor(
     val consecutiveFailures = health.consecutiveFailures
     val maxFailures = healthCheck.maxConsecutiveFailures
 
-    if (consecutiveFailures >= maxFailures) {
+    // ignore failures if maxFailures == 0
+    if (consecutiveFailures >= maxFailures && maxFailures > 0) {
       log.info(f"Killing task ${task.getId} on host ${task.getHost}")
 
       // kill the task
