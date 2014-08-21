@@ -8,3 +8,4 @@ node_modules
 .classpath
 .settings
 .Rproj.user
+_site
