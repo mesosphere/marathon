@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: {{ page.title }}</title>
+    <link rel="icon" type="image/x-icon" href="{{ site.baseurl }}/img/marathon-favicon.ico">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ site.baseurl }}/css/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <a class="navbar-brand" href="{{ site.baseurl }}/">Marathon</a>
+              </div>
+              <ul class="nav navbar-nav">
+                <li><a href="{{ site.baseurl }}/docs/">Docs</a></li>
+              </ul>
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+              </ul>
+            </div>
+          </div>
+          {{ content }}
+          <footer>
+            <p class="text-muted">
+              &copy; 2014 <a class="text-muted" href="http://mesosphere.io">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

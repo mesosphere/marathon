@@ -36,49 +36,6 @@ can even start other Marathon instances via Marathon.
 * *Basic Auth* and *SSL*
 * *Metrics*: available at `/metrics` in JSON format
 
-## Overview
-
-The graphic shown below depicts how Marathon runs on top of Mesos together with
-the Chronos framework. In this case, Marathon is the first framework to be
-launched and it runs alongside Mesos. In other words, the Marathon scheduler
-processes were started outside of Mesos using `init`, `upstart`, or a similar
-tool. Marathon launches two instances of the Chronos scheduler as a Marathon
-task. If either of the two Chronos tasks dies -- due to underlying slave
-crashes, power loss in the cluster, etc. -- Marathon will re-start a Chronos
-instance on another slave. This approach ensures that two Chronos processes are
-always running.
-
-Since Chronos itself is a framework and receives Mesos resource offers, it can
-start tasks on Mesos. In the use case shown below, Chronos is currently running
-two tasks. One dumps a production MySQL database to S3, while another sends an
-email newsletter to all customers via Rake. Meanwhile, Marathon also runs the
-other applications that make up our website, such as JBoss servers, a Jetty
-service, Sinatra, Rails, and so on.
-
-![architecture](https://raw.github.com/mesosphere/marathon/master/docs/img/architecture.png "Marathon on Mesos")
-
-The next graphic shows a more application-centric view of Marathon running
-three applications, each with a different number of tasks: Search (1), Jetty
-(3), and Rails (5).
-
-![Marathon1](https://raw.github.com/mesosphere/marathon/master/docs/img/marathon1.png "Initial Marathon")
-
-As the website gains traction and the user base grows, we decide to scale-out
-the search service and our Rails-based application. This is done via a
-REST call to the Marathon API to add more tasks. Marathon will take care of
-placing the new tasks on machines with spare capacity, honoring the
-constraints we previously set.
-
-![Marathon2](https://raw.github.com/mesosphere/marathon/master/docs/img/marathon2.png "Marathon scale-out")
-
-Imagine that one of the datacenter workers trips over a power cord and a server
-gets unplugged. No problem for Marathon, it moves the affected search service
-and Rails tasks to a node that has spare capacity. The engineer may be
-temporarily embarrased, but Marathon saves him from having to explain a
-difficult situation!
-
-![Marathon3](https://raw.github.com/mesosphere/marathon/master/docs/img/marathon3.png "Marathon recovering an application")
-
 ## Setting Up And Running Marathon
 
 ### Requirements
@@ -163,82 +120,6 @@ The released version 0.19.0 of Mesos does not allow frameworks to launch an in-p
 
     ./bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
     ./bin/start --master localhost:5050 --zk zk://localhost:2181/marathon
-
-### Command Line Flags
-
-The following options can influence how Marathon works:
-
-#### Required Flags
-
-* `--master` (Required): The URL of the Mesos master. The format is a
-    comma-delimited list of of hosts like `zk://host1:port,host2:port/mesos`.
-    If using ZooKeeper, pay particular attention to the leading `zk://` and
-    trailing `/mesos`! If not using ZooKeeper, standard URLs like
-    `http://localhost` are also acceptable.
-
-#### Optional Flags
-
-* `--artifact_store` (Optional. Default: None): URL to the artifact store.
-    Examples: `"hdfs://localhost:54310/path/to/store"`,
-    `"file:///var/log/store"`. For details, see the
-    [artifact store](docs/artifact-store.md) docs.
-* `--checkpoint` (Optional. Default: false): Enable checkpointing of tasks.
-    Requires checkpointing enabled on slaves. Allows tasks to continue running
-    during mesos-slave restarts and upgrades.
-* `--executor` (Optional. Default: "//cmd"): Executor to use when none is
-    specified.
-* `--executor_health_checks` (Optional. Default: false)): If this flag is supplied,
-    health checks are executed on the slaves on which the tasks are running.
-    Requires Mesos `0.20.0` or higher. Use of this option limits app health
-    checks to at most one. The only protocol supported by Mesos is COMMAND.
-* `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
-    failover_timeout for Mesos in seconds.
-* `--ha` (Optional. Default: true): Runs Marathon in HA mode with leader election.
-    Allows starting an arbitrary number of other Marathons but all need to be
-    started in HA mode. This mode requires a running ZooKeeper. See `--master`.
-* `--hostname` (Optional. Default: hostname of machine): The advertised hostname
-    stored in ZooKeeper so another standby host can redirect to the elected leader.
-    _Note: Default is determined by
-    [`InetAddress.getLocalHost`](http://docs.oracle.com/javase/7/docs/api/java/net/InetAddress.html#getLocalHost())._
-* `--local_port_max` (Optional. Default: 20000): Max port number to use when
-    assigning ports to apps.
-* `--local_port_min` (Optional. Default: 10000): Min port number to use when
-    assigning ports to apps.
-* `--mesos_role` (Optional. Default: None): Mesos role for this framework.
-* `--mesos_user` (Optional. Default: current user): Mesos user for
-    this framework. _Note: Default is determined by
-    [`SystemProperties.get("user.name")`](http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String])._
-* `--reconciliation_initial_delay` (Optional. Default: 30000 (30 seconds)): The
-    delay, in milliseconds, before Marathon begins to periodically perform task
-    reconciliation operations.
-* `--reconciliation_interval` (Optional. Default: 30000 (30 seconds)): The
-    period, in milliseconds, between task reconciliation operations.
-* `--task_launch_timeout` (Optional. Default: 60000 (60 seconds)): Time,
-    in milliseconds, to wait for a task to enter the TASK_RUNNING state before
-    killing it.
-* `--zk` (Optional. Default: None): ZooKeeper URL for storing state.
-    Format: `zk://host1:port1,host2:port2,.../path`
-* `--zk_max_versions` (Optional. Default: None): Limit the number of versions
-    stored for one entity.
-* `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
-    in milliseconds.
-
-#### Optional Flags Inherited from [Chaos](https://github.com/mesosphere/chaos)
-
-* `--assets_path` (Optional. Default: None): Local file system path from which
-    to load assets for the web UI. If not supplied, assets are loaded from the
-    packaged JAR.
-* `--http_credentials` (Optional. Default: None): Credentials for accessing the
-    HTTP service in the format of `username:password`. The username may not
-    contain a colon (:).
-* `--http_port` (Optional. Default: 8080): The port on which to listen for HTTP
-    requests.
-* `--https_port` (Optional. Default: 8443): The port on which to listen for
-    HTTPS requests.
-* `--ssl_keystore_password` (Optional. Default: None): Password for the keystore
-    supplied with the `ssl_keystore_path` option.
-* `--ssl_keystore_path` (Optional. Default: None): Path to the SSL keystore. SSL
-    will be enabled if this option is supplied.
 
 ### Configuration Options
 
