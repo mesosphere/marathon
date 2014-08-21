@@ -1,11 +1,1 @@
-.idea
-*.iml
-target
-.reviewboardrc
-dependency-reduced-pom.xml
-node_modules
-.project
-.classpath
-.settings
-.Rproj.user
 _site
