@@ -10,7 +10,9 @@ Events can be subscribed to by pluggable subscribers. Currently an HTTP callback
 
 Add these command line options to configure events:
 
-     $ ./bin/start --master ... --event_subscriber http_callback --http_endpoints http://host1/foo,http://host2/bar
+``` bash
+$ ./bin/start --master ... --event_subscriber http_callback --http_endpoints http://host1/foo,http://host2/bar
+```
 
 Both host1 and host2 will receive events.
 
@@ -22,23 +24,23 @@ Below are example JSON bodies that are posted by Marathon.
 
 Fired every time Marathon receives an API request that modifies an app (create, update, delete):
 
-```
+``` json
 {
-  "eventType":"api_post_event",
-  "clientIp":"0:0:0:0:0:0:0:1",
-  "uri":"/v1/apps/start",
+  "eventType": "api_post_event",
+  "clientIp": "0:0:0:0:0:0:0:1",
+  "uri": "/v1/apps/start",
   "appDefinition":{
-    "id":"sleep",
-    "cmd":"sleep 10",
-    "env":{},
-    "instances":1,
-    "cpus":1.0,
-    "mem":10.0,
-    "executor":"",
-    "constraints":[],
-    "uris":[],
-    "ports":[14480],
-    "taskRateLimit":1.0
+    "id": "sleep",
+    "cmd": "sleep 10",
+    "env": {},
+    "instances": 1,
+    "cpus": 1.0,
+    "mem": 10.0,
+    "executor": "",
+    "constraints": [],
+    "uris": [],
+    "ports": [14480],
+    "taskRateLimit": 1.0
   }
 }
 ```
@@ -47,13 +49,13 @@ Fired every time Marathon receives an API request that modifies an app (create, 
 
 Fired every time the status of a task changes:
 
-```
+``` json
 {
-  "eventType":"status_update_event",
-  "taskId":"sleep_0-1389757007517",
-  "taskStatus":2,
-  "appID":"sleep",
-  "host":"zwerg",
-  "ports":[31372]
+  "eventType": "status_update_event",
+  "taskId": "sleep_0-1389757007517",
+  "taskStatus": 2,
+  "appID": "sleep",
+  "host": "zwerg",
+  "ports": [31372]
 }
 ```

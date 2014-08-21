@@ -29,18 +29,24 @@
 
     **For Mesos 0.19.0:**
 
-        curl -O http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz
-        tar xzf marathon-0.6.1.tgz
+    ``` bash
+    $ curl -O http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz
+    $ tar xzf marathon-0.6.1.tgz
+    ```
 
     **For Mesos 0.17.0 to 0.18.2:**
 
-        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz
-        tar xzf marathon-0.5.1.tgz
+    ``` console
+    $ curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz
+    $ tar xzf marathon-0.5.1.tgz
+    ```
 
     **For Mesos 0.16.0 and earlier:**
 
-        curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1_mesos-0.16.0/marathon-0.5.1_mesos-0.16.0.tgz
-        tar xzf marathon-0.5.1_mesos-0.16.0.tgz
+    ``` console
+    $ curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1_mesos-0.16.0/marathon-0.5.1_mesos-0.16.0.tgz
+    $ tar xzf marathon-0.5.1_mesos-0.16.0.tgz
+    ```
 
     SHA-256 checksums are available by appending `.sha256` to the URLs.
 
@@ -49,9 +55,11 @@
 
 1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
 
-        git clone https://github.com/mesosphere/marathon.git
-        cd marathon
-        sbt assembly
+    ``` console
+    $ git clone https://github.com/mesosphere/marathon.git
+    $ cd marathon
+    $ sbt assembly
+    ```
 
 1.  Run `./bin/build-distribution` to package Marathon as an
     [executable JAR](http://mesosphere.io/2013/12/07/executable-jars/)
@@ -65,7 +73,9 @@ ZooKeeper and Mesos running. The following command launches
 Marathon in *production mode*. Point your web browser to
 `localhost:8080` and you should see the Marathon UI.
 
-    ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
+``` console
+$ ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
+```
 
 Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeepers
 for storing state. They are separate options because Mesos masters can be
@@ -81,7 +91,9 @@ use. Note that you still need to run ZooKeeper for storing state. The following
 command launches Marathon in *local mode*. Point your web browser to
 `http://localhost:8080`, and you should see the Marathon UI.
 
-    ./bin/start --master local --zk zk://localhost:2181/marathon
+``` console
+$ ./bin/start --master local --zk zk://localhost:2181/marathon
+```
 
 ### Running with a standalone Mesos master
 
@@ -90,8 +102,10 @@ You can still run Marathon locally if you launch a master in a separate console
 and either point Marathon directly at the master itself or at the same ZooKeeper
 (if you specified this when launching the master):
 
-    ./bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
-    ./bin/start --master localhost:5050 --zk zk://localhost:2181/marathon
+``` console
+$ ./bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
+$ ./bin/start --master localhost:5050 --zk zk://localhost:2181/marathon
+```
 
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
 [Zookeeper]: https://zookeeper.apache.org/ "Apache ZooKeeper"

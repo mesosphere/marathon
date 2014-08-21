@@ -12,16 +12,20 @@ Constraints can be set via the REST API or the [Marathon gem](https://rubygems.o
 
 via the Marathon gem:
 
-    marathon start -i sleep -C 'sleep 60' -n 3 --constraint hostname:UNIQUE
+``` bash
+$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint hostname:UNIQUE
+```
 
 via curl:
 
-    curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
-      "id": "sleep-unique",
-      "cmd": "sleep 60",
-      "instances": 3,
-      "constraints": [["hostname", "UNIQUE"]]
-    }'
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
+    "id": "sleep-unique",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["hostname", "UNIQUE"]]
+  }'
+```
 
 ### CLUSTER operator
 
@@ -29,40 +33,51 @@ via curl:
 
 via the Marathon gem:
 
-    marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:CLUSTER:rack-1
+``` bash
+$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:CLUSTER:rack-1
+```
 
 via curl:
 
-    curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
-      "id": "sleep-cluster",
-      "cmd": "sleep 60",
-      "instances": 3,
-      "constraints": [["rack_id", "CLUSTER", "rack-1"]]
-    }'
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
+    "id": "sleep-cluster",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "CLUSTER", "rack-1"]]
+  }'
+```
 
 You can also use this attribute to tie an application to a specific node by using the hostname property:
 
-    curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
-      "id": "sleep-cluster",
-      "cmd": "sleep 60",
-      "instances": 3,
-      "constraints": [["hostname", "CLUSTER", "a.specific.node.com"]]
-    }'
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
+    "id": "sleep-cluster",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["hostname", "CLUSTER", "a.specific.node.com"]]
+  }'
+```
+
 ### GROUP_BY operator
 
 `GROUP_BY` can be used to distribute tasks evenly across racks or datacenters for high availability.
 
 via the Marathon gem:
 
-    marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:GROUP_BY
+``` bash
+$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:GROUP_BY
+```
 
 via curl:
 
-    curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
-      "id": "sleep-group-by",
-      "cmd": "sleep 60",
-      "instances": 3,
-      "constraints": [["rack_id", "GROUP_BY"]]
-    }'
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "GROUP_BY"]]
+  }'
+```
 
 Optionally, you can specify a minimum number of groups to try and achieve.

@@ -70,5 +70,7 @@ The application health lifecycle is represented by the finite state machine in f
 - `r` is the number of running instances
 - `h` is the number of healthy instances
 
-![lifecycle](/img/app-state.png "Application health lifecycle")  
-Figure 1: The Application Health Lifecycle
+<p class="text-center">
+  <img src="{{site.baseurl}}/img/app-state.png" width="481" height="797" alt=""><br>
+  <em>Figure 1: The Application Health Lifecycle</em>
+</p>
