@@ -3,8 +3,10 @@
 define([
   "React",
   "mixins/BackboneMixin",
-  "jsx!components/TaskListItemComponent"
-], function(React, BackboneMixin, TaskListItemComponent) {
+  "jsx!components/TaskListItemComponent",
+  "jsx!components/PagedContentComponent"
+], function(React, BackboneMixin, TaskListItemComponent,
+    PagedContentComponent) {
   "use strict";
 
   return React.createClass({
@@ -13,7 +15,9 @@ define([
     mixins: [BackboneMixin],
 
     propTypes: {
+      currentPage: React.PropTypes.number.isRequired,
       fetchState: React.PropTypes.number.isRequired,
+      itemsPerPag: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
       selectedTasks: React.PropTypes.object.isRequired,
       STATES: React.PropTypes.object.isRequired,
@@ -60,44 +64,60 @@ define([
 
       if (this.props.fetchState === this.props.STATES.STATE_LOADING) {
         taskNodes =
-          <tr>
-            <td className="text-center text-muted" colSpan="7">
-              Loading tasks...
-            </td>
-          </tr>;
+          <tbody>
+            <tr>
+              <td className="text-center text-muted" colSpan="7">
+                Loading tasks...
+              </td>
+            </tr>
+          </tbody>;
       } else if (this.props.fetchState === this.props.STATES.STATE_ERROR) {
         taskNodes =
-          <tr>
-            <td className="text-center text-danger" colSpan="7">
-              Error fetching tasks. Refresh the list to try again.
-            </td>
-          </tr>;
+          <tbody>
+            <tr>
+              <td className="text-center text-danger" colSpan="7">
+                Error fetching tasks. Refresh the list to try again.
+              </td>
+            </tr>
+          </tbody>;
       } else if (tasksLength === 0) {
         taskNodes =
-          <tr>
-            <td className="text-center" colSpan="7">
-              No tasks running.
-            </td>
-          </tr>;
+          <tbody>
+            <tr>
+              <td className="text-center" colSpan="7">
+                No tasks running.
+              </td>
+            </tr>
+          </tbody>;
       } else {
-        taskNodes = this.props.tasks.map(function(task) {
-          // Expicitly check for Boolean since the key might not exist in the
-          // object.
-          var isActive = this.props.selectedTasks[task.id] === true;
-          if (!isActive) { allTasksSelected = false; }
 
-          /* jshint trailing:false, quotmark:false, newcap:false */
-          return (
-              <TaskListItemComponent
-                isActive={isActive}
-                key={task.id}
-                taskHealthMessage={this.props.formatTaskHealthMessage(task)}
-                onToggle={this.props.onTaskToggle}
-                onTaskDetailSelect={this.props.onTaskDetailSelect}
-                hasHealth={hasHealth}
-                task={task} />
-          );
-        }, this);
+        /* jshint trailing:false, quotmark:false, newcap:false */
+        taskNodes = (
+          <PagedContentComponent
+              currentPage={this.props.currentPage}
+              itemsPerPage={this.props.itemsPerPage}
+              element="tbody" >
+            {
+              this.props.tasks.map(function(task) {
+                // Expicitly check for Boolean since the key might not exist in the
+                // object.
+                var isActive = this.props.selectedTasks[task.id] === true;
+                if (!isActive) { allTasksSelected = false; }
+
+                return (
+                    <TaskListItemComponent
+                      isActive={isActive}
+                      key={task.id}
+                      taskHealthMessage={this.props.formatTaskHealthMessage(task)}
+                      onToggle={this.props.onTaskToggle}
+                      onTaskDetailSelect={this.props.onTaskDetailSelect}
+                      hasHealth={hasHealth}
+                      task={task} />
+                );
+              }, this)
+            }
+          </PagedContentComponent>
+        );
       }
 
       var sortKey = this.props.tasks.sortKey;
@@ -153,9 +173,7 @@ define([
               }
             </tr>
           </thead>
-          <tbody>
-            {taskNodes}
-          </tbody>
+          {taskNodes}
         </table>
       );
     }
