@@ -1,6 +1,4 @@
-# Marathon [![Build Status](https://travis-ci.org/mesosphere/marathon.png?branch=master)](https://travis-ci.org/mesosphere/marathon)
-
-__Detailed documentation for Mesos + Marathon available via the [Mesosphere Website](http://mesosphere.io/docs/)__
+# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://travis-ci.org/mesosphere/marathon.png?branch=master)](https://travis-ci.org/mesosphere/marathon)
 
 Marathon is an [Apache Mesos][Mesos] framework for long-running applications. Given that
 you have Mesos running as the kernel for your datacenter, Marathon is the
@@ -21,6 +19,9 @@ Marathon is a *meta framework*: you can start other Mesos frameworks such as
 Chronos or [Storm][Storm] with it to ensure they survive machine failures.
 It can launch anything that can be launched in a standard shell. In fact, you
 can even start other Marathon instances via Marathon.
+
+Details for running the full Mesosphere stack with Mesos + Marathon are
+available via the [Mesosphere Website](http://mesosphere.io/docs/).
 
 ## Features
 
