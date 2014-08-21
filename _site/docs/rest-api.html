@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: REST API</title>
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <a class="navbar-brand" href="/marathon/">Marathon</a>
+              </div>
+              <ul class="nav navbar-nav">
+                <li><a href="/marathon/docs/">Docs</a></li>
+              </ul>
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="row">
+  <div class="col-sm-3">
+    <h5>Welcome</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/">
+          Getting Started
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <h5>Guides</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/service-discovery-load-balancing.html">
+          Discovery &amp; Load Balancing
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <h5>Reference</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/artifact-store.html">
+          Artifact Store
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/command-line-flags.html">
+          Command Line Flags
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/constraints.html">
+          Constraints
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/event-bus.html">
+          Event Bus
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/health-checks.html">
+          Health Checks
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/rest-api.html">
+          REST API
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <h5>Resources</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/deployment-design-doc.html">
+          Deployment Design
+        </a>
+      </li>
+    </ul>
+  </div>
+  <div class="col-sm-9">
+    <h1 id="marathon-rest-api">Marathon REST API</h1>
+
+<h2 id="api-version-2">API Version 2</h2>
+
+<ul>
+<li><a href="#apps">Apps</a>
+
+<ul>
+<li><a href="#post-/v2/apps">POST /v2/apps</a>: Create and start a new app</li>
+<li><a href="#get-/v2/apps">GET /v2/apps</a>: List all running apps</li>
+<li><a href="#get-/v2/apps?cmd=%7Bcommand%7D">GET /v2/apps?cmd={command}</a>: List all running
+apps, filtered by <code>command</code></li>
+<li><a href="#get-/v2/apps/%7Bappid%7D">GET /v2/apps/{appId}</a>: List the app <code>appId</code></li>
+<li><a href="#get-/v2/apps/%7Bappid%7D/versions">GET /v2/apps/{appId}/versions</a>: List the versions of the application with id <code>appId</code>.</li>
+<li><a href="#get-/v2/apps/%7Bappid%7D/versions/%7Bversion%7D">GET /v2/apps/{appId}/versions/{version}</a>: List the configuration of the application with id <code>appId</code> at version <code>version</code>.</li>
+<li><a href="#put-/v2/apps/%7Bappid%7D">PUT /v2/apps/{appId}</a>: Change config of the app
+<code>appId</code></li>
+<li><a href="#delete-/v2/apps/%7Bappid%7D">DELETE /v2/apps/{appId}</a>: Destroy app <code>appId</code></li>
+<li><a href="#get-/v2/apps/%7Bappid%7D/tasks">GET /v2/apps/{appId}/tasks</a>: List running tasks
+for app <code>appId</code></li>
+<li><a href="#delete-/v2/apps/%7Bappid%7D/tasks?host=%7Bhost%7D&amp;scale=%7Btrue%7Cfalse%7D">DELETE /v2/apps/{appId}/tasks?host={host}&amp;scale={true|false}</a>:
+kill tasks belonging to app <code>appId</code></li>
+<li><a href="#delete-/v2/apps/%7Bappid%7D/tasks/%7Btaskid%7D?scale=%7Btrue%7Cfalse%7D">DELETE /v2/apps/{appId}/tasks/{taskId}?scale={true|false}</a>:
+Kill the task <code>taskId</code> that belongs to the application <code>appId</code></li>
+</ul></li>
+<li><a href="#tasks">Tasks</a>
+
+<ul>
+<li><a href="#get-/v2/tasks">GET /v2/tasks</a>: List all running tasks</li>
+</ul></li>
+<li><a href="#event-subscriptions">Event Subscriptions</a>
+
+<ul>
+<li><a href="#post-/v2/eventsubscriptions?callbackurl=%7Burl%7D">POST /v2/eventSubscriptions?callbackUrl={url}</a>: Register a callback URL as an event subscriber</li>
+<li><a href="#get-/v2/eventsubscriptions">GET /v2/eventSubscriptions</a>: List all event subscriber callback URLs</li>
+<li><a href="#delete-/v2/eventsubscriptions?callbackurl=%7Burl%7D">DELETE /v2/eventSubscriptions?callbackUrl={url}</a> Unregister a callback URL from the event subscribers list</li>
+</ul></li>
+</ul>
+
+<h3 id="apps">Apps</h3>
+
+<h4 id="post-/v2/apps">POST <code>/v2/apps</code></h4>
+
+<p>Create and start a new application.</p>
+
+<p>The full JSON format of an application resource is as follows:</p>
+
+<div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/product/service/myApp&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;env &amp;&amp; sleep 300&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;args&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;/bin/sh&quot;</span><span class="p">,</span> <span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="s2">&quot;env &amp;&amp; sleep 300&quot;</span><span class="p">]</span>
+    <span class="s2">&quot;container&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;DOCKER&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;docker&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;image&quot;</span><span class="p">:</span> <span class="s2">&quot;group/image&quot;</span>
+        <span class="p">},</span>
+        <span class="nt">&quot;volumes&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="nt">&quot;containerPath&quot;</span><span class="p">:</span> <span class="s2">&quot;/etc/a&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;hostPath&quot;</span><span class="p">:</span> <span class="s2">&quot;/var/data/a&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;RO&quot;</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="nt">&quot;containerPath&quot;</span><span class="p">:</span> <span class="s2">&quot;/etc/b&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;hostPath&quot;</span><span class="p">:</span> <span class="s2">&quot;/var/data/b&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;RW&quot;</span>
+            <span class="p">}</span>
+        <span class="p">]</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span>
+    <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">256.0</span><span class="p">,</span>
+    <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;LD_LIBRARY_PATH&quot;</span><span class="p">:</span> <span class="s2">&quot;/usr/local/lib/myLib&quot;</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">[</span><span class="s2">&quot;attribute&quot;</span><span class="p">,</span> <span class="s2">&quot;OPERATOR&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">]</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;healthChecks&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;protocol&quot;</span><span class="p">:</span> <span class="s2">&quot;HTTP&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/health&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;gracePeriodSeconds&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+            <span class="nt">&quot;intervalSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+            <span class="nt">&quot;portIndex&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="nt">&quot;timeoutSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+            <span class="nt">&quot;maxConsecutiveFailures&quot;</span><span class="p">:</span> <span class="mi">3</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;protocol&quot;</span><span class="p">:</span> <span class="s2">&quot;TCP&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;gracePeriodSeconds&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+            <span class="nt">&quot;intervalSeconds&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="nt">&quot;portIndex&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="nt">&quot;timeoutSeconds&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="nt">&quot;maxConsecutiveFailures&quot;</span><span class="p">:</span> <span class="mi">3</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;protocol&quot;</span><span class="p">:</span> <span class="s2">&quot;COMMAND&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;curl -f -X GET http://$HOST:$PORT0/health&quot;</span> <span class="p">},</span>
+            <span class="nt">&quot;maxConsecutiveFailures&quot;</span><span class="p">:</span> <span class="mi">3</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">256.0</span><span class="p">,</span>
+    <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="mi">8080</span><span class="p">,</span>
+        <span class="mi">9000</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;backoffSeconds&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="nt">&quot;backoffFactor&quot;</span><span class="p">:</span> <span class="mf">1.15</span><span class="p">,</span>
+    <span class="nt">&quot;tasksRunning&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> 
+    <span class="nt">&quot;tasksStaged&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+    <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;https://raw.github.com/mesosphere/marathon/master/README.md&quot;</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;/product/db/mongo&quot;</span><span class="p">,</span> <span class="s2">&quot;/product/db&quot;</span><span class="p">,</span> <span class="s2">&quot;../../db&quot;</span><span class="p">],</span>
+    <span class="nt">&quot;upgradeStrategy&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;minimumHealthCapacity&quot;</span><span class="p">:</span> <span class="mf">0.5</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span>
+<span class="p">}</span></code></pre></div>
+
+<h5 id="id">id</h5>
+
+<p>Unique identifier for the app consisting of a series of names separated by slashes.
+Each name must be at least 1 character and may
+only contain digits (<code>0-9</code>), dashes (<code>-</code>), dots (<code>.</code>), and lowercase letters
+(<code>a-z</code>). The name may not begin or end with a dash.</p>
+
+<p>The allowable format is represented by the following regular expression<br>
+<code>^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$</code></p>
+
+<h5 id="args">args</h5>
+
+<p>An array of strings that represents an alternative mode of specifying the command to run. This was motivated by safe usage of containerizer features like a custom Docker ENTRYPOINT. This args field may be used in place of cmd even when using the default command executor. This change mirrors API and semantics changes in the Mesos CommandInfo protobuf message starting with version <code>0.20.0</code>.  Either <code>cmd</code> or <code>args</code> must be supplied. It is invalid to supply both <code>cmd</code> and <code>args</code> in the same app.</p>
+
+<h5 id="backoffseconds,-backofffactor">backoffSeconds, backoffFactor</h5>
+
+<p>Configures exponential backoff behavior when launching potentially sick apps.
+This prevents sandboxes associated with consecutively failing tasks from
+filling up the hard disk on Mesos slaves. The backoff period is multiplied by
+the factor for each consecutive failure.  This applies also to tasks that are
+killed due to failing too many health checks.</p>
+
+<h5 id="cmd">cmd</h5>
+
+<p>The command that is executed.  This value is wrapped by Mesos via <code>/bin/sh -c ${app.cmd}</code>.  Either <code>cmd</code> or <code>args</code> must be supplied. It is invalid to supply both <code>cmd</code> and <code>args</code> in the same app.</p>
+
+<h5 id="constraints">constraints</h5>
+
+<p>Valid constraint operators are one of [&quot;UNIQUE&quot;, &quot;CLUSTER&quot;,
+&quot;GROUP_BY&quot;]. For additional information on using placement constraints see
+the <a href="https://github.com/mesosphere/marathon/wiki/Constraints">Constraints wiki page</a>.</p>
+
+<h5 id="container">container</h5>
+
+<p>Additional data passed to the containerizer on application launch.  These consist of a type, zero or more volumes, and additional type-specific options.  Volumes and type are optional (the default type is DOCKER).  In order to make use of the docker containerizer, specify <code>--containerizers=docker,mesos</code> to the Mesos slave.</p>
+
+<h5 id="dependencies">dependencies</h5>
+
+<p>A list of services upon which this application depends. An order is derived from the dependencies for performing start/stop and upgrade of the application.  For example, an application <code>/a</code> relies on the services <code>/b</code> which itself relies on <code>/c</code>. To start all 3 applications, first <code>/c</code> is started than <code>/b</code> than <code>/a</code>.</p>
+
+<h5 id="healthchecks">healthChecks</h5>
+
+<p>An array of checks to be performed on running tasks to determine if they are
+operating as expected. Health checks begin immediately upon task launch. For
+design details, refer to the <a href="https://github.com/mesosphere/marathon/wiki/Health-Checks">health checks</a>
+wiki page.  By default, health checks are executed by the Marathon scheduler.
+It&#39;s possible with Mesos <code>0.20.0</code> and higher to execute health checks on the hosts where
+the tasks are running by supplying the <code>--executor_health_checks</code> flag to Marathon.
+In this case, the only supported protocol is <code>COMMAND</code> and each app is limited to
+at most one defined health check.</p>
+
+<p>An HTTP health check is considered passing if (1) its HTTP response code is between
+200 and 399, inclusive, and (2) its response is received within the
+<code>timeoutSeconds</code> period. If a task fails more than <code>maxConseutiveFailures</code>
+health checks consecutively, that task is killed.</p>
+
+<h6 id="health-check-options">HEALTH CHECK OPTIONS</h6>
+
+<ul>
+<li><code>gracePeriodSeconds</code> (Optional. Default: 15): Health check failures are
+ignored within this number of seconds of the task being started or until the
+task becomes healthy for the first time.</li>
+<li><code>intervalSeconds</code> (Optional. Default: 10): Number of seconds to wait between
+health checks.</li>
+<li><code>maxConsecutiveFailures</code>(Optional. Default: 3) : Number of consecutive health
+check failures after which the unhealthy task should be killed.</li>
+<li><code>protocol</code> (Optional. Default: &quot;HTTP&quot;): Protocol of the requests to be
+performed. One of &quot;HTTP&quot;, &quot;TCP&quot;, or &quot;COMMAND&quot;.</li>
+<li><code>path</code> (Optional. Default: &quot;/&quot;): Path to endpoint exposed by the task that
+will provide health  status. Example: &quot;/path/to/health&quot;.
+<em>Note: only used if <code>protocol == &quot;HTTP&quot;</code>.</em></li>
+<li><code>command</code>: Command to run in order to determine the health of a task.
+<em>Note: only used if <code>protocol == &quot;COMMAND&quot;</code>, and only available if Marathon is
+started with the `--executor</em>health_checks` flag.</li>
+<li><code>portIndex</code> (Optional. Default: 0): Index in this app&#39;s <code>ports</code> array to be
+used for health requests. An index is used so the app can use random ports,
+like &quot;[0, 0, 0]&quot; for example, and tasks could be started with port environment
+variables like <code>$PORT1</code>.</li>
+<li><code>timeoutSeconds</code> (Optional. Default: 20): Number of seconds after which a
+health check is considered a failure regardless of the response.</li>
+</ul>
+
+<h5 id="ports">ports</h5>
+
+<p>An array of required port resources on the host. To generate one or more
+arbitrary free ports for each application instance, pass zeros as port
+values. Each port value is exposed to the instance via environment variables
+<code>$PORT0</code>, <code>$PORT1</code>, etc. Ports assigned to running instances are also available
+via the task resource.</p>
+
+<h5 id="upgradestrategy">upgradeStrategy</h5>
+
+<p>During an upgrade all instances of an application get replaced by a new version.
+The <code>minimumHealthCapacity</code> defines the minimum number of healthy nodes, that do not sacrifice overall application purpose. 
+It is a number between <code>0</code> and <code>1</code> which is multiplied with the instance count. 
+The default <code>minimumHealthCapacity</code> is <code>1</code>, which means no old instance can be stopped, before all new instances are deployed. 
+A value of <code>0.5</code> means that an upgrade can be deployed side by side, by taking half of the instances down in the first step, 
+deploy half of the new version and than take the other half down and deploy the rest. 
+A value of <code>0</code> means take all instances down immediately and replace with the new application.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">POST</span> <span class="nn">/v2/apps</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">562</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">mesos.vm:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.8.0</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;env &amp;&amp; python3 -m http.server $PORT0&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">[</span>
+            <span class="s2">&quot;hostname&quot;</span><span class="p">,</span> 
+            <span class="s2">&quot;UNIQUE&quot;</span>
+        <span class="p">]</span>
+    <span class="p">],</span> 
+    <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;docker&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;image&quot;</span><span class="p">:</span> <span class="s2">&quot;python:3&quot;</span>
+        <span class="p">},</span> 
+        <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;DOCKER&quot;</span>
+    <span class="p">},</span> 
+    <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> 
+    <span class="nt">&quot;healthChecks&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;gracePeriodSeconds&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> 
+            <span class="nt">&quot;intervalSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> 
+            <span class="nt">&quot;maxConsecutiveFailures&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> 
+            <span class="nt">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;portIndex&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+            <span class="nt">&quot;protocol&quot;</span><span class="p">:</span> <span class="s2">&quot;HTTP&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;timeoutSeconds&quot;</span><span class="p">:</span> <span class="mi">5</span>
+        <span class="p">}</span>
+    <span class="p">],</span> 
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> 
+    <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> 
+    <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="mi">0</span>
+    <span class="p">],</span> 
+    <span class="nt">&quot;upgradeStrategy&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;minimumHealthCapacity&quot;</span><span class="p">:</span> <span class="mf">0.5</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">201</span> <span class="ne">Created</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Location</span><span class="o">:</span> <span class="l">http://mesos.vm:8080/v2/apps/my-app</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;args&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span> 
+    <span class="nt">&quot;backoffFactor&quot;</span><span class="p">:</span> <span class="mf">1.15</span><span class="p">,</span> 
+    <span class="nt">&quot;backoffSeconds&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> 
+    <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;env &amp;&amp; python3 -m http.server $PORT0&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">[</span>
+            <span class="s2">&quot;hostname&quot;</span><span class="p">,</span> 
+            <span class="s2">&quot;UNIQUE&quot;</span>
+        <span class="p">]</span>
+    <span class="p">],</span> 
+    <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;docker&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;image&quot;</span><span class="p">:</span> <span class="s2">&quot;python:3&quot;</span>
+        <span class="p">},</span> 
+        <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;DOCKER&quot;</span><span class="p">,</span> 
+        <span class="nt">&quot;volumes&quot;</span><span class="p">:</span> <span class="p">[]</span>
+    <span class="p">},</span> 
+    <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> 
+    <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span> 
+    <span class="nt">&quot;disk&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{},</span> 
+    <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;healthChecks&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span> 
+            <span class="nt">&quot;gracePeriodSeconds&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> 
+            <span class="nt">&quot;intervalSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> 
+            <span class="nt">&quot;maxConsecutiveFailures&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> 
+            <span class="nt">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;portIndex&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+            <span class="nt">&quot;protocol&quot;</span><span class="p">:</span> <span class="s2">&quot;HTTP&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;timeoutSeconds&quot;</span><span class="p">:</span> <span class="mi">5</span>
+        <span class="p">}</span>
+    <span class="p">],</span> 
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> 
+    <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span> 
+    <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="mi">0</span>
+    <span class="p">],</span> 
+    <span class="nt">&quot;requirePorts&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> 
+    <span class="nt">&quot;storeUrls&quot;</span><span class="p">:</span> <span class="p">[],</span> 
+    <span class="nt">&quot;upgradeStrategy&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;minimumHealthCapacity&quot;</span><span class="p">:</span> <span class="mf">0.5</span>
+    <span class="p">},</span> 
+    <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[],</span> 
+    <span class="nt">&quot;user&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span> 
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-08-18T22:36:41.451Z&quot;</span>
+<span class="p">}</span></code></pre></div>
+
+<h4 id="get-/v2/apps">GET <code>/v2/apps</code></h4>
+
+<p>List all running applications.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/apps</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">*/*</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">mesos.vm:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.8.0</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;apps&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;args&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span> 
+            <span class="nt">&quot;backoffFactor&quot;</span><span class="p">:</span> <span class="mf">1.15</span><span class="p">,</span> 
+            <span class="nt">&quot;backoffSeconds&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> 
+            <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;env &amp;&amp; python3 -m http.server $PORT0&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">[</span>
+                    <span class="s2">&quot;hostname&quot;</span><span class="p">,</span> 
+                    <span class="s2">&quot;UNIQUE&quot;</span>
+                <span class="p">]</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;docker&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="nt">&quot;image&quot;</span><span class="p">:</span> <span class="s2">&quot;python:3&quot;</span>
+                <span class="p">},</span> 
+                <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;DOCKER&quot;</span><span class="p">,</span> 
+                <span class="nt">&quot;volumes&quot;</span><span class="p">:</span> <span class="p">[]</span>
+            <span class="p">},</span> 
+            <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> 
+            <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span> 
+            <span class="nt">&quot;disk&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> 
+            <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{},</span> 
+            <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;healthChecks&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span> 
+                    <span class="nt">&quot;gracePeriodSeconds&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> 
+                    <span class="nt">&quot;intervalSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> 
+                    <span class="nt">&quot;maxConsecutiveFailures&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> 
+                    <span class="nt">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span> 
+                    <span class="nt">&quot;portIndex&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+                    <span class="nt">&quot;protocol&quot;</span><span class="p">:</span> <span class="s2">&quot;HTTP&quot;</span><span class="p">,</span> 
+                    <span class="nt">&quot;timeoutSeconds&quot;</span><span class="p">:</span> <span class="mi">5</span>
+                <span class="p">}</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> 
+            <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span> 
+            <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="mi">10000</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;requirePorts&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> 
+            <span class="nt">&quot;storeUrls&quot;</span><span class="p">:</span> <span class="p">[],</span> 
+            <span class="nt">&quot;tasksRunning&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> 
+            <span class="nt">&quot;tasksStaged&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+            <span class="nt">&quot;upgradeStrategy&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;minimumHealthCapacity&quot;</span><span class="p">:</span> <span class="mf">0.5</span>
+            <span class="p">},</span> 
+            <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[],</span> 
+            <span class="nt">&quot;user&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span> 
+            <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-08-18T22:36:41.451Z&quot;</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span></code></pre></div>
+
+<h4 id="get-/v2/apps?cmd={command}">GET <code>/v2/apps?cmd={command}</code></h4>
+
+<p>List all running applications, filtered by <code>command</code>.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/apps?cmd=sleep%2060</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;apps&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;env &amp;&amp; sleep 60&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">[</span>
+                    <span class="s2">&quot;hostname&quot;</span><span class="p">,</span> 
+                    <span class="s2">&quot;UNIQUE&quot;</span><span class="p">,</span> 
+                    <span class="s2">&quot;&quot;</span>
+                <span class="p">]</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span> 
+            <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> 
+            <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;LD_LIBRARY_PATH&quot;</span><span class="p">:</span> <span class="s2">&quot;/usr/local/lib/myLib&quot;</span>
+            <span class="p">},</span> 
+            <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> 
+            <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span> 
+            <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="mi">13321</span><span class="p">,</span> 
+                <span class="mi">10982</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;tasksRunning&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> 
+            <span class="nt">&quot;tasksStaged&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+            <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;https://raw.github.com/mesosphere/marathon/master/README.md&quot;</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:25:31.399Z&quot;</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span></code></pre></div>
+
+<h4 id="get-/v2/apps/{appid}">GET <code>/v2/apps/{appId}</code></h4>
+
+<p>List the application with id <code>appId</code>.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/apps/my-app</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;app&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;env &amp;&amp; sleep 60&quot;</span><span class="p">,</span> 
+        <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">[</span>
+                <span class="s2">&quot;hostname&quot;</span><span class="p">,</span> 
+                <span class="s2">&quot;UNIQUE&quot;</span><span class="p">,</span> 
+                <span class="s2">&quot;&quot;</span>
+            <span class="p">]</span>
+        <span class="p">],</span> 
+        <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span> 
+        <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> 
+        <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;LD_LIBRARY_PATH&quot;</span><span class="p">:</span> <span class="s2">&quot;/usr/local/lib/myLib&quot;</span>
+        <span class="p">},</span> 
+        <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> 
+        <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app&quot;</span><span class="p">,</span> 
+        <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> 
+        <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span> 
+        <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="mi">13321</span><span class="p">,</span> 
+            <span class="mi">10982</span>
+        <span class="p">],</span> 
+        <span class="nt">&quot;tasks&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;agouti.local&quot;</span><span class="p">,</span> 
+                <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_0-1396592732285&quot;</span><span class="p">,</span> 
+                <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="mi">31876</span><span class="p">,</span> 
+                    <span class="mi">31877</span>
+                <span class="p">],</span> 
+                <span class="nt">&quot;stagedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:25:32.287Z&quot;</span><span class="p">,</span> 
+                <span class="nt">&quot;startedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:25:32.766Z&quot;</span><span class="p">,</span> 
+                <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:25:31.399Z&quot;</span>
+            <span class="p">}</span>
+        <span class="p">],</span> 
+        <span class="nt">&quot;tasksRunning&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> 
+        <span class="nt">&quot;tasksStaged&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+        <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;https://raw.github.com/mesosphere/marathon/master/README.md&quot;</span>
+        <span class="p">],</span> 
+        <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:25:31.399Z&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre></div>
+
+<h4 id="get-/v2/apps/{appid}/versions">GET <code>/v2/apps/{appId}/versions</code></h4>
+
+<p>List the versions of the application with id <code>appId</code>.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/apps/my-app/versions</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;versions&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;2014-04-04T06:25:31.399Z&quot;</span>
+    <span class="p">]</span>
+<span class="p">}</span></code></pre></div>
+
+<h4 id="get-/v2/apps/{appid}/versions/{version}">GET <code>/v2/apps/{appId}/versions/{version}</code></h4>
+
+<p>List the configuration of the application with id <code>appId</code> at version <code>version</code>.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/apps/my-app/versions/2014-03-01T23:17:50.295Z</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">*/*</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;sleep 60&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[],</span> 
+    <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span> 
+    <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> 
+    <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{},</span> 
+    <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> 
+    <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span> 
+    <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="mi">18027</span><span class="p">,</span> 
+        <span class="mi">13200</span>
+    <span class="p">],</span> 
+    <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;https://raw.github.com/mesosphere/marathon/master/README.md&quot;</span>
+    <span class="p">],</span> 
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:17:50.295Z&quot;</span>
+<span class="p">}</span></code></pre></div>
+
+<h4 id="put-/v2/apps/{appid}">PUT <code>/v2/apps/{appId}</code></h4>
+
+<p>Change parameters of a running application.  The new application parameters
+apply only to subsequently created tasks, and currently running tasks are
+<strong>not</strong> pre-emptively restarted.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">PUT</span> <span class="nn">/v2/apps/my-app</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">126</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;sleep 55&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">[</span>
+            <span class="s2">&quot;hostname&quot;</span><span class="p">,</span> 
+            <span class="s2">&quot;UNIQUE&quot;</span><span class="p">,</span> 
+            <span class="s2">&quot;&quot;</span>
+        <span class="p">]</span>
+    <span class="p">],</span> 
+    <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="s2">&quot;0.3&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="s2">&quot;9&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="mi">9000</span>
+    <span class="p">]</span>
+<span class="p">}</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">204</span> <span class="ne">No Content</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span></code></pre></div>
+
+<h5 id="example-(version-rollback)">Example (version rollback)</h5>
+
+<p>If the <code>version</code> key is supplied in the JSON body, the rest of the object is ignored.  If the supplied version is known, then the app is updated (a new version is created) with those parameters.  Otherwise, if the supplied version is not known Marathon responds with a 404.</p>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">PUT</span> <span class="nn">/v2/apps/my-app</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">39</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:17:50.295Z&quot;</span>
+<span class="p">}</span></code></pre></div>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">204</span> <span class="ne">No Content</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span></code></pre></div>
+
+<h4 id="delete-/v2/apps/{appid}">DELETE <code>/v2/apps/{appId}</code></h4>
+
+<p>Destroy an application. All data about that application will be deleted.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">DELETE</span> <span class="nn">/v2/apps/my-app</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">0</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">204</span> <span class="ne">No Content</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span></code></pre></div>
+
+<h4 id="get-/v2/apps/{appid}/tasks">GET <code>/v2/apps/{appId}/tasks</code></h4>
+
+<p>List all running tasks for application <code>appId</code>.</p>
+
+<h5 id="example-(as-json)">Example (as JSON)</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/apps/my-app/tasks</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;tasks&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;agouti.local&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_1-1396592790353&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="mi">31336</span><span class="p">,</span> 
+                <span class="mi">31337</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;stagedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:30.355Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;startedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:30.860Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:23.051Z&quot;</span>
+        <span class="p">},</span> 
+        <span class="p">{</span>
+            <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;agouti.local&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_0-1396592784349&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="mi">31382</span><span class="p">,</span> 
+                <span class="mi">31383</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;stagedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:24.351Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;startedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:24.919Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:23.051Z&quot;</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span></code></pre></div>
+
+<h5 id="example-(as-text)">Example (as text)</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/apps/my-app/tasks</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">text/plain</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">text/plain</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382  
+my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383</code></pre></div>
+
+<h4 id="delete-/v2/apps/{appid}/tasks?host={host}&amp;scale={true|false}">DELETE <code>/v2/apps/{appId}/tasks?host={host}&amp;scale={true|false}</code></h4>
+
+<p>Kill tasks that belong to the application <code>appId</code>, optionally filtered by the
+task&#39;s <code>host</code>.</p>
+
+<p>The query parameters <code>host</code> and <code>scale</code> are both optional.  If <code>host</code> is
+specified, only tasks running on the supplied slave are killed.  If
+<code>scale=true</code> is specified, then the application is scaled down by the number of
+killed tasks.  The <code>scale</code> parameter defaults to <code>false</code>.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">DELETE</span> <span class="nn">/v2/apps/my-app/tasks?host=mesos.vm&amp;scale=false</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">0</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;tasks&quot;</span><span class="p">:</span> <span class="p">[]</span>
+<span class="p">}</span></code></pre></div>
+
+<h4 id="delete-/v2/apps/{appid}/tasks/{taskid}?scale={true|false}">DELETE <code>/v2/apps/{appId}/tasks/{taskId}?scale={true|false}</code></h4>
+
+<p>Kill the task with ID <code>taskId</code> that belongs to the application <code>appId</code>.</p>
+
+<p>The query parameter <code>scale</code> is optional.  If <code>scale=true</code> is specified, then
+the application is scaled down one if the supplied <code>taskId</code> exists.  The
+<code>scale</code> parameter defaults to <code>false</code>.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">DELETE</span> <span class="nn">/v2/apps/my-app/tasks/my-app_3-1389916890411</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">0</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;task&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;mesos.vm&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_3-1389916890411&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="mi">31509</span><span class="p">,</span>
+            <span class="mi">31510</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;stagedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-01-17T00:01+0000&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;startedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-01-17T00:01+0000&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre></div>
+
+<h3 id="tasks"><em>Tasks</em></h3>
+
+<h4 id="get-/v2/tasks">GET <code>/v2/tasks</code></h4>
+
+<p>List tasks of all running applications.</p>
+
+<h5 id="example-(as-json)">Example (as JSON)</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/tasks</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;tasks&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;appId&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;agouti.local&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_2-1396592796360&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="mi">31364</span><span class="p">,</span> 
+                <span class="mi">31365</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;stagedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:36.362Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;startedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:37.285Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:23.051Z&quot;</span>
+        <span class="p">},</span> 
+        <span class="p">{</span>
+            <span class="nt">&quot;appId&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;agouti.local&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_1-1396592790353&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="mi">31336</span><span class="p">,</span> 
+                <span class="mi">31337</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;stagedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:30.355Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;startedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:30.860Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:23.051Z&quot;</span>
+        <span class="p">},</span> 
+        <span class="p">{</span>
+            <span class="nt">&quot;appId&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;agouti.local&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_0-1396592784349&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="mi">31382</span><span class="p">,</span> 
+                <span class="mi">31383</span>
+            <span class="p">],</span> 
+            <span class="nt">&quot;stagedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:24.351Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;startedAt&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:24.919Z&quot;</span><span class="p">,</span> 
+            <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:23.051Z&quot;</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span></code></pre></div>
+
+<h5 id="example-(as-text)">Example (as text)</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/tasks</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">text/plain</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">text/plain</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382  
+my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383</code></pre></div>
+
+<h3 id="event-subscriptions"><em>Event Subscriptions</em></h3>
+
+<h4 id="post-/v2/eventsubscriptions?callbackurl={url}">POST /v2/eventSubscriptions?callbackUrl={url}</h4>
+
+<p>Register a callback URL as an event subscriber.</p>
+
+<p>NOTE: To activate this endpoint, you need to startup Marathon with <code>--event_subscriber http_callback</code>.</p>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">POST</span> <span class="nn">/v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">0</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;callbackUrl&quot;</span><span class="p">:</span> <span class="s2">&quot;http://localhost:9292/callback&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;clientIp&quot;</span><span class="p">:</span> <span class="s2">&quot;0:0:0:0:0:0:0:1&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;subscribe_event&quot;</span>
+<span class="p">}</span></code></pre></div>
+
+<h4 id="get-/v2/eventsubscriptions">GET <code>/v2/eventSubscriptions</code></h4>
+
+<p>List all event subscriber callback URLs.</p>
+
+<p>NOTE: To activate this endpoint, you need to startup Marathon with <code>--event_subscriber http_callback</code>.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">GET</span> <span class="nn">/v2/eventSubscriptions</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;callbackUrls&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;http://localhost:9292/callback&quot;</span>
+    <span class="p">]</span>
+<span class="p">}</span></code></pre></div>
+
+<h4 id="delete-/v2/eventsubscriptions?callbackurl={url}">DELETE <code>/v2/eventSubscriptions?callbackUrl={url}</code></h4>
+
+<p>Unregister a callback URL from the event subscribers list.</p>
+
+<p>NOTE: To activate this endpoint, you need to startup Marathon with <code>--event_subscriber http_callback</code>.</p>
+
+<h5 id="example">Example</h5>
+
+<p><strong>Request:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="nf">DELETE</span> <span class="nn">/v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Accept-Encoding</span><span class="o">:</span> <span class="l">gzip, deflate, compress</span>
+<span class="na">Content-Length</span><span class="o">:</span> <span class="l">0</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost:8080</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">HTTPie/0.7.2</span></code></pre></div>
+
+<p><strong>Response:</strong></p>
+
+<div class="highlight"><pre><code class="language-http" data-lang="http"><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Server</span><span class="o">:</span> <span class="l">Jetty(8.y.z-SNAPSHOT)</span>
+<span class="na">Transfer-Encoding</span><span class="o">:</span> <span class="l">chunked</span>
+
+<span class="p">{</span>
+    <span class="nt">&quot;callbackUrl&quot;</span><span class="p">:</span> <span class="s2">&quot;http://localhost:9292/callback&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;clientIp&quot;</span><span class="p">:</span> <span class="s2">&quot;0:0:0:0:0:0:0:1&quot;</span><span class="p">,</span> 
+    <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;unsubscribe_event&quot;</span>
+<span class="p">}</span></code></pre></div>
+
+  </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2014 <a class="text-muted" href="http://mesosphere.io">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

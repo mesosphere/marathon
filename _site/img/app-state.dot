@@ -1,0 +1,40 @@
+digraph appState {
+
+	subgraph states {
+		node [shape=circle]
+		initial [label="", style=filled, fillcolor=black]
+		scaling [style=filled, fillcolor=skyblue]
+		healthy [style=filled, fillcolor=palegreen]
+		unhealthy [style=filled, fillcolor=lightpink]
+		destroyed [penwidth=3]
+	}
+
+	subgraph transitions {
+		edge [color=black style=solid]
+
+		subgraph becomeHealthy {
+			edge [color=green4, fontcolor=green4]
+			initial -> healthy [label="i = 0"]
+			scaling -> healthy [label="r = i ^ h = i"]
+			unhealthy -> healthy [label="h = r ^ r = i"]
+		}
+
+		subgraph becomeUnhealthy {
+			edge [color=red, fontcolor=red]
+			healthy -> unhealthy [label="h != r"]
+			scaling -> unhealthy [label="h != r ^ r = i"]
+		}
+
+		subgraph scale {
+			edge [color=royalblue, fontcolor=royalblue]
+			initial -> scaling [label="r < i"]
+			healthy -> scaling [label="r != i ^ h = r"]
+			unhealthy -> scaling [label="h = r ^ r != i"]
+		}
+
+		healthy -> destroyed
+		unhealthy -> destroyed
+		scaling -> destroyed
+	}
+
+}

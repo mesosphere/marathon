@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Setting Up and Running Marathon</title>
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <a class="navbar-brand" href="/marathon/">Marathon</a>
+              </div>
+              <ul class="nav navbar-nav">
+                <li><a href="/marathon/docs/">Docs</a></li>
+              </ul>
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="row">
+  <div class="col-sm-3">
+    <h5>Welcome</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/">
+          Getting Started
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <h5>Guides</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/service-discovery-load-balancing.html">
+          Discovery &amp; Load Balancing
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <h5>Reference</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/artifact-store.html">
+          Artifact Store
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/command-line-flags.html">
+          Command Line Flags
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/constraints.html">
+          Constraints
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/event-bus.html">
+          Event Bus
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/health-checks.html">
+          Health Checks
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/rest-api.html">
+          REST API
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <h5>Resources</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/deployment-design-doc.html">
+          Deployment Design
+        </a>
+      </li>
+    </ul>
+  </div>
+  <div class="col-sm-9">
+    <h2 id="setting-up-and-running-marathon">Setting Up And Running Marathon</h2>
+
+<h3 id="requirements">Requirements</h3>
+
+<ul>
+<li><a href="https://mesos.apache.org/" title="Apache Mesos">Apache Mesos</a> 0.15.0+</li>
+<li><a href="https://zookeeper.apache.org/" title="Apache ZooKeeper">Apache ZooKeeper</a></li>
+<li>JDK 1.6+</li>
+<li>Scala 2.10+</li>
+<li>sbt 0.13.5</li>
+</ul>
+
+<h3 id="installation">Installation</h3>
+
+<ol>
+<li><p>Install Mesos.</p>
+
+<p>One easy way is via your system&#39;s package manager.
+Current builds for major Linux distributions and Mac OS X are available
+from on the Mesosphere <a href="http://mesosphere.io/downloads/">downloads page</a>.</p>
+
+<p>If building from source, see the
+Mesos <a href="http://mesos.apache.org/gettingstarted/">Getting Started</a> page or the
+<a href="http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/">Mesosphere tutorial</a>
+for details. Running <code>make install</code> will install Mesos in <code>/usr/local</code> in
+the same way as these packages do.</p></li>
+<li><p>Download and unpack the latest Marathon release.</p>
+
+<p><strong>For Mesos 0.19.0:</strong></p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>curl -O http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz
+<span class="nv">$ </span>tar xzf marathon-0.6.1.tgz
+</code></pre></div>
+<p><strong>For Mesos 0.17.0 to 0.18.2:</strong></p>
+<div class="highlight"><pre><code class="language-console" data-lang="console"><span class="gp">$</span> curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz
+<span class="gp">$</span> tar xzf marathon-0.5.1.tgz
+</code></pre></div>
+<p><strong>For Mesos 0.16.0 and earlier:</strong></p>
+<div class="highlight"><pre><code class="language-console" data-lang="console"><span class="gp">$</span> curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1_mesos-0.16.0/marathon-0.5.1_mesos-0.16.0.tgz
+<span class="gp">$</span> tar xzf marathon-0.5.1_mesos-0.16.0.tgz
+</code></pre></div>
+<p>SHA-256 checksums are available by appending <code>.sha256</code> to the URLs.</p></li>
+</ol>
+
+<h4 id="building-from-source">Building From Source</h4>
+
+<ol>
+<li><p>To build Marathon from source, check out this repo and use sbt to build a JAR:</p>
+<div class="highlight"><pre><code class="language-console" data-lang="console"><span class="gp">$</span> git clone https://github.com/mesosphere/marathon.git
+<span class="gp">$</span> <span class="nb">cd </span>marathon
+<span class="gp">$</span> sbt assembly
+</code></pre></div></li>
+<li><p>Run <code>./bin/build-distribution</code> to package Marathon as an
+<a href="http://mesosphere.io/2013/12/07/executable-jars/">executable JAR</a>
+(optional).</p></li>
+</ol>
+
+<h3 id="running-in-production-mode">Running in Production Mode</h3>
+
+<p>To launch Marathon in <em>production mode</em>, you need to have both
+ZooKeeper and Mesos running. The following command launches
+Marathon in <em>production mode</em>. Point your web browser to
+<code>localhost:8080</code> and you should see the Marathon UI.</p>
+<div class="highlight"><pre><code class="language-console" data-lang="console"><span class="gp">$</span> ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
+</code></pre></div>
+<p>Marathon uses <code>--master</code> to find the Mesos masters, and <code>--zk</code> to find ZooKeepers
+for storing state. They are separate options because Mesos masters can be
+discovered in other ways as well.</p>
+
+<p>For all configuration options, see the <a href="command-line-flags.html">command line flags</a> doc.</p>
+
+<h3 id="running-in-development-mode">Running in Development Mode</h3>
+
+<p>Local mode allows you to run Marathon without launching a full Mesos
+cluster. It is meant for experimentation and not recommended for production
+use. Note that you still need to run ZooKeeper for storing state. The following
+command launches Marathon in <em>local mode</em>. Point your web browser to
+<code>http://localhost:8080</code>, and you should see the Marathon UI.</p>
+<div class="highlight"><pre><code class="language-console" data-lang="console"><span class="gp">$</span> ./bin/start --master <span class="nb">local</span> --zk zk://localhost:2181/marathon
+</code></pre></div>
+<h3 id="running-with-a-standalone-mesos-master">Running with a standalone Mesos master</h3>
+
+<p>The released version 0.19.0 of Mesos does not allow frameworks to launch an in-process master.
+You can still run Marathon locally if you launch a master in a separate console
+and either point Marathon directly at the master itself or at the same ZooKeeper
+(if you specified this when launching the master):</p>
+<div class="highlight"><pre><code class="language-console" data-lang="console"><span class="gp">$</span> ./bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
+<span class="gp">$</span> ./bin/start --master localhost:5050 --zk zk://localhost:2181/marathon
+</code></pre></div>
+  </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2014 <a class="text-muted" href="http://mesosphere.io">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

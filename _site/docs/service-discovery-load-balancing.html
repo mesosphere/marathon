@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Service Discovery & Load Balancing</title>
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <a class="navbar-brand" href="/marathon/">Marathon</a>
+              </div>
+              <ul class="nav navbar-nav">
+                <li><a href="/marathon/docs/">Docs</a></li>
+              </ul>
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="row">
+  <div class="col-sm-3">
+    <h5>Welcome</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/">
+          Getting Started
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <h5>Guides</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/service-discovery-load-balancing.html">
+          Discovery &amp; Load Balancing
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <h5>Reference</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/artifact-store.html">
+          Artifact Store
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/command-line-flags.html">
+          Command Line Flags
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/constraints.html">
+          Constraints
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/event-bus.html">
+          Event Bus
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/health-checks.html">
+          Health Checks
+        </a>
+      </li>
+      <li>
+        <a href="/marathon/docs/rest-api.html">
+          REST API
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <h5>Resources</h5>
+    <ul class="list-unstyled">
+      <li>
+        <a href="/marathon/docs/deployment-design-doc.html">
+          Deployment Design
+        </a>
+      </li>
+    </ul>
+  </div>
+  <div class="col-sm-9">
+    <h1 id="service-discovery-&amp;-load-balancing">Service Discovery &amp; Load Balancing</h1>
+
+<p>Once our app is up and running, we need a way to send outside traffic to it. If we&#39;re running multiple apps, they also need a way to find each other. A simple way to do this is to run a TCP proxy on each host in the cluster, and transparently forward a static port on localhost to the hosts that are running the app. That way, clients simply connect to that port, and the implementation details of discovery are completely abstracted away.</p>
+
+<h2 id="ports-assignment">Ports Assignment</h2>
+
+<p>When an application is created in Marathon (either through the REST API or the front end) - you may assign it one or more ports. These ports may be any valid port number or 0, which Marathon will use to randomly assign a port number.</p>
+
+<p>This port is used to ensure no two applications can be run using Marathon with overlapping port assignments (i.e. that the ports are globally unique).</p>
+
+<p>However, this is not the port that each instance of that application is assigned when running on slave nodes within the Mesos cluster. Since multiple instances may run on the same node, each instance (or <em>task</em>) is assigned a random port. This can be accessed from the <code>$PORT</code> environment variable which is set by Marathon.</p>
+
+<p>Port information for each running task can be queried at <code>&lt;marathon host&gt;:&lt;port&gt;/v2/tasks</code></p>
+
+<h2 id="using-haproxy">Using HAProxy</h2>
+
+<p>Marathon ships with a simple shell script called &quot;haproxy_cfg&quot; that turns the Marathon&#39;s REST API&#39;s list of running tasks into a config file for HAProxy, a lightweight TCP/HTTP proxy.
+To generate an HAProxy configuration from Marathon running at <code>localhost:8080</code>, use the &quot;haproxy_cfg&quot; script:</p>
+<div class="highlight"><pre><code class="language-console" data-lang="console"><span class="gp">$</span> ./bin/haproxy_cfg localhost:8080 &gt; haproxy.cfg
+</code></pre></div>
+<p>To reload the HAProxy configuration without interrupting existing connections:</p>
+<div class="highlight"><pre><code class="language-console" data-lang="console"><span class="gp">$</span> haproxy -f haproxy.cfg -p haproxy.pid -sf <span class="k">$(</span>cat haproxy.pid<span class="k">)</span>
+</code></pre></div>
+<p>The configuration script and reload could be triggered frequently by Cron, to keep track of topology changes. If a node goes away between reloads, HAProxy&#39;s health check will catch it and stop sending traffic to that node. The script is just a basic example. For a full list of HAProxy configuration options, <a href="http://cbonte.github.io/haproxy-dconv/configuration-1.5.html">check the docs</a>.</p>
+
+  </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2014 <a class="text-muted" href="http://mesosphere.io">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

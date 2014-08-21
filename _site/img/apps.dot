@@ -1,0 +1,22 @@
+digraph apps {
+
+	subgraph apps {
+		node [shape=box]
+		cassandra
+		play
+		ehcache
+	}
+
+	subgraph namespace {
+		edge [color=black style=solid]
+		"/v2/apps" -> production -> productA -> backend -> cassandra
+		productA -> frontend -> play
+		frontend -> ehcache
+	}
+
+	subgraph dependencies {
+		edge [color=blue style=dashed label="dependsOn"]
+		frontend -> backend
+	}
+
+}
