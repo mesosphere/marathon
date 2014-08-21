@@ -29,4 +29,24 @@ following the instructions.
 
 ## Deploying the site
 
-??
+1. Clone a separate copy of the Marathon repo as a sibling of your normal
+   Marathon project directory and name it "marathon-gh-pages".
+
+      $ git clone git@github.com:mesosphere/marathon.git marathon-gh-pages
+
+2. Check out the "gh-pages" branch.
+
+      $ cd /path/to/marathon-gh-pages
+      $ git checkout gh-pages
+
+3. Copy the contents of the "docs" directory in master to the root of your
+   marathon-gh-pages directory.
+
+      $ cd /path/to/marathon
+      $ cp -r docs/** ../marathon-gh-pages
+
+4. Change to the marathon-gh-pages directory, commit, and push the changes
+
+      $ cd /path/to/marathon-gh-pages
+      $ git commit . -m "Syncing docs with master branch"
+      $ git push
