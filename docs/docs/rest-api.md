@@ -974,7 +974,7 @@ my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383
 
 Register a callback URL as an event subscriber.
 
-_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`.
 
 **Request:**
 
@@ -1008,7 +1008,7 @@ Transfer-Encoding: chunked
 
 List all event subscriber callback URLs.
 
-_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`.
 
 ##### Example
 
@@ -1042,7 +1042,7 @@ Transfer-Encoding: chunked
 
 Unregister a callback URL from the event subscribers list.
 
-_NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`_
+NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`.
 
 ##### Example
 

@@ -78,28 +78,28 @@ In the Apache Mesos model, where process placement is typically done dynamically
 
 - A health check definition looks like this:
 
-  ```json
-  {
-    "type": "http",
-    "uri": "/api/health",
-    "portIndex": 0,
-    "gracePeriodSeconds": 30,
-    "timeoutSeconds": 30,
-    "maxConsecutiveFailures": 0
-  }
-  ```
+    ```json
+    {
+      "type": "http",
+      "uri": "/api/health",
+      "portIndex": 0,
+      "gracePeriodSeconds": 30,
+      "timeoutSeconds": 30,
+      "maxConsecutiveFailures": 0
+    }
+    ```
 
     OR
 
-  ```json
-  {
-    "type": "tcp",
-    "portIndex": 0,
-    "gracePeriodSeconds": 30,
-    "timeoutSeconds": 30,
-    "maxConsecutiveFailures": 0
-  }
-  ```
+    ```json
+    {
+      "type": "tcp",
+      "portIndex": 0,
+      "gracePeriodSeconds": 30,
+      "timeoutSeconds": 30,
+      "maxConsecutiveFailures": 0
+    }
+    ```
 
 - The application health lifecycle is represented by the finite state machine in figure 1 below.  In the diagram:
 
@@ -129,54 +129,53 @@ In the Apache Mesos model, where process placement is typically done dynamically
 
 - The definition of a simple (empty) group looks like this:
 
-
-  ```json
-  { "id": "/test" }
-  ```
+    ```json
+    { "id": "/test" }
+    ```
 
 - The definition of a group looks like this if it contains groups:
 
-  ```json
-  {
-    "id": "/test"
-    "groups": [
-      {
-        "id": "/test/product-a"
-        ...
-      }
-    ],
-    "dependencies": []
-  }
-  ```
+    ```json
+    {
+      "id": "/test"
+      "groups": [
+        {
+          "id": "/test/product-a"
+          ...
+        }
+      ],
+      "dependencies": []
+    }
+    ```
 
 - The definition of a group looks like this if it contains apps:
 
-  ```json
-  {
-    "id": "/test/product-a",
-    "apps": [
-      {
-        "id": "/test/product-a/rails-frontend-1.3.2",
-        "cmd": "tar -xf rails*.tgz && start-postgres.sh",
-        "cpus": 1.5,
-        "mem": 128,
-        "uris": [
-          "http://artifacts.mycompany.com/product-a/rails-frontend-1.3.2.tgz"
-        ]
-      },
-      {
-        "id": "/test/product-a/pg-backend-2.5.7",
-        "cmd": "tar -xf pg*.tgz && start-postgres.sh",
-        "cpus": 2,
-        "mem": 512,
-        "uris": [
-          "http://artifacts.mycompany.com/product-a/pg-backend-2.5.7.tgz"
-        ]
-      }
-    ],
-    "dependencies": []
-  }
-  ```
+    ```json
+    {
+      "id": "/test/product-a",
+      "apps": [
+        {
+          "id": "/test/product-a/rails-frontend-1.3.2",
+          "cmd": "tar -xf rails*.tgz && start-postgres.sh",
+          "cpus": 1.5,
+          "mem": 128,
+          "uris": [
+            "http://artifacts.mycompany.com/product-a/rails-frontend-1.3.2.tgz"
+          ]
+        },
+        {
+          "id": "/test/product-a/pg-backend-2.5.7",
+          "cmd": "tar -xf pg*.tgz && start-postgres.sh",
+          "cpus": 2,
+          "mem": 512,
+          "uris": [
+            "http://artifacts.mycompany.com/product-a/pg-backend-2.5.7.tgz"
+          ]
+        }
+      ],
+      "dependencies": []
+    }
+    ```
 
 ### Dependencies
 
@@ -189,12 +188,12 @@ In the Apache Mesos model, where process placement is typically done dynamically
 
     - Dependencies are specified as follows:
 
-    ```json
-    {
-      "id": "/test/product-a/frontend",
-      "dependencies": ["/test/product-a/backend"]
-    }
-    ```
+        ```json
+        {
+          "id": "/test/product-a/frontend",
+          "dependencies": ["/test/product-a/backend"]
+        }
+        ```
 
     - Figure 2 (below) illustrates a simple group hierarchy with a single dependency
       defined.

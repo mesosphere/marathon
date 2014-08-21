@@ -14,18 +14,20 @@ This port is used to ensure no two applications can be run using Marathon with o
 
 However, this is not the port that each instance of that application is assigned when running on slave nodes within the Mesos cluster. Since multiple instances may run on the same node, each instance (or *task*) is assigned a random port. This can be accessed from the `$PORT` environment variable which is set by Marathon.
 
-Work is in progress to prefer the assigned port when accepting resource offers ( #384 ).
-
 Port information for each running task can be queried at `<marathon host>:<port>/v2/tasks`
 
 ## Using HAProxy
-Marathon ships with a simple shell script called haproxy_cfg that turns the Marathon's REST API's list of running tasks into a config file for HAProxy, a lightweight TCP/HTTP proxy.
-To generate an HAProxy configuration from Marathon running at `localhost:8080`, use the haproxy_cfg script:
+Marathon ships with a simple shell script called "haproxy\_cfg" that turns the Marathon's REST API's list of running tasks into a config file for HAProxy, a lightweight TCP/HTTP proxy.
+To generate an HAProxy configuration from Marathon running at `localhost:8080`, use the "haproxy\_cfg" script:
 
-    ./bin/haproxy_cfg localhost:8080 > haproxy.cfg
+``` console
+$ ./bin/haproxy_cfg localhost:8080 > haproxy.cfg
+```
 
 To reload the HAProxy configuration without interrupting existing connections:
 
-    haproxy -f haproxy.cfg -p haproxy.pid -sf $(cat haproxy.pid)
+``` console
+$ haproxy -f haproxy.cfg -p haproxy.pid -sf $(cat haproxy.pid)
+```
 
 The configuration script and reload could be triggered frequently by Cron, to keep track of topology changes. If a node goes away between reloads, HAProxy's health check will catch it and stop sending traffic to that node. The script is just a basic example. For a full list of HAProxy configuration options, [check the docs](http://cbonte.github.io/haproxy-dconv/configuration-1.5.html).
