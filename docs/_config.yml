@@ -11,6 +11,7 @@ defaults:
       layout: docs
 
 sass:
+  sass_dir: _sass
   style: :compressed
 
 baseurl: "/marathon"
