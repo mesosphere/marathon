@@ -9,6 +9,7 @@ define([
     displayName: "PagedNavComponent",
 
     propTypes: {
+      className: React.PropTypes.string,
       currentPage: React.PropTypes.number.isRequired,
       onPageChange: React.PropTypes.func.isRequired,
       itemsPerPage: React.PropTypes.number,
@@ -129,7 +130,7 @@ define([
           null;
 
       return (
-        <div>
+        <div className={this.props.className}>
           {itemNumbers}
           <ul className="pagination pagination-sm pagination-unstyled">
             {leftEndArrow}
