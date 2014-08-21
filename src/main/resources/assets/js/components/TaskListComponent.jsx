@@ -17,7 +17,7 @@ define([
     propTypes: {
       currentPage: React.PropTypes.number.isRequired,
       fetchState: React.PropTypes.number.isRequired,
-      itemsPerPag: React.PropTypes.number.isRequired,
+      itemsPerPage: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
       selectedTasks: React.PropTypes.object.isRequired,
       STATES: React.PropTypes.object.isRequired,
