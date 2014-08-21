@@ -8,7 +8,7 @@ Health checks may be specified per application to be run against that applicatio
 
 - The default health check defers to Mesos' knowledge of the task state `TASK_RUNNING => healthy`
 - Marathon provides a `health` member of the task resource
-  via the [REST API](https://github.com/mesosphere/marathon/blob/master/REST.md).
+  via the [REST API]({{ site.baseurl }}/docs/rest-api.html).
 
 A health check is considered passing if (1) its HTTP response code is between
 200 and 399, inclusive, and (2) its response is received within the
