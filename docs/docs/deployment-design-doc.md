@@ -107,7 +107,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
     - `r` is the number of running instances
     - `h` is the number of healthy instances
 
-    ![lifecycle](/img/app-state.png?raw=true "Application health lifecycle")  
+    ![lifecycle]({{ site.baseurl }}/img/app-state.png "Application health lifecycle")  
     Figure 1: The Application Health Lifecycle
 
 
@@ -199,7 +199,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
     - Figure 2 (below) illustrates a simple group hierarchy with a single dependency
       defined.
 
-      ![hierarchy](/img/apps.png?raw=true "Namespaced Application Groups with a Dependency")      
+      ![hierarchy]({{ site.baseurl }}/img/apps.png "Namespaced Application Groups with a Dependency")      
       Figure 2: Namespaced Application Groups with a Dependency
 
 ### Managed Scaling
@@ -454,6 +454,7 @@ PUT /v2/groups/myGroup
 ```
 PUT /v2/groups/myGroup
 ```
+
 ```json
 { "scaleBy": 2 }
 ```
@@ -469,6 +470,7 @@ DELETE /v2/groups/myGroup
 ```
 GET /v2/apps/product-a/frontend/*
 ```
+
 ```json
 {
   "*": [
@@ -518,6 +520,7 @@ GET /v2/apps/product-a/*
 ```
 PUT /v2/apps/product-a/frontend/play
 ```
+
 ```json
 { "instances": 8 }
 ```
@@ -582,4 +585,3 @@ GET /v2/health/groups/product-a/*
 ```
 GET /v2/events/product-a/frontend/play
 ```
-
