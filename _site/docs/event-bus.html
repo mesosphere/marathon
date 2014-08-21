@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: Event Bus</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
     <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="/marathon/css/style.css" rel="stylesheet">
   </head>
@@ -92,7 +93,9 @@
     <h1 id="event-bus">Event Bus</h1>
 
 <p>Marathon has an internal event bus that captures all API requests and scaling events. This is useful for integrating with load balancers, keeping stats, etc.
-Events can be subscribed to by pluggable subscribers. Currently an HTTP callback subscriber is implemented that POSTs events in JSON format to one or more endpoints. Other subscribers are easy to add. See the code in https://github.com/mesosphere/marathon/tree/master/src/main/scala/mesosphere/marathon/event/http for guidance.</p>
+Events can be subscribed to by pluggable subscribers. Currently an HTTP callback subscriber is implemented that POSTs events in JSON format to one or more endpoints. Other subscribers are easy to add. See the code in
+<a href="https://github.com/mesosphere/marathon/tree/master/src/main/scala/mesosphere/marathon/event/http">marathon/event/http</a>
+for guidance.</p>
 
 <h2 id="configuration">Configuration</h2>
 

@@ -13,6 +13,8 @@ h4, .h4 {
 }
 
 body {
+  background-color: #f6f6f6;
+  color: #323539;
   line-height: 1.7;
   padding-top: 20px;
 }
@@ -20,6 +22,23 @@ body {
 footer {
   margin-bottom: 20px;
   margin-top: 20px;
+}
+
+hr {
+  border-color: #ddd;
+}
+
+pre {
+  background-color: #fff;
+}
+
+.jumbotron {
+  background-color: #ddd;
+}
+
+.navbar-inverse {
+  background-color: #2a2d2f;
+  border-color: transparent;
 }
 
 .navbar-inverse .navbar-brand,

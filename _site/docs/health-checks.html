@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: Health Checks</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
     <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="/marathon/css/style.css" rel="stylesheet">
   </head>
@@ -96,7 +97,7 @@
 <ul>
 <li>The default health check defers to Mesos&#39; knowledge of the task state <code>TASK_RUNNING =&gt; healthy</code></li>
 <li>Marathon provides a <code>health</code> member of the task resource
-via the <a href="https://github.com/mesosphere/marathon/blob/master/REST.md">REST API</a>.</li>
+via the <a href="/marathon/docs/rest-api.html">REST API</a>.</li>
 </ul>
 
 <p>A health check is considered passing if (1) its HTTP response code is between

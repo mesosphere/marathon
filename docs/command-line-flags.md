@@ -19,7 +19,7 @@ The following options can influence how Marathon works:
 * `--artifact_store` (Optional. Default: None): URL to the artifact store.
     Examples: `"hdfs://localhost:54310/path/to/store"`,
     `"file:///var/log/store"`. For details, see the
-    [artifact store](docs/artifact-store.md) docs.
+    [artifact store]({{ site.baseurl }}/docs/artifact-store.html) docs.
 * `--checkpoint` (Optional. Default: false): Enable checkpointing of tasks.
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and upgrades.
