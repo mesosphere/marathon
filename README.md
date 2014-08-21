@@ -5,7 +5,7 @@ you have Mesos running as the kernel for your datacenter, Marathon is the
 [`init`][init] or [`upstart`][upstart] daemon.
 
 Marathon provides a
-[REST API](https://github.com/mesosphere/marathon/blob/master/REST.md) for
+[REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for
 starting, stopping, and scaling applications. Marathon is written in Scala and
 can run in highly-available mode by running multiple copies of Marathon. The
 state of running tasks gets stored in the Mesos state abstraction.
@@ -137,7 +137,7 @@ Run `./bin/start --help` for a full list of configuration options.
 
 ## REST API Usage
 
-The full [API documentation](REST.md) shows details about everything the
+The full [API documentation](https://mesosphere.github.io/marathon/docs/rest-api.html) shows details about everything the
 Marathon API can do.
 
 ### Example using the V2 API
