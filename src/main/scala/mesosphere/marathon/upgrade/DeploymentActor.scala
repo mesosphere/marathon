@@ -1,6 +1,8 @@
 package mesosphere.marathon.upgrade
 
 import java.net.URL
+import mesosphere.marathon.event.{ DeploymentStatus, DeploymentStepSuccess, DeploymentStepFailure }
+
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 
@@ -66,6 +68,8 @@ class DeploymentActor(
       Future.successful(())
     }
     else {
+      eventBus.publish(DeploymentStatus(plan, step))
+
       val futures = step.actions.map {
         case StartApplication(app, scaleTo) => startApp(app, scaleTo)
         case ScaleApplication(app, scaleTo) => scaleApp(app, scaleTo)
@@ -77,7 +81,10 @@ class DeploymentActor(
         case ResolveArtifacts(app, urls)                     => resolveArtifacts(app, urls)
       }
 
-      Future.sequence(futures).map(_ => ())
+      Future.sequence(futures).map(_ => ()) andThen {
+        case Success(_) => eventBus.publish(DeploymentStepSuccess(plan, step))
+        case Failure(_) => eventBus.publish(DeploymentStepFailure(plan, step))
+      }
     }
   }
 

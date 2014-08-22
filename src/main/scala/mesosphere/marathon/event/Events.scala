@@ -1,6 +1,7 @@
 package mesosphere.marathon.event
 
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.rogach.scallop.ScallopConf
 import com.google.inject.{ Inject, Singleton, Provides, AbstractModule }
 import akka.event.EventStream
@@ -118,16 +119,6 @@ case class GroupChangeFailed(
   eventType: String = "group_change_failed",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
-case class RestartSuccess(
-  appId: PathId,
-  eventType: String = "restart_success",
-  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
-
-case class RestartFailed(
-  appId: PathId,
-  eventType: String = "restart_failed",
-  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
-
 case class DeploymentSuccess(
   id: String,
   eventType: String = "deployment_success",
@@ -138,14 +129,22 @@ case class DeploymentFailed(
   eventType: String = "deployment_failed",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
-case class RollbackSuccess(
-  appId: PathId,
-  eventType: String = "rollback_success",
+case class DeploymentStatus(
+  plan: DeploymentPlan,
+  currentStep: DeploymentStep,
+  eventType: String = "deployment_info",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
-case class RollbackFailed(
-  appId: PathId,
-  eventType: String = "rollback_failed",
+case class DeploymentStepSuccess(
+  plan: DeploymentPlan,
+  currentStep: DeploymentStep,
+  eventType: String = "deployment_step_success",
+  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+
+case class DeploymentStepFailure(
+  plan: DeploymentPlan,
+  currentStep: DeploymentStep,
+  eventType: String = "deployment_step_failure",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 // Mesos scheduler
