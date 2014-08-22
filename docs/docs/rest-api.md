@@ -4,8 +4,6 @@ title: REST API
 
 # Marathon REST API
 
-## API Version 2
-
 * [Apps](#apps)
   * [POST /v2/apps](#post-/v2/apps): Create and start a new app
   * [GET /v2/apps](#get-/v2/apps): List all running apps
@@ -875,7 +873,7 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
-### _Tasks_
+### Tasks
 
 #### GET `/v2/tasks`
 
@@ -968,7 +966,7 @@ my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382
 my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383  
 {% endhighlight %}
 
-### _Event Subscriptions_
+### Event Subscriptions
 
 #### POST /v2/eventSubscriptions?callbackUrl={url}
 
