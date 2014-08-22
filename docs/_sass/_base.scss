@@ -33,7 +33,12 @@ pre {
 }
 
 .jumbotron {
-  background-color: #ddd;
+  background-color: #323539;
+  color: #f6f6f6;
+}
+
+.jumbotron .btn-link {
+  color: #00b482;
 }
 
 .navbar-inverse {
