@@ -47,6 +47,14 @@ available via the [Mesosphere Website](http://mesosphere.io/docs/).
 * Scala 2.10+
 * sbt 0.13.5
 
+### Upgrading to a newer version
+
+Upgrading to a newer version of Marathon should be seamless. Be aware that
+downgrading from versions >= 0.7.0 to a version < 0.7.0 is not possible
+because of incompatible changes in the data format. We recommend to create
+backups of the Zookeeper state before upgrading to be able to downgrade in case
+of problems after an upgrade.
+
 ### Installation
 
 1.  Install [Mesos][Mesos]. One easy way is via your system's package manager.
