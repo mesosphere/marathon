@@ -13,7 +13,8 @@ title: A cluster-wide init and control system for services in cgroups or Docker 
       Download Marathon v0.6.1
     </a>
   </p>
-  <a href="http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz.sha256">
+  <a class="btn btn-link"
+      href="http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz.sha256">
     v0.6.1 SHA-256 Checksum
   </a>
 </div>
