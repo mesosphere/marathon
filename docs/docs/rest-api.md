@@ -144,7 +144,7 @@ The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${
 
 Valid constraint operators are one of ["UNIQUE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
-the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constraints).
+the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
 
 ##### container
 
@@ -158,8 +158,8 @@ A list of services upon which this application depends. An order is derived from
 
 An array of checks to be performed on running tasks to determine if they are
 operating as expected. Health checks begin immediately upon task launch. For
-design details, refer to the [health checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)
-wiki page.  By default, health checks are executed by the Marathon scheduler.
+design details, refer to the [health checks]({{ site.baseurl}}/docs/health-checks.html)
+doc.  By default, health checks are executed by the Marathon scheduler.
 It's possible with Mesos `0.20.0` and higher to execute health checks on the hosts where
 the tasks are running by supplying the `--executor_health_checks` flag to Marathon.
 In this case, the only supported protocol is `COMMAND` and each app is limited to
