@@ -1,4 +1,4 @@
-# Marathon and Website
+# Marathon Docs and Website
 
 ## Run it locally
 
