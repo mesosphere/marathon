@@ -4,8 +4,6 @@ title: REST API
 
 # Marathon REST API
 
-## API Version 2
-
 * [Apps](#apps)
   * [POST /v2/apps](#post-/v2/apps): Create and start a new app
   * [GET /v2/apps](#get-/v2/apps): List all running apps
@@ -146,7 +144,7 @@ The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${
 
 Valid constraint operators are one of ["UNIQUE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
-the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constraints).
+the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
 
 ##### container
 
@@ -160,8 +158,8 @@ A list of services upon which this application depends. An order is derived from
 
 An array of checks to be performed on running tasks to determine if they are
 operating as expected. Health checks begin immediately upon task launch. For
-design details, refer to the [health checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)
-wiki page.  By default, health checks are executed by the Marathon scheduler.
+design details, refer to the [health checks]({{ site.baseurl}}/docs/health-checks.html)
+doc.  By default, health checks are executed by the Marathon scheduler.
 It's possible with Mesos `0.20.0` and higher to execute health checks on the hosts where
 the tasks are running by supplying the `--executor_health_checks` flag to Marathon.
 In this case, the only supported protocol is `COMMAND` and each app is limited to
@@ -174,6 +172,9 @@ health checks consecutively, that task is killed.
 
 ###### HEALTH CHECK OPTIONS
 
+* `command`: Command to run in order to determine the health of a task.
+  *Note: only used if `protocol == "COMMAND"`, and only available if Marathon is
+  started with the `--executor_health_checks` flag.*
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
   ignored within this number of seconds of the task being started or until the
   task becomes healthy for the first time.
@@ -186,9 +187,6 @@ health checks consecutively, that task is killed.
 * `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
   will provide health  status. Example: "/path/to/health".
   _Note: only used if `protocol == "HTTP"`._
-* `command`: Command to run in order to determine the health of a task.
-  _Note: only used if `protocol == "COMMAND"`, and only available if Marathon is
-  started with the `--executor_health_checks` flag.
 * `portIndex` (Optional. Default: 0): Index in this app's `ports` array to be
   used for health requests. An index is used so the app can use random ports,
   like "[0, 0, 0]" for example, and tasks could be started with port environment
@@ -875,7 +873,7 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
-### _Tasks_
+### Tasks
 
 #### GET `/v2/tasks`
 
@@ -968,7 +966,7 @@ my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382
 my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383  
 {% endhighlight %}
 
-### _Event Subscriptions_
+### Event Subscriptions
 
 #### POST /v2/eventSubscriptions?callbackUrl={url}
 
