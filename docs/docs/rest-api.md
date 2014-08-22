@@ -172,6 +172,9 @@ health checks consecutively, that task is killed.
 
 ###### HEALTH CHECK OPTIONS
 
+* `command`: Command to run in order to determine the health of a task.
+  *Note: only used if `protocol == "COMMAND"`, and only available if Marathon is
+  started with the `--executor_health_checks` flag.*
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
   ignored within this number of seconds of the task being started or until the
   task becomes healthy for the first time.
@@ -184,9 +187,6 @@ health checks consecutively, that task is killed.
 * `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
   will provide health  status. Example: "/path/to/health".
   _Note: only used if `protocol == "HTTP"`._
-* `command`: Command to run in order to determine the health of a task.
-  _Note: only used if `protocol == "COMMAND"`, and only available if Marathon is
-  started with the `--executor_health_checks` flag.
 * `portIndex` (Optional. Default: 0): Index in this app's `ports` array to be
   used for health requests. An index is used so the app can use random ports,
   like "[0, 0, 0]" for example, and tasks could be started with port environment
