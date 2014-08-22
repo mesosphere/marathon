@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: {{ page.title }}</title>
     <link rel="icon" type="image/x-icon" href="{{ site.baseurl }}/img/marathon-favicon.ico">
-    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="{{ site.baseurl }}/css/style.css" rel="stylesheet">
     <script>
       (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -24,14 +24,22 @@
           <div class="navbar navbar-default navbar-inverse" role="navigation">
             <div class="container-fluid">
               <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
                 <a class="navbar-brand" href="{{ site.baseurl }}/">Marathon</a>
               </div>
-              <ul class="nav navbar-nav">
-                <li><a href="{{ site.baseurl }}/docs/">Docs</a></li>
-              </ul>
-              <ul class="nav navbar-nav navbar-right">
-                <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
-              </ul>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li><a href="{{ site.baseurl }}/docs/">Docs</a></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+              </div>
             </div>
           </div>
           {{ content }}
@@ -43,5 +51,7 @@
         </div>
       </div>
     </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
   </body>
 </html>
