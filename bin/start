@@ -34,6 +34,10 @@ require_arg() {
   fi
 }
 
+for env_op in `env |grep ^MARATHON_ | sed -e 's/MARATHON_\(.*\)=\(.*\)/--\1 \2/'`; do
+  addApplication "$env_op"
+done
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -D*) addJava "$1" && shift ;;
