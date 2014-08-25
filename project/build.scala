@@ -60,7 +60,8 @@ object MarathonBuild extends Build {
         "commons-beanutils-1.7.0.jar",
         "stax-api-1.0.1.jar",
         "commons-beanutils-core-1.8.0.jar",
-        "servlet-api-2.5.jar"
+        "servlet-api-2.5.jar",
+        "jsp-api-2.1.jar"
       )
       cp filter { x => exclude(x.data.getName) }
     }
