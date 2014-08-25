@@ -235,7 +235,7 @@ define([
         // app will not be runnable.
         if (attrs.container == null || !_.isString(attrs.container.image) ||
             attrs.container.image.length < 1 ||
-            attrs.container.image.indexOf("docker") != 0) {
+            attrs.container.image.indexOf("docker") !== 0) {
           errors.push(
             new ValidationError("cmd",
               "Command must be a non-empty String if no container image is provided"
@@ -245,10 +245,14 @@ define([
       }
 
       if (!attrs.constraints.every(isValidConstraint)) {
-        errors.push(new ValidationError("constraints",
-          "Invalid constraints format or operator. Supported operators are " +
-          VALID_CONSTRAINTS.map(function(c) { return "`" + c + "`" }).join(", ") +
-          ". See https://github.com/mesosphere/marathon/wiki/Constraints.")
+        errors.push(
+          new ValidationError("constraints",
+            "Invalid constraints format or operator. Supported operators are " +
+            VALID_CONSTRAINTS.map(function(c) {
+              return "`" + c + "`";
+            }).join(", ") +
+            ". See https://github.com/mesosphere/marathon/wiki/Constraints."
+          )
         );
       }
 
