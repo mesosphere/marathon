@@ -14,11 +14,11 @@ define([
     },
 
     parse: function(response) {
-      return response.tasks;
+      return response.app.tasks;
     },
 
     url: function() {
-      return "/v2/apps/" + this.options.appId + "/tasks";
+      return "/v2/apps/" + this.options.appId;
     }
   });
 });
