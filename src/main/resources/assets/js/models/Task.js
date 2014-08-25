@@ -70,7 +70,7 @@ define([
         // The "/kill" endpoint expects certain POST values to be query
         // parameters. Construct the param string and append it to the normal
         // URL.
-        _options.url = model.url() + "?" + $.param({
+        _options.url = this.collection.url() + "/tasks/" + model.id + "?" + $.param({
           scale: _options.scale
         });
       }
