@@ -74,7 +74,9 @@ define([
         error: function() {
           this.setState({tasksFetchState: STATES.STATE_ERROR});
         }.bind(this),
-        success: function() {
+        success: function(collection, response) {
+          // update changed attributes in app
+          this.props.model.update(response.app);
           this.setState({tasksFetchState: STATES.STATE_SUCCESS});
         }.bind(this)
       });
