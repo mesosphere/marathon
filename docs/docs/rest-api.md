@@ -27,6 +27,8 @@ title: REST API
   * [POST /v2/eventSubscriptions?callbackUrl={url}](#post-/v2/eventsubscriptions?callbackurl={url}): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
   * [DELETE /v2/eventSubscriptions?callbackUrl={url}](#delete-/v2/eventsubscriptions?callbackurl={url}) Unregister a callback URL from the event subscribers list
+* [Server Info](#server-info)
+  * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
 
 ### Apps
 
@@ -1071,3 +1073,62 @@ Transfer-Encoding: chunked
     "eventType": "unsubscribe_event"
 }
 {% endhighlight %}
+
+### Server Info
+
+#### GET `/v2/info`
+
+Get info about the Marathon Instance
+
+##### Example
+
+**Request:**
+
+{% highlight http %}
+GET /v2/info HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 872
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
+{
+    "frameworkId": "20140730-222531-1863654316-5050-10422-0000", 
+    "leader": "127.0.0.1:8080", 
+    "marathon_config": {
+        "checkpoint": false, 
+        "executor": "//cmd", 
+        "failover_timeout": 604800, 
+        "ha": true, 
+        "hostname": "127.0.0.1", 
+        "local_port_max": 49151, 
+        "local_port_min": 32767, 
+        "master": "zk://localhost:2181/mesos", 
+        "mesos_role": null, 
+        "mesos_user": "root", 
+        "reconciliation_initial_delay": 30000, 
+        "reconciliation_interval": 30000, 
+        "task_launch_timeout": 60000
+    }, 
+    "name": "marathon", 
+    "version": "0.7.0-SNAPSHOT", 
+    "zookeeper_config": {
+        "zk": "zk://localhost:2181/marathon", 
+        "zk_future_timeout": {
+            "duration": 10
+        }, 
+        "zk_hosts": "localhost:2181", 
+        "zk_path": "/marathon", 
+        "zk_state": "/marathon", 
+        "zk_timeout": 10
+    }
+}{% endhighlight %}
