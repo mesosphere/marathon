@@ -13,6 +13,14 @@ define([
     AppListComponent, AppModalComponent, NewAppModalComponent) {
   "use strict";
 
+  var STATES = {
+    STATE_LOADING: 0,
+    STATE_ERROR: 1,
+    STATE_SUCCESS: 2
+  };
+
+  var UPDATE_INTERVAL = 5000;
+
   return React.createClass({
     displayName: "Marathon",
 
@@ -20,6 +28,7 @@ define([
       return {
         collection: new AppCollection(),
         deployments: new DeploymentCollection(),
+        fetchState: STATES.STATE_LOADING,
         modalClass: null
       };
     },
@@ -48,6 +57,26 @@ define([
           this.refs.modal.destroyApp();
         }
       }.bind(this));
+
+      this.startPolling();
+    },
+
+    componentWillUnmount: function() {
+      this.stopPolling();
+    },
+
+    fetchResource: function() {
+      var _this = this;
+
+      this.state.collection.fetch({
+        error: function() {
+          _this.setState({fetchState: STATES.STATE_ERROR});
+        },
+        reset: true,
+        success: function() {
+          _this.setState({fetchState: STATES.STATE_SUCCESS});
+        }
+      });
     },
 
     componentDidUpdate: function(prevProps, prevState) {
@@ -70,6 +99,20 @@ define([
         activeApp: null,
         modalClass: null
       });
+    },
+
+    startPolling: function() {
+      if (this._interval == null) {
+        this.fetchResource();
+        this._interval = setInterval(this.fetchResource, UPDATE_INTERVAL);
+      }
+    },
+
+    stopPolling: function() {
+      if (this._interval != null) {
+        clearInterval(this._interval);
+        this._interval = null;
+      }
     },
 
     showAppModal: function(app) {
@@ -132,6 +175,8 @@ define([
               collection={this.state.collection}
               deployments={this.state.deployments}
               onSelectApp={this.showAppModal}
+              fetchState={this.state.fetchState}
+              STATES={STATES}
               ref="appList" />
           </div>
           {modal}
