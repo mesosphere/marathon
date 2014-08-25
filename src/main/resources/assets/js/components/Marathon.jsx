@@ -12,12 +12,21 @@ define([
     AppModalComponent, NewAppModalComponent) {
   "use strict";
 
+  var STATES = {
+    STATE_LOADING: 0,
+    STATE_ERROR: 1,
+    STATE_SUCCESS: 2
+  };
+
+  var UPDATE_INTERVAL = 5000;
+
   return React.createClass({
     displayName: "Marathon",
 
     getInitialState: function() {
       return {
-        collection: new AppCollection()
+        collection: new AppCollection(),
+        fetchState: STATES.STATE_LOADING
       };
     },
 
@@ -38,6 +47,26 @@ define([
           this.state.modal.destroyApp();
         }
       }.bind(this));
+
+      this.startPolling();
+    },
+
+    componentWillUnmount: function() {
+      this.stopPolling();
+    },
+
+    fetchResource: function() {
+      var _this = this;
+
+      this.state.collection.fetch({
+        error: function() {
+          _this.setState({fetchState: STATES.STATE_ERROR});
+        },
+        reset: true,
+        success: function() {
+          _this.setState({fetchState: STATES.STATE_SUCCESS});
+        }
+      });
     },
 
     handleAppCreate: function(appModel, options) {
@@ -48,6 +77,20 @@ define([
       this.setState({modal: null}, function() {
         this.refs.appList.startPolling();
       }.bind(this));
+    },
+
+    startPolling: function() {
+      if (this._interval == null) {
+        this.fetchResource();
+        this._interval = setInterval(this.fetchResource, UPDATE_INTERVAL);
+      }
+    },
+
+    stopPolling: function() {
+      if (this._interval != null) {
+        clearInterval(this._interval);
+        this._interval = null;
+      }
     },
 
     showAppModal: function(app) {
@@ -61,7 +104,7 @@ define([
         modal: React.renderComponent(
           <AppModalComponent model={app} onDestroy={this.handleModalDestroy} />,
           document.getElementById("lightbox"),
-          function() { this.refs.appList.stopPolling(); }.bind(this)
+          this.stopPolling
         )
       });
     },
@@ -83,7 +126,7 @@ define([
             onCreate={this.handleAppCreate}
             onDestroy={this.handleModalDestroy} />,
           document.getElementById("lightbox"),
-          function() { this.refs.appList.stopPolling(); }.bind(this)
+          this.stopPolling
         )
       });
     },
@@ -107,6 +150,8 @@ define([
             <AppListComponent
               collection={this.state.collection}
               onSelectApp={this.showAppModal}
+              fetchState={this.state.fetchState}
+              STATES={STATES}
               ref="appList" />
           </div>
         </div>
