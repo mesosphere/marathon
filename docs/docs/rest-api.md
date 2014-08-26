@@ -23,10 +23,15 @@ title: REST API
     Kill the task `taskId` that belongs to the application `appId`
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
+* [Deployments](#deployments)
+  * [GET /v2/deployments](#get-/v2/deployments): List running deployments
+  * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Cancel the deployment with `deploymentId`
 * [Event Subscriptions](#event-subscriptions)
   * [POST /v2/eventSubscriptions?callbackUrl={url}](#post-/v2/eventsubscriptions?callbackurl={url}): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
   * [DELETE /v2/eventSubscriptions?callbackUrl={url}](#delete-/v2/eventsubscriptions?callbackurl={url}) Unregister a callback URL from the event subscribers list
+* [Queue](#queue)
+  * [GET /v2/queue](#get-v2queue): List content of the staging queue.
 * [Server Info](#server-info)
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
 
@@ -469,6 +474,86 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
+#### GET `/v2/apps?embed=apps.tasks`
+
+List all apps, with their running tasks.
+
+##### Example
+
+**Request:**
+
+{% highlight http %}
+GET /v2/apps?embed=apps.tasks HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: localhost:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "apps": [
+        {
+            "args": null, 
+            "backoffFactor": 1.15, 
+            "backoffSeconds": 1, 
+            "cmd": "python toggle.py $PORT0", 
+            "constraints": [], 
+            "container": null, 
+            "cpus": 0.2, 
+            "dependencies": [], 
+            "disk": 0.0, 
+            "env": {}, 
+            "executor": "", 
+            "healthChecks": [], 
+            "id": "/test", 
+            "instances": 2, 
+            "mem": 32.0, 
+            "ports": [
+                10000
+            ], 
+            "requirePorts": false, 
+            "storeUrls": [], 
+            "tasks": [
+                {
+                    "host": "10.141.141.10",
+                    "id": "test.6520607d-2cde-11e4-8852-56847afe9799",
+                    "ports": [31369], 
+                    "stagedAt": "2014-08-26T05:04:01.895Z", 
+                    "startedAt": "2014-08-26T06:59:22.252Z", 
+                    "version": "2014-08-26T05:03:26.449Z"
+                },
+                {
+                    "host": "10.141.141.10", 
+                    "id": "test.53cf64b8-2cde-11e4-8852-56847afe9799", 
+                    "ports": [31124], 
+                    "stagedAt": "2014-08-26T05:03:32.844Z", 
+                    "startedAt": "2014-08-26T06:59:22.186Z", 
+                    "version": "2014-08-26T05:03:26.449Z"
+                }
+            ],
+            "tasksRunning": 2,
+            "tasksStaged": 0, 
+            "upgradeStrategy": {
+                "minimumHealthCapacity": 1.0
+            }, 
+            "uris": [
+                "http://downloads.mesosphere.io/misc/toggle.tgz"
+            ], 
+            "user": null, 
+            "version": "2014-08-26T05:04:26.263Z"
+        }
+    ]
+}
+{% endhighlight %}
+
+**Response:**
+
 #### GET `/v2/apps/{appId}`
 
 List the application with id `appId`.
@@ -536,6 +621,76 @@ Transfer-Encoding: chunked
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ], 
         "version": "2014-04-04T06:25:31.399Z"
+    }
+}
+{% endhighlight %}
+
+#### GET `/v2/apps/{appId}?embed=apps.tasks`
+
+List the application with id `appId` along with its running tasks.
+
+{% highlight http %}
+GET /v2/apps/test?embed=apps.tasks HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: localhost:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "app": {
+        "args": null, 
+        "backoffFactor": 1.15, 
+        "backoffSeconds": 1, 
+        "cmd": "python toggle.py $PORT0", 
+        "constraints": [], 
+        "container": null, 
+        "cpus": 0.2, 
+        "dependencies": [], 
+        "disk": 0.0, 
+        "env": {}, 
+        "executor": "", 
+        "healthChecks": [], 
+        "id": "/test", 
+        "instances": 2, 
+        "mem": 32.0, 
+        "ports": [10000], 
+        "requirePorts": false, 
+        "storeUrls": [], 
+        "tasks": [
+            {
+                "host": "10.141.141.10", 
+                "id": "test.7d989150-2cde-11e4-8852-56847afe9799", 
+                "ports": [31974], 
+                "stagedAt": "2014-08-26T05:04:42.948Z", 
+                "startedAt": "2014-08-26T07:14:22.264Z", 
+                "version": "2014-08-26T05:04:41.844Z"
+            }, 
+            {
+                "host": "10.141.141.10", 
+                "id": "test.68b5470e-2cde-11e4-8852-56847afe9799", 
+                "ports": [31494], 
+                "stagedAt": "2014-08-26T05:04:07.904Z", 
+                "startedAt": "2014-08-26T07:14:22.323Z", 
+                "version": "2014-08-26T05:03:26.449Z"
+            }
+        ], 
+        "tasksRunning": 2, 
+        "tasksStaged": 0, 
+        "upgradeStrategy": {
+            "minimumHealthCapacity": 1.0
+        }, 
+        "uris": [
+            "http://downloads.mesosphere.io/misc/toggle.tgz"
+        ], 
+        "user": null, 
+        "version": "2014-08-26T05:04:26.263Z"
     }
 }
 {% endhighlight %}
@@ -620,8 +775,8 @@ Transfer-Encoding: chunked
 #### PUT `/v2/apps/{appId}`
 
 Change parameters of a running application.  The new application parameters
-apply only to subsequently created tasks, and currently running tasks are
-__not__ pre-emptively restarted.
+apply only to subsequently created tasks.  Currently running tasks are
+restarted, while maintaining the `minimumHealthCapacity`
 
 ##### Example
 
@@ -657,11 +812,16 @@ User-Agent: HTTPie/0.7.2
 **Response:**
 
 {% highlight http %}
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
-{% endhighlight %}
+Transfer-Encoding: chunked
 
+{
+    "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438", 
+    "version": "2014-08-26T07:37:50.462Z"
+}
+{% endhighlight %}
 
 ##### Example (version rollback)
 
@@ -684,9 +844,52 @@ User-Agent: HTTPie/0.7.2
 {% endhighlight %}
 
 {% highlight http %}
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438", 
+    "version": "2014-08-26T07:37:50.462Z"
+}
+{% endhighlight %}
+
+##### Example (update an app that is locked by a running deployment)
+
+If the app is affected by a currently running deployment, then the
+update operation fails.  As indicated by the response message, the current
+deployment can be overridden by setting the `force` query parameter in a
+subsequent request.
+
+**Request:**
+
+{% highlight http %}
+PUT /v2/apps/test HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Content-Length: 18
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.8.0
+
+{
+    "instances": "2"
+}
+{% endhighlight %}
+
+{% highlight http %}
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "deployments": [
+        "631061a4-d785-4572-9f49-d9561c47c53b"
+    ], 
+    "message": "App is locked by one or more deployments. Override with the option '?force=true'. View details at '/v2/deployments/<DEPLOYMENT_ID>'."
+}
 {% endhighlight %}
 
 #### DELETE `/v2/apps/{appId}`
@@ -968,6 +1171,78 @@ my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382
 my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383  
 {% endhighlight %}
 
+### Deployments
+
+#### GET /v2/deployments
+
+List running deployments
+
+**Request:**
+
+{% highlight http %}
+GET /v2/deployments HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+[
+    {
+        "affectedApplications": [
+            "/test"
+        ], 
+        "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b", 
+        "steps": [
+            [
+                {
+                    "action": "ScaleApplication", 
+                    "application": "/test"
+                }
+            ]
+        ], 
+        "version": "2014-08-26T08:18:03.595Z"
+    }
+]
+{% endhighlight %}
+
+#### DELETE /v2/deployments/{deploymentId}
+
+Cancel the deployment with `deploymentId`
+
+**Request:**
+
+{% highlight http %}
+DELETE /v2/deployments/867ed450-f6a8-4d33-9b0e-e11c5513990b HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Content-Length: 0
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "0b1467fc-d5cd-4bbc-bac2-2805351cee1e", 
+    "version": "2014-08-26T08:20:26.171Z"
+}
+{% endhighlight %}
+
 ### Event Subscriptions
 
 #### POST /v2/eventSubscriptions?callbackUrl={url}
@@ -1058,7 +1333,6 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 {% endhighlight %}
 
-
 **Response:**
 
 {% highlight http %}
@@ -1074,13 +1348,70 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
+### Queue
+
+#### GET `/v2/queue`
+
+Show content of the task queue.
+
+##### Example
+
+{% highlight http %}
+GET /v2/queue HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: localhost:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "queue": [
+        {
+            "app": {
+                "args": null,
+                "backoffFactor": 1.15,
+                "backoffSeconds": 1,
+                "cmd": "python toggle.py $PORT0",
+                "constraints": [],
+                "container": null,
+                "cpus": 0.2,
+                "dependencies": [],
+                "disk": 0.0,
+                "env": {},
+                "executor": "",
+                "healthChecks": [],
+                "id": "/test",
+                "instances": 3,
+                "mem": 32.0,
+                "ports": [10000],
+                "requirePorts": false,
+                "storeUrls": [],
+                "upgradeStrategy": {
+                    "minimumHealthCapacity": 1.0
+                },
+                "uris": [
+                    "http://downloads.mesosphere.io/misc/toggle.tgz"
+                ],
+                "user": null,
+                "version": "2014-08-26T05:04:49.766Z"
+            },
+            "delay": { "overdue": true }
+        }
+    ]
+}
+{% endhighlight %}
+
 ### Server Info
 
 #### GET `/v2/info`
 
 Get info about the Marathon Instance
-
-##### Example
 
 **Request:**
 
@@ -1131,4 +1462,5 @@ Server: Jetty(8.y.z-SNAPSHOT)
         "zk_state": "/marathon", 
         "zk_timeout": 10
     }
-}{% endhighlight %}
+}
+{% endhighlight %}
