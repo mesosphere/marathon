@@ -27,6 +27,9 @@ following the instructions.
 
         $ bundle exec jekyll serve --watch
 
+5. Visit the site at
+   [http://localhost:4000/marathon/](http://localhost:4000/marathon/)
+
 ## Deploying the site
 
 1. Clone a separate copy of the Marathon repo as a sibling of your normal
