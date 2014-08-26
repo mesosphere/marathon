@@ -100,9 +100,11 @@ define([
         this.state.activeApp.versions.fetch({
           error: function() {
             this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+            this.forceUpdate();
           }.bind(this),
           success: function() {
             this.setState({appVersionsFetchState: STATES.STATE_SUCCESS});
+            this.forceUpdate();
           }.bind(this)
         });
       }
@@ -113,11 +115,13 @@ define([
         this.state.activeApp.tasks.fetch({
           error: function() {
             this.setState({tasksFetchState: STATES.STATE_ERROR});
+            this.forceUpdate();
           }.bind(this),
           success: function(collection, response) {
             // update changed attributes in app
             this.state.activeApp.update(response.app);
             this.setState({tasksFetchState: STATES.STATE_SUCCESS});
+            this.forceUpdate();
           }.bind(this)
         });
       }
