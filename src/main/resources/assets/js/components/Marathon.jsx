@@ -100,28 +100,24 @@ define([
         this.state.activeApp.versions.fetch({
           error: function() {
             this.setState({appVersionsFetchState: STATES.STATE_ERROR});
-            // ctx.forceUpdate();
           }.bind(this),
           success: function() {
             this.setState({appVersionsFetchState: STATES.STATE_SUCCESS});
-            // ctx.forceUpdate();
           }.bind(this)
         });
       }
     },
 
-    fetchTasks: function(ctx) {
+    fetchTasks: function() {
       if (this.state.activeApp != null) {
         this.state.activeApp.tasks.fetch({
           error: function() {
             this.setState({tasksFetchState: STATES.STATE_ERROR});
-            ctx && _.isFunction(ctx.forceUpdate) && ctx.forceUpdate();
           }.bind(this),
           success: function(collection, response) {
             // update changed attributes in app
             this.state.activeApp.update(response.app);
             this.setState({tasksFetchState: STATES.STATE_SUCCESS});
-            ctx && _.isFunction(ctx.forceUpdate) && ctx.forceUpdate();
           }.bind(this)
         });
       }
