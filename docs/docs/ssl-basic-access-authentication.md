@@ -103,7 +103,7 @@ $ curl https://localhost:8443/v2/apps
 <div class="alert alert-info">
   <strong>Note:</strong> It's highly recommended to enable SSL if you
   plan to use basic authentication. If SSL is not enabled, the username and
-  password for your Marathon instances will be transmitted unecrypted and can
+  password for your Marathon instances will be transmitted unencrypted and can
   easily be read by unintended parties.
 </div>
 
