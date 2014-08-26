@@ -194,6 +194,7 @@ Marathon API can do.
 * [Guidewire](http://www.guidewire.com/)
 * [OpenTable](http://www.opentable.com/)
 * [PayPal](https://www.paypal.com)
+* [Sailthru](http://www.sailthru.com/)
 * [Viadeo](http://www.viadeo.com)
 
 Not in the list? Open a pull request and add yourself!
