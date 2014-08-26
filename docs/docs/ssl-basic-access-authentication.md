@@ -18,7 +18,7 @@ keystore's password to enable SSL:
 $ cd /path/to/marathon
 $ ./bin/start --master zk://localhost:2181/mesos \
                   --zk zk://localhost:2181/marathon \
-       --ssl_keystore_path marathon-keystore \
+       --ssl_keystore_path marathon.jks \
    --ssl_keystore_password ********
 ```
 
