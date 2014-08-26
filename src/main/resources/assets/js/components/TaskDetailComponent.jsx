@@ -13,19 +13,25 @@ define([
 
   return React.createClass({
     displayName: "TaskDetailComponent",
+
     mixins: [BackboneMixin],
+
     propTypes: {
+      fetchState: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
       onShowTaskList: React.PropTypes.func.isRequired,
       task: React.PropTypes.object.isRequired
     },
+
     getResource: function() {
       return this.props.task;
     },
+
     handleShowTaskList: function (event) {
       event.preventDefault();
       this.props.onShowTaskList();
     },
+
     render: function() {
       var task = this.props.task;
       var hasHealth = !!this.props.hasHealth;

@@ -19,17 +19,22 @@ define([
     STATE_SUCCESS: 2
   };
 
-  var UPDATE_INTERVAL = 5000;
+  var UPDATE_INTERVAL_APPS = 5000;
+  var UPDATE_INTERVAL_TASKS = 2000;
 
   return React.createClass({
     displayName: "Marathon",
 
     getInitialState: function() {
       return {
+        activeApp: null,
+        activeTask: null,
+        appVersionsFetchState: STATES.STATE_LOADING,
         collection: new AppCollection(),
         deployments: new DeploymentCollection(),
         fetchState: STATES.STATE_LOADING,
-        modalClass: null
+        modalClass: null,
+        tasksFetchState: STATES.STATE_LOADING
       };
     },
 
@@ -52,17 +57,28 @@ define([
         this.showNewAppModal(); }.bind(this), "keyup");
 
       Mousetrap.bind("#", function() {
-        if (this.state.modalClass === AppModalComponent &&
-            _.isFunction(this.refs.modal.destroyApp)) {
-          this.refs.modal.destroyApp();
+        if (this.state.modalClass === AppModalComponent) {
+          this.destroyApp();
         }
       }.bind(this));
 
-      this.startPolling();
+      this.startPollingApps();
+    },
+
+    componentDidUpdate: function(prevProps, prevState) {
+      if (prevState.modalClass !== this.state.modalClass) {
+        // No `modalClass` means the modal went from open to closed. Start
+        // polling in that case, otherwise stop polling since the modal went
+        // from closed to open.
+        this.state.modalClass === null ?
+          this.refs.appList.startPolling() :
+          this.refs.appList.stopPolling();
+
+      }
     },
 
     componentWillUnmount: function() {
-      this.stopPolling();
+      this.stopPollingApps();
     },
 
     fetchResource: function() {
@@ -79,14 +95,35 @@ define([
       });
     },
 
-    componentDidUpdate: function(prevProps, prevState) {
-      if (prevState.modalClass !== this.state.modalClass) {
-        // No `modalClass` means the modal went from open to closed. Start
-        // polling in that case, otherwise stop polling since the modal went
-        // from closed to open.
-        this.state.modalClass === null ?
-          this.refs.appList.startPolling() :
-          this.refs.appList.stopPolling();
+    fetchAppVersions: function() {
+      if (this.state.activeApp != null) {
+        this.state.activeApp.versions.fetch({
+          error: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+            // ctx.forceUpdate();
+          }.bind(this),
+          success: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_SUCCESS});
+            // ctx.forceUpdate();
+          }.bind(this)
+        });
+      }
+    },
+
+    fetchTasks: function(ctx) {
+      if (this.state.activeApp != null) {
+        this.state.activeApp.tasks.fetch({
+          error: function() {
+            this.setState({tasksFetchState: STATES.STATE_ERROR});
+            ctx && _.isFunction(ctx.forceUpdate) && ctx.forceUpdate();
+          }.bind(this),
+          success: function(collection, response) {
+            // update changed attributes in app
+            this.state.activeApp.update(response.app);
+            this.setState({tasksFetchState: STATES.STATE_SUCCESS});
+            ctx && _.isFunction(ctx.forceUpdate) && ctx.forceUpdate();
+          }.bind(this)
+        });
       }
     },
 
@@ -101,18 +138,124 @@ define([
       });
     },
 
-    startPolling: function() {
-      if (this._interval == null) {
-        this.fetchResource();
-        this._interval = setInterval(this.fetchResource, UPDATE_INTERVAL);
+    handleShowTaskDetails: function(task) {
+      this.setState({activeTask: task});
+    },
+
+    handleShowTaskList: function() {
+      this.setState({activeTask: null});
+    },
+
+    handleTasksKilled: function(options) {
+      var instances;
+      var app = this.state.activeApp;
+      var _options = options || {};
+      if (_options.scale) {
+        instances = app.get("instances");
+        app.set("instances", instances - 1);
+        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
+        // refresh app versions
+        this.fetchAppVersions();
+      }
+
+      // Force an update since React doesn't know a key was removed from
+      // `selectedTasks`.
+      this.forceUpdate();
+    },
+
+    destroyApp: function() {
+      var app = this.state.activeApp;
+      if (confirm("Destroy app '" + app.get("id") + "'?\nThis is irreversible.")) {
+        // Send force option to ensure the UI is always able to kill apps
+        // regardless of deployment state.
+        app.destroy({
+          url: _.result(app, "url") + "?force=true"
+        });
       }
     },
 
-    stopPolling: function() {
-      if (this._interval != null) {
-        clearInterval(this._interval);
-        this._interval = null;
+    rollbackToAppVersion: function(version) {
+      var app = this.state.activeApp;
+      app.setVersion(version);
+      app.save(
+        null,
+        {
+          error: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+          }.bind(this),
+          success: function() {
+            // refresh app versions
+            this.fetchAppVersions();
+          }.bind(this)
+        });
+    },
+
+    rollbackToPreviousAttributes: function() {
+      var app = this.state.activeApp;
+      app.update(app.previousAttributes());
+    },
+
+    scaleApp: function(instances) {
+      if (this.state.activeApp != null) {
+        var app = this.state.activeApp;
+        app.save(
+          {instances: instances},
+          {
+            error: function() {
+              this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+            },
+            success: function() {
+              // refresh app versions
+              this.fetchAppVersions();
+            }.bind(this)
+          }
+        );
+        if (app.validationError != null) {
+          // If the model is not valid, revert the changes to prevent the UI
+          // from showing an invalid state.
+          app.update(app.previousAttributes());
+          alert("Not scaling: " + app.validationError[0].message);
+        }
       }
+    },
+
+    suspendApp: function() {
+      if (confirm("Suspend app by scaling to 0 instances?")) {
+        this.state.activeApp.suspend({
+          error: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+          }.bind(this),
+          success: function() {
+            // refresh app versions
+            this.fetchAppVersions();
+          }.bind(this)
+        });
+      }
+    },
+
+    startPollingApps: function() {
+      if (this._intervalApps == null) {
+        this.fetchResource();
+        this._intervalApps = setInterval(this.fetchResource, UPDATE_INTERVAL_APPS);
+      }
+    },
+
+    stopPollingApps: function() {
+      if (this._intervalApps != null) {
+        clearInterval(this._intervalApps);
+        this._intervalApps = null;
+      }
+    },
+
+    startPollingTasks: function() {
+      if (this._intervalTasks == null) {
+        this._intervalTasks = setInterval(this.fetchTasks, UPDATE_INTERVAL_TASKS);
+      }
+    },
+
+    stopPollingTasks: function() {
+      clearInterval(this._intervalTasks);
+      this._intervalTasks = null;
     },
 
     showAppModal: function(app) {
@@ -139,6 +282,7 @@ define([
     render: function() {
       var modal;
       if (this.state.modalClass !== null) {
+        /* jshint trailing:false, quotmark:false, newcap:false */
         if (this.state.modalClass === AppModalComponent) {
           modal = (
             <AppModalComponent
@@ -149,9 +293,21 @@ define([
         } else if (this.state.modalClass === NewAppModalComponent) {
           modal = (
             <NewAppModalComponent
-             onCreate={this.handleAppCreate}
-             onDestroy={this.handleModalDestroy}
-             ref="modal" />
+              appVersionsFetchState={this.state.appVersionsFetchState}
+              model={this.state.activeApp}
+              destroyApp={this.destroyApp}
+              fetchTasks={this.fetchTasks}
+              fetchAppVersions={this.fetchAppVersions}
+              onDestroy={this.handleModalDestroy}
+              onShowTaskDetails={this.handleShowTaskDetails}
+              onShowTaskList={this.handleShowTaskList}
+              onTasksKilled={this.handleTasksKilled}
+              rollBackApp={this.rollbackToAppVersion}
+              scaleApp={this.scaleApp}
+              STATES={STATES}
+              suspendApp={this.suspendApp}
+              tasksFetchState={this.state.tasksFetchState}
+              ref="modal" />
           );
         }
       }
