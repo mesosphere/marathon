@@ -56,13 +56,13 @@ $ curl https://localhost:8443/v2/apps
     fully-qualified hostname of where you intend to use the certificate.
 
         ```sh
-        $ openssl req -new -x509 -key marathon.key -out self-signed-marathon.crt
+        $ openssl req -new -x509 -key marathon.key -out self-signed-marathon.pem
         ```
 
 3. Combine the key and certificate files into a PKCS12 format file, the file
    format used by the Java keystore.
 
-    If the certificate you received is not in the `.crt` format, see the
+    If the certificate you received is not in the `.pem` format, see the
     [Jetty SSL configuration](http://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#loading-keys-and-certificates)
     documentation for details on how to convert it.
 
@@ -71,7 +71,9 @@ $ curl https://localhost:8443/v2/apps
 
     ```sh
     $ openssl pkcs12 -inkey marathon.key \
-                        -in trusted.crt \
+                      -name marathon \
+                        -in trusted.pem \
+             -chain -CAFile "trustedCA.crt" \
                -export -out marathon.pkcs12
     ```
 
@@ -80,8 +82,9 @@ $ curl https://localhost:8443/v2/apps
 
     ```sh
     $ keytool -importkeystore -srckeystore marathon.pkcs12 \
+                                 -srcalias marathon \
                              -srcstoretype PKCS12 \
-                             -destkeystore marathon-keystore
+                             -destkeystore marathon.jks
     ```
 
 5. Start Marathon with the keystore and the password you chose when creating the
@@ -91,14 +94,14 @@ $ curl https://localhost:8443/v2/apps
     $ cd /path/to/marathon
     $ ./bin/start --master zk://localhost:2181/mesos \
                       --zk zk://localhost:2181/marathon \
-           --ssl_keystore_path marathon-keystore \
+           --ssl_keystore_path marathon.jks \
        --ssl_keystore_password ******** # Password from step 4
     ```
 
 ## Enabling Basic Access Authentication
 
 <div class="alert alert-info">
-  <strong>Note:</strong> It's highly recommended to enable SSL as well if you
+  <strong>Note:</strong> It's highly recommended to enable SSL if you
   plan to use basic authentication. If SSL is not enabled, the username and
   password for your Marathon instances will be transmitted unecrypted and can
   easily be read by unintended parties.
@@ -113,6 +116,6 @@ $ cd /path/to/marathon
 $ ./bin/start --master zk://localhost:2181/mesos \
                   --zk zk://localhost:2181/marathon \
         --http_credentials "cptPicard:topSecretPa$$word" \
-       --ssl_keystore_path /path/to/keystore \
+       --ssl_keystore_path /path/to/marathon.jks \
    --ssl_keystore_password ********
 ```
