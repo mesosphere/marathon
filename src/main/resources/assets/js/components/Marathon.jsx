@@ -114,6 +114,8 @@ define([
         this.startPollingApps();
         this.stopPollingTasks();
         this.setState({activeApp: null});
+        this.setState({tasksFetchState: STATES.STATE_LOADING});
+        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
       });
     },
 
