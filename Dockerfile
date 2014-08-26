@@ -1,18 +1,21 @@
-# Marathon Dockerfile
 FROM ubuntu:14.04
-MAINTAINER Mesosphere <support@mesosphere.io>
 
-## DEPENDENCIES ##
-RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources.list.d/mesosphere.list
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
-RUN apt-get update
-RUN apt-get install --assume-yes mesos python-software-properties curl default-jdk
+RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources.list.d/mesosphere.list && \
+    apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
+    apt-get update
 
-## MARATHON ##
-ADD http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz /tmp/marathon.tgz
-RUN mkdir -p /opt/marathon && tar xzf /tmp/marathon.tgz -C /opt/marathon --strip=1 && rm -f /tmp/marathon.tgz
+RUN apt-get install -y \
+    default-jdk \
+    mesos \
+    scala \
+    curl 
 
-EXPOSE 8080
-WORKDIR /opt/marathon
-CMD ["--help"]
-ENTRYPOINT ["/opt/marathon/bin/start"]
+RUN curl -SsL -O http://dl.bintray.com/sbt/debian/sbt-0.13.5.deb && \
+    dpkg -i sbt-0.13.5.deb
+
+COPY . /marathon
+WORKDIR /marathon
+
+RUN sbt assembly
+
+ENTRYPOINT ["./bin/start"]
