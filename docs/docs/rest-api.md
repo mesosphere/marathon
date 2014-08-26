@@ -34,6 +34,11 @@ title: REST API
   * [GET /v2/queue](#get-v2queue): List content of the staging queue.
 * [Server Info](#server-info)
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
+* [Miscellaneous](#miscellaneous)
+  * [GET /ping](#get-/ping)
+  * [GET /logging](#get-/logging)
+  * [GET /help](#get-/help)
+  * [GET /metrics](#get-/status)
 
 ### Apps
 
@@ -1462,5 +1467,112 @@ Server: Jetty(8.y.z-SNAPSHOT)
         "zk_state": "/marathon", 
         "zk_timeout": 10
     }
+}
+{% endhighlight %}
+
+### Miscellaneous
+
+**Request:**
+
+{% highlight http %}
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+{% endhighlight %}
+
+#### GET `/ping`
+
+**Request:**
+
+{% highlight http %}
+GET /ping HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Access-Control-Allow-Credentials: true
+Cache-Control: must-revalidate,no-cache,no-store
+Content-Length: 5
+Content-Type: text/plain;charset=ISO-8859-1
+Server: Jetty(8.y.z-SNAPSHOT)
+
+pong
+{% endhighlight %}
+
+#### GET `/logging`
+
+**Request:**
+
+{% highlight http %}
+GET /logging HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0{% endhighlight %}
+
+**Response:**
+
+_HTML-only endpoint_
+
+#### GET `/help`
+
+**Request:**
+
+{% highlight http %}
+GET /help HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+**Response:**
+
+_HTML-only endpoint_
+
+#### GET `/metrics`
+
+**Request:**
+
+{% highlight http %}
+GET /metrics HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Cache-Control: must-revalidate,no-cache,no-store
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "counters": {
+        ...
+    }, 
+    "gauges": {
+        ...
+    }, 
+    "histograms": {}, 
+    "meters": {
+        ...
+    }, 
+    "timers": {
+        ...
+    }, 
+    "version": "3.0.0"
 }
 {% endhighlight %}
