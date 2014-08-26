@@ -9,6 +9,7 @@ define([
 
   return React.createClass({
     displayName: "AppListComponent",
+
     mixins: [BackboneMixin],
 
     propTypes: {

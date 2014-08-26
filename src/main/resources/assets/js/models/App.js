@@ -2,9 +2,10 @@ define([
   "Backbone",
   "Underscore",
   "models/AppVersion",
+  "models/AppVersionCollection",
   "models/Task",
   "models/TaskCollection"
-], function(Backbone, _, AppVersion, Task, TaskCollection) {
+], function(Backbone, _, AppVersion, AppVersionCollection, Task, TaskCollection) {
   "use strict";
 
   function ValidationError(attribute, message) {
@@ -74,11 +75,13 @@ define([
       this.persisted = (this.collection != null);
 
       this.tasks = new TaskCollection(null, {appId: this.id});
+      this.versions = new AppVersionCollection(null, {appId: this.id});
       this.on({
         "change:id": function(model, value, options) {
-          // Inform TaskCollection of new ID so it can send requests to the new
-          // endpoint.
+          // Inform AppVersionCollection and TaskCollection of new ID so it can
+          // send requests to the new endpoint.
           this.tasks.options.appId = value;
+          this.versions.options.appId = value;
         },
         "sync": function(model, response, options) {
           this.persisted = true;
@@ -181,25 +184,25 @@ define([
         this, allowedAttrs, options);
     },
 
-    setAppVersion: function(appVersion) {
-      this.set(_.pick(appVersion.attributes, EDITABLE_ATTRIBUTES));
+    setVersion: function(version) {
+      this.set(_.pick(version.attributes, EDITABLE_ATTRIBUTES));
     },
 
     getCurrentVersion: function() {
-      var appVersion = new AppVersion();
-      appVersion.set(this.attributes);
+      var version = new AppVersion();
+      version.set(this.attributes);
 
       // make sure date is a string
-      appVersion.set({
-        "version": appVersion.get("version").toISOString()
+      version.set({
+        "version": version.get("version").toISOString()
       });
 
       // transfer app id
-      appVersion.options = {
+      version.options = {
         appId: this.get("id")
       };
 
-      return appVersion;
+      return version;
     },
 
     suspend: function(options) {
