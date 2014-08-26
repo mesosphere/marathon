@@ -98,6 +98,10 @@ $ curl https://localhost:8443/v2/apps
        --ssl_keystore_password ******** # Password from step 4
     ```
 
+6. Access the Marathon API and UI via its HTTPS port (default 8443).
+
+    [https://\<MARATHON_HOST\>:8443](https://<MARATHON_HOST>:8443)
+
 ## Enabling Basic Access Authentication
 
 <div class="alert alert-info">
