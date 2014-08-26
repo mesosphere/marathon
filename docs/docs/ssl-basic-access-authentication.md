@@ -19,7 +19,7 @@ $ cd /path/to/marathon
 $ ./bin/start --master zk://localhost:2181/mesos \
                   --zk zk://localhost:2181/marathon \
        --ssl_keystore_path marathon.jks \
-   --ssl_keystore_password ********
+   --ssl_keystore_password $MARATHON_JKS_PASSWORD
 ```
 
 By default, Marathon serves SSL requests on port 8443 (that can be changed with
@@ -129,5 +129,5 @@ $ ./bin/start --master zk://localhost:2181/mesos \
                   --zk zk://localhost:2181/marathon \
         --http_credentials "cptPicard:topSecretPa$$word" \
        --ssl_keystore_path /path/to/marathon.jks \
-   --ssl_keystore_password ********
+   --ssl_keystore_password $MARATHON_JKS_PASSWORD
 ```
