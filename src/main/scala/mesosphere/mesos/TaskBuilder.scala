@@ -74,8 +74,9 @@ class TaskBuilder(app: AppDefinition,
 
       case PathExecutor(path) =>
         val executorId = f"marathon-${taskId.getValue}" // Fresh executor
-        val escaped = "'" + path + "'" // TODO: Really escape this.
-        val shell = f"chmod ug+rx $escaped && exec $escaped ${app.cmd}"
+        val executorPath = s"'$path'" // TODO: Really escape this.
+        val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
+        val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
         val command =
           TaskBuilder.commandInfo(app, ports).toBuilder.setValue(shell)
 
