@@ -41,10 +41,12 @@ $ curl https://localhost:8443/v2/apps
   company's root certificate to users of the Marathon API and UI.
 </div>
 
-1. Generate a key with OpenSSL.
+1. Generate an RSA private key with
+   [OpenSSL](https://www.openssl.org/docs/apps/genrsa.html).
 
     ```sh
-    $ openssl genrsa -des3 -out marathon.key
+    # Set key password to env variable `MARATHON_KEY_PASSWORD`
+    $ openssl genrsa -des3 -out marathon.key -passout "env:MARATHON_KEY_PASSWORD"
     ```
 
 2. Acquire a certificate for the key by one of the following methods:
@@ -56,46 +58,52 @@ $ curl https://localhost:8443/v2/apps
     fully-qualified hostname of where you intend to use the certificate.
 
         ```sh
-        $ openssl req -new -x509 -key marathon.key -out self-signed-marathon.pem
+        # Read key password from env env variable `MARATHON_KEY_PASSWORD`
+        $ openssl req -new -x509 -key marathon.key \
+                              -passin "env:MARATHON_KEY_PASSWORD" \
+                                 -out self-signed-marathon.pem
         ```
 
-3. Combine the key and certificate files into a PKCS12 format file, the file
-   format used by the Java keystore.
-
-    If the certificate you received is not in the `.pem` format, see the
-    [Jetty SSL configuration](http://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#loading-keys-and-certificates)
-    documentation for details on how to convert it.
-
-    _A non-empty password is required for the "export password" in order for the
-    Java keytool to use the generated file._
+3. Combine the key and certificate files into a PKCS12 format file, the format
+   used by the Java keystore. If the certificate you received is not in the
+   `.pem` format, see the
+   [Jetty SSL configuration](http://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#loading-keys-and-certificates)
+   docs for how to convert it.
 
     ```sh
+    # Read key password from env variable `MARATHON_KEY_PASSWORD`
+    # Set PKCS password to env variable `MARATHON_PKCS_PASSWORD`
     $ openssl pkcs12 -inkey marathon.key \
+                    -passin "env:MARATHON_KEY_PASSWORD" \
                       -name marathon \
                         -in trusted.pem \
+                  -password "env:MARATHON_PKCS_PASSWORD" \
              -chain -CAFile "trustedCA.crt" \
                -export -out marathon.pkcs12
     ```
 
-4. Import the keystore. Note the password you use to generate the keystore.
-   You will need to pass it to Marathon when starting each instance.
+4. Import the keystore.
 
     ```sh
+    # Read PKCS password from env variable `MARATHON_PKCS_PASSWORD`
+    # Set JKS password to env variable `MARATHON_JKS_PASSWORD`
     $ keytool -importkeystore -srckeystore marathon.pkcs12 \
                                  -srcalias marathon \
+                             -srcstorepass $MARATHON_PKCS_PASSWORD \
                              -srcstoretype PKCS12 \
-                             -destkeystore marathon.jks
+                             -destkeystore marathon.jks \
+                            -deststorepass $MARATHON_JKS_PASSWORD
     ```
 
 5. Start Marathon with the keystore and the password you chose when creating the
    keystore.
 
     ```sh
-    $ cd /path/to/marathon
+    # Read JKS password from env variable `MARATHON_JKS_PASSWORD`
     $ ./bin/start --master zk://localhost:2181/mesos \
                       --zk zk://localhost:2181/marathon \
            --ssl_keystore_path marathon.jks \
-       --ssl_keystore_password ******** # Password from step 4
+       --ssl_keystore_password $MARATHON_JKS_PASSWORD
     ```
 
 6. Access the Marathon API and UI via its HTTPS port (default 8443).
