@@ -143,6 +143,10 @@ function msg { out "$*" >&2 ;}
 function err { local x=$? ; msg "$*" ; return $(( $x == 0 ? 1 : $x )) ;}
 function out { printf '%s\n' "$*" ;}
 
+# If less than 1 argument is provided, print usage and exit. At least one
+# argument is required as described in the `USAGE` message.
+[ $# -lt 1 ] && { -h; exit 1; }
+
 if [[ ${1:-} ]] && declare -F | cut -d' ' -f3 | fgrep -qx -- "${1:-}"
 then "$@"
 else main "$@"
