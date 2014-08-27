@@ -100,11 +100,13 @@ define([
         this.state.activeApp.versions.fetch({
           error: function() {
             this.setState({appVersionsFetchState: STATES.STATE_ERROR}, function() {
+              // TODO (ml): remove this when modal is in view
               this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
             });
           }.bind(this),
           success: function() {
             this.setState({appVersionsFetchState: STATES.STATE_SUCCESS}, function() {
+              // TODO (ml): remove this when modal is in view
               this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
             });
           }.bind(this)
@@ -117,6 +119,7 @@ define([
         this.state.activeApp.tasks.fetch({
           error: function() {
             this.setState({tasksFetchState: STATES.STATE_ERROR}, function() {
+              // TODO (ml): remove this when modal is in view
               this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
             });
           }.bind(this),
@@ -124,6 +127,7 @@ define([
             // update changed attributes in app
             this.state.activeApp.update(response.app);
             this.setState({tasksFetchState: STATES.STATE_SUCCESS}, function() {
+              // TODO (ml): remove this when modal is in view
               this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
             });
           }.bind(this)
@@ -144,8 +148,12 @@ define([
       });
     },
 
-    handleShowTaskDetails: function(task) {
-      this.setState({activeTask: task});
+    handleShowTaskDetails: function(task, callback) {
+      this.setState({activeTask: task}, function() {
+        // TODO (ml): remove this when modal is in view
+        this.state.modal.setProps({activeTask: task});
+        callback();
+      }.bind(this));
     },
 
     handleShowTaskList: function() {
@@ -292,18 +300,12 @@ define([
         if (this.state.modalClass === AppModalComponent) {
           modal = (
             <AppModalComponent
-              model={this.state.activeApp}
-              onDestroy={this.handleModalDestroy}
-              ref="modal" />
-          );
-        } else if (this.state.modalClass === NewAppModalComponent) {
-          modal = (
-            <NewAppModalComponent
+              activeTask={this.state.activeTask}
               appVersionsFetchState={this.state.appVersionsFetchState}
-              model={this.state.activeApp}
               destroyApp={this.destroyApp}
               fetchTasks={this.fetchTasks}
               fetchAppVersions={this.fetchAppVersions}
+              model={this.state.activeApp}
               onDestroy={this.handleModalDestroy}
               onShowTaskDetails={this.handleShowTaskDetails}
               onShowTaskList={this.handleShowTaskList}
@@ -313,6 +315,13 @@ define([
               STATES={STATES}
               suspendApp={this.suspendApp}
               tasksFetchState={this.state.tasksFetchState}
+              ref="modal" />
+          );
+        } else if (this.state.modalClass === NewAppModalComponent) {
+          modal = (
+            <NewAppModalComponent
+              model={this.state.activeApp}
+              onDestroy={this.handleModalDestroy}
               ref="modal" />
           );
         }

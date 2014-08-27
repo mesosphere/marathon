@@ -19,6 +19,7 @@ define([
     displayName: "AppModalComponent",
 
     propTypes: {
+      activeTask: React.PropTypes.object,
       appVersionsFetchState: React.PropTypes.number.isRequired,
       model: React.PropTypes.object.isRequired,
       destroyApp: React.PropTypes.func.isRequired,
@@ -89,17 +90,18 @@ define([
     },
 
     showTaskDetails: function(task) {
-      this.setState({
-        activeViewIndex: 1
-      });
-      this.props.onShowTaskDetails(task);
+      this.props.onShowTaskDetails(task, function() {
+        this.setState({
+          activeViewIndex: 1
+        });
+      }.bind(this));
     },
 
     showTaskList: function() {
+      this.props.onShowTaskList();
       this.setState({
         activeViewIndex: 0
       });
-      this.props.onShowTaskList();
     },
 
     showScaleAlert: function() {
@@ -171,14 +173,14 @@ define([
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   hasHealth={hasHealth}
                   onTasksKilled={this.props.onTasksKilled}
-                  onTaskDetailSelect={this.props.onShowTaskDetails}
+                  onTaskDetailSelect={this.showTaskDetails}
                   STATES={this.props.STATES} />
                 <TaskDetailComponent
                   fetchState={this.props.tasksFetchState}
-                  taskHealthMessage={model.formatTaskHealthMessage(this.state.activeTask)}
+                  taskHealthMessage={model.formatTaskHealthMessage(this.props.activeTask)}
                   hasHealth={hasHealth}
                   STATES={this.props.STATES}
-                  onShowTaskList={this.props.showTaskList}
+                  onShowTaskList={this.showTaskList}
                   task={this.props.activeTask} />
               </StackedViewComponent>
             </TabPaneComponent>
