@@ -66,6 +66,11 @@ environment as `$MESOS_SANDBOX`.
 
 ## Migration from the `0.6.x` container format
 
+The old container format has been deprecated and replaced with a new format.
+Therefore the following changes are **obligatory** for Marathon users
+upgrading to `0.7.x` who were previously using
+[Deimos](https://github.com/mesosphere/deimos)  to run Docker containers.
+
 Previously, the `container` field looked like this:
 
 ```json
