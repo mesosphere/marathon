@@ -99,12 +99,14 @@ define([
       if (this.state.activeApp != null) {
         this.state.activeApp.versions.fetch({
           error: function() {
-            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
-            this.forceUpdate();
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR}, function() {
+              this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
+            });
           }.bind(this),
           success: function() {
-            this.setState({appVersionsFetchState: STATES.STATE_SUCCESS});
-            this.forceUpdate();
+            this.setState({appVersionsFetchState: STATES.STATE_SUCCESS}, function() {
+              this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
+            });
           }.bind(this)
         });
       }
@@ -114,14 +116,16 @@ define([
       if (this.state.activeApp != null) {
         this.state.activeApp.tasks.fetch({
           error: function() {
-            this.setState({tasksFetchState: STATES.STATE_ERROR});
-            this.forceUpdate();
+            this.setState({tasksFetchState: STATES.STATE_ERROR}, function() {
+              this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
+            });
           }.bind(this),
           success: function(collection, response) {
             // update changed attributes in app
             this.state.activeApp.update(response.app);
-            this.setState({tasksFetchState: STATES.STATE_SUCCESS});
-            this.forceUpdate();
+            this.setState({tasksFetchState: STATES.STATE_SUCCESS}, function() {
+              this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
+            });
           }.bind(this)
         });
       }
@@ -314,6 +318,7 @@ define([
         }
       }
 
+      this.stopPollingApps();
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
