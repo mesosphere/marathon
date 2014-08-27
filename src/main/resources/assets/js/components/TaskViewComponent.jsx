@@ -29,10 +29,6 @@ define([
       };
     },
 
-    getResource: function() {
-      return this.props.collection;
-    },
-
     handlePageChange: function(pageNum) {
       this.setState({currentPage: pageNum});
     },
