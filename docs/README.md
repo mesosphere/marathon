@@ -18,16 +18,24 @@ following the instructions.
 2. Change into the "docs" directory where docs live
 
         $ cd docs
+        
+3. Install packages needed by ruby
 
-3. Install the bundle's dependencies
+        $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev
+        
+4. Install the gems
+
+        $ gem install bundler
+
+5. Install the bundle's dependencies
 
         $ bundle install
 
-4. Start the web server
+6. Start the web server
 
         $ bundle exec jekyll serve --watch
 
-5. Visit the site at
+7. Visit the site at
    [http://localhost:4000/marathon/](http://localhost:4000/marathon/)
 
 ## Deploying the site
