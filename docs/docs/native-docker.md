@@ -68,59 +68,6 @@ by default to the same value as `$MESOS_SANDBOX`.
 To supply credentials to pull from a private repository, add a `.dockercfg` to
 the `uris` field of your app.
 
-## Migration from the `0.6.x` container format
-
-The old container format has been deprecated and replaced with a new format.
-Therefore the following changes are **obligatory** for Marathon users
-upgrading to `0.7.x` who were previously using
-[Deimos](https://github.com/mesosphere/deimos)  to run Docker containers.
-
-Previously, the `container` field looked like this:
-
-```json
-{
-  "container": {
-    "image": "docker:///megacorp/product:1.2.3",
-    "options": [
-      "-v", "/var/data/a:/etc/a:ro",
-      "-v", "/var/data/b:/etc/b:rw",
-      "-e", "FOO=bar",
-      "-p", "443:443"
-    ]
-  }
-}
-```
-
-Here is the `container` field, translated to the new format:
-
-```json
-{
-  "container": {
-    "type": "DOCKER",
-    "docker": {
-      "image": "megacorp/product:1.2.3"
-    },
-    "volumes": [
-      {
-        "hostPath": "/var/data/a",
-        "containerPath": "/etc/a",
-        "mode": "RO"
-      },
-      {
-        "hostPath": "/var/data/b",
-        "containerPath": "/etc/b",
-        "mode": "RW"
-      }
-    ]
-  },
-  "env": {
-    "FOO": "bar"
-  },
-  "ports": [443],
-  "requirePorts": true
-}
-```
-
 ## Advanced Usage
 
 At a lower level, the semantics have changed slightly for the `TaskInfo`
