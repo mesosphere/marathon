@@ -14,14 +14,15 @@ the native Docker support added in version `0.20.0` (released August 2014).
 ## Prerequisites
 
 - Mesos `0.20.0` or better
+- Docker `1.0.0` or above installed on each Mesos slave
 - Start all `mesos-slave` instances with the flag
   `--containerizers=docker,mesos`.
     - The order is significant!
-    - Mesosphere package read config from well-known paths, so it's possible
+    - Mesosphere packages read config from well-known paths, so it's possible
       to specify this by doing
 
         ```bash
-        $ echo 'docker,mesos' > /etc/mesos-slave/containerizers`
+        $ echo 'docker,mesos' > /etc/mesos-slave/containerizers
         ```
 
 ## Overview
@@ -55,14 +56,17 @@ app definition JSON:
 where `volumes` and `type` are optional (the default type is `DOCKER`).  More
 container types may be added later.
 
-To supply credentials to pull from a private repository, add a `.dockercfg` to
-the `uris` field.
-
 Note that initially, Mesos supports only the host (`--net=host`) Docker
 networking mode.
 
 For convenience, the mount point of the mesos sandbox is available in the
-environment as `$MESOS_SANDBOX`.
+environment as `$MESOS_SANDBOX`.  The `$HOME` environment variable is set
+by default to the same value as `$MESOS_SANDBOX`.
+
+## Using a private Docker Repository
+
+To supply credentials to pull from a private repository, add a `.dockercfg` to
+the `uris` field of your app.
 
 ## Migration from the `0.6.x` container format
 
@@ -94,7 +98,7 @@ Here is the `container` field, translated to the new format:
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "docker:///megacorp/product:1.2.3"
+      "image": "megacorp/product:1.2.3"
     },
     "volumes": [
       {
@@ -131,7 +135,7 @@ value is wrapped by Mesos via `/bin/sh -c '${app.cmd}`).
 
 This new (`"args"`) mode of specifying a command allows for safe usage of
 containerizer features like custom Docker `ENTRYPOINT`s.  For example, given
-the following Dockerfile with an `ENTRYPOINTS` defined:
+the following Dockerfile with an `ENTRYPOINT` defined:
 
 ```bash
 FROM busybox
