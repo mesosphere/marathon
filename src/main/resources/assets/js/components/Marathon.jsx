@@ -78,11 +78,13 @@ define([
         this.state.activeApp.versions.fetch({
           error: function() {
             this.setState({appVersionsFetchState: STATES.STATE_ERROR}, function() {
+              // TODO (ml): remove this when modal is in view
               this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
             });
           }.bind(this),
           success: function() {
             this.setState({appVersionsFetchState: STATES.STATE_SUCCESS}, function() {
+              // TODO (ml): remove this when modal is in view
               this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
             });
           }.bind(this)
@@ -95,6 +97,7 @@ define([
         this.state.activeApp.tasks.fetch({
           error: function() {
             this.setState({tasksFetchState: STATES.STATE_ERROR}, function() {
+              // TODO (ml): remove this when modal is in view
               this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
             });
           }.bind(this),
@@ -102,6 +105,7 @@ define([
             // update changed attributes in app
             this.state.activeApp.update(response.app);
             this.setState({tasksFetchState: STATES.STATE_SUCCESS}, function() {
+              // TODO (ml): remove this when modal is in view
               this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
             });
           }.bind(this)
@@ -123,8 +127,12 @@ define([
       });
     },
 
-    handleShowTaskDetails: function(task) {
-      this.setState({activeTask: task});
+    handleShowTaskDetails: function(task, callback) {
+      this.setState({activeTask: task}, function() {
+        // TODO (ml): remove this when modal is in view
+        this.state.modal.setProps({activeTask: task});
+        callback();
+      }.bind(this));
     },
 
     handleShowTaskList: function() {
@@ -257,6 +265,7 @@ define([
         this.setState({
           modal: React.renderComponent(
             <AppModalComponent
+              activeTask={this.state.activeTask}
               appVersionsFetchState={this.state.appVersionsFetchState}
               model={this.state.activeApp}
               destroyApp={this.destroyApp}
