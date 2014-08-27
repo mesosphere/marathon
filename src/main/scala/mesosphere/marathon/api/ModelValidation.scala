@@ -39,7 +39,7 @@ trait ModelValidation extends BeanValidation {
   }
 
   def noAppsAndGroups[T](t: T, path: String, apps: Set[AppDefinition], groups: Set[T])(implicit ct: ClassTag[T]) = {
-    isTrue(t, apps, path, "Groups can define apps xor groups but can not hold both!", !(apps.nonEmpty && groups.nonEmpty))
+    isTrue(t, apps, path, "Groups may contain apps or groups but not both!", !(apps.nonEmpty && groups.nonEmpty))
   }
 
   def noCyclicDependencies(group: Group, path: String) = {
