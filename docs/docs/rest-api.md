@@ -23,16 +23,16 @@ title: REST API
     Kill the task `taskId` that belongs to the application `appId`
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
-* [Deployments](#deployments)
+* [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
   * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Cancel the deployment with `deploymentId`
 * [Event Subscriptions](#event-subscriptions)
   * [POST /v2/eventSubscriptions?callbackUrl={url}](#post-/v2/eventsubscriptions?callbackurl={url}): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
   * [DELETE /v2/eventSubscriptions?callbackUrl={url}](#delete-/v2/eventsubscriptions?callbackurl={url}) Unregister a callback URL from the event subscribers list
-* [Queue](#queue)
+* [Queue](#queue) <span class="label label-default">v0.7.0</span>
   * [GET /v2/queue](#get-v2queue): List content of the staging queue.
-* [Server Info](#server-info)
+* [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
 * [Miscellaneous](#miscellaneous)
   * [GET /ping](#get-/ping)
@@ -1178,6 +1178,8 @@ my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383
 
 ### Deployments
 
+<span class="label label-default">v0.7.0</span>
+
 #### GET /v2/deployments
 
 List running deployments
@@ -1355,6 +1357,8 @@ Transfer-Encoding: chunked
 
 ### Queue
 
+<span class="label label-default">v0.7.0</span>
+
 #### GET `/v2/queue`
 
 Show content of the task queue.
@@ -1413,6 +1417,8 @@ Transfer-Encoding: chunked
 {% endhighlight %}
 
 ### Server Info
+
+<span class="label label-default">v0.7.0</span>
 
 #### GET `/v2/info`
 
