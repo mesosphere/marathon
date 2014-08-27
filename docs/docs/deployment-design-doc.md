@@ -137,7 +137,7 @@ In the Apache Mesos model, where process placement is typically done dynamically
 
     ```json
     {
-      "id": "/test"
+      "id": "/test",
       "groups": [
         {
           "id": "/test/product-a"
