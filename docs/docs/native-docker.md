@@ -17,7 +17,7 @@ the native Docker support added in version `0.20.0` (released August 2014).
 - Start all `mesos-slave` instances with the flag
   `--containerizers=docker,mesos`.
     - The order is significant!
-    - Mesosphere package read config from well-known paths, so it's possible
+    - Mesosphere packages read config from well-known paths, so it's possible
       to specify this by doing
 
         ```bash
@@ -26,7 +26,7 @@ the native Docker support added in version `0.20.0` (released August 2014).
 
 ## Overview
 
-To use the new native container support, and add a `container` field to your
+To use the new native container support, add a `container` field to your
 app definition JSON:
 
 ```json
@@ -116,7 +116,6 @@ Here is the `container` field, translated to the new format:
   "requirePorts": true
 }
 ```
-
 
 ## Advanced Usage
 
