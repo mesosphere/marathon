@@ -3,7 +3,6 @@
 define([
   "Underscore",
   "React",
-  "mixins/BackboneMixin",
   "jsx!components/AppVersionListComponent",
   "jsx!components/ModalComponent",
   "jsx!components/StackedViewComponent",
@@ -11,15 +10,13 @@ define([
   "jsx!components/TaskDetailComponent",
   "jsx!components/TaskViewComponent",
   "jsx!components/TogglableTabsComponent"
-], function(_, React, BackboneMixin, AppVersionListComponent,
-    ModalComponent, StackedViewComponent, TabPaneComponent,
-    TaskDetailComponent, TaskViewComponent, TogglableTabsComponent) {
+], function(_, React, AppVersionListComponent, ModalComponent,
+    StackedViewComponent, TabPaneComponent, TaskDetailComponent,
+    TaskViewComponent, TogglableTabsComponent) {
   "use strict";
 
   return React.createClass({
     displayName: "AppModalComponent",
-
-    mixins: [BackboneMixin],
 
     propTypes: {
       appVersionsFetchState: React.PropTypes.number.isRequired,
@@ -36,10 +33,6 @@ define([
       STATES: React.PropTypes.object.isRequired,
       suspendApp: React.PropTypes.func.isRequired,
       tasksFetchState: React.PropTypes.number.isRequired
-    },
-
-    getResource: function() {
-      return this.props.model;
     },
 
     getInitialState: function() {
