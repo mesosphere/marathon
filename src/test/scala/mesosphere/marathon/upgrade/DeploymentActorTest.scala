@@ -21,7 +21,6 @@ import org.mockito.stubbing.Answer
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -77,10 +76,10 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(tracker.get(app1.id)).thenReturn(mutable.Set(task1_1, task1_2))
-    when(tracker.get(app2.id)).thenReturn(mutable.Set(task2_1))
-    when(tracker.get(app3.id)).thenReturn(mutable.Set(task3_1))
-    when(tracker.get(app4.id)).thenReturn(mutable.Set(task4_1))
+    when(tracker.get(app1.id)).thenReturn(Set(task1_1, task1_2))
+    when(tracker.get(app2.id)).thenReturn(Set(task2_1))
+    when(tracker.get(app3.id)).thenReturn(Set(task3_1))
+    when(tracker.get(app4.id)).thenReturn(Set(task4_1))
 
     // the AppDefinition is never used, so it does not mater which one we return
     when(repo.store(any())).thenReturn(Future.successful(AppDefinition()))
@@ -156,7 +155,7 @@ class DeploymentActorTest
     val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app.version).toBuilder.setStartedAt(0).build()
     val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app.version).toBuilder.setStartedAt(1000).build()
 
-    when(tracker.get(app.id)).thenReturn(mutable.Set(task1_1, task1_2))
+    when(tracker.get(app.id)).thenReturn(Set(task1_1, task1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew, 1, 1)))), Timestamp.now())
 

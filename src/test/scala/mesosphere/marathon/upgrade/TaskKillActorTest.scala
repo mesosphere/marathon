@@ -100,7 +100,7 @@ class TaskKillActorTest
     val tasks = mutable.Set(taskA, taskB)
 
     when(taskTracker.get(app.id))
-      .thenReturn(mutable.Set.empty[MarathonTask])
+      .thenReturn(Set.empty[MarathonTask])
 
     val ref = system.actorOf(Props(classOf[TaskKillActor], driver, app.id, taskTracker, system.eventStream, tasks.toSet, promise))
     watch(ref)
