@@ -73,6 +73,9 @@ The full JSON format of an application resource is as follows:
     },
     "cpus": 1.5,
     "mem": 256.0,
+    "deployments": [
+        "2b2eaba6-5c1f-4e8b-b781-bce3208109a7"
+    ],
     "env": {
         "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
     },
@@ -165,6 +168,11 @@ Additional data passed to the containerizer on application launch.  These consis
 ##### dependencies
 
 A list of services upon which this application depends. An order is derived from the dependencies for performing start/stop and upgrade of the application.  For example, an application `/a` relies on the services `/b` which itself relies on `/c`. To start all 3 applications, first `/c` is started than `/b` than `/a`.
+
+##### deployments (not settable)
+
+A list of currently running deployments that affect this application.
+If this array is nonempty, then this app is locked for updates.
 
 ##### healthChecks
 
