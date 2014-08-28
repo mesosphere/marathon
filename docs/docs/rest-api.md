@@ -21,12 +21,12 @@ title: REST API
     kill tasks belonging to app `appId`
   * [DELETE /v2/apps/{appId}/tasks/{taskId}?scale={true|false}](#delete-/v2/apps/{appid}/tasks/{taskid}?scale={true|false}):
     Kill the task `taskId` that belongs to the application `appId`
-* [Groups](#groups)
+* [Groups](#groups) <span class="label label-default">v0.7.0</span>
   * [GET /v2/groups](#get-/v2/groups): List all groups
   * [GET /v2/groups/{groupId}](#get-/v2/groups/{groupid}): List the group with the specified ID
   * [POST /v2/groups](#post-/v2/groups): Create and start a new groups
   * [PUT /v2/groups/{groupId}](#put-/v2/groups/{groupid}): Change parameters of a deployed application group
-  * [PUT /v2/groups/{groupId}/version/{version}](#put-/v2/groups/{groupid})/version/{$version}) Rollback group to a previous version
+  * [PUT /v2/groups/{groupId}/version/{version}](#put-/v2/groups/{groupid}/version/{$version}): Rollback group to a previous version
   * [DELETE /v2/groups/{groupId}](#delete-/v2/groups/{groupid}): Destroy a group
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
