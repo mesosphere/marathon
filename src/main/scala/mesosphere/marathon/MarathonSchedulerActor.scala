@@ -13,7 +13,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.upgrade.{ TaskKillActor, DeploymentManager, DeploymentPlan }
+import mesosphere.marathon.upgrade.{ DeploymentStep, TaskKillActor, DeploymentManager, DeploymentPlan }
 import mesosphere.mesos.protos.Offer
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.{ TaskBuilder, protos }
@@ -169,7 +169,7 @@ class MarathonSchedulerActor(
           .foreach {
             case RunningDeployments(plans) =>
               val relatedDeploymentIds: Seq[String] = plans.collect {
-                case p if distinctIds(p).toSet.intersect(appIds).nonEmpty =>
+                case (p, _) if distinctIds(p).toSet.intersect(appIds).nonEmpty =>
                   p.id
               }
 
@@ -260,7 +260,7 @@ object MarathonSchedulerActor {
   case class AppUpdated(appId: PathId) extends Event
   case class TasksKilled(appId: PathId, taskIds: Set[String]) extends Event
 
-  case class RunningDeployments(plans: Seq[DeploymentPlan])
+  case class RunningDeployments(plans: Seq[(DeploymentPlan, DeploymentStep)])
 
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 

@@ -1,13 +1,13 @@
 package mesosphere.marathon.upgrade
 
 import akka.actor.{ ActorSystem, Props }
-import akka.testkit.{ TestActorRef, TestKit, TestProbe }
+import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
-import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.event.{ DeploymentStatus, MesosStatusUpdateEvent }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentActor.Finished
+import mesosphere.marathon.upgrade.DeploymentActor.{ RetrieveCurrentStep, Finished }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
 import mesosphere.mesos.protos.Implicits._
@@ -29,7 +29,8 @@ class DeploymentActorTest
     with MarathonSpec
     with Matchers
     with BeforeAndAfterAll
-    with MockitoSugar {
+    with MockitoSugar
+    with ImplicitSender {
 
   var repo: AppRepository = _
   var tracker: TaskTracker = _
@@ -195,5 +196,48 @@ class DeploymentActorTest
 
     verify(driver).killTask(TaskID(task1_2.getId))
     verify(queue).add(appNew)
+  }
+
+  test("Retrieve running deployments") {
+    val managerProbe = TestProbe()
+    val receiverProbe = TestProbe()
+    val eventProbe = TestProbe()
+
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, version = Timestamp(0))
+    val origGroup = Group(PathId("/foo/bar"), Set())
+
+    val targetGroup = Group(PathId("/foo/bar"), Set(app))
+
+    val plan = DeploymentPlan(origGroup, targetGroup)
+    val firstStep = plan.steps.head
+
+    when(repo.store(app)).thenReturn(Future.successful(app))
+
+    system.eventStream.subscribe(eventProbe.ref, classOf[DeploymentStatus])
+
+    val deploymentActor = TestActorRef(
+      Props(
+        classOf[DeploymentActor],
+        managerProbe.ref,
+        receiverProbe.ref,
+        repo,
+        driver,
+        scheduler,
+        plan,
+        tracker,
+        queue,
+        storage,
+        system.eventStream
+      )
+    )
+
+    eventProbe.expectMsgPF() {
+      case DeploymentStatus(`plan`, `firstStep`, _, _) => true
+    }
+
+    deploymentActor ! RetrieveCurrentStep
+
+    expectMsg(firstStep)
+    deploymentActor.stop()
   }
 }
