@@ -34,6 +34,7 @@ class DeploymentActor(
 
   val steps = plan.steps.iterator
   var currentStep: Option[DeploymentStep] = None
+  var currentStepNr: Int = 0
 
   override def preStart(): Unit = {
     self ! NextStep
@@ -48,13 +49,15 @@ class DeploymentActor(
   def receive = {
     case NextStep if steps.hasNext =>
       val step = steps.next()
+      currentStepNr += 1
+      currentStep = Some(step)
+
       performStep(step) onComplete {
         case Success(_) =>
           self ! NextStep
         case Failure(t) =>
           self ! Cancel(t)
       }
-      currentStep = Some(step)
 
     case NextStep =>
       // no more steps, we're done
@@ -67,7 +70,7 @@ class DeploymentActor(
 
     case RetrieveCurrentStep =>
       log.info("retrieving current step")
-      sender ! currentStep.getOrElse(DeploymentStep(Nil))
+      sender ! DeploymentStepInfo(currentStep.getOrElse(DeploymentStep(Nil)), currentStepNr)
   }
 
   def performStep(step: DeploymentStep): Future[Unit] = {
@@ -164,5 +167,6 @@ object DeploymentActor {
   case object NextStep
   case object Finished
   case object RetrieveCurrentStep
+  final case class DeploymentStepInfo(step: DeploymentStep, nr: Int)
   final case class Cancel(reason: Throwable)
 }

@@ -18,7 +18,8 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.upgrade.{ DeploymentStep, DeploymentPlan }
+import mesosphere.marathon.upgrade.DeploymentActor.DeploymentStepInfo
+import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
 import org.apache.log4j.Logger
@@ -95,7 +96,7 @@ class MarathonSchedulerService @Inject() (
   def listAppVersions(appId: PathId): Iterable[Timestamp] =
     Await.result(appRepository.listVersions(appId), config.zkTimeoutDuration)
 
-  def listRunningDeployments(): Future[Seq[(DeploymentPlan, DeploymentStep)]] =
+  def listRunningDeployments(): Future[Seq[(DeploymentPlan, DeploymentStepInfo)]] =
     (schedulerActor ? RetrieveRunningDeployments)
       .mapTo[RunningDeployments]
       .map(_.plans)

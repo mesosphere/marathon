@@ -6,6 +6,7 @@ import javax.ws.rs.core.MediaType
 
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.state.GroupManager
+import mesosphere.marathon.upgrade.DeploymentActor.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentStep, DeploymentPlan }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
@@ -27,12 +28,14 @@ class DeploymentsResource @Inject() (service: MarathonSchedulerService, groupMan
     }
   }
 
-  private def toInfo(deployment: DeploymentPlan, currentStep: DeploymentStep) = Map(
+  private def toInfo(deployment: DeploymentPlan, currentStepInfo: DeploymentStepInfo) = Map(
     "id" -> deployment.id,
     "version" -> deployment.version,
     "affectedApps" -> deployment.affectedApplicationIds.map(_.toString),
     "steps" -> deployment.steps.map(step => step.actions.map(actionToMap)),
-    "currentActions" -> currentStep.actions.map(actionToMap)
+    "currentActions" -> currentStepInfo.step.actions.map(actionToMap),
+    "currentStep" -> currentStepInfo.nr,
+    "totalSteps" -> deployment.steps.size
   )
 
   def actionToMap(action: DeploymentAction) =
