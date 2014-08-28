@@ -39,7 +39,18 @@ trait ModelValidation extends BeanValidation {
   }
 
   def noAppsAndGroups[T](t: T, path: String, apps: Set[AppDefinition], groups: Set[T])(implicit ct: ClassTag[T]) = {
-    isTrue(t, apps, path, "Groups may contain apps or groups but not both!", !(apps.nonEmpty && groups.nonEmpty))
+    lazy val appIds = apps.map(_.id).mkString(", ")
+    lazy val groupIds = groups.collect {
+      case g: Group       => g.id
+      case g: GroupUpdate => g.id.getOrElse(PathId(path))
+    }.mkString(", ")
+
+    isTrue(
+      t,
+      apps,
+      path,
+      s"Groups may contain apps or groups but not both! Apps: [$appIds] Groups: [$groupIds]",
+      !(apps.nonEmpty && groups.nonEmpty))
   }
 
   def noCyclicDependencies(group: Group, path: String) = {
