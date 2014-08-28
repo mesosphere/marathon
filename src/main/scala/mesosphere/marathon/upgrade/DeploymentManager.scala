@@ -2,15 +2,19 @@ package mesosphere.marathon.upgrade
 
 import akka.actor._
 import akka.event.EventStream
+import akka.pattern.{ ask, pipe }
+import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.upgrade.DeploymentActor.RetrieveCurrentStep
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.mutable
 import scala.concurrent.{ Future, Promise }
+import scala.concurrent.duration._
 
 class DeploymentManager(
     appRepository: AppRepository,
@@ -65,7 +69,13 @@ class DeploymentManager(
       sender ! Status.Failure(new ConcurrentTaskUpgradeException("Deployment is already in progress"))
 
     case RetrieveRunningDeployments =>
-      sender ! RunningDeployments(runningDeployments.values.map(_.plan).toSeq)
+      implicit val timeout: Timeout = 5.seconds
+      val deploymentInfos = runningDeployments.values.toSeq.map { info =>
+        val res = (info.ref ? RetrieveCurrentStep).mapTo[DeploymentStep]
+        res.map(info.plan -> _)
+      }
+
+      Future.sequence(deploymentInfos).map(RunningDeployments).pipeTo(sender)
   }
 
   def stopActor(ref: ActorRef, reason: Throwable): Future[Boolean] = {
@@ -76,15 +86,15 @@ class DeploymentManager(
 }
 
 object DeploymentManager {
-  case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
-  case class CancelDeployment(id: String, reason: Throwable)
-  case class CancelConflictingDeployments(plan: DeploymentPlan, reason: Throwable)
+  final case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
+  final case class CancelDeployment(id: String, reason: Throwable)
+  final case class CancelConflictingDeployments(plan: DeploymentPlan, reason: Throwable)
 
-  case class DeploymentFinished(id: String)
-  case class DeploymentCanceled(id: String)
-  case class ConflictingDeploymentsCanceled(id: String)
+  final case class DeploymentFinished(id: String)
+  final case class DeploymentCanceled(id: String)
+  final case class ConflictingDeploymentsCanceled(id: String)
 
-  case class DeploymentInfo(
+  final case class DeploymentInfo(
     ref: ActorRef,
     plan: DeploymentPlan)
 }

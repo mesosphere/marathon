@@ -33,6 +33,7 @@ class DeploymentActor(
   import mesosphere.marathon.upgrade.DeploymentActor._
 
   val steps = plan.steps.iterator
+  var currentStep: Option[DeploymentStep] = None
 
   override def preStart(): Unit = {
     self ! NextStep
@@ -46,12 +47,14 @@ class DeploymentActor(
 
   def receive = {
     case NextStep if steps.hasNext =>
-      performStep(steps.next()) onComplete {
+      val step = steps.next()
+      performStep(step) onComplete {
         case Success(_) =>
           self ! NextStep
         case Failure(t) =>
           self ! Cancel(t)
       }
+      currentStep = Some(step)
 
     case NextStep =>
       // no more steps, we're done
@@ -61,6 +64,10 @@ class DeploymentActor(
     case Cancel(t) =>
       receiver ! Status.Failure(t)
       context.stop(self)
+
+    case RetrieveCurrentStep =>
+      log.info("retrieving current step")
+      sender ! currentStep.getOrElse(DeploymentStep(Nil))
   }
 
   def performStep(step: DeploymentStep): Future[Unit] = {
@@ -156,5 +163,6 @@ class DeploymentActor(
 object DeploymentActor {
   case object NextStep
   case object Finished
-  case class Cancel(reason: Throwable)
+  case object RetrieveCurrentStep
+  final case class Cancel(reason: Throwable)
 }

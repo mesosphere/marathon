@@ -286,12 +286,12 @@ object AppDefinition {
     import scala.concurrent.Await
     @JsonProperty
     def deployments: Seq[String] = {
-      val deployments = Await.result(service.listRunningDeployments, 2.seconds)
+      val deployments = Await.result(service.listRunningDeployments(), 2.seconds)
 
       println(s"deployments: $deployments")
 
       val relatedDeploymentIds = deployments.collect {
-        case deployment if deployment.affectedApplicationIds contains app.id =>
+        case (deployment, _) if deployment.affectedApplicationIds contains app.id =>
           deployment.id
       }
 

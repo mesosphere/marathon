@@ -1613,18 +1613,24 @@ Transfer-Encoding: chunked
 
 [
     {
-        "affectedApplications": [
+        "affectedApps": [
             "/test"
-        ], 
-        "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b", 
+        ],
+        "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b",
         "steps": [
             [
                 {
-                    "action": "ScaleApplication", 
-                    "application": "/test"
+                    "action": "ScaleApplication",
+                    "app": "/test"
                 }
             ]
-        ], 
+        ],
+        "currentActions": [
+          {
+            "action": "ScaleApplication",
+            "app": "/test"
+          }
+        ],
         "version": "2014-08-26T08:18:03.595Z"
     }
 ]
