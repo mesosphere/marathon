@@ -25,6 +25,10 @@ define([
   return React.createClass({
     displayName: "Marathon",
 
+    statics: {
+      STATES: STATES
+    },
+
     getInitialState: function() {
       return {
         activeApp: null,
@@ -312,7 +316,6 @@ define([
               onTasksKilled={this.handleTasksKilled}
               rollBackApp={this.rollbackToAppVersion}
               scaleApp={this.scaleApp}
-              STATES={STATES}
               suspendApp={this.suspendApp}
               tasksFetchState={this.state.tasksFetchState}
               ref="modal" />
@@ -348,7 +351,6 @@ define([
               deployments={this.state.deployments}
               onSelectApp={this.showAppModal}
               fetchState={this.state.fetchState}
-              STATES={STATES}
               ref="appList" />
           </div>
           {modal}

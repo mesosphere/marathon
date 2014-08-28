@@ -31,7 +31,6 @@ define([
       onTasksKilled: React.PropTypes.func.isRequired,
       rollBackApp: React.PropTypes.func.isRequired,
       scaleApp: React.PropTypes.func.isRequired,
-      STATES: React.PropTypes.object.isRequired,
       suspendApp: React.PropTypes.func.isRequired,
       tasksFetchState: React.PropTypes.number.isRequired
     },
@@ -173,13 +172,11 @@ define([
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   hasHealth={hasHealth}
                   onTasksKilled={this.props.onTasksKilled}
-                  onTaskDetailSelect={this.showTaskDetails}
-                  STATES={this.props.STATES} />
+                  onTaskDetailSelect={this.showTaskDetails} />
                 <TaskDetailComponent
                   fetchState={this.props.tasksFetchState}
                   taskHealthMessage={model.formatTaskHealthMessage(this.props.activeTask)}
                   hasHealth={hasHealth}
-                  STATES={this.props.STATES}
                   onShowTaskList={this.showTaskList}
                   task={this.props.activeTask} />
               </StackedViewComponent>
@@ -191,8 +188,7 @@ define([
                 app={model}
                 fetchAppVersions={this.props.fetchAppVersions}
                 fetchState={this.props.appVersionsFetchState}
-                onRollback={this.props.rollBackApp}
-                STATES={this.props.STATES} />
+                onRollback={this.props.rollBackApp} />
             </TabPaneComponent>
           </TogglableTabsComponent>
         </ModalComponent>

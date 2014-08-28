@@ -3,10 +3,11 @@
 define([
   "React",
   "mixins/BackboneMixin",
+  "models/Marathon",
   "models/Task",
   "jsx!components/TimeFieldComponent",
   "jsx!components/TaskHealthComponent"
-], function(React, BackboneMixin, Task,
+], function(React, BackboneMixin, Marathon, Task,
   TimeFieldComponent, TaskHealthComponent) {
   "use strict";
 
@@ -35,7 +36,7 @@ define([
     render: function() {
       var task = this.props.task;
       var hasHealth = !!this.props.hasHealth;
-      var hasError = this.props.fetchState === this.props.STATES.STATE_ERROR || task.collection == null;
+      var hasError = this.props.fetchState === Marathon.STATES.STATE_ERROR || task.collection == null;
       var taskHealth = task.getHealth();
       var healthClassSet;
       var timeNodes;
