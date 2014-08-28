@@ -112,7 +112,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
   }
 
   def rollbackGroup(groupId: PathId, version: String, force: Boolean = false): RestResult[ITDeploymentResult] = {
-    updateGroup(groupId, GroupUpdate.empty(groupId).copy(version = Some(Timestamp(version))), force)
+    updateGroup(groupId, GroupUpdate(None, version = Some(Timestamp(version))), force)
   }
 
   //event resource ---------------------------------------------
