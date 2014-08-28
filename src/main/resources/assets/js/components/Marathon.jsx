@@ -61,6 +61,7 @@ define([
 
     componentWillUnmount: function() {
       this.stopPollingApps();
+      this.stopPollingTasks();
     },
 
     fetchResource: function() {
