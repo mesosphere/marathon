@@ -110,14 +110,16 @@ class GroupManager @Singleton @Inject() (
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
     def deploy(from: Group, to: Group, resolve: Seq[ResolveArtifacts]): Future[DeploymentPlan] = {
-      requireValid(checkGroup(to))
       val plan = DeploymentPlan(from, to, resolve, version)
       scheduler.deploy(plan, force).map(_ => plan)
     }
 
+    val rootGroup = root(withLatestApps = false)
+
     val deployment = for {
-      from <- root(withLatestApps = false) //ignore the state of the scheduler
+      from <- rootGroup //ignore the state of the scheduler
       (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(from, change(from)))
+      _ = requireValid(checkGroup(to))
       _ <- groupRepo.store(zkName, to)
       plan <- deploy(from, to, resolve)
     } yield plan
@@ -127,7 +129,7 @@ class GroupManager @Singleton @Inject() (
         log.info(s"Deployment acknowledged. Waiting to get processed: $plan")
         eventBus.publish(GroupChangeSuccess(gid, version.toString))
       case Failure(ex) =>
-        log.warn(s"Deployment failed for change: $version")
+        log.warn(s"Deployment failed for change: $version", ex)
         eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
     }
     deployment
