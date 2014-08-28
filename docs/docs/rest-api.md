@@ -614,7 +614,10 @@ Transfer-Encoding: chunked
         "ports": [
             13321, 
             10982
-        ], 
+        ],
+        "deployments": [
+          "04228491-1fd1-47b6-83e3-4dc516e7147a"
+        ],
         "tasks": [
             {
                 "host": "agouti.local", 
@@ -634,76 +637,6 @@ Transfer-Encoding: chunked
             "https://raw.github.com/mesosphere/marathon/master/README.md"
         ], 
         "version": "2014-04-04T06:25:31.399Z"
-    }
-}
-{% endhighlight %}
-
-#### GET `/v2/apps/{appId}?embed=apps.tasks`
-
-List the application with id `appId` along with its running tasks.
-
-{% highlight http %}
-GET /v2/apps/test?embed=apps.tasks HTTP/1.1
-Accept: */*
-Accept-Encoding: gzip, deflate
-Host: localhost:8080
-User-Agent: HTTPie/0.8.0
-{% endhighlight %}
-
-{% highlight http %}
-HTTP/1.1 200 OK
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-Transfer-Encoding: chunked
-
-{
-    "app": {
-        "args": null, 
-        "backoffFactor": 1.15, 
-        "backoffSeconds": 1, 
-        "cmd": "python toggle.py $PORT0", 
-        "constraints": [], 
-        "container": null, 
-        "cpus": 0.2, 
-        "dependencies": [], 
-        "disk": 0.0, 
-        "env": {}, 
-        "executor": "", 
-        "healthChecks": [], 
-        "id": "/test", 
-        "instances": 2, 
-        "mem": 32.0, 
-        "ports": [10000], 
-        "requirePorts": false, 
-        "storeUrls": [], 
-        "tasks": [
-            {
-                "host": "10.141.141.10", 
-                "id": "test.7d989150-2cde-11e4-8852-56847afe9799", 
-                "ports": [31974], 
-                "stagedAt": "2014-08-26T05:04:42.948Z", 
-                "startedAt": "2014-08-26T07:14:22.264Z", 
-                "version": "2014-08-26T05:04:41.844Z"
-            }, 
-            {
-                "host": "10.141.141.10", 
-                "id": "test.68b5470e-2cde-11e4-8852-56847afe9799", 
-                "ports": [31494], 
-                "stagedAt": "2014-08-26T05:04:07.904Z", 
-                "startedAt": "2014-08-26T07:14:22.323Z", 
-                "version": "2014-08-26T05:03:26.449Z"
-            }
-        ], 
-        "tasksRunning": 2, 
-        "tasksStaged": 0, 
-        "upgradeStrategy": {
-            "minimumHealthCapacity": 1.0
-        }, 
-        "uris": [
-            "http://downloads.mesosphere.io/misc/toggle.tgz"
-        ], 
-        "user": null, 
-        "version": "2014-08-26T05:04:26.263Z"
     }
 }
 {% endhighlight %}
