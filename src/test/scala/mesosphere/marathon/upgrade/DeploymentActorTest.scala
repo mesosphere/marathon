@@ -7,7 +7,7 @@ import mesosphere.marathon.event.{ DeploymentStatus, MesosStatusUpdateEvent }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentActor.{ RetrieveCurrentStep, Finished }
+import mesosphere.marathon.upgrade.DeploymentActor.{ DeploymentStepInfo, RetrieveCurrentStep, Finished }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
 import mesosphere.mesos.protos.Implicits._
@@ -237,7 +237,7 @@ class DeploymentActorTest
 
     deploymentActor ! RetrieveCurrentStep
 
-    expectMsg(firstStep)
+    expectMsg(DeploymentStepInfo(firstStep, 1))
     deploymentActor.stop()
   }
 }

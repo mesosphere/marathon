@@ -8,7 +8,7 @@ import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, 
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentActor.RetrieveCurrentStep
+import mesosphere.marathon.upgrade.DeploymentActor.{ DeploymentStepInfo, RetrieveCurrentStep }
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
@@ -71,7 +71,7 @@ class DeploymentManager(
     case RetrieveRunningDeployments =>
       implicit val timeout: Timeout = 5.seconds
       val deploymentInfos = runningDeployments.values.toSeq.map { info =>
-        val res = (info.ref ? RetrieveCurrentStep).mapTo[DeploymentStep]
+        val res = (info.ref ? RetrieveCurrentStep).mapTo[DeploymentStepInfo]
         res.map(info.plan -> _)
       }
 
