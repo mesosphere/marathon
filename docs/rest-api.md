@@ -21,6 +21,13 @@ title: REST API
     kill tasks belonging to app `appId`
   * [DELETE /v2/apps/{appId}/tasks/{taskId}?scale={true|false}](#delete-/v2/apps/{appid}/tasks/{taskid}?scale={true|false}):
     Kill the task `taskId` that belongs to the application `appId`
+* [Groups](#groups)
+  * [GET /v2/groups](#get-/v2/groups): List all groups
+  * [GET /v2/groups/{groupId}](#get-/v2/groups/{groupid}): List the group with the specified ID
+  * [POST /v2/groups](#post-/v2/groups): Create and start a new groups
+  * [PUT /v2/groups/{groupId}](#put-/v2/groups/{groupid}): Change parameters of a deployed application group
+  * [PUT /v2/groups/{groupId}/version/{version}](#put-/v2/groups/{groupid})/version/{$version}) Rollback group to a previous version
+  * [DELETE /v2/groups/{groupId}](#delete-/v2/groups/{groupid}): Destroy a group
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
@@ -1081,6 +1088,467 @@ Transfer-Encoding: chunked
         "startedAt": "2014-01-17T00:01+0000"
     }
 }
+{% endhighlight %}
+
+### Groups
+
+#### GET `/v2/groups`
+
+List all groups.
+
+**Request:**
+
+{% highlight http %}
+GET /v2/groups HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "apps": [], 
+    "dependencies": [], 
+    "groups": [
+        {
+            "apps": [
+                {
+                    "args": null, 
+                    "backoffFactor": 1.15, 
+                    "backoffSeconds": 1, 
+                    "cmd": "sleep 30", 
+                    "constraints": [], 
+                    "container": null, 
+                    "cpus": 1.0, 
+                    "dependencies": [], 
+                    "disk": 0.0, 
+                    "env": {}, 
+                    "executor": "", 
+                    "healthChecks": [], 
+                    "id": "/test/app", 
+                    "instances": 1, 
+                    "mem": 128.0, 
+                    "ports": [
+                        10000
+                    ], 
+                    "requirePorts": false, 
+                    "storeUrls": [], 
+                    "upgradeStrategy": {
+                        "minimumHealthCapacity": 1.0
+                    }, 
+                    "uris": [], 
+                    "user": null, 
+                    "version": "2014-08-28T01:05:40.586Z"
+                }
+            ], 
+            "dependencies": [], 
+            "groups": [], 
+            "id": "/test", 
+            "version": "2014-08-28T01:09:46.212Z"
+        }
+    ], 
+    "id": "/", 
+    "version": "2014-08-28T01:09:46.212Z"
+}
+{% endhighlight %}
+
+#### GET `/v2/groups/{groupId}`
+
+List the group with the specified ID.
+
+**Request:**
+
+{% highlight http %}
+GET /v2/groups/test HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "apps": [
+        {
+            "args": null, 
+            "backoffFactor": 1.15, 
+            "backoffSeconds": 1, 
+            "cmd": "sleep 30", 
+            "constraints": [], 
+            "container": null, 
+            "cpus": 1.0, 
+            "dependencies": [], 
+            "disk": 0.0, 
+            "env": {}, 
+            "executor": "", 
+            "healthChecks": [], 
+            "id": "/test/app", 
+            "instances": 1, 
+            "mem": 128.0, 
+            "ports": [
+                10000
+            ], 
+            "requirePorts": false, 
+            "storeUrls": [], 
+            "upgradeStrategy": {
+                "minimumHealthCapacity": 1.0
+            }, 
+            "uris": [], 
+            "user": null, 
+            "version": "2014-08-28T01:05:40.586Z"
+        }
+    ], 
+    "dependencies": [], 
+    "groups": [], 
+    "id": "/test", 
+    "version": "2014-08-28T01:09:46.212Z"
+}
+{% endhighlight %}
+
+#### POST `/v2/groups`
+
+Create and start a new application group.
+Application groups can contain other application groups.
+An application group can either hold other groups or applications, but can not be mixed in one.
+
+The JSON format of a group resource is as follows:
+
+```json
+{
+  "id": "product",
+  "groups": [{
+    "id": "service",
+    "groups": [{
+      "id": "us-east",
+      "apps": [{
+        "id": "app1",
+        "cmd": "someExecutable"
+      },  
+      {
+        "id": "app2",
+        "cmd": "someOtherExecutable"
+      }]
+    }],
+    "dependencies": ["/product/database", "../backend"]
+  }
+]
+"version": "2014-03-01T23:29:30.158Z"
+}
+```
+
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
+The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
+the given version.
+
+### Example
+
+**Request:**
+
+{% highlight http %}
+POST /v2/groups HTTP/1.1
+User-Agent: curl/7.35.0
+Accept: application/json
+Host: localhost:8080
+Content-Type: application/json
+Content-Length: 273
+
+{
+  "id" : "product",
+  "apps":[ 
+    {
+      "id": "myapp",
+      "cmd": "ruby app2.rb",
+      "instances": 1
+    }
+  ]
+}
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 201 Created
+Location: http://localhost:8080/v2/groups/product
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(8.y.z-SNAPSHOT)
+{"version":"2014-07-01T10:20:50.196Z"}
+{% endhighlight %}
+
+Create and start a new application group.
+Application groups can contain other application groups.
+An application group can either hold other groups or applications, but can not be mixed in one.
+
+The JSON format of a group resource is as follows:
+
+```json
+{
+  "id": "product",
+  "groups": [{
+    "id": "service",
+    "groups": [{
+      "id": "us-east",
+      "apps": [{
+        "id": "app1",
+        "cmd": "someExecutable"
+      },  
+      {
+        "id": "app2",
+        "cmd": "someOtherExecutable"
+      }]
+    }],
+    "dependencies": ["/product/database", "../backend"]
+  }
+]
+"version": "2014-03-01T23:29:30.158Z"
+}
+```
+
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
+The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
+the given version.
+
+
+### Example
+
+**Request:**
+
+{% highlight http %}
+POST /v2/groups HTTP/1.1
+User-Agent: curl/7.35.0
+Accept: application/json
+Host: localhost:8080
+Content-Type: application/json
+Content-Length: 273
+
+{
+  "id" : "product",
+  "apps":[ 
+    {
+      "id": "myapp",
+      "cmd": "ruby app2.rb",
+      "instances": 1
+    }
+  ]
+}
+{% endhighlight %}
+
+**Response:**
+
+
+{% highlight http %}
+HTTP/1.1 201 Created
+Location: http://localhost:8080/v2/groups/product
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(8.y.z-SNAPSHOT)
+{"version":"2014-07-01T10:20:50.196Z"}
+{% endhighlight %}
+
+#### PUT `/v2/groups/{groupId}`
+
+Change parameters of a deployed application group.
+
+* Changes to application parameters will result in a restart of this application.
+* A new application added to the group is started.
+* An existing application removed from the group gets stopped.
+
+If there are no changes to the application definition, no restart is triggered.
+During restart marathon keeps track, that the configured amount of minimal running instances are _always_ available.
+
+A deployment can run forever. This is the case, when the new application has a problem and does not become healthy.
+In this case, human interaction is needed with 2 possible choices:
+
+* Rollback to an existing older version (use the rollback endpoint)
+* Update with a newer version of the group which does not have the problems of the old one.
+
+If there is an upgrade process already in progress, a new update will be rejected unless the force flag is set.
+With the force flag given, a running upgrade is terminated and a new one is started.
+
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
+The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
+the given version.
+
+### Example
+
+**Request:**
+
+{% highlight http %}
+PUT /v2/groups/test/project HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Content-Length: 541
+Content-Type: application/json; charset=utf-8
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+
+{
+    "apps": [
+        {
+            "cmd": "ruby app2.rb", 
+            "constraints": [], 
+            "container": null, 
+            "cpus": 0.2, 
+            "env": {}, 
+            "executor": "//cmd", 
+            "healthChecks": [
+                {
+                    "initialDelaySeconds": 15, 
+                    "intervalSeconds": 5, 
+                    "path": "/health", 
+                    "portIndex": 0, 
+                    "protocol": "HTTP", 
+                    "timeoutSeconds": 15
+                }
+            ], 
+            "id": "app", 
+            "instances": 6, 
+            "mem": 128.0, 
+            "ports": [
+                19970
+            ], 
+            "taskRateLimit": 1.0, 
+            "uris": []
+        }
+    ]
+}
+{% endhighlight %}
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231", 
+    "version": "2014-08-28T16:45:41.063Z"
+}
+{% endhighlight %}
+
+### Example
+
+Scale a group.
+
+The scaling affects apps directly in the group as well as all transitive applications referenced by subgroups of this group.
+The scaling factor is applied to each individual instance count of each application.
+
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
+The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
+the given version.
+
+**Request:**
+
+{% highlight http %}
+PUT /v2/groups/product/service HTTP/1.1
+Content-Length: 123
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{ "scaleBy": 1.5 }
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231", 
+    "version": "2014-08-28T16:45:41.063Z"
+}
+{% endhighlight %}
+
+
+#### PUT `/v2/groups/{groupId}/version/{version}`
+
+Rollback this group to a previous version.
+All changes to a group will create a new version.
+With this endpoint it is possible to an older version of this group.
+
+If there is an upgrade process already in progress, this rollback will be rejected unless the force flag is set.
+With the force flag given, a running upgrade is terminated and a new one is started.
+
+The rollback to a version is handled as normal update.
+All implications of an update will take place.
+
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
+The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
+the given version.
+
+
+### Example
+
+**Request:**
+
+{% highlight http %}
+PUT /v2/groups/myproduct/version/2014-03-01T23:29:30.158?force=true HTTP/1.1
+Content-Length: 0
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231", 
+    "version": "2014-08-28T16:45:41.063Z"
+}
+{% endhighlight %}
+
+
+#### DELETE `/v2/groups/{groupId}`
+
+Destroy a group. All data about that group and all associated applications will be deleted.
+
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
+The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
+the given version.
+
+**Request:**
+
+{% highlight http %}
+DELETE /v2/groups/product/service/app HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Length: 0
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: curl/7.35.0
+{% endhighlight %}
+
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 Ok
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(8.y.z-SNAPSHOT)
+{"version":"2014-07-01T10:20:50.196Z"}
 {% endhighlight %}
 
 ### Tasks
