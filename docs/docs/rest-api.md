@@ -1631,7 +1631,9 @@ Transfer-Encoding: chunked
             "app": "/test"
           }
         ],
-        "version": "2014-08-26T08:18:03.595Z"
+        "version": "2014-08-26T08:18:03.595Z",
+        "currentStep": 1,
+        "totalSteps" 1
     }
 ]
 {% endhighlight %}
