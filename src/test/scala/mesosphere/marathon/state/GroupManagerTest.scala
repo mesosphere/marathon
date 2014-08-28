@@ -1,14 +1,20 @@
 package mesosphere.marathon.state
 
+import javax.validation.ConstraintViolationException
+
 import akka.event.EventStream
+import mesosphere.marathon.io.storage.StorageProvider
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
+import org.mockito.Matchers.any
+import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ FunSuite, Matchers }
 
-import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{ PortRangeExhaustedException, MarathonConf, MarathonSchedulerService }
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration._
 
 class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
 
@@ -24,10 +30,6 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
   }
 
   test("Already taken ports will not be used") {
-    val current = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, ports = Seq(10, 11, 12)),
-      AppDefinition("/app2".toPath, ports = Seq(13, 14, 15))
-    ))
     val group = Group(PathId.empty, Set(
       AppDefinition("/app1".toPath, ports = Seq(0, 0, 0)),
       AppDefinition("/app2".toPath, ports = Seq(0, 2, 0))
@@ -47,6 +49,28 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
     }
     ex.minPort should be(10)
     ex.maxPort should be(15)
+  }
+
+  test("Don't store invalid groups") {
+
+    val scheduler = mock[MarathonSchedulerService]
+    val taskTracker = mock[TaskTracker]
+    val groupRepo = mock[GroupRepository]
+    val eventBus = mock[EventStream]
+    val provider = mock[StorageProvider]
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
+    config.afterInit()
+    val manager = new GroupManager(scheduler, taskTracker, groupRepo, provider, config, eventBus)
+
+    val group = Group(PathId.empty, Set(AppDefinition("/app1".toPath)), Set(Group("/group1".toPath)))
+
+    when(groupRepo.group("root", withLatestApps = false)).thenReturn(Future.successful(None))
+
+    intercept[ConstraintViolationException] {
+      Await.result(manager.update(group.id, _ => group), 3.seconds)
+    }.printStackTrace()
+
+    verify(groupRepo, times(0)).store(any(), any())
   }
 
   def manager(from: Int, to: Int) = {
