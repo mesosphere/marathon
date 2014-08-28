@@ -83,10 +83,10 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   test("ReconcileTasks") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    val tasks = mutable.Set(MarathonTask.newBuilder().setId("task_a").build())
+    val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
 
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(tracker.get(app.id)).thenReturn(mutable.Set.empty[MarathonTask])
+    when(tracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
     when(tracker.list).thenReturn(
       mutable.HashMap(
         PathId("nope") -> new TaskTracker.App(
@@ -110,7 +110,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
 
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
-    when(tracker.get(app.id)).thenReturn(mutable.Set.empty[MarathonTask])
+    when(tracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
 
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
     when(tracker.count(app.id)).thenReturn(0)
@@ -140,7 +140,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     ))
 
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
-    when(tracker.get(app.id)).thenReturn(mutable.Set[MarathonTask](taskA))
+    when(tracker.get(app.id)).thenReturn(Set[MarathonTask](taskA))
     when(tracker.fetchTask(app.id, taskA.getId))
       .thenReturn(Some(taskA))
       .thenReturn(None)

@@ -12,7 +12,6 @@ import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
 
@@ -36,7 +35,7 @@ class AppStopActorTest
   test("Stop App") {
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()
-    val tasks = mutable.Set(marathonTask("task_a"), marathonTask("task_b"))
+    val tasks = Set(marathonTask("task_a"), marathonTask("task_b"))
 
     when(taskTracker.get(app.id)).thenReturn(tasks)
 
@@ -66,7 +65,7 @@ class AppStopActorTest
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()
 
-    when(taskTracker.get(app.id)).thenReturn(mutable.Set.empty[MarathonTask])
+    when(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
 
     val ref = TestActorRef[AppStopActor](
       Props(
@@ -90,7 +89,7 @@ class AppStopActorTest
   test("Failed") {
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()
-    val tasks = mutable.Set(marathonTask("task_a"), marathonTask("task_b"))
+    val tasks = Set(marathonTask("task_a"), marathonTask("task_b"))
 
     when(taskTracker.get(app.id)).thenReturn(tasks)
 
@@ -120,11 +119,11 @@ class AppStopActorTest
   test("Task synchronization") {
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()
-    val tasks = mutable.Set(marathonTask("task_a"), marathonTask("task_b"))
+    val tasks = Set(marathonTask("task_a"), marathonTask("task_b"))
 
     when(taskTracker.get(app.id))
       .thenReturn(tasks)
-      .thenReturn(mutable.Set.empty[MarathonTask])
+      .thenReturn(Set.empty[MarathonTask])
 
     val ref = system.actorOf(
       Props(

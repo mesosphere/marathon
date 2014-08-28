@@ -7,6 +7,8 @@ import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 import com.google.common.collect.Lists
@@ -155,7 +157,7 @@ class TaskBuilderTest extends MarathonSpec {
 
     val t1 = makeSampleTask(app.id, "rackid", "2")
     val t2 = makeSampleTask(app.id, "rackid", "3")
-    val s = mutable.Set(t1, t2)
+    val s = Set(t1, t2)
 
     when(taskTracker.get(app.id)).thenReturn(s)
 
@@ -179,9 +181,11 @@ class TaskBuilderTest extends MarathonSpec {
       )
     )
 
-    val runningTasks = new mutable.HashSet[MarathonTask]()
+    var runningTasks = Set.empty[MarathonTask]
     val taskTracker = mock[TaskTracker]
-    when(taskTracker.get(app.id)).thenReturn(runningTasks)
+    when(taskTracker.get(app.id)).thenAnswer(new Answer[Set[MarathonTask]] {
+      override def answer(p1: InvocationOnMock): Set[MarathonTask] = runningTasks
+    })
 
     val builder = new TaskBuilder(app,
       s => TaskID(s.toString), taskTracker, defaultConfig())
@@ -195,7 +199,7 @@ class TaskBuilderTest extends MarathonSpec {
         tupleOption.get._2,
         offer.getAttributesList.asScala.toList,
         Timestamp.now)
-      runningTasks.add(marathonTask)
+      runningTasks += marathonTask
     }
 
     def shouldNotBuildTask(message: String, offer: Offer) {
@@ -238,9 +242,11 @@ class TaskBuilderTest extends MarathonSpec {
       )
     )
 
-    val runningTasks = new mutable.HashSet[MarathonTask]()
+    var runningTasks = Set.empty[MarathonTask]
     val taskTracker = mock[TaskTracker]
-    when(taskTracker.get(app.id)).thenReturn(runningTasks)
+    when(taskTracker.get(app.id)).thenAnswer(new Answer[Set[MarathonTask]] {
+      override def answer(p1: InvocationOnMock): Set[MarathonTask] = runningTasks
+    })
 
     val builder = new TaskBuilder(app,
       s => TaskID(s.toString), taskTracker, defaultConfig())
@@ -253,7 +259,7 @@ class TaskBuilderTest extends MarathonSpec {
         offer.getHostname,
         tupleOption.get._2,
         offer.getAttributesList.asScala.toList, Timestamp.now)
-      runningTasks.add(marathonTask)
+      runningTasks += marathonTask
     }
 
     def shouldNotBuildTask(message: String, offer: Offer) {
@@ -301,11 +307,11 @@ class TaskBuilderTest extends MarathonSpec {
       ), Seq(1000, 1001))
 
     val uriinfo1 = command.getUris(0)
-    assert(uriinfo1.getExtract == false)
+    assert(!uriinfo1.getExtract)
     val uriinfo2 = command.getUris(1)
-    assert(uriinfo2.getExtract == true)
+    assert(uriinfo2.getExtract)
     val uriinfo3 = command.getUris(2)
-    assert(uriinfo3.getExtract == true)
+    assert(uriinfo3.getExtract)
 
   }
 
