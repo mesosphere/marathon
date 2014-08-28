@@ -30,6 +30,7 @@ class TaskBuilderTest extends MarathonSpec {
       offer,
       AppDefinition(
         id = "testApp".toPath,
+        cmd = Some("foo"),
         cpus = 1,
         mem = 64,
         disk = 1,
@@ -49,11 +50,125 @@ class TaskBuilderTest extends MarathonSpec {
     assert(taskPorts(0) == range.get.getBegin.toInt)
     assert(taskPorts(1) == range.get.getEnd.toInt)
 
+    assert(!taskInfo.hasExecutor)
+    assert(taskInfo.hasCommand)
+    val cmd = taskInfo.getCommand
+    assert(cmd.getShell)
+    assert(cmd.hasValue)
+    assert(cmd.getArgumentsList.asScala.isEmpty)
+    assert(cmd.getValue == "foo")
+
     for (r <- taskInfo.getResourcesList.asScala) {
       assert("*" == r.getRole)
     }
 
     // TODO test for resources etc.
+  }
+
+  test("BuildIfMatchesWithArgs") {
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
+      .addResources(ScalarResource("cpus", 1))
+      .addResources(ScalarResource("mem", 128))
+      .addResources(ScalarResource("disk", 2000))
+      .build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "testApp".toPath,
+        args = Some(Seq("a", "b", "c")),
+        cpus = 1,
+        mem = 64,
+        disk = 1,
+        executor = "//cmd",
+        ports = Seq(8080, 8081)
+      )
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+    val range = taskInfo.getResourcesList.asScala
+      .find(r => r.getName == Resource.PORTS)
+      .map(r => r.getRanges.getRange(0))
+    assert(range.isDefined)
+    assert(2 == taskPorts.size)
+    assert(taskPorts(0) == range.get.getBegin.toInt)
+    assert(taskPorts(1) == range.get.getEnd.toInt)
+
+    assert(!taskInfo.hasExecutor)
+    assert(taskInfo.hasCommand)
+    val cmd = taskInfo.getCommand
+    assert(!cmd.getShell)
+    assert(!cmd.hasValue)
+    assert(cmd.getArgumentsList.asScala == Seq("a", "b", "c"))
+
+    for (r <- taskInfo.getResourcesList.asScala) {
+      assert("*" == r.getRole)
+    }
+
+    // TODO test for resources etc.
+  }
+  test("BuildIfMatchesWithCommandAndExecutor") {
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
+      .addResources(ScalarResource("cpus", 1))
+      .addResources(ScalarResource("mem", 128))
+      .addResources(ScalarResource("disk", 2000))
+      .build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "testApp".toPath,
+        cpus = 1,
+        mem = 64,
+        disk = 1,
+        cmd = Some("foo"),
+        executor = "/custom/executor",
+        ports = Seq(8080, 8081)
+      )
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+    assert(taskInfo.hasExecutor)
+    assert(!taskInfo.hasCommand)
+
+    val cmd = taskInfo.getExecutor.getCommand
+    assert(cmd.getShell)
+    assert(cmd.hasValue)
+    assert(cmd.getArgumentsList.asScala.isEmpty)
+    assert(cmd.getValue == "chmod ug+rx '/custom/executor' && exec '/custom/executor' foo")
+  }
+
+  test("BuildIfMatchesWithArgsAndExecutor") {
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
+      .addResources(ScalarResource("cpus", 1))
+      .addResources(ScalarResource("mem", 128))
+      .addResources(ScalarResource("disk", 2000))
+      .build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "testApp".toPath,
+        cpus = 1,
+        mem = 64,
+        disk = 1,
+        args = Some(Seq("a", "b", "c")),
+        executor = "/custom/executor",
+        ports = Seq(8080, 8081)
+      )
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+    val cmd = taskInfo.getExecutor.getCommand
+
+    assert(!taskInfo.hasCommand)
+    assert(cmd.getValue == "chmod ug+rx '/custom/executor' && exec '/custom/executor' a b c")
   }
 
   test("BuildIfMatchesWithRole") {
