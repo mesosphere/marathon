@@ -26,7 +26,7 @@ title: REST API
   * [GET /v2/groups/{groupId}](#get-/v2/groups/{groupid}): List the group with the specified ID
   * [POST /v2/groups](#post-/v2/groups): Create and start a new groups
   * [PUT /v2/groups/{groupId}](#put-/v2/groups/{groupid}): Change parameters of a deployed application group
-  * [PUT /v2/groups/{groupId}/version/{version}](#put-/v2/groups/{groupid})/version/{$version})
+  * [PUT /v2/groups/{groupId}/version/{version}](#put-/v2/groups/{groupid})/version/{$version}) Rollback group to a previous version
   * [DELETE /v2/groups/{groupId}](#delete-/v2/groups/{groupid}): Destroy a group
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
@@ -1259,13 +1259,14 @@ the given version.
 
 **Request:**
 
-```
+{% highlight http %}
 POST /v2/groups HTTP/1.1
 User-Agent: curl/7.35.0
 Accept: application/json
 Host: localhost:8080
 Content-Type: application/json
 Content-Length: 273
+
 {
   "id" : "product",
   "apps":[ 
@@ -1276,18 +1277,18 @@ Content-Length: 273
     }
   ]
 }
-```
+{% endhighlight %}
 
 **Response:**
 
-```
+{% highlight http %}
 HTTP/1.1 201 Created
 Location: http://localhost:8080/v2/groups/product
 Content-Type: application/json
 Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
 {"version":"2014-07-01T10:20:50.196Z"}
-```
+{% endhighlight %}
 
 Create and start a new application group.
 Application groups can contain other application groups.
@@ -1327,13 +1328,14 @@ the given version.
 
 **Request:**
 
-```
+{% highlight http %}
 POST /v2/groups HTTP/1.1
 User-Agent: curl/7.35.0
 Accept: application/json
 Host: localhost:8080
 Content-Type: application/json
 Content-Length: 273
+
 {
   "id" : "product",
   "apps":[ 
@@ -1344,19 +1346,19 @@ Content-Length: 273
     }
   ]
 }
-```
+{% endhighlight %}
 
 **Response:**
 
 
-```
+{% highlight http %}
 HTTP/1.1 201 Created
 Location: http://localhost:8080/v2/groups/product
 Content-Type: application/json
 Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
 {"version":"2014-07-01T10:20:50.196Z"}
-```
+{% endhighlight %}
 
 #### PUT `/v2/groups/{groupId}`
 
@@ -1386,59 +1388,64 @@ the given version.
 
 **Request:**
 
-```
-PUT /v2/groups/my/cool/project HTTP/1.1
+{% highlight http %}
+PUT /v2/groups/test/project HTTP/1.1
 Accept: application/json
-Accept-Encoding: gzip, deflate, compress
-Content-Length: 176
+Accept-Encoding: gzip, deflate
+Content-Length: 541
 Content-Type: application/json; charset=utf-8
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+
 {
-  "apps":[
-    {
-      "id": "app",
-      "cmd": "ruby app2.rb",
-      "env": {},
-      "instances": 6,
-      "cpus": 0.2,
-      "mem": 128.0,
-      "executor": "//cmd",
-      "constraints": [],
-      "uris": [],
-      "ports": [19970],
-      "taskRateLimit": 1.0,
-      "container": null,
-      "healthChecks": [
+    "apps": [
         {
-          "path": "/health",
-          "protocol": "HTTP",
-          "portIndex": 0,
-          "initialDelaySeconds": 15,
-          "intervalSeconds": 5,
-          "timeoutSeconds": 15
+            "cmd": "ruby app2.rb", 
+            "constraints": [], 
+            "container": null, 
+            "cpus": 0.2, 
+            "env": {}, 
+            "executor": "//cmd", 
+            "healthChecks": [
+                {
+                    "initialDelaySeconds": 15, 
+                    "intervalSeconds": 5, 
+                    "path": "/health", 
+                    "portIndex": 0, 
+                    "protocol": "HTTP", 
+                    "timeoutSeconds": 15
+                }
+            ], 
+            "id": "app", 
+            "instances": 6, 
+            "mem": 128.0, 
+            "ports": [
+                19970
+            ], 
+            "taskRateLimit": 1.0, 
+            "uris": []
         }
-      ],
-    }
-  ]
+    ]
 }
-```
+{% endhighlight %}
 
-**Response:**
-
-```
-HTTP/1.1 200 Ok
+{% highlight http %}
+HTTP/1.1 200 OK
 Content-Type: application/json
-Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
-{"version":"2014-07-01T10:20:50.196Z"}
-```
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231", 
+    "version": "2014-08-28T16:45:41.063Z"
+}
+{% endhighlight %}
 
 ### Example
 
 Scale a group.
 
-The scaling effects apps directly in the group as well as all transitive applications referenced by subgroups of this group.
+The scaling affects apps directly in the group as well as all transitive applications referenced by subgroups of this group.
 The scaling factor is applied to each individual instance count of each application.
 
 Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
@@ -1447,27 +1454,32 @@ the given version.
 
 **Request:**
 
-```
+{% highlight http %}
 PUT /v2/groups/product/service HTTP/1.1
 Content-Length: 123
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 { "scaleBy": 1.5 }
-```
+{% endhighlight %}
 
 **Response:**
 
-```
-HTTP/1.1 200 Ok
+{% highlight http %}
+HTTP/1.1 200 OK
 Content-Type: application/json
-Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
-{"version":"2014-07-01T10:20:50.196Z"}
-```
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231", 
+    "version": "2014-08-28T16:45:41.063Z"
+}
+{% endhighlight %}
+
 
 #### PUT `/v2/groups/{groupId}/version/{version}`
 
-Rollback this group to a specific version, that has been deployed in the past.
+Rollback this group to a previous version.
 All changes to a group will create a new version.
 With this endpoint it is possible to an older version of this group.
 
@@ -1486,22 +1498,27 @@ the given version.
 
 **Request:**
 
-```
+{% highlight http %}
 PUT /v2/groups/myproduct/version/2014-03-01T23:29:30.158?force=true HTTP/1.1
 Content-Length: 0
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-```
+{% endhighlight %}
 
 **Response:**
 
-```
-HTTP/1.1 200 Ok
+{% highlight http %}
+HTTP/1.1 200 OK
 Content-Type: application/json
-Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
-{"version":"2014-07-01T10:20:50.196Z"}
-```
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231", 
+    "version": "2014-08-28T16:45:41.063Z"
+}
+{% endhighlight %}
+
 
 #### DELETE `/v2/groups/{groupId}`
 
@@ -1513,7 +1530,7 @@ the given version.
 
 **Request:**
 
-```
+{% highlight http %}
 DELETE /v2/groups/product/service/app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -1521,18 +1538,18 @@ Content-Length: 0
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: curl/7.35.0
-```
+{% endhighlight %}
 
 
 **Response:**
 
-```
+{% highlight http %}
 HTTP/1.1 200 Ok
 Content-Type: application/json
 Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
 {"version":"2014-07-01T10:20:50.196Z"}
-```
+{% endhighlight %}
 
 ### Tasks
 
