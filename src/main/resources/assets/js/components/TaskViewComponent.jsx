@@ -157,7 +157,6 @@ define([
             onTaskDetailSelect={this.props.onTaskDetailSelect}
             itemsPerPage={itemsPerPage}
             selectedTasks={this.state.selectedTasks}
-            STATES={this.props.STATES}
             tasks={this.props.collection}
             toggleAllTasks={this.toggleAllTasks} />
         </div>

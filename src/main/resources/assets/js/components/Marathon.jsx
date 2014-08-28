@@ -24,6 +24,10 @@ define([
   return React.createClass({
     displayName: "Marathon",
 
+    statics: {
+      STATES: STATES
+    },
+
     getInitialState: function() {
       return {
         collection: new AppCollection(),
@@ -277,7 +281,6 @@ define([
               onTasksKilled={this.handleTasksKilled}
               rollBackApp={this.rollbackToAppVersion}
               scaleApp={this.scaleApp}
-              STATES={STATES}
               suspendApp={this.suspendApp}
               tasksFetchState={this.state.tasksFetchState} />,
             document.getElementById("lightbox")
@@ -328,7 +331,6 @@ define([
               collection={this.state.collection}
               onSelectApp={this.showAppModal}
               fetchState={this.state.fetchState}
-              STATES={STATES}
               ref="appList" />
           </div>
         </div>
