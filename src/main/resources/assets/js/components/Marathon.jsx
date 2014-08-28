@@ -123,12 +123,14 @@ define([
     },
 
     handleModalDestroy: function() {
-      this.setState({modal: null}, function () {
+      this.setState({
+        modal: null,
+        activeApp: null,
+        tasksFetchState: STATES.STATE_LOADING,
+        appVersionsFetchState: STATES.STATE_LOADING
+      }, function () {
         this.startPollingApps();
         this.stopPollingTasks();
-        this.setState({activeApp: null});
-        this.setState({tasksFetchState: STATES.STATE_LOADING});
-        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
       });
     },
 
@@ -261,14 +263,11 @@ define([
           this.state.modal.isMounted()) {
         return;
       }
-      this.setState({activeApp: app}, function () {
-        this.fetchTasks();
-        this.startPollingTasks();
-        this.stopPollingApps();
 
-        /* jshint trailing:false, quotmark:false, newcap:false */
-        this.setState({
-          modal: React.renderComponent(
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      this.setState({
+        activeApp: app,
+        modal: React.renderComponent(
             <AppModalComponent
               activeTask={this.state.activeTask}
               appVersionsFetchState={this.state.appVersionsFetchState}
@@ -286,7 +285,10 @@ define([
               tasksFetchState={this.state.tasksFetchState} />,
             document.getElementById("lightbox")
           )
-        });
+      }, function () {
+        this.fetchTasks();
+        this.startPollingTasks();
+        this.stopPollingApps();
       });
     },
 
