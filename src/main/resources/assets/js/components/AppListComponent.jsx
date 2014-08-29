@@ -134,20 +134,11 @@ define([
       return (
         <table className={tableClassName}>
           <colgroup>
-<<<<<<< HEAD
-            <col style={{width: "30%"}} />
-            <col style={{width: "18%"}} />
-            <col style={{width: "18%"}} />
-            <col style={{width: "18%"}} />
-            <col style={{width: "18%"}} />
-=======
-            <col style={{width: "25%"}} />
             <col style={{width: "28%"}} />
-            <col style={{width: "10%"}} />
-            <col style={{width: "10%"}} />
-            <col style={{width: "13%"}} />
-            <col style={{width: "13%"}} />
->>>>>>> Adding deployments to modal and app list
+            <col style={{width: "18%"}} />
+            <col style={{width: "18%"}} />
+            <col style={{width: "18%"}} />
+            <col style={{width: "18%"}} />
           </colgroup>
           <thead>
             <tr>
