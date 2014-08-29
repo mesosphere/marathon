@@ -598,12 +598,11 @@ List the application with id `appId`.
 **Request:**
 
 {% highlight http %}
-GET /v2/apps/my-app HTTP/1.1
-Accept: application/json
-Accept-Encoding: gzip, deflate, compress
-Content-Type: application/json; charset=utf-8
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
+GET /v2/apps/sleepy-docker HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
 {% endhighlight %}
 
 **Response:**
@@ -616,49 +615,73 @@ Transfer-Encoding: chunked
 
 {
     "app": {
-        "cmd": "env && sleep 60", 
-        "constraints": [
-            [
-                "hostname", 
-                "UNIQUE", 
-                ""
-            ]
-        ], 
-        "container": null, 
-        "cpus": 0.1, 
-        "env": {
-            "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
+        "args": null, 
+        "backoffFactor": 1.15, 
+        "backoffSeconds": 1, 
+        "cmd": "env && sleep 300", 
+        "constraints": [], 
+        "container": {
+            "docker": {
+                "image": "busybox"
+            }, 
+            "type": "DOCKER", 
+            "volumes": []
         }, 
+        "cpus": 0.5, 
+        "dependencies": [], 
+        "deployments": [], 
+        "disk": 0.0, 
+        "env": {}, 
         "executor": "", 
-        "id": "my-app", 
-        "instances": 3, 
-        "mem": 5.0, 
+        "healthChecks": [], 
+        "id": "/sleepy-docker", 
+        "instances": 6, 
+        "mem": 64.0, 
         "ports": [
-            13321, 
-            10982
-        ],
-        "deployments": [
-          "04228491-1fd1-47b6-83e3-4dc516e7147a"
-        ],
+            10001
+        ], 
+        "requirePorts": false, 
+        "storeUrls": [], 
         "tasks": [
             {
-                "host": "agouti.local", 
-                "id": "my-app_0-1396592732285", 
+                "host": "10.141.141.10", 
+                "id": "sleepy-docker.ae5ececf-2f52-11e4-86eb-56847afe9799", 
                 "ports": [
-                    31876, 
-                    31877
+                    31033
                 ], 
-                "stagedAt": "2014-04-04T06:25:32.287Z", 
-                "startedAt": "2014-04-04T06:25:32.766Z", 
-                "version": "2014-04-04T06:25:31.399Z"
+                "stagedAt": "2014-08-29T08:01:28.724Z", 
+                "startedAt": "2014-08-29T08:02:00.953Z", 
+                "version": "2014-08-29T08:00:40.293Z"
+            }, 
+            {
+                "host": "10.141.141.10", 
+                "id": "sleepy-docker.938184d3-2f52-11e4-86eb-56847afe9799", 
+                "ports": [
+                    31136
+                ], 
+                "stagedAt": "2014-08-29T08:00:43.653Z", 
+                "startedAt": "2014-08-29T08:02:00.930Z", 
+                "version": "2014-08-29T08:00:40.293Z"
+            }, 
+            {
+                "host": "10.141.141.10", 
+                "id": "sleepy-docker.c0e0f797-2f52-11e4-86eb-56847afe9799", 
+                "ports": [
+                    31031
+                ], 
+                "stagedAt": "2014-08-29T08:01:59.776Z", 
+                "startedAt": null, 
+                "version": "2014-08-29T08:00:40.293Z"
             }
         ], 
-        "tasksRunning": 1, 
-        "tasksStaged": 0, 
-        "uris": [
-            "https://raw.github.com/mesosphere/marathon/master/README.md"
-        ], 
-        "version": "2014-04-04T06:25:31.399Z"
+        "tasksRunning": 2, 
+        "tasksStaged": 1, 
+        "upgradeStrategy": {
+            "minimumHealthCapacity": 1.0
+        }, 
+        "uris": [], 
+        "user": null, 
+        "version": "2014-08-29T08:00:40.293Z"
     }
 }
 {% endhighlight %}
