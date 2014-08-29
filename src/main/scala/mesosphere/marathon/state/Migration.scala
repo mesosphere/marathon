@@ -109,7 +109,7 @@ class Migration @Inject() (
       val oldVar = state.fetch("tasks:" + app.appName.safePath).get()
       val bytes = new ByteArrayOutputStream()
       val output = new ObjectOutputStream(bytes)
-      Future.sequence(app.tasks.toSeq.map(taskTracker.store(app.appName, _)))
+      Future.sequence(app.tasks.values.toSeq.map(taskTracker.store(app.appName, _)))
     }
     appRepo.allPathIds().flatMap { apps =>
       val res = apps.flatMap(fetchApp).map{ app => store(fn(app)) }
