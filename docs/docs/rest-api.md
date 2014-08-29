@@ -424,7 +424,12 @@ Transfer-Encoding: chunked
                 "volumes": []
             }, 
             "cpus": 0.25, 
-            "dependencies": [], 
+            "dependencies": [],
+            "deployments": [
+                {
+                    "id": "5cd987cd-85ae-4e70-8df7-f1438367d9cb"
+                }
+            ], 
             "disk": 0.0, 
             "env": {}, 
             "executor": "", 
