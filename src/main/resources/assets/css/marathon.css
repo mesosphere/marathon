@@ -43,6 +43,10 @@ th {
   color: #8e929b;
 }
 
+dt {
+  font-weight: normal;
+}
+
 dd {
   color: #f6f6f6;
 }
@@ -218,7 +222,7 @@ a,
 }
 
 .text-warning {
-  color: #EBDE53;
+  color: #e4f342;
 }
 
 .text-muted {
