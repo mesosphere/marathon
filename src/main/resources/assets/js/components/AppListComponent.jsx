@@ -3,18 +3,14 @@
 define([
   "React",
   "jsx!components/AppComponent",
+  "jsx!components/Marathon",
   "mixins/BackboneMixin"
-], function(React, AppComponent, BackboneMixin) {
+], function(React, AppComponent, Marathon, BackboneMixin) {
   "use strict";
-
-  var STATE_LOADING = 0;
-  var STATE_ERROR = 1;
-  var STATE_SUCCESS = 2;
-
-  var UPDATE_INTERVAL = 5000;
 
   return React.createClass({
     displayName: "AppListComponent",
+
     mixins: [BackboneMixin],
 
     propTypes: {
@@ -22,41 +18,8 @@ define([
       onSelectApp: React.PropTypes.func.isRequired
     },
 
-    componentDidMount: function() {
-      this.startPolling();
-    },
-
-    componentWillUnmount: function() {
-      this.stopPolling();
-    },
-
-    getInitialState: function() {
-      return {
-        fetchState: STATE_LOADING
-      };
-    },
-
     getResource: function() {
       return this.props.collection;
-    },
-
-    fetchResource: function() {
-      var _this = this;
-
-      this.props.collection.fetch({
-        error: function() {
-          _this.setState({fetchState: STATE_ERROR});
-        },
-        reset: true,
-        success: function() {
-          _this.setState({fetchState: STATE_SUCCESS});
-        }
-      });
-    },
-
-    onClickApp: function(app) {
-      this.stopPolling();
-      this.props.onSelectApp(app);
     },
 
     sortCollectionBy: function(comparator) {
@@ -67,20 +30,6 @@ define([
         comparator;
       collection.setComparator(comparator);
       collection.sort();
-    },
-
-    startPolling: function() {
-      if (this._interval == null) {
-        this.fetchResource();
-        this._interval = setInterval(this.fetchResource, UPDATE_INTERVAL);
-      }
-    },
-
-    stopPolling: function() {
-      if (this._interval != null) {
-        clearInterval(this._interval);
-        this._interval = null;
-      }
     },
 
     render: function() {
@@ -94,14 +43,14 @@ define([
         "dropup": this.props.collection.sortReverse
       });
 
-      if (this.state.fetchState === STATE_LOADING) {
+      if (this.props.fetchState === Marathon.STATES.STATE_LOADING) {
         appNodes =
           <tr>
             <td className="text-center text-muted" colSpan="5">
               Loading apps...
             </td>
           </tr>;
-      } else if (this.state.fetchState === STATE_ERROR) {
+      } else if (this.props.fetchState === Marathon.STATES.STATE_ERROR) {
         appNodes =
           <tr>
             <td className="text-center text-danger" colSpan="5">
@@ -117,7 +66,7 @@ define([
 
         /* jshint trailing:false, quotmark:false, newcap:false */
         appNodes = this.props.collection.map(function(model) {
-          return <AppComponent key={model.id} model={model} onClick={this.onClickApp} />;
+          return <AppComponent key={model.id} model={model} onClick={this.props.onSelectApp} />;
         }, this);
 
         // Give rows the selectable look when there are apps to click.

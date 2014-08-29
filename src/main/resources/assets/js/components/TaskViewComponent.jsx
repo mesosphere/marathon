@@ -10,16 +10,23 @@ define([
   return React.createClass({
     displayName: "TaskViewComponent",
 
+    propTypes: {
+      fetchState: React.PropTypes.number.isRequired,
+      collection: React.PropTypes.object.isRequired,
+      fetchTasks: React.PropTypes.func.isRequired,
+      formatTaskHealthMessage: React.PropTypes.func.isRequired,
+      hasHealth: React.PropTypes.bool,
+      onTasksKilled: React.PropTypes.func.isRequired,
+      onTaskDetailSelect: React.PropTypes.func.isRequired,
+      STATES: React.PropTypes.object.isRequired
+    },
+
     getInitialState: function() {
       return {
         selectedTasks: {},
         currentPage: 0,
         itemsPerPage: 8
       };
-    },
-
-    getResource: function() {
-      return this.props.collection;
     },
 
     handlePageChange: function(pageNum) {
@@ -150,7 +157,6 @@ define([
             onTaskDetailSelect={this.props.onTaskDetailSelect}
             itemsPerPage={itemsPerPage}
             selectedTasks={this.state.selectedTasks}
-            STATES={this.props.STATES}
             tasks={this.props.collection}
             toggleAllTasks={this.toggleAllTasks} />
         </div>

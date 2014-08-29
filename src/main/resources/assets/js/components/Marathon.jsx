@@ -12,12 +12,30 @@ define([
     AppModalComponent, NewAppModalComponent) {
   "use strict";
 
+  var STATES = {
+    STATE_LOADING: 0,
+    STATE_ERROR: 1,
+    STATE_SUCCESS: 2
+  };
+
+  var UPDATE_INTERVAL_APPS = 5000;
+  var UPDATE_INTERVAL_TASKS = 2000;
+
   return React.createClass({
     displayName: "Marathon",
 
+    statics: {
+      STATES: STATES
+    },
+
     getInitialState: function() {
       return {
-        collection: new AppCollection()
+        collection: new AppCollection(),
+        fetchState: STATES.STATE_LOADING,
+        tasksFetchState: STATES.STATE_LOADING,
+        appVersionsFetchState: STATES.STATE_LOADING,
+        activeApp: null,
+        activeTask: null
       };
     },
 
@@ -33,11 +51,71 @@ define([
       Mousetrap.bind("c", function() {
         this.showNewAppModal(); }.bind(this), "keyup");
       Mousetrap.bind("#", function() {
-        if (this.state.modal != null &&
-            _.isFunction(this.state.modal.destroyApp)) {
-          this.state.modal.destroyApp();
+        if (this.state.modal != null && this.state.activeApp != null) {
+          this.destroyApp();
         }
       }.bind(this));
+
+      this.startPollingApps();
+    },
+
+    componentWillUnmount: function() {
+      this.stopPollingApps();
+      this.stopPollingTasks();
+    },
+
+    fetchResource: function() {
+      var _this = this;
+
+      this.state.collection.fetch({
+        error: function() {
+          _this.setState({fetchState: STATES.STATE_ERROR});
+        },
+        reset: true,
+        success: function() {
+          _this.setState({fetchState: STATES.STATE_SUCCESS});
+        }
+      });
+    },
+
+    fetchAppVersions: function() {
+      if (this.state.activeApp != null) {
+        this.state.activeApp.versions.fetch({
+          error: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR}, function() {
+              // TODO (ml): remove this when modal is in view
+              this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
+            });
+          }.bind(this),
+          success: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_SUCCESS}, function() {
+              // TODO (ml): remove this when modal is in view
+              this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
+            });
+          }.bind(this)
+        });
+      }
+    },
+
+    fetchTasks: function() {
+      if (this.state.activeApp != null) {
+        this.state.activeApp.tasks.fetch({
+          error: function() {
+            this.setState({tasksFetchState: STATES.STATE_ERROR}, function() {
+              // TODO (ml): remove this when modal is in view
+              this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
+            });
+          }.bind(this),
+          success: function(collection, response) {
+            // update changed attributes in app
+            this.state.activeApp.update(response.app);
+            this.setState({tasksFetchState: STATES.STATE_SUCCESS}, function() {
+              // TODO (ml): remove this when modal is in view
+              this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
+            });
+          }.bind(this)
+        });
+      }
     },
 
     handleAppCreate: function(appModel, options) {
@@ -45,9 +123,139 @@ define([
     },
 
     handleModalDestroy: function() {
-      this.setState({modal: null}, function() {
-        this.refs.appList.startPolling();
+      this.setState({
+        modal: null,
+        activeApp: null,
+        tasksFetchState: STATES.STATE_LOADING,
+        appVersionsFetchState: STATES.STATE_LOADING
+      }, function () {
+        this.startPollingApps();
+        this.stopPollingTasks();
+      });
+    },
+
+    handleShowTaskDetails: function(task, callback) {
+      this.setState({activeTask: task}, function() {
+        // TODO (ml): remove this when modal is in view
+        this.state.modal.setProps({activeTask: task});
+        callback();
       }.bind(this));
+    },
+
+    handleShowTaskList: function() {
+      this.setState({activeTask: null});
+    },
+
+    handleTasksKilled: function(options) {
+      var instances;
+      var app = this.state.activeApp;
+      var _options = options || {};
+      if (_options.scale) {
+        instances = app.get("instances");
+        app.set("instances", instances - 1);
+        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
+        // refresh app versions
+        this.fetchAppVersions();
+      }
+
+      // Force an update since React doesn't know a key was removed from
+      // `selectedTasks`.
+      this.forceUpdate();
+    },
+
+    destroyApp: function() {
+      var app = this.state.activeApp;
+      if (confirm("Destroy app '" + app.get("id") + "'?\nThis is irreversible.")) {
+        // Send force option to ensure the UI is always able to kill apps
+        // regardless of deployment state.
+        app.destroy({
+          url: _.result(app, "url") + "?force=true"
+        });
+      }
+    },
+
+    rollbackToAppVersion: function(version) {
+      var app = this.state.activeApp;
+      app.setVersion(version);
+      app.save(
+        null,
+        {
+          error: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+          }.bind(this),
+          success: function() {
+            // refresh app versions
+            this.fetchAppVersions();
+          }.bind(this)
+        });
+    },
+
+    rollbackToPreviousAttributes: function() {
+      var app = this.state.activeApp;
+      app.update(app.previousAttributes());
+    },
+
+    scaleApp: function(instances) {
+      if (this.state.activeApp != null) {
+        var app = this.state.activeApp;
+        app.save(
+          {instances: instances},
+          {
+            error: function() {
+              this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+            },
+            success: function() {
+              // refresh app versions
+              this.fetchAppVersions();
+            }.bind(this)
+          }
+        );
+        if (app.validationError != null) {
+          // If the model is not valid, revert the changes to prevent the UI
+          // from showing an invalid state.
+          app.update(app.previousAttributes());
+          alert("Not scaling: " + app.validationError[0].message);
+        }
+      }
+    },
+
+    suspendApp: function() {
+      if (confirm("Suspend app by scaling to 0 instances?")) {
+        this.state.activeApp.suspend({
+          error: function() {
+            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+          }.bind(this),
+          success: function() {
+            // refresh app versions
+            this.fetchAppVersions();
+          }.bind(this)
+        });
+      }
+    },
+
+    startPollingApps: function() {
+      if (this._intervalApps == null) {
+        this.fetchResource();
+        this._intervalApps = setInterval(this.fetchResource, UPDATE_INTERVAL_APPS);
+      }
+    },
+
+    stopPollingApps: function() {
+      if (this._intervalApps != null) {
+        clearInterval(this._intervalApps);
+        this._intervalApps = null;
+      }
+    },
+
+    startPollingTasks: function() {
+      if (this._intervalTasks == null) {
+        this._intervalTasks = setInterval(this.fetchTasks, UPDATE_INTERVAL_TASKS);
+      }
+    },
+
+    stopPollingTasks: function() {
+      clearInterval(this._intervalTasks);
+      this._intervalTasks = null;
     },
 
     showAppModal: function(app) {
@@ -58,11 +266,29 @@ define([
 
       /* jshint trailing:false, quotmark:false, newcap:false */
       this.setState({
+        activeApp: app,
         modal: React.renderComponent(
-          <AppModalComponent model={app} onDestroy={this.handleModalDestroy} />,
-          document.getElementById("lightbox"),
-          function() { this.refs.appList.stopPolling(); }.bind(this)
-        )
+            <AppModalComponent
+              activeTask={this.state.activeTask}
+              appVersionsFetchState={this.state.appVersionsFetchState}
+              model={this.state.activeApp}
+              destroyApp={this.destroyApp}
+              fetchTasks={this.fetchTasks}
+              fetchAppVersions={this.fetchAppVersions}
+              onDestroy={this.handleModalDestroy}
+              onShowTaskDetails={this.handleShowTaskDetails}
+              onShowTaskList={this.handleShowTaskList}
+              onTasksKilled={this.handleTasksKilled}
+              rollBackApp={this.rollbackToAppVersion}
+              scaleApp={this.scaleApp}
+              suspendApp={this.suspendApp}
+              tasksFetchState={this.state.tasksFetchState} />,
+            document.getElementById("lightbox")
+          )
+      }, function () {
+        this.fetchTasks();
+        this.startPollingTasks();
+        this.stopPollingApps();
       });
     },
 
@@ -76,14 +302,14 @@ define([
         return;
       }
 
+      this.stopPollingApps();
       /* jshint trailing:false, quotmark:false, newcap:false */
       this.setState({
         modal: React.renderComponent(
           <NewAppModalComponent
             onCreate={this.handleAppCreate}
             onDestroy={this.handleModalDestroy} />,
-          document.getElementById("lightbox"),
-          function() { this.refs.appList.stopPolling(); }.bind(this)
+          document.getElementById("lightbox")
         )
       });
     },
@@ -107,6 +333,7 @@ define([
             <AppListComponent
               collection={this.state.collection}
               onSelectApp={this.showAppModal}
+              fetchState={this.state.fetchState}
               ref="appList" />
           </div>
         </div>
