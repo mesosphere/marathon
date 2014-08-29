@@ -2,9 +2,8 @@
 
 define([
   "React",
-  "models/Task",
-  "jsx!components/BadgeComponent"
-], function(React, Task, BadgeComponent) {
+  "models/Task"
+], function(React, Task) {
   "use strict";
 
   function buildHref(host, port) {
@@ -85,6 +84,10 @@ define([
         "health-dot-unknown": taskHealth === Task.HEALTH.UNKNOWN
       });
 
+      var statusClassSet = React.addons.classSet({
+        "text-warning": task.isStaged()
+      });
+
       var updatedAtNode;
       if (task.get("updatedAt") != null) {
         updatedAtNode =
@@ -109,9 +112,9 @@ define([
             {buildTaskAnchors(task)}
           </td>
           <td className="text-center">
-            <BadgeComponent types={{"warning": task.isStaged()}}>
+            <span className={statusClassSet}>
               {task.get("status")}
-            </BadgeComponent>
+            </span>
           </td>
           <td className="text-right">
             <time dateTime={task.get("version").toISOString()} title={task.get("version").toISOString()}>
