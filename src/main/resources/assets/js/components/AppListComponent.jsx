@@ -152,23 +152,17 @@ define([
       return (
         <table className={tableClassName}>
           <colgroup>
-            <col style={{width: "25%"}} />
-            <col style={{width: "28%"}} />
-            <col style={{width: "10%"}} />
-            <col style={{width: "10%"}} />
-            <col style={{width: "13%"}} />
-            <col style={{width: "13%"}} />
+            <col style={{width: "30%"}} />
+            <col style={{width: "18%"}} />
+            <col style={{width: "18%"}} />
+            <col style={{width: "18%"}} />
+            <col style={{width: "18%"}} />
           </colgroup>
           <thead>
             <tr>
               <th>
                 <span onClick={this.sortCollectionBy.bind(null, "id")} className={headerClassSet}>
                   ID {sortKey === "id" ? <span className="caret"></span> : null}
-                </span>
-              </th>
-              <th>
-                <span onClick={this.sortCollectionBy.bind(null, "cmd")} className={headerClassSet}>
-                  Command {sortKey === "cmd" ? <span className="caret"></span> : null}
                 </span>
               </th>
               <th className="text-right">
