@@ -54,25 +54,7 @@ define([
             error: function() {
               this.setState({fetchState: STATE_ERROR});
             }.bind(this),
-            reset: true,
-            success: function(response, deployments) {
-              // create deployments map
-              var deploymentsMap = {};
-              deployments.forEach(function (deployment) {
-                _.forEach(deployment.affectedApplications, function (id) {
-                  if (deploymentsMap[id] == null) {
-                    deploymentsMap[id] = [];
-                  }
-                  deploymentsMap[id].push(deployment.id);
-                });
-              });
-
-              // apply map to apps
-              _.map(deploymentsMap, function(val, id) {
-                var app = this.props.collection.get(id);
-                app.set("deployments", _.uniq(val));
-              }, this);
-            }.bind(this)
+            reset: true
           });
         }.bind(this)
       });
