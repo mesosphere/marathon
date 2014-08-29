@@ -1,16 +1,19 @@
 package mesosphere.marathon.api.v2
 
+import java.util
 import javax.ws.rs._
-import scala.Array
 import javax.ws.rs.core.MediaType
 import javax.inject.Inject
 import mesosphere.marathon.api.{ EndpointsHelper, RestResource }
 import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.tasks.TaskTracker
 import org.apache.log4j.Logger
 import com.codahale.metrics.annotation.Timed
+import org.apache.mesos.Protos.TaskState
+
+import scala.collection.JavaConverters._
 
 @Path("v2/tasks")
 class TasksResource @Inject() (
@@ -24,18 +27,24 @@ class TasksResource @Inject() (
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def indexJson() = Map(
-    "tasks" -> taskTracker.list.flatMap {
-      case (appId, setOfTasks) =>
-        setOfTasks.tasks.map { task =>
-          EnrichedTask(
-            appId,
-            task,
-            result(healthCheckManager.status(appId, task.getId))
-          )
-        }
-    }
-  )
+  def indexJson(@QueryParam("status") status: String,
+                @QueryParam("status[]") statuses: util.List[String]) = {
+    if (status != null) statuses.add(status)
+    val statusSet = statuses.asScala.flatMap(toTaskState).toSet
+    Map(
+      "tasks" -> taskTracker.list.flatMap {
+        case (appId, setOfTasks) =>
+          setOfTasks.tasks.collect {
+            case task if statusSet.isEmpty || statusSet(task.getStatus.getState) =>
+              EnrichedTask(
+                appId,
+                task,
+                result(healthCheckManager.status(appId, task.getId))
+              )
+          }
+      }
+    )
+  }
 
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
@@ -46,4 +55,9 @@ class TasksResource @Inject() (
     "\t"
   )
 
+  private def toTaskState(state: String): Option[TaskState] = state.toLowerCase match {
+    case "running" => Some(TaskState.TASK_RUNNING)
+    case "staging" => Some(TaskState.TASK_STAGING)
+    case _         => None
+  }
 }

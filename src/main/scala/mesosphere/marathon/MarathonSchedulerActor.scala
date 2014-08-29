@@ -345,7 +345,9 @@ class SchedulerActions(
         for (appId <- appIds) schedulerActor ! ScaleApp(appId)
 
         val knownTaskStatuses = appIds.flatMap { appId =>
-          taskTracker.get(appId).flatMap(_.getStatusesList.asScala.lastOption)
+          taskTracker.get(appId).collect {
+            case task if task.hasStatus => task.getStatus
+          }
         }
 
         for (unknownAppId <- taskTracker.list.keySet -- appIds) {

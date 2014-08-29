@@ -14,6 +14,7 @@ import mesosphere.util.ThreadPoolContext.context
 import mesosphere.util.{ BackToTheFuture, Logging }
 import org.apache.mesos.state.{ State, Variable }
 
+import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success, Try }
@@ -100,7 +101,11 @@ class Migration @Inject() (
       val bytes = state.fetch("tasks:" + appId.safePath).get().value
       if (bytes.length > 0) {
         val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
-        val fetchedTasks = taskTracker.legacyDeserialize(appId, source)
+        val fetchedTasks = taskTracker.legacyDeserialize(appId, source).map { task =>
+          val builder = task.toBuilder.clearOBSOLETEStatuses()
+          task.getOBSOLETEStatusesList.asScala.lastOption.foreach(builder.setStatus)
+          builder.build()
+        }
         Some(new InternalApp(appId, fetchedTasks, false))
       }
       else None

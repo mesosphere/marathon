@@ -1496,7 +1496,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 #### GET `/v2/tasks`
 
-List tasks of all running applications.
+List tasks of all applications.
 
 ##### Example (as JSON)
 
@@ -1561,7 +1561,52 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
+#### GET `/v2/tasks?status=[running|staging]`
+
+List running or staging tasks of all applications.
+
+##### Example (as JSON)
+
+**Request:**
+
+{% highlight http %}
+GET /v2/tasks HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Type: application/json; charset=utf-8
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "tasks": [
+        {
+            "appId": "my-app",
+            "host": "agouti.local",
+            "id": "my-app_0-1396592784349",
+            "ports": [
+                31382,
+                31383
+            ],
+            "stagedAt": "2014-04-04T06:26:24.351Z",
+            "startedAt": "2014-04-04T06:26:24.919Z",
+            "version": "2014-04-04T06:26:23.051Z"
+        }
+    ]
+}
+{% endhighlight %}
+
 ##### Example (as text)
+
+In text/plain only running tasks will be returned.
 
 **Request:**
 

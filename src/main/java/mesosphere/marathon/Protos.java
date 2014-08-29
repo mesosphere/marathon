@@ -6188,29 +6188,29 @@ public final class Protos {
      */
     long getStartedAt();
 
-    // repeated .mesos.TaskStatus statuses = 7;
+    // repeated .mesos.TaskStatus OBSOLETE_statuses = 7;
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
     java.util.List<org.apache.mesos.Protos.TaskStatus> 
-        getStatusesList();
+        getOBSOLETEStatusesList();
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
-    org.apache.mesos.Protos.TaskStatus getStatuses(int index);
+    org.apache.mesos.Protos.TaskStatus getOBSOLETEStatuses(int index);
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
-    int getStatusesCount();
+    int getOBSOLETEStatusesCount();
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
     java.util.List<? extends org.apache.mesos.Protos.TaskStatusOrBuilder> 
-        getStatusesOrBuilderList();
+        getOBSOLETEStatusesOrBuilderList();
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
-    org.apache.mesos.Protos.TaskStatusOrBuilder getStatusesOrBuilder(
+    org.apache.mesos.Protos.TaskStatusOrBuilder getOBSOLETEStatusesOrBuilder(
         int index);
 
     // optional string version = 8;
@@ -6227,6 +6227,20 @@ public final class Protos {
      */
     com.google.protobuf.ByteString
         getVersionBytes();
+
+    // optional .mesos.TaskStatus status = 9;
+    /**
+     * <code>optional .mesos.TaskStatus status = 9;</code>
+     */
+    boolean hasStatus();
+    /**
+     * <code>optional .mesos.TaskStatus status = 9;</code>
+     */
+    org.apache.mesos.Protos.TaskStatus getStatus();
+    /**
+     * <code>optional .mesos.TaskStatus status = 9;</code>
+     */
+    org.apache.mesos.Protos.TaskStatusOrBuilder getStatusOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.MarathonTask}
@@ -6330,15 +6344,28 @@ public final class Protos {
             }
             case 58: {
               if (!((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
-                statuses_ = new java.util.ArrayList<org.apache.mesos.Protos.TaskStatus>();
+                oBSOLETEStatuses_ = new java.util.ArrayList<org.apache.mesos.Protos.TaskStatus>();
                 mutable_bitField0_ |= 0x00000040;
               }
-              statuses_.add(input.readMessage(org.apache.mesos.Protos.TaskStatus.PARSER, extensionRegistry));
+              oBSOLETEStatuses_.add(input.readMessage(org.apache.mesos.Protos.TaskStatus.PARSER, extensionRegistry));
               break;
             }
             case 66: {
               bitField0_ |= 0x00000010;
               version_ = input.readBytes();
+              break;
+            }
+            case 74: {
+              org.apache.mesos.Protos.TaskStatus.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000020) == 0x00000020)) {
+                subBuilder = status_.toBuilder();
+              }
+              status_ = input.readMessage(org.apache.mesos.Protos.TaskStatus.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(status_);
+                status_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000020;
               break;
             }
           }
@@ -6356,7 +6383,7 @@ public final class Protos {
           attributes_ = java.util.Collections.unmodifiableList(attributes_);
         }
         if (((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
-          statuses_ = java.util.Collections.unmodifiableList(statuses_);
+          oBSOLETEStatuses_ = java.util.Collections.unmodifiableList(oBSOLETEStatuses_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -6567,40 +6594,40 @@ public final class Protos {
       return startedAt_;
     }
 
-    // repeated .mesos.TaskStatus statuses = 7;
-    public static final int STATUSES_FIELD_NUMBER = 7;
-    private java.util.List<org.apache.mesos.Protos.TaskStatus> statuses_;
+    // repeated .mesos.TaskStatus OBSOLETE_statuses = 7;
+    public static final int OBSOLETE_STATUSES_FIELD_NUMBER = 7;
+    private java.util.List<org.apache.mesos.Protos.TaskStatus> oBSOLETEStatuses_;
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
-    public java.util.List<org.apache.mesos.Protos.TaskStatus> getStatusesList() {
-      return statuses_;
+    public java.util.List<org.apache.mesos.Protos.TaskStatus> getOBSOLETEStatusesList() {
+      return oBSOLETEStatuses_;
     }
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
     public java.util.List<? extends org.apache.mesos.Protos.TaskStatusOrBuilder> 
-        getStatusesOrBuilderList() {
-      return statuses_;
+        getOBSOLETEStatusesOrBuilderList() {
+      return oBSOLETEStatuses_;
     }
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
-    public int getStatusesCount() {
-      return statuses_.size();
+    public int getOBSOLETEStatusesCount() {
+      return oBSOLETEStatuses_.size();
     }
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
-    public org.apache.mesos.Protos.TaskStatus getStatuses(int index) {
-      return statuses_.get(index);
+    public org.apache.mesos.Protos.TaskStatus getOBSOLETEStatuses(int index) {
+      return oBSOLETEStatuses_.get(index);
     }
     /**
-     * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+     * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
      */
-    public org.apache.mesos.Protos.TaskStatusOrBuilder getStatusesOrBuilder(
+    public org.apache.mesos.Protos.TaskStatusOrBuilder getOBSOLETEStatusesOrBuilder(
         int index) {
-      return statuses_.get(index);
+      return oBSOLETEStatuses_.get(index);
     }
 
     // optional string version = 8;
@@ -6646,6 +6673,28 @@ public final class Protos {
       }
     }
 
+    // optional .mesos.TaskStatus status = 9;
+    public static final int STATUS_FIELD_NUMBER = 9;
+    private org.apache.mesos.Protos.TaskStatus status_;
+    /**
+     * <code>optional .mesos.TaskStatus status = 9;</code>
+     */
+    public boolean hasStatus() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional .mesos.TaskStatus status = 9;</code>
+     */
+    public org.apache.mesos.Protos.TaskStatus getStatus() {
+      return status_;
+    }
+    /**
+     * <code>optional .mesos.TaskStatus status = 9;</code>
+     */
+    public org.apache.mesos.Protos.TaskStatusOrBuilder getStatusOrBuilder() {
+      return status_;
+    }
+
     private void initFields() {
       id_ = "";
       host_ = "";
@@ -6653,8 +6702,9 @@ public final class Protos {
       attributes_ = java.util.Collections.emptyList();
       stagedAt_ = 0L;
       startedAt_ = 0L;
-      statuses_ = java.util.Collections.emptyList();
+      oBSOLETEStatuses_ = java.util.Collections.emptyList();
       version_ = "";
+      status_ = org.apache.mesos.Protos.TaskStatus.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6671,8 +6721,14 @@ public final class Protos {
           return false;
         }
       }
-      for (int i = 0; i < getStatusesCount(); i++) {
-        if (!getStatuses(i).isInitialized()) {
+      for (int i = 0; i < getOBSOLETEStatusesCount(); i++) {
+        if (!getOBSOLETEStatuses(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      if (hasStatus()) {
+        if (!getStatus().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -6702,11 +6758,14 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeInt64(6, startedAt_);
       }
-      for (int i = 0; i < statuses_.size(); i++) {
-        output.writeMessage(7, statuses_.get(i));
+      for (int i = 0; i < oBSOLETEStatuses_.size(); i++) {
+        output.writeMessage(7, oBSOLETEStatuses_.get(i));
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeBytes(8, getVersionBytes());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeMessage(9, status_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -6746,13 +6805,17 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(6, startedAt_);
       }
-      for (int i = 0; i < statuses_.size(); i++) {
+      for (int i = 0; i < oBSOLETEStatuses_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(7, statuses_.get(i));
+          .computeMessageSize(7, oBSOLETEStatuses_.get(i));
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(8, getVersionBytes());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(9, status_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -6863,7 +6926,8 @@ public final class Protos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getAttributesFieldBuilder();
-          getStatusesFieldBuilder();
+          getOBSOLETEStatusesFieldBuilder();
+          getStatusFieldBuilder();
         }
       }
       private static Builder create() {
@@ -6888,14 +6952,20 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000010);
         startedAt_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000020);
-        if (statusesBuilder_ == null) {
-          statuses_ = java.util.Collections.emptyList();
+        if (oBSOLETEStatusesBuilder_ == null) {
+          oBSOLETEStatuses_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000040);
         } else {
-          statusesBuilder_.clear();
+          oBSOLETEStatusesBuilder_.clear();
         }
         version_ = "";
         bitField0_ = (bitField0_ & ~0x00000080);
+        if (statusBuilder_ == null) {
+          status_ = org.apache.mesos.Protos.TaskStatus.getDefaultInstance();
+        } else {
+          statusBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
 
@@ -6954,19 +7024,27 @@ public final class Protos {
           to_bitField0_ |= 0x00000008;
         }
         result.startedAt_ = startedAt_;
-        if (statusesBuilder_ == null) {
+        if (oBSOLETEStatusesBuilder_ == null) {
           if (((bitField0_ & 0x00000040) == 0x00000040)) {
-            statuses_ = java.util.Collections.unmodifiableList(statuses_);
+            oBSOLETEStatuses_ = java.util.Collections.unmodifiableList(oBSOLETEStatuses_);
             bitField0_ = (bitField0_ & ~0x00000040);
           }
-          result.statuses_ = statuses_;
+          result.oBSOLETEStatuses_ = oBSOLETEStatuses_;
         } else {
-          result.statuses_ = statusesBuilder_.build();
+          result.oBSOLETEStatuses_ = oBSOLETEStatusesBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
           to_bitField0_ |= 0x00000010;
         }
         result.version_ = version_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        if (statusBuilder_ == null) {
+          result.status_ = status_;
+        } else {
+          result.status_ = statusBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -7035,29 +7113,29 @@ public final class Protos {
         if (other.hasStartedAt()) {
           setStartedAt(other.getStartedAt());
         }
-        if (statusesBuilder_ == null) {
-          if (!other.statuses_.isEmpty()) {
-            if (statuses_.isEmpty()) {
-              statuses_ = other.statuses_;
+        if (oBSOLETEStatusesBuilder_ == null) {
+          if (!other.oBSOLETEStatuses_.isEmpty()) {
+            if (oBSOLETEStatuses_.isEmpty()) {
+              oBSOLETEStatuses_ = other.oBSOLETEStatuses_;
               bitField0_ = (bitField0_ & ~0x00000040);
             } else {
-              ensureStatusesIsMutable();
-              statuses_.addAll(other.statuses_);
+              ensureOBSOLETEStatusesIsMutable();
+              oBSOLETEStatuses_.addAll(other.oBSOLETEStatuses_);
             }
             onChanged();
           }
         } else {
-          if (!other.statuses_.isEmpty()) {
-            if (statusesBuilder_.isEmpty()) {
-              statusesBuilder_.dispose();
-              statusesBuilder_ = null;
-              statuses_ = other.statuses_;
+          if (!other.oBSOLETEStatuses_.isEmpty()) {
+            if (oBSOLETEStatusesBuilder_.isEmpty()) {
+              oBSOLETEStatusesBuilder_.dispose();
+              oBSOLETEStatusesBuilder_ = null;
+              oBSOLETEStatuses_ = other.oBSOLETEStatuses_;
               bitField0_ = (bitField0_ & ~0x00000040);
-              statusesBuilder_ = 
+              oBSOLETEStatusesBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getStatusesFieldBuilder() : null;
+                   getOBSOLETEStatusesFieldBuilder() : null;
             } else {
-              statusesBuilder_.addAllMessages(other.statuses_);
+              oBSOLETEStatusesBuilder_.addAllMessages(other.oBSOLETEStatuses_);
             }
           }
         }
@@ -7065,6 +7143,9 @@ public final class Protos {
           bitField0_ |= 0x00000080;
           version_ = other.version_;
           onChanged();
+        }
+        if (other.hasStatus()) {
+          mergeStatus(other.getStatus());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -7081,8 +7162,14 @@ public final class Protos {
             return false;
           }
         }
-        for (int i = 0; i < getStatusesCount(); i++) {
-          if (!getStatuses(i).isInitialized()) {
+        for (int i = 0; i < getOBSOLETEStatusesCount(); i++) {
+          if (!getOBSOLETEStatuses(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        if (hasStatus()) {
+          if (!getStatus().isInitialized()) {
             
             return false;
           }
@@ -7629,244 +7716,244 @@ public final class Protos {
         return this;
       }
 
-      // repeated .mesos.TaskStatus statuses = 7;
-      private java.util.List<org.apache.mesos.Protos.TaskStatus> statuses_ =
+      // repeated .mesos.TaskStatus OBSOLETE_statuses = 7;
+      private java.util.List<org.apache.mesos.Protos.TaskStatus> oBSOLETEStatuses_ =
         java.util.Collections.emptyList();
-      private void ensureStatusesIsMutable() {
+      private void ensureOBSOLETEStatusesIsMutable() {
         if (!((bitField0_ & 0x00000040) == 0x00000040)) {
-          statuses_ = new java.util.ArrayList<org.apache.mesos.Protos.TaskStatus>(statuses_);
+          oBSOLETEStatuses_ = new java.util.ArrayList<org.apache.mesos.Protos.TaskStatus>(oBSOLETEStatuses_);
           bitField0_ |= 0x00000040;
          }
       }
 
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder> statusesBuilder_;
+          org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder> oBSOLETEStatusesBuilder_;
 
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public java.util.List<org.apache.mesos.Protos.TaskStatus> getStatusesList() {
-        if (statusesBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(statuses_);
+      public java.util.List<org.apache.mesos.Protos.TaskStatus> getOBSOLETEStatusesList() {
+        if (oBSOLETEStatusesBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(oBSOLETEStatuses_);
         } else {
-          return statusesBuilder_.getMessageList();
+          return oBSOLETEStatusesBuilder_.getMessageList();
         }
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public int getStatusesCount() {
-        if (statusesBuilder_ == null) {
-          return statuses_.size();
+      public int getOBSOLETEStatusesCount() {
+        if (oBSOLETEStatusesBuilder_ == null) {
+          return oBSOLETEStatuses_.size();
         } else {
-          return statusesBuilder_.getCount();
+          return oBSOLETEStatusesBuilder_.getCount();
         }
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public org.apache.mesos.Protos.TaskStatus getStatuses(int index) {
-        if (statusesBuilder_ == null) {
-          return statuses_.get(index);
+      public org.apache.mesos.Protos.TaskStatus getOBSOLETEStatuses(int index) {
+        if (oBSOLETEStatusesBuilder_ == null) {
+          return oBSOLETEStatuses_.get(index);
         } else {
-          return statusesBuilder_.getMessage(index);
+          return oBSOLETEStatusesBuilder_.getMessage(index);
         }
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public Builder setStatuses(
+      public Builder setOBSOLETEStatuses(
           int index, org.apache.mesos.Protos.TaskStatus value) {
-        if (statusesBuilder_ == null) {
+        if (oBSOLETEStatusesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureStatusesIsMutable();
-          statuses_.set(index, value);
+          ensureOBSOLETEStatusesIsMutable();
+          oBSOLETEStatuses_.set(index, value);
           onChanged();
         } else {
-          statusesBuilder_.setMessage(index, value);
+          oBSOLETEStatusesBuilder_.setMessage(index, value);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public Builder setStatuses(
+      public Builder setOBSOLETEStatuses(
           int index, org.apache.mesos.Protos.TaskStatus.Builder builderForValue) {
-        if (statusesBuilder_ == null) {
-          ensureStatusesIsMutable();
-          statuses_.set(index, builderForValue.build());
+        if (oBSOLETEStatusesBuilder_ == null) {
+          ensureOBSOLETEStatusesIsMutable();
+          oBSOLETEStatuses_.set(index, builderForValue.build());
           onChanged();
         } else {
-          statusesBuilder_.setMessage(index, builderForValue.build());
+          oBSOLETEStatusesBuilder_.setMessage(index, builderForValue.build());
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public Builder addStatuses(org.apache.mesos.Protos.TaskStatus value) {
-        if (statusesBuilder_ == null) {
+      public Builder addOBSOLETEStatuses(org.apache.mesos.Protos.TaskStatus value) {
+        if (oBSOLETEStatusesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureStatusesIsMutable();
-          statuses_.add(value);
+          ensureOBSOLETEStatusesIsMutable();
+          oBSOLETEStatuses_.add(value);
           onChanged();
         } else {
-          statusesBuilder_.addMessage(value);
+          oBSOLETEStatusesBuilder_.addMessage(value);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public Builder addStatuses(
+      public Builder addOBSOLETEStatuses(
           int index, org.apache.mesos.Protos.TaskStatus value) {
-        if (statusesBuilder_ == null) {
+        if (oBSOLETEStatusesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureStatusesIsMutable();
-          statuses_.add(index, value);
+          ensureOBSOLETEStatusesIsMutable();
+          oBSOLETEStatuses_.add(index, value);
           onChanged();
         } else {
-          statusesBuilder_.addMessage(index, value);
+          oBSOLETEStatusesBuilder_.addMessage(index, value);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public Builder addStatuses(
+      public Builder addOBSOLETEStatuses(
           org.apache.mesos.Protos.TaskStatus.Builder builderForValue) {
-        if (statusesBuilder_ == null) {
-          ensureStatusesIsMutable();
-          statuses_.add(builderForValue.build());
+        if (oBSOLETEStatusesBuilder_ == null) {
+          ensureOBSOLETEStatusesIsMutable();
+          oBSOLETEStatuses_.add(builderForValue.build());
           onChanged();
         } else {
-          statusesBuilder_.addMessage(builderForValue.build());
+          oBSOLETEStatusesBuilder_.addMessage(builderForValue.build());
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public Builder addStatuses(
+      public Builder addOBSOLETEStatuses(
           int index, org.apache.mesos.Protos.TaskStatus.Builder builderForValue) {
-        if (statusesBuilder_ == null) {
-          ensureStatusesIsMutable();
-          statuses_.add(index, builderForValue.build());
+        if (oBSOLETEStatusesBuilder_ == null) {
+          ensureOBSOLETEStatusesIsMutable();
+          oBSOLETEStatuses_.add(index, builderForValue.build());
           onChanged();
         } else {
-          statusesBuilder_.addMessage(index, builderForValue.build());
+          oBSOLETEStatusesBuilder_.addMessage(index, builderForValue.build());
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public Builder addAllStatuses(
+      public Builder addAllOBSOLETEStatuses(
           java.lang.Iterable<? extends org.apache.mesos.Protos.TaskStatus> values) {
-        if (statusesBuilder_ == null) {
-          ensureStatusesIsMutable();
-          super.addAll(values, statuses_);
+        if (oBSOLETEStatusesBuilder_ == null) {
+          ensureOBSOLETEStatusesIsMutable();
+          super.addAll(values, oBSOLETEStatuses_);
           onChanged();
         } else {
-          statusesBuilder_.addAllMessages(values);
+          oBSOLETEStatusesBuilder_.addAllMessages(values);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public Builder clearStatuses() {
-        if (statusesBuilder_ == null) {
-          statuses_ = java.util.Collections.emptyList();
+      public Builder clearOBSOLETEStatuses() {
+        if (oBSOLETEStatusesBuilder_ == null) {
+          oBSOLETEStatuses_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000040);
           onChanged();
         } else {
-          statusesBuilder_.clear();
+          oBSOLETEStatusesBuilder_.clear();
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public Builder removeStatuses(int index) {
-        if (statusesBuilder_ == null) {
-          ensureStatusesIsMutable();
-          statuses_.remove(index);
+      public Builder removeOBSOLETEStatuses(int index) {
+        if (oBSOLETEStatusesBuilder_ == null) {
+          ensureOBSOLETEStatusesIsMutable();
+          oBSOLETEStatuses_.remove(index);
           onChanged();
         } else {
-          statusesBuilder_.remove(index);
+          oBSOLETEStatusesBuilder_.remove(index);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public org.apache.mesos.Protos.TaskStatus.Builder getStatusesBuilder(
+      public org.apache.mesos.Protos.TaskStatus.Builder getOBSOLETEStatusesBuilder(
           int index) {
-        return getStatusesFieldBuilder().getBuilder(index);
+        return getOBSOLETEStatusesFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public org.apache.mesos.Protos.TaskStatusOrBuilder getStatusesOrBuilder(
+      public org.apache.mesos.Protos.TaskStatusOrBuilder getOBSOLETEStatusesOrBuilder(
           int index) {
-        if (statusesBuilder_ == null) {
-          return statuses_.get(index);  } else {
-          return statusesBuilder_.getMessageOrBuilder(index);
+        if (oBSOLETEStatusesBuilder_ == null) {
+          return oBSOLETEStatuses_.get(index);  } else {
+          return oBSOLETEStatusesBuilder_.getMessageOrBuilder(index);
         }
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
       public java.util.List<? extends org.apache.mesos.Protos.TaskStatusOrBuilder> 
-           getStatusesOrBuilderList() {
-        if (statusesBuilder_ != null) {
-          return statusesBuilder_.getMessageOrBuilderList();
+           getOBSOLETEStatusesOrBuilderList() {
+        if (oBSOLETEStatusesBuilder_ != null) {
+          return oBSOLETEStatusesBuilder_.getMessageOrBuilderList();
         } else {
-          return java.util.Collections.unmodifiableList(statuses_);
+          return java.util.Collections.unmodifiableList(oBSOLETEStatuses_);
         }
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public org.apache.mesos.Protos.TaskStatus.Builder addStatusesBuilder() {
-        return getStatusesFieldBuilder().addBuilder(
+      public org.apache.mesos.Protos.TaskStatus.Builder addOBSOLETEStatusesBuilder() {
+        return getOBSOLETEStatusesFieldBuilder().addBuilder(
             org.apache.mesos.Protos.TaskStatus.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
-      public org.apache.mesos.Protos.TaskStatus.Builder addStatusesBuilder(
+      public org.apache.mesos.Protos.TaskStatus.Builder addOBSOLETEStatusesBuilder(
           int index) {
-        return getStatusesFieldBuilder().addBuilder(
+        return getOBSOLETEStatusesFieldBuilder().addBuilder(
             index, org.apache.mesos.Protos.TaskStatus.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesos.TaskStatus statuses = 7;</code>
+       * <code>repeated .mesos.TaskStatus OBSOLETE_statuses = 7;</code>
        */
       public java.util.List<org.apache.mesos.Protos.TaskStatus.Builder> 
-           getStatusesBuilderList() {
-        return getStatusesFieldBuilder().getBuilderList();
+           getOBSOLETEStatusesBuilderList() {
+        return getOBSOLETEStatusesFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder> 
-          getStatusesFieldBuilder() {
-        if (statusesBuilder_ == null) {
-          statusesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+          getOBSOLETEStatusesFieldBuilder() {
+        if (oBSOLETEStatusesBuilder_ == null) {
+          oBSOLETEStatusesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder>(
-                  statuses_,
+                  oBSOLETEStatuses_,
                   ((bitField0_ & 0x00000040) == 0x00000040),
                   getParentForChildren(),
                   isClean());
-          statuses_ = null;
+          oBSOLETEStatuses_ = null;
         }
-        return statusesBuilder_;
+        return oBSOLETEStatusesBuilder_;
       }
 
       // optional string version = 8;
@@ -7941,6 +8028,123 @@ public final class Protos {
         version_ = value;
         onChanged();
         return this;
+      }
+
+      // optional .mesos.TaskStatus status = 9;
+      private org.apache.mesos.Protos.TaskStatus status_ = org.apache.mesos.Protos.TaskStatus.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder> statusBuilder_;
+      /**
+       * <code>optional .mesos.TaskStatus status = 9;</code>
+       */
+      public boolean hasStatus() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      /**
+       * <code>optional .mesos.TaskStatus status = 9;</code>
+       */
+      public org.apache.mesos.Protos.TaskStatus getStatus() {
+        if (statusBuilder_ == null) {
+          return status_;
+        } else {
+          return statusBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .mesos.TaskStatus status = 9;</code>
+       */
+      public Builder setStatus(org.apache.mesos.Protos.TaskStatus value) {
+        if (statusBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          status_ = value;
+          onChanged();
+        } else {
+          statusBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000100;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TaskStatus status = 9;</code>
+       */
+      public Builder setStatus(
+          org.apache.mesos.Protos.TaskStatus.Builder builderForValue) {
+        if (statusBuilder_ == null) {
+          status_ = builderForValue.build();
+          onChanged();
+        } else {
+          statusBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000100;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TaskStatus status = 9;</code>
+       */
+      public Builder mergeStatus(org.apache.mesos.Protos.TaskStatus value) {
+        if (statusBuilder_ == null) {
+          if (((bitField0_ & 0x00000100) == 0x00000100) &&
+              status_ != org.apache.mesos.Protos.TaskStatus.getDefaultInstance()) {
+            status_ =
+              org.apache.mesos.Protos.TaskStatus.newBuilder(status_).mergeFrom(value).buildPartial();
+          } else {
+            status_ = value;
+          }
+          onChanged();
+        } else {
+          statusBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000100;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TaskStatus status = 9;</code>
+       */
+      public Builder clearStatus() {
+        if (statusBuilder_ == null) {
+          status_ = org.apache.mesos.Protos.TaskStatus.getDefaultInstance();
+          onChanged();
+        } else {
+          statusBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000100);
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TaskStatus status = 9;</code>
+       */
+      public org.apache.mesos.Protos.TaskStatus.Builder getStatusBuilder() {
+        bitField0_ |= 0x00000100;
+        onChanged();
+        return getStatusFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .mesos.TaskStatus status = 9;</code>
+       */
+      public org.apache.mesos.Protos.TaskStatusOrBuilder getStatusOrBuilder() {
+        if (statusBuilder_ != null) {
+          return statusBuilder_.getMessageOrBuilder();
+        } else {
+          return status_;
+        }
+      }
+      /**
+       * <code>optional .mesos.TaskStatus status = 9;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder> 
+          getStatusFieldBuilder() {
+        if (statusBuilder_ == null) {
+          statusBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.mesos.Protos.TaskStatus, org.apache.mesos.Protos.TaskStatus.Builder, org.apache.mesos.Protos.TaskStatusOrBuilder>(
+                  status_,
+                  getParentForChildren(),
+                  isClean());
+          status_ = null;
+        }
+        return statusBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.MarathonTask)
@@ -12504,24 +12708,25 @@ public final class Protos {
       "egyDefinition\022\024\n\014dependencies\030\020 \003(\t\022\021\n\ts" +
       "toreUrls\030\021 \003(\t\022\034\n\rrequire_ports\030\022 \001(\010:\005f" +
       "alse\022\'\n\tcontainer\030\023 \001(\0132\024.mesos.Containe",
-      "rInfo\"\272\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004ho" +
+      "rInfo\"\346\001\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004ho" +
       "st\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004 " +
       "\003(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001(\003" +
-      "\022\022\n\nstarted_at\030\006 \001(\003\022#\n\010statuses\030\007 \003(\0132\021" +
-      ".mesos.TaskStatus\022\017\n\007version\030\010 \001(\t\"M\n\013Ma" +
-      "rathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!" +
-      ".mesosphere.marathon.MarathonTask\"1\n\rCon" +
-      "tainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002" +
-      " \003(\014\")\n\020EventSubscribers\022\025\n\rcallback_url" +
-      "s\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030\001 \002(\r",
-      "\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\":\n\031Upgrad" +
-      "eStrategyDefinition\022\035\n\025minimumHealthCapa" +
-      "city\030\001 \002(\001\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002" +
-      "(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.meso" +
-      "sphere.marathon.ServiceDefinition\0224\n\006gro" +
-      "ups\030\004 \003(\0132$.mesosphere.marathon.GroupDef" +
-      "inition\022\024\n\014dependencies\030\005 \003(\tB\035\n\023mesosph" +
-      "ere.marathonB\006Protos"
+      "\022\022\n\nstarted_at\030\006 \001(\003\022,\n\021OBSOLETE_statuse" +
+      "s\030\007 \003(\0132\021.mesos.TaskStatus\022\017\n\007version\030\010 " +
+      "\001(\t\022!\n\006status\030\t \001(\0132\021.mesos.TaskStatus\"M" +
+      "\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003" +
+      "(\0132!.mesosphere.marathon.MarathonTask\"1\n" +
+      "\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007optio" +
+      "ns\030\002 \003(\014\")\n\020EventSubscribers\022\025\n\rcallback",
+      "_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030\001" +
+      " \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\":\n\031Up" +
+      "gradeStrategyDefinition\022\035\n\025minimumHealth" +
+      "Capacity\030\001 \002(\001\"\260\001\n\017GroupDefinition\022\n\n\002id" +
+      "\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&." +
+      "mesosphere.marathon.ServiceDefinition\0224\n" +
+      "\006groups\030\004 \003(\0132$.mesosphere.marathon.Grou" +
+      "pDefinition\022\024\n\014dependencies\030\005 \003(\tB\035\n\023mes" +
+      "osphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12551,7 +12756,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
-              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "Statuses", "Version", });
+              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "OBSOLETEStatuses", "Version", "Status", });
           internal_static_mesosphere_marathon_MarathonApp_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_mesosphere_marathon_MarathonApp_fieldAccessorTable = new
