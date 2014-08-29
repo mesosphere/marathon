@@ -31,9 +31,6 @@ define([
           <td className="overflow-ellipsis" title={model.get("id")}>
             {model.get("id")}
           </td>
-          <td className="overflow-ellipsis" title={model.get("cmd")}>
-            {model.get("cmd")}
-          </td>
           <td className="text-right">{model.get("mem")}</td>
           <td className="text-right">{model.get("cpus")}</td>
           <td className="text-right">
