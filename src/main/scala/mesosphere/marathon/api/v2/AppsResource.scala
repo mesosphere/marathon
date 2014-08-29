@@ -37,10 +37,10 @@ class AppsResource @Inject() (
             @QueryParam("embed") embed: String) = {
     val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
     if (embed == EmbedTasks) {
-      Map("apps" -> apps.map(_.withTasks(taskTracker)))
+      Map("apps" -> apps.map(_.withTasksAndDeployments(service, taskTracker)))
     }
     else {
-      Map("apps" -> apps.map(_.withTaskCounts(taskTracker)))
+      Map("apps" -> apps.map(_.withTaskCountsAndDeployments(service, taskTracker)))
     }
   }
 
@@ -62,7 +62,7 @@ class AppsResource @Inject() (
   def show(@PathParam("id") id: String): Response = {
     def transitiveApps(gid: PathId) = {
       val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
-      val withTasks = apps.map(_.withTasks(taskTracker))
+      val withTasks = apps.map(_.withTasksAndDeployments(service, taskTracker))
       ok(Map("*" -> withTasks))
     }
     def app() = service.getApp(id.toRootPath) match {
