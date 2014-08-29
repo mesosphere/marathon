@@ -6,7 +6,6 @@ import javax.inject.Inject
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ Main, MarathonConf }
-import mesosphere.util.ConcurrentSet
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.state.{ State, Variable }
@@ -39,9 +38,9 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   }
 
   def get(appId: PathId): Set[MarathonTask] =
-    getInternal(appId).toSet
+    getInternal(appId).values.toSet
 
-  private def getInternal(appId: PathId): ConcurrentSet[MarathonTask] =
+  private def getInternal(appId: PathId): TrieMap[String, MarathonTask] =
     apps.getOrElseUpdate(appId, fetchApp(appId)).tasks
 
   def list: Map[PathId, App] = apps.mapValues(_.toApp).toMap
@@ -54,14 +53,13 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
 
   def created(appId: PathId, task: MarathonTask): Unit = {
     // Keep this here so running() can pick it up
-    getInternal(appId) += task
+    getInternal(appId) += (task.getId -> task)
   }
 
   def running(appId: PathId, status: TaskStatus): Future[MarathonTask] = {
     val taskId = status.getTaskId.getValue
     val task = get(appId).find(_.getId == taskId) match {
       case Some(stagedTask) =>
-        getInternal(appId).remove(stagedTask)
         stagedTask.toBuilder
           .setStartedAt(System.currentTimeMillis)
           .addStatuses(status)
@@ -77,7 +75,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
           .addStatuses(status)
           .build
     }
-    getInternal(appId) += task
+    getInternal(appId) += (task.getId -> task)
     store(appId, task).map(_ => task)
   }
 
@@ -86,9 +84,9 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     val app = apps(appId)
     val taskId = status.getTaskId.getValue
 
-    appTasks.find(_.getId == taskId) match {
+    appTasks.get(taskId) match {
       case Some(task) =>
-        app.tasks = appTasks - task
+        app.tasks.remove(task.getId)
 
         val variable = fetchFromState(getKey(appId, taskId))
         state.expunge(variable)
@@ -122,13 +120,12 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
 
   def statusUpdate(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = {
     val taskId = status.getTaskId.getValue
-    getInternal(appId).find(_.getId == taskId) match {
+    getInternal(appId).get(taskId) match {
       case Some(task) =>
-        getInternal(appId).remove(task)
         val updatedTask = task.toBuilder
           .addStatuses(status)
           .build
-        getInternal(appId) += updatedTask
+        getInternal(appId) += (task.getId -> updatedTask)
         store(appId, updatedTask).map(_ => Some(updatedTask))
 
       case _ =>
@@ -142,7 +139,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     val now = System.currentTimeMillis
     val expires = now - Main.conf.taskLaunchTimeout()
     val toKill = apps.values.map { app =>
-      app.tasks.filter(t => Option(t.getStartedAt).isEmpty && t.getStagedAt < expires)
+      app.tasks.values.filter(t => Option(t.getStartedAt).isEmpty && t.getStagedAt < expires)
     }.flatten
 
     toKill.foreach(t => {
@@ -156,7 +153,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     log.info("Expunging orphaned tasks from store")
     val stateTaskKeys = state.names.get.asScala.filter(_.startsWith(PREFIX))
     val appsTaskKeys = apps.values.flatMap { app =>
-      app.tasks.map(task => getKey(app.appName, task.getId))
+      app.tasks.keys.map(taskId => getKey(app.appName, taskId))
     }.toSet
 
     for (stateTaskKey <- stateTaskKeys) {
@@ -171,12 +168,12 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   private[tasks] def fetchApp(appId: PathId): InternalApp = {
     log.debug(s"Fetching app from store $appId")
     val names = state.names().get.asScala.toSet
-    val tasks = ConcurrentSet[MarathonTask]()
+    val tasks = TrieMap[String, MarathonTask]()
     val taskKeys = names.filter(name => name.startsWith(PREFIX + appId.safePath + ID_DELIMITER))
     for {
       taskKey <- taskKeys
       task <- fetchTask(taskKey)
-    } tasks.add(task)
+    } tasks += (task.getId -> task)
 
     new InternalApp(appId, tasks, false)
   }
@@ -213,8 +210,8 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     }
   }
 
-  def legacyDeserialize(appId: PathId, source: ObjectInputStream): ConcurrentSet[MarathonTask] = {
-    var results = ConcurrentSet[MarathonTask]()
+  def legacyDeserialize(appId: PathId, source: ObjectInputStream): TrieMap[String, MarathonTask] = {
+    var results = TrieMap[String, MarathonTask]()
 
     if (source.available > 0) {
       try {
@@ -225,7 +222,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
         if (app.getName != appId.toString) {
           log.warn(s"App name from task state for $appId is wrong!  Got '${app.getName}' Continuing anyway...")
         }
-        results ++= app.getTasksList.asScala.toSet
+        results ++= app.getTasksList.asScala.map(x => x.getId -> x)
       }
       catch {
         case e: com.google.protobuf.InvalidProtocolBufferException =>
@@ -260,10 +257,10 @@ object TaskTracker {
 
   private[marathon] class InternalApp(
       val appName: PathId,
-      var tasks: ConcurrentSet[MarathonTask],
+      var tasks: TrieMap[String, MarathonTask],
       var shutdown: Boolean) {
 
-    def toApp = App(appName, tasks.toSet, shutdown)
+    def toApp = App(appName, tasks.values.toSet, shutdown)
   }
 
   case class App(appName: PathId, tasks: Set[MarathonTask], shutdown: Boolean)
