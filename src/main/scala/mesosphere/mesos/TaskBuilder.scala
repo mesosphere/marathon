@@ -213,7 +213,8 @@ object TaskBuilder {
       stringuri.endsWith(".tbz2") ||
       stringuri.endsWith(".tar.bz2") ||
       stringuri.endsWith(".txz") ||
-      stringuri.endsWith(".tar.xz")) {
+      stringuri.endsWith(".tar.xz") ||
+      stringuri.endsWith(".zip")) {
       return true;
     }
     else {
