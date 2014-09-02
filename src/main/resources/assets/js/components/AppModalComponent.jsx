@@ -129,7 +129,6 @@ define([
       var isDeploying = model.isDeploying();
 
       var statusClassSet = React.addons.classSet({
-        "badge": false,
         "text-warning": isDeploying
       });
 
