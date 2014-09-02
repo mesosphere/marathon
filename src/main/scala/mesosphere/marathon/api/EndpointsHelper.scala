@@ -23,7 +23,7 @@ object EndpointsHelper {
 
       if (app.ports.isEmpty) {
         sb.append(s"${cleanId}$delimiter $delimiter")
-        for(task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
+        for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
           sb.append(s"${task.getHost} ")
         }
         sb.append(s"\n")

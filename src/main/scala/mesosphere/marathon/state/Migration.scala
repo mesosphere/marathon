@@ -101,10 +101,11 @@ class Migration @Inject() (
       val bytes = state.fetch("tasks:" + appId.safePath).get().value
       if (bytes.length > 0) {
         val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
-        val fetchedTasks = taskTracker.legacyDeserialize(appId, source).map { task =>
-          val builder = task.toBuilder.clearOBSOLETEStatuses()
-          task.getOBSOLETEStatusesList.asScala.lastOption.foreach(builder.setStatus)
-          builder.build()
+        val fetchedTasks = taskTracker.legacyDeserialize(appId, source).map {
+          case (key, task) =>
+            val builder = task.toBuilder.clearOBSOLETEStatuses()
+            task.getOBSOLETEStatusesList.asScala.lastOption.foreach(builder.setStatus)
+            key -> builder.build()
         }
         Some(new InternalApp(appId, fetchedTasks, false))
       }
