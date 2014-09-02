@@ -134,7 +134,7 @@ define([
       return (
         <table className={tableClassName}>
           <colgroup>
-            <col style={{width: "30%"}} />
+            <col style={{width: "28%"}} />
             <col style={{width: "18%"}} />
             <col style={{width: "18%"}} />
             <col style={{width: "18%"}} />
