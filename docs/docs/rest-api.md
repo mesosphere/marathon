@@ -397,7 +397,10 @@ Transfer-Encoding: chunked
                 "volumes": []
             }, 
             "cpus": 0.25, 
-            "dependencies": [], 
+            "dependencies": [],
+            "deployments": [
+                "3423117e-858b-4af6-8424-b6a2f3866d3a"
+            ], 
             "disk": 0.0, 
             "env": {}, 
             "executor": "", 
@@ -443,12 +446,11 @@ List all running applications, filtered by `command`.
 **Request:**
 
 {% highlight http %}
-GET /v2/apps?cmd=sleep%2060 HTTP/1.1
-Accept: application/json
-Accept-Encoding: gzip, deflate, compress
-Content-Type: application/json; charset=utf-8
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
+GET /v2/apps?cmd=env HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
 {% endhighlight %}
 
 **Response:**
@@ -462,33 +464,43 @@ Transfer-Encoding: chunked
 {
     "apps": [
         {
-            "cmd": "env && sleep 60", 
-            "constraints": [
-                [
-                    "hostname", 
-                    "UNIQUE", 
-                    ""
-                ]
-            ], 
-            "container": null, 
-            "cpus": 0.1, 
-            "env": {
-                "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
+            "args": null, 
+            "backoffFactor": 1.15, 
+            "backoffSeconds": 1, 
+            "cmd": "env && sleep 300", 
+            "constraints": [], 
+            "container": {
+                "docker": {
+                    "image": "busybox"
+                }, 
+                "type": "DOCKER", 
+                "volumes": []
             }, 
-            "executor": "", 
-            "id": "my-app", 
-            "instances": 3, 
-            "mem": 5.0, 
-            "ports": [
-                13321, 
-                10982
+            "cpus": 0.5, 
+            "dependencies": [], 
+            "deployments": [
+                "b2a6d112-d709-480b-82c2-0f618924845e"
             ], 
+            "disk": 0.0, 
+            "env": {}, 
+            "executor": "", 
+            "healthChecks": [], 
+            "id": "/sleepy-docker", 
+            "instances": 6, 
+            "mem": 64.0, 
+            "ports": [
+                10001
+            ], 
+            "requirePorts": false, 
+            "storeUrls": [], 
             "tasksRunning": 1, 
             "tasksStaged": 0, 
-            "uris": [
-                "https://raw.github.com/mesosphere/marathon/master/README.md"
-            ], 
-            "version": "2014-04-04T06:25:31.399Z"
+            "upgradeStrategy": {
+                "minimumHealthCapacity": 1.0
+            }, 
+            "uris": [], 
+            "user": null, 
+            "version": "2014-08-29T08:00:40.293Z"
         }
     ]
 }
@@ -527,6 +539,9 @@ Transfer-Encoding: chunked
             "container": null, 
             "cpus": 0.2, 
             "dependencies": [], 
+            "deployments": [
+                "d27b3347-8408-4366-8cf1-993ffb258a96"
+            ],
             "disk": 0.0, 
             "env": {}, 
             "executor": "", 

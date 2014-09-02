@@ -2,9 +2,10 @@ define([
   "Backbone",
   "Underscore",
   "models/AppVersion",
+  "models/AppVersionCollection",
   "models/Task",
   "models/TaskCollection"
-], function(Backbone, _, AppVersion, Task, TaskCollection) {
+], function(Backbone, _, AppVersion, AppVersionCollection, Task, TaskCollection) {
   "use strict";
 
   function ValidationError(attribute, message) {
@@ -15,6 +16,7 @@ define([
   var DEFAULT_HEALTH_MSG = "Unknown";
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
     "executor", "id", "instances", "mem", "disk", "ports", "uris"];
+  var UPDATEABLE_ATTRIBUTES = ["instances", "tasksRunning", "tasksStaged", "deployments"];
   var VALID_ID_PATTERN = "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
   var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
   var VALID_CONSTRAINTS = ["unique", "cluster", "group_by"];
@@ -54,6 +56,7 @@ define([
         constraints: [],
         container: null,
         cpus: 0.1,
+        deployments: [],
         env: {},
         executor: "",
         healthChecks: [],
@@ -73,11 +76,13 @@ define([
       this.persisted = (this.collection != null);
 
       this.tasks = new TaskCollection(null, {appId: this.id});
+      this.versions = new AppVersionCollection(null, {appId: this.id});
       this.on({
         "change:id": function(model, value, options) {
-          // Inform TaskCollection of new ID so it can send requests to the new
-          // endpoint.
+          // Inform AppVersionCollection and TaskCollection of new ID so it can
+          // send requests to the new endpoint.
           this.tasks.options.appId = value;
+          this.versions.options.appId = value;
         },
         "sync": function(model, response, options) {
           this.persisted = true;
@@ -87,6 +92,10 @@ define([
 
     isNew: function() {
       return !this.persisted;
+    },
+
+    isDeploying: function() {
+      return !_.isEmpty(this.get("deployments"));
     },
 
     allInstancesBooted: function() {
@@ -133,6 +142,20 @@ define([
       return data;
     },
 
+    /* Updates only those attributes listed in `UPDATEABLE_ATTRIBUTES` to prevent
+     * showing values that cannot be changed.
+     */
+    update: function(attrs) {
+
+      var filteredAttributes = _.filter(UPDATEABLE_ATTRIBUTES, function(attr) {
+        return attrs[attr] != null;
+      });
+
+      var allowedAttrs = _.pick(attrs, filteredAttributes);
+
+      this.set(allowedAttrs);
+    },
+
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
      * "version" value, which when sent prevents any other attributes from being
@@ -166,25 +189,25 @@ define([
         this, allowedAttrs, options);
     },
 
-    setAppVersion: function(appVersion) {
-      this.set(_.pick(appVersion.attributes, EDITABLE_ATTRIBUTES));
+    setVersion: function(version) {
+      this.set(_.pick(version.attributes, EDITABLE_ATTRIBUTES));
     },
 
     getCurrentVersion: function() {
-      var appVersion = new AppVersion();
-      appVersion.set(this.attributes);
+      var version = new AppVersion();
+      version.set(this.attributes);
 
       // make sure date is a string
-      appVersion.set({
-        "version": appVersion.get("version").toISOString()
+      version.set({
+        "version": version.get("version").toISOString()
       });
 
       // transfer app id
-      appVersion.options = {
+      version.options = {
         appId: this.get("id")
       };
 
-      return appVersion;
+      return version;
     },
 
     suspend: function(options) {
@@ -231,10 +254,14 @@ define([
       }
 
       if (!attrs.constraints.every(isValidConstraint)) {
-        errors.push(new ValidationError("constraints",
-          "Invalid constraints format or operator. Supported operators are " +
-          VALID_CONSTRAINTS.map(function(c) { return "`" + c + "`" }).join(", ") +
-          ". See https://github.com/mesosphere/marathon/wiki/Constraints.")
+        errors.push(
+          new ValidationError("constraints",
+            "Invalid constraints format or operator. Supported operators are " +
+            VALID_CONSTRAINTS.map(function(c) {
+              return "`" + c + "`";
+            }).join(", ") +
+            ". See https://github.com/mesosphere/marathon/wiki/Constraints."
+          )
         );
       }
 

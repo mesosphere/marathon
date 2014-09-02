@@ -23,7 +23,6 @@ import scala.concurrent.duration._
 @ValidAppDefinition
 case class AppDefinition(
 
-  //@FieldNotEmpty @FieldPattern(regexp = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$") id: String = "",
   id: PathId = PathId.empty,
 
   cmd: Option[String] = None,
@@ -180,18 +179,18 @@ case class AppDefinition(
     mergeFromProto(proto)
   }
 
-  def withTaskCounts(taskTracker: TaskTracker): AppDefinition.WithTaskCounts =
-    new AppDefinition.WithTaskCounts(taskTracker, this)
-
-  def withTasks(taskTracker: TaskTracker): AppDefinition.WithTasks =
-    new AppDefinition.WithTasks(taskTracker, this)
+  def withTaskCountsAndDeployments(
+    service: MarathonSchedulerService,
+    taskTracker: TaskTracker): AppDefinition.WithTaskCountsAndDeployments =
+    new AppDefinition.WithTaskCountsAndDeployments(service, taskTracker, this)
 
   def withTasksAndDeployments(
     service: MarathonSchedulerService,
-    taskTracker: TaskTracker): AppDefinition.WithTasks =
+    taskTracker: TaskTracker): AppDefinition.WithTasksAndDeployments =
     new AppDefinition.WithTasksAndDeployments(service, taskTracker, this)
 
-  def isOnlyScaleChange(to: AppDefinition): Boolean = !isUpgrade(to) && (instances != to.instances)
+  def isOnlyScaleChange(to: AppDefinition): Boolean =
+    !isUpgrade(to) && (instances != to.instances)
 
   def isUpgrade(to: AppDefinition): Boolean = {
     cmd != to.cmd ||
@@ -236,15 +235,19 @@ object AppDefinition {
 
   val DEFAULT_BACKOFF_FACTOR = 1.15
 
-  def fromProto(proto: Protos.ServiceDefinition): AppDefinition = AppDefinition().mergeFromProto(proto)
+  def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
+    AppDefinition().mergeFromProto(proto)
 
-  protected[marathon] class WithTaskCounts(
+  protected[marathon] class WithTaskCountsAndDeployments(
+    service: MarathonSchedulerService,
     taskTracker: TaskTracker,
-    app: AppDefinition) extends AppDefinition(
-    app.id, app.cmd, app.args, app.user, app.env, app.instances, app.cpus, app.mem, app.disk, app.executor,
-    app.constraints, app.uris, app.storeUrls, app.ports, app.requirePorts, app.backoff,
-    app.backoffFactor, app.container, app.healthChecks, app.dependencies, app.upgradeStrategy,
-    app.version) {
+    private val app: AppDefinition)
+      extends AppDefinition(
+        app.id, app.cmd, app.args, app.user, app.env, app.instances, app.cpus,
+        app.mem, app.disk, app.executor, app.constraints, app.uris,
+        app.storeUrls, app.ports, app.requirePorts, app.backoff,
+        app.backoffFactor, app.container, app.healthChecks, app.dependencies,
+        app.upgradeStrategy, app.version) {
 
     /**
       * Snapshot of the known tasks for this app
@@ -269,35 +272,29 @@ object AppDefinition {
     val tasksRunning: Int = appTasks.count { task =>
       task.hasStatus && task.getStatus.getState == TaskState.TASK_RUNNING
     }
-  }
 
-  protected[marathon] class WithTasks(
-      taskTracker: TaskTracker,
-      app: AppDefinition) extends WithTaskCounts(taskTracker, app) {
+    import scala.concurrent.Await
+
+    /**
+      * Snapshot of the running deployments that affect this app
+      */
     @JsonProperty
-    def tasks = appTasks
+    def deployments: Seq[String] = {
+      val deployments = Await.result(service.listRunningDeployments, 2.seconds)
+      deployments.collect {
+        case (d, _) if d.affectedApplicationIds contains app.id => d.id
+      }
+    }
   }
 
   protected[marathon] class WithTasksAndDeployments(
-      service: MarathonSchedulerService,
-      taskTracker: TaskTracker,
-      app: AppDefinition) extends WithTasks(taskTracker, app) {
-    import scala.concurrent.Await
+    service: MarathonSchedulerService,
+    taskTracker: TaskTracker,
+    private val app: AppDefinition)
+      extends WithTaskCountsAndDeployments(service, taskTracker, app) {
+
     @JsonProperty
-    def deployments: Seq[String] = {
-      val deployments = Await.result(service.listRunningDeployments(), 2.seconds)
-
-      println(s"deployments: $deployments")
-
-      val relatedDeploymentIds = deployments.collect {
-        case (deployment, _) if deployment.affectedApplicationIds contains app.id =>
-          deployment.id
-      }
-
-      println(s"relatedDeploymentIds: $relatedDeploymentIds")
-
-      relatedDeploymentIds
-    }
+    def tasks = appTasks
   }
 
 }
