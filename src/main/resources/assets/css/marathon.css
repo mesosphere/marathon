@@ -475,18 +475,6 @@ fieldset[disabled] .btn-info.active {
   margin-top: 14px;
 }
 
-.table-badged > thead > tr > th,
-.table-badged > tbody > tr > th,
-.table-badged > tfoot > tr > th,
-.table-badged > thead > tr > td,
-.table-badged > tbody > tr > td,
-.table-badged > tfoot > tr > td {
-  /* Match the 28px height of badges in tables that contain badged (like the
-   * AppList table).
-   */
-  line-height: 2;
-}
-
 .table-fixed {
   table-layout: fixed;
 }
@@ -506,20 +494,6 @@ fieldset[disabled] .btn-info.active {
 
 .dl-unstyled {
   margin-bottom: 0;
-}
-
-.badge-circlet {
-  padding: 7px 9px;
-  background: transparent;
-  border-radius: 14px;
-  color: inherit;
-  font-size: 14px;
-  font-weight: normal;
-}
-
-.badge-circlet-default {
-  background-color: #3b3e43;
-  color: #f6f6f6;
 }
 
 .health-dot {

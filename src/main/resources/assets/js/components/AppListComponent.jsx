@@ -89,7 +89,7 @@ define([
       var sortKey = this.props.collection.sortKey;
 
       var appNodes;
-      var tableClassName = "table table-fixed table-badged";
+      var tableClassName = "table table-fixed";
 
       var headerClassSet = React.addons.classSet({
         "clickable": true,
