@@ -42,7 +42,7 @@ available via the [Mesosphere Website](http://mesosphere.io/docs/).
 ### Requirements
 
 * [Mesos][Mesos] 0.15.0+
-* [Zookeeper][Zookeeper]
+* [ZooKeeper][Zookeeper]
 * JDK 1.6+
 * Scala 2.10+
 * sbt 0.13.5
