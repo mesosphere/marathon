@@ -193,7 +193,7 @@ define([
                   label="Disk Space (MB)"
                   model={model}
                   errors={errors}>
-              <input min="0" step="any" type="number" required />
+                <input min="0" step="any" type="number" required />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="instances"
@@ -216,7 +216,9 @@ define([
                   label="Executor"
                   model={model}
                   errors={errors}>
-                <input />
+                <input
+                  pattern={App.VALID_EXECUTOR_PATTERN}
+                  title="Executor must be the string '//cmd', a string containing only single slashes ('/'), or blank." />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="ports"
