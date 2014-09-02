@@ -63,9 +63,9 @@ class TaskTrackerTest extends MarathonSpec {
     )
   }
 
-  def shouldContainTaskStatus(task: MarathonTask, taskStatus: TaskStatus) {
+  def shouldHaveTaskStatus(task: MarathonTask, taskStatus: TaskStatus) {
     assert(
-      task.getStatusesList.contains(taskStatus), s"Should contain task status ${taskStatus.getState.toString}"
+      task.getStatus == taskStatus, s"Should have task status ${taskStatus.getState.toString}"
     )
   }
 
@@ -140,7 +140,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTaskKey)
-    taskTracker.get(TEST_APP_NAME).foreach(task => shouldContainTaskStatus(task, startingTaskStatus))
+    taskTracker.get(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
 
     // TASK RUNNING
     val runningTaskStatus: TaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_RUNNING)
@@ -149,7 +149,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTaskKey)
-    taskTracker.get(TEST_APP_NAME).foreach(task => shouldContainTaskStatus(task, runningTaskStatus))
+    taskTracker.get(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK TERMINATED
     val finishedTaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_FINISHED)

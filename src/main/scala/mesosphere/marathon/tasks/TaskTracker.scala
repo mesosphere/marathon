@@ -62,7 +62,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
       case Some(stagedTask) =>
         stagedTask.toBuilder
           .setStartedAt(System.currentTimeMillis)
-          .addStatuses(status)
+          .setStatus(status)
           .build
 
       case _ =>
@@ -72,7 +72,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
           .setId(taskId)
           .setStagedAt(System.currentTimeMillis)
           .setStartedAt(System.currentTimeMillis)
-          .addStatuses(status)
+          .setStatus(status)
           .build
     }
     getInternal(appId) += (task.getId -> task)
@@ -123,7 +123,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     getInternal(appId).get(taskId) match {
       case Some(task) =>
         val updatedTask = task.toBuilder
-          .addStatuses(status)
+          .setStatus(status)
           .build
         getInternal(appId) += (task.getId -> updatedTask)
         store(appId, updatedTask).map(_ => Some(updatedTask))
