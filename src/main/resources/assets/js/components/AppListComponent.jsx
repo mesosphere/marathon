@@ -50,12 +50,8 @@ define([
         reset: true,
         success: function() {
           this.setState({fetchState: STATE_SUCCESS});
-          this.props.deployments.fetch({
-            error: function() {
-              this.setState({fetchState: STATE_ERROR});
-            }.bind(this),
-            reset: true
-          });
+          // fetch deployments
+          this.props.deployments.fetch();
         }.bind(this)
       });
     },
