@@ -55,7 +55,6 @@ define([
     },
 
     onClickApp: function(app) {
-      this.stopPolling();
       this.props.onSelectApp(app);
     },
 
