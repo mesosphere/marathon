@@ -17,7 +17,8 @@ define([
 
     getInitialState: function() {
       return {
-        collection: new AppCollection()
+        collection: new AppCollection(),
+        modalClass: null
       };
     },
 
@@ -33,11 +34,22 @@ define([
       Mousetrap.bind("c", function() {
         this.showNewAppModal(); }.bind(this), "keyup");
       Mousetrap.bind("#", function() {
-        if (this.state.modal != null &&
-            _.isFunction(this.state.modal.destroyApp)) {
-          this.state.modal.destroyApp();
+        if (this.state.modalClass === AppModalComponent &&
+            _.isFunction(this.refs.modal.destroyApp)) {
+          this.refs.modal.destroyApp();
         }
       }.bind(this));
+    },
+
+    componentDidUpdate: function(prevProps, prevState) {
+      if (prevState.modalClass !== this.state.modalClass) {
+        // No `modalClass` means the modal went from open to closed. Start
+        // polling in that case, otherwise stop polling since the modal went
+        // from closed to open.
+        this.state.modalClass === null ?
+          this.refs.appList.startPolling() :
+          this.refs.appList.stopPolling();
+      }
     },
 
     handleAppCreate: function(appModel, options) {
@@ -45,50 +57,55 @@ define([
     },
 
     handleModalDestroy: function() {
-      this.setState({modal: null}, function() {
-        this.refs.appList.startPolling();
-      }.bind(this));
+      this.setState({
+        activeApp: null,
+        modalClass: null
+      });
     },
 
     showAppModal: function(app) {
-      if (this.state != null && this.state.modal != null &&
-          this.state.modal.isMounted()) {
+      if (this.state.modalClass !== null) {
         return;
       }
 
       /* jshint trailing:false, quotmark:false, newcap:false */
       this.setState({
-        modal: React.renderComponent(
-          <AppModalComponent model={app} onDestroy={this.handleModalDestroy} />,
-          document.getElementById("lightbox"),
-          function() { this.refs.appList.stopPolling(); }.bind(this)
-        )
+        activeApp: app,
+        modalClass: AppModalComponent
       });
     },
 
     showNewAppModal: function(event) {
-      // Don't recreate the modal on successive calls of `showModal` if the
-      // modal is already open. For example, pressing "c" to open the modal and
-      // then pressing "c" again should not create new App and Modal instances
-      // or data will be lost if the form is partially filled.
-      if (this.state != null && this.state.modal != null &&
-          this.state.modal.isMounted()) {
+      if (this.state.modalClass !== null) {
         return;
       }
 
       /* jshint trailing:false, quotmark:false, newcap:false */
       this.setState({
-        modal: React.renderComponent(
-          <NewAppModalComponent
-            onCreate={this.handleAppCreate}
-            onDestroy={this.handleModalDestroy} />,
-          document.getElementById("lightbox"),
-          function() { this.refs.appList.stopPolling(); }.bind(this)
-        )
+        modalClass: NewAppModalComponent
       });
     },
 
     render: function() {
+      var modal;
+      if (this.state.modalClass !== null) {
+        if (this.state.modalClass === AppModalComponent) {
+          modal = (
+            <AppModalComponent
+              model={this.state.activeApp}
+              onDestroy={this.handleModalDestroy}
+              ref="modal" />
+          );
+        } else if (this.state.modalClass === NewAppModalComponent) {
+          modal = (
+            <NewAppModalComponent
+             onCreate={this.handleAppCreate}
+             onDestroy={this.handleModalDestroy}
+             ref="modal" />
+          );
+        }
+      }
+
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
@@ -109,6 +126,7 @@ define([
               onSelectApp={this.showAppModal}
               ref="appList" />
           </div>
+          {modal}
         </div>
       );
     }
