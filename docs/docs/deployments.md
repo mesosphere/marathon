@@ -4,7 +4,7 @@ title: Application Deployments
 
 # Application Deployments
 
-Every change in the definition of applications or groups in marathon is performed as a deployment.
+Every change in the definition of applications or groups in Marathon is performed as a deployment.
 A deployment is a set of actions, that can do:
 
 - Start/Stop one or more applications
@@ -12,11 +12,11 @@ A deployment is a set of actions, that can do:
 - Scale one or more applications
 
 Deployments are not instantly available - they take time. 
-A deployment is active in marathon until the deployment is finished successfully.
+A deployment is active in Marathon until the deployment is finished successfully.
 
 Multiple deployments can be performed at the same, as long as one application is changed only by one deployment.
-If a deployment is requested which tries to change an application, which is changed by an other active deployment,
-then the deployment request will be rejected.
+If a deployment is requested, that tries to change an application that is already being changed by another active deployment, 
+the new deployment request will be rejected.
 
 ## Dependencies
 
@@ -40,7 +40,7 @@ One of the most common problems facing developers and operators is how to roll o
 At the root, this process consists of two phases: starting a set of processes with the new version and stopping the set of processes with the old version.
 There are multitude of possible models how this process can be performed. 
 
-In marathon there is an upgrade strategy with a minimumHealthCapacity, which is defined on application level.
+In Marathon there is an upgrade strategy with a minimumHealthCapacity, which is defined on application level.
 The minimumHealthCapacity is a percentage, which applied to the instance count defines the number of instances,
 the application in a certain version has to have at all time during update.  
 
@@ -97,7 +97,7 @@ To heal the system, a new deployment has to be applied, which corrects the probl
 
 ## The /v2/deployments endpoint
 
-The list of running deployments can be accessed via the /v2/deployments endpoint.
+The list of running deployments can be accessed via the [/v2/deployments](rest-api.html#deployments) endpoint.
 There are several information available for every deployment:
 
 - affectedApps: which applications are affected by this deployment
