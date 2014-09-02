@@ -218,7 +218,7 @@ define([
                   errors={errors}>
                 <input
                   pattern={App.VALID_EXECUTOR_PATTERN}
-                  title={"Must be a valid executor path. Format is '" + App.VALID_EXECUTOR_PATTERN + "'."} />
+                  title="Executor must be the string '//cmd', a string containing only single slashes ('/'), or blank." />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="ports"

@@ -237,7 +237,7 @@ define([
         errors.push(
           new ValidationError(
             "executor",
-            "Executor must match the following pattern: '" + VALID_EXECUTOR_PATTERN + "'"
+            "Executor must be the string '//cmd', a string containing only single slashes ('/'), or blank."
           )
         );
       }
