@@ -103,7 +103,7 @@ define([
       });
     },
 
-    showScaleAlert: function() {
+    scaleApp: function() {
       var model = this.props.model;
       var instancesString = prompt("Scale to how many instances?",
         model.get("instances"));
@@ -149,7 +149,7 @@ define([
                   disabled={model.get("instances") < 1}>
                 Suspend
               </button>
-              <button className="btn btn-sm btn-default" onClick={this.showScaleAlert}>
+              <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
                 Scale
               </button>
               <button className="btn btn-sm btn-danger pull-right" onClick={this.handleDestroyApp}>
