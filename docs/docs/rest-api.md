@@ -7,8 +7,6 @@ title: REST API
 * [Apps](#apps)
   * [POST /v2/apps](#post-/v2/apps): Create and start a new app
   * [GET /v2/apps](#get-/v2/apps): List all running apps
-  * [GET /v2/apps?cmd={command}](#get-/v2/apps?cmd={command}): List all running
-    apps, filtered by `command`
   * [GET /v2/apps/{appId}](#get-/v2/apps/{appid}): List the app `appId`
   * [GET /v2/apps/{appId}/versions](#get-/v2/apps/{appid}/versions): List the versions of the application with id `appId`.
   * [GET /v2/apps/{appId}/versions/{version}](#get-/v2/apps/{appid}/versions/{version}): List the configuration of the application with id `appId` at version `version`.
@@ -17,16 +15,16 @@ title: REST API
   * [DELETE /v2/apps/{appId}](#delete-/v2/apps/{appid}): Destroy app `appId`
   * [GET /v2/apps/{appId}/tasks](#get-/v2/apps/{appid}/tasks): List running tasks
     for app `appId`
-  * [DELETE /v2/apps/{appId}/tasks?host={host}&scale={true|false}](#delete-/v2/apps/{appid}/tasks?host={host}&scale={true|false}):
+  * [DELETE /v2/apps/{appId}/tasks](#delete-/v2/apps/{appid}/tasks):
     kill tasks belonging to app `appId`
-  * [DELETE /v2/apps/{appId}/tasks/{taskId}?scale={true|false}](#delete-/v2/apps/{appid}/tasks/{taskid}?scale={true|false}):
+  * [DELETE /v2/apps/{appId}/tasks/{taskId}](#delete-/v2/apps/{appid}/tasks/{taskid}):
     Kill the task `taskId` that belongs to the application `appId`
 * [Groups](#groups) <span class="label label-default">v0.7.0</span>
   * [GET /v2/groups](#get-/v2/groups): List all groups
   * [GET /v2/groups/{groupId}](#get-/v2/groups/{groupid}): List the group with the specified ID
   * [POST /v2/groups](#post-/v2/groups): Create and start a new groups
   * [PUT /v2/groups/{groupId}](#put-/v2/groups/{groupid}): Change parameters of a deployed application group
-  * [PUT /v2/groups/{groupId}/version/{version}](#put-/v2/groups/{groupid}/version/{$version}): Rollback group to a previous version
+  * [PUT /v2/groups/{groupId}/version/{version}](#put-/v2/groups/{groupid}/version/{version}): Rollback group to a previous version
   * [DELETE /v2/groups/{groupId}](#delete-/v2/groups/{groupid}): Destroy a group
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
@@ -34,9 +32,9 @@ title: REST API
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
   * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Cancel the deployment with `deploymentId`
 * [Event Subscriptions](#event-subscriptions)
-  * [POST /v2/eventSubscriptions?callbackUrl={url}](#post-/v2/eventsubscriptions?callbackurl={url}): Register a callback URL as an event subscriber
+  * [POST /v2/eventSubscriptions](#post-/v2/eventsubscriptions): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
-  * [DELETE /v2/eventSubscriptions?callbackUrl={url}](#delete-/v2/eventsubscriptions?callbackurl={url}) Unregister a callback URL from the event subscribers list
+  * [DELETE /v2/eventSubscriptions](#delete-/v2/eventsubscriptions) Unregister a callback URL from the event subscribers list
 * [Queue](#queue) <span class="label label-default">v0.7.0</span>
   * [GET /v2/queue](#get-v2queue): List content of the staging queue.
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
@@ -356,6 +354,35 @@ Transfer-Encoding: chunked
 
 List all running applications.
 
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>cmd</code></td>
+      <td><code>string</code></td>
+      <td>
+        Filter apps to only those whose commands contain <code>cmd</code>.
+        Default: <code>""</code>.
+      </td>
+    </tr>
+    <tr>
+      <td><code>embed</code></td>
+      <td><code>string</code></td>
+      <td>Embeds nested resources that match the supplied path. Possible values:
+        <code>"apps.tasks"</code>. Apps' tasks are not embedded in the response
+        by default. Default: <code>none</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
 ##### Example
 
 **Request:**
@@ -433,146 +460,6 @@ Transfer-Encoding: chunked
     ]
 }
 {% endhighlight %}
-
-#### GET `/v2/apps?cmd={command}`
-
-List all running applications, filtered by `command`.
-
-##### Example
-
-**Request:**
-
-{% highlight http %}
-GET /v2/apps?cmd=sleep%2060 HTTP/1.1
-Accept: application/json
-Accept-Encoding: gzip, deflate, compress
-Content-Type: application/json; charset=utf-8
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
-{% endhighlight %}
-
-**Response:**
-
-{% highlight http %}
-HTTP/1.1 200 OK
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-Transfer-Encoding: chunked
-
-{
-    "apps": [
-        {
-            "cmd": "env && sleep 60", 
-            "constraints": [
-                [
-                    "hostname", 
-                    "UNIQUE", 
-                    ""
-                ]
-            ], 
-            "container": null, 
-            "cpus": 0.1, 
-            "env": {
-                "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
-            }, 
-            "executor": "", 
-            "id": "my-app", 
-            "instances": 3, 
-            "mem": 5.0, 
-            "ports": [
-                13321, 
-                10982
-            ], 
-            "tasksRunning": 1, 
-            "tasksStaged": 0, 
-            "uris": [
-                "https://raw.github.com/mesosphere/marathon/master/README.md"
-            ], 
-            "version": "2014-04-04T06:25:31.399Z"
-        }
-    ]
-}
-{% endhighlight %}
-
-#### GET `/v2/apps?embed=apps.tasks`
-
-List all apps, with their running tasks.
-
-##### Example
-
-**Request:**
-
-{% highlight http %}
-GET /v2/apps?embed=apps.tasks HTTP/1.1
-Accept: */*
-Accept-Encoding: gzip, deflate
-Host: localhost:8080
-User-Agent: HTTPie/0.8.0
-{% endhighlight %}
-
-{% highlight http %}
-HTTP/1.1 200 OK
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-Transfer-Encoding: chunked
-
-{
-    "apps": [
-        {
-            "args": null, 
-            "backoffFactor": 1.15, 
-            "backoffSeconds": 1, 
-            "cmd": "python toggle.py $PORT0", 
-            "constraints": [], 
-            "container": null, 
-            "cpus": 0.2, 
-            "dependencies": [], 
-            "disk": 0.0, 
-            "env": {}, 
-            "executor": "", 
-            "healthChecks": [], 
-            "id": "/test", 
-            "instances": 2, 
-            "mem": 32.0, 
-            "ports": [
-                10000
-            ], 
-            "requirePorts": false, 
-            "storeUrls": [], 
-            "tasks": [
-                {
-                    "host": "10.141.141.10",
-                    "id": "test.6520607d-2cde-11e4-8852-56847afe9799",
-                    "ports": [31369], 
-                    "stagedAt": "2014-08-26T05:04:01.895Z", 
-                    "startedAt": "2014-08-26T06:59:22.252Z", 
-                    "version": "2014-08-26T05:03:26.449Z"
-                },
-                {
-                    "host": "10.141.141.10", 
-                    "id": "test.53cf64b8-2cde-11e4-8852-56847afe9799", 
-                    "ports": [31124], 
-                    "stagedAt": "2014-08-26T05:03:32.844Z", 
-                    "startedAt": "2014-08-26T06:59:22.186Z", 
-                    "version": "2014-08-26T05:03:26.449Z"
-                }
-            ],
-            "tasksRunning": 2,
-            "tasksStaged": 0, 
-            "upgradeStrategy": {
-                "minimumHealthCapacity": 1.0
-            }, 
-            "uris": [
-                "http://downloads.mesosphere.io/misc/toggle.tgz"
-            ], 
-            "user": null, 
-            "version": "2014-08-26T05:04:26.263Z"
-        }
-    ]
-}
-{% endhighlight %}
-
-**Response:**
 
 #### GET `/v2/apps/{appId}`
 
@@ -753,6 +640,28 @@ Transfer-Encoding: chunked
 Change parameters of a running application.  The new application parameters
 apply only to subsequently created tasks.  Currently running tasks are
 restarted, while maintaining the `minimumHealthCapacity`
+
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>force</code></td>
+      <td><code>boolean</code></td>
+      <td>If the app is affected by a running deployment, then the update
+        operation will fail. The current deployment can be overridden by setting
+        the `force` query parameter.
+        Default: <code>false</code>.</td>
+    </tr>
+  </tbody>
+</table>
 
 ##### Example
 
@@ -973,15 +882,36 @@ my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382
 my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383  
 {% endhighlight %}
 
-#### DELETE `/v2/apps/{appId}/tasks?host={host}&scale={true|false}`
+#### DELETE `/v2/apps/{appId}/tasks`
 
-Kill tasks that belong to the application `appId`, optionally filtered by the
-task's `host`.
+Kill tasks that belong to the application `appId`.
 
-The query parameters `host` and `scale` are both optional.  If `host` is
-specified, only tasks running on the supplied slave are killed.  If
-`scale=true` is specified, then the application is scaled down by the number of
-killed tasks.  The `scale` parameter defaults to `false`.
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>host</code></td>
+      <td><code>string</code></td>
+      <td>Kill only those tasks running on host <code>host</code>.
+        Default: <code>none</code>.</td>
+    </tr>
+    <tr>
+      <td><code>scale</code></td>
+      <td><code>boolean</code></td>
+      <td>Scale the app down (i.e. decrement its <code>instances</code> setting
+        by the number of tasks killed) after killing the specified tasks.
+        Default: <code>false</code>.</td>
+    </tr>
+  </tbody>
+</table>
 
 ##### Example
 
@@ -1010,13 +940,30 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
-#### DELETE `/v2/apps/{appId}/tasks/{taskId}?scale={true|false}`
+#### DELETE `/v2/apps/{appId}/tasks/{taskId}`
 
 Kill the task with ID `taskId` that belongs to the application `appId`.
 
-The query parameter `scale` is optional.  If `scale=true` is specified, then
-the application is scaled down one if the supplied `taskId` exists.  The
-`scale` parameter defaults to `false`.
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>scale</code></td>
+      <td><code>boolean</code></td>
+      <td>Scale the app down (i.e. decrement its <code>instances</code> setting
+        by the number of tasks killed) after killing the specified task.
+        Default: <code>false</code>.</td>
+    </tr>
+  </tbody>
+</table>
 
 ##### Example
 
@@ -1216,8 +1163,8 @@ The JSON format of a group resource is as follows:
 ```
 
 Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
-the given version.
+The failure or success of the action is signalled via event. There is a
+`group_change_success` and `group_change_failed` event with the given version.
 
 ### Example
 
@@ -1284,8 +1231,8 @@ The JSON format of a group resource is as follows:
 ```
 
 Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
-the given version.
+The failure or success of the action is signalled via event. There is a
+`group_change_success` and `group_change_failed` event with the given version.
 
 
 ### Example
@@ -1345,8 +1292,8 @@ If there is an upgrade process already in progress, a new update will be rejecte
 With the force flag given, a running upgrade is terminated and a new one is started.
 
 Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
-the given version.
+The failure or success of the action is signalled via event. There is a
+`group_change_success` and `group_change_failed` event with the given version.
 
 ### Example
 
@@ -1413,8 +1360,8 @@ The scaling affects apps directly in the group as well as all transitive applica
 The scaling factor is applied to each individual instance count of each application.
 
 Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
-the given version.
+The failure or success of the action is signalled via event. There is a
+`group_change_success` and `group_change_failed` event with the given version.
 
 **Request:**
 
@@ -1447,18 +1394,36 @@ Rollback this group to a previous version.
 All changes to a group will create a new version.
 With this endpoint it is possible to an older version of this group.
 
-If there is an upgrade process already in progress, this rollback will be rejected unless the force flag is set.
-With the force flag given, a running upgrade is terminated and a new one is started.
-
 The rollback to a version is handled as normal update.
 All implications of an update will take place.
 
 Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
-the given version.
+The failure or success of the action is signalled via event. There is a
+`group_change_success` and `group_change_failed` event with the given version.
 
+##### Parameters
 
-### Example
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>force</code></td>
+      <td><code>boolean</code></td>
+      <td>If there is an upgrade process already in progress, this rollback will
+        be rejected unless the force flag is set. With the force flag given,
+        a running upgrade is terminated and a new one is started.
+        Default: <code>false</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+##### Example
 
 **Request:**
 
@@ -1489,8 +1454,8 @@ Transfer-Encoding: chunked
 Destroy a group. All data about that group and all associated applications will be deleted.
 
 Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
-the given version.
+The failure or success of the action is signalled via event. There is a
+`group_change_success` and `group_change_failed` event with the given version.
 
 **Request:**
 
@@ -1520,6 +1485,27 @@ Server: Jetty(8.y.z-SNAPSHOT)
 #### GET `/v2/tasks`
 
 List tasks of all applications.
+
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>status</code></td>
+      <td><code>string</code></td>
+      <td>Return only those tasks whose <code>status</code> matches this
+        parameter. If not specified, all tasks are returned. Possible values:
+        <code>running</code>, <code>staging</code>. Default: <code>none</code>.</td>
+    </tr>
+  </tbody>
+</table>
 
 ##### Example (as JSON)
 
@@ -1584,52 +1570,9 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
-#### GET `/v2/tasks?status=[running|staging]`
-
-List running or staging tasks of all applications.
-
-##### Example (as JSON)
-
-**Request:**
-
-{% highlight http %}
-GET /v2/tasks HTTP/1.1
-Accept: application/json
-Accept-Encoding: gzip, deflate, compress
-Content-Type: application/json; charset=utf-8
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
-{% endhighlight %}
-
-**Response:**
-
-{% highlight http %}
-HTTP/1.1 200 OK
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-Transfer-Encoding: chunked
-
-{
-    "tasks": [
-        {
-            "appId": "my-app",
-            "host": "agouti.local",
-            "id": "my-app_0-1396592784349",
-            "ports": [
-                31382,
-                31383
-            ],
-            "stagedAt": "2014-04-04T06:26:24.351Z",
-            "startedAt": "2014-04-04T06:26:24.919Z",
-            "version": "2014-04-04T06:26:23.051Z"
-        }
-    ]
-}
-{% endhighlight %}
-
 ##### Example (as text)
 
-In text/plain only running tasks will be returned.
+In text/plain only tasks with status `running` will be returned.
 
 **Request:**
 
@@ -1737,11 +1680,30 @@ Transfer-Encoding: chunked
 
 ### Event Subscriptions
 
-#### POST /v2/eventSubscriptions?callbackUrl={url}
+#### POST /v2/eventSubscriptions
 
 Register a callback URL as an event subscriber.
 
-NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`.
+NOTE: To activate this endpoint, you need to start Marathon with `--event_subscriber http_callback`.
+
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>callbackUrl</code></td>
+      <td><code>string</code></td>
+      <td>URL to which events should be posted. <strong>Required.</strong></td>
+    </tr>
+  </tbody>
+</table>
 
 **Request:**
 
@@ -1754,7 +1716,6 @@ Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 {% endhighlight %}
-
 
 **Response:**
 
@@ -1805,11 +1766,30 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
-#### DELETE `/v2/eventSubscriptions?callbackUrl={url}`
+#### DELETE `/v2/eventSubscriptions`
 
 Unregister a callback URL from the event subscribers list.
 
-NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`.
+NOTE: To activate this endpoint, you need to start Marathon with `--event_subscriber http_callback`.
+
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>callbackUrl</code></td>
+      <td><code>string</code></td>
+      <td>URL passed when the event subscription was created. <strong>Required.</strong></td>
+    </tr>
+  </tbody>
+</table>
 
 ##### Example
 
