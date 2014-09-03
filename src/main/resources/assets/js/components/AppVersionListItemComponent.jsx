@@ -2,18 +2,13 @@
 
 define([
   "React",
+  "constants/States",
   "models/App",
   "models/AppVersion",
   "mixins/BackboneMixin",
   "jsx!components/AppVersionComponent"
-], function(React, App, AppVersion, BackboneMixin, AppVersionComponent) {
+], function(React, States, App, AppVersion, BackboneMixin, AppVersionComponent) {
   "use strict";
-
-  var STATES = {
-    STATE_LOADING: 0,
-    STATE_ERROR: 1,
-    STATE_SUCCESS: 2
-  };
 
   return React.createClass({
     displayName: "AppVersionListItemComponent",
@@ -39,17 +34,17 @@ define([
     getInitialState: function() {
       return {
         open: false,
-        fetchState: STATES.STATE_LOADING
+        fetchState: States.STATE_LOADING
       };
     },
 
     getVersionDetails: function() {
       this.props.appVersion.fetch({
         error: function() {
-          this.setState({fetchState: STATES.STATE_ERROR});
+          this.setState({fetchState: States.STATE_ERROR});
         }.bind(this),
         success: function() {
-          this.setState({fetchState: STATES.STATE_SUCCESS});
+          this.setState({fetchState: States.STATE_SUCCESS});
         }.bind(this)
       });
     },
@@ -60,7 +55,7 @@ define([
         return;
       }
       event.preventDefault();
-      if (this.state.fetchState !== STATES.STATE_SUCCESS) {
+      if (this.state.fetchState !== States.STATE_SUCCESS) {
         this.getVersionDetails();
       }
       this.setState({open: !this.state.open});
@@ -73,14 +68,14 @@ define([
       });
       var versionDate = new Date(this.props.appVersion.get("version"));
       var versionNode;
-      if (this.state.fetchState === STATES.STATE_LOADING) {
+      if (this.state.fetchState === States.STATE_LOADING) {
         versionNode =
           <div className="panel-body">
             <p className="text-center text-muted">
               Loading version details...
             </p>
           </div>;
-      } else if (this.state.fetchState === STATES.STATE_ERROR) {
+      } else if (this.state.fetchState === States.STATE_ERROR) {
         versionNode =
           <div className="panel-body">
             <p className="text-center text-danger">

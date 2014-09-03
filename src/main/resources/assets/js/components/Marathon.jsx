@@ -4,20 +4,15 @@ define([
   "mousetrap",
   "React",
   "Underscore",
+  "constants/States",
   "models/AppCollection",
   "models/DeploymentCollection",
   "jsx!components/AppListComponent",
   "jsx!components/AppModalComponent",
   "jsx!components/NewAppModalComponent"
-], function(Mousetrap, React, _, AppCollection, DeploymentCollection,
+], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
     AppListComponent, AppModalComponent, NewAppModalComponent) {
   "use strict";
-
-  var STATES = {
-    STATE_LOADING: 0,
-    STATE_ERROR: 1,
-    STATE_SUCCESS: 2
-  };
 
   var UPDATE_INTERVAL_APPS = 5000;
   var UPDATE_INTERVAL_TASKS = 2000;
@@ -25,20 +20,16 @@ define([
   return React.createClass({
     displayName: "Marathon",
 
-    statics: {
-      STATES: STATES
-    },
-
     getInitialState: function() {
       return {
         activeApp: null,
         activeTask: null,
-        appVersionsFetchState: STATES.STATE_LOADING,
+        appVersionsFetchState: States.STATE_LOADING,
         collection: new AppCollection(),
         deployments: new DeploymentCollection(),
-        fetchState: STATES.STATE_LOADING,
+        fetchState: States.STATE_LOADING,
         modalClass: null,
-        tasksFetchState: STATES.STATE_LOADING
+        tasksFetchState: States.STATE_LOADING,
       };
     },
 
@@ -74,9 +65,13 @@ define([
         // No `modalClass` means the modal went from open to closed. Start
         // polling in that case, otherwise stop polling since the modal went
         // from closed to open.
-        this.state.modalClass === null ?
-          this.refs.appList.startPolling() :
-          this.refs.appList.stopPolling();
+        if (this.state.modalClass === null) {
+          this.startPollingApps();
+          this.stopPollingTasks();
+        } else {
+          this.stopPollingApps();
+          this.startPollingTasks();
+        }
 
       }
     },
@@ -91,11 +86,11 @@ define([
 
       this.state.collection.fetch({
         error: function() {
-          _this.setState({fetchState: STATES.STATE_ERROR});
+          _this.setState({fetchState: States.STATE_ERROR});
         },
         reset: true,
         success: function() {
-          _this.setState({fetchState: STATES.STATE_SUCCESS});
+          _this.setState({fetchState: States.STATE_SUCCESS});
         }
       });
     },
@@ -104,16 +99,10 @@ define([
       if (this.state.activeApp != null) {
         this.state.activeApp.versions.fetch({
           error: function() {
-            this.setState({appVersionsFetchState: STATES.STATE_ERROR}, function() {
-              // TODO (ml): remove this when modal is in view
-              this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
-            });
+            this.setState({appVersionsFetchState: States.STATE_ERROR});
           }.bind(this),
           success: function() {
-            this.setState({appVersionsFetchState: STATES.STATE_SUCCESS}, function() {
-              // TODO (ml): remove this when modal is in view
-              this.state.modal.setProps({appVersionsFetchState: this.state.appVersionsFetchState});
-            });
+            this.setState({appVersionsFetchState: States.STATE_SUCCESS});
           }.bind(this)
         });
       }
@@ -123,18 +112,12 @@ define([
       if (this.state.activeApp != null) {
         this.state.activeApp.tasks.fetch({
           error: function() {
-            this.setState({tasksFetchState: STATES.STATE_ERROR}, function() {
-              // TODO (ml): remove this when modal is in view
-              this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
-            });
+            this.setState({tasksFetchState: States.STATE_ERROR});
           }.bind(this),
           success: function(collection, response) {
             // update changed attributes in app
             this.state.activeApp.update(response.app);
-            this.setState({tasksFetchState: STATES.STATE_SUCCESS}, function() {
-              // TODO (ml): remove this when modal is in view
-              this.state.modal.setProps({tasksFetchState: this.state.tasksFetchState});
-            });
+            this.setState({tasksFetchState: States.STATE_SUCCESS});
           }.bind(this)
         });
       }
@@ -148,15 +131,13 @@ define([
       this.setState({
         activeApp: null,
         modalClass: null,
-        tasksFetchState: STATES.STATE_LOADING,
-        appVersionsFetchState: STATES.STATE_LOADING
+        tasksFetchState: States.STATE_LOADING,
+        appVersionsFetchState: States.STATE_LOADING
       });
     },
 
     handleShowTaskDetails: function(task, callback) {
       this.setState({activeTask: task}, function() {
-        // TODO (ml): remove this when modal is in view
-        this.state.modal.setProps({activeTask: task});
         callback();
       }.bind(this));
     },
@@ -172,7 +153,7 @@ define([
       if (_options.scale) {
         instances = app.get("instances");
         app.set("instances", instances - 1);
-        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
+        this.setState({appVersionsFetchState: States.STATE_LOADING});
         // refresh app versions
         this.fetchAppVersions();
       }
@@ -200,7 +181,7 @@ define([
         null,
         {
           error: function() {
-            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+            this.setState({appVersionsFetchState: States.STATE_ERROR});
           }.bind(this),
           success: function() {
             // refresh app versions
@@ -221,7 +202,7 @@ define([
           {instances: instances},
           {
             error: function() {
-              this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+              this.setState({appVersionsFetchState: States.STATE_ERROR});
             },
             success: function() {
               // refresh app versions
@@ -242,7 +223,7 @@ define([
       if (confirm("Suspend app by scaling to 0 instances?")) {
         this.state.activeApp.suspend({
           error: function() {
-            this.setState({appVersionsFetchState: STATES.STATE_ERROR});
+            this.setState({appVersionsFetchState: States.STATE_ERROR});
           }.bind(this),
           success: function() {
             // refresh app versions
@@ -303,6 +284,7 @@ define([
       if (this.state.modalClass !== null) {
         /* jshint trailing:false, quotmark:false, newcap:false */
         if (this.state.modalClass === AppModalComponent) {
+          this.fetchTasks();
           modal = (
             <AppModalComponent
               activeTask={this.state.activeTask}
@@ -331,7 +313,6 @@ define([
         }
       }
 
-      this.stopPollingApps();
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>

@@ -2,10 +2,10 @@
 
 define([
   "React",
+  "constants/States",
   "jsx!components/AppComponent",
-  "jsx!components/Marathon",
   "mixins/BackboneMixin"
-], function(React, AppComponent, Marathon, BackboneMixin) {
+], function(React, States, AppComponent, BackboneMixin) {
   "use strict";
 
   return React.createClass({
@@ -56,14 +56,14 @@ define([
         "dropup": this.props.collection.sortReverse
       });
 
-      if (this.props.fetchState === Marathon.STATES.STATE_LOADING) {
+      if (this.props.fetchState === States.STATE_LOADING) {
         appNodes =
           <tr>
             <td className="text-center text-muted" colSpan="5">
               Loading apps...
             </td>
           </tr>;
-      } else if (this.props.fetchState === Marathon.STATES.STATE_ERROR) {
+      } else if (this.props.fetchState === States.STATE_ERROR) {
         appNodes =
           <tr>
             <td className="text-center text-danger" colSpan="5">

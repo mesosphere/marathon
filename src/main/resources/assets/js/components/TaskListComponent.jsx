@@ -2,11 +2,11 @@
 
 define([
   "React",
-  "models/Marathon",
+  "constants/States",
   "mixins/BackboneMixin",
   "jsx!components/TaskListItemComponent",
   "jsx!components/PagedContentComponent"
-], function(React, Marathon, BackboneMixin,
+], function(React, States, BackboneMixin,
     TaskListItemComponent, PagedContentComponent) {
   "use strict";
 
@@ -30,7 +30,7 @@ define([
 
     getInitialState: function() {
       return {
-        fetchState: Marathon.STATES.STATE_LOADING
+        fetchState: States.STATE_LOADING
       };
     },
 
@@ -62,7 +62,7 @@ define([
       // true.
       var allTasksSelected = tasksLength > 0;
 
-      if (this.props.fetchState === Marathon.STATES.STATE_LOADING) {
+      if (this.props.fetchState === States.STATE_LOADING) {
         taskNodes =
           <tbody>
             <tr>
@@ -71,7 +71,7 @@ define([
               </td>
             </tr>
           </tbody>;
-      } else if (this.props.fetchState === Marathon.STATES.STATE_ERROR) {
+      } else if (this.props.fetchState === States.STATE_ERROR) {
         taskNodes =
           <tbody>
             <tr>

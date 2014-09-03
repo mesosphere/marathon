@@ -17,8 +17,7 @@ define([
       formatTaskHealthMessage: React.PropTypes.func.isRequired,
       hasHealth: React.PropTypes.bool,
       onTasksKilled: React.PropTypes.func.isRequired,
-      onTaskDetailSelect: React.PropTypes.func.isRequired,
-      STATES: React.PropTypes.object.isRequired
+      onTaskDetailSelect: React.PropTypes.func.isRequired
     },
 
     getInitialState: function() {

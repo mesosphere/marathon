@@ -2,17 +2,16 @@
 
 define([
   "React",
+  "constants/States",
   "models/App",
   "models/AppVersion",
-  "models/Marathon",
   "mixins/BackboneMixin",
   "jsx!components/AppVersionComponent",
   "jsx!components/AppVersionListItemComponent",
   "jsx!components/PagedContentComponent",
   "jsx!components/PagedNavComponent"
-], function(React, App, AppVersion, Marathon, BackboneMixin,
-    AppVersionComponent, AppVersionListItemComponent, PagedContentComponent,
-    PagedNavComponent) {
+], function(React, States, App, AppVersion, BackboneMixin, AppVersionComponent,
+    AppVersionListItemComponent, PagedContentComponent, PagedNavComponent) {
   "use strict";
 
   return React.createClass({
@@ -58,9 +57,9 @@ define([
 
       var tableContents;
 
-      if (this.props.fetchState === Marathon.STATES.STATE_LOADING) {
+      if (this.props.fetchState === States.STATE_LOADING) {
         tableContents = <p className="text-muted text-center">Loading versions...</p>;
-      } else if (this.props.fetchState === Marathon.STATES.STATE_SUCCESS) {
+      } else if (this.props.fetchState === States.STATE_SUCCESS) {
 
         /* jshint trailing:false, quotmark:false, newcap:false */
         tableContents =
