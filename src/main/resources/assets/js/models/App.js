@@ -16,7 +16,15 @@ define([
   var DEFAULT_HEALTH_MSG = "Unknown";
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
     "executor", "id", "instances", "mem", "disk", "ports", "uris"];
-  var VALID_ID_PATTERN = "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
+
+  // Matches the command executor, like "//cmd", and custom executors starting
+  // with or without a "/" but never two "//", like "/custom/exec". Double slash
+  // is only permitted as a prefix to the cmd executor, "/custom//exec" is
+  // invalid for example.
+  var VALID_EXECUTOR_PATTERN = "^(|\\/\\/cmd|\\/?[^\\/]+(\\/[^\\/]+)*)$";
+  var VALID_EXECUTOR_REGEX = new RegExp(VALID_EXECUTOR_PATTERN);
+
+  var VALID_ID_PATTERN = "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9]/?)+$";
   var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
   var VALID_CONSTRAINTS = ["unique", "cluster", "group_by"];
 
@@ -233,6 +241,15 @@ define([
         );
       }
 
+      if (_.isString(attrs.executor) && !VALID_EXECUTOR_REGEX.test(attrs.executor)) {
+        errors.push(
+          new ValidationError(
+            "executor",
+            "Executor must be the string '//cmd', a string containing only single slashes ('/'), or blank."
+          )
+        );
+      }
+
       if (!_.every(attrs.ports, function(p) { return _.isNumber(p); })) {
         errors.push(
           new ValidationError("ports", "Ports must be a list of Numbers"));
@@ -253,6 +270,7 @@ define([
       if (errors.length > 0) { return errors; }
     }
   }, {
+    VALID_EXECUTOR_PATTERN: VALID_EXECUTOR_PATTERN,
     VALID_ID_PATTERN: VALID_ID_PATTERN
   });
 });
