@@ -31,8 +31,15 @@ define([
         return mousetrapOriginalStopCallback.apply(null, arguments);
       };
 
+      Mousetrap.bind("esc", function() {
+        if (this.refs.modal != null) {
+          this.refs.modal.destroy();
+        }
+      }.bind(this));
+
       Mousetrap.bind("c", function() {
         this.showNewAppModal(); }.bind(this), "keyup");
+
       Mousetrap.bind("#", function() {
         if (this.state.modalClass === AppModalComponent &&
             _.isFunction(this.refs.modal.destroyApp)) {
