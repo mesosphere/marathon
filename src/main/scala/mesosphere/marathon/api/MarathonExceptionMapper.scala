@@ -8,6 +8,7 @@ import mesosphere.marathon.{
   BadRequestException,
   UnknownAppException
 }
+import mesosphere.marathon.state.Identifiable
 import com.sun.jersey.api.NotFoundException
 import com.fasterxml.jackson.core.JsonParseException
 import javax.ws.rs.WebApplicationException
@@ -49,7 +50,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: AppLockedException =>
       Map(
         "message" -> e.getMessage,
-        "deployments" -> e.deploymentIds
+        "deployments" -> e.deploymentIds.map(Identifiable(_))
       )
     case e: JsonParseException =>
       Map("message" -> e.getOriginalMessage)

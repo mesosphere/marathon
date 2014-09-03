@@ -238,8 +238,6 @@ object AppDefinition {
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
-  protected[marathon] case class Identifiable(id: String)
-
   protected[marathon] class WithTaskCountsAndDeployments(
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
