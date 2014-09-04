@@ -194,4 +194,3 @@ object Dependency {
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
   }
 }
-

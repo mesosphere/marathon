@@ -36,7 +36,7 @@ object Container {
   def apply(proto: mesos.CommandInfo.ContainerInfo): Container =
     Container(
       `type` = mesos.ContainerInfo.Type.DOCKER,
-      docker = Some(Docker(proto.getImage))
+      docker = Some(Docker(proto.getImage, proto.getNetwork, proto.getPortMapping))
     )
 
   /**
@@ -46,7 +46,7 @@ object Container {
   def apply(proto: Protos.ContainerInfo): Container =
     Container(
       `type` = mesos.ContainerInfo.Type.DOCKER,
-      docker = Some(Docker(proto.getImage.toStringUtf8))
+      docker = Some(Docker(proto.getImage.toStringUtf8, proto.getNetwork, proto.getPortMapping))
     )
 
   /**
@@ -78,13 +78,19 @@ object Container {
   /**
     * Docker-specific container parameters.
     */
-  case class Docker(image: String = "") {
-    def toProto(): mesos.ContainerInfo.DockerInfo =
-      mesos.ContainerInfo.DockerInfo.newBuilder.setImage(image).build
+  case class Docker(image: String = "",
+                    networkMode: Option[Mesos.ContainerInfo.DockerInfo.Network] = None)
+    def toProto(): mesos.ContainerInfo.DockerInfo = {
+      val builder = mesos.ContainerInfo.DockerInfo.newBuilder.setImage(image)
+      networkMode.map { mode =>
+        builder.setNetwork(mode)
+      }
+      builder.build
+    }
   }
 
   object Docker {
     def apply(proto: mesos.ContainerInfo.DockerInfo): Docker =
-      Docker(image = proto.getImage)
+      Docker(image = proto.getImage, proto.getNetwork)
   }
 }
