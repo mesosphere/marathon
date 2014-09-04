@@ -19,14 +19,6 @@ define([
       onSelectApp: React.PropTypes.func.isRequired
     },
 
-    componentDidMount: function() {
-      this.startPolling();
-    },
-
-    componentWillUnmount: function() {
-      this.stopPolling();
-    },
-
     getResource: function() {
       return this.props.collection;
     },
