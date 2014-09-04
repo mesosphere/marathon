@@ -79,8 +79,10 @@ The full JSON format of an application resource is as follows:
     "cpus": 1.5,
     "mem": 256.0,
     "deployments": [
-        "2b2eaba6-5c1f-4e8b-b781-bce3208109a7"
-    ],
+        {
+            "id": "5cd987cd-85ae-4e70-8df7-f1438367d9cb"
+        }
+    ], 
     "env": {
         "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
     },
@@ -424,7 +426,12 @@ Transfer-Encoding: chunked
                 "volumes": []
             }, 
             "cpus": 0.25, 
-            "dependencies": [], 
+            "dependencies": [],
+            "deployments": [
+                {
+                    "id": "5cd987cd-85ae-4e70-8df7-f1438367d9cb"
+                }
+            ], 
             "disk": 0.0, 
             "env": {}, 
             "executor": "", 
@@ -771,7 +778,9 @@ Transfer-Encoding: chunked
 
 {
     "deployments": [
-        "631061a4-d785-4572-9f49-d9561c47c53b"
+        {
+            "id": "5cd987cd-85ae-4e70-8df7-f1438367d9cb"
+        }
     ], 
     "message": "App is locked by one or more deployments. Override with the option '?force=true'. View details at '/v2/deployments/<DEPLOYMENT_ID>'."
 }
