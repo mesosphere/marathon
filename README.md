@@ -8,7 +8,7 @@ Marathon provides a
 [REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for
 starting, stopping, and scaling applications. Marathon is written in Scala and
 can run in highly-available mode by running multiple copies. The
-state of running tasks gets stored in the Mesos state abstraction, typically using Apache ZooKeeper.
+state of running tasks gets stored in the Mesos state abstraction.
 
 Try Marathon now on AWS with [Elastic Mesos](http://elastic.mesosphere.io) or with [Mesosphere for Google Compute Platform](http://google.mesosphere.io) and learn how
 to use it in Mesosphere's interactive
