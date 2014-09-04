@@ -98,8 +98,6 @@ command launches Marathon in *local mode*. Point your web browser to
 $ ./bin/start --master local --zk zk://localhost:2181/marathon
 ```
 
-(Note that Mesos 0.19.0 has a bug which prevents frameworks from launching an in-process master. To get around this, launch the Mesos master separately and set `--master localhost:5050`.)
-
 ### Running in Production Mode
 
 To launch Marathon in *production mode*, you need to have both
