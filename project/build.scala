@@ -107,7 +107,6 @@ object Dependencies {
     chaos % "compile",
     mesosUtils % "compile",
     jacksonCaseClass % "compile",
-    mesos % "compile",
     twitterCommons % "compile",
     twitterZkClient % "compile",
     jodaTime % "compile",
@@ -132,7 +131,7 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.5.6"
     val JacksonCCM = "0.1.0"
-    val Mesos = "0.20.1-SNAPSHOT"
+    // val Mesos = "0.20.1-SNAPSHOT"
     val MesosUtils = "0.19.0-1"
     val Akka = "2.2.4"
     val Spray = "1.2.1"
@@ -160,13 +159,14 @@ object Dependency {
   val sprayHttpx = "io.spray" % "spray-httpx" % V.Spray
   val json4s = "org.json4s" %% "json4s-jackson" % V.Json4s
   val chaos = "mesosphere" % "chaos" % V.Chaos
-  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
+  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils excludeAll(
+    ExclusionRule(organization = "org.apache.mesos")
+  )
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
-  val mesos = "org.apache.mesos" % "mesos" % V.Mesos
   val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
   val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZKClient
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator

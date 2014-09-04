@@ -22,6 +22,21 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
       volumes = volumes,
       docker = Some(Container.Docker(image = "group/image"))
     )
+
+    lazy val container2 = Container(
+      `type` = mesos.ContainerInfo.Type.DOCKER,
+      volumes = Nil,
+      docker = Some(
+        Container.Docker(
+          image = "group/image",
+          network = Some(mesos.ContainerInfo.DockerInfo.NetworkMode.BRIDGE),
+          portMappings = Seq(
+            Container.Docker.PortMapping(8080, 32001, "tcp"),
+            Container.Docker.PortMapping(8081, 32002, "udp")
+          )
+        )
+      )
+    )
   }
 
   def fixture(): Fixture = new Fixture
@@ -32,6 +47,12 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
     assert(mesos.ContainerInfo.Type.DOCKER == proto.getType)
     assert("group/image" == proto.getDocker.getImage)
     assert(f.container.volumes == proto.getVolumesList.asScala.map(Container.Volume(_)))
+
+    val proto2 = f.container2.toProto
+    assert(mesos.ContainerInfo.Type.DOCKER == proto2.getType)
+    assert("group/image" == proto2.getDocker.getImage)
+    assert(f.container2.docker.get.network == Some(proto2.getDocker.getNetwork))
+    assert(f.container2.docker.get.portMappings == proto2.getDocker.getPortMappingsList.asScala.map(Container.Docker.PortMapping.apply))
   }
 
   test("ConstructFromProto") {
@@ -45,6 +66,15 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
 
     val container = Container(containerInfo)
     assert(container == f.container)
+
+    val containerInfo2 = mesos.ContainerInfo.newBuilder
+      .setType(mesos.ContainerInfo.Type.DOCKER)
+      .setDocker(f.container2.docker.get.toProto)
+      .build
+
+    val container2 = Container(containerInfo2)
+    assert(container2 == f.container2)
+
   }
 
   test("SerializationRoundtrip") {
@@ -93,6 +123,24 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
 
     val readResult3 = mapper.readValue(json3, classOf[Container])
     assert(readResult3 == f.container)
+
+    val json4 =
+      """
+      {
+        "type": "DOCKER",
+        "docker": {
+          "image": "group/image",
+          "network": "BRIDGE",
+          "portMappings": [
+            { "containerPort": 8080, "hostPort": 32001, "protocol": "tcp"},
+            { "containerPort": 8081, "hostPort": 32002, "protocol": "udp"}
+          ]
+        }
+      }
+      """
+
+    val readResult4 = mapper.readValue(json4, classOf[Container])
+    assert(readResult4 == f.container2)
   }
 
 }
