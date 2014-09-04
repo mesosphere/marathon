@@ -132,7 +132,7 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.5.6"
     val JacksonCCM = "0.1.0"
-    val Mesos = "0.20.0-SNAPSHOT"
+    val Mesos = "0.20.1-SNAPSHOT"
     val MesosUtils = "0.19.0-1"
     val Akka = "2.2.4"
     val Spray = "1.2.1"
@@ -181,4 +181,3 @@ object Dependency {
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
   }
 }
-
