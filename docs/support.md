@@ -12,7 +12,7 @@ an eye on questions in a few places.
 
 The
 [**marathon-framework** Google Group](https://groups.google.com/forum/#!forum/marathon-framework)
-is where team and community members ask longer, potentially open-ended
+is where team and community members ask and answer longer, potentially open-ended
 questions.
 
 ### Stack Overflow "marathon" tag
