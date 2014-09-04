@@ -14,8 +14,7 @@ define([
     AppListComponent, AppModalComponent, NewAppModalComponent) {
   "use strict";
 
-  var UPDATE_INTERVAL_APPS = 5000;
-  var UPDATE_INTERVAL_TASKS = 2000;
+  var UPDATE_INTERVAL = 5000;
 
   return React.createClass({
     displayName: "Marathon",
@@ -57,41 +56,39 @@ define([
         }
       }.bind(this));
 
-      this.startPollingApps();
+      this.setPollResource(this.fetchApps);
     },
 
     componentDidUpdate: function(prevProps, prevState) {
       if (prevState.modalClass !== this.state.modalClass) {
         // No `modalClass` means the modal went from open to closed. Start
-        // polling in that case, otherwise stop polling since the modal went
-        // from closed to open.
+        // polling for apps in that case.
+        // If `modalClass` is AppModalComponent start polling for tasks for that
+        // app.
+        // Otherwise stop polling since the modal went from closed to open.
         if (this.state.modalClass === null) {
-          this.startPollingApps();
-          this.stopPollingTasks();
+          this.setPollResource(this.fetchApps);
+        } else if (this.state.modalClass === AppModalComponent) {
+          this.setPollResource(this.fetchTasks);
         } else {
-          this.stopPollingApps();
-          this.startPollingTasks();
+          this.stopPolling();
         }
-
       }
     },
 
     componentWillUnmount: function() {
-      this.stopPollingApps();
-      this.stopPollingTasks();
+      this.stopPolling();
     },
 
-    fetchResource: function() {
-      var _this = this;
-
+    fetchApps: function() {
       this.state.collection.fetch({
         error: function() {
-          _this.setState({fetchState: States.STATE_ERROR});
-        },
+          this.setState({fetchState: States.STATE_ERROR});
+        }.bind(this),
         reset: true,
         success: function() {
-          _this.setState({fetchState: States.STATE_SUCCESS});
-        }
+          this.setState({fetchState: States.STATE_SUCCESS});
+        }.bind(this)
       });
     },
 
@@ -157,10 +154,6 @@ define([
         // refresh app versions
         this.fetchAppVersions();
       }
-
-      // Force an update since React doesn't know a key was removed from
-      // `selectedTasks`.
-      this.forceUpdate();
     },
 
     destroyApp: function() {
@@ -175,24 +168,22 @@ define([
     },
 
     rollbackToAppVersion: function(version) {
-      var app = this.state.activeApp;
-      app.setVersion(version);
-      app.save(
-        null,
-        {
-          error: function() {
-            this.setState({appVersionsFetchState: States.STATE_ERROR});
-          }.bind(this),
-          success: function() {
-            // refresh app versions
-            this.fetchAppVersions();
-          }.bind(this)
-        });
-    },
-
-    rollbackToPreviousAttributes: function() {
-      var app = this.state.activeApp;
-      app.update(app.previousAttributes());
+      if (this.state.activeApp != null) {
+        var app = this.state.activeApp;
+        app.setVersion(version);
+        app.save(
+          null,
+          {
+            error: function(data, response) {
+              var msg = response.responseJSON.message || response.statusText;
+              alert("Could not update to chosen version: " + msg);
+            },
+            success: function() {
+              // refresh app versions
+              this.fetchAppVersions();
+            }.bind(this)
+          });
+      }
     },
 
     scaleApp: function(instances) {
@@ -201,8 +192,9 @@ define([
         app.save(
           {instances: instances},
           {
-            error: function() {
-              this.setState({appVersionsFetchState: States.STATE_ERROR});
+            error: function(data, response) {
+              var msg = response.responseJSON.message || response.statusText;
+              alert("Not scaling: " + msg);
             },
             success: function() {
               // refresh app versions
@@ -222,9 +214,10 @@ define([
     suspendApp: function() {
       if (confirm("Suspend app by scaling to 0 instances?")) {
         this.state.activeApp.suspend({
-          error: function() {
-            this.setState({appVersionsFetchState: States.STATE_ERROR});
-          }.bind(this),
+          error: function(data, response) {
+            var msg = response.responseJSON.message || response.statusText;
+            alert("Could not suspend: " + msg);
+          },
           success: function() {
             // refresh app versions
             this.fetchAppVersions();
@@ -233,29 +226,30 @@ define([
       }
     },
 
-    startPollingApps: function() {
-      if (this._intervalApps == null) {
-        this.fetchResource();
-        this._intervalApps = setInterval(this.fetchResource, UPDATE_INTERVAL_APPS);
+    poll: function() {
+      this._pollResource();
+    },
+
+    setPollResource: function(func) {
+      // Kill any poll that is in flight to ensure it doesn't fire after having changed
+      // the `_pollResource` function.
+      this.stopPolling();
+      this._pollResource = func;
+      this.startPolling();
+    },
+
+    startPolling: function() {
+      if (this._interval == null) {
+        this.poll();
+        this._interval = setInterval(this.poll, UPDATE_INTERVAL);
       }
     },
 
-    stopPollingApps: function() {
-      if (this._intervalApps != null) {
-        clearInterval(this._intervalApps);
-        this._intervalApps = null;
+    stopPolling: function() {
+      if (this._interval != null) {
+        clearInterval(this._interval);
+        this._interval = null;
       }
-    },
-
-    startPollingTasks: function() {
-      if (this._intervalTasks == null) {
-        this._intervalTasks = setInterval(this.fetchTasks, UPDATE_INTERVAL_TASKS);
-      }
-    },
-
-    stopPollingTasks: function() {
-      clearInterval(this._intervalTasks);
-      this._intervalTasks = null;
     },
 
     showAppModal: function(app) {
@@ -263,7 +257,6 @@ define([
         return;
       }
 
-      this.fetchTasks();
       this.setState({
         activeApp: app,
         modalClass: AppModalComponent
