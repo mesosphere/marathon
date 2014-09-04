@@ -4,7 +4,7 @@ import akka.event.EventStream
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
-import org.apache.mesos.Protos.TaskID
+import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.mutable
@@ -22,8 +22,14 @@ class TaskKillActor(
 
   def initializeStop(): Unit = {
     log.info(s"Killing ${tasksToKill.size} instances")
-    for (task <- tasksToKill)
+    for (task <- tasksToKill) {
       driver.killTask(taskId(task.getId))
+      val status = TaskStatus.newBuilder
+        .setTaskId(taskId(task.getId))
+        .setState(TaskState.TASK_KILLED)
+        .build
+      taskTracker.terminated(appId, status)
+    }
   }
 
   private def taskId(id: String) = TaskID.newBuilder().setValue(id).build()
