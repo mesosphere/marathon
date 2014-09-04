@@ -7,7 +7,7 @@ import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 
-import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
 import mesosphere.marathon.api.{ ModelValidation, RestResource }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
@@ -64,7 +64,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, val config: Marathon
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def create(update: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response = createUpdate("", update, force)
+  def create(update: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response = createWithPath("", update, force)
 
   /**
     * Create or update a group.
@@ -77,10 +77,13 @@ class GroupsResource @Inject() (groupManager: GroupManager, val config: Marathon
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("""{id:.+}""")
   @Timed
-  def createUpdate(@PathParam("id") id: String,
-                   update: GroupUpdate,
-                   @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+  def createWithPath(@PathParam("id") id: String,
+                     update: GroupUpdate,
+                     @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     requireValid(checkGroupUpdate(update, needsId = true))
+    val effectivePath = update.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
+    val current = result(groupManager.root(withLatestApps = false)).findGroup(_.id == effectivePath)
+    if (current.isDefined) throw ConflictingChangeException(s"Group $effectivePath is already created. Use PUT to change this group.")
     val (deployment, path, version) = updateOrCreate(id.toRootPath, update, force)
     deploymentResult(deployment, Response.created(new URI(path.toString)))
   }

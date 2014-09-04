@@ -25,6 +25,8 @@ case class UpgradeInProgressException(msg: String) extends Exception(msg)
 
 case class CanceledActionException(msg: String) extends Exception(msg)
 
+case class ConflictingChangeException(msg: String) extends Exception(msg)
+
 /*
  * Task upgrade specific exceptions
  */
