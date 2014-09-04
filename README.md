@@ -83,17 +83,6 @@ command launches Marathon on Mesos in *local mode*. Point your web browser to
 
     ./bin/start --master local --zk zk://localhost:2181/marathon
 
-### Running in Production Mode
-
-The following command launches Marathon on Mesos in *production mode*. Point your web browser to
-`localhost:8080` and you should see the Marathon UI.
-
-    ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
-
-Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeepers
-for storing state. These are separate options because Mesos masters can be
-discovered in other ways as well.
-
 For more information on how to run Marathon in production and configuration options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 ## REST API Usage

@@ -61,21 +61,6 @@ Marathon releases are available from Mespshere's [repositories](http://mesospher
     SHA-256 checksums are available by appending `.sha256` to the URLs.
 
 
-#### Building from Source
-
-1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
-
-    ``` console
-    $ git clone https://github.com/mesosphere/marathon.git
-    $ cd marathon
-    $ sbt assembly
-    ```
-
-1.  Run `./bin/build-distribution` to package Marathon as an
-    [executable JAR](http://mesosphere.io/2013/12/07/executable-jars/)
-    (optional).
-
-
 ### Upgrading to a Newer Version
 
 Upgrading to a newer version of Marathon should be seamless. Be aware that
@@ -85,18 +70,6 @@ backups of the Zookeeper state before upgrading to be able to downgrade in case
 of problems after an upgrade.
 
 [See here](https://mesosphere.github.io/marathon/docs/upgrade/06xto070.html) for an upgrade guide from 0.6.* to 0.7.0
-
-### Running in Development Mode
-
-Local mode allows you to run Marathon without launching a full Mesos
-cluster. It is meant for experimentation and not recommended for production
-use. Note that you still need to run ZooKeeper for storing state. The following
-command launches Marathon in *local mode*. Point your web browser to
-`http://localhost:8080`, and you should see the Marathon UI.
-
-``` console
-$ ./bin/start --master local --zk zk://localhost:2181/marathon
-```
 
 ### Running in Production Mode
 
