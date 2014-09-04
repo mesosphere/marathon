@@ -25,7 +25,7 @@ import mesosphere.util.PromiseActor
 import org.apache.log4j.Logger
 
 import scala.concurrent.duration.{ MILLISECONDS, _ }
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{TimeoutException, Await, Future, Promise}
 import scala.util.{ Failure, Random, Success }
 
 /**
@@ -98,6 +98,7 @@ class MarathonSchedulerService @Inject() (
 
   def listRunningDeployments(): Future[Seq[(DeploymentPlan, DeploymentStepInfo)]] =
     (schedulerActor ? RetrieveRunningDeployments)
+      .recoverWith{ case _: TimeoutException => Future.failed(new TimeoutException(s"Can not retrieve the list of running deployments in time")) }
       .mapTo[RunningDeployments]
       .map(_.plans)
 
