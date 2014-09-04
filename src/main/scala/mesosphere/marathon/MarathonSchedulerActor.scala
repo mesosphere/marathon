@@ -170,8 +170,7 @@ class MarathonSchedulerActor(
           .foreach {
             case RunningDeployments(plans) =>
               val relatedDeploymentIds: Seq[String] = plans.collect {
-                case (p, _) if distinctIds(p).toSet.intersect(appIds).nonEmpty =>
-                  p.id
+                case (p, _) if p.affectedApplicationIds.intersect(appIds).nonEmpty => p.id
               }
 
               origSender ! CommandFailed(
@@ -210,20 +209,9 @@ class MarathonSchedulerActor(
 
       case Failure(e) =>
         log.error(s"Deployment of ${plan.target.id} failed", e)
-        distinctApps(plan).foreach(app => taskQueue.purge(app.id))
+        plan.affectedApplicationIds.foreach(appId => taskQueue.purge(appId))
         eventBus.publish(DeploymentFailed(plan.id))
     }
-  }
-
-  def distinctIds(plan: DeploymentPlan): Seq[PathId] = distinctApps(plan).map(_.id)
-
-  def distinctApps(plan: DeploymentPlan): Seq[AppDefinition] = {
-    val res = for {
-      step <- plan.steps
-      action <- step.actions
-    } yield action.app
-
-    res.distinct
   }
 }
 
@@ -393,10 +381,6 @@ class SchedulerActions(
     * Ensures current application parameters (resource requirements, URLs,
     * command, and constraints) are applied consistently across running
     * application instances.
-    *
-    * @param driver
-    * @param updatedApp
-    * @param appUpdate
     */
   private def update(
     driver: SchedulerDriver,
@@ -407,8 +391,6 @@ class SchedulerActions(
 
   /**
     * Make sure the app is running the correct number of instances
-    * @param driver
-    * @param app
     */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     taskTracker.get(app.id).synchronized {

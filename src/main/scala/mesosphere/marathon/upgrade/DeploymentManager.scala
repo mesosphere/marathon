@@ -13,7 +13,7 @@ import mesosphere.marathon.{ ConcurrentTaskUpgradeException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ TimeoutException, Future, Promise }
 import scala.concurrent.duration._
 
 class DeploymentManager(
@@ -62,16 +62,18 @@ class DeploymentManager(
       runningDeployments -= id
 
     case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.id) =>
-      val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, appRepository, driver, scheduler, plan, taskTracker, taskQueue, storage, eventBus))
+      val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, appRepository, driver, scheduler, plan, taskTracker, taskQueue, storage, eventBus), plan.id)
       runningDeployments += plan.id -> DeploymentInfo(ref, plan)
 
     case _: PerformDeployment =>
       sender ! Status.Failure(new ConcurrentTaskUpgradeException("Deployment is already in progress"))
 
     case RetrieveRunningDeployments =>
-      implicit val timeout: Timeout = 5.seconds
+      implicit val timeout: Timeout = 2.seconds
       val deploymentInfos = runningDeployments.values.toSeq.map { info =>
-        val res = (info.ref ? RetrieveCurrentStep).mapTo[DeploymentStepInfo]
+        val res = (info.ref ? RetrieveCurrentStep)
+          .recoverWith{ case _: TimeoutException => Future.failed(new TimeoutException(s"Can not retrieve current step from $info in time")) }
+          .mapTo[DeploymentStepInfo]
         res.map(info.plan -> _)
       }
 
