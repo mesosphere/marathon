@@ -67,7 +67,7 @@ Upgrading to a newer version of Marathon should be seamless. Be aware that
 downgrading from versions >= 0.7.0 to older versions is not possible
 because of incompatible changes in the data format. 
 
-We recommend to creating a backup of the ZooKeeper state before upgrading to be able to downgrade in case
+We recommend creating a backup of the ZooKeeper state before upgrading to be able to downgrade in case
 of problems after an upgrade. This can done by creating a copy of ZooKeeper's [data directory](http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#The+Data+Directory).
 
 [See here](https://mesosphere.github.io/marathon/docs/upgrade/06xto070.html) for an upgrade guide from 0.6.* to 0.7.0
