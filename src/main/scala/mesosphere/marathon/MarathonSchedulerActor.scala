@@ -12,7 +12,6 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentActor.DeploymentStepInfo
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ TaskKillActor, DeploymentManager, DeploymentPlan }
 import mesosphere.mesos.protos.Offer

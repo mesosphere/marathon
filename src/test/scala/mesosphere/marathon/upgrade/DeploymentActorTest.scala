@@ -1,28 +1,29 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ ActorSystem, Props }
-import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
+import scala.concurrent.Future
+import scala.concurrent.duration._
+
+import akka.actor.{ActorSystem, Props}
+import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import akka.util.Timeout
-import mesosphere.marathon.event.{ DeploymentStatus, MesosStatusUpdateEvent }
-import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentActor.{ DeploymentStepInfo, RetrieveCurrentStep, Finished }
-import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
-import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
-import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.TaskID
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
-import org.mockito.Mockito.{ times, verify, when }
+import org.mockito.Mockito.{times, verify, when}
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{BeforeAndAfterAll, Matchers}
 
-import scala.concurrent.Future
-import scala.concurrent.duration._
+import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.io.storage.StorageProvider
+import mesosphere.marathon.state._
+import mesosphere.marathon.tasks.{MarathonTasks, TaskQueue, TaskTracker}
+import mesosphere.marathon.upgrade.DeploymentActor.Finished
+import mesosphere.marathon.upgrade.DeploymentManager.{DeploymentFinished, DeploymentStepInfo}
+import mesosphere.marathon.{MarathonSpec, SchedulerActions}
+import mesosphere.mesos.protos.Implicits._
+import mesosphere.mesos.protos.TaskID
 
 class DeploymentActorTest
     extends TestKit(ActorSystem("System"))
@@ -136,6 +137,10 @@ class DeploymentActorTest
       )
     )
 
+    plan.steps.zipWithIndex.foreach {
+      case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
+    }
+
     managerProbe.expectMsg(5.seconds, DeploymentFinished(plan.id))
 
     verify(scheduler).startApp(driver, app3)
@@ -196,48 +201,5 @@ class DeploymentActorTest
 
     verify(driver).killTask(TaskID(task1_2.getId))
     verify(queue).add(appNew)
-  }
-
-  test("Retrieve running deployments") {
-    val managerProbe = TestProbe()
-    val receiverProbe = TestProbe()
-    val eventProbe = TestProbe()
-
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, version = Timestamp(0))
-    val origGroup = Group(PathId("/foo/bar"), Set())
-
-    val targetGroup = Group(PathId("/foo/bar"), Set(app))
-
-    val plan = DeploymentPlan(origGroup, targetGroup)
-    val firstStep = plan.steps.head
-
-    when(repo.store(app)).thenReturn(Future.successful(app))
-
-    system.eventStream.subscribe(eventProbe.ref, classOf[DeploymentStatus])
-
-    val deploymentActor = TestActorRef(
-      Props(
-        classOf[DeploymentActor],
-        managerProbe.ref,
-        receiverProbe.ref,
-        repo,
-        driver,
-        scheduler,
-        plan,
-        tracker,
-        queue,
-        storage,
-        system.eventStream
-      )
-    )
-
-    eventProbe.expectMsgPF() {
-      case DeploymentStatus(`plan`, `firstStep`, _, _) => true
-    }
-
-    deploymentActor ! RetrieveCurrentStep
-
-    expectMsg(DeploymentStepInfo(firstStep, 1))
-    deploymentActor.stop()
   }
 }

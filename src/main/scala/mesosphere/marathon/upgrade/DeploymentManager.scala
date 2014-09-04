@@ -2,19 +2,15 @@ package mesosphere.marathon.upgrade
 
 import akka.actor._
 import akka.event.EventStream
-import akka.pattern.{ ask, pipe }
-import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentActor.{ DeploymentStepInfo, RetrieveCurrentStep }
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.mutable
-import scala.concurrent.{ TimeoutException, Future, Promise }
-import scala.concurrent.duration._
+import scala.concurrent.{ Future, Promise }
 
 class DeploymentManager(
     appRepository: AppRepository,
@@ -27,6 +23,7 @@ class DeploymentManager(
   import mesosphere.marathon.upgrade.DeploymentManager._
 
   val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty[String, DeploymentInfo]
+  val deploymentStatus: mutable.Map[String, DeploymentStepInfo] = mutable.Map.empty[String, DeploymentStepInfo]
 
   def receive = {
     case CancelConflictingDeployments(plan, reason) =>
@@ -60,24 +57,20 @@ class DeploymentManager(
     case DeploymentFinished(id) =>
       log.info(s"Removing $id from list of running deployments")
       runningDeployments -= id
+      deploymentStatus -= id
 
     case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.id) =>
       val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, appRepository, driver, scheduler, plan, taskTracker, taskQueue, storage, eventBus), plan.id)
       runningDeployments += plan.id -> DeploymentInfo(ref, plan)
 
+    case stepInfo: DeploymentStepInfo => deploymentStatus += stepInfo.plan.id -> stepInfo
+
     case _: PerformDeployment =>
       sender ! Status.Failure(new ConcurrentTaskUpgradeException("Deployment is already in progress"))
 
     case RetrieveRunningDeployments =>
-      implicit val timeout: Timeout = 2.seconds
-      val deploymentInfos = runningDeployments.values.toSeq.map { info =>
-        val res = (info.ref ? RetrieveCurrentStep)
-          .recoverWith{ case _: TimeoutException => Future.failed(new TimeoutException(s"Can not retrieve current step from $info in time")) }
-          .mapTo[DeploymentStepInfo]
-        res.map(info.plan -> _)
-      }
-
-      Future.sequence(deploymentInfos).map(RunningDeployments).pipeTo(sender)
+      val deployments = runningDeployments.keys.flatMap(deploymentStatus.get).map(step => step.plan -> step)
+      sender ! RunningDeployments(deployments.toSeq)
   }
 
   def stopActor(ref: ActorRef, reason: Throwable): Future[Boolean] = {
@@ -92,6 +85,7 @@ object DeploymentManager {
   final case class CancelDeployment(id: String, reason: Throwable)
   final case class CancelConflictingDeployments(plan: DeploymentPlan, reason: Throwable)
 
+  final case class DeploymentStepInfo(plan: DeploymentPlan, step: DeploymentStep, nr: Int)
   final case class DeploymentFinished(id: String)
   final case class DeploymentCanceled(id: String)
   final case class ConflictingDeploymentsCanceled(id: String)
