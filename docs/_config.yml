@@ -9,6 +9,7 @@ defaults:
       path: "docs"
     values:
       layout: docs
+      tab: docs
 
 sass:
   sass_dir: _sass
