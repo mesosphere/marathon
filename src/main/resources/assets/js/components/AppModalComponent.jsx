@@ -74,7 +74,9 @@ define([
         error: function() {
           this.setState({tasksFetchState: STATES.STATE_ERROR});
         }.bind(this),
-        success: function() {
+        success: function(collection, response) {
+          // update changed attributes in app
+          this.props.model.update(response.app);
           this.setState({tasksFetchState: STATES.STATE_SUCCESS});
         }.bind(this)
       });
@@ -97,19 +99,11 @@ define([
     },
 
     onTasksKilled: function(options) {
-      var instances;
       var _options = options || {};
       if (_options.scale) {
-        instances = this.props.model.get("instances");
-        this.props.model.set("instances", instances - 1);
-        this.setState({appVersionsFetchState: STATES.STATE_LOADING});
         // refresh app versions
         this.fetchAppVersions();
       }
-
-      // Force an update since React doesn't know a key was removed from
-      // `selectedTasks`.
-      this.forceUpdate();
     },
 
     refreshTaskList: function() {
@@ -133,6 +127,13 @@ define([
 
     render: function() {
       var model = this.props.model;
+
+      var isDeploying = model.isDeploying();
+
+      var statusClassSet = React.addons.classSet({
+        "text-warning": isDeploying
+      });
+
       var hasHealth = model.get("healthChecks") != null &&
         model.get("healthChecks").length > 0;
 
@@ -146,8 +147,9 @@ define([
             <span className="h3 modal-title">{model.get("id")}</span>
             <ul className="list-inline list-inline-subtext">
               <li>
-                <strong>Instances </strong>
-                <span className="badge">{model.get("instances")}</span>
+                  <span className={statusClassSet}>
+                    {isDeploying ? "Deploying" : "Running" }
+                  </span>
               </li>
             </ul>
             <div className="header-btn">
@@ -218,9 +220,10 @@ define([
         model.save(
           {instances: instances},
           {
-            error: function() {
-              this.setState({appVersionsFetchState: STATES.STATE_ERROR});
-            },
+            error: function(data, response) {
+              model.set(model.previousAttributes());
+              alert("Not scaling: " + response.statusText);
+            }.bind(this),
             success: function() {
               // refresh app versions
               this.fetchAppVersions();

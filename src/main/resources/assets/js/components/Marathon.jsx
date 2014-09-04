@@ -5,11 +5,12 @@ define([
   "React",
   "Underscore",
   "models/AppCollection",
+  "models/DeploymentCollection",
   "jsx!components/AppListComponent",
   "jsx!components/AppModalComponent",
   "jsx!components/NewAppModalComponent"
-], function(Mousetrap, React, _, AppCollection, AppListComponent,
-    AppModalComponent, NewAppModalComponent) {
+], function(Mousetrap, React, _, AppCollection, DeploymentCollection,
+    AppListComponent, AppModalComponent, NewAppModalComponent) {
   "use strict";
 
   return React.createClass({
@@ -18,6 +19,7 @@ define([
     getInitialState: function() {
       return {
         collection: new AppCollection(),
+        deployments: new DeploymentCollection(),
         modalClass: null
       };
     },
@@ -128,6 +130,7 @@ define([
           <div className="container-fluid">
             <AppListComponent
               collection={this.state.collection}
+              deployments={this.state.deployments}
               onSelectApp={this.showAppModal}
               ref="appList" />
           </div>

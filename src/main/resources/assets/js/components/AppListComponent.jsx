@@ -2,9 +2,10 @@
 
 define([
   "React",
+  "Underscore",
   "jsx!components/AppComponent",
   "mixins/BackboneMixin"
-], function(React, AppComponent, BackboneMixin) {
+], function(React, _, AppComponent, BackboneMixin) {
   "use strict";
 
   var STATE_LOADING = 0;
@@ -19,6 +20,7 @@ define([
 
     propTypes: {
       collection: React.PropTypes.object.isRequired,
+      deployments: React.PropTypes.object.isRequired,
       onSelectApp: React.PropTypes.func.isRequired
     },
 
@@ -41,16 +43,16 @@ define([
     },
 
     fetchResource: function() {
-      var _this = this;
-
       this.props.collection.fetch({
         error: function() {
-          _this.setState({fetchState: STATE_ERROR});
-        },
+          this.setState({fetchState: STATE_ERROR});
+        }.bind(this),
         reset: true,
         success: function() {
-          _this.setState({fetchState: STATE_SUCCESS});
-        }
+          this.setState({fetchState: STATE_SUCCESS});
+          // fetch deployments
+          this.props.deployments.fetch();
+        }.bind(this)
       });
     },
 
@@ -86,7 +88,7 @@ define([
       var sortKey = this.props.collection.sortKey;
 
       var appNodes;
-      var tableClassName = "table table-fixed table-badged";
+      var tableClassName = "table table-fixed";
 
       var headerClassSet = React.addons.classSet({
         "clickable": true,
@@ -127,22 +129,17 @@ define([
       return (
         <table className={tableClassName}>
           <colgroup>
-            <col style={{width: "25%"}} />
-            <col style={{width: "35%"}} />
-            <col style={{width: "14%"}} />
-            <col style={{width: "13%"}} />
-            <col style={{width: "13%"}} />
+            <col style={{width: "28%"}} />
+            <col style={{width: "18%"}} />
+            <col style={{width: "18%"}} />
+            <col style={{width: "18%"}} />
+            <col style={{width: "18%"}} />
           </colgroup>
           <thead>
             <tr>
               <th>
                 <span onClick={this.sortCollectionBy.bind(null, "id")} className={headerClassSet}>
                   ID {sortKey === "id" ? <span className="caret"></span> : null}
-                </span>
-              </th>
-              <th>
-                <span onClick={this.sortCollectionBy.bind(null, "cmd")} className={headerClassSet}>
-                  Command {sortKey === "cmd" ? <span className="caret"></span> : null}
                 </span>
               </th>
               <th className="text-right">
@@ -157,7 +154,12 @@ define([
               </th>
               <th className="text-right">
                 <span onClick={this.sortCollectionBy.bind(null, "instances")} className={headerClassSet}>
-                  {sortKey === "instances" ? <span className="caret"></span> : null} Instances
+                  {sortKey === "instances" ? <span className="caret"></span> : null} Tasks / Instances
+                </span>
+              </th>
+              <th className="text-right">
+                <span onClick={this.sortCollectionBy.bind(null, "isDeploying")} className={headerClassSet}>
+                  {sortKey === "isDeploying" ? <span className="caret"></span> : null} Status
                 </span>
               </th>
             </tr>
