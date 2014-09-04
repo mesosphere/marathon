@@ -174,7 +174,9 @@ object Dependency {
   val sprayHttpx = "io.spray" % "spray-httpx" % V.Spray
   val json4s = "org.json4s" %% "json4s-jackson" % V.Json4s
   val chaos = "mesosphere" % "chaos" % V.Chaos
-  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
+  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils excludeAll(
+    ExclusionRule(organization = "org.apache.mesos")
+  )
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
