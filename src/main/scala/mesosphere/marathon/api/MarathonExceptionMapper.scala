@@ -6,6 +6,7 @@ import scala.concurrent.TimeoutException
 import mesosphere.marathon.{
   AppLockedException,
   BadRequestException,
+  ConflictingChangeException,
   UnknownAppException
 }
 import mesosphere.marathon.state.Identifiable
@@ -34,14 +35,15 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
   }
 
   private def statusCode(exception: Exception): Int = exception match {
-    case e: IllegalArgumentException => 422 // Unprocessable entity
-    case e: TimeoutException         => 504 // Gateway timeout
-    case e: UnknownAppException      => 404 // Not found
-    case e: AppLockedException       => 409 // Conflict
-    case e: BadRequestException      => 400 // Bad Request
-    case e: JsonParseException       => 400 // Bad Request
-    case e: WebApplicationException  => e.getResponse.getStatus
-    case _                           => 500 // Internal server error
+    case e: IllegalArgumentException   => 422 // Unprocessable entity
+    case e: TimeoutException           => 504 // Gateway timeout
+    case e: UnknownAppException        => 404 // Not found
+    case e: AppLockedException         => 409 // Conflict
+    case e: ConflictingChangeException => 409 // Conflict
+    case e: BadRequestException        => 400 // Bad Request
+    case e: JsonParseException         => 400 // Bad Request
+    case e: WebApplicationException    => e.getResponse.getStatus
+    case _                             => 500 // Internal server error
   }
 
   private def entity(exception: Exception): Any = exception match {
