@@ -61,7 +61,7 @@ the same way as these packages do.
 
 Full instructions on how to install prepackaged releases are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/). Alternatively, you can build Marathon from source.
 
-##### Building From Source
+##### Building from Source
 
 1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
 
