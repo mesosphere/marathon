@@ -41,6 +41,10 @@ pre {
   color: #00b482;
 }
 
+.navbar {
+  border: none;
+}
+
 .navbar-inverse {
   background-color: #2a2d2f;
   border-color: transparent;
@@ -49,4 +53,15 @@ pre {
 .navbar-inverse .navbar-brand,
 .navbar-inverse .nav > li > a {
   color: #fff;
+}
+
+.navbar-inverse .navbar-nav > li > a:hover {
+  background-color: #3e4146;
+}
+
+.navbar-inverse .navbar-nav > .active > a,
+.navbar-inverse .navbar-nav > .active > a:hover,
+.navbar-inverse .navbar-nav > .active > a:focus {
+  border-bottom: 3px solid #00b482;
+  padding-bottom: 12px;
 }
