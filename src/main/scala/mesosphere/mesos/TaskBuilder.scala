@@ -67,10 +67,26 @@ class TaskBuilder(app: AppDefinition,
       builder.addResources(portsResource)
     }
 
+    val containerProto: Option[ContainerInfo] =
+      app.container.map { c =>
+        val portMappings = c.docker.map { d =>
+          d.portMappings zip ports map {
+            case (mapping, port) => mapping.copy(hostPort = port.toInt)
+          }
+        }
+        val containerWithPortMappings = portMappings match {
+          case None => c
+          case Some(newMappings) => c.copy(
+            docker = c.docker.map { _.copy(portMappings = newMappings) }
+          )
+        }
+        containerWithPortMappings.toProto
+      }
+
     executor match {
       case CommandExecutor() =>
         builder.setCommand(TaskBuilder.commandInfo(app, ports))
-        for (c <- app.container) builder.setContainer(c.toProto)
+        for (c <- containerProto) builder.setContainer(c)
 
       case PathExecutor(path) =>
         val executorId = f"marathon-${taskId.getValue}" // Fresh executor
@@ -83,7 +99,7 @@ class TaskBuilder(app: AppDefinition,
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
           .setCommand(command)
-        for (c <- app.container) info.setContainer(c.toProto)
+        for (c <- containerProto) info.setContainer(c)
         builder.setExecutor(info)
         val binary = new ByteArrayOutputStream()
         mapper.writeValue(binary, app)
