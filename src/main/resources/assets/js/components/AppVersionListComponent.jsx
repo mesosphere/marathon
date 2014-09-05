@@ -2,6 +2,7 @@
 
 define([
   "React",
+  "constants/States",
   "models/App",
   "models/AppVersion",
   "mixins/BackboneMixin",
@@ -9,7 +10,7 @@ define([
   "jsx!components/AppVersionListItemComponent",
   "jsx!components/PagedContentComponent",
   "jsx!components/PagedNavComponent"
-], function(React, App, AppVersion, BackboneMixin, AppVersionComponent,
+], function(React, States, App, AppVersion, BackboneMixin, AppVersionComponent,
     AppVersionListItemComponent, PagedContentComponent, PagedNavComponent) {
   "use strict";
 
@@ -20,13 +21,16 @@ define([
 
     propTypes: {
       app: React.PropTypes.instanceOf(App).isRequired,
-      appVersions: React.PropTypes.object.isRequired,
       fetchAppVersions: React.PropTypes.func.isRequired,
       onRollback: React.PropTypes.func
     },
 
+    componentWillMount: function() {
+      this.props.fetchAppVersions();
+    },
+
     getResource: function() {
-      return this.props.appVersions;
+      return this.props.app.versions;
     },
 
     getInitialState: function() {
@@ -46,16 +50,16 @@ define([
 
     render: function() {
       // take out current version, to be displayed seperately
-      var appVersions = this.props.appVersions.models.slice(1);
+      var appVersions = this.props.app.versions.models.slice(1);
 
       var itemsPerPage = this.state.itemsPerPage;
       var currentPage = this.state.currentPage;
 
       var tableContents;
 
-      if (this.props.fetchState === this.props.STATES.STATE_LOADING) {
+      if (this.props.fetchState === States.STATE_LOADING) {
         tableContents = <p className="text-muted text-center">Loading versions...</p>;
-      } else if (this.props.fetchState === this.props.STATES.STATE_SUCCESS) {
+      } else if (this.props.fetchState === States.STATE_SUCCESS) {
 
         /* jshint trailing:false, quotmark:false, newcap:false */
         tableContents =

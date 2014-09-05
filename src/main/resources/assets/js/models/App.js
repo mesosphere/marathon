@@ -164,7 +164,6 @@ define([
       this.set(allowedAttrs);
     },
 
-
     /* Sends only those attributes listed in `EDITABLE_ATTRIBUTES` to prevent
      * sending immutable values like "tasksRunning" and "tasksStaged" and the
      * "version" value, which when sent prevents any other attributes from being

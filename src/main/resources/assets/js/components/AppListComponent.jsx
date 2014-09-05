@@ -2,20 +2,15 @@
 
 define([
   "React",
-  "Underscore",
+  "constants/States",
   "jsx!components/AppComponent",
   "mixins/BackboneMixin"
-], function(React, _, AppComponent, BackboneMixin) {
+], function(React, States, AppComponent, BackboneMixin) {
   "use strict";
-
-  var STATE_LOADING = 0;
-  var STATE_ERROR = 1;
-  var STATE_SUCCESS = 2;
-
-  var UPDATE_INTERVAL = 5000;
 
   return React.createClass({
     displayName: "AppListComponent",
+
     mixins: [BackboneMixin],
 
     propTypes: {
@@ -24,36 +19,8 @@ define([
       onSelectApp: React.PropTypes.func.isRequired
     },
 
-    componentDidMount: function() {
-      this.startPolling();
-    },
-
-    componentWillUnmount: function() {
-      this.stopPolling();
-    },
-
-    getInitialState: function() {
-      return {
-        fetchState: STATE_LOADING
-      };
-    },
-
     getResource: function() {
       return this.props.collection;
-    },
-
-    fetchResource: function() {
-      this.props.collection.fetch({
-        error: function() {
-          this.setState({fetchState: STATE_ERROR});
-        }.bind(this),
-        reset: true,
-        success: function() {
-          this.setState({fetchState: STATE_SUCCESS});
-          // fetch deployments
-          this.props.deployments.fetch();
-        }.bind(this)
-      });
     },
 
     onClickApp: function(app) {
@@ -70,20 +37,6 @@ define([
       collection.sort();
     },
 
-    startPolling: function() {
-      if (this._interval == null) {
-        this.fetchResource();
-        this._interval = setInterval(this.fetchResource, UPDATE_INTERVAL);
-      }
-    },
-
-    stopPolling: function() {
-      if (this._interval != null) {
-        clearInterval(this._interval);
-        this._interval = null;
-      }
-    },
-
     render: function() {
       var sortKey = this.props.collection.sortKey;
 
@@ -95,14 +48,14 @@ define([
         "dropup": this.props.collection.sortReverse
       });
 
-      if (this.state.fetchState === STATE_LOADING) {
+      if (this.props.fetchState === States.STATE_LOADING) {
         appNodes =
           <tr>
             <td className="text-center text-muted" colSpan="5">
               Loading apps...
             </td>
           </tr>;
-      } else if (this.state.fetchState === STATE_ERROR) {
+      } else if (this.props.fetchState === States.STATE_ERROR) {
         appNodes =
           <tr>
             <td className="text-center text-danger" colSpan="5">
