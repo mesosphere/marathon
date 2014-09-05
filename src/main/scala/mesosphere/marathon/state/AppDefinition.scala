@@ -2,15 +2,14 @@ package mesosphere.marathon.state
 
 import java.lang.{ Double => JDouble, Integer => JInt }
 
-import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
+import com.fasterxml.jackson.annotation.{ JsonIgnoreProperties, JsonProperty }
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.Protos
+import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.TaskState
@@ -111,7 +110,7 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
 
-    container.foreach { c => builder.setContainer(c.toProto) }
+    container.foreach { c => builder.setContainer(c.toProto()) }
 
     builder.build
   }
@@ -180,14 +179,15 @@ case class AppDefinition(
   }
 
   def withTaskCountsAndDeployments(
-    service: MarathonSchedulerService,
-    taskTracker: TaskTracker): AppDefinition.WithTaskCountsAndDeployments =
-    new AppDefinition.WithTaskCountsAndDeployments(service, taskTracker, this)
+    appTasks: Seq[MarathonTask],
+    runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTaskCountsAndDeployments = {
+    new AppDefinition.WithTaskCountsAndDeployments(appTasks, runningDeployments, this)
+  }
 
   def withTasksAndDeployments(
-    service: MarathonSchedulerService,
-    taskTracker: TaskTracker): AppDefinition.WithTasksAndDeployments =
-    new AppDefinition.WithTasksAndDeployments(service, taskTracker, this)
+    appTasks: Seq[MarathonTask],
+    runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTasksAndDeployments =
+    new AppDefinition.WithTasksAndDeployments(appTasks, runningDeployments, this)
 
   def isOnlyScaleChange(to: AppDefinition): Boolean =
     !isUpgrade(to) && (instances != to.instances)
@@ -239,8 +239,8 @@ object AppDefinition {
     AppDefinition().mergeFromProto(proto)
 
   protected[marathon] class WithTaskCountsAndDeployments(
-    service: MarathonSchedulerService,
-    taskTracker: TaskTracker,
+    appTasks: Seq[MarathonTask],
+    runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
       extends AppDefinition(
         app.id, app.cmd, app.args, app.user, app.env, app.instances, app.cpus,
@@ -248,13 +248,6 @@ object AppDefinition {
         app.storeUrls, app.ports, app.requirePorts, app.backoff,
         app.backoffFactor, app.container, app.healthChecks, app.dependencies,
         app.upgradeStrategy, app.version) {
-
-    /**
-      * Snapshot of the known tasks for this app
-      */
-    @JsonIgnore
-    protected[this] val appTasks: Seq[MarathonTask] =
-      taskTracker.get(this.id).toSeq
 
     /**
       * Snapshot of the number of staged (but not running) tasks
@@ -273,26 +266,22 @@ object AppDefinition {
       task.hasStatus && task.getStatus.getState == TaskState.TASK_RUNNING
     }
 
-    import scala.concurrent.Await
-
     /**
       * Snapshot of the running deployments that affect this app
       */
     @JsonProperty
     def deployments: Seq[Identifiable] = {
-      val deployments = Await.result(service.listRunningDeployments, 2.seconds)
-      deployments.collect {
-        case (d, _) if d.affectedApplicationIds contains app.id =>
-          Identifiable(d.id)
+      runningDeployments.collect {
+        case plan if plan.affectedApplicationIds contains app.id => Identifiable(plan.id)
       }
     }
   }
 
   protected[marathon] class WithTasksAndDeployments(
-    service: MarathonSchedulerService,
-    taskTracker: TaskTracker,
+    appTasks: Seq[MarathonTask],
+    runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
-      extends WithTaskCountsAndDeployments(service, taskTracker, app) {
+      extends WithTaskCountsAndDeployments(appTasks, runningDeployments, app) {
 
     @JsonProperty
     def tasks = appTasks

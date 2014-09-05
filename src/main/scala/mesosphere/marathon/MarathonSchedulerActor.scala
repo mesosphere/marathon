@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.Semaphore
 
 import akka.actor._
 import akka.event.EventStream
@@ -70,21 +70,15 @@ class MarathonSchedulerActor(
 
     case cmd @ ScaleApp(appId) =>
       val origSender = sender
-      locking(appId, origSender, cmd, blocking = false) {
+      performAsyncWithLockFor(appId, origSender, cmd, blocking = false) {
         scheduler.scale(driver, appId).sendAnswer(origSender, cmd)
-      }
-
-    case cmd @ UpdateApp(appId, update) =>
-      val origSender = sender
-      locking(appId, origSender, cmd, blocking = false) {
-        scheduler.updateApp(driver, appId, update).sendAnswer(origSender, cmd)
       }
 
     case cmd @ Deploy(plan, false) =>
       val origSender = sender
       val ids = plan.affectedApplicationIds
 
-      locking(ids, origSender, cmd, blocking = false) {
+      performAsyncWithLockFor(ids, origSender, cmd, blocking = false) {
         val res = deploy(driver, plan)
         origSender ! cmd.answer
         res
@@ -95,7 +89,7 @@ class MarathonSchedulerActor(
       val ids = plan.affectedApplicationIds
 
       deploymentManager ! CancelConflictingDeployments(plan, new DeploymentCanceledException("The upgrade has been cancelled"))
-      locking(ids, origSender, cmd, blocking = true) {
+      performAsyncWithLockFor(ids, origSender, cmd, blocking = true) {
         val res = deploy(driver, plan)
         origSender ! cmd.answer
         res
@@ -103,7 +97,7 @@ class MarathonSchedulerActor(
 
     case cmd @ KillTasks(appId, taskIds, scale) =>
       val origSender = sender
-      locking(appId, origSender, cmd, blocking = true) {
+      performAsyncWithLockFor(appId, origSender, cmd, blocking = true) {
         val promise = Promise[Unit]()
         val tasksToKill = taskIds.flatMap(taskTracker.fetchTask(appId, _)).toSet
         val actor = context.actorOf(Props(new TaskKillActor(driver, appId, taskTracker, eventBus, tasksToKill, promise)))
@@ -132,53 +126,46 @@ class MarathonSchedulerActor(
     * otherwise a [CommandFailed] message is sent to
     * the original sender.
     */
-  def locking[U](appIds: Set[PathId], origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Unit = {
-    val locks = for {
-      appId <- appIds
-    } yield appLocks.get(appId)
+  //FIXME(MV): DR is it ok to wrap this in a future? (especially the blocking path)
+  def performAsyncWithLockFor[U](appIds: Set[PathId], origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Future[_] = {
 
-    if (blocking) {
-      locks.foreach(_.acquire())
-      log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
-      f andThen {
-        case _ =>
-          log.debug(s"Releasing locks for $appIds")
-          locks.foreach(_.release())
-      }
-    }
-    else {
-      val acquiredLocks = locks.takeWhile(_.tryAcquire(1000, TimeUnit.MILLISECONDS))
-      if (acquiredLocks.size == locks.size) {
-        log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
-        f andThen {
-          case _ =>
-            log.debug(s"Releasing locks for $appIds")
-            acquiredLocks.foreach(_.release())
-        }
-      }
-      else {
-        log.debug(s"Failed to acquire some of the locks for $appIds to perform cmd: $cmd")
-        acquiredLocks.foreach(_.release())
-
-        import akka.pattern.ask
-        import akka.util.Timeout
-        import scala.concurrent.duration._
-
-        deploymentManager.ask(RetrieveRunningDeployments)(Timeout(2.seconds))
-          .mapTo[RunningDeployments]
-          .foreach {
-            case RunningDeployments(plans) =>
-              val relatedDeploymentIds: Seq[String] = plans.collect {
-                case (p, _) if p.affectedApplicationIds.intersect(appIds).nonEmpty => p.id
-              }
-
-              origSender ! CommandFailed(
-                cmd,
-                AppLockedException(relatedDeploymentIds)
-              )
+    def performWithLock(lockFn: Set[Semaphore] => Set[Semaphore]): Future[_] = {
+      val locks = appIds.map(appLocks.get) //needed locks for all application
+      Future(lockFn(locks)).flatMap { acquired => //acquired locks, fetched in a future
+        if (acquired.size == locks.size) {
+          log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
+          f andThen {
+            case _ =>
+              log.debug(s"Releasing locks for $appIds")
+              acquired.foreach(_.release())
           }
+        }
+        else lockNotAvailable(acquired)
       }
     }
+
+    def lockNotAvailable(acquiredLocks: Set[Semaphore]): Future[_] = Future {
+      log.debug(s"Failed to acquire some of the locks for $appIds to perform cmd: $cmd")
+      acquiredLocks.foreach(_.release())
+
+      import akka.pattern.ask
+      import akka.util.Timeout
+      import scala.concurrent.duration._
+
+      deploymentManager.ask(RetrieveRunningDeployments)(Timeout(2.seconds))
+        .mapTo[RunningDeployments]
+        .foreach {
+          case RunningDeployments(plans) =>
+            val relatedDeploymentIds: Seq[String] = plans.collect {
+              case (p, _) if p.affectedApplicationIds.intersect(appIds).nonEmpty => p.id
+            }
+            origSender ! CommandFailed(cmd, AppLockedException(relatedDeploymentIds))
+        }
+    }
+
+    def acquireBlocking(locks: Set[Semaphore]) = locks.map{ s => s.acquire(); s }
+    def acquireIfPossible(locks: Set[Semaphore]) = locks.takeWhile(_.tryAcquire())
+    performWithLock(if (blocking) acquireBlocking else acquireIfPossible)
   }
 
   /**
@@ -187,8 +174,8 @@ class MarathonSchedulerActor(
     * otherwise a [CommandFailed] message is sent to
     * the original sender.
     */
-  def locking[U](appId: PathId, origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Unit =
-    locking(Set(appId), origSender, cmd, blocking)(f)
+  def performAsyncWithLockFor[U](appId: PathId, origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Future[_] =
+    performAsyncWithLockFor(Set(appId), origSender, cmd, blocking)(f)
 
   // there has to be a better way...
   def driver: SchedulerDriver = MarathonSchedulerDriver.driver.get
@@ -231,10 +218,6 @@ object MarathonSchedulerActor {
     def answer: Event = DeploymentStarted(plan)
   }
 
-  case class UpdateApp(appId: PathId, update: AppUpdate) extends Command {
-    def answer = AppUpdated(appId)
-  }
-
   case class KillTasks(appId: PathId, taskIds: Set[String], scale: Boolean) extends Command {
     def answer = TasksKilled(appId, taskIds)
   }
@@ -245,7 +228,6 @@ object MarathonSchedulerActor {
   case class AppScaled(appId: PathId) extends Event
   case object TasksReconciled extends Event
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
-  case class AppUpdated(appId: PathId) extends Event
   case class TasksKilled(appId: PathId, taskIds: Set[String]) extends Event
 
   case class RunningDeployments(plans: Seq[(DeploymentPlan, DeploymentStepInfo)])

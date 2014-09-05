@@ -3,25 +3,25 @@ package mesosphere.marathon.upgrade
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-import akka.actor.{ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
+import akka.actor.{ ActorSystem, Props }
+import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
-import org.mockito.Mockito.{times, verify, when}
+import org.mockito.Mockito.{ times, verify, when }
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{BeforeAndAfterAll, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{MarathonTasks, TaskQueue, TaskTracker}
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentActor.Finished
-import mesosphere.marathon.upgrade.DeploymentManager.{DeploymentFinished, DeploymentStepInfo}
-import mesosphere.marathon.{MarathonSpec, SchedulerActions}
+import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
+import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
 
