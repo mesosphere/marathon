@@ -33,17 +33,28 @@ Fired every time Marathon receives an API request that modifies an app (create, 
   "clientIp": "0:0:0:0:0:0:0:1",
   "uri": "/v1/apps/start",
   "appDefinition":{
-    "id": "sleep",
-    "cmd": "sleep 10",
-    "env": {},
-    "instances": 1,
-    "cpus": 1.0,
-    "mem": 10.0,
-    "executor": "",
-    "constraints": [],
-    "uris": [],
-    "ports": [14480],
-    "taskRateLimit": 1.0
+    "backoffFactor": 1.15, 
+    "backoffSeconds": 1, 
+    "cmd": "sleep 30", 
+    "constraints": [], 
+    "cpus": 0.25, 
+    "dependencies": [], 
+    "disk": 0.0, 
+    "env": {}, 
+    "executor": "", 
+    "healthChecks": [], 
+    "id": "/nested/app", 
+    "instances": 1, 
+    "mem": 16.0, 
+    "ports": [10001], 
+    "requirePorts": false, 
+    "storeUrls": [], 
+    "upgradeStrategy": {
+      "minimumHealthCapacity": 1.0
+    }, 
+    "uris": [], 
+    "user": null, 
+    "version": "2014-09-08T18:12:38.259Z"
   }
 }
 ```
