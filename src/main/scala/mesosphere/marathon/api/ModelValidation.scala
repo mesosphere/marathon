@@ -21,7 +21,7 @@ trait ModelValidation extends BeanValidation {
       checkPath(group, parent, group.id, path + "id"),
       checkApps(group.apps, path + "apps", base),
       checkGroups(group.groups, path + "groups", base),
-      noAppsAndGroups(group, path + "apps", group.apps, group.groups),
+      noAppsAndGroupsWithSameName(group, path + "apps", group.apps, group.groups),
       noCyclicDependencies(group, path + "dependencies")
     )
   }
@@ -39,8 +39,7 @@ trait ModelValidation extends BeanValidation {
         defined(group, group.id, "id", (b: GroupUpdate, p: PathId, i: String) => idErrors(b, group.groupId.canonicalPath(parent), p, i), mandatory = needsId),
         group.id.map(checkPath(group, parent, _, path + "id")).getOrElse(Nil),
         group.apps.map(checkApps(_, path + "apps", base)).getOrElse(Nil),
-        group.groups.map(checkGroupUpdates(_, path + "groups", base)).getOrElse(Nil),
-        group.groups.flatMap(groups => group.apps.map(apps => (apps, groups))).map(ga => noAppsAndGroups(group, path + "apps", ga._1, ga._2)).getOrElse(Nil)
+        group.groups.map(checkGroupUpdates(_, path + "groups", base)).getOrElse(Nil)
       )
     }
   }
@@ -53,19 +52,10 @@ trait ModelValidation extends BeanValidation {
     isTrue(product, prop, path, "not allowed in conjunction with other properties", definedOptionsCount == 1)
   }
 
-  def noAppsAndGroups[T](t: T, path: String, apps: Set[AppDefinition], groups: Set[T])(implicit ct: ClassTag[T]) = {
-    lazy val appIds = apps.map(_.id).mkString(", ")
-    lazy val groupIds = groups.collect {
-      case g: Group       => g.id
-      case g: GroupUpdate => g.id.getOrElse(PathId(path))
-    }.mkString(", ")
-
-    isTrue(
-      t,
-      apps,
-      path,
-      s"Groups may contain apps or groups but not both! Apps: [$appIds] Groups: [$groupIds]",
-      !(apps.nonEmpty && groups.nonEmpty))
+  def noAppsAndGroupsWithSameName[T](t: T, path: String, apps: Set[AppDefinition], groups: Set[Group])(implicit ct: ClassTag[T]) = {
+    val groupIds = groups.map(_.id)
+    val clashingIds = apps.map(_.id).filter(groupIds.contains)
+    isTrue(t, apps, path, s"Groups and Applications may not have the same identifier: ${clashingIds.mkString(", ")}", clashingIds.isEmpty)
   }
 
   def noCyclicDependencies(group: Group, path: String) = {
