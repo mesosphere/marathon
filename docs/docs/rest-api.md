@@ -1342,7 +1342,6 @@ User-Agent: HTTPie/0.8.0
             "ports": [
                 19970
             ], 
-            "taskRateLimit": 1.0, 
             "uris": []
         }
     ]
