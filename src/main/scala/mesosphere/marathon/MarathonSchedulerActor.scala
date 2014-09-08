@@ -1,10 +1,17 @@
 package mesosphere.marathon
 
 import java.util.concurrent.Semaphore
+import scala.collection.JavaConverters._
+import scala.concurrent.{ ExecutionContext, Future, Promise, blocking }
+import scala.util.{ Failure, Success }
 
 import akka.actor._
 import akka.event.EventStream
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.apache.mesos.Protos.TaskInfo
+import org.apache.mesos.SchedulerDriver
+import org.slf4j.LoggerFactory
+
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess }
@@ -13,18 +20,11 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.upgrade.{ TaskKillActor, DeploymentManager, DeploymentPlan }
+import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos.Offer
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.{ TaskBuilder, protos }
 import mesosphere.util.{ LockManager, PromiseActor }
-import org.apache.mesos.Protos.TaskInfo
-import org.apache.mesos.SchedulerDriver
-import org.slf4j.LoggerFactory
-
-import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionContext, Future, Promise }
-import scala.util.{ Failure, Success }
 
 class MarathonSchedulerActor(
     mapper: ObjectMapper,
@@ -38,6 +38,7 @@ class MarathonSchedulerActor(
     eventBus: EventStream,
     config: MarathonConf) extends Actor with ActorLogging {
   import context.dispatcher
+
   import mesosphere.marathon.MarathonSchedulerActor._
 
   val appLocks = LockManager[PathId]()
@@ -78,7 +79,7 @@ class MarathonSchedulerActor(
       val origSender = sender
       val ids = plan.affectedApplicationIds
 
-      performAsyncWithLockFor(ids, origSender, cmd, blocking = false) {
+      performAsyncWithLockFor(ids, origSender, cmd, isBlocking = false) {
         val res = deploy(driver, plan)
         origSender ! cmd.answer
         res
@@ -89,7 +90,7 @@ class MarathonSchedulerActor(
       val ids = plan.affectedApplicationIds
 
       deploymentManager ! CancelConflictingDeployments(plan, new DeploymentCanceledException("The upgrade has been cancelled"))
-      performAsyncWithLockFor(ids, origSender, cmd, blocking = true) {
+      performAsyncWithLockFor(ids, origSender, cmd, isBlocking = true) {
         val res = deploy(driver, plan)
         origSender ! cmd.answer
         res
@@ -126,12 +127,11 @@ class MarathonSchedulerActor(
     * otherwise a [CommandFailed] message is sent to
     * the original sender.
     */
-  //FIXME(MV): DR is it ok to wrap this in a future? (especially the blocking path)
-  def performAsyncWithLockFor[U](appIds: Set[PathId], origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Future[_] = {
+  def performAsyncWithLockFor[U](appIds: Set[PathId], origSender: ActorRef, cmd: Command, isBlocking: Boolean)(f: => Future[U]): Future[_] = {
 
     def performWithLock(lockFn: Set[Semaphore] => Set[Semaphore]): Future[_] = {
       val locks = appIds.map(appLocks.get) //needed locks for all application
-      Future(lockFn(locks)).flatMap { acquired => //acquired locks, fetched in a future
+      Future(blocking(lockFn(locks))).flatMap { acquired => //acquired locks, fetched in a future
         if (acquired.size == locks.size) {
           log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
           f andThen {
@@ -148,9 +148,9 @@ class MarathonSchedulerActor(
       log.debug(s"Failed to acquire some of the locks for $appIds to perform cmd: $cmd")
       acquiredLocks.foreach(_.release())
 
+      import scala.concurrent.duration._
       import akka.pattern.ask
       import akka.util.Timeout
-      import scala.concurrent.duration._
 
       deploymentManager.ask(RetrieveRunningDeployments)(Timeout(2.seconds))
         .mapTo[RunningDeployments]
@@ -165,7 +165,7 @@ class MarathonSchedulerActor(
 
     def acquireBlocking(locks: Set[Semaphore]) = locks.map{ s => s.acquire(); s }
     def acquireIfPossible(locks: Set[Semaphore]) = locks.takeWhile(_.tryAcquire())
-    performWithLock(if (blocking) acquireBlocking else acquireIfPossible)
+    performWithLock(if (isBlocking) acquireBlocking else acquireIfPossible)
   }
 
   /**

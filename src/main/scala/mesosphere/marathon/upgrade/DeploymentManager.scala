@@ -1,16 +1,19 @@
 package mesosphere.marathon.upgrade
 
+import scala.collection.mutable
+import scala.concurrent.{ Future, Promise }
+import scala.util.control.NonFatal
+
+import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.event.EventStream
+import org.apache.mesos.SchedulerDriver
+
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, SchedulerActions }
-import org.apache.mesos.SchedulerDriver
-
-import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
 
 class DeploymentManager(
     appRepository: AppRepository,
@@ -20,10 +23,15 @@ class DeploymentManager(
     storage: StorageProvider,
     eventBus: EventStream) extends Actor with ActorLogging {
   import context.dispatcher
+
   import mesosphere.marathon.upgrade.DeploymentManager._
 
   val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty[String, DeploymentInfo]
   val deploymentStatus: mutable.Map[String, DeploymentStepInfo] = mutable.Map.empty[String, DeploymentStepInfo]
+
+  override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
+    case NonFatal(_) => Stop
+  }
 
   def receive = {
     case CancelConflictingDeployments(plan, reason) =>
