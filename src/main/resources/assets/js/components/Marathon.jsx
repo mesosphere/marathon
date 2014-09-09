@@ -158,11 +158,20 @@ define([
 
     destroyApp: function() {
       var app = this.state.activeApp;
-      if (confirm("Destroy app '" + app.get("id") + "'?\nThis is irreversible.")) {
-        // Send force option to ensure the UI is always able to kill apps
-        // regardless of deployment state.
+
+      if (confirm("Destroy app '" + app.id + "'?\nThis is irreversible.")) {
         app.destroy({
-          url: _.result(app, "url") + "?force=true"
+          error: function(data, response) {
+            var msg = response.responseJSON.message || response.statusText;
+            alert("Error destroying app '" + app.id + "': " + msg);
+          },
+          success: function() {
+            this.setState({
+              activeApp: null,
+              modalClass: null
+            });
+          }.bind(this),
+          wait: true
         });
       }
     },
