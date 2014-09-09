@@ -65,34 +65,42 @@ case class Subscribe(
   clientIp: String,
   callbackUrl: String,
   eventType: String = "subscribe_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonSubscriptionEvent
+  timestamp: String = Timestamp.now().toString)
+    extends MarathonSubscriptionEvent
 
 case class Unsubscribe(
   clientIp: String,
   callbackUrl: String,
   eventType: String = "unsubscribe_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonSubscriptionEvent
+  timestamp: String = Timestamp.now().toString)
+    extends MarathonSubscriptionEvent
 
 // health checks
 
-sealed trait MarathonHealthCheckEvent extends MarathonEvent
+sealed trait MarathonHealthCheckEvent extends MarathonEvent {
+  def appId(): PathId
+}
 
 case class AddHealthCheck(
+  appId: PathId,
   healthCheck: HealthCheck,
   eventType: String = "add_health_check_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
+  timestamp: String = Timestamp.now().toString)
+    extends MarathonHealthCheckEvent
 
 case class RemoveHealthCheck(
   appId: PathId,
   eventType: String = "remove_health_check_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
+  timestamp: String = Timestamp.now().toString)
+    extends MarathonHealthCheckEvent
 
 case class FailedHealthCheck(
   appId: PathId,
   taskId: String,
   healthCheck: HealthCheck,
   eventType: String = "failed_health_check_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
+  timestamp: String = Timestamp.now().toString)
+    extends MarathonHealthCheckEvent
 
 case class HealthStatusChanged(
   appId: PathId,
@@ -100,7 +108,8 @@ case class HealthStatusChanged(
   version: String,
   alive: Boolean,
   eventType: String = "health_status_changed_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
+  timestamp: String = Timestamp.now().toString)
+    extends MarathonHealthCheckEvent
 
 // upgrade messages
 
