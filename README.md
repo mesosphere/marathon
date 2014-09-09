@@ -7,23 +7,25 @@ following the instructions.
 
 ### Dependencies
 
+* [Bundler](http://bundler.io/)
+* [Node.js](http://nodejs.org/) (for compiling assets)
+* Python
 * Ruby
 * [RubyGems](https://rubygems.org/)
-* [Bundler](http://bundler.io/)
 
 ### Instructions
 
-1. Clone the Marathon repository
-
-2. Change into the "docs" directory where docs live
-
-        $ cd docs
-        
-3. Install packages needed by ruby
+1. Install packages needed to generate the site
 
         $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev
-        
-4. Install the gems
+
+2. Clone the Marathon repository
+
+3. Change into the "docs" directory where docs live
+
+        $ cd docs
+
+4. Install Bundler
 
         $ gem install bundler
 
