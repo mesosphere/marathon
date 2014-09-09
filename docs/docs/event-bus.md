@@ -72,7 +72,7 @@ Fired every time the status of a task changes:
   "timestamp": "2014-03-01T23:29:30.158Z",
   "slaveId": "20140909-054127-177048842-5050-1494-0",
   "taskId": "my-app_0-1396592784349",
-  "taskStatus": "TASK_RUNNINg",
+  "taskStatus": "TASK_RUNNING",
   "appId": "/my-app",
   "host": "slave-1234.acme.org",
   "ports": [31372],
