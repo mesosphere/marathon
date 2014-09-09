@@ -1,10 +1,17 @@
 package mesosphere.marathon
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.Semaphore
+import scala.collection.JavaConverters._
+import scala.concurrent.{ ExecutionContext, Future, Promise, blocking }
+import scala.util.{ Failure, Success }
 
 import akka.actor._
 import akka.event.EventStream
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.apache.mesos.Protos.TaskInfo
+import org.apache.mesos.SchedulerDriver
+import org.slf4j.LoggerFactory
+
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess }
@@ -12,20 +19,12 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentActor.DeploymentStepInfo
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.upgrade.{ TaskKillActor, DeploymentManager, DeploymentPlan }
+import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos.Offer
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.{ TaskBuilder, protos }
 import mesosphere.util.{ LockManager, PromiseActor }
-import org.apache.mesos.Protos.TaskInfo
-import org.apache.mesos.SchedulerDriver
-import org.slf4j.LoggerFactory
-
-import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionContext, Future, Promise }
-import scala.util.{ Failure, Success }
 
 class MarathonSchedulerActor(
     mapper: ObjectMapper,
@@ -39,6 +38,7 @@ class MarathonSchedulerActor(
     eventBus: EventStream,
     config: MarathonConf) extends Actor with ActorLogging {
   import context.dispatcher
+
   import mesosphere.marathon.MarathonSchedulerActor._
 
   val appLocks = LockManager[PathId]()
@@ -71,21 +71,15 @@ class MarathonSchedulerActor(
 
     case cmd @ ScaleApp(appId) =>
       val origSender = sender
-      locking(appId, origSender, cmd, blocking = false) {
+      performAsyncWithLockFor(appId, origSender, cmd, blocking = false) {
         scheduler.scale(driver, appId).sendAnswer(origSender, cmd)
-      }
-
-    case cmd @ UpdateApp(appId, update) =>
-      val origSender = sender
-      locking(appId, origSender, cmd, blocking = false) {
-        scheduler.updateApp(driver, appId, update).sendAnswer(origSender, cmd)
       }
 
     case cmd @ Deploy(plan, false) =>
       val origSender = sender
       val ids = plan.affectedApplicationIds
 
-      locking(ids, origSender, cmd, blocking = false) {
+      performAsyncWithLockFor(ids, origSender, cmd, isBlocking = false) {
         val res = deploy(driver, plan)
         origSender ! cmd.answer
         res
@@ -96,7 +90,7 @@ class MarathonSchedulerActor(
       val ids = plan.affectedApplicationIds
 
       deploymentManager ! CancelConflictingDeployments(plan, new DeploymentCanceledException("The upgrade has been cancelled"))
-      locking(ids, origSender, cmd, blocking = true) {
+      performAsyncWithLockFor(ids, origSender, cmd, isBlocking = true) {
         val res = deploy(driver, plan)
         origSender ! cmd.answer
         res
@@ -104,7 +98,7 @@ class MarathonSchedulerActor(
 
     case cmd @ KillTasks(appId, taskIds, scale) =>
       val origSender = sender
-      locking(appId, origSender, cmd, blocking = true) {
+      performAsyncWithLockFor(appId, origSender, cmd, blocking = true) {
         val promise = Promise[Unit]()
         val tasksToKill = taskIds.flatMap(taskTracker.fetchTask(appId, _)).toSet
         val actor = context.actorOf(Props(new TaskKillActor(driver, appId, taskTracker, eventBus, tasksToKill, promise)))
@@ -133,54 +127,45 @@ class MarathonSchedulerActor(
     * otherwise a [CommandFailed] message is sent to
     * the original sender.
     */
-  def locking[U](appIds: Set[PathId], origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Unit = {
-    val locks = for {
-      appId <- appIds
-    } yield appLocks.get(appId)
+  def performAsyncWithLockFor[U](appIds: Set[PathId], origSender: ActorRef, cmd: Command, isBlocking: Boolean)(f: => Future[U]): Future[_] = {
 
-    if (blocking) {
-      locks.foreach(_.acquire())
-      log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
-      f andThen {
-        case _ =>
-          log.debug(s"Releasing locks for $appIds")
-          locks.foreach(_.release())
-      }
-    }
-    else {
-      val acquiredLocks = locks.takeWhile(_.tryAcquire(1000, TimeUnit.MILLISECONDS))
-      if (acquiredLocks.size == locks.size) {
-        log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
-        f andThen {
-          case _ =>
-            log.debug(s"Releasing locks for $appIds")
-            acquiredLocks.foreach(_.release())
-        }
-      }
-      else {
-        log.debug(s"Failed to acquire some of the locks for $appIds to perform cmd: $cmd")
-        acquiredLocks.foreach(_.release())
-
-        import akka.pattern.ask
-        import akka.util.Timeout
-        import scala.concurrent.duration._
-
-        deploymentManager.ask(RetrieveRunningDeployments)(Timeout(2.seconds))
-          .mapTo[RunningDeployments]
-          .foreach {
-            case RunningDeployments(plans) =>
-              val relatedDeploymentIds: Seq[String] = plans.collect {
-                case (p, _) if distinctIds(p).toSet.intersect(appIds).nonEmpty =>
-                  p.id
-              }
-
-              origSender ! CommandFailed(
-                cmd,
-                AppLockedException(relatedDeploymentIds)
-              )
+    def performWithLock(lockFn: Set[Semaphore] => Set[Semaphore]): Future[_] = {
+      val locks = appIds.map(appLocks.get) //needed locks for all application
+      Future(blocking(lockFn(locks))).flatMap { acquired => //acquired locks, fetched in a future
+        if (acquired.size == locks.size) {
+          log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
+          f andThen {
+            case _ =>
+              log.debug(s"Releasing locks for $appIds")
+              acquired.foreach(_.release())
           }
+        }
+        else lockNotAvailable(acquired)
       }
     }
+
+    def lockNotAvailable(acquiredLocks: Set[Semaphore]): Future[_] = Future {
+      log.debug(s"Failed to acquire some of the locks for $appIds to perform cmd: $cmd")
+      acquiredLocks.foreach(_.release())
+
+      import scala.concurrent.duration._
+      import akka.pattern.ask
+      import akka.util.Timeout
+
+      deploymentManager.ask(RetrieveRunningDeployments)(Timeout(2.seconds))
+        .mapTo[RunningDeployments]
+        .foreach {
+          case RunningDeployments(plans) =>
+            val relatedDeploymentIds: Seq[String] = plans.collect {
+              case (p, _) if p.affectedApplicationIds.intersect(appIds).nonEmpty => p.id
+            }
+            origSender ! CommandFailed(cmd, AppLockedException(relatedDeploymentIds))
+        }
+    }
+
+    def acquireBlocking(locks: Set[Semaphore]) = locks.map{ s => s.acquire(); s }
+    def acquireIfPossible(locks: Set[Semaphore]) = locks.takeWhile(_.tryAcquire())
+    performWithLock(if (isBlocking) acquireBlocking else acquireIfPossible)
   }
 
   /**
@@ -189,8 +174,8 @@ class MarathonSchedulerActor(
     * otherwise a [CommandFailed] message is sent to
     * the original sender.
     */
-  def locking[U](appId: PathId, origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Unit =
-    locking(Set(appId), origSender, cmd, blocking)(f)
+  def performAsyncWithLockFor[U](appId: PathId, origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Future[_] =
+    performAsyncWithLockFor(Set(appId), origSender, cmd, blocking)(f)
 
   // there has to be a better way...
   def driver: SchedulerDriver = MarathonSchedulerDriver.driver.get
@@ -210,20 +195,9 @@ class MarathonSchedulerActor(
 
       case Failure(e) =>
         log.error(s"Deployment of ${plan.target.id} failed", e)
-        distinctApps(plan).foreach(app => taskQueue.purge(app.id))
+        plan.affectedApplicationIds.foreach(appId => taskQueue.purge(appId))
         eventBus.publish(DeploymentFailed(plan.id))
     }
-  }
-
-  def distinctIds(plan: DeploymentPlan): Seq[PathId] = distinctApps(plan).map(_.id)
-
-  def distinctApps(plan: DeploymentPlan): Seq[AppDefinition] = {
-    val res = for {
-      step <- plan.steps
-      action <- step.actions
-    } yield action.app
-
-    res.distinct
   }
 }
 
@@ -244,10 +218,6 @@ object MarathonSchedulerActor {
     def answer: Event = DeploymentStarted(plan)
   }
 
-  case class UpdateApp(appId: PathId, update: AppUpdate) extends Command {
-    def answer = AppUpdated(appId)
-  }
-
   case class KillTasks(appId: PathId, taskIds: Set[String], scale: Boolean) extends Command {
     def answer = TasksKilled(appId, taskIds)
   }
@@ -258,7 +228,6 @@ object MarathonSchedulerActor {
   case class AppScaled(appId: PathId) extends Event
   case object TasksReconciled extends Event
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
-  case class AppUpdated(appId: PathId) extends Event
   case class TasksKilled(appId: PathId, taskIds: Set[String]) extends Event
 
   case class RunningDeployments(plans: Seq[(DeploymentPlan, DeploymentStepInfo)])
@@ -393,10 +362,6 @@ class SchedulerActions(
     * Ensures current application parameters (resource requirements, URLs,
     * command, and constraints) are applied consistently across running
     * application instances.
-    *
-    * @param driver
-    * @param updatedApp
-    * @param appUpdate
     */
   private def update(
     driver: SchedulerDriver,
@@ -407,8 +372,6 @@ class SchedulerActions(
 
   /**
     * Make sure the app is running the correct number of instances
-    * @param driver
-    * @param app
     */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     taskTracker.get(app.id).synchronized {

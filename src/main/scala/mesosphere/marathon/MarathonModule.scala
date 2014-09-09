@@ -3,8 +3,9 @@ package mesosphere.marathon
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Named
+import scala.util.control.NonFatal
 
-import akka.actor.SupervisorStrategy.Resume
+import akka.actor.SupervisorStrategy.Restart
 import akka.actor.{ ActorRef, ActorSystem, OneForOneStrategy, Props }
 import akka.event.EventStream
 import akka.routing.RoundRobinRouter
@@ -13,6 +14,10 @@ import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, ZooKeeperClient, Group => ZGroup }
+import org.apache.log4j.Logger
+import org.apache.mesos.state.{ State, ZooKeeperState }
+import org.apache.zookeeper.ZooDefs
+
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.health.{ DelegatingHealthCheckManager, HealthCheckManager, MarathonHealthCheckManager }
@@ -20,9 +25,6 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
-import org.apache.log4j.Logger
-import org.apache.mesos.state.{ State, ZooKeeperState }
-import org.apache.zookeeper.ZooDefs
 
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
@@ -93,7 +95,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     @Named(EventModule.busName) eventBus: EventStream,
     config: MarathonConf): ActorRef = {
     val supervision = OneForOneStrategy() {
-      case _ => Resume
+      case NonFatal(_) => Restart
     }
 
     system.actorOf(

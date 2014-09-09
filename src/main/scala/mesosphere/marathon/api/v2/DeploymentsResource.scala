@@ -6,8 +6,8 @@ import javax.ws.rs.core.MediaType
 
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.state.GroupManager
-import mesosphere.marathon.upgrade.DeploymentActor.DeploymentStepInfo
-import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentStep, DeploymentPlan }
+import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
+import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentPlan }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
 @Path("v2/deployments")

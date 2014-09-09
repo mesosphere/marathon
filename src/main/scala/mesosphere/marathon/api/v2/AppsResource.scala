@@ -36,12 +36,11 @@ class AppsResource @Inject() (
             @QueryParam("id") id: String,
             @QueryParam("embed") embed: String) = {
     val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
-    if (embed == EmbedTasks) {
-      Map("apps" -> apps.map(_.withTasksAndDeployments(service, taskTracker)))
-    }
-    else {
-      Map("apps" -> apps.map(_.withTaskCountsAndDeployments(service, taskTracker)))
-    }
+    val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
+    val mapped =
+      if (embed == EmbedTasks) apps.map(app => app.withTasksAndDeployments(taskTracker.get(app.id).toSeq, runningDeployments))
+      else apps.map(app => app.withTaskCountsAndDeployments(taskTracker.get(app.id).toSeq, runningDeployments))
+    Map("apps" -> mapped)
   }
 
   @POST
@@ -52,7 +51,7 @@ class AppsResource @Inject() (
     requireValid(checkApp(app, baseId.parent))
     maybePostEvent(req, app)
     val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
-    val deployment = result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
+    result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
     Response.created(new URI(baseId.toString)).entity(managed).build()
   }
 
@@ -60,13 +59,14 @@ class AppsResource @Inject() (
   @Path("""{id:.+}""")
   @Timed
   def show(@PathParam("id") id: String): Response = {
+    def runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
     def transitiveApps(gid: PathId) = {
       val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
-      val withTasks = apps.map(_.withTasksAndDeployments(service, taskTracker))
+      val withTasks = apps.map(app => app.withTasksAndDeployments(taskTracker.get(app.id).toSeq, runningDeployments))
       ok(Map("*" -> withTasks))
     }
     def app() = service.getApp(id.toRootPath) match {
-      case Some(app) => ok(Map("app" -> app.withTasksAndDeployments(service, taskTracker)))
+      case Some(app) => ok(Map("app" -> app.withTasksAndDeployments(taskTracker.get(app.id).toSeq, runningDeployments)))
       case None      => unknownApp(id.toRootPath)
     }
     id match {
@@ -158,7 +158,7 @@ class AppsResource @Inject() (
       val appMatchesCmd =
         cmd != null &&
           cmd.nonEmpty &&
-          app.cmd.map(isPrefix(cmd, _)).getOrElse(false)
+          app.cmd.exists(isPrefix(cmd, _))
 
       val appMatchesId =
         id != null &&

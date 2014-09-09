@@ -15,7 +15,7 @@ import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ PathId, AppDefinition, AppRepository }
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentManager.DeploymentFinished
+import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentStepInfo, DeploymentFinished }
 
 class DeploymentActor(
     parent: ActorRef,
@@ -51,6 +51,7 @@ class DeploymentActor(
       val step = steps.next()
       currentStepNr += 1
       currentStep = Some(step)
+      parent ! DeploymentStepInfo(plan, currentStep.getOrElse(DeploymentStep(Nil)), currentStepNr)
 
       performStep(step) onComplete {
         case Success(_) =>
@@ -68,9 +69,6 @@ class DeploymentActor(
       receiver ! Status.Failure(t)
       context.stop(self)
 
-    case RetrieveCurrentStep =>
-      log.info("retrieving current step")
-      sender ! DeploymentStepInfo(currentStep.getOrElse(DeploymentStep(Nil)), currentStepNr)
   }
 
   def performStep(step: DeploymentStep): Future[Unit] = {
@@ -166,7 +164,5 @@ class DeploymentActor(
 object DeploymentActor {
   case object NextStep
   case object Finished
-  case object RetrieveCurrentStep
-  final case class DeploymentStepInfo(step: DeploymentStep, nr: Int)
   final case class Cancel(reason: Throwable)
 }

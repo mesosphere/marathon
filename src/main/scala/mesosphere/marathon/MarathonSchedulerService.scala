@@ -18,14 +18,14 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.upgrade.DeploymentActor.DeploymentStepInfo
+import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
 import org.apache.log4j.Logger
 
 import scala.concurrent.duration.{ MILLISECONDS, _ }
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{ TimeoutException, Await, Future, Promise }
 import scala.util.{ Failure, Random, Success }
 
 /**
@@ -98,6 +98,7 @@ class MarathonSchedulerService @Inject() (
 
   def listRunningDeployments(): Future[Seq[(DeploymentPlan, DeploymentStepInfo)]] =
     (schedulerActor ? RetrieveRunningDeployments)
+      .recoverWith{ case _: TimeoutException => Future.failed(new TimeoutException(s"Can not retrieve the list of running deployments in time")) }
       .mapTo[RunningDeployments]
       .map(_.plans)
 
