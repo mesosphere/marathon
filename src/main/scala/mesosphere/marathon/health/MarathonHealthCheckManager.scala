@@ -51,7 +51,7 @@ class MarathonHealthCheckManager @Inject() (
       appHealthChecks += (appId -> newHealthChecksForApp)
     }
 
-    eventBus.publish(AddHealthCheck(healthCheck))
+    eventBus.publish(AddHealthCheck(appId, healthCheck))
   }
 
   override def addAllFor(app: AppDefinition): Unit =
