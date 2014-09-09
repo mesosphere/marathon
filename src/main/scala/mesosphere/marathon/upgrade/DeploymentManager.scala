@@ -77,7 +77,7 @@ class DeploymentManager(
       sender ! Status.Failure(new ConcurrentTaskUpgradeException("Deployment is already in progress"))
 
     case RetrieveRunningDeployments =>
-      val deployments = runningDeployments.keys.flatMap(deploymentStatus.get).map(step => step.plan -> step)
+      val deployments: Iterable[(DeploymentPlan, DeploymentStepInfo)] = deploymentStatus.values.map(step => step.plan -> step)
       sender ! RunningDeployments(deployments.toSeq)
   }
 
