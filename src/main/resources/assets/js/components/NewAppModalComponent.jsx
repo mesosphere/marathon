@@ -53,21 +53,28 @@ define([
     },
 
     validateResponse: function(response) {
-      var errors = [];
+      var errors;
 
-      if (response.status === 422) {
-        errors.push(
-          new ValidationError("id", "An app with this ID already exists")
-        );
+      if (response.status === 422 && response.responseJSON != null &&
+          _.isArray(response.responseJSON.errors)) {
+        errors = response.responseJSON.errors.map(function(e) {
+          return new ValidationError(
+            // Errors that affect multiple attributes provide a blank string. In
+            // that case, count it as a "general" error.
+            e.attribute.length < 1 ? "general" : e.attribute,
+            e.error
+          );
+        });
       } else if (response.status >= 500) {
-        errors.push(
-          new ValidationError("general", "Server error, could not create")
-        );
+        errors = [
+          new ValidationError("general", "Server error, could not create app.")
+        ];
       } else {
-        errors.push(
-          new ValidationError("general", "Creation unsuccessful")
-        );
+        errors = [
+          new ValidationError("general", "App creation unsuccessful. Check your connection and try again.")
+        ];
       }
+
       this.setState({errors: errors});
     },
 
@@ -134,7 +141,11 @@ define([
             success: function() {
               this.clearValidation();
               this.destroy();
-            }.bind(this)
+            }.bind(this),
+
+            // Wait to add the model to the collection until a successful
+            // response code is received from the server.
+            wait: true
           }
         );
       }
@@ -142,7 +153,6 @@ define([
 
     render: function() {
       var model = this.state.model;
-
       var errors = this.state.errors;
 
       var generalErrors = errors.filter(function(e) {
@@ -168,11 +178,7 @@ define([
                   label="ID"
                   model={model}
                   errors={errors}>
-                <input
-                  autoFocus
-                  pattern={App.VALID_ID_PATTERN}
-                  required
-                  title="Must be a valid hostname (may contain only digits, dashes, dots, and lowercase letters)" />
+                <input autoFocus required />
               </FormGroupComponent>
               <FormGroupComponent
                   attribute="cpus"

@@ -25,8 +25,6 @@ define([
   var VALID_EXECUTOR_PATTERN = "^(|\\/\\/cmd|\\/?[^\\/]+(\\/[^\\/]+)*)$";
   var VALID_EXECUTOR_REGEX = new RegExp(VALID_EXECUTOR_PATTERN);
 
-  var VALID_ID_PATTERN = "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9]/?)+$";
-  var VALID_ID_REGEX = new RegExp(VALID_ID_PATTERN);
   var VALID_CONSTRAINTS = ["unique", "cluster", "group_by"];
 
   function findHealthCheckMsg(healthCheckResults, context) {
@@ -246,14 +244,8 @@ define([
           new ValidationError("instances", "Instances must be a non-negative Number"));
       }
 
-      if (!_.isString(attrs.id) || attrs.id.length < 1 ||
-          !VALID_ID_REGEX.test(attrs.id)) {
-        errors.push(
-          new ValidationError(
-            "id",
-            "ID must be a valid hostname (may contain only digits, dashes, dots, and lowercase letters)"
-          )
-        );
+      if (!_.isString(attrs.id) || attrs.id.length < 1) {
+        errors.push(new ValidationError("id", "ID must not be empty"));
       }
 
       if (_.isString(attrs.executor) && !VALID_EXECUTOR_REGEX.test(attrs.executor)) {
@@ -285,7 +277,6 @@ define([
       if (errors.length > 0) { return errors; }
     }
   }, {
-    VALID_EXECUTOR_PATTERN: VALID_EXECUTOR_PATTERN,
-    VALID_ID_PATTERN: VALID_ID_PATTERN
+    VALID_EXECUTOR_PATTERN: VALID_EXECUTOR_PATTERN
   });
 });
