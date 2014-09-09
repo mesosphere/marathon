@@ -79,38 +79,20 @@ Mesos local mode allows you to run Marathon without launching a full Mesos
 cluster. It is meant for experimentation and not recommended for production
 use. Note that you still need to run ZooKeeper for storing state. The following
 command launches Marathon on Mesos in *local mode*. Point your web browser to
-`http://localhost:8080`, and you should see the Marathon UI.
+`http://localhost:8080` to see the Marathon UI.
 
     ./bin/start --master local --zk zk://localhost:2181/marathon
 
-For more information on how to run Marathon in production and configuration options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
+For more information on how to run Marathon in production and configuration
+options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
-## REST API Usage
+## Developing Marathon
 
-The full [API documentation](https://mesosphere.github.io/marathon/docs/rest-api.html) shows details about everything the
-Marathon API can do.
-
-### Example using the V2 API
-
-    # Start an app with 128 MB memory, 1 CPU, and 1 instance
-    curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
-        localhost:8080/v2/apps \
-        -d '{"id": "app-123", "cmd": "sleep 600", "instances": 1, "mem": 128, "cpus": 1}'
-
-    # Scale the app to 2 instances
-    curl -X PUT -H "Accept: application/json" -H "Content-Type: application/json" \
-        localhost:8080/v2/apps/app-123 \
-        -d '{"id": "app-123", "cmd": "sleep 600", "instances": 2, "mem": 128, "cpus": 1}'
-
-    # Stop the app
-    curl -X DELETE localhost:8080/v2/apps/app-123
-
-##### Example starting an app using constraints
-
-    # Start an app with a hostname uniqueness constraint
-    curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
-        localhost:8080/v2/apps \
-        -d '{"id": "constraints", "cmd": "hostname && sleep 600", "instances": 10, "mem": 64, "cpus": 0.1, "constraints": [["hostname", "UNIQUE", ""]]}'
+The [Marathon Project Wiki](https://github.com/mesosphere/marathon/wiki)
+contains documentation on simplifying local development and testing of Marathon
+including how to run a Mesos environment inside a preconfigured virtual machine
+and a list of recipes for launching applications that test specific Marathon
+features.
 
 ## Marathon Clients
 
