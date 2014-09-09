@@ -138,6 +138,7 @@ Marathon API can do.
 * [PayPal](https://www.paypal.com)
 * [Sailthru](http://www.sailthru.com/)
 * [Viadeo](http://www.viadeo.com)
+* [WooRank](http://www.woorank.com)
 
 Not in the list? Open a pull request and add yourself!
 
