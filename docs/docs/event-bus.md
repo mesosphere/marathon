@@ -242,42 +242,39 @@ Fired when a new http callback subscriber is added or removed:
       "version": "2014-09-09T06:30:49.667Z"
     },
     "target": {
-      {
-        "apps": [
-          {
-            "args": [],
-            "backoffFactor": 1.15, 
-            "backoffSeconds": 1, 
-            "cmd": "sleep 30", 
-            "constraints": [], 
-            "container": null, 
-            "cpus": 0.2, 
-            "dependencies": [], 
-            "disk": 0.0, 
-            "env": {}, 
-            "executor": "", 
-            "healthChecks": [], 
-            "id": "/my-app", 
-            "instances": 2, 
-            "mem": 32.0, 
-            "ports": [10001], 
-            "requirePorts": false, 
-            "storeUrls": [], 
-            "upgradeStrategy": {
-                "minimumHealthCapacity": 1.0
-            }, 
-            "uris": [], 
-            "user": null, 
-            "version": "2014-09-09T05:57:50.866Z"
-          }
-        ], 
-        "dependencies": [], 
-        "groups": [], 
-        "id": "/", 
-        "version": "2014-09-09T05:57:50.866Z"
-      }
-
-    }
+      "apps": [
+        {
+          "args": [],
+          "backoffFactor": 1.15, 
+          "backoffSeconds": 1, 
+          "cmd": "sleep 30", 
+          "constraints": [], 
+          "container": null, 
+          "cpus": 0.2, 
+          "dependencies": [], 
+          "disk": 0.0, 
+          "env": {}, 
+          "executor": "", 
+          "healthChecks": [], 
+          "id": "/my-app", 
+          "instances": 2, 
+          "mem": 32.0, 
+          "ports": [10001], 
+          "requirePorts": false, 
+          "storeUrls": [], 
+          "upgradeStrategy": {
+              "minimumHealthCapacity": 1.0
+          }, 
+          "uris": [], 
+          "user": null, 
+          "version": "2014-09-09T05:57:50.866Z"
+        }
+      ], 
+      "dependencies": [], 
+      "groups": [], 
+      "id": "/", 
+      "version": "2014-09-09T05:57:50.866Z"
+    },
     "steps": [
       {
         "action": "ScaleApplication",
@@ -307,42 +304,39 @@ Fired when a new http callback subscriber is added or removed:
       "version": "2014-09-09T06:30:49.667Z"
     },
     "target": {
-      {
-        "apps": [
-          {
-            "args": [],
-            "backoffFactor": 1.15, 
-            "backoffSeconds": 1, 
-            "cmd": "sleep 30", 
-            "constraints": [], 
-            "container": null, 
-            "cpus": 0.2, 
-            "dependencies": [], 
-            "disk": 0.0, 
-            "env": {}, 
-            "executor": "", 
-            "healthChecks": [], 
-            "id": "/my-app", 
-            "instances": 2, 
-            "mem": 32.0, 
-            "ports": [10001], 
-            "requirePorts": false, 
-            "storeUrls": [], 
-            "upgradeStrategy": {
-                "minimumHealthCapacity": 1.0
-            }, 
-            "uris": [], 
-            "user": null, 
-            "version": "2014-09-09T05:57:50.866Z"
-          }
-        ], 
-        "dependencies": [], 
-        "groups": [], 
-        "id": "/", 
-        "version": "2014-09-09T05:57:50.866Z"
-      }
-
-    }
+      "apps": [
+        {
+          "args": [],
+          "backoffFactor": 1.15, 
+          "backoffSeconds": 1, 
+          "cmd": "sleep 30", 
+          "constraints": [], 
+          "container": null, 
+          "cpus": 0.2, 
+          "dependencies": [], 
+          "disk": 0.0, 
+          "env": {}, 
+          "executor": "", 
+          "healthChecks": [], 
+          "id": "/my-app", 
+          "instances": 2, 
+          "mem": 32.0, 
+          "ports": [10001], 
+          "requirePorts": false, 
+          "storeUrls": [], 
+          "upgradeStrategy": {
+              "minimumHealthCapacity": 1.0
+          }, 
+          "uris": [], 
+          "user": null, 
+          "version": "2014-09-09T05:57:50.866Z"
+        }
+      ], 
+      "dependencies": [], 
+      "groups": [], 
+      "id": "/", 
+      "version": "2014-09-09T05:57:50.866Z"
+    },
     "steps": [
       {
         "action": "ScaleApplication",
@@ -372,42 +366,39 @@ Fired when a new http callback subscriber is added or removed:
       "version": "2014-09-09T06:30:49.667Z"
     },
     "target": {
-      {
-        "apps": [
-          {
-            "args": [],
-            "backoffFactor": 1.15, 
-            "backoffSeconds": 1, 
-            "cmd": "sleep 30", 
-            "constraints": [], 
-            "container": null, 
-            "cpus": 0.2, 
-            "dependencies": [], 
-            "disk": 0.0, 
-            "env": {}, 
-            "executor": "", 
-            "healthChecks": [], 
-            "id": "/my-app", 
-            "instances": 2, 
-            "mem": 32.0, 
-            "ports": [10001], 
-            "requirePorts": false, 
-            "storeUrls": [], 
-            "upgradeStrategy": {
-                "minimumHealthCapacity": 1.0
-            }, 
-            "uris": [], 
-            "user": null, 
-            "version": "2014-09-09T05:57:50.866Z"
-          }
-        ], 
-        "dependencies": [], 
-        "groups": [], 
-        "id": "/", 
-        "version": "2014-09-09T05:57:50.866Z"
-      }
-
-    }
+      "apps": [
+        {
+          "args": [],
+          "backoffFactor": 1.15, 
+          "backoffSeconds": 1, 
+          "cmd": "sleep 30", 
+          "constraints": [], 
+          "container": null, 
+          "cpus": 0.2, 
+          "dependencies": [], 
+          "disk": 0.0, 
+          "env": {}, 
+          "executor": "", 
+          "healthChecks": [], 
+          "id": "/my-app", 
+          "instances": 2, 
+          "mem": 32.0, 
+          "ports": [10001], 
+          "requirePorts": false, 
+          "storeUrls": [], 
+          "upgradeStrategy": {
+              "minimumHealthCapacity": 1.0
+          }, 
+          "uris": [], 
+          "user": null, 
+          "version": "2014-09-09T05:57:50.866Z"
+        }
+      ], 
+      "dependencies": [], 
+      "groups": [], 
+      "id": "/", 
+      "version": "2014-09-09T05:57:50.866Z"
+    },
     "steps": [
       {
         "action": "ScaleApplication",
