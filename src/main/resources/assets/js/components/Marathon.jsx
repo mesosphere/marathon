@@ -203,8 +203,7 @@ define([
     },
 
     destroyDeployment: function(deployment) {
-
-      if (confirm("Destroy deployment '" + deployment.get("id") + "'?\nThis is irreversible.")) {
+      if (confirm("Destroy deployment of apps: '" + deployment.affectedAppsString() + "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version.")) {
         deployment.destroy({
           error: function(data, response) {
             var msg = response.responseJSON.message || response.statusText;
@@ -372,7 +371,7 @@ define([
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
-          <nav className="navbar navbar-inverse" role="navigation">
+          <nav className="navbar navbar-inverse navbar-static-top" role="navigation">
            <div className="container-fluid">
               <a className="navbar-brand" href="/">
                 <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />

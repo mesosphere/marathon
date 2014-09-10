@@ -317,10 +317,6 @@ fieldset[disabled] .btn-info.active {
   background-color: transparent;
 }
 
-.navbar {
-  border-radius: 0;
-}
-
 .navbar-inverse {
   background-color: #2a2d2f;
   border-color: transparent;
@@ -527,13 +523,13 @@ fieldset[disabled] .btn-info.active {
    font-size: .7em;
    color: #2a2d2f;
    background: #e4f342;
-   width: 18px;
+   min-width: 18px;
    height: 18px;
    text-align: center;
    line-height: 18px;
    border-radius: 50%;
    box-shadow: 0 1px 1px #333;
-   padding: 0;
+   padding: 0 2px;
 }
 
 .health-dot {

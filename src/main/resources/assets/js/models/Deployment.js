@@ -16,11 +16,19 @@ define([
     },
 
     currentActionsString: function() {
-      return this.get("currentActions").toString();
+      var actions = this.get("currentActions");
+      var actionsString = actions.map(function(action) {
+        return action.action;
+      });
+      return actionsString;
     },
 
     affectedAppsString: function() {
-      return this.get("currentActions").toString();
+      var actions = this.get("currentActions");
+      var apps = actions.map(function(action) {
+        return action.apps;
+      });
+      return apps;
     },
 
     initialize: function(options) {

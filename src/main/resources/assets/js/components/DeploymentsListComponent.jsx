@@ -48,20 +48,20 @@ define([
         deploymentNodes =
           <tr>
             <td className="text-center text-muted" colSpan="5">
-              Loading apps...
+              Loading deployments...
             </td>
           </tr>;
       } else if (this.props.fetchState === States.STATE_ERROR) {
         deploymentNodes =
           <tr>
             <td className="text-center text-danger" colSpan="5">
-              Error fetching apps. Refresh to try again.
+              Error fetching deployments. Refresh to try again.
             </td>
           </tr>;
       } else if (this.props.deployments.length === 0) {
         deploymentNodes =
           <tr>
-            <td className="text-center" colSpan="5">No running apps.</td>
+            <td className="text-center" colSpan="5">No deployments in progress.</td>
           </tr>;
       } else {
 
