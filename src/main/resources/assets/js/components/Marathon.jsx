@@ -386,11 +386,6 @@ define([
                 tabs={tabs} />
               <ul className="nav navbar-nav nav-tabs nav-tabs-unbordered pull-right">
                 <li>
-                  <a onClick={this.showNewAppModal}>
-                    About
-                  </a>
-                </li>
-                <li>
                   <a href="//mesosphere.github.io/marathon/docs/" target="_blank">
                     Docs
                   </a>
