@@ -53,7 +53,7 @@ define([
           </td>
           <td className="text-right">
             <button
-                onClick={this.handleDestroyDeployment.bind(this)}
+                onClick={this.handleDestroyDeployment.bind(null, this)}
                 className="btn btn-sm btn-danger">
               Destroy Deployment
             </button>
