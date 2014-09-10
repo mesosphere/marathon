@@ -19,7 +19,8 @@ define([
 
     getDefaultProps: function() {
       return {
-        onTabClick: noop
+        onTabClick: noop,
+        className: ""
       };
     },
 
@@ -49,11 +50,9 @@ define([
         );
       }, this);
 
-      var className = this.props.className ? this.props.className : "";
-
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
-        <ul className={className + " nav navbar navbar-static-top nav-tabs"}>
+        <ul className={this.props.className + " nav navbar navbar-static-top nav-tabs"}>
           {tabs}
         </ul>
       );
