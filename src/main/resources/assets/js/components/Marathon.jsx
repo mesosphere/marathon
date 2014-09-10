@@ -380,8 +380,8 @@ define([
                 <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
               </a>
               <NavTabsComponent
-                className="navbar-nav nav-tabs-unbordered"
                 activeTabId={this.state.activeTabId}
+                className="navbar-nav nav-tabs-unbordered"
                 onTabClick={this.onTabClick}
                 tabs={tabs} />
               <ul className="nav navbar-nav nav-tabs nav-tabs-unbordered pull-right">
