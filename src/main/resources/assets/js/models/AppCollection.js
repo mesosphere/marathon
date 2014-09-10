@@ -6,6 +6,7 @@
 
   return SortableCollection.extend({
     model: App,
+
     initialize: function(models, options) {
       this.options = options;
       this.setComparator("-id");

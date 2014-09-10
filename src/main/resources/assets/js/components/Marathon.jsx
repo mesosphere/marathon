@@ -36,6 +36,7 @@ define([
         appVersionsFetchState: States.STATE_LOADING,
         collection: new AppCollection(),
         deployments: new DeploymentCollection(),
+        deploymentsFetchState: States.STATE_LOADING,
         fetchState: States.STATE_LOADING,
         modalClass: null,
         tasksFetchState: States.STATE_LOADING
@@ -115,6 +116,17 @@ define([
       }
     },
 
+    fetchDeployments: function() {
+      this.state.deployments.fetch({
+        error: function() {
+          this.setState({deploymentsFetchState: States.STATE_ERROR});
+        }.bind(this),
+        success: function() {
+          this.setState({deploymentsFetchState: States.STATE_SUCCESS});
+        }.bind(this)
+      });
+    },
+
     fetchTasks: function() {
       if (this.state.activeApp != null) {
         this.state.activeApp.tasks.fetch({
@@ -180,6 +192,22 @@ define([
               activeApp: null,
               modalClass: null
             });
+          }.bind(this),
+          wait: true
+        });
+      }
+    },
+
+    destroyDeployment: function(deployment) {
+
+      if (confirm("Destroy deployment '" + deployment.get("id") + "'?\nThis is irreversible.")) {
+        deployment.destroy({
+          error: function(data, response) {
+            var msg = response.responseJSON.message || response.statusText;
+            alert("Error destroying app '" + deployment.id + "': " + msg);
+          },
+          success: function() {
+            this.fetchDeployments();
           }.bind(this),
           wait: true
         });
@@ -296,6 +324,11 @@ define([
       this.setState({
         activeTabId: id
       });
+      if (id === tabs[0].id) {
+        this.setPollResource(this.fetchApps);
+      } else if (id === tabs[1].id) {
+        this.setPollResource(this.fetchDeployments);
+      }
     },
 
     render: function() {
@@ -367,22 +400,18 @@ define([
                   + New App
                 </button>
                 <AppListComponent
-                collection={this.state.collection}
-                deployments={this.state.deployments}
-                onSelectApp={this.showAppModal}
-                fetchState={this.state.fetchState}
-                ref="appList" />
+                  collection={this.state.collection}
+                  onSelectApp={this.showAppModal}
+                  fetchState={this.state.fetchState}
+                  ref="appList" />
               </TabPaneComponent>
               <TabPaneComponent
                   id="deployments"
                   onActivate={this.props.fetchAppVersions} >
                 <DeploymentsListComponent
-                  collection={this.state.collection}
                   deployments={this.state.deployments}
-                  onSelectApp={this.showAppModal}
-                  fetchState={this.state.fetchState}
-                  ref="appList" />
-
+                  destroyDeployment={this.destroyDeployment}
+                  fetchState={this.state.deploymentsFetchState} />
               </TabPaneComponent>
             </TogglableTabsComponent>
 

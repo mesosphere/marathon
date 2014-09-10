@@ -3,78 +3,77 @@
 define([
   "React",
   "constants/States",
-  "jsx!components/AppComponent",
+  "jsx!components/DeploymentComponent",
   "mixins/BackboneMixin"
-], function(React, States, AppComponent, BackboneMixin) {
+], function(React, States, DeploymentComponent, BackboneMixin) {
   "use strict";
 
   return React.createClass({
-    displayName: "AppListComponent",
+    displayName: "DeploymentListComponent",
 
     mixins: [BackboneMixin],
 
     propTypes: {
-      collection: React.PropTypes.object.isRequired,
-      onSelectApp: React.PropTypes.func.isRequired
+      deployments: React.PropTypes.object.isRequired,
+      destroyDeployment: React.PropTypes.func.isRequired,
+      fetchState: React.PropTypes.number.isRequired
     },
 
     getResource: function() {
-      return this.props.collection;
-    },
-
-    onClickApp: function(app) {
-      this.props.onSelectApp(app);
+      return this.props.deployments;
     },
 
     sortCollectionBy: function(comparator) {
-      var collection = this.props.collection;
+      var deployments = this.props.deployments;
       comparator =
-        collection.sortKey === comparator && !collection.sortReverse ?
+        deployments.sortKey === comparator && !deployments.sortReverse ?
         "-" + comparator :
         comparator;
-      collection.setComparator(comparator);
-      collection.sort();
+      deployments.setComparator(comparator);
+      deployments.sort();
     },
 
     render: function() {
-      var sortKey = this.props.collection.sortKey;
+      var sortKey = this.props.deployments.sortKey;
 
-      var appNodes;
+      var deploymentNodes;
       var tableClassName = "table table-fixed";
 
       var headerClassSet = React.addons.classSet({
         "clickable": true,
-        "dropup": this.props.collection.sortReverse
+        "dropup": this.props.deployments.sortReverse
       });
 
       if (this.props.fetchState === States.STATE_LOADING) {
-        appNodes =
+        deploymentNodes =
           <tr>
             <td className="text-center text-muted" colSpan="5">
               Loading apps...
             </td>
           </tr>;
       } else if (this.props.fetchState === States.STATE_ERROR) {
-        appNodes =
+        deploymentNodes =
           <tr>
             <td className="text-center text-danger" colSpan="5">
               Error fetching apps. Refresh to try again.
             </td>
           </tr>;
-      } else if (this.props.collection.length === 0) {
-        appNodes =
+      } else if (this.props.deployments.length === 0) {
+        deploymentNodes =
           <tr>
             <td className="text-center" colSpan="5">No running apps.</td>
           </tr>;
       } else {
 
         /* jshint trailing:false, quotmark:false, newcap:false */
-        appNodes = this.props.collection.map(function(model) {
-          return <AppComponent key={model.id} model={model} onClick={this.onClickApp} />;
+        deploymentNodes = this.props.deployments.map(function(model) {
+          return (
+            <DeploymentComponent
+              key={model.id}
+              destroyDeployment={this.props.destroyDeployment}
+              model={model} />
+          );
         }, this);
-
-        // Give rows the selectable look when there are apps to click.
-        tableClassName += " table-hover table-selectable";
       }
 
       /* jshint trailing:false, quotmark:false, newcap:false */
@@ -94,30 +93,27 @@ define([
                   ID {sortKey === "id" ? <span className="caret"></span> : null}
                 </span>
               </th>
-              <th className="text-right">
-                <span onClick={this.sortCollectionBy.bind(null, "mem")} className={headerClassSet}>
-                  {sortKey === "mem" ? <span className="caret"></span> : null} Memory (MB)
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "affectedApps")} className={headerClassSet}>
+                  Affected Apps {sortKey === "affectedApps" ? <span className="caret"></span> : null}
+                </span>
+              </th>
+              <th>
+                <span onClick={this.sortCollectionBy.bind(null, "formatCurrentActions")} className={headerClassSet}>
+                  {sortKey === "formatCurrentActions" ? <span className="caret"></span> : null} Action
                 </span>
               </th>
               <th className="text-right">
-                <span onClick={this.sortCollectionBy.bind(null, "cpus")} className={headerClassSet}>
-                  {sortKey === "cpus" ? <span className="caret"></span> : null} CPUs
+                <span onClick={this.sortCollectionBy.bind(null, "currentStep")} className={headerClassSet}>
+                  {sortKey === "currentStep" ? <span className="caret"></span> : null} Progress
                 </span>
               </th>
-              <th className="text-right">
-                <span onClick={this.sortCollectionBy.bind(null, "instances")} className={headerClassSet}>
-                  {sortKey === "instances" ? <span className="caret"></span> : null} Tasks / Instances
-                </span>
-              </th>
-              <th className="text-right">
-                <span onClick={this.sortCollectionBy.bind(null, "isDeploying")} className={headerClassSet}>
-                  {sortKey === "isDeploying" ? <span className="caret"></span> : null} Status
-                </span>
+              <th>
               </th>
             </tr>
           </thead>
           <tbody>
-            {appNodes}
+            {deploymentNodes}
           </tbody>
         </table>
       );
