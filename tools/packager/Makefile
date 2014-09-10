@@ -3,9 +3,9 @@ PREFIX := usr/local
 
 # Command to extract from X.X.X-rcX the version (X.X.X) and tag (rcX)
 EXTRACT_VER := perl -n -e\
-	'/^version := "([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
+	'/"([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
 EXTRACT_TAG := perl -n -e\
-	'/^version := "[0-9]+\.[0-9]+\.[0-9]+-([A-Za-z0-9]+).*"/ && print $$1'
+	'/"[0-9]+\.[0-9]+\.[0-9]+-([A-Za-z0-9]+).*"/ && print $$1'
 PKG_VER := $(shell cd marathon && cat version.sbt | $(EXTRACT_VER))
 PKG_TAG := $(shell cd marathon && cat version.sbt | $(EXTRACT_TAG))
 
