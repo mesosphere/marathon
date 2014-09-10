@@ -17,10 +17,10 @@ define([
 
     currentActionsString: function() {
       var actions = this.get("currentActions");
-      var actionsString = actions.map(function(action) {
+      var actionNames = actions.map(function(action) {
         return action.action;
       });
-      return actionsString;
+      return actionNames.join(", ");
     },
 
     affectedAppsString: function() {
@@ -28,7 +28,7 @@ define([
       var apps = actions.map(function(action) {
         return action.apps;
       });
-      return apps;
+      return apps.join(", ");
     },
 
     initialize: function(options) {
