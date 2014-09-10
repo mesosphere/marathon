@@ -6,6 +6,8 @@ define([
   "use strict";
 
   return React.createClass({
+    name: "TabPaneComponent",
+
     propTypes: {
       isActive: React.PropTypes.bool,
       onActivate: React.PropTypes.func
