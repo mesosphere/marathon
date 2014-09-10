@@ -15,7 +15,9 @@ define([
   "jsx!components/TogglableTabsComponent",
   "jsx!components/NavTabsComponent"
 ], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
-    AppListComponent, AppModalComponent, DeploymentsListComponent, NewAppModalComponent, TabPaneComponent, TogglableTabsComponent, NavTabsComponent) {
+    AppListComponent, AppModalComponent, DeploymentsListComponent,
+    NewAppModalComponent, TabPaneComponent, TogglableTabsComponent,
+    NavTabsComponent) {
   "use strict";
 
   var UPDATE_INTERVAL = 5000;
@@ -122,7 +124,8 @@ define([
         error: function() {
           this.setState({deploymentsFetchState: States.STATE_ERROR});
         }.bind(this),
-        success: function() {
+        success: function(response) {
+          tabs[1].badge = response.models.length;
           this.setState({deploymentsFetchState: States.STATE_SUCCESS});
         }.bind(this)
       });
@@ -366,11 +369,6 @@ define([
         }
       }
 
-      // Show badge for number of deployments
-      if (this.state.deployments.length > 0) {
-        tabs[1].badge = this.state.deployments.length;
-      }
-
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
@@ -386,7 +384,7 @@ define([
                 tabs={tabs} />
               <ul className="nav navbar-nav nav-tabs nav-tabs-unbordered pull-right">
                 <li>
-                  <a href="//mesosphere.github.io/marathon/docs/" target="_blank">
+                  <a href="https://mesosphere.github.io/marathon/docs/" target="_blank">
                     Docs
                   </a>
                 </li>

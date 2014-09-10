@@ -13,7 +13,6 @@ define([
     },
 
     handleDestroyDeployment: function (id, event) {
-      event.preventDefault();
       this.props.destroyDeployment(id);
     },
 
@@ -24,9 +23,6 @@ define([
         "text-warning": model.get("currentStep") < model.get("totalSteps")
       });
 
-      var formatAffectedApps = model.formatAffectedApps().split("\n").join("<br>");
-      var formatCurrentActions = model.formatCurrentActions().split("\n").join("<br>");
-
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         // Set `title` on cells that potentially overflow so hovering on the
@@ -35,8 +31,20 @@ define([
           <td className="overflow-ellipsis" title={model.get("id")}>
             {model.get("id")}
           </td>
-          <td dangerouslySetInnerHTML={{__html: formatAffectedApps}}></td>
-          <td dangerouslySetInnerHTML={{__html: formatCurrentActions}}></td>
+          <td>
+            <ul className="list-unstyled">
+              {model.get("currentActions").map(function(action) {
+                return <li key={action.apps}>{action.apps}</li>;
+              })}
+            </ul>
+          </td>
+          <td>
+            <ul className="list-unstyled">
+              {model.get("currentActions").map(function(action) {
+                return <li key={action.action}>{action.action}</li>;
+              })}
+            </ul>
+          </td>
           <td className="text-right">
             <span className={isDeployingClassSet}>
               {model.get("currentStep")}
@@ -45,7 +53,7 @@ define([
           <td className="text-right">
             <button
                 onClick={this.handleDestroyDeployment.bind(this, model)}
-                className="btn btn-sm btn-danger pull-right">
+                className="btn btn-sm btn-danger">
               Destroy Deployment
             </button>
           </td>

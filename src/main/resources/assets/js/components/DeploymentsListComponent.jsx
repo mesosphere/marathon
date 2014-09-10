@@ -94,13 +94,13 @@ define([
                 </span>
               </th>
               <th>
-                <span onClick={this.sortCollectionBy.bind(null, "affectedApps")} className={headerClassSet}>
-                  Affected Apps {sortKey === "affectedApps" ? <span className="caret"></span> : null}
+                <span onClick={this.sortCollectionBy.bind(null, "affectedAppsString")} className={headerClassSet}>
+                  Affected Apps {sortKey === "affectedAppsString" ? <span className="caret"></span> : null}
                 </span>
               </th>
               <th>
-                <span onClick={this.sortCollectionBy.bind(null, "formatCurrentActions")} className={headerClassSet}>
-                  {sortKey === "formatCurrentActions" ? <span className="caret"></span> : null} Action
+                <span onClick={this.sortCollectionBy.bind(null, "currentActionsString")} className={headerClassSet}>
+                  {sortKey === "currentActionsString" ? <span className="caret"></span> : null} Action
                 </span>
               </th>
               <th className="text-right">

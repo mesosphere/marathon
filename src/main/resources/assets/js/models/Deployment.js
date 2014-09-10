@@ -15,44 +15,12 @@ define([
       };
     },
 
-    formatCurrentActions: function() {
-      var currentActions = this.get("currentActions");
-
-      if (_.isEmpty(currentActions)) {
-        return "-";
-      }
-
-      var string = "";
-      var length = currentActions.length;
-
-      currentActions.forEach(function(action, index) {
-        string += action.action;
-        if (index < length - 1) {
-          string += "\n";
-        }
-      });
-
-      return string;
+    currentActionsString: function() {
+      return this.get("currentActions").toString();
     },
 
-    formatAffectedApps: function() {
-      var currentActions = this.get("currentActions");
-
-      if (_.isEmpty(currentActions)) {
-        return "-";
-      }
-
-      var string = "";
-      var length = currentActions.length;
-
-      currentActions.forEach(function(action, index) {
-        string += action.apps;
-        if (index < length - 1) {
-          string += "\n";
-        }
-      });
-
-      return string;
+    affectedAppsString: function() {
+      return this.get("currentActions").toString();
     },
 
     initialize: function(options) {

@@ -36,12 +36,15 @@ define([
           "active": tab.id === activeTabId
         });
 
+        var badge = tab.badge > 0 ? tab.badge : null;
+
         return (
           /* jshint trailing:false, quotmark:false, newcap:false */
           <li className={tabClassSet} key={tab.id}>
-            <a href={"#" + tab.id} data-badge={tab.badge} onClick={this.onTabClick.bind(this, tab.id)}>
+            <a href={"#" + tab.id} onClick={this.onTabClick.bind(this, tab.id)}>
               {tab.text}
             </a>
+            <span className="badge">{badge}</span>
           </li>
         );
       }, this);
