@@ -9,12 +9,21 @@ define([
   "models/DeploymentCollection",
   "jsx!components/AppListComponent",
   "jsx!components/AppModalComponent",
-  "jsx!components/NewAppModalComponent"
+  "jsx!components/DeploymentsListComponent",
+  "jsx!components/NewAppModalComponent",
+  "jsx!components/TabPaneComponent",
+  "jsx!components/TogglableTabsComponent",
+  "jsx!components/NavTabsComponent"
 ], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
-    AppListComponent, AppModalComponent, NewAppModalComponent) {
+    AppListComponent, AppModalComponent, DeploymentsListComponent, NewAppModalComponent, TabPaneComponent, TogglableTabsComponent, NavTabsComponent) {
   "use strict";
 
   var UPDATE_INTERVAL = 5000;
+
+  var tabs = [
+    {id: "apps", text: "Apps"},
+    {id: "deployments", text: "Deployments"}
+  ];
 
   return React.createClass({
     displayName: "Marathon",
@@ -23,6 +32,7 @@ define([
       return {
         activeApp: null,
         activeTask: null,
+        activeTabId: tabs[0].id,
         appVersionsFetchState: States.STATE_LOADING,
         collection: new AppCollection(),
         deployments: new DeploymentCollection(),
@@ -282,6 +292,12 @@ define([
       });
     },
 
+    onTabClick: function(id) {
+      this.setState({
+        activeTabId: id
+      });
+    },
+
     render: function() {
       var modal;
       if (this.state.modalClass !== null) {
@@ -324,43 +340,52 @@ define([
               <a className="navbar-brand" href="/">
                 <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
               </a>
-              <ul className="nav navbar-nav nav-tabs nav-tabs-unbordered">
-                <li className="active">
-                  <a href="/">
-                    Apps
-                  </a>
-                </li>
-                <li>
-                  <a href="/">
-                    Deployments
-                  </a>
-                </li>
-              </ul>
+              <NavTabsComponent
+                className="navbar-nav nav-tabs-unbordered"
+                activeTabId={this.state.activeTabId}
+                onTabClick={this.onTabClick}
+                tabs={tabs} />
               <ul className="nav navbar-nav nav-tabs nav-tabs-unbordered pull-right">
                 <li>
-                  <a href="/">
-                    Docs
+                  <a onClick={this.showNewAppModal}>
+                    About
                   </a>
                 </li>
                 <li>
-                  <a href="/">
-                    About
+                  <a href="//mesosphere.github.io/marathon/docs/" target="_blank">
+                    Docs
                   </a>
                 </li>
               </ul>
             </div>
           </nav>
           <div className="container-fluid">
-            <button type="button" className="btn btn-success navbar-btn"
-                onClick={this.showNewAppModal}>
-              + New App
-            </button>
-            <AppListComponent
-              collection={this.state.collection}
-              deployments={this.state.deployments}
-              onSelectApp={this.showAppModal}
-              fetchState={this.state.fetchState}
-              ref="appList" />
+            <TogglableTabsComponent activeTabId={this.state.activeTabId} >
+              <TabPaneComponent id="apps">
+                <button type="button" className="btn btn-success navbar-btn"
+                    onClick={this.showNewAppModal} >
+                  + New App
+                </button>
+                <AppListComponent
+                collection={this.state.collection}
+                deployments={this.state.deployments}
+                onSelectApp={this.showAppModal}
+                fetchState={this.state.fetchState}
+                ref="appList" />
+              </TabPaneComponent>
+              <TabPaneComponent
+                  id="deployments"
+                  onActivate={this.props.fetchAppVersions} >
+                <DeploymentsListComponent
+                  collection={this.state.collection}
+                  deployments={this.state.deployments}
+                  onSelectApp={this.showAppModal}
+                  fetchState={this.state.fetchState}
+                  ref="appList" />
+
+              </TabPaneComponent>
+            </TogglableTabsComponent>
+
           </div>
           {modal}
         </div>
