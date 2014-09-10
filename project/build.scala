@@ -34,8 +34,7 @@ object MarathonBuild extends Build {
     resolvers ++= Seq(
       "Mesosphere Public Repo"    at "http://downloads.mesosphere.io/maven",
       "Twitter Maven2 Repository" at "http://maven.twttr.com/",
-      "Spray Maven Repository"    at "http://repo.spray.io/",
-      "Local Maven"               at s"${Path.userHome.asFile.toURI.toURL}.m2/repository"
+      "Spray Maven Repository"    at "http://repo.spray.io/"
     ),
     sourceGenerators in Compile <+= buildInfo,
     fork in Test := true,
@@ -107,7 +106,6 @@ object Dependencies {
     chaos % "compile",
     mesosUtils % "compile",
     jacksonCaseClass % "compile",
-    mesos % "compile",
     twitterCommons % "compile",
     twitterZkClient % "compile",
     jodaTime % "compile",
@@ -132,8 +130,7 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.5.6"
     val JacksonCCM = "0.1.0"
-    val Mesos = "0.20.0-SNAPSHOT"
-    val MesosUtils = "0.19.0-1"
+    val MesosUtils = "0.20.0-1"
     val Akka = "2.2.4"
     val Spray = "1.2.1"
     val Json4s = "3.2.5"
@@ -166,7 +163,6 @@ object Dependency {
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
-  val mesos = "org.apache.mesos" % "mesos" % V.Mesos
   val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
   val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZKClient
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
