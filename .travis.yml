@@ -1,6 +1,6 @@
 language: scala
 before_script:
-  - export PROJECT_VERSION="`sed -n 's|version := "\(.*\)"|\1|p' version.sbt | awk '{ print $1; exit }'`" && echo Project version is $PROJECT_VERSION
+  - export PROJECT_VERSION="`egrep -os -e '([0-9]\.)+[0-9](-\w+)?' version.sbt`" && echo Project Version is $PROJECT_VERSION
   - export ARTIFACT="marathon-$PROJECT_VERSION.tgz"
   - pushd src/main/resources/assets/ && npm install && ./bin/build && popd
 jdk:
