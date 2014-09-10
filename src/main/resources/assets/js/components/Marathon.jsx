@@ -381,7 +381,7 @@ define([
                 className="navbar-nav nav-tabs-unbordered"
                 onTabClick={this.onTabClick}
                 tabs={tabs} />
-              <ul className="nav navbar-nav nav-tabs nav-tabs-unbordered pull-right">
+              <ul className="nav navbar-nav nav-tabs nav-tabs-unbordered navbar-right">
                 <li>
                   <a href="https://mesosphere.github.io/marathon/docs/" target="_blank">
                     Docs
