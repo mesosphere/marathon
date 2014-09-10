@@ -9,11 +9,12 @@ define([
     name: "DeploymentComponent",
 
     propTypes: {
+      model: React.PropTypes.object.isRequired,
       destroyDeployment: React.PropTypes.func.isRequired
     },
 
-    handleDestroyDeployment: function (id, event) {
-      this.props.destroyDeployment(id);
+    handleDestroyDeployment: function () {
+      this.props.destroyDeployment(this.props.model);
     },
 
     render: function() {
@@ -52,7 +53,7 @@ define([
           </td>
           <td className="text-right">
             <button
-                onClick={this.handleDestroyDeployment.bind(this, model)}
+                onClick={this.handleDestroyDeployment.bind(this)}
                 className="btn btn-sm btn-danger">
               Destroy Deployment
             </button>
