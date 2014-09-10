@@ -113,6 +113,7 @@ features.
 ## Companies using Marathon
 
 * [Airbnb](https://www.airbnb.com/)
+* [Disqus](https://www.disqus.com/)
 * [eBay](http://www.ebay.com/)
 * [The Factory](https://github.com/thefactory/)
 * [Guidewire](http://www.guidewire.com/)
