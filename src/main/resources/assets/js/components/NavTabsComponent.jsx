@@ -33,7 +33,7 @@ define([
 
       var tabs = this.props.tabs.map(function(tab) {
         var tabClassSet = React.addons.classSet({
-          " active": tab.id === activeTabId
+          "active": tab.id === activeTabId
         });
 
         return (

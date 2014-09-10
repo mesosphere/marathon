@@ -17,33 +17,41 @@ define([
 
     formatCurrentActions: function() {
       var currentActions = this.get("currentActions");
+
       if (_.isEmpty(currentActions)) {
         return "-";
       }
+
       var string = "";
       var length = currentActions.length;
-      _.each(currentActions, function(action, index) {
+
+      currentActions.forEach(function(action, index) {
         string += action.action;
         if (index < length - 1) {
           string += "\n";
         }
-      }, this);
+      });
+
       return string;
     },
 
     formatAffectedApps: function() {
       var currentActions = this.get("currentActions");
+
       if (_.isEmpty(currentActions)) {
         return "-";
       }
+
       var string = "";
       var length = currentActions.length;
-      _.each(currentActions, function(action, index) {
+
+      currentActions.forEach(function(action, index) {
         string += action.apps;
         if (index < length - 1) {
           string += "\n";
         }
-      }, this);
+      });
+
       return string;
     },
 
