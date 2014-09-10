@@ -70,7 +70,6 @@ define([
       }.bind(this));
 
       this.setPollResource(this.fetchApps);
-      this.fetchDeployments();
     },
 
     componentDidUpdate: function(prevProps, prevState) {
@@ -101,6 +100,7 @@ define([
         }.bind(this),
         reset: true,
         success: function() {
+          this.fetchDeployments();
           this.setState({fetchState: States.STATE_SUCCESS});
         }.bind(this)
       });
