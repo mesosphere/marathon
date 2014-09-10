@@ -85,7 +85,7 @@ define([
       var itemsUBound = Math.min(currentPage * itemsPerPage + itemsPerPage, noItems);
       var itemNumbers =
         this.props.useItemNumbers ?
-          <span className="itemNumbers">{itemsLBound + 1}-{itemsUBound} of {noItems}</span> :
+          <span className="item-numbers">{itemsLBound + 1}-{itemsUBound} of {noItems}</span> :
           null;
 
       var leftArrowsClassSet = React.addons.classSet({
