@@ -120,8 +120,8 @@ class GroupManager @Singleton @Inject() (
       from <- rootGroup //ignore the state of the scheduler
       (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(from, change(from)))
       _ = requireValid(checkGroup(to))
-      _ <- groupRepo.store(zkName, to)
       plan <- deploy(from, to, resolve)
+      _ <- groupRepo.store(zkName, to)
     } yield plan
 
     deployment.onComplete {
