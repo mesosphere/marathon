@@ -434,17 +434,14 @@ fieldset[disabled] .btn-info.active {
 
 .nav-tabs {
   border-bottom: 2px solid #2a2d2f;
-  margin: 0 -20px;
+  margin-top: 0;
+  margin-left: -20px;
+  margin-right: -20px;
   padding: 0 20px;
 }
 
 .nav-tabs-unbordered {
   border-bottom: 0 solid transparent;
-}
-
-.nav-tabs > li {
-  margin-bottom: -2px;
-  border-bottom: 2px solid #2a2d2f;
 }
 
 .nav-tabs-unbordered > li {
@@ -485,10 +482,6 @@ fieldset[disabled] .btn-info.active {
 .nav-tabs > li > a {
   border-radius: 0;
   padding-top: 13px;
-}
-
-.tab-content {
-  margin-top: 20px;
 }
 
 .header-btn {

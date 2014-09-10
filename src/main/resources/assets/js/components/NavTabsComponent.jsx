@@ -49,9 +49,11 @@ define([
         );
       }, this);
 
+      var className = this.props.className ? this.props.className : "";
+
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
-        <ul className={this.props.className + " nav nav-tabs"}>
+        <ul className={className + " nav navbar navbar-static-top nav-tabs"}>
           {tabs}
         </ul>
       );
