@@ -68,6 +68,7 @@ define([
       }.bind(this));
 
       this.setPollResource(this.fetchApps);
+      this.fetchDeployments();
     },
 
     componentDidUpdate: function(prevProps, prevState) {
@@ -363,6 +364,11 @@ define([
               ref="modal" />
           );
         }
+      }
+
+      // Show badge for number of deployments
+      if (this.state.deployments.length > 0) {
+        tabs[1].badge = this.state.deployments.length;
       }
 
       /* jshint trailing:false, quotmark:false, newcap:false */

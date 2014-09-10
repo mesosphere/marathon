@@ -38,7 +38,7 @@ define([
 
         return (
           <li className={tabClassSet} key={tab.id}>
-            <a href={"#" + tab.id} onClick={this.onTabClick.bind(this, tab.id)}>
+            <a href={"#" + tab.id} data-badge={tab.badge} onClick={this.onTabClick.bind(this, tab.id)}>
               {tab.text}
             </a>
           </li>

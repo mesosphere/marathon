@@ -520,6 +520,23 @@ fieldset[disabled] .btn-info.active {
   margin-bottom: 0;
 }
 
+a[data-badge]:before,
+button[data-badge]:before {
+   content: attr(data-badge);
+   position: absolute;
+   top: 5px;
+   left: 1px;
+   font-size: .7em;
+   color: #2a2d2f;
+   background: #e4f342;
+   width: 18px;
+   height: 18px;
+   text-align: center;
+   line-height: 18px;
+   border-radius: 50%;
+   box-shadow: 0 1px 1px #333;
+}
+
 .health-dot {
   display: inline-block;
 }
