@@ -37,7 +37,6 @@ define([
       var sortKey = this.props.deployments.sortKey;
 
       var deploymentNodes;
-      var tableClassName = "table table-fixed";
 
       var headerClassSet = React.addons.classSet({
         "clickable": true,
@@ -78,7 +77,7 @@ define([
 
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
-        <table className={tableClassName}>
+        <table className="table table-fixed">
           <colgroup>
             <col style={{width: "28%"}} />
             <col style={{width: "18%"}} />
