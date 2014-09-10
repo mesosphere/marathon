@@ -37,7 +37,9 @@ define([
           "active": tab.id === activeTabId
         });
 
-        var badge = tab.badge > 0 ? tab.badge : null;
+        var badge = tab.badge > 0 ?
+          <span className="badge">{tab.badge}</span> :
+          null;
 
         return (
           /* jshint trailing:false, quotmark:false, newcap:false */
@@ -45,7 +47,7 @@ define([
             <a href={"#" + tab.id} onClick={this.onTabClick.bind(this, tab.id)}>
               {tab.text}
             </a>
-            <span className="badge">{badge}</span>
+            {badge}
           </li>
         );
       }, this);
