@@ -155,45 +155,6 @@ a,
   color: #f6f6f6;
 }
 
-.nav-tabs {
-  border-bottom: 2px solid #2a2d2f;
-  margin-bottom: 20px;
-  margin-left: -20px;
-  margin-right: -20px;
-  padding-left: 20px;
-  padding-right: 20px;
-}
-
-.nav-tabs > li > a {
-  color: #f6f6f6;
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  border-bottom: 3px solid transparent;
-  line-height: 1.1;
-}
-
-.nav-tabs > li > a:hover,
-.nav-tabs > li > a:focus {
-  color: #f6f6f6;
-  border-color: transparent;
-}
-
-.nav > li > a:hover,
-.nav > li > a:focus {
-  text-decoration: none;
-  background-color: #3e4146;
-}
-
-.nav-tabs > li.active > a,
-.nav-tabs > li.active > a:hover,
-.nav-tabs > li.active > a:focus {
-  background-color: transparent;
-  border-color: #555;
-  border-bottom-color: #222224;
-  color: #f6f6f6;
-}
-
 .table > thead > tr > th,
 .table > tbody > tr > th,
 .table > tfoot > tr > th,
@@ -253,7 +214,7 @@ a,
 }
 
 .btn-link {
-  color: #999;
+  color: #8e929b;
 }
 
 .btn-default {
@@ -350,9 +311,30 @@ fieldset[disabled] .btn-info.active {
  * ==============
  */
 
+.nav > li > a:hover,
+.nav > li > a:focus {
+  text-decoration: none;
+  background-color: transparent;
+}
+
+.navbar {
+  border-radius: 0;
+}
+
 .navbar-inverse {
   background-color: #2a2d2f;
   border-color: transparent;
+}
+
+.navbar-inverse .navbar-nav > li > a {
+  color: #8e929b;
+}
+
+.navbar-inverse .navbar-nav > .active > a,
+.navbar-inverse .navbar-nav > .active > a:hover,
+.navbar-inverse .navbar-nav > .active > a:focus {
+  color: #f6f6f6;
+  background-color: transparent;
 }
 
 @media (min-width: 768px) {
@@ -454,7 +436,46 @@ fieldset[disabled] .btn-info.active {
   background-color: #00b482;
 }
 
+.nav-tabs {
+  border-bottom: 2px solid #2a2d2f;
+  margin: 0 -20px;
+  padding: 0 20px;
+}
 
+.nav-tabs-unbordered {
+  border-bottom: 0 solid transparent;
+}
+
+.nav-tabs > li {
+  margin-bottom: -2px;
+  border-bottom: 2px solid #2a2d2f;
+}
+
+.nav-tabs-unbordered > li {
+  margin-bottom: 0;
+  border-bottom: 0 solid transparent;
+}
+
+.nav-tabs > li > a {
+  color: #8e929b;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 3px solid transparent;
+}
+
+.nav-tabs > li > a:hover,
+.nav-tabs > li > a:focus {
+  color: #f6f6f6;
+  border-color: transparent;
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+  background-color: transparent;
+  color: #f6f6f6;
+}
 
 .nav-tabs > li.active > a,
 .nav-tabs > li.active > a:hover,
@@ -462,13 +483,16 @@ fieldset[disabled] .btn-info.active {
   border-top: none;
   border-left: none;
   border-right: none;
-  border-bottom: 3px solid;
-  border-color: #00b482;
+  border-bottom: 3px solid #00b482;
 }
 
 .nav-tabs > li > a {
   border-radius: 0;
   padding-top: 13px;
+}
+
+.tab-content {
+  margin-top: 20px;
 }
 
 .header-btn {

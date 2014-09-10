@@ -324,13 +324,37 @@ define([
               <a className="navbar-brand" href="/">
                 <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
               </a>
-              <button type="button" className="btn btn-success navbar-btn pull-right"
-                  onClick={this.showNewAppModal}>
-                + New App
-              </button>
+              <ul className="nav navbar-nav nav-tabs nav-tabs-unbordered">
+                <li className="active">
+                  <a href="/">
+                    Apps
+                  </a>
+                </li>
+                <li>
+                  <a href="/">
+                    Deployments
+                  </a>
+                </li>
+              </ul>
+              <ul className="nav navbar-nav nav-tabs nav-tabs-unbordered pull-right">
+                <li>
+                  <a href="/">
+                    Docs
+                  </a>
+                </li>
+                <li>
+                  <a href="/">
+                    About
+                  </a>
+                </li>
+              </ul>
             </div>
           </nav>
           <div className="container-fluid">
+            <button type="button" className="btn btn-success navbar-btn"
+                onClick={this.showNewAppModal}>
+              + New App
+            </button>
             <AppListComponent
               collection={this.state.collection}
               deployments={this.state.deployments}
