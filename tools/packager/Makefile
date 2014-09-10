@@ -1,13 +1,13 @@
 # Note that the prefix affects the init scripts as well.
-PREFIX ?= usr/local
+PREFIX := usr/local
 
 # Command to extract from X.X.X-rcX the version (X.X.X) and tag (rcX)
-EXTRACT_VER ?= perl -n -e\
+EXTRACT_VER := perl -n -e\
 	'/"([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
-EXTRACT_TAG ?= perl -n -e\
+EXTRACT_TAG := perl -n -e\
 	'/"[0-9]+\.[0-9]+\.[0-9]+-([A-Za-z0-9]+).*"/ && print $$1'
-PKG_VER ?= $(shell cd marathon && cat version.sbt | $(EXTRACT_VER))
-PKG_TAG ?= $(shell cd marathon && cat version.sbt | $(EXTRACT_TAG))
+PKG_VER := $(shell cd marathon && cat version.sbt | $(EXTRACT_VER))
+PKG_TAG := $(shell cd marathon && cat version.sbt | $(EXTRACT_TAG))
 
 ifeq ($(strip $(PKG_TAG)),)
 PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S')
@@ -15,7 +15,7 @@ else
 PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S').$(PKG_TAG)
 endif
 
-FPM_OPTS ?= -s dir -n marathon -v $(PKG_VER) --iteration $(PKG_REL) \
+FPM_OPTS := -s dir -n marathon -v $(PKG_VER) --iteration $(PKG_REL) \
 	--architecture native \
 	--url "https://github.com/mesosphere/marathon" \
 	--license Apache-2.0 \
@@ -23,14 +23,14 @@ FPM_OPTS ?= -s dir -n marathon -v $(PKG_VER) --iteration $(PKG_REL) \
 	Apache Mesos" \
 	--maintainer "Mesosphere Package Builder <support@mesosphere.io>" \
 	--vendor "Mesosphere, Inc."
-FPM_OPTS_DEB ?= -t deb \
+FPM_OPTS_DEB := -t deb \
 	-d 'java7-runtime-headless | java6-runtime-headless' \
 	--deb-init marathon.init \
 	--after-install marathon.postinst \
 	--after-remove marathon.postrm
-FPM_OPTS_RPM ?= -t rpm \
+FPM_OPTS_RPM := -t rpm \
 	-d coreutils -d 'java >= 1.6'
-FPM_OPTS_OSX ?= -t osxpkg --osxpkg-identifier-prefix io.mesosphere
+FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
 .PHONY: all
 all: deb rpm
