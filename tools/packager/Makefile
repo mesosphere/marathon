@@ -6,8 +6,8 @@ EXTRACT_VER := perl -n -e\
 	'/"([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
 EXTRACT_TAG := perl -n -e\
 	'/"[0-9]+\.[0-9]+\.[0-9]+-([A-Za-z0-9]+).*"/ && print $$1'
-PKG_VER := $(shell cd marathon && cat version.sbt | $(EXTRACT_VER))
-PKG_TAG := $(shell cd marathon && cat version.sbt | $(EXTRACT_TAG))
+PKG_VER ?= $(shell cd marathon && cat version.sbt | $(EXTRACT_VER))
+PKG_TAG ?= $(shell cd marathon && cat version.sbt | $(EXTRACT_TAG))
 
 ifeq ($(strip $(PKG_TAG)),)
 PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S')
