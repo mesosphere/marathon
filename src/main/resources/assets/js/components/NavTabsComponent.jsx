@@ -37,6 +37,7 @@ define([
         });
 
         return (
+          /* jshint trailing:false, quotmark:false, newcap:false */
           <li className={tabClassSet} key={tab.id}>
             <a href={"#" + tab.id} data-badge={tab.badge} onClick={this.onTabClick.bind(this, tab.id)}>
               {tab.text}
