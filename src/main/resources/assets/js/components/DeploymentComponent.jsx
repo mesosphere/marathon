@@ -47,7 +47,7 @@ define([
           </td>
           <td className="text-right">
             <span className={isDeployingClassSet}>
-              {model.get("currentStep")}
+              {model.get("currentStep") - 1}
             </span> / {model.get("totalSteps")}
           </td>
           <td className="text-right">
