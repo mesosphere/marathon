@@ -138,6 +138,7 @@ define([
             this.setState({tasksFetchState: States.STATE_ERROR});
           }.bind(this),
           success: function(collection, response) {
+            this.fetchDeployments();
             // update changed attributes in app
             this.state.activeApp.update(response.app);
             this.setState({tasksFetchState: States.STATE_SUCCESS});
