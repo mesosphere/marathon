@@ -26,7 +26,6 @@ define([
     },
 
     handleDestroyDeployment: function () {
-      this.setLoading(true);
       this.props.destroyDeployment(this.props.model, this);
     },
 

@@ -203,6 +203,7 @@ define([
     },
 
     destroyDeployment: function(deployment, component) {
+      component.setLoading(true);
       if (confirm("Destroy deployment of apps: '" + deployment.affectedAppsString() + "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version.")) {
         setTimeout(function() {
           deployment.destroy({
@@ -210,9 +211,6 @@ define([
               var msg = response.responseJSON.message || response.statusText;
               component.setLoading(false);
               alert("Error destroying app '" + deployment.id + "': " + msg);
-            },
-            success: function() {
-              component.setLoading(false);
             },
             wait: true
           });
