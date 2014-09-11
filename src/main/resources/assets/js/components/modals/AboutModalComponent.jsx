@@ -58,9 +58,9 @@ define([
               <dt title="name">Name</dt>
               <dd>{this.state.info.get("name") || <span className="text-muted">Undefined</span>}</dd>
             </dl>
-            <h4 title="marathon_config">Marathon Config</h4>
+            <h5 title="marathon_config">Marathon Config</h5>
             <ObjectDlComponent object={marathonConfig} />
-            <h4 title="zookeeper_config">ZooKeeper Config</h4>
+            <h5 title="zookeeper_config">ZooKeeper Config</h5>
             <ObjectDlComponent object={zookeeperConfig} />
           </div>
         </ModalComponent>
