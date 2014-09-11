@@ -12,8 +12,8 @@ the native Docker support added in Apache Mesos version 0.20.0
 
 - Mesos version 0.20.0 or later
 - Docker version 1.0.0 or later installed on each Mesos slave
-- Start all `mesos-slave` instances with the flag
-  `--containerizers=docker,mesos`.
+- Configure Mesos slaves
+  - Set the containerizers `--containerizers=docker,mesos`.
     - _**The order of the containerizers is significant!**_
     - Mesosphere packages read config from well-known paths, so it's possible
       to specify this by doing
@@ -21,6 +21,15 @@ the native Docker support added in Apache Mesos version 0.20.0
         ```bash
         $ echo 'docker,mesos' > /etc/mesos-slave/containerizers
         ```
+
+  - Increase the executor timeout `--executor_registration_timeout=5mins`
+    - Mesosphere packages read config from well-known paths, so it's possible
+      to specify this by doing
+
+        ```bash
+        $ echo '5mins' > /etc/mesos-slave/executor_registration_timeout
+        ```
+
 
 ### Resources
 
