@@ -454,7 +454,11 @@ fieldset[disabled] .btn-info.active {
   border-top: none;
   border-left: none;
   border-right: none;
+  border-radius: 0;
+  padding-top: 13px;
+  padding-bottom: 15px;
   border-bottom: 3px solid transparent;
+  line-height: 19px;
 }
 
 .nav-tabs > li > a:hover,
@@ -477,11 +481,6 @@ fieldset[disabled] .btn-info.active {
   border-left: none;
   border-right: none;
   border-bottom: 3px solid #00b482;
-}
-
-.nav-tabs > li > a {
-  border-radius: 0;
-  padding-top: 13px;
 }
 
 .header-btn {
