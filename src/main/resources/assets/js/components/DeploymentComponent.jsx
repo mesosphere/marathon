@@ -20,9 +20,7 @@ define([
     },
 
     setLoading: function(bool) {
-      if (this.isMounted()) {
-        this.setState({loading: bool});
-      }
+      this.setState({loading: bool});
     },
 
     handleDestroyDeployment: function () {
