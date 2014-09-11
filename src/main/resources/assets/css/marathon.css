@@ -455,8 +455,7 @@ fieldset[disabled] .btn-info.active {
   border-left: none;
   border-right: none;
   border-radius: 0;
-  padding-top: 13px;
-  padding-bottom: 15px;
+  padding-bottom: 13px;
   border-bottom: 3px solid transparent;
   line-height: 19px;
 }
