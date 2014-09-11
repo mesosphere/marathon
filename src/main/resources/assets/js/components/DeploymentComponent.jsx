@@ -19,13 +19,15 @@ define([
       };
     },
 
+    setLoading: function(bool) {
+      if (this.isMounted()) {
+        this.setState({loading: bool});
+      }
+    },
+
     handleDestroyDeployment: function () {
-      this.setState({loading: true});
-      this.props.destroyDeployment(this.props.model, function () {
-        this.setState({loading: false});
-      }.bind(this));
-
-
+      this.setLoading(true);
+      this.props.destroyDeployment(this.props.model, this);
     },
 
     render: function() {
@@ -67,13 +69,13 @@ define([
               this.state.loading ?
                 <div className="progress progress-striped active pull-right" style={{"width": "140px"}}>
                   <span className="progress-bar progress-bar-info" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style={{"width": "100%"}}>
-                    <span className="sr-only">Reverting deployment</span>
+                    <span className="sr-only">Rolling back deployment</span>
                   </span>
                 </div> :
                 <button
-                    onClick={this.handleDestroyDeployment.bind(null, this)}
+                    onClick={this.handleDestroyDeployment}
                     className="btn btn-sm btn-default">
-                  Revert deployment
+                  Rollback deployment
                 </button>
             }
           </td>
