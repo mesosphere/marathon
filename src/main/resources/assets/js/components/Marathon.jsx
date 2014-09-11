@@ -63,7 +63,20 @@ define([
       }.bind(this));
 
       Mousetrap.bind("c", function() {
-        this.showNewAppModal(); }.bind(this), "keyup");
+        this.showNewAppModal();
+      }.bind(this), "keyup");
+
+      Mousetrap.bind("g a", function() {
+        if(this.state.modalClass == null) {
+          this.onTabClick("apps");
+        }
+      }.bind(this));
+
+      Mousetrap.bind("g d", function() {
+        if(this.state.modalClass == null) {
+          this.onTabClick("deployments");
+        }
+      }.bind(this));
 
       Mousetrap.bind("#", function() {
         if (this.state.modalClass === AppModalComponent) {
@@ -211,7 +224,9 @@ define([
 
     destroyDeployment: function(deployment, component) {
       component.setLoading(true);
-      if (confirm("Destroy deployment of apps: '" + deployment.affectedAppsString() + "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version.")) {
+      if (confirm("Destroy deployment of apps: '" + deployment.affectedAppsString() +
+          "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version.")) {
+
         setTimeout(function() {
           deployment.destroy({
             error: function(data, response) {
@@ -262,6 +277,7 @@ define([
             }.bind(this)
           }
         );
+
         if (app.validationError != null) {
           // If the model is not valid, revert the changes to prevent the UI
           // from showing an invalid state.
@@ -349,6 +365,7 @@ define([
       this.setState({
         activeTabId: id
       });
+
       if (id === tabs[0].id) {
         this.setPollResource(this.fetchApps);
       } else if (id === tabs[1].id) {
