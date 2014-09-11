@@ -89,7 +89,7 @@ define([
             <tr>
               <th>
                 <span onClick={this.sortCollectionBy.bind(null, "id")} className={headerClassSet}>
-                  ID {sortKey === "id" ? <span className="caret"></span> : null}
+                  Deployment ID {sortKey === "id" ? <span className="caret"></span> : null}
                 </span>
               </th>
               <th>

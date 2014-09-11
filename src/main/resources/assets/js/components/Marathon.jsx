@@ -202,18 +202,20 @@ define([
       }
     },
 
-    destroyDeployment: function(deployment) {
+    destroyDeployment: function(deployment, callback) {
       if (confirm("Destroy deployment of apps: '" + deployment.affectedAppsString() + "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version.")) {
-        deployment.destroy({
-          error: function(data, response) {
-            var msg = response.responseJSON.message || response.statusText;
-            alert("Error destroying app '" + deployment.id + "': " + msg);
-          },
-          success: function() {
-            this.fetchDeployments();
-          }.bind(this),
-          wait: true
-        });
+        setTimeout(function() {
+          deployment.destroy({
+            error: function(data, response) {
+              var msg = response.responseJSON.message || response.statusText;
+              callback();
+              alert("Error destroying app '" + deployment.id + "': " + msg);
+            },
+            wait: true
+          });
+        }, 1000);
+      } else {
+        callback();
       }
     },
 
