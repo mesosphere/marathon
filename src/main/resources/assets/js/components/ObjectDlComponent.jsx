@@ -23,7 +23,9 @@ define([
   return React.createClass({
     displayName: "ObjectDlComponent",
     propTypes: {
-      object: React.PropTypes.object.isRequired
+      // Can be `null` or `undefined` since the data is likely fetched
+      // asynchronously.
+      object: React.PropTypes.object
     },
 
     render: function() {
