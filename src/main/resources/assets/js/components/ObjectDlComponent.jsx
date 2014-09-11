@@ -40,7 +40,7 @@ define([
           dlNodes.push(
             <dd key={key + "_val"}>
               {this.props.object[key] == null ?
-                <span className="text-muted">Undefined</span> :
+                <span className="text-muted">Unspecified</span> :
                 prettyPrint(this.props.object[key])}
             </dd>
           );
