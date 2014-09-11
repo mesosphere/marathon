@@ -7,6 +7,8 @@ define([
   "jsx!components/ModalComponent",
   "jsx!components/ObjectDlComponent"
 ], function(React, Info, BackboneMixin, ModalComponent, ObjectDlComponent) {
+  "use strict";
+
   return React.createClass({
     mixins: [BackboneMixin],
 
@@ -17,7 +19,6 @@ define([
     },
 
     componentDidMount: function() {
-      console.log("fetching")
       this.state.info.fetch();
     },
 
