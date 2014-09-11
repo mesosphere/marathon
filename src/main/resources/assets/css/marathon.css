@@ -34,6 +34,11 @@ h4, .h4 {
   font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
+code {
+  color: #fff;
+  background-color: #454a50;
+}
+
 hr {
   border-color: #2a2d2f;
 }
