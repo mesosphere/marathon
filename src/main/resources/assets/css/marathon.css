@@ -574,3 +574,17 @@ fieldset[disabled] .btn-info.active {
 .clickable {
   cursor: pointer;
 }
+
+.modal-header-blend {
+  background: transparent;
+}
+
+@media (min-width: 768px) {
+  .dl-horizontal-lg dt {
+    width: 190px;
+  }
+
+  .dl-horizontal-lg dd {
+    margin-left: 210px;
+  }
+}
