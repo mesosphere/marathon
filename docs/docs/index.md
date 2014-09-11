@@ -87,7 +87,7 @@ Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeeper
 for storing state. They are separate options because Mesos masters can be
 discovered in other ways as well.
 
-For all configuration options, see the [command line flags](command-line-flags.html) doc.
+For all configuration options, see the [command line flags](command-line-flags.html) doc. For more information on the high-availability feature of Marathon, see the [high availability](high-availability.html) doc.
 
 ### Mesos Library
 
