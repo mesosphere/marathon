@@ -71,7 +71,7 @@ define([
                 </div> :
                 <button
                     onClick={this.handleDestroyDeployment}
-                    className="btn btn-sm btn-default">
+                    className="btn btn-xs btn-default">
                   Rollback deployment
                 </button>
             }
