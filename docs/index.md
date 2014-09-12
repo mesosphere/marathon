@@ -31,7 +31,7 @@ the same way as these packages do.
 
 #### Through your Package Manager
 
-Marathon releases are available from Mespshere's [repositories](http://mesosphere.io/2014/07/17/mesosphere-package-repositories/).
+Marathon packages are available from Mesosphere's [repositories](http://mesosphere.io/2014/07/17/mesosphere-package-repositories/).
 
 #### From a Tarball
 
@@ -87,7 +87,7 @@ Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeeper
 for storing state. They are separate options because Mesos masters can be
 discovered in other ways as well.
 
-For all configuration options, see the [command line flags](command-line-flags.html) doc.
+For all configuration options, see the [command line flags](command-line-flags.html) doc. For more information on the high-availability feature of Marathon, see the [high availability](high-availability.html) doc.
 
 ### Mesos Library
 
