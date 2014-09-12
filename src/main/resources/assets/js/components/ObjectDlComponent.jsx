@@ -11,7 +11,8 @@ define([
 
   function prettyPrint(object) {
     if (typeof object === "object" && !!object) {
-      return JSON.stringify(object, null, " ");
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      return <code>{JSON.stringify(object, null, " ")}</code>;
     } else if (typeof object === "boolean") {
       /* jshint trailing:false, quotmark:false, newcap:false */
       return <code>{object.toString()}</code>;
