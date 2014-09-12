@@ -428,13 +428,13 @@ define([
                 tabs={tabs} />
               <ul className="nav navbar-nav navbar-right">
                 <li>
-                  <a href="https://mesosphere.github.io/marathon/docs/" target="_blank">
-                    Docs
+                  <a href="#/about" onClick={this.showAboutModal}>
+                    About
                   </a>
                 </li>
                 <li>
-                  <a href="#/about" onClick={this.showAboutModal}>
-                    About
+                  <a href="https://mesosphere.github.io/marathon/docs/" target="_blank">
+                    Docs ⇗
                   </a>
                 </li>
               </ul>
