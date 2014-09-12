@@ -10,17 +10,37 @@ the native Docker support added in Apache Mesos version 0.20.0
 
 ### Prerequisites
 
-- Mesos version 0.20.0 or later
-- Docker version 1.0.0 or later installed on each Mesos slave
-- Start all `mesos-slave` instances with the flag
-  `--containerizers=docker,mesos`.
-    - _**The order of the containerizers is significant!**_
-    - Mesosphere packages read config from well-known paths, so it's possible
-      to specify this by doing
+## Docker
 
-        ```bash
-        $ echo 'docker,mesos' > /etc/mesos-slave/containerizers
-        ```
+Docker version 1.0.0 or later installed on each slave node.
+
+### Configure mesos-slave
+
+  <div class="alert alert-info">
+    <strong>Note:</strong> All commands below assume `mesos-slave` is being run
+    as a service using the package provided by 
+    <a href="https://mesosphere.io/2014/07/17/mesosphere-package-repositories/">Mesosphere</a>
+  </div>
+
+1. Update slave configuration to specify the use of the Docker containerizer
+  <div class="alert alert-info">
+    <strong>Note:</strong> The order of the parameters to `containerizers` is important. 
+    It specifies the priority used when choosing the containerizer to launch
+    the task.
+  </div>
+
+    ```bash
+    $ echo 'docker,mesos' > /etc/mesos-slave/containerizers
+    ```
+
+2. Increase the executor timeout
+
+    ```bash
+    $ echo '5mins' > /etc/mesos-slave/executor_registration_timeout
+    ```
+
+3. Restart `mesos-slave` process to load the new configuration
+
 
 ### Resources
 
@@ -57,8 +77,10 @@ app definition JSON:
 where `volumes` and `type` are optional (the default type is `DOCKER`).  More
 container types may be added later.
 
-Note that initially, Mesos supports only the host (`--net=host`) Docker
-networking mode.
+  <div class="alert alert-info">
+    <strong>Note:</strong> Initially, Mesos supports only the host (`--net=host`) Docker
+    networking mode.
+  </div>
 
 For convenience, the mount point of the mesos sandbox is available in the
 environment as `$MESOS_SANDBOX`.  The `$HOME` environment variable is set
