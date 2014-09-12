@@ -15,11 +15,6 @@ define([
     TaskViewComponent, TogglableTabsComponent) {
   "use strict";
 
-  var tabs = [
-    {id: "tasks", text: "Tasks"},
-    {id: "configuration", text: "Configuration"}
-  ];
-
   return React.createClass({
     displayName: "AppModalComponent",
 
@@ -43,7 +38,6 @@ define([
     getInitialState: function() {
       return {
         activeViewIndex: 0,
-        activeTabId: tabs[0].id,
         selectedTasks: {}
       };
     },
@@ -55,12 +49,6 @@ define([
     handleDestroyApp: function() {
       this.props.destroyApp();
       this.destroy();
-    },
-
-    onTabClick: function(id) {
-      this.setState({
-        activeTabId: id
-      });
     },
 
     toggleAllTasks: function() {
@@ -170,9 +158,10 @@ define([
             </div>
           </div>
           <TogglableTabsComponent className="modal-body modal-body-no-top"
-              activeTabId={this.state.activeTabId}
-              onTabClick={this.onTabClick}
-              tabs={tabs} >
+              tabs={[
+                {id: "tasks", text: "Tasks"},
+                {id: "configuration", text: "Configuration"}
+              ]}>
             <TabPaneComponent id="tasks">
               <StackedViewComponent
                 activeViewIndex={this.state.activeViewIndex}>

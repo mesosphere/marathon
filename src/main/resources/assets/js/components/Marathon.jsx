@@ -9,23 +9,12 @@ define([
   "models/DeploymentCollection",
   "jsx!components/AppListComponent",
   "jsx!components/AppModalComponent",
-  "jsx!components/DeploymentsListComponent",
-  "jsx!components/NewAppModalComponent",
-  "jsx!components/TabPaneComponent",
-  "jsx!components/TogglableTabsComponent",
-  "jsx!components/NavTabsComponent"
+  "jsx!components/NewAppModalComponent"
 ], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
-    AppListComponent, AppModalComponent, DeploymentsListComponent,
-    NewAppModalComponent, TabPaneComponent, TogglableTabsComponent,
-    NavTabsComponent) {
+    AppListComponent, AppModalComponent, NewAppModalComponent) {
   "use strict";
 
   var UPDATE_INTERVAL = 5000;
-
-  var tabs = [
-    {id: "apps", text: "Apps"},
-    {id: "deployments", text: "Deployments"}
-  ];
 
   return React.createClass({
     displayName: "Marathon",
@@ -34,11 +23,9 @@ define([
       return {
         activeApp: null,
         activeTask: null,
-        activeTabId: tabs[0].id,
         appVersionsFetchState: States.STATE_LOADING,
         collection: new AppCollection(),
         deployments: new DeploymentCollection(),
-        deploymentsFetchState: States.STATE_LOADING,
         fetchState: States.STATE_LOADING,
         modalClass: null,
         tasksFetchState: States.STATE_LOADING
@@ -100,7 +87,6 @@ define([
         }.bind(this),
         reset: true,
         success: function() {
-          this.fetchDeployments();
           this.setState({fetchState: States.STATE_SUCCESS});
         }.bind(this)
       });
@@ -119,18 +105,6 @@ define([
       }
     },
 
-    fetchDeployments: function() {
-      this.state.deployments.fetch({
-        error: function() {
-          this.setState({deploymentsFetchState: States.STATE_ERROR});
-        }.bind(this),
-        success: function(response) {
-          tabs[1].badge = response.models.length;
-          this.setState({deploymentsFetchState: States.STATE_SUCCESS});
-        }.bind(this)
-      });
-    },
-
     fetchTasks: function() {
       if (this.state.activeApp != null) {
         this.state.activeApp.tasks.fetch({
@@ -138,7 +112,6 @@ define([
             this.setState({tasksFetchState: States.STATE_ERROR});
           }.bind(this),
           success: function(collection, response) {
-            this.fetchDeployments();
             // update changed attributes in app
             this.state.activeApp.update(response.app);
             this.setState({tasksFetchState: States.STATE_SUCCESS});
@@ -200,24 +173,6 @@ define([
           }.bind(this),
           wait: true
         });
-      }
-    },
-
-    destroyDeployment: function(deployment, component) {
-      component.setLoading(true);
-      if (confirm("Destroy deployment of apps: '" + deployment.affectedAppsString() + "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version.")) {
-        setTimeout(function() {
-          deployment.destroy({
-            error: function(data, response) {
-              var msg = response.responseJSON.message || response.statusText;
-              component.setLoading(false);
-              alert("Error destroying app '" + deployment.id + "': " + msg);
-            },
-            wait: true
-          });
-        }, 1000);
-      } else {
-        component.setLoading(false);
       }
     },
 
@@ -327,17 +282,6 @@ define([
       });
     },
 
-    onTabClick: function(id) {
-      this.setState({
-        activeTabId: id
-      });
-      if (id === tabs[0].id) {
-        this.setPollResource(this.fetchApps);
-      } else if (id === tabs[1].id) {
-        this.setPollResource(this.fetchDeployments);
-      }
-    },
-
     render: function() {
       var modal;
       if (this.state.modalClass !== null) {
@@ -375,48 +319,24 @@ define([
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
-          <nav className="navbar navbar-inverse navbar-static-top" role="navigation">
+          <nav className="navbar navbar-inverse" role="navigation">
            <div className="container-fluid">
               <a className="navbar-brand" href="/">
                 <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
               </a>
-              <NavTabsComponent
-                activeTabId={this.state.activeTabId}
-                className="navbar-nav nav-tabs-unbordered"
-                onTabClick={this.onTabClick}
-                tabs={tabs} />
-              <ul className="nav navbar-nav navbar-right">
-                <li>
-                  <a href="https://mesosphere.github.io/marathon/docs/" target="_blank">
-                    Docs
-                  </a>
-                </li>
-              </ul>
+              <button type="button" className="btn btn-success navbar-btn pull-right"
+                  onClick={this.showNewAppModal}>
+                + New App
+              </button>
             </div>
           </nav>
           <div className="container-fluid">
-            <TogglableTabsComponent activeTabId={this.state.activeTabId} >
-              <TabPaneComponent id="apps">
-                <button type="button" className="btn btn-success navbar-btn"
-                    onClick={this.showNewAppModal} >
-                  + New App
-                </button>
-                <AppListComponent
-                  collection={this.state.collection}
-                  onSelectApp={this.showAppModal}
-                  fetchState={this.state.fetchState}
-                  ref="appList" />
-              </TabPaneComponent>
-              <TabPaneComponent
-                  id="deployments"
-                  onActivate={this.props.fetchAppVersions} >
-                <DeploymentsListComponent
-                  deployments={this.state.deployments}
-                  destroyDeployment={this.destroyDeployment}
-                  fetchState={this.state.deploymentsFetchState} />
-              </TabPaneComponent>
-            </TogglableTabsComponent>
-
+            <AppListComponent
+              collection={this.state.collection}
+              deployments={this.state.deployments}
+              onSelectApp={this.showAppModal}
+              fetchState={this.state.fetchState}
+              ref="appList" />
           </div>
           {modal}
         </div>
