@@ -15,6 +15,7 @@ define([
 
     propTypes: {
       collection: React.PropTypes.object.isRequired,
+      deployments: React.PropTypes.object.isRequired,
       onSelectApp: React.PropTypes.func.isRequired
     },
 

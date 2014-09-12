@@ -1,16 +1,14 @@
 define([
-  "models/Deployment",
-  "models/SortableCollection"
-], function(Deployment, SortableCollection) {
+  "Backbone",
+  "models/Deployment"
+], function(Backbone, Deployment) {
   "use strict";
 
-  return SortableCollection.extend({
+  return Backbone.Collection.extend({
     model: Deployment,
 
     initialize: function(models, options) {
       this.options = options;
-      this.setComparator("-id");
-      this.sort();
     },
 
     url: function() {
