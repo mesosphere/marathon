@@ -31,7 +31,7 @@ the same way as these packages do.
 
 #### Through your Package Manager
 
-Marathon releases are available from Mespshere's [repositories](http://mesosphere.io/2014/07/17/mesosphere-package-repositories/).
+Marathon packages are available from Mesosphere's [repositories](http://mesosphere.io/2014/07/17/mesosphere-package-repositories/).
 
 #### From a Tarball
 
