@@ -44,7 +44,10 @@ define([
 
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
-        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy} size="lg">
+        <ModalComponent
+            onDestroy={this.props.onDestroy}
+            ref="modalComponent"
+            size="lg">
           <div className="modal-header modal-header-blend">
             <button type="button" className="close"
               aria-hidden="true" onClick={this.destroy}>&times;</button>
