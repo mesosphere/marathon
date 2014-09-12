@@ -9,13 +9,6 @@ define([
 ], function(React, Info, BackboneMixin, ModalComponent, ObjectDlComponent) {
   "use strict";
 
-  var UNSPECIFIED_NODE =
-    React.createClass({
-      render: function() {
-        return <dd className="text-muted">Unspecified</dd>;
-      }
-    });
-
   return React.createClass({
     mixins: [BackboneMixin],
 
@@ -59,11 +52,11 @@ define([
           <div className="modal-body">
             <dl className="dl-horizontal dl-horizontal-lg">
               <dt title="framework_id">Framework Id</dt>
-              <dd>{this.state.info.get("framework_id") || <UNSPECIFIED_NODE />}</dd>
+              <dd>{this.state.info.get("framework_id") || <span className="text-muted">Unspecified</span>}</dd>
               <dt title="leader">Leader</dt>
-              <dd>{this.state.info.get("leader") || <UNSPECIFIED_NODE />}</dd>
+              <dd>{this.state.info.get("leader") || <span className="text-muted">Unspecified</span>}</dd>
               <dt title="name">Name</dt>
-              <dd>{this.state.info.get("name") || <UNSPECIFIED_NODE />}</dd>
+              <dd>{this.state.info.get("name") || <span className="text-muted">Unspecified</span>}</dd>
             </dl>
             <h5 title="marathon_config">Marathon Config</h5>
             <ObjectDlComponent object={marathonConfig} />
