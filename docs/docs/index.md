@@ -6,7 +6,10 @@ title: Setting Up and Running Marathon
 
 ### Quickstart on Google Cloud Platform
 
-A quick way to try out Marathon is to launch a full [Mesosphere cluster on Google Cloud Platform](https://google.mesosphere.io) which contains Marathon.
+A quick way to try out Marathon is to launch a full
+[Mesosphere cluster on Google Cloud Platform](https://google.mesosphere.io).
+Each cluster installs and configures Marathon and makes its UI accessible over a
+custom VPN.
 
 ### Requirements
 
