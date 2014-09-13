@@ -477,7 +477,7 @@ List the application with id `appId`.
 **Request:**
 
 {% highlight http %}
-GET /v2/apps/sleepy-docker HTTP/1.1
+GET /v2/apps/toggle?embed=apps.tasks HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
@@ -497,70 +497,89 @@ Transfer-Encoding: chunked
         "args": null, 
         "backoffFactor": 1.15, 
         "backoffSeconds": 1, 
-        "cmd": "env && sleep 300", 
+        "cmd": "python toggle.py $PORT0", 
         "constraints": [], 
-        "container": {
-            "docker": {
-                "image": "busybox"
-            }, 
-            "type": "DOCKER", 
-            "volumes": []
-        }, 
-        "cpus": 0.5, 
+        "container": null, 
+        "cpus": 0.2, 
         "dependencies": [], 
         "deployments": [], 
         "disk": 0.0, 
         "env": {}, 
         "executor": "", 
-        "healthChecks": [], 
-        "id": "/sleepy-docker", 
-        "instances": 6, 
-        "mem": 64.0, 
+        "healthChecks": [
+            {
+                "command": null, 
+                "gracePeriodSeconds": 5, 
+                "intervalSeconds": 10, 
+                "maxConsecutiveFailures": 3, 
+                "path": "/health", 
+                "portIndex": 0, 
+                "protocol": "HTTP", 
+                "timeoutSeconds": 10
+            }
+        ], 
+        "id": "/toggle", 
+        "instances": 2, 
+        "mem": 32.0, 
         "ports": [
-            10001
+            10000
         ], 
         "requirePorts": false, 
         "storeUrls": [], 
         "tasks": [
             {
-                "host": "10.141.141.10", 
-                "id": "sleepy-docker.ae5ececf-2f52-11e4-86eb-56847afe9799", 
-                "ports": [
-                    31033
+                "appId": "/toggle", 
+                "healthCheckResults": [
+                    {
+                        "alive": true, 
+                        "consecutiveFailures": 0, 
+                        "firstSuccess": "2014-09-13T00:20:28.101Z", 
+                        "lastFailure": null, 
+                        "lastSuccess": "2014-09-13T00:25:07.506Z", 
+                        "taskId": "toggle.802df2ae-3ad4-11e4-a400-56847afe9799"
+                    }
                 ], 
-                "stagedAt": "2014-08-29T08:01:28.724Z", 
-                "startedAt": "2014-08-29T08:02:00.953Z", 
-                "version": "2014-08-29T08:00:40.293Z"
+                "host": "10.141.141.10", 
+                "id": "toggle.802df2ae-3ad4-11e4-a400-56847afe9799", 
+                "ports": [
+                    31045
+                ], 
+                "stagedAt": "2014-09-12T23:28:28.594Z", 
+                "startedAt": "2014-09-13T00:24:46.959Z", 
+                "version": "2014-09-12T23:28:21.737Z"
             }, 
             {
-                "host": "10.141.141.10", 
-                "id": "sleepy-docker.938184d3-2f52-11e4-86eb-56847afe9799", 
-                "ports": [
-                    31136
+                "appId": "/toggle", 
+                "healthCheckResults": [
+                    {
+                        "alive": true, 
+                        "consecutiveFailures": 0, 
+                        "firstSuccess": "2014-09-13T00:20:28.101Z", 
+                        "lastFailure": null, 
+                        "lastSuccess": "2014-09-13T00:25:07.508Z", 
+                        "taskId": "toggle.7c99814d-3ad4-11e4-a400-56847afe9799"
+                    }
                 ], 
-                "stagedAt": "2014-08-29T08:00:43.653Z", 
-                "startedAt": "2014-08-29T08:02:00.930Z", 
-                "version": "2014-08-29T08:00:40.293Z"
-            }, 
-            {
                 "host": "10.141.141.10", 
-                "id": "sleepy-docker.c0e0f797-2f52-11e4-86eb-56847afe9799", 
+                "id": "toggle.7c99814d-3ad4-11e4-a400-56847afe9799", 
                 "ports": [
-                    31031
+                    31234
                 ], 
-                "stagedAt": "2014-08-29T08:01:59.776Z", 
-                "startedAt": null, 
-                "version": "2014-08-29T08:00:40.293Z"
+                "stagedAt": "2014-09-12T23:28:22.587Z", 
+                "startedAt": "2014-09-13T00:24:46.965Z", 
+                "version": "2014-09-12T23:28:21.737Z"
             }
         ], 
         "tasksRunning": 2, 
-        "tasksStaged": 1, 
+        "tasksStaged": 0, 
         "upgradeStrategy": {
             "minimumHealthCapacity": 1.0
         }, 
-        "uris": [], 
+        "uris": [
+            "http://downloads.mesosphere.io/misc/toggle.tgz"
+        ], 
         "user": null, 
-        "version": "2014-08-29T08:00:40.293Z"
+        "version": "2014-09-12T23:28:21.737Z"
     }
 }
 {% endhighlight %}

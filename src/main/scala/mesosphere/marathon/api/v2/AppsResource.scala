@@ -9,6 +9,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.{ ModelValidation, RestResource }
+import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
@@ -38,8 +39,12 @@ class AppsResource @Inject() (
     val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
     val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
     val mapped =
-      if (embed == EmbedTasks) apps.map(app => app.withTasksAndDeployments(taskTracker.get(app.id).toSeq, runningDeployments))
-      else apps.map(app => app.withTaskCountsAndDeployments(taskTracker.get(app.id).toSeq, runningDeployments))
+      if (embed == EmbedTasks) apps.map { app =>
+        app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
+      }
+      else apps.map { app =>
+        app.withTaskCountsAndDeployments(enrichedTasks(app), runningDeployments)
+      }
     Map("apps" -> mapped)
   }
 
@@ -62,12 +67,18 @@ class AppsResource @Inject() (
     def runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
     def transitiveApps(gid: PathId) = {
       val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
-      val withTasks = apps.map(app => app.withTasksAndDeployments(taskTracker.get(app.id).toSeq, runningDeployments))
+      val withTasks = apps.map { app =>
+        app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
+      }
       ok(Map("*" -> withTasks))
     }
     def app() = service.getApp(id.toRootPath) match {
-      case Some(app) => ok(Map("app" -> app.withTasksAndDeployments(taskTracker.get(app.id).toSeq, runningDeployments)))
-      case None      => unknownApp(id.toRootPath)
+      case Some(app) =>
+        val mapped =
+          app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
+        ok(Map("app" -> mapped))
+
+      case None => unknownApp(id.toRootPath)
     }
     id match {
       case ListApps(gid) => transitiveApps(gid.toRootPath)
@@ -145,6 +156,12 @@ class AppsResource @Inject() (
 
   @Path("{appId:.+}/versions")
   def appVersionsResource() = new AppVersionsResource(service, config)
+
+  private def enrichedTasks(app: AppDefinition): Seq[EnrichedTask] =
+    taskTracker.get(app.id).map { task =>
+      val hcResults = result(healthCheckManager.status(app.id, task.getId))
+      EnrichedTask(app.id, task, hcResults)
+    }.toSeq
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
