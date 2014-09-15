@@ -94,6 +94,20 @@ including how to run a Mesos environment inside a preconfigured virtual machine
 and a list of recipes for launching applications that test specific Marathon
 features.
 
+### Running the development Docker
+
+Build tip:
+
+    docker build -t marathon-tip .
+
+Run it:
+
+    docker run marathon-tip --master local --zk zk://localhost:2181/marathon
+
+If you want to inspect the contents of the Docker:
+
+    docker run -i -t --entrypoint=/bin/bash marathon-tip -s
+
 ## Marathon Clients
 
 * [Ruby gem and command line client](https://rubygems.org/gems/marathon_client)
