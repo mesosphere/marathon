@@ -1166,7 +1166,7 @@ The JSON format of a group resource is as follows:
     }],
     "dependencies": ["/product/database", "../backend"]
   }
-]
+],
 "version": "2014-03-01T23:29:30.158Z"
 }
 ```
@@ -1234,7 +1234,7 @@ The JSON format of a group resource is as follows:
     }],
     "dependencies": ["/product/database", "../backend"]
   }
-]
+],
 "version": "2014-03-01T23:29:30.158Z"
 }
 ```
