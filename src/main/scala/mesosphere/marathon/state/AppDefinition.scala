@@ -4,6 +4,7 @@ import java.lang.{ Double => JDouble, Integer => JInt }
 
 import com.fasterxml.jackson.annotation.{ JsonIgnoreProperties, JsonProperty }
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
+import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
 import mesosphere.marathon.health.HealthCheck
@@ -179,13 +180,13 @@ case class AppDefinition(
   }
 
   def withTaskCountsAndDeployments(
-    appTasks: Seq[MarathonTask],
+    appTasks: Seq[EnrichedTask],
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTaskCountsAndDeployments = {
     new AppDefinition.WithTaskCountsAndDeployments(appTasks, runningDeployments, this)
   }
 
   def withTasksAndDeployments(
-    appTasks: Seq[MarathonTask],
+    appTasks: Seq[EnrichedTask],
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTasksAndDeployments =
     new AppDefinition.WithTasksAndDeployments(appTasks, runningDeployments, this)
 
@@ -239,7 +240,7 @@ object AppDefinition {
     AppDefinition().mergeFromProto(proto)
 
   protected[marathon] class WithTaskCountsAndDeployments(
-    appTasks: Seq[MarathonTask],
+    appTasks: Seq[EnrichedTask],
     runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
       extends AppDefinition(
@@ -254,16 +255,17 @@ object AppDefinition {
       * for this app
       */
     @JsonProperty
-    val tasksStaged: Int = appTasks.count { task =>
-      task.getStagedAt != 0 && task.getStartedAt == 0
+    val tasksStaged: Int = appTasks.count { eTask =>
+      eTask.task.getStagedAt != 0 && eTask.task.getStartedAt == 0
     }
 
     /**
       * Snapshot of the number of running tasks for this app
       */
     @JsonProperty
-    val tasksRunning: Int = appTasks.count { task =>
-      task.hasStatus && task.getStatus.getState == TaskState.TASK_RUNNING
+    val tasksRunning: Int = appTasks.count { eTask =>
+      eTask.task.hasStatus &&
+        eTask.task.getStatus.getState == TaskState.TASK_RUNNING
     }
 
     /**
@@ -278,7 +280,7 @@ object AppDefinition {
   }
 
   protected[marathon] class WithTasksAndDeployments(
-    appTasks: Seq[MarathonTask],
+    appTasks: Seq[EnrichedTask],
     runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
       extends WithTaskCountsAndDeployments(appTasks, runningDeployments, app) {
