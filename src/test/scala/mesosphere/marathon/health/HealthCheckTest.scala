@@ -121,7 +121,28 @@ class HealthCheckTest extends MarathonSpec {
       val json =
         """
         {
-          "path": null,
+          "protocol": "COMMAND",
+          "portIndex": 0,
+          "command": { "value": "echo healthy" },
+          "gracePeriodSeconds": 15,
+          "intervalSeconds": 10,
+          "timeoutSeconds": 20,
+          "maxConsecutiveFailures": 3
+        }
+        """
+      val expected =
+        HealthCheck(
+          protocol = Protocol.COMMAND,
+          command = Some(Command("echo healthy"))
+        )
+      val readResult = mapper.readValue(json, classOf[HealthCheck])
+      assert(readResult == expected)
+    }
+
+    {
+      val json =
+        """
+        {
           "protocol": "COMMAND",
           "portIndex": 0,
           "command": { "value": "echo healthy" },
@@ -135,7 +156,7 @@ class HealthCheckTest extends MarathonSpec {
         HealthCheck(
           protocol = Protocol.COMMAND,
           command = Some(Command("echo healthy")),
-          path = None
+          path = Some("/")
         )
       val readResult = mapper.readValue(json, classOf[HealthCheck])
       assert(readResult == expected)
