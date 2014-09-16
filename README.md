@@ -17,7 +17,12 @@ following the instructions.
 
 1. Install packages needed to generate the site
 
-        $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev
+    * On Linux:
+
+            $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev
+    * On Mac OS X:
+    
+            $ brew install node
 
 2. Clone the Marathon repository
 

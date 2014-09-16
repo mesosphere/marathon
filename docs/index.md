@@ -4,6 +4,13 @@ title: Setting Up and Running Marathon
 
 ## Setting Up And Running Marathon
 
+### Quickstart on Google Cloud Platform
+
+A quick way to try out Marathon is to launch a cluster using
+[Mesosphere for Google Cloud Platform](https://google.mesosphere.io).
+Each cluster has Mesos and Marathon configured and offers secure access
+over a custom VPN.
+
 ### Requirements
 
 * [Apache Mesos][Mesos] 0.15.0+
@@ -65,7 +72,7 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
 
 Upgrading to a newer version of Marathon should be seamless. Be aware that
 downgrading from versions >= 0.7.0 to older versions is not possible
-because of incompatible changes in the data format. 
+because of incompatible changes in the data format.
 
 We recommend creating a backup of the ZooKeeper state before upgrading to be able to downgrade in case
 of problems after an upgrade. This can done by creating a copy of ZooKeeper's [data directory](http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#The+Data+Directory).
