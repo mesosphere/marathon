@@ -129,7 +129,7 @@ object Dependency {
   object V {
     // runtime deps versions
     val Chaos = "0.5.6"
-    val JacksonCCM = "0.1.0"
+    val JacksonCCM = "0.1.1"
     val MesosUtils = "0.20.0-1"
     val Akka = "2.2.4"
     val Spray = "1.2.1"
