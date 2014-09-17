@@ -6,6 +6,7 @@ import sbtrelease.ReleasePlugin._
 import com.typesafe.sbt.SbtScalariform._
 import ohnosequences.sbt.SbtS3Resolver.S3Resolver
 import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
+import org.scalastyle.sbt.ScalastylePlugin.{ Settings => styleSettings }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
 import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
@@ -14,15 +15,31 @@ object MarathonBuild extends Build {
   lazy val root = Project(
     id = "marathon",
     base = file("."),
-    settings = baseSettings ++ asmSettings ++ releaseSettings ++ publishSettings ++ formatSettings ++ revolverSettings ++ Seq(
-      libraryDependencies ++= Dependencies.root,
-      parallelExecution in Test := false,
-      fork in Test := true
-    ))
+    settings = baseSettings ++
+               asmSettings ++
+               releaseSettings ++
+               publishSettings ++
+               formatSettings ++
+               styleSettings ++
+               revolverSettings ++
+      Seq(
+        libraryDependencies ++= Dependencies.root,
+        parallelExecution in Test := false,
+        fork in Test := true
+      )
+    )
     .configs(IntegrationTest)
     .settings(inConfig(IntegrationTest)(Defaults.testTasks): _*)
     .settings(testOptions in Test := Seq(Tests.Argument("-l", "integration")))
     .settings(testOptions in IntegrationTest := Seq(Tests.Argument("-n", "integration")))
+
+  lazy val testScalaStyle = taskKey[Unit]("testScalaStyle")
+
+  testScalaStyle := {
+    org.scalastyle.sbt.PluginKeys.scalastyle.toTask("").value
+  }
+
+  (test in Test) <<= (test in Test) dependsOn testScalaStyle
 
   lazy val IntegrationTest = config("integration") extend Test
 
