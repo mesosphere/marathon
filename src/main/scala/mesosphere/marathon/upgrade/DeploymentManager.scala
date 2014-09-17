@@ -30,7 +30,7 @@ class DeploymentManager(
   val deploymentStatus: mutable.Map[String, DeploymentStepInfo] = mutable.Map.empty[String, DeploymentStepInfo]
 
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-    case NonFatal(_) => Stop
+    case NonFatal(e) => Stop
   }
 
   def receive = {

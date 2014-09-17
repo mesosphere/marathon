@@ -17,7 +17,7 @@ import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
+import mesosphere.marathon.state.{ DeploymentRepository, AppDefinition, AppRepository, PathId }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
@@ -29,6 +29,7 @@ import mesosphere.util.{ LockManager, PromiseActor }
 class MarathonSchedulerActor(
     mapper: ObjectMapper,
     appRepository: AppRepository,
+    deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
@@ -36,7 +37,7 @@ class MarathonSchedulerActor(
     taskIdUtil: TaskIdUtil,
     storage: StorageProvider,
     eventBus: EventStream,
-    config: MarathonConf) extends Actor with ActorLogging {
+    config: MarathonConf) extends Actor with ActorLogging with Stash {
   import context.dispatcher
 
   import mesosphere.marathon.MarathonSchedulerActor._
@@ -62,9 +63,27 @@ class MarathonSchedulerActor(
     deploymentManager = context.actorOf(
       Props(classOf[DeploymentManager], appRepository, taskTracker, taskQueue, scheduler, storage, eventBus), "UpgradeManager")
 
+    deploymentRepository.all() onComplete {
+      case Success(deployments) => self ! RecoveredDeployments(deployments)
+      case Failure(_)           => self ! RecoveredDeployments(Nil)
+    }
   }
 
-  def receive = {
+  def receive = recovering
+
+  def recovering: Receive = {
+    case RecoveredDeployments(deployments) =>
+      deployments.foreach { plan =>
+        log.info(s"Recovering deployment: $plan")
+        deploy(Actor.noSender, Deploy(plan, force = false), plan, blocking = false)
+      }
+      unstashAll()
+      context.become(ready)
+
+    case _ => stash()
+  }
+
+  def ready: Receive = {
     case cmd @ ReconcileTasks =>
       scheduler.reconcileTasks(driver)
       sender ! cmd.answer
@@ -76,25 +95,11 @@ class MarathonSchedulerActor(
       }
 
     case cmd @ Deploy(plan, false) =>
-      val origSender = sender
-      val ids = plan.affectedApplicationIds
-
-      performAsyncWithLockFor(ids, origSender, cmd, isBlocking = false) {
-        val res = deploy(driver, plan)
-        origSender ! cmd.answer
-        res
-      }
+      deploy(sender, cmd, plan, blocking = false)
 
     case cmd @ Deploy(plan, true) =>
-      val origSender = sender
-      val ids = plan.affectedApplicationIds
-
       deploymentManager ! CancelConflictingDeployments(plan, new DeploymentCanceledException("The upgrade has been cancelled"))
-      performAsyncWithLockFor(ids, origSender, cmd, isBlocking = true) {
-        val res = deploy(driver, plan)
-        origSender ! cmd.answer
-        res
-      }
+      deploy(sender, cmd, plan, blocking = true)
 
     case cmd @ KillTasks(appId, taskIds, scale) =>
       val origSender = sender
@@ -180,28 +185,45 @@ class MarathonSchedulerActor(
   // there has to be a better way...
   def driver: SchedulerDriver = MarathonSchedulerDriver.driver.get
 
+  def deploy(origSender: ActorRef, cmd: Command, plan: DeploymentPlan, blocking: Boolean): Unit = {
+    val ids = plan.affectedApplicationIds
+
+    performAsyncWithLockFor(ids, origSender, cmd, isBlocking = blocking) {
+      val res = deploy(driver, plan)
+      origSender ! cmd.answer
+      res
+    }
+  }
+
   def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Future[Unit] = {
-    val promise = Promise[Any]()
-    val promiseActor = context.actorOf(Props(classOf[PromiseActor], promise))
-    val msg = PerformDeployment(driver, plan)
-    deploymentManager.tell(msg, promiseActor)
+    deploymentRepository.store(plan).flatMap { _ =>
+      val promise = Promise[Any]()
+      val promiseActor = context.actorOf(Props(classOf[PromiseActor], promise))
+      val msg = PerformDeployment(driver, plan)
+      deploymentManager.tell(msg, promiseActor)
 
-    val res = promise.future.map(_ => ())
+      val res = promise.future.map(_ => ())
 
-    res andThen {
-      case Success(_) =>
-        log.info(s"Deployment of ${plan.target.id} successful")
-        eventBus.publish(DeploymentSuccess(plan.id))
+      res andThen {
+        case Success(_) =>
+          log.info(s"Deployment of ${plan.target.id} successful")
+          eventBus.publish(DeploymentSuccess(plan.id))
+          deploymentRepository.expunge(plan.id)
 
-      case Failure(e) =>
-        log.error(s"Deployment of ${plan.target.id} failed", e)
-        plan.affectedApplicationIds.foreach(appId => taskQueue.purge(appId))
-        eventBus.publish(DeploymentFailed(plan.id))
+        case Failure(e) =>
+          log.error(s"Deployment of ${plan.target.id} failed", e)
+          plan.affectedApplicationIds.foreach(appId => taskQueue.purge(appId))
+          eventBus.publish(DeploymentFailed(plan.id))
+          if (e.isInstanceOf[DeploymentCanceledException])
+            deploymentRepository.expunge(plan.id)
+      }
     }
   }
 }
 
 object MarathonSchedulerActor {
+  case class RecoveredDeployments(deployments: Seq[DeploymentPlan])
+
   sealed trait Command {
     def answer: Event
   }

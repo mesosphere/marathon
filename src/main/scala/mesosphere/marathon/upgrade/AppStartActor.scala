@@ -10,8 +10,8 @@ import org.apache.mesos.SchedulerDriver
 import scala.concurrent.Promise
 
 class AppStartActor(
-    driver: SchedulerDriver,
-    scheduler: SchedulerActions,
+    val driver: SchedulerDriver,
+    val scheduler: SchedulerActions,
     val taskQueue: TaskQueue,
     val eventBus: EventStream,
     val app: AppDefinition,

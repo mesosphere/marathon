@@ -1,5 +1,7 @@
 package mesosphere.marathon.upgrade
 
+import java.util.UUID
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -102,7 +104,7 @@ class DeploymentActorTest
 
     when(queue.add(app2New)).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", "task2_2", "TASK_RUNNING", app2.id, "", Nil, app2New.version.toString))
+        system.eventStream.publish(MesosStatusUpdateEvent("", UUID.randomUUID().toString, "TASK_RUNNING", app2.id, "", Nil, app2New.version.toString))
         true
       }
     })
@@ -174,7 +176,7 @@ class DeploymentActorTest
 
     when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_2", "TASK_KILLED", app.id, "", Nil, appNew.version.toString))
+        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_2", "TASK_KILLED", app.id, "", Nil, app.version.toString))
         Status.DRIVER_RUNNING
       }
     })
