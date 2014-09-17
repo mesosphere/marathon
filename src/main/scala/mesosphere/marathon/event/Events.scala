@@ -51,7 +51,7 @@ case class ApiPostEvent(
   clientIp: String,
   uri: String,
   appDefinition: AppDefinition,
-  eventType: String = "api_post_event",
+  eventType: String = "api_post_request_received_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
 // event subscriptions
@@ -64,14 +64,14 @@ sealed trait MarathonSubscriptionEvent extends MarathonEvent {
 case class Subscribe(
   clientIp: String,
   callbackUrl: String,
-  eventType: String = "subscribe_event",
+  eventType: String = "marathon_event_bus_subscribed_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSubscriptionEvent
 
 case class Unsubscribe(
   clientIp: String,
   callbackUrl: String,
-  eventType: String = "unsubscribe_event",
+  eventType: String = "marathon_event_bus_unsubscribed_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSubscriptionEvent
 
@@ -84,13 +84,13 @@ sealed trait MarathonHealthCheckEvent extends MarathonEvent {
 case class AddHealthCheck(
   appId: PathId,
   healthCheck: HealthCheck,
-  eventType: String = "add_health_check_event",
+  eventType: String = "marathon_health_check_added_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonHealthCheckEvent
 
 case class RemoveHealthCheck(
   appId: PathId,
-  eventType: String = "remove_health_check_event",
+  eventType: String = "marathon_health_check_removed_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonHealthCheckEvent
 
@@ -98,7 +98,7 @@ case class FailedHealthCheck(
   appId: PathId,
   taskId: String,
   healthCheck: HealthCheck,
-  eventType: String = "failed_health_check_event",
+  eventType: String = "marathon_health_check_failed_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonHealthCheckEvent
 
@@ -107,7 +107,7 @@ case class HealthStatusChanged(
   taskId: String,
   version: String,
   alive: Boolean,
-  eventType: String = "health_status_changed_event",
+  eventType: String = "marathon_health_check_status_updated_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonHealthCheckEvent
 
@@ -118,42 +118,42 @@ trait UpgradeEvent extends MarathonEvent
 case class GroupChangeSuccess(
   groupId: PathId,
   version: String,
-  eventType: String = "group_change_success",
+  eventType: String = "marathon_group_change_succeeded_event",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class GroupChangeFailed(
   groupId: PathId,
   version: String,
   reason: String,
-  eventType: String = "group_change_failed",
+  eventType: String = "marathon_group_change_failed_event",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentSuccess(
   id: String,
-  eventType: String = "deployment_success",
+  eventType: String = "marathon_deployment_succeeded_event",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentFailed(
   id: String,
-  eventType: String = "deployment_failed",
+  eventType: String = "marathon_deployment_failed_event",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStatus(
   plan: DeploymentPlan,
   currentStep: DeploymentStep,
-  eventType: String = "deployment_info",
+  eventType: String = "marathon_deployment_status_updated_event",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepSuccess(
   plan: DeploymentPlan,
   currentStep: DeploymentStep,
-  eventType: String = "deployment_step_success",
+  eventType: String = "marathon_deployment_step_succeeded_event",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepFailure(
   plan: DeploymentPlan,
   currentStep: DeploymentStep,
-  eventType: String = "deployment_step_failure",
+  eventType: String = "marathon_deployment_step_failed_event",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 // Mesos scheduler
@@ -166,12 +166,12 @@ case class MesosStatusUpdateEvent(
   host: String,
   ports: Iterable[Integer],
   version: String,
-  eventType: String = "status_update_event",
+  eventType: String = "mesos_status_update_received_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
 case class MesosFrameworkMessageEvent(
   executorId: String,
   slaveId: String,
   message: Array[Byte],
-  eventType: String = "framework_message_event",
+  eventType: String = "mesos_framework_message_received_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
