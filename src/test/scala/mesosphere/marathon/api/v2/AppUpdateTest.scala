@@ -1,13 +1,16 @@
 package mesosphere.marathon.api.v2
 
 import javax.validation.Validation
-import org.apache.mesos.{ Protos => mesos }
-import scala.collection.JavaConverters._
-import scala.concurrent.duration._
+
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
 import mesosphere.marathon.state.Container._
+import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
+import org.apache.mesos.{ Protos => mesos }
+
+import scala.collection.immutable.Seq
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 class AppUpdateTest extends MarathonSpec {
 
@@ -39,8 +42,8 @@ class AppUpdateTest extends MarathonSpec {
   test("SerializationRoundtrip") {
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
     import mesosphere.jackson.CaseClassModule
+    import mesosphere.marathon.api.v2.json.MarathonModule
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)

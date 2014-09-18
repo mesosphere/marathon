@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.util.Try
 import org.apache.mesos.{ Protos => mesos }
@@ -25,7 +26,7 @@ object Container {
   def apply(proto: mesos.ContainerInfo): Container =
     Container(
       `type` = proto.getType,
-      volumes = proto.getVolumesList.asScala.map(Container.Volume.apply),
+      volumes = proto.getVolumesList.asScala.map(Container.Volume(_)).to[Seq],
       docker = Try(Docker(proto.getDocker)).toOption
     )
 
@@ -95,7 +96,7 @@ object Container {
       Docker(
         image = proto.getImage,
         if (proto.hasNetwork) Some(proto.getNetwork) else None,
-        proto.getPortMappingsList.asScala.map(PortMapping.apply)
+        proto.getPortMappingsList.asScala.map(PortMapping.apply).to[Seq]
       )
 
     /**

@@ -18,6 +18,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
@@ -91,7 +92,7 @@ class MarathonScheduler @Inject() (
         val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
 
         val withTaskInfos: Seq[(QueuedTask, Option[(TaskInfo, Seq[Long])])] =
-          queuedTasks.view.map { qt => qt -> newTask(qt.app, offer) }
+          queuedTasks.view.map { qt => qt -> newTask(qt.app, offer) }.to[Seq]
 
         val launchedTask: Option[QueuedTask] = withTaskInfos.collectFirst {
           case (qt, Some((taskInfo, ports))) if qt.delay.isOverdue =>
@@ -108,7 +109,7 @@ class MarathonScheduler @Inject() (
         }
 
         // put unscheduled tasks back in the queue
-        taskQueue.addAll(queuedTasks diff launchedTask.toSeq)
+        taskQueue.addAll(queuedTasks diff launchedTask.to[Seq])
 
         if (launchedTask.isEmpty) {
           log.debug("Offer doesn't match request. Declining.")

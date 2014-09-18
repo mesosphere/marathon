@@ -1,11 +1,14 @@
 package mesosphere.marathon.tasks
 
+import java.util.concurrent.PriorityBlockingQueue
+
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.util.RateLimiter
 
-import scala.collection.mutable.SynchronizedPriorityQueue
 import scala.concurrent.duration.Deadline
-import scala.util.Try
+import scala.collection.mutable
+import scala.collection.immutable.Seq
+import scala.collection.JavaConverters._
 
 /**
   * Utility class to stage tasks before they get scheduled
@@ -16,17 +19,19 @@ class TaskQueue {
 
   protected[marathon] val rateLimiter = new RateLimiter
 
+  // we used SynchronizedPriorityQueue before, but it has been deprecated
+  // because it is not safe to use
   protected[tasks] var queue =
-    new SynchronizedPriorityQueue[QueuedTask]()(AppConstraintsOrdering)
+    new PriorityBlockingQueue[QueuedTask](11, AppConstraintsOrdering.reverse)
 
-  def list(): Seq[QueuedTask] = queue.to[scala.collection.immutable.Seq]
+  def list: Seq[QueuedTask] = queue.asScala.to[scala.collection.immutable.Seq]
 
-  def listApps(): Seq[AppDefinition] = list.map(_.app)
+  def listApps: Seq[AppDefinition] = list.map(_.app)
 
-  def poll(): Option[QueuedTask] = Try(queue.dequeue()).toOption
+  def poll(): Option[QueuedTask] = Option(queue.poll())
 
   def add(app: AppDefinition): Unit =
-    queue += QueuedTask(app, rateLimiter.getDelay(app))
+    queue.add(QueuedTask(app, rateLimiter.getDelay(app)))
 
   /**
     * Number of tasks in the queue for the given app
@@ -34,17 +39,21 @@ class TaskQueue {
     * @param app The app
     * @return count
     */
-  def count(app: AppDefinition): Int = queue.count(_.app.id == app.id)
+  def count(app: AppDefinition): Int = queue.asScala.count(_.app.id == app.id)
 
   def purge(appId: PathId): Unit = {
-    val retained = queue.filterNot(_.app.id == appId)
+    val retained = queue.asScala.filterNot(_.app.id == appId)
     removeAll()
-    queue ++= retained
+    queue.addAll(retained.asJavaCollection)
   }
 
-  def addAll(xs: Seq[QueuedTask]): Unit = queue ++= xs
+  def addAll(xs: Seq[QueuedTask]): Unit = queue.addAll(xs.asJavaCollection)
 
-  def removeAll(): Seq[QueuedTask] = queue.dequeueAll
+  def removeAll(): Seq[QueuedTask] = {
+    val builder = new java.util.ArrayList[QueuedTask]()
+    queue.drainTo(builder)
+    builder.asScala.to[Seq]
+  }
 
 }
 

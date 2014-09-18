@@ -28,15 +28,18 @@ class DeploymentsResource @Inject() (service: MarathonSchedulerService, groupMan
     }
   }
 
-  private def toInfo(deployment: DeploymentPlan, currentStepInfo: DeploymentStepInfo) = Map(
-    "id" -> deployment.id,
-    "version" -> deployment.version,
-    "affectedApps" -> deployment.affectedApplicationIds.map(_.toString),
-    "steps" -> deployment.steps.map(step => step.actions.map(actionToMap)),
-    "currentActions" -> currentStepInfo.step.actions.map(actionToMap),
-    "currentStep" -> currentStepInfo.nr,
-    "totalSteps" -> deployment.steps.size
-  )
+  private def toInfo(
+    deployment: DeploymentPlan,
+    currentStepInfo: DeploymentStepInfo): Map[String, Any] =
+    Map(
+      "id" -> deployment.id,
+      "version" -> deployment.version,
+      "affectedApps" -> deployment.affectedApplicationIds.map(_.toString),
+      "steps" -> deployment.steps.map(step => step.actions.map(actionToMap)),
+      "currentActions" -> currentStepInfo.step.actions.map(actionToMap),
+      "currentStep" -> currentStepInfo.nr,
+      "totalSteps" -> deployment.steps.size
+    )
 
   def actionToMap(action: DeploymentAction) =
     Map(

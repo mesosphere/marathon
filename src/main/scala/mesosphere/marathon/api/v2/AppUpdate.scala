@@ -1,5 +1,7 @@
 package mesosphere.marathon.api.v2
 
+import java.lang.{ Integer => JInt, Double => JDouble }
+
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
@@ -11,8 +13,9 @@ import mesosphere.marathon.state.{
   Timestamp
 }
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+
+import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
-import java.lang.{ Integer => JInt, Double => JDouble }
 
 // TODO: Accept a task restart strategy as a constructor parameter here, to be
 //       used in MarathonScheduler.

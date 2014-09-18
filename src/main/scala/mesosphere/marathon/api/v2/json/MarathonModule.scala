@@ -1,24 +1,26 @@
 package mesosphere.marathon.api.v2.json
 
-import com.fasterxml.jackson.databind._
-import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
-import mesosphere.marathon.state.{ Container, PathId, UpgradeStrategy, Timestamp }
-import mesosphere.marathon.health.HealthCheck
+import java.lang.{ Double => JDouble, Integer => JInt }
+import java.util.concurrent.TimeUnit.SECONDS
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind.Module.SetupContext
-import com.fasterxml.jackson.databind.ser.Serializers
+import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.deser.Deserializers
-import scala.concurrent.duration.FiniteDuration
-import java.util.concurrent.TimeUnit.SECONDS
-import scala.collection.JavaConverters._
+import com.fasterxml.jackson.databind.ser.Serializers
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.v2._
-import java.lang.{ Integer => JInt, Double => JDouble }
 import mesosphere.marathon.api.validation.FieldConstraints._
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import PathId._
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
+
+import scala.collection.immutable.Seq
+import scala.concurrent.duration.FiniteDuration
 
 class MarathonModule extends Module {
-  import MarathonModule._
+  import mesosphere.marathon.api.v2.json.MarathonModule._
 
   private val constraintClass = classOf[Constraint]
   private val marathonTaskClass = classOf[MarathonTask]

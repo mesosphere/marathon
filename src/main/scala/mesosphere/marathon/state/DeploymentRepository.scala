@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.upgrade.DeploymentPlan
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 class DeploymentRepository(val store: PersistenceStore[DeploymentPlan], val maxVersions: Option[Int] = None) extends EntityRepository[DeploymentPlan] {
@@ -13,7 +14,7 @@ class DeploymentRepository(val store: PersistenceStore[DeploymentPlan], val maxV
     allIds().flatMap { ids =>
       val results = ids.map(this.currentVersion)
 
-      Future.sequence(results).map(_.flatten.toSeq)
+      Future.sequence(results).map(_.flatten.to[Seq])
     }
   }
 }

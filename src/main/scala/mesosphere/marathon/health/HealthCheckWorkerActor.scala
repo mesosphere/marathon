@@ -29,7 +29,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
   def receive = {
     case HealthCheckJob(task, check) =>
-      val replyTo = sender // avoids closing over the volatile sender ref
+      val replyTo = sender() // avoids closing over the volatile sender ref
 
       val replyWithHealth = doCheck(task, check)
 

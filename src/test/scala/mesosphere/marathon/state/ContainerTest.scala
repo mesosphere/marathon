@@ -7,6 +7,7 @@ import javax.validation.Validation
 import org.scalatest.Matchers
 import org.apache.mesos.{ Protos => mesos }
 
+import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 
 class ContainerTest extends MarathonSpec with Matchers with ModelValidation {

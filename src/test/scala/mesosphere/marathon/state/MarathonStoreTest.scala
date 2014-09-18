@@ -1,15 +1,18 @@
 package mesosphere.marathon.state
 
-import org.mockito.Mockito._
-import org.mockito.Matchers._
-import org.apache.mesos.state.{ InMemoryState, Variable, State }
-import java.util.concurrent.{ Future => JFuture, ExecutionException }
 import java.lang.{ Boolean => JBoolean }
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration._
+import java.util.concurrent.{ ExecutionException, Future => JFuture }
+
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.{ MarathonSpec, StorageException }
+import org.apache.mesos.state.{ InMemoryState, State, Variable }
+import org.mockito.Matchers._
+import org.mockito.Mockito._
+
+import scala.collection.immutable.Seq
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
-import PathId._
 
 class MarathonStoreTest extends MarathonSpec {
   test("Fetch") {

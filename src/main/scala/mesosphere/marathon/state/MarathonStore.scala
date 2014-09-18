@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import com.google.protobuf.InvalidProtocolBufferException
 import org.apache.mesos.state.State
 import scala.collection.JavaConverters._
-import scala.concurrent._
+import scala.concurrent.{ ExecutionException, Future }
 import mesosphere.marathon.StorageException
 import mesosphere.util.LockManager
 import mesosphere.util.{ ThreadPoolContext, BackToTheFuture }
@@ -72,7 +72,7 @@ class MarathonStore[S <: MarathonState[_, S]](
 
   def names(): Future[Iterator[String]] = {
     // TODO use implicit conversion after it has been merged
-    future {
+    Future {
       try {
         state.names().get.asScala.collect {
           case name if name startsWith prefix =>

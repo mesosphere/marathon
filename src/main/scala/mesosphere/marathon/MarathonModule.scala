@@ -10,7 +10,7 @@ import scala.util.control.NonFatal
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor.{ ActorRef, ActorSystem, OneForOneStrategy, Props }
 import akka.event.EventStream
-import akka.routing.RoundRobinRouter
+import akka.routing.RoundRobinPool
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.inject._
 import com.google.inject.name.Names
@@ -114,7 +114,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         taskIdUtil,
         storage,
         eventBus,
-        config).withRouter(RoundRobinRouter(nrOfInstances = 1, supervisorStrategy = supervision)),
+        config).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }
 
