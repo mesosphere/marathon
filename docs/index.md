@@ -4,13 +4,6 @@ title: Setting Up and Running Marathon
 
 ## Setting Up And Running Marathon
 
-### Quickstart on Google Cloud Platform
-
-A quick way to try out Marathon is to launch a cluster using
-[Mesosphere for Google Cloud Platform](https://google.mesosphere.io).
-Each cluster has Mesos and Marathon configured and offers secure access
-over a custom VPN.
-
 ### Requirements
 
 * [Apache Mesos][Mesos] 0.15.0+
@@ -21,26 +14,17 @@ over a custom VPN.
 
 ### Installation
 
-#### Install Mesos
+1.  Install Mesos.
 
-One easy way is via your system's package manager.
-Current builds for major Linux distributions and Mac OS X are available
-from on the Mesosphere [downloads page](http://mesosphere.io/downloads/)
-or from Mesosphere's [repositories](http://mesosphere.io/2014/07/17/mesosphere-package-repositories/).
+    One easy way is via your system's package manager.
+    Current builds for major Linux distributions and Mac OS X are available
+    from on the Mesosphere [downloads page](http://mesosphere.io/downloads/).
 
-If building from source, see the
-Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
-[Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
-for details. Running `make install` will install Mesos in `/usr/local` in
-the same way as these packages do.
-
-#### Install Marathon
-
-#### Through your Package Manager
-
-Marathon packages are available from Mesosphere's [repositories](http://mesosphere.io/2014/07/17/mesosphere-package-repositories/).
-
-#### From a Tarball
+    If building from source, see the
+    Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
+    [Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
+    for details. Running `make install` will install Mesos in `/usr/local` in
+    the same way as these packages do.
 
 1.  Download and unpack the latest Marathon release.
 
@@ -68,16 +52,20 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
     SHA-256 checksums are available by appending `.sha256` to the URLs.
 
 
-### Upgrading to a Newer Version
+#### Building From Source
 
-Upgrading to a newer version of Marathon should be seamless. Be aware that
-downgrading from versions >= 0.7.0 to older versions is not possible
-because of incompatible changes in the data format.
+1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
 
-We recommend creating a backup of the ZooKeeper state before upgrading to be able to downgrade in case
-of problems after an upgrade. This can done by creating a copy of ZooKeeper's [data directory](http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#The+Data+Directory).
+    ``` console
+    $ git clone https://github.com/mesosphere/marathon.git
+    $ cd marathon
+    $ sbt assembly
+    ```
 
-[See here](https://mesosphere.github.io/marathon/docs/upgrade/06xto070.html) for an upgrade guide from 0.6.* to 0.7.0
+1.  Run `./bin/build-distribution` to package Marathon as an
+    [executable JAR](http://mesosphere.io/2013/12/07/executable-jars/)
+    (optional).
+
 
 ### Running in Production Mode
 
@@ -94,22 +82,31 @@ Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeeper
 for storing state. They are separate options because Mesos masters can be
 discovered in other ways as well.
 
-For all configuration options, see the [command line flags](command-line-flags.html) doc. For more information on the high-availability feature of Marathon, see the [high availability](high-availability.html) doc.
+For all configuration options, see the [command line flags](command-line-flags.html) doc.
 
-### Mesos Library
+### Running in Development Mode
 
-`MESOS_NATIVE_JAVA_LIBRARY`: `bin/start` searches the common installation paths,
-`/usr/lib` and `/usr/local/lib`, for the Mesos native library. If the
-library lives elsewhere in your configuration, set the environment variable
-`MESOS_NATIVE_JAVA_LIBRARY` to its full path.
+Local mode allows you to run Marathon without launching a full Mesos
+cluster. It is meant for experimentation and not recommended for production
+use. Note that you still need to run ZooKeeper for storing state. The following
+command launches Marathon in *local mode*. Point your web browser to
+`http://localhost:8080`, and you should see the Marathon UI.
 
-For example:
-
-```console
-$ MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
+``` console
+$ ./bin/start --master local --zk zk://localhost:2181/marathon
 ```
 
+### Running with a standalone Mesos master
 
+The released version 0.19.0 of Mesos does not allow frameworks to launch an in-process master.
+You can still run Marathon locally if you launch a master in a separate console
+and either point Marathon directly at the master itself or at the same ZooKeeper
+(if you specified this when launching the master):
+
+``` console
+$ ./bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
+$ ./bin/start --master localhost:5050 --zk zk://localhost:2181/marathon
+```
 
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
 [Zookeeper]: https://zookeeper.apache.org/ "Apache ZooKeeper"
