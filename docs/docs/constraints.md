@@ -98,3 +98,26 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start 
 ```
 
 Optionally, you can specify a minimum number of groups to try and achieve.
+
+### LIKE operator
+
+Just like the `CLUSTER` operator, but matches substring of the field value.
+
+via the Marathon gem:
+
+``` bash
+$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:LIKE:rack-1
+```
+
+via curl:
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "LIKE", "rack-1"]]
+  }'
+```
+
+Note that this will match all values containing `rack-1`, such as `rack-111` and `my-rack-123`. Also, the value is required, or you'll get a warning.
