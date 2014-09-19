@@ -71,7 +71,7 @@ message MarathonTask {
   optional int64 staged_at = 5;
   optional int64 started_at = 6;
   repeated mesos.TaskStatus OBSOLETE_statuses = 7;
-  optional string version = 8;
+  optional string version = 8 [default = "1970-01-01T00:00:00.000Z"]; // since 0.7.0
   optional mesos.TaskStatus status = 9;
 }
 
