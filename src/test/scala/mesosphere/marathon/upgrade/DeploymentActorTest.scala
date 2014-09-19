@@ -151,7 +151,7 @@ class DeploymentActorTest
   test("Restart app") {
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, version = Timestamp(0))
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
     val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
@@ -163,7 +163,14 @@ class DeploymentActorTest
 
     when(tracker.get(app.id)).thenReturn(Set(task1_1, task1_2))
 
-    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew, 1, 1)))), Timestamp.now())
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew, 0, 2)))), Timestamp.now())
+
+    when(driver.killTask(TaskID(task1_1.getId))).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_1", "TASK_KILLED", app.id, "", Nil, appNew.version.toString))
+        Status.DRIVER_RUNNING
+      }
+    })
 
     when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -175,6 +182,13 @@ class DeploymentActorTest
     when(queue.add(appNew)).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
         system.eventStream.publish(MesosStatusUpdateEvent("", "task1_3", "TASK_RUNNING", app.id, "", Nil, appNew.version.toString))
+        true
+      }
+    })
+
+    when(queue.add(appNew)).thenAnswer(new Answer[Boolean] {
+      def answer(invocation: InvocationOnMock): Boolean = {
+        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_4", "TASK_RUNNING", app.id, "", Nil, appNew.version.toString))
         true
       }
     })
@@ -199,7 +213,8 @@ class DeploymentActorTest
 
     receiverProbe.expectMsg(Finished)
 
+    verify(driver).killTask(TaskID(task1_1.getId))
     verify(driver).killTask(TaskID(task1_2.getId))
-    verify(queue).add(appNew)
+    verify(queue, times(2)).add(appNew)
   }
 }
