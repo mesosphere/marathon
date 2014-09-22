@@ -1,3 +1,5 @@
+/** @jsx React.DOM */
+
 define([
   "React"
 ], function(React) {

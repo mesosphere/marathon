@@ -9,6 +9,7 @@ define([
 ], function(React, Info, BackboneMixin, ModalComponent, ObjectDlComponent) {
   "use strict";
 
+  /* jshint trailing:false, quotmark:false, newcap:false */
   var UNSPECIFIED_NODE = React.createClass({
     render: function() {
       return <span className="text-muted">Unspecified</span>;
