@@ -5,18 +5,6 @@
   src: local('Open Sans Light'), local('OpenSans-Light'), url(https://themes.googleusercontent.com/static/fonts/opensans/v8/DXI1ORHCpsQm3Vp6mXoaTaRDOzjiPcYnFooOUGCOsRk.woff) format('woff');
 }
 
-@-webkit-keyframes blink {
-  0% { opacity: 1; }
-  50% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
-@keyframes blink {
-  0% { opacity: 1; }
-  50% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
 /* ==============
  * Base
  * ==============
@@ -32,6 +20,11 @@ h2, .h2,
 h3, .h3,
 h4, .h4 {
   font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+code {
+  color: #fff;
+  background-color: #454a50;
 }
 
 hr {
@@ -455,8 +448,8 @@ fieldset[disabled] .btn-info.active {
   border-left: none;
   border-right: none;
   border-radius: 0;
-  padding-top: 13px;
-  padding-bottom: 15px;
+  padding-bottom: 13px;
+  padding-top: 15px;
   border-bottom: 3px solid transparent;
   line-height: 19px;
 }
@@ -573,4 +566,18 @@ fieldset[disabled] .btn-info.active {
 
 .clickable {
   cursor: pointer;
+}
+
+.modal-header-blend {
+  background: transparent;
+}
+
+@media (min-width: 768px) {
+  .dl-horizontal-lg dt {
+    width: 190px;
+  }
+
+  .dl-horizontal-lg dd {
+    margin-left: 210px;
+  }
 }
