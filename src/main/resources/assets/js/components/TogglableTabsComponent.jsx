@@ -2,38 +2,42 @@
 
 define([
   "React",
-  "Underscore",
   "jsx!components/NavTabsComponent"
-], function(React, _, NavTabsComponent) {
+], function(React, NavTabsComponent) {
   "use strict";
 
   return React.createClass({
-    getInitialState: function() {
-      return {
-        activeTabId: _.isArray(this.props.children) ?
-          this.props.children[0].props.id :
-          this.props.children.props.id
-      };
+    name: "TogglableTabsComponent",
+
+    propTypes: {
+      activeTabId: React.PropTypes.string.isRequired,
+      className: React.PropTypes.string,
+      onTabClick: React.PropTypes.func,
+      tabs: React.PropTypes.array
     },
-    onTabClick: function(id) {
-      this.setState({
-        activeTabId: id
-      });
-    },
+
     render: function() {
       var childNodes = React.Children.map(this.props.children, function(child) {
         return React.addons.cloneWithProps(child, {
-          isActive: (child.props.id === this.state.activeTabId)
+          isActive: (child.props.id === this.props.activeTabId)
         });
       }, this);
+
+      var nav;
+      if (this.props.onTabClick != null && this.props.tabs != null) {
+        /* jshint trailing:false, quotmark:false, newcap:false */
+        nav = (
+          <NavTabsComponent
+            activeTabId={this.props.activeTabId}
+            onTabClick={this.props.onTabClick}
+            tabs={this.props.tabs} />
+        );
+      }
 
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div className={this.props.className}>
-          <NavTabsComponent
-            activeTabId={this.state.activeTabId}
-            onTabClick={this.onTabClick}
-            tabs={this.props.tabs} />
+          {nav}
           <div className="tab-content">
             {childNodes}
           </div>
