@@ -121,12 +121,16 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   def statusUpdate(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = {
     val taskId = status.getTaskId.getValue
     getInternal(appId).get(taskId) match {
-      case Some(task) =>
+      case Some(task) if statusDidChange(task.getStatus, status) =>
         val updatedTask = task.toBuilder
           .setStatus(status)
           .build
         getInternal(appId) += (task.getId -> updatedTask)
         store(appId, updatedTask).map(_ => Some(updatedTask))
+
+      case Some(task) =>
+        log.debug(s"Ignoring status update for ${task.getId}. Status did not change.")
+        Future.successful(None)
 
       case _ =>
         log.warn(s"No task for ID $taskId")
@@ -251,6 +255,12 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     state.store(newVar)
   }
 
+  private[tasks] def statusDidChange(statusA: TaskStatus, statusB: TaskStatus): Boolean = {
+    val healthy = (statusA.hasHealthy && statusB.hasHealthy) &&
+      statusA.getHealthy != statusB.getHealthy
+
+    healthy || statusA.getState != statusB.getState
+  }
 }
 
 object TaskTracker {
