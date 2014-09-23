@@ -9,8 +9,11 @@ import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
+import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.state.{ InMemoryState, State }
+import org.mockito.Mockito.{ reset, spy, times, verify }
+import org.mockito.Matchers.any
 
 import scala.collection.JavaConverters._
 import scala.collection._
@@ -28,7 +31,7 @@ class TaskTrackerTest extends MarathonSpec {
 
   before {
     val metricRegistry = new MetricRegistry
-    state = new InMemoryState
+    state = spy(new InMemoryState)
     taskTracker = new TaskTracker(state, config)
   }
 
@@ -277,5 +280,170 @@ class TaskTrackerTest extends MarathonSpec {
     shouldContainTask(tasks, task1)
     shouldContainTask(tasks, task2)
     shouldContainTask(tasks, task3)
+  }
+
+  test("Should not store if state did not change (no health present)") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val status = Protos.TaskStatus
+      .newBuilder
+      .setState(Protos.TaskState.TASK_RUNNING)
+      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .build()
+
+    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.running(TEST_APP_NAME, status)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    reset(state)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    verify(state, times(0)).store(any())
+  }
+
+  test("Should not store if state and health did not change") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val status = Protos.TaskStatus
+      .newBuilder
+      .setState(Protos.TaskState.TASK_RUNNING)
+      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .setHealthy(true)
+      .build()
+
+    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.running(TEST_APP_NAME, status)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    reset(state)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    verify(state, times(0)).store(any())
+  }
+
+  test("Should store if state changed") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val status = Protos.TaskStatus
+      .newBuilder
+      .setState(Protos.TaskState.TASK_RUNNING)
+      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .build()
+
+    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.running(TEST_APP_NAME, status)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    reset(state)
+
+    val newStatus = status.toBuilder
+      .setState(Protos.TaskState.TASK_FAILED)
+      .build()
+
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+
+    verify(state, times(1)).store(any())
+  }
+
+  test("Should store if health changed") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val status = Protos.TaskStatus
+      .newBuilder
+      .setState(Protos.TaskState.TASK_RUNNING)
+      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .setHealthy(true)
+      .build()
+
+    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.running(TEST_APP_NAME, status)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    reset(state)
+
+    val newStatus = status.toBuilder
+      .setHealthy(false)
+      .build()
+
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+
+    verify(state, times(1)).store(any())
+  }
+
+  test("Should store if state and health changed") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val status = Protos.TaskStatus
+      .newBuilder
+      .setState(Protos.TaskState.TASK_RUNNING)
+      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .setHealthy(true)
+      .build()
+
+    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.running(TEST_APP_NAME, status)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    reset(state)
+
+    val newStatus = status.toBuilder
+      .setState(Protos.TaskState.TASK_FAILED)
+      .setHealthy(false)
+      .build()
+
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+
+    verify(state, times(1)).store(any())
+  }
+
+  test("Should store if health changed (no health present at first)") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val status = Protos.TaskStatus
+      .newBuilder
+      .setState(Protos.TaskState.TASK_RUNNING)
+      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .build()
+
+    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.running(TEST_APP_NAME, status)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    reset(state)
+
+    val newStatus = status.toBuilder
+      .setHealthy(true)
+      .build()
+
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+
+    verify(state, times(1)).store(any())
+  }
+
+  test("Should store if state and health changed (no health present at first)") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val status = Protos.TaskStatus
+      .newBuilder
+      .setState(Protos.TaskState.TASK_RUNNING)
+      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .build()
+
+    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.running(TEST_APP_NAME, status)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    reset(state)
+
+    val newStatus = status.toBuilder
+      .setState(Protos.TaskState.TASK_FAILED)
+      .setHealthy(false)
+      .build()
+
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+
+    verify(state, times(1)).store(any())
   }
 }
