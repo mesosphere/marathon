@@ -181,16 +181,11 @@ class DeploymentActorTest
       }
     })
 
-    when(queue.add(appNew)).thenAnswer(new Answer[Boolean] {
-      def answer(invocation: InvocationOnMock): Boolean = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_3", "TASK_RUNNING", app.id, "", Nil, appNew.version.toString))
-        true
-      }
-    })
+    val taskIDs = Iterator.from(3)
 
     when(queue.add(appNew)).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_4", "TASK_RUNNING", app.id, "", Nil, appNew.version.toString))
+        system.eventStream.publish(MesosStatusUpdateEvent("", s"task1_${taskIDs.next}", "TASK_RUNNING", app.id, "", Nil, appNew.version.toString))
         true
       }
     })
