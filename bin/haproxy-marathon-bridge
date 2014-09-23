@@ -117,7 +117,7 @@ function apps {
     then
       cat <<EOF
 
-listen $app_name
+listen $app_name-$app_port
   bind 0.0.0.0:$app_port
   mode tcp
   option tcplog
