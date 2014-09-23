@@ -93,7 +93,7 @@ _Note: Requires Mesos 0.20.1 and Marathon 0.7.1_
 ```json
 {
   "id": "bridged-webapp",
-  "cmd": "python3 -m http.server $PORT0",
+  "cmd": "python3 -m http.server 8080",
   "cpus": 0.5,
   "mem": 64.0,
   "instances": 2,
@@ -123,8 +123,8 @@ _Note: Requires Mesos 0.20.1 and Marathon 0.7.1_
 
 Here `"hostPort": 0` retains its traditional meaning in Marathon, which is "a
 random port from the range included in the Mesos resource offer". The resulting
-ports for each task will be accessible via environment variables as well as the
-task details in the REST API.
+host ports for each task will be accessible via environment variables and via
+the task details in the REST API.
 
 It's also possible to specify (non-zero) host ports statically. When doing this
 you must ensure that the target ports are included in some resource offers!
