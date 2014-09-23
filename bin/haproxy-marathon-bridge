@@ -106,8 +106,7 @@ EOF
 }
 
 function apps {
-  ## TODO: failover with other servers given as arguments
-  curl -sSfLk -H 'Accept: text/plain' "${1%/}"/v2/tasks | while read -r txt
+  (until curl -sSfLk -m 10 -H 'Accept: text/plain' "${1%/}"/v2/tasks; do [ $# -lt 2 ] && return 1 || shift; done) | while read -r txt
   do
     set -- $txt
     local app_name="$1"
