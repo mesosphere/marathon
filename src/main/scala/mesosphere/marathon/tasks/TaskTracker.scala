@@ -256,8 +256,8 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   }
 
   private[tasks] def statusDidChange(statusA: TaskStatus, statusB: TaskStatus): Boolean = {
-    val healthy = (statusA.hasHealthy && statusB.hasHealthy) &&
-      statusA.getHealthy != statusB.getHealthy
+    val healthy = statusB.hasHealthy &&
+      (!statusA.hasHealthy || statusA.getHealthy != statusB.getHealthy)
 
     healthy || statusA.getState != statusB.getState
   }

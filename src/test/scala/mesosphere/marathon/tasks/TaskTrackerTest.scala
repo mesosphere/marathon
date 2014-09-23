@@ -282,7 +282,7 @@ class TaskTrackerTest extends MarathonSpec {
     shouldContainTask(tasks, task3)
   }
 
-  test("Should not store if state did not change") {
+  test("Should not store if state did not change (no health present)") {
     val sampleTask = makeSampleTask(TEST_TASK_ID)
     val status = Protos.TaskStatus
       .newBuilder
@@ -379,6 +379,55 @@ class TaskTrackerTest extends MarathonSpec {
       .setState(Protos.TaskState.TASK_RUNNING)
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .setHealthy(true)
+      .build()
+
+    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.running(TEST_APP_NAME, status)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    reset(state)
+
+    val newStatus = status.toBuilder
+      .setState(Protos.TaskState.TASK_FAILED)
+      .setHealthy(false)
+      .build()
+
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+
+    verify(state, times(1)).store(any())
+  }
+
+  test("Should store if health changed (no health present at first)") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val status = Protos.TaskStatus
+      .newBuilder
+      .setState(Protos.TaskState.TASK_RUNNING)
+      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .build()
+
+    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.running(TEST_APP_NAME, status)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, status)
+
+    reset(state)
+
+    val newStatus = status.toBuilder
+      .setHealthy(true)
+      .build()
+
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+
+    verify(state, times(1)).store(any())
+  }
+
+  test("Should store if state and health changed (no health present at first)") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val status = Protos.TaskStatus
+      .newBuilder
+      .setState(Protos.TaskState.TASK_RUNNING)
+      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
     taskTracker.store(TEST_APP_NAME, sampleTask)
