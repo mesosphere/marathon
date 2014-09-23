@@ -80,7 +80,7 @@ object Container {
     */
   case class Docker(
       image: String = "",
-      network: Option[mesos.ContainerInfo.DockerInfo.NetworkMode] = None,
+      network: Option[mesos.ContainerInfo.DockerInfo.Network] = None,
       portMappings: Seq[Docker.PortMapping] = Nil) {
     def toProto(): mesos.ContainerInfo.DockerInfo = {
       val builder = mesos.ContainerInfo.DockerInfo.newBuilder.setImage(image)

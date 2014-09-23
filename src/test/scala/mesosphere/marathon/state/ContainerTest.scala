@@ -29,7 +29,7 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
       docker = Some(
         Container.Docker(
           image = "group/image",
-          network = Some(mesos.ContainerInfo.DockerInfo.NetworkMode.BRIDGE),
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
           portMappings = Seq(
             Container.Docker.PortMapping(8080, 32001, "tcp"),
             Container.Docker.PortMapping(8081, 32002, "udp")
