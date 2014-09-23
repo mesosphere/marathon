@@ -48,7 +48,7 @@ Docker version 1.0.0 or later installed on each slave node.
 
 ## Overview
 
-To use the new native container support, add a `container` field to your
+To use the native container support, add a `container` field to your
 app definition JSON:
 
 ```json
@@ -85,6 +85,59 @@ container types may be added later.
 For convenience, the mount point of the mesos sandbox is available in the
 environment as `$MESOS_SANDBOX`.  The `$HOME` environment variable is set
 by default to the same value as `$MESOS_SANDBOX`.
+
+### Bridged Networking Mode
+
+_Note: Requires Mesos 0.20.1 and Marathon 0.7.1_
+
+```json
+{
+  "id": "bridged-webapp",
+  "cmd": "python3 -m http.server $PORT0",
+  "cpus": 0.5,
+  "mem": 64.0,
+  "instances": 2,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "python:3",
+      "network": "BRIDGE",
+      "portMappings": [
+        { "containerPort": 8080, "hostPort": 0, "protocol": "tcp"},
+        { "containerPort": 161, "hostPort": 0, "protocol": "udp"}
+      ]
+    }
+  },
+  "healthChecks": [
+    {
+      "protocol": "HTTP",
+      "portIndex": 0,
+      "path": "/",
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 20,
+      "maxConsecutiveFailures": 3
+    }
+  ]
+}
+```
+
+Here `"hostPort": 0` retains its traditional meaning in Marathon, which is "a
+random port from the range included in the Mesos resource offer". The resulting
+ports for each task will be accessible via environment variables as well as the
+task details in the REST API.
+
+It's also possible to specify (non-zero) host ports statically. When doing this
+you must ensure that the target ports are included in some resource offers!
+The Mesos slave announces port resources in the range `[31000-32000]` by
+default. This can be overridden; for example to also expose ports in the range
+`[8000-9000]`:
+
+```
+--resources="ports(*):[8000-9000, 31000-32000]"
+```
+
+See the [network configuration](https://docs.docker.com/articles/networking/)
+documentation for more details on how Docker handles networking.
 
 ### Using a private Docker Repository
 
