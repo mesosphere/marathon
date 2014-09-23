@@ -51,8 +51,7 @@ object MarathonBuild extends Build {
     resolvers ++= Seq(
       "Mesosphere Public Repo"    at "http://downloads.mesosphere.io/maven",
       "Twitter Maven2 Repository" at "http://maven.twttr.com/",
-      "Spray Maven Repository"    at "http://repo.spray.io/",
-      "Mesos 0.20.1 Staging Repository" at "https://repository.apache.org/content/repositories/orgapachemesos-1036"
+      "Spray Maven Repository"    at "http://repo.spray.io/"
     ),
     sourceGenerators in Compile <+= buildInfo,
     fork in Test := true,
@@ -149,7 +148,7 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.5.6"
     val JacksonCCM = "0.1.1"
-    val Mesos = "0.20.1-rc3"
+    val Mesos = "0.20.1"
     val MesosUtils = "0.20.0-1"
     val Akka = "2.2.4"
     val Spray = "1.2.1"
