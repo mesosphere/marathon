@@ -3,6 +3,8 @@ package mesosphere.marathon
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Named
+import mesosphere.marathon.upgrade.DeploymentPlan
+
 import scala.util.control.NonFatal
 
 import akka.actor.SupervisorStrategy.Restart
@@ -86,6 +88,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     @Named("restMapper") mapper: ObjectMapper,
     system: ActorSystem,
     appRepository: AppRepository,
+    deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
@@ -103,6 +106,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         classOf[MarathonSchedulerActor],
         mapper,
         appRepository,
+        deploymentRepository,
         healthCheckManager,
         taskTracker,
         taskQueue,
@@ -145,6 +149,13 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   def provideGroupRepository(state: State, appRepository: AppRepository, conf: MarathonConf): GroupRepository = new GroupRepository(
     new MarathonStore[Group](state, () => Group.empty, "group:"), appRepository, conf.zooKeeperMaxVersions.get
+  )
+
+  @Provides
+  @Singleton
+  def provideDeploymentRepository(state: State, conf: MarathonConf) = new DeploymentRepository(
+    new MarathonStore[DeploymentPlan](state, () => DeploymentPlan.empty, "deployment:"),
+    conf.zooKeeperMaxVersions.get
   )
 
   @Provides

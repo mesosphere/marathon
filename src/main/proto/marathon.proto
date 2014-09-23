@@ -107,3 +107,9 @@ message GroupDefinition {
   repeated string dependencies = 5;
 }
 
+message DeploymentPlanDefinition {
+  required string id = 1;
+  required string version = 2;
+  required GroupDefinition original = 4;
+  required GroupDefinition target = 5;
+}

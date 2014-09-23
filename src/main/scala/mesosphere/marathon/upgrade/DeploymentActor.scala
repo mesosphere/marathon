@@ -109,7 +109,7 @@ class DeploymentActor(
     }
     else if (scaleTo > runningTasks.size) {
       val promise = Promise[Unit]()
-      context.actorOf(Props(classOf[TaskStartActor], taskQueue, eventBus, app, scaleTo - runningTasks.size, app.healthChecks.nonEmpty, promise))
+      context.actorOf(Props(classOf[TaskStartActor], driver, scheduler, taskQueue, eventBus, app, scaleTo - runningTasks.size, app.healthChecks.nonEmpty, promise))
       promise.future.map(_ => ())
     }
     else {
@@ -141,7 +141,7 @@ class DeploymentActor(
     val runningNew = runningTasks.filter(_.getVersion == app.version.toString)
     val nrToStart = scaleNewTo - runningNew.size
 
-    context.actorOf(Props(classOf[TaskStartActor], taskQueue, eventBus, app, nrToStart, app.healthChecks.nonEmpty, startPromise))
+    context.actorOf(Props(classOf[TaskStartActor], driver, scheduler, taskQueue, eventBus, app, nrToStart, app.healthChecks.nonEmpty, startPromise))
 
     context.actorOf(Props(classOf[TaskKillActor], driver, app.id, taskTracker, eventBus, tasksToKill.toSet, stopPromise))
 

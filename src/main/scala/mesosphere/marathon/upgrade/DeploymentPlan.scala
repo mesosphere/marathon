@@ -3,7 +3,8 @@ package mesosphere.marathon.upgrade
 import java.net.URL
 import java.util.UUID
 
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.Protos
+import mesosphere.marathon.state._
 import mesosphere.util.Logging
 
 import scala.collection.mutable.ListBuffer
@@ -35,7 +36,7 @@ final case class DeploymentPlan(
     original: Group,
     target: Group,
     steps: List[DeploymentStep],
-    version: Timestamp) {
+    version: Timestamp) extends MarathonState[Protos.DeploymentPlanDefinition, DeploymentPlan] {
 
   def isEmpty: Boolean = steps.isEmpty
 
@@ -58,10 +59,29 @@ final case class DeploymentPlan(
     val stepString = steps.map("Step(" + _.actions.map(actionString) + ")").mkString("(", ", ", ")")
     s"DeploymentPlan($version, $stepString)"
   }
+
+  override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan = mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
+
+  override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
+    original = Group.empty.mergeFromProto(msg.getOriginal),
+    target = Group.empty.mergeFromProto(msg.getTarget),
+    version = Timestamp(msg.getVersion)
+  ).copy(id = msg.getId)
+
+  override def toProto: Protos.DeploymentPlanDefinition =
+    Protos.DeploymentPlanDefinition
+      .newBuilder
+      .setId(id)
+      .setOriginal(original.toProto)
+      .setTarget(target.toProto)
+      .setVersion(version.toString)
+      .build()
 }
 
 object DeploymentPlan extends Logging {
-  def empty() = DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
+  def empty = DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
+
+  def fromProto(message: Protos.DeploymentPlanDefinition) = empty.mergeFromProto(message)
 
   def apply(original: Group, target: Group, resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty, version: Timestamp = Timestamp.now()): DeploymentPlan = {
     log.info(s"Compute DeploymentPlan from $original to $target")
@@ -146,7 +166,7 @@ object DeploymentPlan extends Logging {
     //resolve artifact dependencies .
     val toResolve = List(DeploymentStep(resolveArtifacts.toList))
 
-    var finalSteps = toResolve ++ nonDependentSteps ++ dependentSteps ++ unhandledStops
+    val finalSteps = toResolve ++ nonDependentSteps ++ dependentSteps ++ unhandledStops
 
     DeploymentPlan(UUID.randomUUID().toString, original, target, finalSteps.filter(_.nonEmpty), version)
   }

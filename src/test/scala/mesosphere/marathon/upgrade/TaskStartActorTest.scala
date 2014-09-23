@@ -2,12 +2,14 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
-import mesosphere.marathon.TaskUpgradeCanceledException
+import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskQueue
+import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ spy, times, verify }
+import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
@@ -17,6 +19,7 @@ class TaskStartActorTest
     extends TestKit(ActorSystem("System"))
     with FunSuiteLike
     with Matchers
+    with MockitoSugar
     with BeforeAndAfterAll {
 
   override protected def afterAll(): Unit = {
@@ -25,12 +28,16 @@ class TaskStartActorTest
   }
 
   test("Start success") {
+    val driver = mock[SchedulerDriver]
+    val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
     val promise = Promise[Unit]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      driver,
+      scheduler,
       taskQueue,
       system.eventStream,
       app,
@@ -42,8 +49,8 @@ class TaskStartActorTest
 
     awaitCond(taskQueue.count(app) == 5, 3.seconds)
 
-    for (task <- taskQueue.removeAll())
-      system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", app.id, "", Nil, app.version.toString))
+    for ((task, i) <- taskQueue.removeAll().zipWithIndex)
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
 
@@ -51,12 +58,16 @@ class TaskStartActorTest
   }
 
   test("Start success with no instances to start") {
+    val driver = mock[SchedulerDriver]
+    val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 0)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      driver,
+      scheduler,
       taskQueue,
       system.eventStream,
       app,
@@ -72,12 +83,16 @@ class TaskStartActorTest
   }
 
   test("Start with health checks") {
+    val driver = mock[SchedulerDriver]
+    val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      driver,
+      scheduler,
       taskQueue,
       system.eventStream,
       app,
@@ -98,12 +113,16 @@ class TaskStartActorTest
   }
 
   test("Start with health checks with no instances to start") {
+    val driver = mock[SchedulerDriver]
+    val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 0)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      driver,
+      scheduler,
       taskQueue,
       system.eventStream,
       app,
@@ -119,12 +138,16 @@ class TaskStartActorTest
   }
 
   test("Cancelled") {
+    val driver = mock[SchedulerDriver]
+    val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
     val ref = system.actorOf(Props(
       classOf[TaskStartActor],
+      driver,
+      scheduler,
       taskQueue,
       system.eventStream,
       app,
@@ -144,12 +167,16 @@ class TaskStartActorTest
   }
 
   test("Task fails to start") {
+    val driver = mock[SchedulerDriver]
+    val scheduler = mock[SchedulerActions]
     val taskQueue = spy(new TaskQueue)
     val promise = Promise[Unit]()
     val app = AppDefinition("myApp".toPath, instances = 1)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      driver,
+      scheduler,
       taskQueue,
       system.eventStream,
       app,
