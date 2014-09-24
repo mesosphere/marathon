@@ -11,7 +11,7 @@ import scala.collection.mutable
 import scala.concurrent.Promise
 
 class TaskKillActor(
-    driver: SchedulerDriver,
+    val driver: SchedulerDriver,
     val appId: PathId,
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
@@ -24,11 +24,6 @@ class TaskKillActor(
     log.info(s"Killing ${tasksToKill.size} instances")
     for (task <- tasksToKill) {
       driver.killTask(taskId(task.getId))
-      val status = TaskStatus.newBuilder
-        .setTaskId(taskId(task.getId))
-        .setState(TaskState.TASK_KILLED)
-        .build
-      taskTracker.terminated(appId, status)
     }
   }
 
