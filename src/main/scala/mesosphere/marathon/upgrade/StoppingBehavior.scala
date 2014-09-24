@@ -7,6 +7,7 @@ import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
+import org.apache.mesos.{ Protos, SchedulerDriver }
 
 import scala.collection.mutable
 import scala.concurrent.Promise
@@ -15,6 +16,7 @@ import scala.concurrent.duration._
 trait StoppingBehavior extends Actor with ActorLogging {
   import context.dispatcher
 
+  def driver: SchedulerDriver
   def eventBus: EventStream
   def promise: Promise[Unit]
   def taskTracker: TaskTracker
@@ -49,6 +51,15 @@ trait StoppingBehavior extends Actor with ActorLogging {
     case SynchronizeTasks =>
       val trackerIds = taskTracker.get(appId).map(_.getId).toSet
       idsToKill = idsToKill.filter(trackerIds)
+
+      idsToKill.foreach { id =>
+        driver.killTask(
+          Protos.TaskID
+            .newBuilder
+            .setValue(id)
+            .build())
+      }
+
       scheduleSynchronization()
       checkFinished()
 

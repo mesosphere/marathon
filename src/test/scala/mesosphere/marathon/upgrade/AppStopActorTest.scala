@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito._
@@ -125,7 +126,7 @@ class AppStopActorTest
       .thenReturn(tasks)
       .thenReturn(Set.empty[MarathonTask])
 
-    val ref = system.actorOf(
+    val ref = TestActorRef[AppStopActor](
       Props(
         classOf[AppStopActor],
         driver,
@@ -137,6 +138,10 @@ class AppStopActorTest
       )
     )
     watch(ref)
+
+    ref.underlyingActor.periodicalCheck.cancel()
+
+    ref ! SynchronizeTasks
 
     Await.result(promise.future, 10.seconds) should be(())
 

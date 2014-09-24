@@ -11,7 +11,7 @@ import scala.collection.mutable
 import scala.concurrent.Promise
 
 class AppStopActor(
-    driver: SchedulerDriver,
+    val driver: SchedulerDriver,
     scheduler: SchedulerActions,
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
