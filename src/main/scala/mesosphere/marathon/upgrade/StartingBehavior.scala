@@ -58,7 +58,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   }
 
   final def checkForRunning: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", app.`id`, _, _, Version, _, _) =>
+    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", app.`id`, _, _, Version, _, _) if !runningTasks(taskId) =>
       runningTasks += taskId
       log.info(s"Started $taskId")
       checkFinished()
