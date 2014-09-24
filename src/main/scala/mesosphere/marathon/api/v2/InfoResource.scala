@@ -4,38 +4,53 @@ import javax.ws.rs.core.{ MediaType, Response }
 import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
+import mesosphere.marathon.event.EventConfiguration
+import mesosphere.marathon.event.http.HttpEventConfiguration
 import mesosphere.marathon.{ MarathonSchedulerService, BuildInfo, MarathonConf }
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class InfoResource @Inject() (schedulerService: MarathonSchedulerService, marathonConf: MarathonConf) {
+class InfoResource @Inject() (schedulerService: MarathonSchedulerService, conf: MarathonConf with EventConfiguration with HttpEventConfiguration) {
 
   // Marathon configurations
-  private[this] val marathonConfigValues = Map(
-    "master" -> marathonConf.mesosMaster.get,
-    "failover_timeout" -> marathonConf.mesosFailoverTimeout.get,
-    "ha" -> marathonConf.highlyAvailable.get,
-    "checkpoint" -> marathonConf.checkpoint.get,
-    "local_port_min" -> marathonConf.localPortMin.get,
-    "local_port_max" -> marathonConf.localPortMax.get,
-    "executor" -> marathonConf.defaultExecutor.get,
-    "hostname" -> marathonConf.hostname.get,
-    "mesos_role" -> marathonConf.mesosRole.get,
-    "task_launch_timeout" -> marathonConf.taskLaunchTimeout.get,
-    "reconciliation_initial_delay" -> marathonConf.reconciliationInitialDelay.get,
-    "reconciliation_interval" -> marathonConf.reconciliationInterval.get,
-    "mesos_user" -> marathonConf.mesosUser.get)
+  private[this] lazy val marathonConfigValues = Map(
+    "master" -> conf.mesosMaster.get,
+    "failover_timeout" -> conf.mesosFailoverTimeout.get,
+    "ha" -> conf.highlyAvailable.get,
+    "checkpoint" -> conf.checkpoint.get,
+    "local_port_min" -> conf.localPortMin.get,
+    "local_port_max" -> conf.localPortMax.get,
+    "executor" -> conf.defaultExecutor.get,
+    "hostname" -> conf.hostname.get,
+    "mesos_role" -> conf.mesosRole.get,
+    "task_launch_timeout" -> conf.taskLaunchTimeout.get,
+    "reconciliation_initial_delay" -> conf.reconciliationInitialDelay.get,
+    "reconciliation_interval" -> conf.reconciliationInterval.get,
+    "mesos_user" -> conf.mesosUser.get)
 
   // Zookeeper congiurations
-  private[this] val zookeeperConfigValues = Map(
-    "zk_hosts" -> marathonConf.zooKeeperHostString.get,
-    "zk_state" -> marathonConf.zooKeeperPath.get,
-    "zk_timeout" -> marathonConf.zooKeeperTimeout.get,
-    "zk" -> marathonConf.zooKeeperUrl.get,
-    "zk_hosts" -> marathonConf.zkHosts,
-    "zk_path" -> marathonConf.zkPath,
-    "zk_timeout" -> marathonConf.zkTimeoutDuration,
-    "zk_future_timeout" -> marathonConf.zkFutureTimeout)
+  private[this] lazy val zookeeperConfigValues = Map(
+    "zk_timeout" -> conf.zooKeeperTimeout.get,
+    "zk" -> conf.zooKeeperUrl.get,
+    "zk_hosts" -> conf.zkHosts,
+    "zk_path" -> conf.zkPath,
+    "zk_timeout" -> conf.zkTimeoutDuration,
+    "zk_future_timeout" -> conf.zkFutureTimeout)
+
+  private[this] lazy val eventHandlerConfigValues = {
+    def httpEventConfig = Map(
+      "http_endpoints" -> conf.httpEventEndpoints.get
+    )
+
+    def eventConfig = conf.eventSubscriber.get match {
+      case Some("http_callback") => httpEventConfig
+      case _                     => Map()
+    }
+
+    Map(
+      "type" -> conf.eventSubscriber.get
+    ) ++ eventConfig
+  }
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
@@ -47,6 +62,7 @@ class InfoResource @Inject() (schedulerService: MarathonSchedulerService, marath
         "leader" -> schedulerService.getLeader,
         "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
         "marathon_config" -> marathonConfigValues,
-        "zookeeper_config" -> zookeeperConfigValues)).build()
+        "zookeeper_config" -> zookeeperConfigValues,
+        "event_subscriber" -> conf.eventSubscriber.get.map(_ => eventHandlerConfigValues))).build()
   }
 }
