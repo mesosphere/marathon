@@ -21,7 +21,7 @@ the new deployment request will be rejected.
 ## Dependencies
 
 Applications without dependencies can be deployed in any order without restriction.
-If there are dependencies between applications, than the deployment actions will be performed in a specific order.
+If there are dependencies between applications, then the deployment actions will be performed in a specific order.
 
 <p class="text-center">
   <img src="{{ site.baseurl}}/img/dependency.png" width="645" height="241" alt="">
@@ -46,7 +46,7 @@ the application in a certain version has to have at all time during update.
 
 - __minimumHealthCapacity == 0__ : all old instances can be killed, before the new version is deployed.
 - __minimumHealthCapacity == 1__ : all instances of the new version is deployed side by side, before the old version is stopped 
-- __minimumHealthCapacity between 0 and 1__ : scale old version to minimumHealthCapacity and start the new version to minimumHealthCapacity side by side. If this is completed successfully than the new version is scaled to 100% and the old version is stopped. 
+- __minimumHealthCapacity between 0 and 1__ : scale old version to minimumHealthCapacity and start the new version to minimumHealthCapacity side by side. If this is completed successfully then the new version is scaled to 100% and the old version is stopped. 
 
 This gets a little bit more complex, if there are dependencies.
 When the applications of the example above will be updated, following actions will be performed.
