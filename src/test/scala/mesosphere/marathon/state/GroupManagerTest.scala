@@ -29,6 +29,29 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
     update.transitiveApps.flatMap(_.ports.filter(x => x >= 10 && x <= 20)) should have size 5
   }
 
+  test("Assign dynamic app ports specified in the container") {
+    import Container.Docker
+    import Docker.PortMapping
+    import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    val container = Container(
+      docker = Some(Docker(
+        image = "busybox",
+        network = Some(Network.BRIDGE),
+        portMappings = Seq(
+          PortMapping(containerPort = 8080, hostPort = 0, protocol = "tcp"),
+          PortMapping (containerPort = 9000, hostPort = 10555, protocol = "udp"),
+          PortMapping(containerPort = 9001, hostPort = 0, protocol = "tcp")
+        )
+      ))
+    )
+    val group = Group(PathId.empty, Set(
+      AppDefinition("/app1".toPath, ports = Seq(), container = Some(container))
+    ))
+    val update = manager(10, 20).assignDynamicAppPort(Group.empty, group)
+    update.transitiveApps.filter(_.hasDynamicPort) should not be ('empty)
+    update.transitiveApps.flatMap(_.ports.filter(x => x >= 10 && x <= 20)) should have size 2
+  }
+
   test("Already taken ports will not be used") {
     val group = Group(PathId.empty, Set(
       AppDefinition("/app1".toPath, ports = Seq(0, 0, 0)),

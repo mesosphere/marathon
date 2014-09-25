@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import java.net.URL
 import javax.inject.Inject
+import java.lang.{ Integer => JInt }
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 import scala.collection.mutable
@@ -158,19 +159,46 @@ class GroupManager @Singleton @Inject() (
   private[state] def assignDynamicAppPort(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.ports)
-    def nextGlobalFreePort: Integer = {
-      val port = portRange.find(!taken.contains(_)).getOrElse(throw new PortRangeExhaustedException(config.localPortMin(), config.localPortMax()))
+
+    def nextGlobalFreePort: JInt = synchronized {
+      val port = portRange.find(!taken.contains(_))
+        .getOrElse(throw new PortRangeExhaustedException(
+          config.localPortMin(),
+          config.localPortMax()
+        ))
       log.info(s"Take next configured free port: $port")
       taken += port
       port
     }
-    def appPorts(app: AppDefinition) = {
-      val alreadyAssigned = mutable.Queue(from.app(app.id).map(_.ports).getOrElse(Nil).filter(portRange.contains): _*)
-      def nextFreeAppPort = if (alreadyAssigned.nonEmpty) alreadyAssigned.dequeue() else nextGlobalFreePort
-      val ports = app.ports.map { port => if (port == 0) nextFreeAppPort else port }
+
+    def assignPorts(app: AppDefinition): AppDefinition = {
+      val alreadyAssigned = mutable.Queue(
+        from.app(app.id)
+          .map(_.ports)
+          .getOrElse(Nil)
+          .filter(portRange.contains): _*
+      )
+
+      def nextFreeAppPort: JInt =
+        if (alreadyAssigned.nonEmpty) alreadyAssigned.dequeue()
+        else nextGlobalFreePort
+
+      // dynamic ports defined in container port mappings
+      val containerPorts: Option[Seq[JInt]] =
+        app.containerHostPorts.map(_.map(p => new JInt(p)))
+
+      val ports: Seq[JInt] = containerPorts.getOrElse(app.ports)
+        .map { port => if (port == 0) nextFreeAppPort else port }
+
       app.copy(ports = ports)
     }
-    val dynamicApps = to.transitiveApps.filter(_.hasDynamicPort).map(appPorts)
-    dynamicApps.foldLeft(to) { (update, app) => update.updateApp(app.id, _ => app, app.version) }
+
+    val dynamicApps: Set[AppDefinition] =
+      to.transitiveApps.filter(_.hasDynamicPort).map(assignPorts)
+
+    dynamicApps.foldLeft(to) { (update, app) =>
+      update.updateApp(app.id, _ => app, app.version)
+    }
   }
+
 }

@@ -172,7 +172,11 @@ case class AppDefinition(
     )
   }
 
-  def hasDynamicPort = ports.contains(0)
+  def containerHostPorts(): Option[Seq[Int]] =
+    container.flatMap(_.docker.map(_.portMappings.map(_.hostPort)))
+
+  def hasDynamicPort(): Boolean =
+    containerHostPorts.getOrElse(ports).contains(0)
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
