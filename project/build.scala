@@ -121,7 +121,6 @@ object Dependencies {
     sprayHttpx % "compile",
     json4s % "compile",
     chaos % "compile",
-    mesos % "compile",
     mesosUtils % "compile",
     jacksonCaseClass % "compile",
     twitterCommons % "compile",
@@ -148,8 +147,7 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.5.6"
     val JacksonCCM = "0.1.1"
-    val Mesos = "0.20.1"
-    val MesosUtils = "0.20.0-1"
+    val MesosUtils = "0.20.1-1"
     val Akka = "2.2.4"
     val Spray = "1.2.1"
     val Json4s = "3.2.5"
@@ -176,10 +174,7 @@ object Dependency {
   val sprayHttpx = "io.spray" % "spray-httpx" % V.Spray
   val json4s = "org.json4s" %% "json4s-jackson" % V.Json4s
   val chaos = "mesosphere" % "chaos" % V.Chaos
-  val mesos = "org.apache.mesos" % "mesos" % V.Mesos
-  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils excludeAll(
-    ExclusionRule(organization = "org.apache.mesos")
-  )
+  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
