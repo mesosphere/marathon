@@ -54,6 +54,11 @@ The following options can influence how Marathon works:
 * `--task_launch_timeout` (Optional. Default: 60000 (60 seconds)): Time,
     in milliseconds, to wait for a task to enter the TASK_RUNNING state before
     killing it.
+* `--event_subscriber` (Optional. Default: None): Event subscriber module to
+    enable. Currently the only valid value is `http_callback`.
+* `--http_endpoints` (Optional. Default: None): Pre-configured http callback
+    URLs. Valid only in conjunction with `--event_subscriber http_callback`.
+    Additional callback URLs may also be set dynamically via the REST API.
 * `--zk` (Optional. Default: None): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
 * `--zk_max_versions` (Optional. Default: None): Limit the number of versions
