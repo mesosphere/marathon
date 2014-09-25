@@ -1937,7 +1937,13 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 {
     "frameworkId": "20140730-222531-1863654316-5050-10422-0000", 
-    "leader": "127.0.0.1:8080", 
+    "leader": "127.0.0.1:8080",
+    "event_subscriber":{
+        "type":"http_callback",
+        "http_endpoints": [
+            "localhost:9999/events"
+        ]
+    },
     "marathon_config": {
         "checkpoint": false, 
         "executor": "//cmd", 
