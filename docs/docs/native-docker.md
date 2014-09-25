@@ -90,6 +90,15 @@ by default to the same value as `$MESOS_SANDBOX`.
 
 _Note: Requires Mesos 0.20.1 and Marathon 0.7.1_
 
+Bridged networking makes it easy to run programs that bind to statically
+configured ports in Docker containers. Marathon can "bridge" the gap between
+the port resource accounting done by Mesos and the host ports that are bound
+by Docker.
+
+**Dynamic port mapping:**
+
+Let's begin by taking an example app definition:
+
 ```json
 {
   "id": "bridged-webapp",
@@ -121,12 +130,14 @@ _Note: Requires Mesos 0.20.1 and Marathon 0.7.1_
 }
 ```
 
-Here `"hostPort": 0` retains its traditional meaning in Marathon, which is "a
+Here `"hostPort": 0` retains the traditional meaning in Marathon, which is "a
 random port from the range included in the Mesos resource offer". The resulting
-host ports for each task will be accessible via environment variables and via
-the task details in the REST API.
+host ports for each task are exposed via the task details in the REST API and
+the Marathon web UI.
 
-It's also possible to specify (non-zero) host ports statically. When doing this
+**Static port mapping:**
+
+It's also possible to specify non-zero host ports. When doing this
 you must ensure that the target ports are included in some resource offers!
 The Mesos slave announces port resources in the range `[31000-32000]` by
 default. This can be overridden; for example to also expose ports in the range
