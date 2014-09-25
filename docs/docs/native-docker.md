@@ -19,7 +19,7 @@ Docker version 1.0.0 or later installed on each slave node.
   <div class="alert alert-info">
     <strong>Note:</strong> All commands below assume `mesos-slave` is being run
     as a service using the package provided by 
-    <a href="https://mesosphere.io/2014/07/17/mesosphere-package-repositories/">Mesosphere</a>
+    <a href="http://mesosphere.com/2014/07/17/mesosphere-package-repositories/">Mesosphere</a>
   </div>
 
 1. Update slave configuration to specify the use of the Docker containerizer

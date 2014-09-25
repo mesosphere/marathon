@@ -25,12 +25,12 @@ over a custom VPN.
 
 One easy way is via your system's package manager.
 Current builds for major Linux distributions and Mac OS X are available
-from on the Mesosphere [downloads page](http://mesosphere.io/downloads/)
-or from Mesosphere's [repositories](http://mesosphere.io/2014/07/17/mesosphere-package-repositories/).
+from on the Mesosphere [downloads page](http://mesosphere.com/downloads/)
+or from Mesosphere's [repositories](http://mesosphere.com/2014/07/17/mesosphere-package-repositories/).
 
 If building from source, see the
 Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
-[Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
+[Mesosphere tutorial](http://mesosphere.com/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
 for details. Running `make install` will install Mesos in `/usr/local` in
 the same way as these packages do.
 
@@ -38,7 +38,7 @@ the same way as these packages do.
 
 #### Through your Package Manager
 
-Marathon packages are available from Mesosphere's [repositories](http://mesosphere.io/2014/07/17/mesosphere-package-repositories/).
+Marathon packages are available from Mesosphere's [repositories](http://mesosphere.com/2014/07/17/mesosphere-package-repositories/).
 
 #### From a Tarball
 
