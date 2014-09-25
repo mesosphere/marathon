@@ -177,7 +177,7 @@ User-Agent: HTTPie/0.8.0
         0
     ], 
     "storeUrls": [
-        "http://downloads.mesosphere.io/misc/toggle.tgz"
+        "http://downloads.mesosphere.com/misc/toggle.tgz"
     ]
 }
 {% endhighlight %}

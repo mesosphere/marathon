@@ -47,21 +47,21 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
     **For Mesos 0.19.0:**
 
     ``` bash
-    $ curl -O http://downloads.mesosphere.io/marathon/marathon-0.6.1/marathon-0.6.1.tgz
+    $ curl -O http://downloads.mesosphere.com/marathon/marathon-0.6.1/marathon-0.6.1.tgz
     $ tar xzf marathon-0.6.1.tgz
     ```
 
     **For Mesos 0.17.0 to 0.18.2:**
 
     ``` console
-    $ curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1/marathon-0.5.1.tgz
+    $ curl -O http://downloads.mesosphere.com/marathon/marathon-0.5.1/marathon-0.5.1.tgz
     $ tar xzf marathon-0.5.1.tgz
     ```
 
     **For Mesos 0.16.0 and earlier:**
 
     ``` console
-    $ curl -O http://downloads.mesosphere.io/marathon/marathon-0.5.1_mesos-0.16.0/marathon-0.5.1_mesos-0.16.0.tgz
+    $ curl -O http://downloads.mesosphere.com/marathon/marathon-0.5.1_mesos-0.16.0/marathon-0.5.1_mesos-0.16.0.tgz
     $ tar xzf marathon-0.5.1_mesos-0.16.0.tgz
     ```
 

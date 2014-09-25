@@ -82,7 +82,7 @@ See the detailed docs on
   "instances": 2,
   "mem": 32.0,
   "ports": [0],
-  "uris": ["http://downloads.mesosphere.io/misc/toggle.tgz"]
+  "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
 }
 ```
 
@@ -107,7 +107,7 @@ See the detailed docs on
   "instances": 2,
   "mem": 32.0,
   "ports": [0],
-  "uris": ["http://downloads.mesosphere.io/misc/toggle.tgz"]
+  "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
 }
 ```
 
@@ -136,7 +136,6 @@ flag.  Requires Mesos version `0.20.0` or later.
   "instances": 2,
   "mem": 32.0,
   "ports": [0],
-  "uris": ["http://downloads.mesosphere.io/misc/toggle.tgz"]
+  "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
 }
 ```
-
