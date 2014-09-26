@@ -230,7 +230,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
         "instances": 2,
         "mem": 32.0,
         "ports": [0],
-        "uris": ["http://downloads.mesosphere.io/misc/toggle.tgz"]
+        "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
       }
     """
     val readResult2 = mapper.readValue(json2, classOf[AppDefinition])

@@ -12,7 +12,7 @@ state of running tasks gets stored in the Mesos state abstraction.
 
 Try Marathon now on AWS with [Elastic Mesos](http://elastic.mesosphere.io) or with [Mesosphere for Google Compute Platform](http://google.mesosphere.io) and learn how
 to use it in Mesosphere's interactive
-[Marathon tutorial](http://mesosphere.io/learn/run-services-with-marathon/)
+[Marathon tutorial](http://mesosphere.com/learn/run-services-with-marathon/)
 that can be personalized for your cluster.
 
 Marathon is a *meta framework*: you can start other Mesos frameworks such as
@@ -23,7 +23,7 @@ can even start other Marathon instances via Marathon.
 Using Marathon versions 0.7.0+ and Mesos 0.20.0+, you can [deploy, run and scale Docker containers](https://mesosphere.github.io/marathon/docs/native-docker.html) with ease.
 
 Documentation for installing and configuring the full Mesosphere stack with Mesos + Marathon is
-available on the [Mesosphere website](http://mesosphere.io/docs/).
+available on the [Mesosphere website](http://mesosphere.com/docs/).
 
 ## Features
 
@@ -48,12 +48,12 @@ available on the [Mesosphere website](http://mesosphere.io/docs/).
 Marathon requires Mesos installed on the same machine in order to use a shared library.
 One easy way is via your system's package manager.
 Current builds for major Linux distributions are available
-from on the Mesosphere [downloads page](http://mesosphere.io/downloads/)
-or from Mesosphere's [repositories](http://mesosphere.io/2014/07/17/mesosphere-package-repositories/).
+from on the Mesosphere [downloads page](http://mesosphere.com/downloads/)
+or from Mesosphere's [repositories](http://mesosphere.com/2014/07/17/mesosphere-package-repositories/).
 
 If building from source, see the
 Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
-[Mesosphere tutorial](http://mesosphere.io/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
+[Mesosphere tutorial](http://mesosphere.com/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
 for details. Running `make install` will install Mesos in `/usr/local` in
 the same way as these packages do.
 
@@ -70,7 +70,7 @@ Full instructions on how to install prepackaged releases are available [in the M
         sbt assembly
 
 1.  Run `./bin/build-distribution` to package Marathon as an
-    [executable JAR](http://mesosphere.io/2013/12/07/executable-jars/)
+    [executable JAR](http://mesosphere.com/2013/12/07/executable-jars/)
     (optional).
 
 ### Running in Development Mode
@@ -163,4 +163,4 @@ the community.
 [freenode]: https://freenode.net/ "IRC channels"
 [upstart]: http://upstart.ubuntu.com/ "Ubuntu's event-based daemons"
 [init]: https://en.wikipedia.org/wiki/Init "init"
-[Mesosphere]: http://mesosphere.io/ "Mesosphere"
+[Mesosphere]: http://mesosphere.com/ "Mesosphere"

@@ -5,6 +5,6 @@
   "cpus": 1.0,
   "instances": 1,
   "uris": [
-    "http://downloads.mesosphere.io/tutorials/PlayHello.zip"
+    "http://downloads.mesosphere.com/tutorials/PlayHello.zip"
   ]
 }

@@ -576,7 +576,7 @@ Transfer-Encoding: chunked
             "minimumHealthCapacity": 1.0
         }, 
         "uris": [
-            "http://downloads.mesosphere.io/misc/toggle.tgz"
+            "http://downloads.mesosphere.com/misc/toggle.tgz"
         ], 
         "user": null, 
         "version": "2014-09-12T23:28:21.737Z"
@@ -1897,7 +1897,7 @@ Transfer-Encoding: chunked
                     "minimumHealthCapacity": 1.0
                 },
                 "uris": [
-                    "http://downloads.mesosphere.io/misc/toggle.tgz"
+                    "http://downloads.mesosphere.com/misc/toggle.tgz"
                 ],
                 "user": null,
                 "version": "2014-08-26T05:04:49.766Z"
