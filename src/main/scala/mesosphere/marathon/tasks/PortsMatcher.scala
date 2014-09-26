@@ -104,11 +104,6 @@ class PortsMatcher(app: AppDefinition, offer: Offer) extends Logging {
           (acc, r) => acc ++ Iterator.range(r.getBegin.toInt, r.getEnd.toInt + 1)
         }
 
-      if (availablePorts.size < mappings.size)
-        throw new PortResourceException(
-          "Insufficient ports in offer for app [${app.id}]"
-        )
-
       val scalaPortRanges: Seq[Range] =
         offeredPortRanges.map { r => r.getBegin.toInt to r.getEnd.toInt }
 
@@ -117,6 +112,9 @@ class PortsMatcher(app: AppDefinition, offer: Offer) extends Logging {
 
       val mappingsWithAssignedRandoms = mappings.map {
         case PortMapping(containerPort, 0, protocol) =>
+          if (!availablePorts.hasNext) throw PortResourceException(
+            "Insufficient ports in offer for app [${app.id}]"
+          )
           PortMapping(containerPort, availablePorts.next, protocol)
         case pm: PortMapping => pm
       }
