@@ -4,13 +4,14 @@ import javax.ws.rs.core.{ MediaType, Response }
 import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
+import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
 import mesosphere.marathon.{ MarathonSchedulerService, BuildInfo, MarathonConf }
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class InfoResource @Inject() (schedulerService: MarathonSchedulerService, conf: MarathonConf with EventConfiguration with HttpEventConfiguration) {
+class InfoResource @Inject() (schedulerService: MarathonSchedulerService, conf: MarathonConf with HttpConf with EventConfiguration with HttpEventConfiguration) {
 
   // Marathon configurations
   private[this] lazy val marathonConfigValues = Map(
@@ -52,6 +53,12 @@ class InfoResource @Inject() (schedulerService: MarathonSchedulerService, conf: 
     ) ++ eventConfig
   }
 
+  private[this] lazy val httpConfigValues = Map(
+    "assets_path" -> conf.assetsFileSystemPath.get,
+    "http_port" -> conf.httpPort.get,
+    "https_port" -> conf.httpsPort.get
+  )
+
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(): Response = {
@@ -63,6 +70,7 @@ class InfoResource @Inject() (schedulerService: MarathonSchedulerService, conf: 
         "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
         "marathon_config" -> marathonConfigValues,
         "zookeeper_config" -> zookeeperConfigValues,
-        "event_subscriber" -> conf.eventSubscriber.get.map(_ => eventHandlerConfigValues))).build()
+        "event_subscriber" -> conf.eventSubscriber.get.map(_ => eventHandlerConfigValues),
+        "http_config" -> httpConfigValues)).build()
   }
 }
