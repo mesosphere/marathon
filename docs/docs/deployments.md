@@ -41,14 +41,14 @@ At the root, this process consists of two phases: starting a set of processes wi
 There are multitude of possible models how this process can be performed. 
 
 In Marathon there is an upgrade strategy with a minimumHealthCapacity, which is defined on application level.
-The minimumHealthCapacity is a percentage, which applied to the instance count defines the number of instances,
-the application in a certain version has to have at all time during update.  
+The minimumHealthCapacity is a percentage which, when applied to the instance count, defines the number of healthy instances
+that a certain version of the application must have at all times during update.  
 
 - __minimumHealthCapacity == 0__ : all old instances can be killed, before the new version is deployed.
 - __minimumHealthCapacity == 1__ : all instances of the new version is deployed side by side, before the old version is stopped 
 - __minimumHealthCapacity between 0 and 1__ : scale old version to minimumHealthCapacity and start the new version to minimumHealthCapacity side by side. If this is completed successfully than the new version is scaled to 100% and the old version is stopped. 
 
-This gets a little bit more complex, if there are dependencies.
+This gets a little bit more complex if there are dependencies.
 When the applications of the example above are updated, the following actions will be performed:
   
 1. Scale old application db to instance count 6
@@ -67,10 +67,10 @@ This means that in the update case, we have 12 instances of db (6 old and 6 new)
 
 ## Force a Deployment
 
-One application can be changed only by a deployment.
-Another change of the application has to wait until the first deployment has finished.
-It is possible to break this rule, if a deployment is run with force flag.
-The REST interface allows the force flag for all state changing operations.
+An application can be changed by only one deployment at a time.
+Other changes to the application must wait until the first deployment has finished.
+It is possible to break this rule by running a deployment with the force flag.
+The REST interface allows the force flag for all state-changing operations.
 
 __ATTENTION__: The force flag should be used only in the case of a failed deployment!
 
@@ -84,7 +84,7 @@ The only good reason to force a deployment is to correct a failed deployment.
 A deployment consists of steps. The steps are executed one after the other.
 The next step is only executed, if the previous step has finished successfully.
 
-There are circumstances, where a step will never finish successfully. For example:
+There are circumstances where a step will never finish successfully. For example:
 
 - the new application does not start correctly
 - the new application does not become healthy
@@ -93,12 +93,12 @@ There are circumstances, where a step will never finish successfully. For exampl
 - ...
 
 The deployment in this case would take forever.
-To heal the system, a new deployment has to be applied, which corrects the problem of the current deployment.
+To heal the system, a new deployment must be applied to correct the problem with the current deployment.
 
 ## The /v2/deployments endpoint
 
 The list of running deployments can be accessed via the [/v2/deployments](rest-api.html#deployments) endpoint.
-There are several information available for every deployment:
+There are several items of information available for every deployment:
 
 - affectedApps: which applications are affected by this deployment
 - steps: the steps to perform for this deployment
