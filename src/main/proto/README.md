@@ -1,5 +1,5 @@
 # Google Protocol Buffers
- 
+
 Marathon is using Google [Protocol Buffers](https://developers.google.com/protocol-buffers) to marshal and unmarshal data from the persistent store.
 
 ## Dependencies
@@ -10,10 +10,10 @@ Marathon is using Google [Protocol Buffers](https://developers.google.com/protoc
 
 ## Rebuilt the protos
 
-To rebuild the protos, open a terminal where the current working directory is the project directory. 
+To rebuild the protos, open a terminal where the current working directory is the project directory.
 
 ```
 $> cd src/main/proto
-$> protoc --java_out=../java/ marathon.proto 
+$> protoc --java_out=../java/ marathon.proto
 ```
- 
+

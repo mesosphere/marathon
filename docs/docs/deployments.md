@@ -46,7 +46,7 @@ that a certain version of the application must have at all times during update.
 
 - __minimumHealthCapacity == 0__ : all old instances can be killed, before the new version is deployed.
 - __minimumHealthCapacity == 1__ : all instances of the new version is deployed side by side, before the old version is stopped 
-- __minimumHealthCapacity between 0 and 1__ : scale old version to minimumHealthCapacity and start the new version to minimumHealthCapacity side by side. If this is completed successfully than the new version is scaled to 100% and the old version is stopped. 
+- __minimumHealthCapacity between 0 and 1__ : scale old version to minimumHealthCapacity and start the new version to minimumHealthCapacity side by side. If this is completed successfully then the new version is scaled to 100% and the old version is stopped. 
 
 This gets a little bit more complex if there are dependencies.
 When the applications of the example above are updated, the following actions will be performed:

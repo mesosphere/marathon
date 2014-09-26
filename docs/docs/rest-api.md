@@ -235,7 +235,7 @@ The `minimumHealthCapacity` defines the minimum number of healthy nodes, that do
 It is a number between `0` and `1` which is multiplied with the instance count. 
 The default `minimumHealthCapacity` is `1`, which means no old instance can be stopped, before all new instances are deployed. 
 A value of `0.5` means that an upgrade can be deployed side by side, by taking half of the instances down in the first step, 
-deploy half of the new version and than take the other half down and deploy the rest. 
+deploy half of the new version and then take the other half down and deploy the rest. 
 A value of `0` means take all instances down immediately and replace with the new application.
 
 ##### Example

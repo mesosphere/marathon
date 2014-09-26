@@ -131,6 +131,7 @@ If you want to inspect the contents of the Docker:
 * [eBay](http://www.ebay.com/)
 * [The Factory](https://github.com/thefactory/)
 * [Guidewire](http://www.guidewire.com/)
+* [iQIYI](http://www.iqiyi.com/)
 * [OpenTable](http://www.opentable.com/)
 * [PayPal](https://www.paypal.com)
 * [Sailthru](http://www.sailthru.com/)

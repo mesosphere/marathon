@@ -7,6 +7,22 @@ title: Constraints
 Constraints control where apps run to allow optimizing for fault tolerance or locality.
 Constraints can be set via the REST API or the [Marathon gem](https://rubygems.org/gems/marathon_client) when starting an app. Make sure to use the gem version 0.2.0 or later for constraint support. Constraints are made up of three parts: a field name, an operator, and an optional value. The field can be the slave hostname or any Mesos slave attribute.
 
+## Fields
+
+### Hostname field
+
+`hostname` field matches the slave hostnames, see `UNIQUE operator` for usage example.
+
+`hostname` field supports all operators except `CLUSTER`, since it's useless for hostnames.
+
+### Attribute field
+
+If the field name is none of the above, it will be treated as a Mesos slave attribute. Mesos slave attribute is a way to tag a slave node, see `mesos-slave --help` to learn how to set the attributes.
+
+Attribute field supports all operators of Marathon.
+
+## Operators
+
 ### UNIQUE operator
 
 `UNIQUE` tells Marathon to enforce uniqueness of the attribute across all of an app's tasks. For example the following constraint ensures that there is only one app task running on each host:
@@ -82,3 +98,26 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start 
 ```
 
 Optionally, you can specify a minimum number of groups to try and achieve.
+
+### LIKE operator
+
+Just like the `CLUSTER` operator, but matches substring of the field value.
+
+via the Marathon gem:
+
+``` bash
+$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:LIKE:rack-1
+```
+
+via curl:
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "LIKE", "rack-1"]]
+  }'
+```
+
+Note that this will match all values containing `rack-1`, such as `rack-111` and `my-rack-123`. Also, the value is required, or you'll get a warning.
