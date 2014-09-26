@@ -8,14 +8,18 @@ title: A cluster-wide init and control system for services in cgroups or Docker 
     A cluster-wide init and control system for services in cgroups or Docker containers
   </p>
   <p>
-    <a href="http://downloads.mesosphere.com/marathon/marathon-0.6.1/marathon-0.6.1.tgz"
+    <a href="http://downloads.mesosphere.com/marathon/v0.7.1/marathon-0.7.1.tgz"
         class="btn btn-lg btn-primary">
-      Download Marathon v0.6.1
+      Download Marathon v0.7.1
     </a>
   </p>
   <a class="btn btn-link"
-      href="http://downloads.mesosphere.com/marathon/marathon-0.6.1/marathon-0.6.1.tgz.sha256">
-    v0.6.1 SHA-256 Checksum
+      href="http://downloads.mesosphere.com/marathon/v0.7.1/marathon-0.7.1.tgz.sha256">
+    v0.7.1 SHA-256 Checksum
+  </a> &middot;
+  <a class="btn btn-link"
+      href="https://github.com/mesosphere/marathon/releases/tag/v0.7.1">
+    v0.7.1 Release Notes
   </a>
 </div>
 
