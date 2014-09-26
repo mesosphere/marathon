@@ -1,6 +1,5 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.state.PathId
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -13,8 +12,9 @@ import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
 
 import mesosphere.marathon._
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.tasks.{ PortsMatcher, TaskTracker }
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 
 import scala.util.{ Failure, Success, Try }
@@ -67,10 +67,26 @@ class TaskBuilder(app: AppDefinition,
       builder.addResources(portsResource)
     }
 
+    val containerProto: Option[ContainerInfo] =
+      app.container.map { c =>
+        val portMappings = c.docker.map { d =>
+          d.portMappings zip ports map {
+            case (mapping, port) => mapping.copy(hostPort = port.toInt)
+          }
+        }
+        val containerWithPortMappings = portMappings match {
+          case None => c
+          case Some(newMappings) => c.copy(
+            docker = c.docker.map { _.copy(portMappings = newMappings) }
+          )
+        }
+        containerWithPortMappings.toProto
+      }
+
     executor match {
       case CommandExecutor() =>
         builder.setCommand(TaskBuilder.commandInfo(app, ports))
-        for (c <- app.container) builder.setContainer(c.toProto)
+        for (c <- containerProto) builder.setContainer(c)
 
       case PathExecutor(path) =>
         val executorId = f"marathon-${taskId.getValue}" // Fresh executor
@@ -83,7 +99,7 @@ class TaskBuilder(app: AppDefinition,
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
           .setCommand(command)
-        for (c <- app.container) info.setContainer(c.toProto)
+        for (c <- containerProto) info.setContainer(c)
         builder.setExecutor(info)
         val binary = new ByteArrayOutputStream()
         mapper.writeValue(binary, app)
@@ -151,24 +167,31 @@ class TaskBuilder(app: AppDefinition,
       return None
     }
 
-    if (!portMatcher.matches) {
-      log.warn("App ports are not available in the offer.")
-      return None
+    val badConstraints: Set[Constraint] = {
+      val runningTasks = taskTracker.get(app.id)
+      app.constraints.filterNot { constraint =>
+        Constraints.meetsConstraint(runningTasks, offer, constraint)
+      }
     }
 
-    if (app.constraints.nonEmpty) {
-      val runningTasks = taskTracker.get(app.id)
-      val constraintsMet = app.constraints.forall(
-        Constraints.meetsConstraint(runningTasks, offer, _)
-      )
-      if (!constraintsMet) {
-        log.warn("Did not meet a constraint in an offer.")
-        return None
-      }
-      log.info("Met all constraints.")
+    portMatcher.portRanges match {
+      case None =>
+        log.warn("App ports are not available in the offer.")
+        None
+
+      case _ if badConstraints.nonEmpty =>
+        log.warn(
+          s"Offer did not satisfy constraints for app [${app.id}].\n" +
+            s"Conflicting constraints are: [${badConstraints.mkString(", ")}]"
+        )
+        None
+
+      case Some(portRanges) =>
+        log.info("Met all constraints.")
+        Some((cpuRole, memRole, diskRole, portRanges))
     }
-    Some((cpuRole, memRole, diskRole, portMatcher.portRanges.get))
   }
+
 }
 
 object TaskBuilder {

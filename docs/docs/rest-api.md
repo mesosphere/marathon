@@ -390,14 +390,12 @@ List all running applications.
 **Request:**
 
 {% highlight http %}
-GET /v2/apps HTTP/1.1
+GET /v2/apps/ HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-{% endhighlight %}
-
-**Response:**
+{%endhighlight%}
 
 {% highlight http %}
 HTTP/1.1 200 OK
@@ -408,65 +406,70 @@ Transfer-Encoding: chunked
 {
     "apps": [
         {
-            "args": null, 
-            "backoffFactor": 1.15, 
-            "backoffSeconds": 1, 
-            "cmd": "env && python3 -m http.server $PORT0", 
-            "constraints": [
-                [
-                    "hostname", 
-                    "UNIQUE"
-                ]
-            ], 
+            "args": null,
+            "backoffFactor": 1.15,
+            "backoffSeconds": 1,
+            "cmd": "python3 -m http.server 8080",
+            "constraints": [],
             "container": {
                 "docker": {
-                    "image": "python:3"
-                }, 
-                "type": "DOCKER", 
+                    "image": "python:3",
+                    "network": "BRIDGE",
+                    "portMappings": [
+                        {
+                            "containerPort": 8080,
+                            "hostPort": 0,
+                            "protocol": "tcp"
+                        },
+                        {
+                            "containerPort": 161,
+                            "hostPort": 0,
+                            "protocol": "udp"
+                        }
+                    ]
+                },
+                "type": "DOCKER",
                 "volumes": []
-            }, 
-            "cpus": 0.25, 
+            },
+            "cpus": 0.5,
             "dependencies": [],
-            "deployments": [
-                {
-                    "id": "5cd987cd-85ae-4e70-8df7-f1438367d9cb"
-                }
-            ], 
-            "disk": 0.0, 
-            "env": {}, 
-            "executor": "", 
+            "deployments": [],
+            "disk": 0.0,
+            "env": {},
+            "executor": "",
             "healthChecks": [
                 {
-                    "command": null, 
-                    "gracePeriodSeconds": 3, 
-                    "intervalSeconds": 10, 
-                    "maxConsecutiveFailures": 3, 
-                    "path": "/", 
-                    "portIndex": 0, 
-                    "protocol": "HTTP", 
-                    "timeoutSeconds": 5
+                    "command": null,
+                    "gracePeriodSeconds": 5,
+                    "intervalSeconds": 20,
+                    "maxConsecutiveFailures": 3,
+                    "path": "/",
+                    "portIndex": 0,
+                    "protocol": "HTTP",
+                    "timeoutSeconds": 20
                 }
-            ], 
-            "id": "/my-app", 
-            "instances": 2, 
-            "mem": 50.0, 
+            ],
+            "id": "/bridged-webapp",
+            "instances": 2,
+            "mem": 64.0,
             "ports": [
-                10000
-            ], 
-            "requirePorts": false, 
-            "storeUrls": [], 
-            "tasksRunning": 1, 
-            "tasksStaged": 0, 
+                10000,
+                10001
+            ],
+            "requirePorts": false,
+            "storeUrls": [],
+            "tasksRunning": 2,
+            "tasksStaged": 0,
             "upgradeStrategy": {
-                "minimumHealthCapacity": 0.5
-            }, 
-            "uris": [], 
-            "user": null, 
-            "version": "2014-08-18T22:36:41.451Z"
+                "minimumHealthCapacity": 1.0
+            },
+            "uris": [],
+            "user": null,
+            "version": "2014-09-25T02:26:59.256Z"
         }
     ]
 }
-{% endhighlight %}
+{%endhighlight%}
 
 #### GET `/v2/apps/{appId}`
 

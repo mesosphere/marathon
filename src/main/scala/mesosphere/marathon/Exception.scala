@@ -17,6 +17,8 @@ case class AppLockedException(deploymentIds: Seq[String] = Nil)
       "View details at '/v2/deployments/<DEPLOYMENT_ID>'."
   )
 
+case class PortResourceException(msg: String) extends Exception(msg)
+
 class PortRangeExhaustedException(
   val minPort: Int,
   val maxPort: Int) extends Exception(s"All ports in the range $minPort-$maxPort are already in use")

@@ -78,13 +78,54 @@ object Container {
   /**
     * Docker-specific container parameters.
     */
-  case class Docker(image: String = "") {
-    def toProto(): mesos.ContainerInfo.DockerInfo =
-      mesos.ContainerInfo.DockerInfo.newBuilder.setImage(image).build
+  case class Docker(
+      image: String = "",
+      network: Option[mesos.ContainerInfo.DockerInfo.Network] = None,
+      portMappings: Seq[Docker.PortMapping] = Nil) {
+    def toProto(): mesos.ContainerInfo.DockerInfo = {
+      val builder = mesos.ContainerInfo.DockerInfo.newBuilder.setImage(image)
+      network foreach builder.setNetwork
+      builder.addAllPortMappings(portMappings.map(_.toProto).asJava)
+      builder.build
+    }
   }
 
   object Docker {
     def apply(proto: mesos.ContainerInfo.DockerInfo): Docker =
-      Docker(image = proto.getImage)
+      Docker(
+        image = proto.getImage,
+        if (proto.hasNetwork) Some(proto.getNetwork) else None,
+        proto.getPortMappingsList.asScala.map(PortMapping.apply)
+      )
+
+    /**
+      * @param containerPort The container port to expose
+      * @param hostPort  The host port to bind
+      * @param protocol  Layer 4 protocol to expose (i.e. tcp, udp).
+      */
+    case class PortMapping(
+        containerPort: Int,
+        hostPort: Int,
+        protocol: String) {
+      def toProto(): mesos.ContainerInfo.DockerInfo.PortMapping = {
+        mesos.ContainerInfo.DockerInfo.PortMapping.newBuilder
+          .setContainerPort(containerPort)
+          .setHostPort(hostPort)
+          .setProtocol(protocol)
+          .build
+      }
+    }
+
+    object PortMapping {
+      def apply(proto: mesos.ContainerInfo.DockerInfo.PortMapping): PortMapping =
+        PortMapping(
+          proto.getContainerPort,
+          proto.getHostPort,
+          proto.getProtocol
+        )
+
+    }
+
   }
+
 }
