@@ -62,9 +62,7 @@ define([
         }
       }.bind(this));
 
-      Mousetrap.bind("c", function() {
-        this.showNewAppModal();
-      }.bind(this), "keyup");
+      Mousetrap.bind("c", this.showNewAppModal, "keyup");
 
       Mousetrap.bind("g a", function() {
         if(this.state.modalClass == null) {
@@ -84,9 +82,7 @@ define([
         }
       }.bind(this));
 
-      Mousetrap.bind("shift+,", function() {
-        this.showAboutModal();
-      }.bind(this));
+      Mousetrap.bind("shift+,", this.showAboutModal);
 
       this.setPollResource(this.fetchApps);
     },
