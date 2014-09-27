@@ -11,6 +11,7 @@ import mesosphere.marathon.state.PathId._
 import org.apache.mesos.Protos.CommandInfo
 import org.scalatest.Matchers
 
+import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 

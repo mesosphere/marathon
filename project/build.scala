@@ -45,11 +45,11 @@ object MarathonBuild extends Build {
 
   lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
     organization := "mesosphere",
-    scalaVersion := "2.10.4",
+    scalaVersion := "2.11.2",
     scalacOptions in Compile ++= Seq("-encoding", "UTF-8", "-target:jvm-1.6", "-deprecation", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint"),
     javacOptions in Compile ++= Seq("-encoding", "UTF-8", "-source", "1.6", "-target", "1.6", "-Xlint:unchecked", "-Xlint:deprecation"),
     resolvers ++= Seq(
-      "Mesosphere Public Repo"    at "http://downloads.mesosphere.com/maven",
+      "Mesosphere Public Repo"    at "http://downloads.mesosphere.io/maven",
       "Twitter Maven2 Repository" at "http://maven.twttr.com/",
       "Spray Maven Repository"    at "http://repo.spray.io/"
     ),
@@ -134,6 +134,7 @@ object Dependencies {
     hadoopHdfs % "compile",
     hadoopCommon % "compile",
     beanUtils % "compile",
+    scallop % "compile",
 
     // test
     Test.scalatest % "test",
@@ -145,20 +146,21 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Chaos = "0.5.6"
-    val JacksonCCM = "0.1.1"
+    val Chaos = "0.6.1"
+    val JacksonCCM = "0.1.2"
     val MesosUtils = "0.20.1-1"
-    val Akka = "2.2.4"
-    val Spray = "1.2.1"
-    val Json4s = "3.2.5"
-    val TwitterCommons = "0.0.52"
-    val TwitterZKClient = "0.0.43"
+    val Akka = "2.3.6"
+    val Spray = "1.3.1"
+    val Json4s = "3.2.10"
+    val TwitterCommons = "0.0.60"
+    val TwitterZKClient = "0.0.60"
     val Jersey = "1.18.1"
     val JodaTime = "2.3"
     val JodaConvert = "1.6"
     val UUIDGenerator = "3.1.3"
     val JGraphT = "0.9.1"
     val Hadoop = "2.4.1"
+    val Scallop = "0.9.5"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -173,7 +175,7 @@ object Dependency {
   val sprayClient = "io.spray" % "spray-client" % V.Spray
   val sprayHttpx = "io.spray" % "spray-httpx" % V.Spray
   val json4s = "org.json4s" %% "json4s-jackson" % V.Json4s
-  val chaos = "mesosphere" % "chaos" % V.Chaos
+  val chaos = "mesosphere" %% "chaos" % V.Chaos
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
@@ -187,6 +189,7 @@ object Dependency {
   val hadoopHdfs = "org.apache.hadoop" % "hadoop-hdfs" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
   val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.2"
+  val scallop = "org.rogach" %% "scallop" % V.Scallop
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

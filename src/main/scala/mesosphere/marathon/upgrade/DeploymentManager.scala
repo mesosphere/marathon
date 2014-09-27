@@ -1,19 +1,19 @@
 package mesosphere.marathon.upgrade
 
-import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
-import scala.util.control.NonFatal
-
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.event.EventStream
-import org.apache.mesos.SchedulerDriver
-
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, SchedulerActions }
+import org.apache.mesos.SchedulerDriver
+
+import scala.collection.immutable.Seq
+import scala.collection.mutable
+import scala.concurrent.{ Future, Promise }
+import scala.util.control.NonFatal
 
 class DeploymentManager(
     appRepository: AppRepository,
@@ -23,7 +23,6 @@ class DeploymentManager(
     storage: StorageProvider,
     eventBus: EventStream) extends Actor with ActorLogging {
   import context.dispatcher
-
   import mesosphere.marathon.upgrade.DeploymentManager._
 
   val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty[String, DeploymentInfo]
@@ -35,7 +34,7 @@ class DeploymentManager(
 
   def receive = {
     case CancelConflictingDeployments(plan, reason) =>
-      val origSender = sender
+      val origSender = sender()
       val conflictingDeployments = for {
         info <- runningDeployments.values
         if info.plan.isAffectedBy(plan)
@@ -50,7 +49,7 @@ class DeploymentManager(
       }
 
     case CancelDeployment(id, t) =>
-      val origSender = sender
+      val origSender = sender()
 
       runningDeployments.get(id) match {
         case Some(info) =>
@@ -68,17 +67,17 @@ class DeploymentManager(
       deploymentStatus -= id
 
     case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.id) =>
-      val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender, appRepository, driver, scheduler, plan, taskTracker, taskQueue, storage, eventBus), plan.id)
+      val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender(), appRepository, driver, scheduler, plan, taskTracker, taskQueue, storage, eventBus), plan.id)
       runningDeployments += plan.id -> DeploymentInfo(ref, plan)
 
     case stepInfo: DeploymentStepInfo => deploymentStatus += stepInfo.plan.id -> stepInfo
 
     case _: PerformDeployment =>
-      sender ! Status.Failure(new ConcurrentTaskUpgradeException("Deployment is already in progress"))
+      sender() ! Status.Failure(new ConcurrentTaskUpgradeException("Deployment is already in progress"))
 
     case RetrieveRunningDeployments =>
       val deployments: Iterable[(DeploymentPlan, DeploymentStepInfo)] = deploymentStatus.values.map(step => step.plan -> step)
-      sender ! RunningDeployments(deployments.toSeq)
+      sender() ! RunningDeployments(deployments.to[Seq])
   }
 
   def stopActor(ref: ActorRef, reason: Throwable): Future[Boolean] = {

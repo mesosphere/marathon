@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.Service
 import mesosphere.chaos.http.{ HttpService, HttpConf, HttpModule }
 import mesosphere.chaos.metrics.MetricsModule
 import java.io.File
+import java.util.concurrent.TimeUnit
 import org.apache.log4j.Logger
 import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
@@ -31,7 +32,7 @@ object ProcessKeeper {
     val injector = Guice.createInjector(new MetricsModule, new HttpModule(conf), new IntegrationTestModule)
     val http = injector.getInstance(classOf[HttpService])
     services = http :: services
-    http.start()
+    http.startAsync().awaitRunning()
   }
 
   def startZooKeeper(port: Int, workDir: String) {
@@ -89,7 +90,8 @@ object ProcessKeeper {
   }
 
   def stopAllServices(): Unit = {
-    services.foreach(s => Try(s.stop()))
+    services.foreach(_.stopAsync())
+    services.par.foreach(_.awaitTerminated(5, TimeUnit.SECONDS))
     services = Nil
   }
 

@@ -1,13 +1,12 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.mesos.protos._
-import mesosphere.mesos.protos
 import mesosphere.marathon.state.AppDefinition
+import mesosphere.mesos.protos
+import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.Offer
-import mesosphere.mesos.protos.OfferID
-import mesosphere.mesos.protos.FrameworkID
-import mesosphere.mesos.protos.RangesResource
+
+import scala.collection.immutable.Seq
 
 class PortsMatcherTest extends MarathonSpec {
 

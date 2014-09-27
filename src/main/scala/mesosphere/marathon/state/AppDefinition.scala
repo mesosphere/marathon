@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import java.lang.{ Double => JDouble, Integer => JInt }
 
 import com.fasterxml.jackson.annotation.{ JsonIgnoreProperties, JsonProperty }
-import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
@@ -15,6 +15,7 @@ import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.TaskState
 
+import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
@@ -87,7 +88,7 @@ case class AppDefinition(
   }
 
   def toProto: Protos.ServiceDefinition = {
-    val commandInfo = TaskBuilder.commandInfo(this, Seq())
+    val commandInfo = TaskBuilder.commandInfo(this, Seq.empty)
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
@@ -134,7 +135,7 @@ case class AppDefinition(
 
     val argsOption =
       if (commandOption.isEmpty)
-        Some(proto.getCmd.getArgumentsList.asScala)
+        Some(proto.getCmd.getArgumentsList.asScala.to[Seq])
       else None
 
     val containerOption =
@@ -153,7 +154,7 @@ case class AppDefinition(
       args = argsOption,
       executor = proto.getExecutor,
       instances = proto.getInstances,
-      ports = proto.getPortsList.asScala,
+      ports = proto.getPortsList.asScala.to[Seq],
       requirePorts = proto.getRequirePorts,
       backoff = proto.getBackoff.milliseconds,
       backoffFactor = proto.getBackoffFactor,
@@ -162,8 +163,8 @@ case class AppDefinition(
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
       env = envMap,
-      uris = proto.getCmd.getUrisList.asScala.map(_.getValue),
-      storeUrls = proto.getStoreUrlsList.asScala,
+      uris = proto.getCmd.getUrisList.asScala.map(_.getValue).to[Seq],
+      storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
       healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion),

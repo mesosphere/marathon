@@ -1,19 +1,19 @@
 package mesosphere.mesos
 
-import org.mockito.Mockito._
-
-import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
+import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
+import mesosphere.mesos.protos._
+import org.apache.mesos.Protos.{ Offer, TaskInfo }
+import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import scala.collection.mutable
+
+import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
-import com.google.common.collect.Lists
-import org.apache.mesos.Protos.{ Offer, TaskInfo }
-import mesosphere.mesos.protos._
 
 class TaskBuilderTest extends MarathonSpec {
 

@@ -7,6 +7,7 @@ import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration.Deadline
 
 class TaskQueueTest extends MarathonSpec {

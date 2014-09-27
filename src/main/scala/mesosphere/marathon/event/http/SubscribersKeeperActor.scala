@@ -28,7 +28,7 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
             event
         }
 
-      subscription pipeTo sender
+      subscription pipeTo sender()
 
     case event @ Unsubscribe(_, callbackUrl, _, _) =>
       val removeResult: Future[Option[EventSubscribers]] = remove(callbackUrl)
@@ -41,12 +41,12 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
             event
         }
 
-      subscription pipeTo sender
+      subscription pipeTo sender()
 
     case GetSubscribers =>
       val subscription = store.fetch(Subscribers).map(_.getOrElse(EventSubscribers()))
 
-      subscription pipeTo sender
+      subscription pipeTo sender()
   }
 
   protected[this] def add(callbackUrl: String): Future[Option[EventSubscribers]] =

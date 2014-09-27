@@ -17,6 +17,8 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
+import scala.collection.immutable.Seq
+
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -161,7 +163,7 @@ class AppsResource @Inject() (
     taskTracker.get(app.id).map { task =>
       val hcResults = result(healthCheckManager.status(app.id, task.getId))
       EnrichedTask(app.id, task, hcResults)
-    }.toSeq
+    }.to[Seq]
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))

@@ -1,7 +1,9 @@
 package mesosphere.marathon.state
 
+import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
-import PathId._
+
+import scala.collection.immutable.Seq
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 

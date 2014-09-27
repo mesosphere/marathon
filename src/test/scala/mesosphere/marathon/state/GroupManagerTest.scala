@@ -13,8 +13,9 @@ import org.rogach.scallop.ScallopConf
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ FunSuite, Matchers }
 
-import scala.concurrent.{ Await, Future }
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 
 class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
 

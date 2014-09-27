@@ -16,10 +16,11 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import org.apache.mesos.Protos.{ OfferID, TaskID, TaskInfo }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
-import org.mockito.Matchers.{ same, eq => mockEq }
+import org.mockito.Matchers.same
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfterAll
 
+import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Deadline
 
@@ -84,9 +85,9 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
     when(tracker.checkStagedTasks).thenReturn(Seq())
     when(queue.poll()).thenReturn(Some(queuedTask))
-    when(queue.list()).thenReturn(list)
+    when(queue.list).thenReturn(list)
     when(queue.removeAll()).thenReturn(list)
-    when(queue.listApps()).thenReturn(allApps)
+    when(queue.listApps).thenReturn(allApps)
 
     scheduler.resourceOffers(driver, offers)
 

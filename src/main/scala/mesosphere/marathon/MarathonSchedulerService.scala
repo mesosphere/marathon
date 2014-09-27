@@ -24,6 +24,7 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
 import org.apache.log4j.Logger
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration.{ MILLISECONDS, _ }
 import scala.concurrent.{ TimeoutException, Await, Future, Promise }
 import scala.util.{ Failure, Random, Success }

@@ -43,7 +43,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
     context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
-  final def receive = {
+  final def receive: PartialFunction[Any, Unit] = {
     val behavior =
       if (withHealthChecks) checkForHealthy
       else checkForRunning

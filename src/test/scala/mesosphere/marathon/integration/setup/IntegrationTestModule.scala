@@ -82,7 +82,7 @@ class CallbackEventHandler @Inject() () {
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
   def handleEvent(map: Map[String, Any]): Unit = {
-    val kind = map.getOrElse("eventType", "unknown").asInstanceOf[String]
+    val kind = map.get("eventType").map(_.toString).getOrElse("unknown")
     log.info(s"Received callback event: $kind with props $map")
     val event = CallbackEvent(kind, map)
     ExternalMarathonIntegrationTest.listener.foreach(_.handleEvent(event))

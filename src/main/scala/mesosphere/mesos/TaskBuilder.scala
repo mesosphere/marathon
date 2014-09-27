@@ -17,6 +17,7 @@ import mesosphere.marathon.tasks.{ PortsMatcher, TaskTracker }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 
+import scala.collection.immutable.Seq
 import scala.util.{ Failure, Success, Try }
 
 class TaskBuilder(app: AppDefinition,
@@ -42,7 +43,7 @@ class TaskBuilder(app: AppDefinition,
         diskRole = disk
         portsResource = ranges
       case _ =>
-        log.info(s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, disk=${app.disk}, ports=${app.ports}) : " + offer)
+        log.info(s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, disk=${app.disk}, ports=${app.requestedPorts}) : " + offer)
         return None
     }
 
@@ -53,7 +54,7 @@ class TaskBuilder(app: AppDefinition,
       Executor.dispatch(app.executor)
     }
 
-    val ports = portsResource.ranges.flatMap(_.asScala())
+    val ports = portsResource.ranges.flatMap(_.asScala()).to[Seq]
 
     val taskId = newTaskId(app.id)
     val builder = TaskInfo.newBuilder
@@ -231,19 +232,13 @@ object TaskBuilder {
   }
 
   private def isExtract(stringuri: String): Boolean = {
-    if (stringuri.endsWith(".tgz") ||
+    stringuri.endsWith(".tgz") ||
       stringuri.endsWith(".tar.gz") ||
       stringuri.endsWith(".tbz2") ||
       stringuri.endsWith(".tar.bz2") ||
       stringuri.endsWith(".txz") ||
       stringuri.endsWith(".tar.xz") ||
-      stringuri.endsWith(".zip")) {
-      return true;
-    }
-    else {
-      return false;
-    }
-
+      stringuri.endsWith(".zip")
   }
 
   def environment(vars: Map[String, String]) = {
