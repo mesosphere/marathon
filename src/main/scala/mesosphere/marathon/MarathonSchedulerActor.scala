@@ -93,25 +93,30 @@ class MarathonSchedulerActor(
     case cmd @ ScaleApp(appId) =>
       val origSender = sender()
       performAsyncWithLockFor(appId, origSender, cmd, blocking = false) {
-        scheduler.scale(driver, appId).sendAnswer(origSender, cmd)
+        val res = scheduler.scale(driver, appId)
+
+        if (origSender != Actor.noSender)
+          res.sendAnswer(origSender, cmd)
+        else
+          res
       }
 
     case cmd @ Deploy(plan, false) =>
-      deploy(sender, cmd, plan, blocking = false)
+      deploy(sender(), cmd, plan, blocking = false)
 
     case cmd @ Deploy(plan, true) =>
       deploymentManager ! CancelConflictingDeployments(
         plan,
         new DeploymentCanceledException("The upgrade has been cancelled")
       )
-      deploy(sender, cmd, plan, blocking = true)
+      deploy(sender(), cmd, plan, blocking = true)
 
     case cmd @ KillTasks(appId, taskIds, scale) =>
       val origSender = sender()
       performAsyncWithLockFor(appId, origSender, cmd, blocking = true) {
         val promise = Promise[Unit]()
         val tasksToKill = taskIds.flatMap(taskTracker.fetchTask(appId, _)).toSet
-        val actor = context.actorOf(Props(new TaskKillActor(driver, appId, taskTracker, eventBus, tasksToKill, promise)))
+        context.actorOf(Props(classOf[TaskKillActor], driver, appId, taskTracker, eventBus, tasksToKill, promise))
         val res = if (scale) {
           for {
             _ <- promise.future
@@ -195,7 +200,7 @@ class MarathonSchedulerActor(
 
     performAsyncWithLockFor(ids, origSender, cmd, isBlocking = blocking) {
       val res = deploy(driver, plan)
-      origSender ! cmd.answer
+      if (origSender != Actor.noSender) origSender ! cmd.answer
       res
     }
   }
