@@ -98,7 +98,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     log.debug("Checking the health of [{}] via TCP", address)
 
     Future {
-      val address = InetSocketAddress.createUnresolved(host, port)
+      val address = new InetSocketAddress(host, port)
       val socket = new Socket
       socket.connect(address, timeoutMillis)
       socket.close()
