@@ -172,6 +172,25 @@ class ConstraintsTest extends MarathonSpec {
     assert(clusterMet, "Should meet cluster constraints.")
   }
 
+  test("AttributesUnlikeByConstraints") {
+    val task1_rack1 = makeSampleTask("task1", Map("foo" -> "bar"))
+    val task2_rack1 = makeSampleTask("task2", Map("jdk" -> "7"))
+    val freshRack = Set(task1_rack1, task2_rack1)
+    val jdk7Constraint = makeConstraint("jdk", Constraint.Operator.UNLIKE, "7")
+
+    val clusterMet = Constraints.meetsConstraint(
+      freshRack, // list of tasks register in the cluster
+      makeOffer("foohost", Set(TextAttribute("jdk", "6"))), // slave attributes
+      jdk7Constraint)
+    assert(clusterMet, "Should meet cluster constraints.")
+
+    val clusterNotMet = Constraints.meetsConstraint(
+      freshRack, // list of tasks register in the cluster
+      makeOffer("foohost", Set(TextAttribute("jdk", "7"))), // slave attributes
+      jdk7Constraint)
+    assert(!clusterNotMet, "Should not meet cluster constraints.")
+  }
+
   test("RackGroupedByConstraints") {
     val task1_rack1 = makeSampleTask("task1", Map("rackid" -> "rack-1"))
     val task2_rack1 = makeSampleTask("task2", Map("rackid" -> "rack-1"))

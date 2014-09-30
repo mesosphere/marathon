@@ -121,3 +121,24 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start 
 ```
 
 Note, the parameter is required, or you'll get a warning.
+
+### UNLIKE operator
+
+Just like `LIKE` operator, but only run tasks on slaves whose field values don't match the regular expression.
+
+via the Marathon gem:
+
+``` bash
+$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:UNLIKE:rack-[7-9]
+```
+
+via curl:
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "UNLIKE", "rack-[7-9]"]]
+  }'
+```

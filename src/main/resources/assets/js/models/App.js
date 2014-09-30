@@ -25,7 +25,7 @@ define([
   var VALID_EXECUTOR_PATTERN = "^(|\\/\\/cmd|\\/?[^\\/]+(\\/[^\\/]+)*)$";
   var VALID_EXECUTOR_REGEX = new RegExp(VALID_EXECUTOR_PATTERN);
 
-  var VALID_CONSTRAINTS = ["unique", "cluster", "group_by"];
+  var VALID_CONSTRAINTS = ["unique", "like", "unlike", "cluster", "group_by"];
 
   function findHealthCheckMsg(healthCheckResults, context) {
     return healthCheckResults.map(function (hc, index) {
