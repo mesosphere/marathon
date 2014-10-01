@@ -174,11 +174,11 @@ case class AppDefinition(
   }
 
   def containerHostPorts(): Option[Seq[Int]] =
-    container.flatMap { c =>
-      c.docker.flatMap { d =>
-        d.portMappings.map { pms => pms.map(_.hostPort) }
-      }
-    }
+    for {
+      c <- container
+      d <- c.docker
+      pms <- d.portMappings
+    } yield pms.map(_.hostPort)
 
   def requestedPorts(): Seq[Int] =
     containerHostPorts.getOrElse(ports.map(_.toInt))

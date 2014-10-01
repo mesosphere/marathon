@@ -98,9 +98,11 @@ object Container {
       Docker(
         image = proto.getImage,
         if (proto.hasNetwork) Some(proto.getNetwork) else None,
-        proto.getPortMappingsList.asScala match {
-          case pms if pms.isEmpty => None
-          case pms                => Some(pms.map(PortMapping(_)).to[Seq])
+        {
+          val pms = proto.getPortMappingsList.asScala
+
+          if (pms.isEmpty) None
+          else Some(pms.map(PortMapping(_)).to[Seq])
         }
       )
 
