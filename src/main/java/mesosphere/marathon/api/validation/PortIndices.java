@@ -9,7 +9,7 @@ import java.lang.annotation.*;
 @Constraint(validatedBy = PortIndicesValidator.class)
 @Documented
 public @interface PortIndices {
-     String message() default "Port indices must address an element of this app's ports array.";
+     String message() default "Health check port indices must address an element of the ports array or container port mappings.";
      Class<?>[] groups() default {};
      Class<? extends Payload>[] payload() default { };
 }

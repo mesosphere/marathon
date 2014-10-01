@@ -71,8 +71,10 @@ class TaskBuilder(app: AppDefinition,
     val containerProto: Option[ContainerInfo] =
       app.container.map { c =>
         val portMappings = c.docker.map { d =>
-          d.portMappings zip ports map {
-            case (mapping, port) => mapping.copy(hostPort = port.toInt)
+          d.portMappings.map { pms =>
+            pms zip ports map {
+              case (mapping, port) => mapping.copy(hostPort = port.toInt)
+            }
           }
         }
         val containerWithPortMappings = portMappings match {

@@ -82,11 +82,13 @@ object Container {
   case class Docker(
       image: String = "",
       network: Option[mesos.ContainerInfo.DockerInfo.Network] = None,
-      portMappings: Seq[Docker.PortMapping] = Nil) {
+      portMappings: Option[Seq[Docker.PortMapping]] = None) {
     def toProto(): mesos.ContainerInfo.DockerInfo = {
       val builder = mesos.ContainerInfo.DockerInfo.newBuilder.setImage(image)
       network foreach builder.setNetwork
-      builder.addAllPortMappings(portMappings.map(_.toProto).asJava)
+      portMappings.foreach { pms =>
+        builder.addAllPortMappings(pms.map(_.toProto).asJava)
+      }
       builder.build
     }
   }
@@ -96,7 +98,10 @@ object Container {
       Docker(
         image = proto.getImage,
         if (proto.hasNetwork) Some(proto.getNetwork) else None,
-        proto.getPortMappingsList.asScala.map(PortMapping.apply).to[Seq]
+        proto.getPortMappingsList.asScala match {
+          case pms if pms.isEmpty => None
+          case pms                => Some(pms.map(PortMapping(_)).to[Seq])
+        }
       )
 
     /**

@@ -28,7 +28,7 @@ class PortsMatcher(app: AppDefinition, offer: Offer) extends Logging {
   def portRanges: Option[RangesResource] = {
 
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
-      app.container.flatMap(_.docker.map(_.portMappings)).filter(_.nonEmpty)
+      app.container.flatMap(_.docker.flatMap(_.portMappings)).filter(_.nonEmpty)
 
     (app.ports, portMappings) match {
       case (Nil, None) =>

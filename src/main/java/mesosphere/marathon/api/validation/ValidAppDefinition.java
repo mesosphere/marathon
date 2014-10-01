@@ -9,7 +9,7 @@ import java.lang.annotation.*;
 @Constraint(validatedBy = AppDefinitionValidator.class)
 @Documented
 public @interface ValidAppDefinition {
-  String message() default "AppDefinition must either contain a 'cmd' or a 'container'.";
+  String message() default "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.";
   Class<?>[] groups() default {};
   Class<? extends Payload>[] payload() default {};
 }

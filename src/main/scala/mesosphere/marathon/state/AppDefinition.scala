@@ -14,7 +14,6 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.TaskState
-
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -73,15 +72,16 @@ case class AppDefinition(
 
   assert(
     portIndicesAreValid(),
-    "Port indices must address an element of this app's ports array."
+    "Health check port indices must address an element of the ports array or container port mappings."
   )
 
   /**
     * Returns true if all health check port index values are in the range
-    * of ths app's ports array.
+    * of ths app's ports array, or if defined, the array of container
+    * port mappings.
     */
   def portIndicesAreValid(): Boolean = {
-    val validPortIndices = 0 until ports.size
+    val validPortIndices = 0 until requestedPorts.size
     healthChecks.forall { hc =>
       validPortIndices contains hc.portIndex
     }
@@ -174,7 +174,11 @@ case class AppDefinition(
   }
 
   def containerHostPorts(): Option[Seq[Int]] =
-    container.flatMap(_.docker.map(_.portMappings.map(_.hostPort)))
+    container.flatMap { c =>
+      c.docker.flatMap { d =>
+        d.portMappings.map { pms => pms.map(_.hostPort) }
+      }
+    }
 
   def requestedPorts(): Seq[Int] =
     containerHostPorts.getOrElse(ports.map(_.toInt))

@@ -38,11 +38,11 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
       docker = Some(Docker(
         image = "busybox",
         network = Some(Network.BRIDGE),
-        portMappings = Seq(
+        portMappings = Some(Seq(
           PortMapping(containerPort = 8080, hostPort = 0, protocol = "tcp"),
           PortMapping (containerPort = 9000, hostPort = 10555, protocol = "udp"),
           PortMapping(containerPort = 9001, hostPort = 0, protocol = "tcp")
-        )
+        ))
       ))
     )
     val group = Group(PathId.empty, Set(

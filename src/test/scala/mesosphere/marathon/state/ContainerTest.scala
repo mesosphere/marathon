@@ -31,10 +31,10 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
         Container.Docker(
           image = "group/image",
           network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Seq(
+          portMappings = Some(Seq(
             Container.Docker.PortMapping(8080, 32001, "tcp"),
             Container.Docker.PortMapping(8081, 32002, "udp")
-          )
+          ))
         )
       )
     )
@@ -53,7 +53,7 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
     assert(mesos.ContainerInfo.Type.DOCKER == proto2.getType)
     assert("group/image" == proto2.getDocker.getImage)
     assert(f.container2.docker.get.network == Some(proto2.getDocker.getNetwork))
-    assert(f.container2.docker.get.portMappings == proto2.getDocker.getPortMappingsList.asScala.map(Container.Docker.PortMapping.apply))
+    assert(f.container2.docker.get.portMappings == Some(proto2.getDocker.getPortMappingsList.asScala.map(Container.Docker.PortMapping.apply)))
   }
 
   test("ConstructFromProto") {
