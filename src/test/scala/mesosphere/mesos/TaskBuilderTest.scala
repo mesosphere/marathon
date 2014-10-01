@@ -58,6 +58,12 @@ class TaskBuilderTest extends MarathonSpec {
     assert(cmd.getArgumentsList.asScala.isEmpty)
     assert(cmd.getValue == "foo")
 
+    assert(cmd.hasEnvironment)
+    val envVars = cmd.getEnvironment.getVariablesList.asScala
+    assert(envVars.exists(v => v.getName == "HOST" && v.getValue == offer.getHostname))
+    assert(envVars.exists(v => v.getName == "PORT0" && v.getValue.nonEmpty))
+    assert(envVars.exists(v => v.getName == "PORT1" && v.getValue.nonEmpty))
+
     for (r <- taskInfo.getResourcesList.asScala) {
       assert("*" == r.getRole)
     }
@@ -410,16 +416,20 @@ class TaskBuilderTest extends MarathonSpec {
   test("TaskNoURIExtraction") {
 
     val command =
-      TaskBuilder.commandInfo(AppDefinition(
-        id = "testApp".toPath,
-        cpus = 1,
-        mem = 64,
-        disk = 1,
-        executor = "//cmd",
-        uris = Seq("http://www.example.com", "http://www.example.com/test.tgz",
-          "example.tar.gz"),
-        ports = Seq(8080, 8081)
-      ), Seq(1000, 1001))
+      TaskBuilder.commandInfo(
+        AppDefinition(
+          id = "testApp".toPath,
+          cpus = 1,
+          mem = 64,
+          disk = 1,
+          executor = "//cmd",
+          uris = Seq("http://www.example.com", "http://www.example.com/test.tgz",
+            "example.tar.gz"),
+          ports = Seq(8080, 8081)
+        ),
+        Some("host.mega.corp"),
+        Seq(1000, 1001)
+      )
 
     val uriinfo1 = command.getUris(0)
     assert(!uriinfo1.getExtract)
