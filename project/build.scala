@@ -4,6 +4,7 @@ import sbtassembly.Plugin._
 import AssemblyKeys._
 import sbtrelease.ReleasePlugin._
 import com.typesafe.sbt.SbtScalariform._
+import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import ohnosequences.sbt.SbtS3Resolver.S3Resolver
 import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
 import org.scalastyle.sbt.ScalastylePlugin.{ Settings => styleSettings }
@@ -22,6 +23,7 @@ object MarathonBuild extends Build {
                formatSettings ++
                styleSettings ++
                revolverSettings ++
+               graphSettings ++
       Seq(
         libraryDependencies ++= Dependencies.root,
         parallelExecution in Test := false,
@@ -172,8 +174,8 @@ object Dependency {
 
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
-  val sprayClient = "io.spray" % "spray-client" % V.Spray
-  val sprayHttpx = "io.spray" % "spray-httpx" % V.Spray
+  val sprayClient = "io.spray" %% "spray-client" % V.Spray
+  val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
   val json4s = "org.json4s" %% "json4s-jackson" % V.Json4s
   val chaos = "mesosphere" %% "chaos" % V.Chaos
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
