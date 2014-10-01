@@ -113,7 +113,7 @@ _env:_: [Environent] key/value pairs that get added to the environment variables
 
 _executor:_ [String] the executor to use to launch this application. Different executors are available. The simplest one (and the default if none is given) is //cmd, which takes the cmd and executes that on the shell level.
 
-_constraints:_ [Array[String]] Valid constraint operators are one of ["UNIQUE", "LIKE", "CLUSTER", "GROUP_BY"].  For additional information on using placement constraints see [Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.com/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
+_constraints:_ [Array[String]] Valid constraint operators are one of ["UNIQUE", "LIKE", "UNLIKE", "CLUSTER", "GROUP_BY"].  For additional information on using placement constraints see [Marathon, a Mesos framework, adds Placement Constraints](http://mesosphere.com/2013/11/22/marathon-a-mesos-framework-adds-placement-constraints).
 
 _instances:_: The number of instances of this application to start. Please note: this number can be changed everytime as needed to scale the application.
 
@@ -142,7 +142,7 @@ _version:_ [String] ISODate string, which shows the last change of the applicati
 
 ##### `constraints`
 
-Valid constraint operators are one of ["UNIQUE", "CLUSTER",
+Valid constraint operators are one of ["UNIQUE", "LIKE", "UNLIKE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
 the [Constraints wiki page](https://github.com/mesosphere/marathon/wiki/Constraints).
 

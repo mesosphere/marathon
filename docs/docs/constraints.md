@@ -5,7 +5,7 @@ title: Constraints
 # Constraints
 
 Constraints control where apps run to allow optimizing for fault tolerance or locality.
-Constraints can be set via the REST API or the [Marathon gem](https://rubygems.org/gems/marathon_client) when starting an app. Make sure to use the gem version 0.2.0 or later for constraint support. Constraints are made up of three parts: a field name, an operator, and an optional value. The field can be the slave hostname or any Mesos slave attribute.
+Constraints can be set via the REST API or the [Marathon gem](https://rubygems.org/gems/marathon_client) when starting an app. Make sure to use the gem version 0.2.0 or later for constraint support. Constraints are made up of three parts: a field name, an operator, and an optional parameter. The field can be the slave hostname or any Mesos slave attribute.
 
 ## Fields
 
@@ -101,12 +101,12 @@ Optionally, you can specify a minimum number of groups to try and achieve.
 
 ### LIKE operator
 
-Just like the `CLUSTER` operator, but matches substring of the field value.
+`LIKE` accepts a regular expression as parameter, and allows you to run your tasks only on the slaves whose field values match the regular expression.
 
 via the Marathon gem:
 
 ``` bash
-$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:LIKE:rack-1
+$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:LIKE:rack-[1-3]
 ```
 
 via curl:
@@ -116,8 +116,29 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start 
     "id": "sleep-group-by",
     "cmd": "sleep 60",
     "instances": 3,
-    "constraints": [["rack_id", "LIKE", "rack-1"]]
+    "constraints": [["rack_id", "LIKE", "rack-[1-3]"]]
   }'
 ```
 
-Note that this will match all values containing `rack-1`, such as `rack-111` and `my-rack-123`. Also, the value is required, or you'll get a warning.
+Note, the parameter is required, or you'll get a warning.
+
+### UNLIKE operator
+
+Just like `LIKE` operator, but only run tasks on slaves whose field values don't match the regular expression.
+
+via the Marathon gem:
+
+``` bash
+$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:UNLIKE:rack-[7-9]
+```
+
+via curl:
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "UNLIKE", "rack-[7-9]"]]
+  }'
+```

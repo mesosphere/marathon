@@ -20,6 +20,8 @@ message Constraint {
       CLUSTER = 2;
       // Tasks will be grouped by field. Value specifies the minimum size of each group.
       GROUP_BY = 3;
+      // Field must not match the regex given by value.
+      UNLIKE = 4;
   }
   required Operator operator = 2;
   optional string value = 3;
