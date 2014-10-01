@@ -27,7 +27,7 @@ stop() {
   start-stop-daemon --stop --quiet --pidfile "$PID"
 }
 
-case "$1" in
+case "${1-}" in
   start)
     echo -n "Starting $DESC: "
     start
