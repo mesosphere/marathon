@@ -1,13 +1,15 @@
 package mesosphere.marathon.state
 
-import javax.validation.Validation
-
-import com.google.common.collect.Lists
 import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
+
+import com.google.common.collect.Lists
+import javax.validation.Validation
 import org.apache.mesos.Protos.CommandInfo
 import org.scalatest.Matchers
 
@@ -114,14 +116,19 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       assert(
         violations.exists { v =>
           v.getPropertyPath.toString == path && v.getMessageTemplate.toString == template
-        }
+        },
+        s"Violations:\n${violations.mkString}"
       )
     }
 
     def shouldNotViolate(app: AppDefinition, path: String, template: String) = {
       val violations = checkApp(app, PathId.empty)
-      assert(!violations.exists(v =>
-        v.getPropertyPath.toString == path && v.getMessageTemplate == template))
+      assert(
+        !violations.exists { v =>
+          v.getPropertyPath.toString == path && v.getMessageTemplate == template
+        },
+        s"Violations:\n${violations.mkString}"
+      )
     }
 
     val idError = "contains invalid characters (allowed: [a-z0-9]* . and .. in path)"
@@ -187,13 +194,30 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     shouldViolate(
       correct.copy(cmd = Some("command"), args = Some(Seq("a", "b", "c"))),
       "",
-      "AppDefinition must either contain a 'cmd' or a 'container'."
+      "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
 
     shouldNotViolate(
       correct.copy(cmd = None, args = Some(Seq("a", "b", "c"))),
       "",
-      "AppDefinition must either contain a 'cmd' or a 'container'."
+      "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
+    )
+
+    shouldNotViolate(
+      correct.copy(
+        container = Some(Container(
+          docker = Some(Docker(
+            portMappings = Some(Seq(
+              Docker.PortMapping(8080, 0, "tcp"),
+              Docker.PortMapping(8081, 0, "tcp")
+            ))
+          ))
+        )),
+        ports = Nil,
+        healthChecks = Set(HealthCheck(portIndex = 1))
+      ),
+      "",
+      "Health check port indices must address an element of the ports array or container port mappings."
     )
 
   }
