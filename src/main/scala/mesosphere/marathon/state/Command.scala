@@ -19,55 +19,6 @@ case class Command(value: String)
       .setValue(this.value)
       .build
 
-  def toProtoWithEnvironment(
-    task: Protos.MarathonTask): MesosProtos.CommandInfo = {
-
-    val variables = mutable.Buffer[MesosProtos.Environment.Variable]()
-
-    // the task ID is exposed as $TASK_ID
-    variables +=
-      MesosProtos.Environment.Variable.newBuilder
-      .setName("TASK_ID")
-      .setValue(task.getId)
-      .build
-
-    // the task host is exposed as $HOST
-    if (task.hasHost) variables +=
-      MesosProtos.Environment.Variable.newBuilder
-      .setName("HOST")
-      .setValue(task.getHost)
-      .build
-
-    val ports = task.getPortsList.asScala
-
-    // the first port (if any) is exposed as $PORT
-    ports.headOption.foreach { firstPort =>
-      variables +=
-        MesosProtos.Environment.Variable.newBuilder
-        .setName(s"PORT")
-        .setValue(firstPort.toString)
-        .build
-    }
-
-    // task ports are exposed as $PORT0 through $PORT{ n - 1 }
-    ports.zipWithIndex.foreach {
-      case (port, i) =>
-        variables +=
-          MesosProtos.Environment.Variable.newBuilder
-          .setName(s"PORT$i")
-          .setValue(port.toString)
-          .build
-    }
-
-    val env = MesosProtos.Environment.newBuilder
-      .addAllVariables(variables.asJava)
-      .build
-
-    this.toProto.toBuilder
-      .setEnvironment(env)
-      .build
-  }
-
   def mergeFromProto(proto: MesosProtos.CommandInfo): Command =
     Command(value = proto.getValue)
 

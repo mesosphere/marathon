@@ -54,6 +54,8 @@ class TaskBuilder(app: AppDefinition,
       Executor.dispatch(app.executor)
     }
 
+    val host: Option[String] = Some(offer.getHostname)
+
     val ports = portsResource.ranges.flatMap(_.asScala()).to[Seq]
 
     val taskId = newTaskId(app.id)
@@ -86,7 +88,7 @@ class TaskBuilder(app: AppDefinition,
 
     executor match {
       case CommandExecutor() =>
-        builder.setCommand(TaskBuilder.commandInfo(app, ports))
+        builder.setCommand(TaskBuilder.commandInfo(app, host, ports))
         for (c <- containerProto) builder.setContainer(c)
 
       case PathExecutor(path) =>
@@ -95,7 +97,7 @@ class TaskBuilder(app: AppDefinition,
         val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
         val command =
-          TaskBuilder.commandInfo(app, ports).toBuilder.setValue(shell)
+          TaskBuilder.commandInfo(app, host, ports).toBuilder.setValue(shell)
 
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
@@ -197,8 +199,8 @@ class TaskBuilder(app: AppDefinition,
 
 object TaskBuilder {
 
-  def commandInfo(app: AppDefinition, ports: Seq[Long]) = {
-    val envMap = app.env ++ portsEnv(ports)
+  def commandInfo(app: AppDefinition, host: Option[String], ports: Seq[Long]) = {
+    val envMap = app.env ++ portsEnv(ports) ++ host.map("HOST" -> _)
 
     val builder = CommandInfo.newBuilder()
       .setEnvironment(environment(envMap))
