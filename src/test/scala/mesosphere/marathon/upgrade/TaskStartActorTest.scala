@@ -2,12 +2,13 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
-import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
+import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.tasks.TaskQueue
+import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
 import org.apache.mesos.SchedulerDriver
+import org.apache.mesos.state.InMemoryState
 import org.mockito.Mockito.{ spy, times, verify }
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
@@ -31,6 +32,7 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
     val promise = Promise[Unit]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
@@ -39,6 +41,7 @@ class TaskStartActorTest
       driver,
       scheduler,
       taskQueue,
+      taskTracker,
       system.eventStream,
       app,
       app.instances,
@@ -61,6 +64,7 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 0)
 
@@ -69,6 +73,7 @@ class TaskStartActorTest
       driver,
       scheduler,
       taskQueue,
+      taskTracker,
       system.eventStream,
       app,
       app.instances,
@@ -86,6 +91,7 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
@@ -94,6 +100,7 @@ class TaskStartActorTest
       driver,
       scheduler,
       taskQueue,
+      taskTracker,
       system.eventStream,
       app,
       app.instances,
@@ -116,6 +123,7 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 0)
 
@@ -124,6 +132,7 @@ class TaskStartActorTest
       driver,
       scheduler,
       taskQueue,
+      taskTracker,
       system.eventStream,
       app,
       app.instances,
@@ -141,6 +150,7 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
@@ -149,6 +159,7 @@ class TaskStartActorTest
       driver,
       scheduler,
       taskQueue,
+      taskTracker,
       system.eventStream,
       app,
       app.instances,
@@ -170,6 +181,7 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = spy(new TaskQueue)
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
     val promise = Promise[Unit]()
     val app = AppDefinition("myApp".toPath, instances = 1)
 
@@ -178,6 +190,7 @@ class TaskStartActorTest
       driver,
       scheduler,
       taskQueue,
+      taskTracker,
       system.eventStream,
       app,
       app.instances,

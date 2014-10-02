@@ -2,8 +2,9 @@ package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestKit }
 import akka.actor.{ Props, ActorSystem }
-import mesosphere.marathon.tasks.TaskQueue
-import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions, MarathonSpec }
+import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
+import mesosphere.marathon.{ MarathonConf, AppStartCanceledException, SchedulerActions, MarathonSpec }
+import org.apache.mesos.state.InMemoryState
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 import org.scalatest.mock.MockitoSugar
 import org.apache.mesos.SchedulerDriver
@@ -24,11 +25,13 @@ class AppStartActorTest
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
   var taskQueue: TaskQueue = _
+  var taskTracker: TaskTracker = _
 
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
     taskQueue = new TaskQueue
+    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
   }
 
   test("Without Health Checks") {
@@ -40,6 +43,7 @@ class AppStartActorTest
         driver,
         scheduler,
         taskQueue,
+        taskTracker,
         system.eventStream,
         app,
         2,
@@ -66,6 +70,7 @@ class AppStartActorTest
         driver,
         scheduler,
         taskQueue,
+        taskTracker,
         system.eventStream,
         app,
         2,
@@ -92,6 +97,7 @@ class AppStartActorTest
         driver,
         scheduler,
         taskQueue,
+        taskTracker,
         system.eventStream,
         app,
         2,
@@ -120,6 +126,7 @@ class AppStartActorTest
         driver,
         scheduler,
         taskQueue,
+        taskTracker,
         system.eventStream,
         app,
         0,
@@ -143,6 +150,7 @@ class AppStartActorTest
         driver,
         scheduler,
         taskQueue,
+        taskTracker,
         system.eventStream,
         app,
         0,
