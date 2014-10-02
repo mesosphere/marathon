@@ -5,7 +5,8 @@ import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent, HealthStatusChanged }
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.TaskQueue
+import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
+import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._
@@ -20,6 +21,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   def taskQueue: TaskQueue
   def driver: SchedulerDriver
   def scheduler: SchedulerActions
+  def taskTracker: TaskTracker
 
   val app: AppDefinition
   val Version = app.version.toString
@@ -71,9 +73,10 @@ trait StartingBehavior { this: Actor with ActorLogging =>
       taskQueue.add(app)
 
     case Sync =>
-      val queueCount = taskQueue.count(app)
-      if (queueCount + runningTasks.size < expectedSize) {
-        scheduler.scale(driver, app.copy(instances = expectedSize))
+      val actualSize = taskQueue.count(app) + taskTracker.count(app.id)
+
+      if (actualSize < expectedSize) {
+        for (_ <- 0 until (expectedSize - actualSize)) taskQueue.add(app)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }

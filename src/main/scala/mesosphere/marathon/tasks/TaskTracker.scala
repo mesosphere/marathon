@@ -138,13 +138,13 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     }
   }
 
+  def stagedTasks = apps.values.flatMap(_.tasks.values.filter(_.getStartedAt == 0))
+
   def checkStagedTasks: Iterable[MarathonTask] = {
     // stagedAt is set when the task is created by the scheduler
     val now = System.currentTimeMillis
     val expires = now - Main.conf.taskLaunchTimeout()
-    val toKill = apps.values.map { app =>
-      app.tasks.values.filter(t => Option(t.getStartedAt).isEmpty && t.getStagedAt < expires)
-    }.flatten
+    val toKill = stagedTasks.filter(_.getStagedAt < expires)
 
     toKill.foreach(t => {
       log.warn(s"Task '${t.getId}' was staged ${(now - t.getStagedAt) / 1000}s ago and has not yet started")
