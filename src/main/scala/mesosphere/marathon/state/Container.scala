@@ -3,6 +3,7 @@ package mesosphere.marathon.state
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.util.Try
+import java.lang.{ Integer => JInt }
 import org.apache.mesos.{ Protos => mesos }
 import mesosphere.marathon.Protos
 
@@ -10,11 +11,20 @@ case class Container(
     `type`: mesos.ContainerInfo.Type = mesos.ContainerInfo.Type.DOCKER,
     volumes: Seq[Container.Volume] = Nil,
     docker: Option[Container.Docker] = None) {
-  def toProto(): mesos.ContainerInfo = {
-    val builder = mesos.ContainerInfo.newBuilder
-      .setType(mesos.ContainerInfo.Type.DOCKER)
+
+  def toProto(): Protos.ExtendedContainerInfo = {
+    val builder = Protos.ExtendedContainerInfo.newBuilder
+      .setType(`type`)
       .addAllVolumes(volumes.map(_.toProto).asJava)
     docker.foreach { d => builder.setDocker(d.toProto) }
+    builder.build
+  }
+
+  def toMesos(): mesos.ContainerInfo = {
+    val builder = mesos.ContainerInfo.newBuilder
+      .setType(`type`)
+      .addAllVolumes(volumes.map(_.toProto).asJava)
+    docker.foreach { d => builder.setDocker(d.toMesos) }
     builder.build
   }
 }
@@ -23,7 +33,7 @@ object Container {
 
   object Empty extends Container
 
-  def apply(proto: mesos.ContainerInfo): Container =
+  def apply(proto: Protos.ExtendedContainerInfo): Container =
     Container(
       `type` = proto.getType,
       volumes = proto.getVolumesList.asScala.map(Container.Volume(_)).to[Seq],
@@ -83,18 +93,28 @@ object Container {
       image: String = "",
       network: Option[mesos.ContainerInfo.DockerInfo.Network] = None,
       portMappings: Option[Seq[Docker.PortMapping]] = None) {
-    def toProto(): mesos.ContainerInfo.DockerInfo = {
-      val builder = mesos.ContainerInfo.DockerInfo.newBuilder.setImage(image)
+
+    def toProto(): Protos.ExtendedContainerInfo.DockerInfo = {
+      val builder = Protos.ExtendedContainerInfo.DockerInfo.newBuilder.setImage(image)
       network foreach builder.setNetwork
       portMappings.foreach { pms =>
         builder.addAllPortMappings(pms.map(_.toProto).asJava)
       }
       builder.build
     }
+
+    def toMesos(): mesos.ContainerInfo.DockerInfo = {
+      val builder = mesos.ContainerInfo.DockerInfo.newBuilder.setImage(image)
+      network foreach builder.setNetwork
+      portMappings.foreach { pms =>
+        builder.addAllPortMappings(pms.map(_.toMesos).asJava)
+      }
+      builder.build
+    }
   }
 
   object Docker {
-    def apply(proto: mesos.ContainerInfo.DockerInfo): Docker =
+    def apply(proto: Protos.ExtendedContainerInfo.DockerInfo): Docker =
       Docker(
         image = proto.getImage,
         if (proto.hasNetwork) Some(proto.getNetwork) else None,
@@ -108,14 +128,26 @@ object Container {
 
     /**
       * @param containerPort The container port to expose
-      * @param hostPort  The host port to bind
-      * @param protocol  Layer 4 protocol to expose (i.e. tcp, udp).
+      * @param hostPort      The host port to bind
+      * @param servicePort   The well-known port for this service
+      * @param protocol      Layer 4 protocol to expose (i.e. tcp, udp).
       */
     case class PortMapping(
-        containerPort: Int,
-        hostPort: Int,
-        protocol: String) {
-      def toProto(): mesos.ContainerInfo.DockerInfo.PortMapping = {
+        containerPort: JInt,
+        hostPort: JInt = 0,
+        servicePort: JInt = 0,
+        protocol: String = "tcp") {
+
+      def toProto(): Protos.ExtendedContainerInfo.DockerInfo.PortMapping = {
+        Protos.ExtendedContainerInfo.DockerInfo.PortMapping.newBuilder
+          .setContainerPort(containerPort)
+          .setHostPort(hostPort)
+          .setProtocol(protocol)
+          .setServicePort(servicePort)
+          .build
+      }
+
+      def toMesos(): mesos.ContainerInfo.DockerInfo.PortMapping = {
         mesos.ContainerInfo.DockerInfo.PortMapping.newBuilder
           .setContainerPort(containerPort)
           .setHostPort(hostPort)
@@ -125,13 +157,13 @@ object Container {
     }
 
     object PortMapping {
-      def apply(proto: mesos.ContainerInfo.DockerInfo.PortMapping): PortMapping =
+      def apply(proto: Protos.ExtendedContainerInfo.DockerInfo.PortMapping): PortMapping =
         PortMapping(
           proto.getContainerPort,
           proto.getHostPort,
+          proto.getServicePort,
           proto.getProtocol
         )
-
     }
 
   }

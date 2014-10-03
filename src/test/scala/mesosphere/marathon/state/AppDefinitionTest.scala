@@ -10,7 +10,7 @@ import mesosphere.marathon.state.PathId._
 
 import com.google.common.collect.Lists
 import javax.validation.Validation
-import org.apache.mesos.Protos.CommandInfo
+import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq
@@ -71,7 +71,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
   }
 
   test("MergeFromProto") {
-    val cmd = CommandInfo.newBuilder
+    val cmd = mesos.CommandInfo.newBuilder
       .setValue("bash foo-*/start -Dhttp.port=$PORT")
 
     val proto1 = ServiceDefinition.newBuilder
@@ -207,9 +207,10 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       correct.copy(
         container = Some(Container(
           docker = Some(Docker(
+            network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
             portMappings = Some(Seq(
-              Docker.PortMapping(8080, 0, "tcp"),
-              Docker.PortMapping(8081, 0, "tcp")
+              Docker.PortMapping(8080, 0, 0, "tcp"),
+              Docker.PortMapping(8081, 0, 0, "tcp")
             ))
           ))
         )),
@@ -295,6 +296,42 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     val readResult3 = mapper.readValue(json3, classOf[AppDefinition])
     assert(readResult3 == app3)
 
+    import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    import mesosphere.marathon.state.Container.Docker.PortMapping
+    import java.lang.{ Integer => JInt }
+
+    val app4 = AppDefinition(
+      id = "bridged-webapp".toPath,
+      cmd = Some("python3 -m http.server 8080"),
+      container = Some(Container(
+        docker = Some(Docker(
+          image = "python:3",
+          network = Some(Network.BRIDGE),
+          portMappings = Some(Seq(
+            PortMapping(containerPort = 8080, hostPort = 0, servicePort = 9000, protocol = "tcp")
+          ))
+        ))
+      ))
+    )
+
+    val json4 = """
+      {
+        "id": "bridged-webapp",
+        "cmd": "python3 -m http.server 8080",
+        "container": {
+          "type": "DOCKER",
+          "docker": {
+            "image": "python:3",
+            "network": "BRIDGE",
+            "portMappings": [
+              { "containerPort": 8080, "hostPort": 0, "servicePort": 9000, "protocol": "tcp" }
+            ]
+          }
+        }
+      }
+    """
+    val readResult4 = mapper.readValue(json4, classOf[AppDefinition])
+    assert(readResult4.copy(version = app4.version) == app4)
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {

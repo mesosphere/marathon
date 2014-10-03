@@ -161,6 +161,9 @@ class MarathonModule extends Module {
       jgen.writeStartObject()
       jgen.writeObjectField("appId", enriched.appId)
       MarathonTaskSerializer.writeFieldValues(enriched.task, jgen, provider)
+      if (enriched.servicePorts.nonEmpty) {
+        jgen.writeObjectField("servicePorts", enriched.servicePorts)
+      }
       if (enriched.healthCheckResults.nonEmpty) {
         jgen.writeObjectField("healthCheckResults", enriched.healthCheckResults)
       }

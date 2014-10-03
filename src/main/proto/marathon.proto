@@ -62,7 +62,7 @@ message ServiceDefinition {
   repeated string dependencies = 16;
   repeated string storeUrls = 17;
   optional bool require_ports = 18 [default = false];
-  optional mesos.ContainerInfo container = 19;
+  optional ExtendedContainerInfo container = 19;
 }
 
 message MarathonTask {
@@ -85,6 +85,32 @@ message MarathonApp {
 message ContainerInfo {
   required bytes image = 1 [default = ""];
   repeated bytes options = 2;
+}
+
+// Copied from mesos.proto
+// Extends DockerInfo.PortMapping to include `service_port`.
+message ExtendedContainerInfo {
+
+  message DockerInfo {
+
+    required string image = 1;
+
+    optional mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];
+
+    message PortMapping {
+      required uint32 host_port = 1;
+      required uint32 container_port = 2;
+      optional string protocol = 3;
+      optional uint32 service_port = 100 [default = 0];
+    }
+
+    repeated PortMapping port_mappings = 3;
+  }
+
+  required mesos.ContainerInfo.Type type = 1;
+  repeated mesos.Volume volumes = 2;
+
+  optional DockerInfo docker = 3;
 }
 
 message EventSubscribers {

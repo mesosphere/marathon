@@ -43,7 +43,7 @@ class TaskBuilder(app: AppDefinition,
         diskRole = disk
         portsResource = ranges
       case _ =>
-        log.info(s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, disk=${app.disk}, ports=${app.requestedPorts}) : " + offer)
+        log.info(s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, disk=${app.disk}, ports=${app.hostPorts}) : " + offer)
         return None
     }
 
@@ -85,7 +85,7 @@ class TaskBuilder(app: AppDefinition,
             docker = c.docker.map { _.copy(portMappings = newMappings) }
           )
         }
-        containerWithPortMappings.toProto
+        containerWithPortMappings.toMesos
       }
 
     executor match {

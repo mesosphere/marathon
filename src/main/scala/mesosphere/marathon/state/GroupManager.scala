@@ -186,12 +186,9 @@ class GroupManager @Singleton @Inject() (
         if (alreadyAssigned.nonEmpty) alreadyAssigned.dequeue()
         else nextGlobalFreePort
 
-      // dynamic ports defined in container port mappings
-      val containerPorts: Option[Seq[JInt]] =
-        app.containerHostPorts.map(_.map(p => new JInt(p)))
-
-      val ports: Seq[JInt] = containerPorts.getOrElse(app.ports)
-        .map { port => if (port == 0) nextFreeAppPort else port }
+      val ports: Seq[JInt] = app.servicePorts.map { port =>
+        if (port == 0) nextFreeAppPort else new JInt(port)
+      }
 
       app.copy(ports = ports)
     }
