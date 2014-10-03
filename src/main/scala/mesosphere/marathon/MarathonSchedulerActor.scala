@@ -199,6 +199,8 @@ class MarathonSchedulerActor(
     val ids = plan.affectedApplicationIds
 
     performAsyncWithLockFor(ids, origSender, cmd, isBlocking = blocking) {
+      ids.foreach(taskQueue.rateLimiter.resetDelay)
+
       val res = deploy(driver, plan)
       if (origSender != Actor.noSender) origSender ! cmd.answer
       res
@@ -327,6 +329,7 @@ class SchedulerActions(
       }
       taskQueue.purge(app.id)
       taskTracker.shutdown(app.id)
+      taskQueue.rateLimiter.resetDelay(app.id)
       // TODO after all tasks have been killed we should remove the app from taskTracker
     }
   }

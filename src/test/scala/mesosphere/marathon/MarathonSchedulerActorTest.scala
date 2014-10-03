@@ -12,7 +12,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.upgrade.{ DeploymentStep, StopApplication, DeploymentPlan }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
 import mesosphere.mesos.util.FrameworkIdUtil
@@ -55,7 +55,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     deploymentRepo = mock[DeploymentRepository]
     hcManager = mock[HealthCheckManager]
     tracker = mock[TaskTracker]
-    queue = mock[TaskQueue]
+    queue = spy(new TaskQueue)
     frameworkIdUtil = mock[FrameworkIdUtil]
     taskIdUtil = new TaskIdUtil
     storage = mock[StorageProvider]
@@ -196,6 +196,30 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val answer = probe.expectMsgType[DeploymentSuccess]
     answer.id should be(plan.id)
+
+    system.eventStream.unsubscribe(probe.ref)
+  }
+
+  test("Deployment resets rate limiter for affected apps") {
+    val probe = TestProbe()
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val origGroup = Group(PathId("/foo/bar"), Set(app))
+
+    val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
+
+    val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
+
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
+
+    system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
+
+    queue.rateLimiter.addDelay(app)
+
+    schedulerActor ! Deploy(plan)
+
+    expectMsg(DeploymentStarted(plan))
+
+    awaitCond(queue.rateLimiter.getDelay(app).isOverdue(), 200.millis)
 
     system.eventStream.unsubscribe(probe.ref)
   }
