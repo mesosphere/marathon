@@ -133,15 +133,17 @@ Let's begin by taking an example app definition:
 Here `"hostPort": 0` retains the traditional meaning in Marathon, which is "a
 random port from the range included in the Mesos resource offer". The resulting
 host ports for each task are exposed via the task details in the REST API and
-the Marathon web UI.
+the Marathon web UI. `"hostPort"` is optional and defaults to `0`.
 
 `"servicePort"` is a helper port intended for doing service discovery using
-a well-known port per service.  The `servicePort` parameter is optional,
-defaulting to `0`.  Like `hostPort`, If the value is `0`, a random port will
+a well-known port per service.  The `servicePort` parameter is optional
+and defaults to `0`.  Like `hostPort`, If the value is `0`, a random port will
 be assigned.  The values for random service ports are in the
 range `[local_port_min, local_port_max]` where `local_port_min` and
 `local_port_max` are command line options with default values of `10000` and
 `20000`, respectively.
+
+The `"protocol"` parameter is optional and defaults to `"tcp"`.
 
 **Static port mapping:**
 
