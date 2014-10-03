@@ -130,7 +130,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
 
       case Some(task) =>
         log.debug(s"Ignoring status update for ${task.getId}. Status did not change.")
-        Future.successful(None)
+        Future.successful(Some(task))
 
       case _ =>
         log.warn(s"No task for ID $taskId")
