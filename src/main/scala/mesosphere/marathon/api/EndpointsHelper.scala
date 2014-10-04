@@ -21,7 +21,9 @@ object EndpointsHelper {
       val cleanId = app.id.safePath.replaceAll("\\s+", "_")
       val tasks = taskTracker.get(app.id)
 
-      if (app.ports.isEmpty) {
+      val servicePorts = app.servicePorts()
+
+      if (servicePorts.isEmpty) {
         sb.append(s"${cleanId}$delimiter $delimiter")
         for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
           sb.append(s"${task.getHost} ")
@@ -29,7 +31,7 @@ object EndpointsHelper {
         sb.append(s"\n")
       }
       else {
-        for ((port, i) <- app.ports.zipWithIndex) {
+        for ((port, i) <- servicePorts.zipWithIndex) {
           sb.append(s"$cleanId$delimiter$port$delimiter")
           for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
             val ports = task.getPortsList.asScala.lift

@@ -39,7 +39,8 @@ class TasksResource @Inject() (
               EnrichedTask(
                 appId,
                 task,
-                result(healthCheckManager.status(appId, task.getId))
+                result(healthCheckManager.status(appId, task.getId)),
+                service.getApp(appId).map(_.servicePorts).getOrElse(Nil)
               )
           }
       }

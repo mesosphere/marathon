@@ -8,11 +8,13 @@ import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.Protos
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.apache.mesos.Protos.TaskState
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
@@ -81,7 +83,7 @@ case class AppDefinition(
     * port mappings.
     */
   def portIndicesAreValid(): Boolean = {
-    val validPortIndices = 0 until requestedPorts.size
+    val validPortIndices = 0 until hostPorts.size
     healthChecks.forall { hc =>
       validPortIndices contains hc.portIndex
     }
@@ -173,17 +175,27 @@ case class AppDefinition(
     )
   }
 
-  def containerHostPorts(): Option[Seq[Int]] =
+  def portMappings(): Option[Seq[PortMapping]] =
     for {
       c <- container
       d <- c.docker
+      n <- d.network if n == Network.BRIDGE
       pms <- d.portMappings
-    } yield pms.map(_.hostPort)
+    } yield pms
 
-  def requestedPorts(): Seq[Int] =
+  def containerHostPorts(): Option[Seq[Int]] =
+    for (pms <- portMappings) yield pms.map(_.hostPort.toInt)
+
+  def containerServicePorts(): Option[Seq[Int]] =
+    for (pms <- portMappings) yield pms.map(_.servicePort.toInt)
+
+  def hostPorts(): Seq[Int] =
     containerHostPorts.getOrElse(ports.map(_.toInt))
 
-  def hasDynamicPort(): Boolean = requestedPorts.contains(0)
+  def servicePorts(): Seq[Int] =
+    containerServicePorts.getOrElse(ports.map(_.toInt))
+
+  def hasDynamicPort(): Boolean = servicePorts.contains(0)
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)

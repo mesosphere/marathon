@@ -10,7 +10,7 @@
       "image": "python:3",
       "network": "BRIDGE",
       "portMappings": [
-        { "containerPort": 8080, "hostPort": 0, "protocol": "tcp"},
+        { "containerPort": 8080, "hostPort": 0, "servicePort": 9000, "protocol": "tcp" },
         { "containerPort": 161, "hostPort": 0, "protocol": "udp"}
       ]
     }
@@ -26,4 +26,3 @@
     }
   ]
 }
-

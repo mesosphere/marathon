@@ -39,9 +39,9 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
         image = "busybox",
         network = Some(Network.BRIDGE),
         portMappings = Some(Seq(
-          PortMapping(containerPort = 8080, hostPort = 0, protocol = "tcp"),
-          PortMapping (containerPort = 9000, hostPort = 10555, protocol = "udp"),
-          PortMapping(containerPort = 9001, hostPort = 0, protocol = "tcp")
+          PortMapping(containerPort = 8080, hostPort = 0, servicePort = 0, protocol = "tcp"),
+          PortMapping (containerPort = 9000, hostPort = 10555, servicePort = 10555, protocol = "udp"),
+          PortMapping(containerPort = 9001, hostPort = 0, servicePort = 0, protocol = "tcp")
         ))
       ))
     )
@@ -76,7 +76,6 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
   }
 
   test("Don't store invalid groups") {
-
     val scheduler = mock[MarathonSchedulerService]
     val taskTracker = mock[TaskTracker]
     val groupRepo = mock[GroupRepository]
