@@ -55,9 +55,9 @@ The full JSON format of an application resource is as follows:
 
 {% highlight json %}
 {
-    "id": "/product/service/myApp",
+    "id": "/product/service/my-app",
     "cmd": "env && sleep 300",
-    "args": ["/bin/sh", "-c", "env && sleep 300"]
+    "args": ["/bin/sh", "-c", "env && sleep 300"],
     "container": {
         "type": "DOCKER",
         "docker": {
@@ -128,9 +128,7 @@ The full JSON format of an application resource is as follows:
             "maxConsecutiveFailures": 3
         }
     ],
-    "id": "my-app",
     "instances": 3,
-    "mem": 256.0,
     "ports": [
         8080,
         9000
