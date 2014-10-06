@@ -26,7 +26,7 @@ after_success:
   - |
     tar -czv -f "$ARTIFACT" --transform "s,,marathon-$PROJECT_VERSION/," \
       Dockerfile README.md REST.md LICENSE bin examples docs \
-      target/scala-2.10/marathon-assembly-*.jar
+      target/scala-2.11/marathon-assembly-*.jar
   - shasum --binary --algorithm 256 "$ARTIFACT" > "$ARTIFACT".sha256
   - travis-artifacts upload --path "$ARTIFACT" --target-path marathon/"$TRAVIS_BRANCH"/
   - travis-artifacts upload --path "$ARTIFACT".sha256 --target-path marathon/"$TRAVIS_BRANCH"/
