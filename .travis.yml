@@ -25,7 +25,7 @@ after_success:
   # Prepend a marathon version dir to the tarball elements (requires GNU tar)
   - |
     tar -czv -f "$ARTIFACT" --transform "s,,marathon-$PROJECT_VERSION/," \
-      Dockerfile README.md REST.md LICENSE bin examples docs \
+      Dockerfile README.md LICENSE bin examples docs \
       target/scala-2.11/marathon-assembly-*.jar
   - shasum --binary --algorithm 256 "$ARTIFACT" > "$ARTIFACT".sha256
   - travis-artifacts upload --path "$ARTIFACT" --target-path marathon/"$TRAVIS_BRANCH"/
