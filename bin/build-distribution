@@ -18,7 +18,7 @@ function main {
 
 function runnable_jar {
   local script=bin/marathon-framework
-  local jars=( target/scala-2.10/marathon-assembly-*.jar )
+  local jars=( target/scala-2.11/marathon-assembly-*.jar )
   case ${#jars[@]} in
     0) err 'No jars to concatenate.' ;;
     1) printf 'Concatenating\n  %s\n  %s\nto form\n  %s\n' \
