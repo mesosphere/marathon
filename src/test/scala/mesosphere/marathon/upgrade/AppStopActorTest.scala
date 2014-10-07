@@ -53,8 +53,8 @@ class AppStopActorTest
     )
     watch(ref)
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", "task_a", "TASK_KILLED", app.id, "", Nil, app.version.toString))
-    system.eventStream.publish(MesosStatusUpdateEvent("", "task_b", "TASK_KILLED", app.id, "", Nil, app.version.toString))
+    system.eventStream.publish(MesosStatusUpdateEvent("", "task_a", "TASK_KILLED", "", app.id, "", Nil, app.version.toString))
+    system.eventStream.publish(MesosStatusUpdateEvent("", "task_b", "TASK_KILLED", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 5.seconds)
 
