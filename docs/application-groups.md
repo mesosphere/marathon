@@ -40,7 +40,7 @@ The definition could look like this:
 ## Dependencies 
 
 Applications can have dependencies. For example a Play application could require a database to run. 
-If the dependencies are defined in the application specification, than Marathon keeps track of the
+If the dependencies are defined in the application specification, then Marathon keeps track of the
 correct order of action for starting, stopping and upgrading the applications.
 
 Dependencies can be expressed on the level of applications and on the level of application groups.

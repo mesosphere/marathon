@@ -55,13 +55,27 @@ The full JSON format of an application resource is as follows:
 
 {% highlight json %}
 {
-    "id": "/product/service/myApp",
+    "id": "/product/service/my-app",
     "cmd": "env && sleep 300",
-    "args": ["/bin/sh", "-c", "env && sleep 300"]
+    "args": ["/bin/sh", "-c", "env && sleep 300"],
     "container": {
         "type": "DOCKER",
         "docker": {
-            "image": "group/image"
+            "image": "group/image",
+            "network": "BRIDGE",
+            "portMappings": {
+                {
+                    "containerPort": 8080,
+                    "hostPort": 0,
+                    "servicePort": 9000,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 161,
+                    "hostPort": 0,
+                    "protocol": "udp"
+                }
+            }
         },
         "volumes": [
             {
@@ -114,9 +128,7 @@ The full JSON format of an application resource is as follows:
             "maxConsecutiveFailures": 3
         }
     ],
-    "id": "my-app",
     "instances": 3,
-    "mem": 256.0,
     "ports": [
         8080,
         9000
@@ -235,7 +247,7 @@ The `minimumHealthCapacity` defines the minimum number of healthy nodes, that do
 It is a number between `0` and `1` which is multiplied with the instance count. 
 The default `minimumHealthCapacity` is `1`, which means no old instance can be stopped, before all new instances are deployed. 
 A value of `0.5` means that an upgrade can be deployed side by side, by taking half of the instances down in the first step, 
-deploy half of the new version and than take the other half down and deploy the rest. 
+deploy half of the new version and then take the other half down and deploy the rest. 
 A value of `0` means take all instances down immediately and replace with the new application.
 
 ##### Example
@@ -419,6 +431,7 @@ Transfer-Encoding: chunked
                         {
                             "containerPort": 8080,
                             "hostPort": 0,
+                            "servicePort": 9000,
                             "protocol": "tcp"
                         },
                         {
@@ -1544,10 +1557,10 @@ List tasks of all applications.
 {% highlight http %}
 GET /v2/tasks HTTP/1.1
 Accept: application/json
-Accept-Encoding: gzip, deflate, compress
+Accept-Encoding: gzip, deflate
 Content-Type: application/json; charset=utf-8
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
 {% endhighlight %}
 
 **Response:**
@@ -1561,43 +1574,56 @@ Transfer-Encoding: chunked
 {
     "tasks": [
         {
-            "appId": "my-app", 
-            "host": "agouti.local", 
-            "id": "my-app_2-1396592796360", 
-            "ports": [
-                31364, 
-                31365
+            "appId": "/bridged-webapp", 
+            "healthCheckResults": [
+                {
+                    "alive": true, 
+                    "consecutiveFailures": 0, 
+                    "firstSuccess": "2014-10-03T22:57:02.246Z", 
+                    "lastFailure": null, 
+                    "lastSuccess": "2014-10-03T22:57:41.643Z", 
+                    "taskId": "bridged-webapp.eb76c51f-4b4a-11e4-ae49-56847afe9799"
+                }
             ], 
-            "stagedAt": "2014-04-04T06:26:36.362Z", 
-            "startedAt": "2014-04-04T06:26:37.285Z", 
-            "version": "2014-04-04T06:26:23.051Z"
+            "host": "10.141.141.10", 
+            "id": "bridged-webapp.eb76c51f-4b4a-11e4-ae49-56847afe9799", 
+            "ports": [
+                31000
+            ], 
+            "servicePorts": [
+                9000
+            ], 
+            "stagedAt": "2014-10-03T22:16:27.811Z", 
+            "startedAt": "2014-10-03T22:57:41.587Z", 
+            "version": "2014-10-03T22:16:23.634Z"
         }, 
         {
-            "appId": "my-app", 
-            "host": "agouti.local", 
-            "id": "my-app_1-1396592790353", 
-            "ports": [
-                31336, 
-                31337
+            "appId": "/bridged-webapp", 
+            "healthCheckResults": [
+                {
+                    "alive": true, 
+                    "consecutiveFailures": 0, 
+                    "firstSuccess": "2014-10-03T22:57:02.246Z", 
+                    "lastFailure": null, 
+                    "lastSuccess": "2014-10-03T22:57:41.649Z", 
+                    "taskId": "bridged-webapp.ef0b5d91-4b4a-11e4-ae49-56847afe9799"
+                }
             ], 
-            "stagedAt": "2014-04-04T06:26:30.355Z", 
-            "startedAt": "2014-04-04T06:26:30.860Z", 
-            "version": "2014-04-04T06:26:23.051Z"
-        }, 
-        {
-            "appId": "my-app", 
-            "host": "agouti.local", 
-            "id": "my-app_0-1396592784349", 
+            "host": "10.141.141.10", 
+            "id": "bridged-webapp.ef0b5d91-4b4a-11e4-ae49-56847afe9799", 
             "ports": [
-                31382, 
-                31383
+                31001
             ], 
-            "stagedAt": "2014-04-04T06:26:24.351Z", 
-            "startedAt": "2014-04-04T06:26:24.919Z", 
-            "version": "2014-04-04T06:26:23.051Z"
+            "servicePorts": [
+                9000
+            ], 
+            "stagedAt": "2014-10-03T22:16:33.814Z", 
+            "startedAt": "2014-10-03T22:57:41.593Z", 
+            "version": "2014-10-03T22:16:23.634Z"
         }
     ]
 }
+
 {% endhighlight %}
 
 ##### Example (as text)
@@ -1623,7 +1649,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382  
-my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383  
+my-app2  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383  
 {% endhighlight %}
 
 ### Deployments
