@@ -1,10 +1,10 @@
 package mesosphere.marathon.upgrade
 
 import akka.actor.{ ActorSystem, Props }
-import akka.testkit.{ TestActorRef, TestKit }
+import akka.testkit.{ TestProbe, TestActorRef, TestKit }
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.event.{ HistoryActor, AppTerminatedEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.state.{ TaskFailureEvent, TaskFailureEventRepository, AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions, TaskUpgradeCanceledException }
@@ -26,11 +26,13 @@ class AppStopActorTest
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
   var taskTracker: TaskTracker = _
+  var taskFailureEventRepository: TaskFailureEventRepository = _
 
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
     taskTracker = mock[TaskTracker]
+    taskFailureEventRepository = mock[TaskFailureEventRepository]
   }
 
   test("Stop App") {
@@ -53,13 +55,35 @@ class AppStopActorTest
     )
     watch(ref)
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", "task_a", "TASK_KILLED", "", app.id, "", Nil, app.version.toString))
-    system.eventStream.publish(MesosStatusUpdateEvent("", "task_b", "TASK_KILLED", "", app.id, "", Nil, app.version.toString))
+    val historyRef = TestActorRef[HistoryActor](
+      Props(
+        new HistoryActor(
+          system.eventStream,
+          taskFailureEventRepository
+        )
+      )
+    )
+
+    val statusUpdateEventA = MesosStatusUpdateEvent("", "task_a", "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+    val statusUpdateEventB = MesosStatusUpdateEvent("", "task_b", "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+    system.eventStream.publish(statusUpdateEventA)
+    system.eventStream.publish(statusUpdateEventB)
 
     Await.result(promise.future, 5.seconds)
 
     verify(scheduler).stopApp(driver, app)
+
+    system.eventStream.publish(AppTerminatedEvent(app.id))
+
     expectTerminated(ref)
+
+    watch(historyRef)
+    verify(taskFailureEventRepository, times(2)).store(
+      app.id, TaskFailureEvent(app.id, statusUpdateEventA.message, timestamp = statusUpdateEventA.timestamp))
+    verify(taskFailureEventRepository, times(2)).store(
+      app.id, TaskFailureEvent(app.id, statusUpdateEventB.message, timestamp = statusUpdateEventB.timestamp))
+
+    verify(taskFailureEventRepository, times(1)).expunge(app.id)
   }
 
   test("Stop App without running tasks") {
