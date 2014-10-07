@@ -213,6 +213,12 @@ case class AppDefinition(
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTasksAndDeployments =
     new AppDefinition.WithTasksAndDeployments(appTasks, runningDeployments, this)
 
+  def withTasksAndDeploymentsAndFailures(appTasks: Seq[EnrichedTask],
+                                         runningDeployments: Seq[DeploymentPlan],
+                                         taskFailureEvent: Option[TaskFailureEvent]): AppDefinition.WithTasksAndDeploymentsAndTaskFailureEvents = {
+    new AppDefinition.WithTasksAndDeploymentsAndTaskFailureEvents(appTasks, runningDeployments, taskFailureEvent, this)
+  }
+
   def isOnlyScaleChange(to: AppDefinition): Boolean =
     !isUpgrade(to) && (instances != to.instances)
 
@@ -310,6 +316,16 @@ object AppDefinition {
 
     @JsonProperty
     def tasks = appTasks
+  }
+
+  protected[marathon] class WithTasksAndDeploymentsAndTaskFailureEvents(appTasks: Seq[EnrichedTask],
+                                                                        runningDeployments: Seq[DeploymentPlan],
+                                                                        taskFailureEvent: Option[TaskFailureEvent],
+                                                                        private val app: AppDefinition)
+      extends WithTaskCountsAndDeployments(appTasks, runningDeployments, app) {
+
+    @JsonProperty
+    def lastTaskFailure = taskFailureEvent.getOrElse(None)
   }
 
 }

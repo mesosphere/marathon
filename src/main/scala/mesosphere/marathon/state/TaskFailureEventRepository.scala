@@ -1,8 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.event.TaskFailureEvent
-
-class TaskFailureEventRepository(val store: PersistenceStore[TaskFailureEvent], appRepo: AppRepository, val maxVersions: Option[Int] = None) { //extends EntityRepository[TaskFailureEvent] {
+class TaskFailureEventRepository(val store: PersistenceStore[TaskFailureEvent], val maxVersions: Option[Int] = None) { //extends EntityRepository[TaskFailureEvent] {
 
   val taskFailuresMap = scala.collection.mutable.Map[PathId, TaskFailureEvent]()
 
@@ -14,8 +12,8 @@ class TaskFailureEventRepository(val store: PersistenceStore[TaskFailureEvent], 
     taskFailuresMap -= id
   }
 
-  def current(id: PathId) = {
-    taskFailuresMap(id)
+  def current(id: PathId): Option[TaskFailureEvent] = {
+    if (taskFailuresMap.contains(id)) Some(taskFailuresMap(id)) else None
   }
 
 }

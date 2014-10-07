@@ -141,3 +141,8 @@ message DeploymentPlanDefinition {
   required GroupDefinition original = 4;
   required GroupDefinition target = 5;
 }
+
+message TaskFailureEvent {
+  required string id = 1;
+  required string message = 2;
+}

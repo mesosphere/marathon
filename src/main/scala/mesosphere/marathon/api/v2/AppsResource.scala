@@ -27,11 +27,13 @@ class AppsResource @Inject() (
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
+    taskFailureEventRepository: TaskFailureEventRepository,
     val config: MarathonConf,
     groupManager: GroupManager) extends RestResource with ModelValidation {
 
   val ListApps = """^((?:.+/)|)\*$""".r
   val EmbedTasks = "apps.tasks"
+  val EmbedTasksAndFailures = "apps.failures"
 
   @GET
   @Timed
@@ -43,6 +45,9 @@ class AppsResource @Inject() (
     val mapped =
       if (embed == EmbedTasks) apps.map { app =>
         app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
+      }
+      else if (embed == EmbedTasksAndFailures) apps.map { app =>
+        app.withTasksAndDeploymentsAndFailures(enrichedTasks(app), runningDeployments, taskFailureEventRepository.current(app.id))
       }
       else apps.map { app =>
         app.withTaskCountsAndDeployments(enrichedTasks(app), runningDeployments)

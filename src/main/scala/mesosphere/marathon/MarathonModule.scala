@@ -96,6 +96,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     taskIdUtil: TaskIdUtil,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
+    taskFailureEventRepository: TaskFailureEventRepository,
     config: MarathonConf): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
@@ -114,6 +115,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         taskIdUtil,
         storage,
         eventBus,
+        taskFailureEventRepository,
         config).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }
@@ -138,6 +140,12 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     }
     None
   }
+
+  @Provides
+  @Singleton
+  def provideTaskFailureEventRepository(state: State, conf: MarathonConf): TaskFailureEventRepository = new TaskFailureEventRepository(
+    new MarathonStore[TaskFailureEvent](state, () => TaskFailureEvent.apply()), conf.zooKeeperMaxVersions.get
+  )
 
   @Provides
   @Singleton

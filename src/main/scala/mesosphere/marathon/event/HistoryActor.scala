@@ -2,7 +2,7 @@ package mesosphere.marathon.event
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
-import mesosphere.marathon.state.{ PathId, TaskFailureEventRepository }
+import mesosphere.marathon.state.{ TaskFailureEvent, PathId, TaskFailureEventRepository }
 
 class HistoryActor(eventBus: EventStream, taskFailureEventRepository: TaskFailureEventRepository)
     extends Actor with ActorLogging {
