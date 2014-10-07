@@ -6,7 +6,7 @@ title: Command Line Flags
 
 The following options can influence how Marathon works:
 
-_All options can be also set by environment variable `MARATON_OPTION_NAME` (the option name with a `MARATHON_` prefix added to it), for example`MARATHON_MASTER` for `--master` option._
+*All options can be also set by environment variable `MARATON_OPTION_NAME` (the option name with a `MARATHON_` prefix added to it), for example `MARATHON_MASTER` for `--master` option.  Please note that command line potions precedes environment variables.  This means if both `MARATHON_MASTER` and `--master` were set, `--master` will be activated.*
 
 ### Required Flags
 
