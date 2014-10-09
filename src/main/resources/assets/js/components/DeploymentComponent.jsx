@@ -34,6 +34,8 @@ define([
         "text-warning": model.get("currentStep") < model.get("totalSteps")
       });
 
+      var progressStep = Math.max(0, model.get("currentStep") - 1);
+
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         // Set `title` on cells that potentially overflow so hovering on the
@@ -58,7 +60,7 @@ define([
           </td>
           <td className="text-right">
             <span className={isDeployingClassSet}>
-              {model.get("currentStep") - 1}
+              {progressStep}
             </span> / {model.get("totalSteps")}
           </td>
           <td className="text-right">
