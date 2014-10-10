@@ -11,10 +11,10 @@ import org.slf4j.LoggerFactory
 
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.event.{ DeploymentFailed, DeploymentSuccess }
+import mesosphere.marathon.event.{ HistoryActor, AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ DeploymentRepository, AppDefinition, AppRepository, PathId }
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
@@ -39,6 +39,7 @@ class MarathonSchedulerActor(
     taskIdUtil: TaskIdUtil,
     storage: StorageProvider,
     eventBus: EventStream,
+    taskFailureRepository: TaskFailureRepository,
     config: MarathonConf) extends Actor with ActorLogging with Stash {
   import context.dispatcher
 
@@ -48,6 +49,7 @@ class MarathonSchedulerActor(
   var scheduler: SchedulerActions = _
 
   var deploymentManager: ActorRef = _
+  var historyActor: ActorRef = _
 
   override def preStart(): Unit = {
 
@@ -64,6 +66,9 @@ class MarathonSchedulerActor(
 
     deploymentManager = context.actorOf(
       Props(classOf[DeploymentManager], appRepository, taskTracker, taskQueue, scheduler, storage, eventBus), "UpgradeManager")
+
+    historyActor = context.actorOf(
+      Props(classOf[HistoryActor], eventBus, taskFailureRepository), "HistoryActor")
 
     deploymentRepository.all() onComplete {
       case Success(deployments) => self ! RecoveredDeployments(deployments)
@@ -331,6 +336,8 @@ class SchedulerActions(
       taskTracker.shutdown(app.id)
       taskQueue.rateLimiter.resetDelay(app.id)
       // TODO after all tasks have been killed we should remove the app from taskTracker
+
+      eventBus.publish(AppTerminatedEvent(app.id))
     }
   }
 

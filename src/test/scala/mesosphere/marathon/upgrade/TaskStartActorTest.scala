@@ -53,7 +53,7 @@ class TaskStartActorTest
     awaitCond(taskQueue.count(app) == 5, 3.seconds)
 
     for ((task, i) <- taskQueue.removeAll().zipWithIndex)
-      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", app.id, "", Nil, app.version.toString))
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
 
@@ -202,14 +202,14 @@ class TaskStartActorTest
     awaitCond(taskQueue.count(app) == 1, 3.seconds)
 
     for (task <- taskQueue.removeAll())
-      system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", app.id, "", Nil, app.version.toString))
+      system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", "", app.id, "", Nil, app.version.toString))
 
     awaitCond(taskQueue.count(app) == 1, 3.seconds)
 
     verify(taskQueue, times(2)).add(app)
 
     for (task <- taskQueue.removeAll())
-      system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", app.id, "", Nil, app.version.toString))
+      system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
 

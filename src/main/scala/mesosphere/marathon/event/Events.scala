@@ -158,10 +158,16 @@ case class DeploymentStepFailure(
 
 // Mesos scheduler
 
+case class AppTerminatedEvent(
+  appId: PathId,
+  eventType: String = "app_terminated_event",
+  timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
 case class MesosStatusUpdateEvent(
   slaveId: String,
   taskId: String,
   taskStatus: String,
+  message: String,
   appId: PathId,
   host: String,
   ports: Iterable[Integer],

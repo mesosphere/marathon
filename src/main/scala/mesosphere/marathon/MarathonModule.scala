@@ -96,6 +96,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     taskIdUtil: TaskIdUtil,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
+    taskFailureRepository: TaskFailureRepository,
     config: MarathonConf): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
@@ -114,6 +115,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         taskIdUtil,
         storage,
         eventBus,
+        taskFailureRepository,
         config).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }
@@ -137,6 +139,24 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       return Some(candidate)
     }
     None
+  }
+
+  @Provides
+  @Singleton
+  def provideTaskFailureRepository(state: State, conf: MarathonConf): TaskFailureRepository = {
+    import mesosphere.marathon.state.PathId
+    import org.apache.mesos.{ Protos => mesos }
+    new TaskFailureRepository(
+      new MarathonStore[TaskFailure](
+        state,
+        () => TaskFailure(
+          PathId.empty,
+          mesos.TaskID.newBuilder().setValue("").build,
+          mesos.TaskState.TASK_STAGING
+        )
+      ),
+      conf.zooKeeperMaxVersions.get
+    )
   }
 
   @Provides

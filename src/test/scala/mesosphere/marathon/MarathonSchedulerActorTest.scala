@@ -45,6 +45,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var driver: SchedulerDriver = _
   var taskIdUtil: TaskIdUtil = _
   var storage: StorageProvider = _
+  var taskFailureEventRepository: TaskFailureRepository = _
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -59,6 +60,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     frameworkIdUtil = mock[FrameworkIdUtil]
     taskIdUtil = new TaskIdUtil
     storage = mock[StorageProvider]
+    taskFailureEventRepository = mock[TaskFailureRepository]
 
     when(deploymentRepo.store(any())).thenAnswer(new Answer[Future[DeploymentPlan]] {
       override def answer(p1: InvocationOnMock): Future[DeploymentPlan] = {
@@ -82,6 +84,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       taskIdUtil,
       storage,
       system.eventStream,
+      taskFailureEventRepository,
       mock[MarathonConf]
     ))
   }
@@ -157,9 +160,11 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(tracker.count(app.id)).thenReturn(0)
     when(repo.store(any())).thenReturn(Future.successful(app))
 
+    val statusUpdateEvent = MesosStatusUpdateEvent("", taskA.getId, "TASK_FAILED", "", app.id, "", Nil, app.version.toString)
+
     when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", app.id, "", Nil, app.version.toString))
+        system.eventStream.publish(statusUpdateEvent)
         Status.DRIVER_RUNNING
       }
     })
@@ -173,6 +178,10 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
 
     expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
+
+    val Some(taskFailureEvent) = TaskFailure.FromMesosStatusUpdateEvent(statusUpdateEvent)
+
+    verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent)
 
     verify(repo, times(3)).store(app.copy(instances = 0))
   }
@@ -271,6 +280,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       taskIdUtil,
       storage,
       system.eventStream,
+      taskFailureEventRepository,
       mock[MarathonConf]
     ))
 

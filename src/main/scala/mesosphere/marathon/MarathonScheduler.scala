@@ -240,6 +240,7 @@ class MarathonScheduler @Inject() (
         status.getSlaveId.getValue,
         status.getTaskId.getValue,
         status.getState.name,
+        if (status.hasMessage) status.getMessage else "",
         taskIdUtil.appId(status.getTaskId),
         task.getHost,
         task.getPortsList.asScala,
