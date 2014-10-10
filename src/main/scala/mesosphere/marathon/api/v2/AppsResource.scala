@@ -47,7 +47,11 @@ class AppsResource @Inject() (
         app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
       }
       else if (embed == EmbedTasksAndFailures) apps.map { app =>
-        app.withTasksAndDeploymentsAndFailures(enrichedTasks(app), runningDeployments, taskFailureRepository.current(app.id))
+        app.withTasksAndDeploymentsAndFailures(
+          enrichedTasks(app),
+          runningDeployments,
+          taskFailureRepository.current(app.id)
+        )
       }
       else apps.map { app =>
         app.withTaskCountsAndDeployments(enrichedTasks(app), runningDeployments)
@@ -75,14 +79,21 @@ class AppsResource @Inject() (
     def transitiveApps(gid: PathId) = {
       val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
       val withTasks = apps.map { app =>
-        app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
+        app.withTasksAndDeploymentsAndFailures(
+          enrichedTasks(app),
+          runningDeployments,
+          taskFailureRepository.current(app.id)
+        )
       }
       ok(Map("*" -> withTasks))
     }
     def app() = service.getApp(id.toRootPath) match {
       case Some(app) =>
-        val mapped =
-          app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
+        val mapped = app.withTasksAndDeploymentsAndFailures(
+          enrichedTasks(app),
+          runningDeployments,
+          taskFailureRepository.current(app.id)
+        )
         ok(Map("app" -> mapped))
 
       case None => unknownApp(id.toRootPath)

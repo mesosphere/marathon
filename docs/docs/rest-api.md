@@ -635,6 +635,15 @@ Transfer-Encoding: chunked
         ],
         "id": "/toggle",
         "instances": 2,
+        "lastTaskFailure": {
+            "appId": "/toggle",
+            "host": "10.141.141.10",
+            "message": "Abnormal executor termination",
+            "state": "TASK_FAILED",
+            "taskId": "toggle.cc427e60-5046-11e4-9e34-56847afe9799",
+            "timestamp": "2014-09-12T23:23:41.711Z",
+            "version": "2014-09-12T23:28:21.737Z"
+        },
         "mem": 32.0,
         "ports": [
             10000
