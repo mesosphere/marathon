@@ -6,6 +6,8 @@ title: Command Line Flags
 
 The following options can influence how Marathon works:
 
+*All options can be also set by environment variable `MARATON_OPTION_NAME` (the option name with a `MARATHON_` prefix added to it), for example `MARATHON_MASTER` for `--master` option.  Please note that command line options precede environment variables.  This means that if the `MARATHON_MASTER` environment variable is set and `--master` is supplied on the command line, then the environment variable is ignored.*
+
 ### Required Flags
 
 * `--master` (Required): The URL of the Mesos master. The format is a

@@ -56,6 +56,10 @@ function load_options_and_log {
       cmd+=( --master "$(cat /etc/mesos/zk)" )
     fi
   fi
+  for env_op in `env |grep ^MARATHON_ | sed -e 's/MARATHON_//' -e 's/=/ /'| awk '{printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'| sed -e 's/ $//'`; do
+    cmd+=( "$env_op" )
+  done
+  echo "${cmd[@]}"
   logged marathon "${cmd[@]}" "$@"
 }
 
