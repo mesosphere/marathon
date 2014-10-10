@@ -4,7 +4,7 @@ import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestProbe, TestActorRef, TestKit }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event.{ HistoryActor, AppTerminatedEvent, MesosStatusUpdateEvent }
-import mesosphere.marathon.state.{ TaskFailureEvent, TaskFailureEventRepository, AppDefinition, PathId }
+import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions, TaskUpgradeCanceledException }
@@ -26,13 +26,13 @@ class AppStopActorTest
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
   var taskTracker: TaskTracker = _
-  var taskFailureEventRepository: TaskFailureEventRepository = _
+  var taskFailureRepository: TaskFailureRepository = _
 
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
     taskTracker = mock[TaskTracker]
-    taskFailureEventRepository = mock[TaskFailureEventRepository]
+    taskFailureRepository = mock[TaskFailureRepository]
   }
 
   test("Stop App") {
@@ -59,13 +59,23 @@ class AppStopActorTest
       Props(
         new HistoryActor(
           system.eventStream,
-          taskFailureEventRepository
+          taskFailureRepository
         )
       )
     )
 
-    val statusUpdateEventA = MesosStatusUpdateEvent("", "task_a", "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
-    val statusUpdateEventB = MesosStatusUpdateEvent("", "task_b", "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+    val statusUpdateEventA =
+      MesosStatusUpdateEvent("", "task_a", "TASK_FAILED", "", app.id, "", Nil, app.version.toString)
+
+    val statusUpdateEventB =
+      MesosStatusUpdateEvent("", "task_b", "TASK_LOST", "", app.id, "", Nil, app.version.toString)
+
+    val Some(taskFailureA) =
+      TaskFailure.FromMesosStatusUpdateEvent(statusUpdateEventA)
+
+    val Some(taskFailureB) =
+      TaskFailure.FromMesosStatusUpdateEvent(statusUpdateEventB)
+
     system.eventStream.publish(statusUpdateEventA)
     system.eventStream.publish(statusUpdateEventB)
 
@@ -78,12 +88,10 @@ class AppStopActorTest
     expectTerminated(ref)
 
     watch(historyRef)
-    verify(taskFailureEventRepository, times(2)).store(
-      app.id, TaskFailureEvent(app.id, statusUpdateEventA.message, timestamp = statusUpdateEventA.timestamp))
-    verify(taskFailureEventRepository, times(2)).store(
-      app.id, TaskFailureEvent(app.id, statusUpdateEventB.message, timestamp = statusUpdateEventB.timestamp))
+    verify(taskFailureRepository, times(1)).store(app.id, taskFailureA)
+    verify(taskFailureRepository, times(1)).store(app.id, taskFailureB)
 
-    verify(taskFailureEventRepository, times(1)).expunge(app.id)
+    verify(taskFailureRepository, times(1)).expunge(app.id)
   }
 
   test("Stop App without running tasks") {

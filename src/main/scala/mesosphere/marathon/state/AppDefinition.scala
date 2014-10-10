@@ -215,8 +215,8 @@ case class AppDefinition(
 
   def withTasksAndDeploymentsAndFailures(appTasks: Seq[EnrichedTask],
                                          runningDeployments: Seq[DeploymentPlan],
-                                         taskFailureEvent: Option[TaskFailureEvent]): AppDefinition.WithTasksAndDeploymentsAndTaskFailureEvents = {
-    new AppDefinition.WithTasksAndDeploymentsAndTaskFailureEvents(appTasks, runningDeployments, taskFailureEvent, this)
+                                         taskFailure: Option[TaskFailure]): AppDefinition.WithTasksAndDeploymentsAndTaskFailures = {
+    new AppDefinition.WithTasksAndDeploymentsAndTaskFailures(appTasks, runningDeployments, taskFailure, this)
   }
 
   def isOnlyScaleChange(to: AppDefinition): Boolean =
@@ -315,17 +315,18 @@ object AppDefinition {
       extends WithTaskCountsAndDeployments(appTasks, runningDeployments, app) {
 
     @JsonProperty
-    def tasks = appTasks
+    def tasks: Seq[EnrichedTask] = appTasks
   }
 
-  protected[marathon] class WithTasksAndDeploymentsAndTaskFailureEvents(appTasks: Seq[EnrichedTask],
-                                                                        runningDeployments: Seq[DeploymentPlan],
-                                                                        taskFailureEvent: Option[TaskFailureEvent],
-                                                                        private val app: AppDefinition)
-      extends WithTaskCountsAndDeployments(appTasks, runningDeployments, app) {
+  protected[marathon] class WithTasksAndDeploymentsAndTaskFailures(
+    appTasks: Seq[EnrichedTask],
+    runningDeployments: Seq[DeploymentPlan],
+    taskFailure: Option[TaskFailure],
+    private val app: AppDefinition)
+      extends WithTasksAndDeployments(appTasks, runningDeployments, app) {
 
     @JsonProperty
-    def lastTaskFailure = taskFailureEvent.getOrElse(None)
+    def lastTaskFailure: Option[TaskFailure] = taskFailure
   }
 
 }

@@ -142,7 +142,13 @@ message DeploymentPlanDefinition {
   required GroupDefinition target = 5;
 }
 
-message TaskFailureEvent {
-  required string id = 1;
-  required string message = 2;
+message TaskFailure {
+  required string app_id = 1;
+  required mesos.TaskID task_id = 2;
+  required mesos.TaskState state = 3;
+  optional string message = 4 [default = ""];
+  optional string host = 5 [default = ""];
+  required string version = 6;
+  required string timestamp = 7;
 }
+

@@ -27,7 +27,7 @@ class AppsResource @Inject() (
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
-    taskFailureEventRepository: TaskFailureEventRepository,
+    taskFailureRepository: TaskFailureRepository,
     val config: MarathonConf,
     groupManager: GroupManager) extends RestResource with ModelValidation {
 
@@ -47,7 +47,7 @@ class AppsResource @Inject() (
         app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
       }
       else if (embed == EmbedTasksAndFailures) apps.map { app =>
-        app.withTasksAndDeploymentsAndFailures(enrichedTasks(app), runningDeployments, taskFailureEventRepository.current(app.id))
+        app.withTasksAndDeploymentsAndFailures(enrichedTasks(app), runningDeployments, taskFailureRepository.current(app.id))
       }
       else apps.map { app =>
         app.withTaskCountsAndDeployments(enrichedTasks(app), runningDeployments)

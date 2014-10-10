@@ -39,7 +39,7 @@ class MarathonSchedulerActor(
     taskIdUtil: TaskIdUtil,
     storage: StorageProvider,
     eventBus: EventStream,
-    taskFailureEventRepository: TaskFailureEventRepository,
+    taskFailureRepository: TaskFailureRepository,
     config: MarathonConf) extends Actor with ActorLogging with Stash {
   import context.dispatcher
 
@@ -68,7 +68,7 @@ class MarathonSchedulerActor(
       Props(classOf[DeploymentManager], appRepository, taskTracker, taskQueue, scheduler, storage, eventBus), "UpgradeManager")
 
     historyActor = context.actorOf(
-      Props(classOf[HistoryActor], eventBus, taskFailureEventRepository), "HistoryActor")
+      Props(classOf[HistoryActor], eventBus, taskFailureRepository), "HistoryActor")
 
     deploymentRepository.all() onComplete {
       case Success(deployments) => self ! RecoveredDeployments(deployments)

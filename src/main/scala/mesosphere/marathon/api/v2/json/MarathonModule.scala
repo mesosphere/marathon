@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.Module.SetupContext
 import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.ser.Serializers
+import org.apache.mesos.{ Protos => mesos }
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.v2._
 import mesosphere.marathon.api.validation.FieldConstraints._
@@ -29,6 +30,7 @@ class MarathonModule extends Module {
   private val finiteDurationClass = classOf[FiniteDuration]
   private val appUpdateClass = classOf[AppUpdate]
   private val groupIdClass = classOf[PathId]
+  private val taskIdClass = classOf[mesos.TaskID]
 
   def getModuleName: String = "MarathonModule"
 
@@ -47,6 +49,7 @@ class MarathonModule extends Module {
         else if (matches(timestampClass)) TimestampSerializer
         else if (matches(finiteDurationClass)) FiniteDurationSerializer
         else if (matches(groupIdClass)) PathIdSerializer
+        else if (matches(taskIdClass)) TaskIdSerializer
         else null
       }
     })
@@ -63,6 +66,7 @@ class MarathonModule extends Module {
         else if (matches(finiteDurationClass)) FiniteDurationDeserializer
         else if (matches(appUpdateClass)) AppUpdateDeserializer
         else if (matches(groupIdClass)) PathIdDeserializer
+        else if (matches(taskIdClass)) TaskIdDeserializer
         else null
       }
     })
@@ -181,6 +185,19 @@ class MarathonModule extends Module {
     def deserialize(json: JsonParser, context: DeserializationContext): PathId = {
       val tree: JsonNode = json.getCodec.readTree(json)
       tree.textValue().toPath
+    }
+  }
+
+  object TaskIdSerializer extends JsonSerializer[mesos.TaskID] {
+    def serialize(id: mesos.TaskID, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeString(id.getValue)
+    }
+  }
+
+  object TaskIdDeserializer extends JsonDeserializer[mesos.TaskID] {
+    def deserialize(json: JsonParser, context: DeserializationContext): mesos.TaskID = {
+      val tree: JsonNode = json.getCodec.readTree(json)
+      mesos.TaskID.newBuilder.setValue(tree.textValue).build
     }
   }
 
