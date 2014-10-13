@@ -37,12 +37,6 @@ object MarathonBuild extends Build {
 
   lazy val testScalaStyle = taskKey[Unit]("testScalaStyle")
 
-  testScalaStyle := {
-    org.scalastyle.sbt.PluginKeys.scalastyle.toTask("").value
-  }
-
-  (test in Test) <<= (test in Test) dependsOn testScalaStyle
-
   lazy val IntegrationTest = config("integration") extend Test
 
   lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
@@ -58,7 +52,11 @@ object MarathonBuild extends Build {
     sourceGenerators in Compile <+= buildInfo,
     fork in Test := true,
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
-    buildInfoPackage := "mesosphere.marathon"
+    buildInfoPackage := "mesosphere.marathon",
+    testScalaStyle := {
+      org.scalastyle.sbt.PluginKeys.scalastyle.toTask("").value
+    },
+    (test in Test) <<= (test in Test) dependsOn testScalaStyle
   )
 
   lazy val asmSettings = assemblySettings ++ Seq(
