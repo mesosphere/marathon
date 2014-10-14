@@ -23,7 +23,7 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     addHeader("Accept", "application/json")
     ~> sendReceive)
 
-  def receive = {
+  def receive: Receive = {
     case event: MarathonEvent =>
       broadcast(event)
     case _ =>
@@ -37,7 +37,7 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     }
   }
 
-  def post(urlString: String, event: MarathonEvent) {
+  def post(urlString: String, event: MarathonEvent): Unit = {
     log.info("Sending POST to:" + urlString)
 
     val request = Post(urlString, event)
@@ -59,6 +59,6 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     { case path: PathId => JString(path.toString) }
   ))
 
-  implicit def json4sJacksonFormats = DefaultFormats + FieldSerializer[AppDefinition]() + new PathIdSerializer
+  implicit def json4sJacksonFormats: org.json4s.Formats = DefaultFormats + FieldSerializer[AppDefinition]() + new PathIdSerializer
 }
 

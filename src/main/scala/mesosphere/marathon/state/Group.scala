@@ -162,7 +162,7 @@ case class Group(
 
 object Group {
   def empty: Group = Group(PathId(Nil))
-  def emptyWithId(id: PathId) = empty.copy(id = id)
+  def emptyWithId(id: PathId): Group = empty.copy(id = id)
 
   def fromProto(msg: GroupDefinition): Group = {
     Group(

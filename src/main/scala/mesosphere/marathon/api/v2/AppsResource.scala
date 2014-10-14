@@ -15,6 +15,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
 import scala.collection.immutable.Seq
@@ -39,7 +40,7 @@ class AppsResource @Inject() (
   @Timed
   def index(@QueryParam("cmd") cmd: String,
             @QueryParam("id") id: String,
-            @QueryParam("embed") embed: String) = {
+            @QueryParam("embed") embed: String): Map[String, Iterable[AppDefinition]] = {
     val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
     val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
     val mapped =
@@ -75,8 +76,8 @@ class AppsResource @Inject() (
   @Path("""{id:.+}""")
   @Timed
   def show(@PathParam("id") id: String): Response = {
-    def runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
-    def transitiveApps(gid: PathId) = {
+    def runningDeployments: Seq[DeploymentPlan] = result(service.listRunningDeployments()).map(r => r._1)
+    def transitiveApps(gid: PathId): Response = {
       val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
       val withTasks = apps.map { app =>
         app.withTasksAndDeploymentsAndFailures(
@@ -87,7 +88,7 @@ class AppsResource @Inject() (
       }
       ok(Map("*" -> withTasks))
     }
-    def app() = service.getApp(id.toRootPath) match {
+    def app(): Response = service.getApp(id.toRootPath) match {
       case Some(app) =>
         val mapped = app.withTasksAndDeploymentsAndFailures(
           enrichedTasks(app),
@@ -142,7 +143,7 @@ class AppsResource @Inject() (
     def updateApp(update: AppUpdate, app: AppDefinition): AppDefinition = {
       update.version.flatMap(v => service.getApp(app.id, v)).orElse(Some(update(app))).getOrElse(app)
     }
-    def updateGroup(root: Group) = updates.foldLeft(root) { (group, update) =>
+    def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
       update.id match {
         case Some(id) => group.updateApp(id.canonicalPath(), updateApp(update, _), version)
         case None     => group
@@ -170,10 +171,10 @@ class AppsResource @Inject() (
   }
 
   @Path("{appId:.+}/tasks")
-  def appTasksResource() = new AppTasksResource(service, taskTracker, healthCheckManager, config, groupManager)
+  def appTasksResource(): AppTasksResource = new AppTasksResource(service, taskTracker, healthCheckManager, config, groupManager)
 
   @Path("{appId:.+}/versions")
-  def appVersionsResource() = new AppVersionsResource(service, config)
+  def appVersionsResource(): AppVersionsResource = new AppVersionsResource(service, config)
 
   private def enrichedTasks(app: AppDefinition): Seq[EnrichedTask] =
     taskTracker.get(app.id).map { task =>

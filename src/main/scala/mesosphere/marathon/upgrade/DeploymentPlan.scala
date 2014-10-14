@@ -27,8 +27,8 @@ final case class RestartApplication(app: AppDefinition, scaleOldTo: Int, scaleNe
 final case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends DeploymentAction
 
 final case class DeploymentStep(actions: List[DeploymentAction]) {
-  def +(step: DeploymentStep) = DeploymentStep(actions ++ step.actions)
-  def nonEmpty = actions.nonEmpty
+  def +(step: DeploymentStep): DeploymentStep = DeploymentStep(actions ++ step.actions)
+  def nonEmpty(): Boolean = actions.nonEmpty
 }
 
 final case class DeploymentPlan(
@@ -47,7 +47,7 @@ final case class DeploymentPlan(
   def isAffectedBy(other: DeploymentPlan): Boolean = affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
   override def toString: String = {
-    def appString(app: AppDefinition) = s"App(${app.id}, ${app.cmd}))"
+    def appString(app: AppDefinition): String = s"App(${app.id}, ${app.cmd}))"
     def actionString(a: DeploymentAction): String = a match {
       case StartApplication(app, scale)      => s"Start(${appString(app)}, $scale)"
       case StopApplication(app)              => s"Stop(${appString(app)})"
@@ -79,9 +79,9 @@ final case class DeploymentPlan(
 }
 
 object DeploymentPlan extends Logging {
-  def empty = DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
+  def empty: DeploymentPlan = DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
 
-  def fromProto(message: Protos.DeploymentPlanDefinition) = empty.mergeFromProto(message)
+  def fromProto(message: Protos.DeploymentPlanDefinition): DeploymentPlan = empty.mergeFromProto(message)
 
   def apply(original: Group, target: Group, resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty, version: Timestamp = Timestamp.now()): DeploymentPlan = {
     log.info(s"Compute DeploymentPlan from $original to $target")
@@ -105,10 +105,12 @@ object DeploymentPlan extends Logging {
     val (dependent, nonDependent) = target.dependencyList
 
     //compute the restart actions: restart, kill, scale for one app
-    def restartActions(app: AppDefinition, orig: AppDefinition) = (
-      RestartApplication(app,
+    def restartActions(app: AppDefinition, orig: AppDefinition): (DeploymentAction, DeploymentAction, DeploymentAction) = ( // TODO: Let's create an ADT for this or refactor to a Seq
+      RestartApplication(
+        app,
         (orig.upgradeStrategy.minimumHealthCapacity * orig.instances).ceil.toInt,
-        (app.upgradeStrategy.minimumHealthCapacity * app.instances).ceil.toInt),
+        (app.upgradeStrategy.minimumHealthCapacity * app.instances).ceil.toInt
+      ),
         KillAllOldTasksOf(app),
         ScaleApplication(app, app.instances)
     )

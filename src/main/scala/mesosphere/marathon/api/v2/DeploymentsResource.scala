@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import javax.inject.Inject
 import javax.ws.rs._
-import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.{ MediaType, Response }
 
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.state.GroupManager
@@ -15,13 +15,13 @@ import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 class DeploymentsResource @Inject() (service: MarathonSchedulerService, groupManager: GroupManager, val config: MarathonConf) extends RestResource {
 
   @GET
-  def running() = ok(result(service.listRunningDeployments()).map {
+  def running(): Response = ok(result(service.listRunningDeployments()).map {
     case (plan, currentStep) => toInfo(plan, currentStep)
   })
 
   @DELETE
   @Path("{id}")
-  def cancel(@PathParam("id") id: String) = {
+  def cancel(@PathParam("id") id: String): Response = {
     result(service.listRunningDeployments()).find(_._1.id == id).fold(notFound(s"DeploymentPlan $id does not exist")) {
       case (plan, _) =>
         deploymentResult(result(groupManager.update(plan.original.id, _ => plan.original, force = true)))
@@ -41,7 +41,7 @@ class DeploymentsResource @Inject() (service: MarathonSchedulerService, groupMan
       "totalSteps" -> deployment.steps.size
     )
 
-  def actionToMap(action: DeploymentAction) =
+  def actionToMap(action: DeploymentAction): Map[String, String] =
     Map(
       "action" -> action.getClass.getSimpleName,
       "apps" -> action.app.id.toString

@@ -12,7 +12,7 @@ import akka.actor.Status
   * @param promise
   */
 class PromiseActor(promise: Promise[Any]) extends Actor {
-  def receive = {
+  def receive: Receive = {
     case x =>
       x match {
         case Status.Failure(t) => promise.failure(t)

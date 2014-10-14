@@ -130,7 +130,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       val candidate = new CandidateImpl(new ZGroup(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE,
         Main.conf.zooKeeperLeaderPath),
         new Supplier[Array[Byte]] {
-          def get() = {
+          def get(): Array[Byte] = {
             //host:port
             "%s:%d".format(Main.conf.hostname(),
               Main.conf.httpPort()).getBytes
@@ -173,7 +173,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideDeploymentRepository(state: State, conf: MarathonConf) = new DeploymentRepository(
+  def provideDeploymentRepository(state: State, conf: MarathonConf): DeploymentRepository = new DeploymentRepository(
     new MarathonStore[DeploymentPlan](state, () => DeploymentPlan.empty, "deployment:"),
     conf.zooKeeperMaxVersions.get
   )

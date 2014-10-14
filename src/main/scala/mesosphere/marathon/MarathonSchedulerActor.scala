@@ -76,7 +76,7 @@ class MarathonSchedulerActor(
     }
   }
 
-  def receive = recovering
+  def receive: Receive = recovering
 
   def recovering: Receive = {
     case RecoveredDeployments(deployments) =>
@@ -183,8 +183,8 @@ class MarathonSchedulerActor(
         }
     }
 
-    def acquireBlocking(locks: Set[Semaphore]) = locks.map{ s => s.acquire(); s }
-    def acquireIfPossible(locks: Set[Semaphore]) = locks.takeWhile(_.tryAcquire())
+    def acquireBlocking(locks: Set[Semaphore]): Set[Semaphore] = locks.map{ s => s.acquire(); s }
+    def acquireIfPossible(locks: Set[Semaphore]): Set[Semaphore] = locks.takeWhile(_.tryAcquire())
     performWithLock(if (isBlocking) acquireBlocking else acquireIfPossible)
   }
 
@@ -246,11 +246,11 @@ object MarathonSchedulerActor {
   }
 
   case object ReconcileTasks extends Command {
-    def answer = TasksReconciled
+    def answer: Event = TasksReconciled
   }
 
   case class ScaleApp(appId: PathId) extends Command {
-    def answer = AppScaled(appId)
+    def answer: Event = AppScaled(appId)
   }
 
   case class Deploy(plan: DeploymentPlan, force: Boolean = false) extends Command {
@@ -258,7 +258,7 @@ object MarathonSchedulerActor {
   }
 
   case class KillTasks(appId: PathId, taskIds: Set[String], scale: Boolean) extends Command {
-    def answer = TasksKilled(appId, taskIds)
+    def answer: Event = TasksKilled(appId, taskIds)
   }
 
   case object RetrieveRunningDeployments

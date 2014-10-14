@@ -141,8 +141,8 @@ class GroupManager @Singleton @Inject() (
   }
 
   private[state] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
-    def url2Path(url: String) = contentPath(new URL(url)).map { url -> _ }
-    Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path)).map(_.toMap).map { paths =>
+    def url2Path(url: String): Future[(String, String)] = contentPath(new URL(url)).map(url -> _)
+    Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path)).map(_.toMap).map { paths => // TODO: refactor this for clarity
       //Filter out all items with already existing path.
       //Since the path is derived from the content itself,
       //it will only change, if the content changes.

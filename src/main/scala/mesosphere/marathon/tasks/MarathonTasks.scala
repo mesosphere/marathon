@@ -11,7 +11,7 @@ object MarathonTasks {
                host: String,
                ports: Iterable[Long],
                attributes: Iterable[Attribute],
-               version: Timestamp) = {
+               version: Timestamp): MarathonTask = {
     MarathonTask.newBuilder()
       .setId(id)
       .setHost(host)

@@ -6,12 +6,12 @@ import scala.concurrent.Promise
 
 class StopActor(toStop: ActorRef, promise: Promise[Boolean], reason: Throwable) extends Actor with ActorLogging {
 
-  override def preStart() = {
+  override def preStart(): Unit = {
     context.watch(toStop)
     toStop ! Cancel(reason)
   }
 
-  def receive = {
+  def receive: Receive = {
     case Terminated(`toStop`) =>
       promise.success(true)
       log.debug(s"$toStop has successfully been stopped.")

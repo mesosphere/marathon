@@ -30,7 +30,7 @@ trait BeanValidation {
       e.getConstraintDescriptor, ElementType.FIELD, e.getExecutableParameters)
   }
 
-  def notSet[Bean, Prop](bean: Bean, path: String)(implicit ct: ClassTag[Bean]) = {
+  def notSet[Bean, Prop](bean: Bean, path: String)(implicit ct: ClassTag[Bean]): ConstraintViolation[Bean] = {
     violation(bean, null, path, "Property missing which is mandatory")
   }
 
@@ -44,7 +44,7 @@ trait BeanValidation {
     }
   }
 
-  def isTrue[Bean, Prop](bean: Bean, prop: Prop, path: String, message: String, assertion: => Boolean)(implicit ct: ClassTag[Bean]) = {
+  def isTrue[Bean, Prop](bean: Bean, prop: Prop, path: String, message: String, assertion: => Boolean)(implicit ct: ClassTag[Bean]): Seq[ConstraintViolation[Bean]] = {
     if (!assertion) List(violation(bean, prop, path, message)) else Nil
   }
 

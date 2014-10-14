@@ -138,7 +138,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     }
   }
 
-  def stagedTasks = apps.values.flatMap(_.tasks.values.filter(_.getStartedAt == 0))
+  def stagedTasks(): Iterable[MarathonTask] = apps.values.flatMap(_.tasks.values.filter(_.getStartedAt == 0))
 
   def checkStagedTasks: Iterable[MarathonTask] = {
     // stagedAt is set when the task is created by the scheduler
@@ -270,7 +270,7 @@ object TaskTracker {
       var tasks: TrieMap[String, MarathonTask],
       var shutdown: Boolean) {
 
-    def toApp = App(appName, tasks.values.toSet, shutdown)
+    def toApp: App = App(appName, tasks.values.toSet, shutdown)
   }
 
   case class App(appName: PathId, tasks: Set[MarathonTask], shutdown: Boolean)

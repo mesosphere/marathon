@@ -27,7 +27,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   implicit val system = context.system
   import context.dispatcher // execution context for futures
 
-  def receive = {
+  def receive: Receive = {
     case HealthCheckJob(task, check) =>
       val replyTo = sender() // avoids closing over the volatile sender ref
 

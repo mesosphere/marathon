@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.event.EventStream
 import javax.inject.{ Named, Inject }
+import scala.concurrent.Future
 
 class HttpCallbackSubscriptionService @Inject() (
     @Named(HttpEventModule.SubscribersKeeperActor) val subscribersKeeper: ActorRef,
@@ -14,13 +15,13 @@ class HttpCallbackSubscriptionService @Inject() (
   implicit val ec = HttpEventModule.executionContext
   implicit val timeout = HttpEventModule.timeout
 
-  def handleSubscriptionEvent(event: MarathonSubscriptionEvent) =
+  def handleSubscriptionEvent(event: MarathonSubscriptionEvent): Future[MarathonEvent] =
     (subscribersKeeper ? event).map { msg =>
       // Subscribe and Unsubscribe event should be broadcast.
       eventBus.publish(event)
       event
     }
 
-  def getSubscribers =
+  def getSubscribers: Future[EventSubscribers] =
     (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers]
 }
