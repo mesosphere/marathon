@@ -30,4 +30,11 @@ class AppRepository(
     * Returns the current version for all apps.
     */
   def apps(): Future[Iterable[AppDefinition]] = current()
+
+  /**
+    * Returns a map from PathIds to current app timestamps.
+    */
+  def currentAppVersions(): Future[Map[PathId, Timestamp]] =
+    for (as <- apps()) yield as.map { a => a.id -> a.version }.toMap
+
 }

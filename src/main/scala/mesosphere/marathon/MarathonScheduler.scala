@@ -9,8 +9,9 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
 import mesosphere.marathon.tasks._
+import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.{ TaskBuilder, protos }
 import org.apache.log4j.Logger
@@ -19,7 +20,7 @@ import org.apache.mesos.{ Scheduler, SchedulerDriver }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success }
 
 trait SchedulerCallbacks {
@@ -87,7 +88,14 @@ class MarathonScheduler @Inject() (
         driver.killTask(protos.TaskID(task.getId))
     }
 
-    import mesosphere.marathon.tasks.TaskQueue.QueuedTask
+    // remove queued tasks with stale (non-current) app definition versions
+    val appVersions: Map[PathId, Timestamp] =
+      Await.result(appRepo.currentAppVersions, config.zkTimeoutDuration)
+
+    taskQueue.filterNot {
+      case QueuedTask(app, _) =>
+        appVersions.get(app.id) contains app.version
+    }
 
     for (offer <- offers.asScala) {
       try {
