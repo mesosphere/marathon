@@ -33,7 +33,8 @@ Docker version 1.0.0 or later installed on each slave node.
     $ echo 'docker,mesos' > /etc/mesos-slave/containerizers
     ```
 
-2. Increase the executor timeout
+2. Increase the executor timeout to account for the potential delay in pulling a docker image to the slave.
+
 
     ```bash
     $ echo '5mins' > /etc/mesos-slave/executor_registration_timeout
@@ -41,6 +42,9 @@ Docker version 1.0.0 or later installed on each slave node.
 
 3. Restart `mesos-slave` process to load the new configuration
 
+### Configure marathon
+
+1. Increase the marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html") `--task_launch_timeout` to at least the executor timeout you set on your slaves in the previous step.
 
 ### Resources
 
