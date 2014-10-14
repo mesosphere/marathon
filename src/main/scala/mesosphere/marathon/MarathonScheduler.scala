@@ -92,7 +92,7 @@ class MarathonScheduler @Inject() (
     val appVersions: Map[PathId, Timestamp] =
       Await.result(appRepo.currentAppVersions, config.zkTimeoutDuration)
 
-    taskQueue.filterNot {
+    taskQueue.filter {
       case QueuedTask(app, _) =>
         appVersions.get(app.id) contains app.version
     }

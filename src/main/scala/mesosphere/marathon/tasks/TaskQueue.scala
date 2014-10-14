@@ -48,13 +48,13 @@ class TaskQueue {
   }
 
   /**
-    * Removes elements that match the supplied predicate from this queue.
+    * Retains only elements that satisfy the supplied predicate.
     */
   def filter(f: (QueuedTask => Boolean)): Unit =
-    queue.iterator.asScala.foreach { qt => if (f(qt)) queue.remove(qt) }
+    queue.iterator.asScala.foreach { qt => if (!f(qt)) queue.remove(qt) }
 
   /**
-    * Removes elements that do not match the supplied predicate from this queue.
+    * Retains only elements that do not satisfy the supplied predicate.
     */
   def filterNot(f: (QueuedTask => Boolean)): Unit = filter { qt: QueuedTask => !f(qt) }
 
