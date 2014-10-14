@@ -15,7 +15,9 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 
 @Path("v2/groups")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class GroupsResource @Inject() (groupManager: GroupManager, val config: MarathonConf) extends RestResource with ModelValidation {
+class GroupsResource @Inject() (
+    groupManager: GroupManager,
+    val config: MarathonConf) extends RestResource with ModelValidation {
 
   val ListApps = """^((?:.+/)|)apps$""".r
   val ListRootApps = """^apps$""".r
@@ -64,7 +66,8 @@ class GroupsResource @Inject() (groupManager: GroupManager, val config: Marathon
   @POST
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def create(update: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response = createWithPath("", update, force)
+  def create(update: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response =
+    createWithPath("", update, force)
 
   /**
     * Create or update a group.
@@ -83,7 +86,8 @@ class GroupsResource @Inject() (groupManager: GroupManager, val config: Marathon
     requireValid(checkGroupUpdate(update, needsId = true))
     val effectivePath = update.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
     val current = result(groupManager.root(withLatestApps = false)).findGroup(_.id == effectivePath)
-    if (current.isDefined) throw ConflictingChangeException(s"Group $effectivePath is already created. Use PUT to change this group.")
+    if (current.isDefined)
+      throw ConflictingChangeException(s"Group $effectivePath is already created. Use PUT to change this group.")
     val (deployment, path, version) = updateOrCreate(id.toRootPath, update, force)
     deploymentResult(deployment, Response.created(new URI(path.toString)))
   }
@@ -91,7 +95,8 @@ class GroupsResource @Inject() (groupManager: GroupManager, val config: Marathon
   @PUT
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def updateRoot(group: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response = update("", group, force)
+  def updateRoot(group: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response =
+    update("", group, force)
 
   /**
     * Create or update a group.
@@ -116,7 +121,12 @@ class GroupsResource @Inject() (groupManager: GroupManager, val config: Marathon
   @Timed
   def delete(@DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val version = Timestamp.now()
-    val deployment = result(groupManager.update(PathId.empty, root => root.copy(apps = Set.empty, groups = Set.empty), version, force))
+    val deployment = result(groupManager.update(
+      PathId.empty,
+      root => root.copy(apps = Set.empty, groups = Set.empty),
+      version,
+      force
+    ))
     deploymentResult(deployment)
   }
 
@@ -144,7 +154,9 @@ class GroupsResource @Inject() (groupManager: GroupManager, val config: Marathon
     def groupChange(group: Group): Group = {
       val versionChange = update.version.map { updateVersion =>
         val versionedGroup = result(groupManager.group(id, updateVersion)).map(_.update(id, identity, version))
-        versionedGroup.getOrElse(throw new IllegalArgumentException(s"Group $id not available in version $updateVersion"))
+        versionedGroup.getOrElse(
+          throw new IllegalArgumentException(s"Group $id not available in version $updateVersion")
+        )
       }
       val scaleChange = update.scaleBy.map { scale =>
         group.transitiveApps.foldLeft(group) { (changedGroup, app) =>

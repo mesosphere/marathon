@@ -170,7 +170,9 @@ case class AppDefinition(
       container = containerOption,
       healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       version = Timestamp(proto.getVersion),
-      upgradeStrategy = if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy) else UpgradeStrategy.empty,
+      upgradeStrategy =
+        if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
+        else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet
     )
   }
@@ -213,11 +215,11 @@ case class AppDefinition(
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTasksAndDeployments =
     new AppDefinition.WithTasksAndDeployments(appTasks, runningDeployments, this)
 
-  def withTasksAndDeploymentsAndFailures(appTasks: Seq[EnrichedTask],
-                                         runningDeployments: Seq[DeploymentPlan],
-                                         taskFailure: Option[TaskFailure]): AppDefinition.WithTasksAndDeploymentsAndTaskFailures = {
+  def withTasksAndDeploymentsAndFailures(
+    appTasks: Seq[EnrichedTask],
+    runningDeployments: Seq[DeploymentPlan],
+    taskFailure: Option[TaskFailure]): AppDefinition.WithTasksAndDeploymentsAndTaskFailures =
     new AppDefinition.WithTasksAndDeploymentsAndTaskFailures(appTasks, runningDeployments, taskFailure, this)
-  }
 
   def isOnlyScaleChange(to: AppDefinition): Boolean =
     !isUpgrade(to) && (instances != to.instances)

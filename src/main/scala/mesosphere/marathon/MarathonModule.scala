@@ -167,16 +167,18 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideGroupRepository(state: State, appRepository: AppRepository, conf: MarathonConf): GroupRepository = new GroupRepository(
-    new MarathonStore[Group](state, () => Group.empty, "group:"), appRepository, conf.zooKeeperMaxVersions.get
-  )
+  def provideGroupRepository(state: State, appRepository: AppRepository, conf: MarathonConf): GroupRepository =
+    new GroupRepository(
+      new MarathonStore[Group](state, () => Group.empty, "group:"), appRepository, conf.zooKeeperMaxVersions.get
+    )
 
   @Provides
   @Singleton
-  def provideDeploymentRepository(state: State, conf: MarathonConf): DeploymentRepository = new DeploymentRepository(
-    new MarathonStore[DeploymentPlan](state, () => DeploymentPlan.empty, "deployment:"),
-    conf.zooKeeperMaxVersions.get
-  )
+  def provideDeploymentRepository(state: State, conf: MarathonConf): DeploymentRepository =
+    new DeploymentRepository(
+      new MarathonStore[DeploymentPlan](state, () => DeploymentPlan.empty, "deployment:"),
+      conf.zooKeeperMaxVersions.get
+    )
 
   @Provides
   @Singleton
@@ -189,7 +191,11 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideMigration(state: State, appRepo: AppRepository, groupRepo: GroupRepository, config: MarathonConf): Migration =
+  def provideMigration(
+    state: State,
+    appRepo: AppRepository,
+    groupRepo: GroupRepository,
+    config: MarathonConf): Migration =
     new Migration(state, appRepo, groupRepo, config)
 
   @Provides
@@ -198,5 +204,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideStorageProvider(config: MarathonConf, http: HttpConf): StorageProvider = StorageProvider.provider(config, http)
+  def provideStorageProvider(config: MarathonConf, http: HttpConf): StorageProvider =
+    StorageProvider.provider(config, http)
+
 }

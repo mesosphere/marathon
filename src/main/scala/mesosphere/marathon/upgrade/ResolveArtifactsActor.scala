@@ -13,22 +13,31 @@ import mesosphere.marathon.io.{ CancelableDownload, IO, PathFun }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.util.Logging
 
-class ResolveArtifactsActor(app: AppDefinition, url2Path: Map[URL, String], promise: Promise[Boolean], storage: StorageProvider) extends Actor with IO with PathFun with Logging {
+class ResolveArtifactsActor(
+  app: AppDefinition,
+  url2Path: Map[URL, String],
+  promise: Promise[Boolean],
+  storage: StorageProvider)
+    extends Actor
+    with IO
+    with PathFun
+    with Logging {
 
   import mesosphere.marathon.upgrade.ResolveArtifactsActor.DownloadFinished
   import mesosphere.util.ThreadPoolContext.{ context => executionContext }
 
-  //all downloads that have to be performed by this actor
+  // all downloads that have to be performed by this actor
   var downloads = url2Path.map { case (url, path) => new CancelableDownload(url, storage, path) }
 
   override def preStart(): Unit = {
     downloads.map(_.get.map(DownloadFinished) pipeTo self)
-    if (url2Path.isEmpty) promise.success(true) //handle empty list
+    if (url2Path.isEmpty) promise.success(true) // handle empty list
   }
 
   override def postStop(): Unit = {
-    downloads.foreach(_.cancel()) //clean up not finished artifacts
-    if (!promise.isCompleted) promise.tryFailure(new ResolveArtifactsCanceledException("Artifact Resolving has been cancelled"))
+    downloads.foreach(_.cancel()) // clean up not finished artifacts
+    if (!promise.isCompleted)
+      promise.tryFailure(new ResolveArtifactsCanceledException("Artifact Resolving has been cancelled"))
   }
 
   override def receive: Receive = {
@@ -36,7 +45,7 @@ class ResolveArtifactsActor(app: AppDefinition, url2Path: Map[URL, String], prom
       downloads = downloads.filter(_ != download)
       if (downloads.isEmpty) promise.success(true)
     case Failure(ex) =>
-      log.warn("Can not resolve artifact", ex) //do not fail the promise!
+      log.warn("Can not resolve artifact", ex) // do not fail the promise!
   }
 }
 

@@ -27,11 +27,15 @@ trait SchedulerCallbacks {
 }
 
 object MarathonScheduler {
-  private class MarathonSchedulerCallbacksImpl(serviceOption: Option[MarathonSchedulerService]) extends SchedulerCallbacks {
+  private class MarathonSchedulerCallbacksImpl(
+    serviceOption: Option[MarathonSchedulerService])
+      extends SchedulerCallbacks {
+
     override def disconnected(): Unit = {
       // Abdicate leadership when we become disconnected from the Mesos master.
       serviceOption.foreach(_.abdicateLeadership())
     }
+
   }
 
   val callbacks: SchedulerCallbacks = new MarathonSchedulerCallbacksImpl(
@@ -185,7 +189,11 @@ class MarathonScheduler @Inject() (
     }
   }
 
-  override def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]): Unit = {
+  override def frameworkMessage(
+    driver: SchedulerDriver,
+    executor: ExecutorID,
+    slave: SlaveID,
+    message: Array[Byte]): Unit = {
     log.info("Received framework message %s %s %s ".format(executor, slave, message))
     eventBus.publish(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message))
   }

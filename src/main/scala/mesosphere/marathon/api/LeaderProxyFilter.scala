@@ -69,7 +69,7 @@ class LeaderProxyFilter @Inject() (schedulerService: MarathonSchedulerService,
 
           val names = request.getHeaderNames
           // getHeaderNames() and getHeaders() are known to return null, see:
-          // http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
+          //http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
           if (names != null) {
             for (name <- names.asScala) {
               val values = request.getHeaders(name)
@@ -98,8 +98,7 @@ class LeaderProxyFilter @Inject() (schedulerService: MarathonSchedulerService,
 
           try {
             val fields = proxy.getHeaderFields
-            // getHeaderNames() and getHeaders() are known to return null, see:
-            // http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
+            // getHeaderNames() and getHeaders() are known to return null
             if (fields != null) {
               for ((name, values) <- fields.asScala) {
                 if (name != null && values != null) {

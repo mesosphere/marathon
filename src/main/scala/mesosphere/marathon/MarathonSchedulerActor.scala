@@ -65,7 +65,17 @@ class MarathonSchedulerActor(
       config)
 
     deploymentManager = context.actorOf(
-      Props(classOf[DeploymentManager], appRepository, taskTracker, taskQueue, scheduler, storage, eventBus), "UpgradeManager")
+      Props(
+        classOf[DeploymentManager],
+        appRepository,
+        taskTracker,
+        taskQueue,
+        scheduler,
+        storage,
+        eventBus
+      ),
+      "UpgradeManager"
+    )
 
     historyActor = context.actorOf(
       Props(classOf[HistoryActor], eventBus, taskFailureRepository), "HistoryActor")
@@ -126,7 +136,9 @@ class MarathonSchedulerActor(
           for {
             _ <- promise.future
             currentApp <- appRepository.currentVersion(appId)
-            _ <- currentApp.map(app => appRepository.store(app.copy(instances = app.instances - tasksToKill.size))).getOrElse(Future.successful(()))
+            _ <- currentApp
+              .map { app => appRepository.store(app.copy(instances = app.instances - tasksToKill.size)) }
+              .getOrElse(Future.successful(()))
           } yield ()
         }
         else promise.future
@@ -147,24 +159,28 @@ class MarathonSchedulerActor(
     * otherwise a [CommandFailed] message is sent to
     * the original sender.
     */
-  def performAsyncWithLockFor[U](appIds: Set[PathId], origSender: ActorRef, cmd: Command, isBlocking: Boolean)(f: => Future[U]): Future[_] = {
+  def performAsyncWithLockFor[U](
+    appIds: Set[PathId],
+    origSender: ActorRef,
+    cmd: Command,
+    isBlocking: Boolean)(f: => Future[U]): Future[Unit] = {
 
-    def performWithLock(lockFn: Set[Semaphore] => Set[Semaphore]): Future[_] = {
-      val locks = appIds.map(appLocks.get) //needed locks for all application
-      Future(blocking(lockFn(locks))).flatMap { acquired => //acquired locks, fetched in a future
+    def performWithLock(lockFn: Set[Semaphore] => Set[Semaphore]): Future[Unit] = {
+      val locks = appIds.map(appLocks.get) // needed locks for all applications
+      Future(blocking(lockFn(locks))).flatMap { acquired => // acquired locks, fetched in a future
         if (acquired.size == locks.size) {
           log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
-          f andThen {
+          f.andThen {
             case _ =>
               log.debug(s"Releasing locks for $appIds")
               acquired.foreach(_.release())
-          }
+          }.map { _ => () }
         }
         else lockNotAvailable(acquired)
       }
     }
 
-    def lockNotAvailable(acquiredLocks: Set[Semaphore]): Future[_] = Future {
+    def lockNotAvailable(acquiredLocks: Set[Semaphore]): Future[Unit] = Future {
       log.debug(s"Failed to acquire some of the locks for $appIds to perform cmd: $cmd")
       acquiredLocks.foreach(_.release())
 
@@ -194,7 +210,11 @@ class MarathonSchedulerActor(
     * otherwise a [CommandFailed] message is sent to
     * the original sender.
     */
-  def performAsyncWithLockFor[U](appId: PathId, origSender: ActorRef, cmd: Command, blocking: Boolean)(f: => Future[U]): Future[_] =
+  def performAsyncWithLockFor[U](
+    appId: PathId,
+    origSender: ActorRef,
+    cmd: Command,
+    blocking: Boolean)(f: => Future[U]): Future[_] =
     performAsyncWithLockFor(Set(appId), origSender, cmd, blocking)(f)
 
   // there has to be a better way...

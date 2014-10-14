@@ -11,7 +11,9 @@ import mesosphere.marathon.{ MarathonSchedulerService, BuildInfo, MarathonConf }
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class InfoResource @Inject() (schedulerService: MarathonSchedulerService, conf: MarathonConf with HttpConf with EventConfiguration with HttpEventConfiguration) {
+class InfoResource @Inject() (
+    schedulerService: MarathonSchedulerService,
+    conf: MarathonConf with HttpConf with EventConfiguration with HttpEventConfiguration) {
 
   // Marathon configurations
   private[this] lazy val marathonConfigValues = Map(

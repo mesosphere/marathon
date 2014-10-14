@@ -2,7 +2,12 @@ package mesosphere.marathon.state
 
 import scala.concurrent.Future
 
-class GroupRepository(val store: PersistenceStore[Group], appRepo: AppRepository, val maxVersions: Option[Int] = None) extends EntityRepository[Group] {
+class GroupRepository(
+  val store: PersistenceStore[Group],
+  appRepo: AppRepository,
+  val maxVersions: Option[Int] = None)
+    extends EntityRepository[Group] {
+
   import mesosphere.util.ThreadPoolContext.context
 
   def group(id: String, withLatestApps: Boolean = true): Future[Option[Group]] = {

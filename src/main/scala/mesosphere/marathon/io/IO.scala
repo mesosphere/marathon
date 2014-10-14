@@ -34,7 +34,8 @@ trait IO {
   protected def createDirectory(dir: File) {
     if (!dir.exists()) {
       val result = dir.mkdirs()
-      if (!result || !dir.isDirectory || !dir.exists) throw new IOException("Can not create Directory: " + dir.getAbsolutePath)
+      if (!result || !dir.isDirectory || !dir.exists)
+        throw new IOException("Can not create Directory: " + dir.getAbsolutePath)
     }
   }
 
@@ -45,13 +46,20 @@ trait IO {
     file.delete()
   }
 
-  protected def mdSum(in: InputStream, mdName: String = "SHA-1", out: OutputStream = ByteStreams.nullOutputStream()): String = {
+  protected def mdSum(
+    in: InputStream,
+    mdName: String = "SHA-1",
+    out: OutputStream = ByteStreams.nullOutputStream()): String = {
     val md = MessageDigest.getInstance(mdName)
     transfer(new DigestInputStream(in, md), out)
     new BigInteger(1, md.digest()).toString(16)
   }
 
-  protected def transfer(in: InputStream, out: OutputStream, close: Boolean = true, continue: => Boolean = true) {
+  protected def transfer(
+    in: InputStream,
+    out: OutputStream,
+    close: Boolean = true,
+    continue: => Boolean = true) {
     try {
       val buffer = new Array[Byte](BufferSize)
       @tailrec def read() {

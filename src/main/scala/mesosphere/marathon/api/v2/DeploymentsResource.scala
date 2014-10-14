@@ -12,7 +12,10 @@ import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
 @Path("v2/deployments")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class DeploymentsResource @Inject() (service: MarathonSchedulerService, groupManager: GroupManager, val config: MarathonConf) extends RestResource {
+class DeploymentsResource @Inject() (
+    service: MarathonSchedulerService,
+    groupManager: GroupManager,
+    val config: MarathonConf) extends RestResource {
 
   @GET
   def running(): Response = ok(result(service.listRunningDeployments()).map {
@@ -21,12 +24,17 @@ class DeploymentsResource @Inject() (service: MarathonSchedulerService, groupMan
 
   @DELETE
   @Path("{id}")
-  def cancel(@PathParam("id") id: String): Response = {
-    result(service.listRunningDeployments()).find(_._1.id == id).fold(notFound(s"DeploymentPlan $id does not exist")) {
-      case (plan, _) =>
-        deploymentResult(result(groupManager.update(plan.original.id, _ => plan.original, force = true)))
-    }
-  }
+  def cancel(@PathParam("id") id: String): Response =
+    result(service.listRunningDeployments())
+      .find(_._1.id == id)
+      .fold(notFound(s"DeploymentPlan $id does not exist")) {
+        case (plan, _) =>
+          deploymentResult(result(groupManager.update(
+            plan.original.id,
+            _ => plan.original,
+            force = true
+          )))
+      }
 
   private def toInfo(
     deployment: DeploymentPlan,
