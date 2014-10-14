@@ -22,7 +22,7 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
     */
   @POST
   @Consumes(Array(MediaType.MULTIPART_FORM_DATA))
-  def uploadFile(@FormParam("file") upload: InputStream, @FormParam("file") info: FormInfo) = storeFile(info.getFileName, upload)
+  def uploadFile(@FormParam("file") upload: InputStream, @FormParam("file") info: FormInfo): Response = storeFile(info.getFileName, upload)
 
   /**
     * Upload to a specific path inside artifact store.
@@ -30,12 +30,12 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
   @PUT
   @Path("{path:.+}")
   @Consumes(Array(MediaType.MULTIPART_FORM_DATA))
-  def uploadFilePut(@PathParam("path") path: String, @FormParam("file") upload: InputStream) = storeFile(path, upload)
+  def uploadFilePut(@PathParam("path") path: String, @FormParam("file") upload: InputStream): Response = storeFile(path, upload)
 
   @POST
   @Path("{path:.+}")
   @Consumes(Array(MediaType.MULTIPART_FORM_DATA))
-  def uploadFilePost(@PathParam("path") path: String, @FormParam("file") upload: InputStream) = storeFile(path, upload)
+  def uploadFilePost(@PathParam("path") path: String, @FormParam("file") upload: InputStream): Response = storeFile(path, upload)
 
   private def storeFile(path: String, upload: InputStream) = {
     require(upload != null, "Please use 'file' as form parameter name!")
@@ -51,7 +51,7 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
   @GET
   @Path("{path:.+}")
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def get(@PathParam("path") path: String) = {
+  def get(@PathParam("path") path: String): Response = {
     val item = storage.item(path)
     if (!item.exists) {
       notFound(s"No artifact with path $path")
@@ -71,12 +71,12 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
   @DELETE
   @Path("{path:.+}")
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def delete(@PathParam("path") path: String) = {
+  def delete(@PathParam("path") path: String): Response = {
     val item = storage.item(path)
     if (item.exists) item.delete()
     ok()
   }
 
   private[this] val mimes = new MimeTypes()
-  def mediaMime(path: String) = Option(mimes.getMimeByExtension(path)).map(_.toString("UTF-8")).getOrElse("application/octet-stream")
+  def mediaMime(path: String): String = Option(mimes.getMimeByExtension(path)).map(_.toString("UTF-8")).getOrElse("application/octet-stream")
 }

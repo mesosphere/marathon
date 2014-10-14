@@ -39,11 +39,11 @@ class InfoResource @Inject() (schedulerService: MarathonSchedulerService, conf: 
     "zk_future_timeout" -> conf.zkFutureTimeout)
 
   private[this] lazy val eventHandlerConfigValues = {
-    def httpEventConfig = Map(
+    def httpEventConfig: Map[String, Option[Seq[String]]] = Map(
       "http_endpoints" -> conf.httpEventEndpoints.get
     )
 
-    def eventConfig = conf.eventSubscriber.get match {
+    def eventConfig(): Map[String, Option[Seq[String]]] = conf.eventSubscriber.get match {
       case Some("http_callback") => httpEventConfig
       case _                     => Map()
     }

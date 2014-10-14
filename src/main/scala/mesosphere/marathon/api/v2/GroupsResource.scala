@@ -40,7 +40,7 @@ class GroupsResource @Inject() (groupManager: GroupManager, val config: Marathon
   @Path("""{id:.+}""")
   @Timed
   def group(@PathParam("id") id: String): Response = {
-    def groupResponse[T](id: PathId, fn: Group => T, version: Option[Timestamp] = None) = {
+    def groupResponse[T](id: PathId, fn: Group => T, version: Option[Timestamp] = None): Response = {
       result(version.map(groupManager.group(id, _)).getOrElse(groupManager.group(id))) match {
         case Some(group) => ok(fn(group))
         case None        => unknownGroup(id, version)

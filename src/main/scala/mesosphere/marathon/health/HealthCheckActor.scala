@@ -114,7 +114,7 @@ class HealthCheckActor(
       task.getStartedAt + healthCheck.gracePeriod.toMillis > System.currentTimeMillis()
   }
 
-  def receive = {
+  def receive: Receive = {
     case GetTaskHealth(taskId) => sender() ! taskHealth.get(taskId)
     case Tick =>
       purgeStatusOfDoneTasks()

@@ -42,7 +42,8 @@ trait StoppingBehavior extends Actor with ActorLogging {
   }
 
   val taskFinished = "^TASK_(FAILED|FINISHED|LOST|KILLED)$".r
-  def receive = {
+
+  def receive: Receive = {
     case MesosStatusUpdateEvent(_, taskId, taskFinished(_), _, _, _, _, _, _, _) if idsToKill(taskId) =>
       idsToKill.remove(taskId)
       log.info(s"Task $taskId has been killed. Waiting for ${idsToKill.size} more tasks to be killed.")

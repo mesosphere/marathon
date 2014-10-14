@@ -22,7 +22,7 @@ class RateLimiter {
   def getDelay(app: AppDefinition): Deadline =
     taskLaunchDelays.get(app.id).map(_.current.fromNow) getOrElse Deadline.now
 
-  def addDelay(app: AppDefinition) = {
+  def addDelay(app: AppDefinition): Unit = {
     val newDelay = taskLaunchDelays.get(app.id) match {
       case Some(Delay(current, future)) => Delay(future.next, future)
       case None => Delay(

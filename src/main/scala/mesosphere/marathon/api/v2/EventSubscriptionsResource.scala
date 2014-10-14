@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, MediaType }
+import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import com.google.inject.Inject
@@ -21,28 +21,28 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf) extends Re
 
   @GET
   @Timed
-  def listSubscribers(@Context req: HttpServletRequest) = {
+  def listSubscribers(@Context req: HttpServletRequest): Response = {
     validateSubscriptionService()
-    result(service.getSubscribers)
+    ok(result(service.getSubscribers))
   }
 
   @POST
   @Timed
-  def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String) = {
+  def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response = {
     validateSubscriptionService()
     val future = service.handleSubscriptionEvent(Subscribe(req.getRemoteAddr, callbackUrl))
-    result(future)
+    ok(result(future))
   }
 
   @DELETE
   @Timed
-  def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String) = {
+  def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response = {
     validateSubscriptionService()
     val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
-    result(future)
+    ok(result(future))
   }
 
-  private def validateSubscriptionService() = {
+  private def validateSubscriptionService(): Unit = {
     if (service eq null) throw new BadRequestException(
       "http event callback system is not running on this Marathon instance. " +
         "Please re-start this instance with \"--event_subscriber http_callback\"."

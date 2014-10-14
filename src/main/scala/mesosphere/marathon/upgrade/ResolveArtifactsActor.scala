@@ -31,7 +31,7 @@ class ResolveArtifactsActor(app: AppDefinition, url2Path: Map[URL, String], prom
     if (!promise.isCompleted) promise.tryFailure(new ResolveArtifactsCanceledException("Artifact Resolving has been cancelled"))
   }
 
-  override def receive = {
+  override def receive: Receive = {
     case DownloadFinished(download) =>
       downloads = downloads.filter(_ != download)
       if (downloads.isEmpty) promise.success(true)

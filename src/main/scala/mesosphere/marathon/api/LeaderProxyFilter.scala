@@ -23,9 +23,9 @@ class LeaderProxyFilter @Inject() (schedulerService: MarathonSchedulerService,
 
   val log = Logger.getLogger(getClass.getName)
 
-  def init(filterConfig: FilterConfig) {}
+  def init(filterConfig: FilterConfig): Unit = {}
 
-  def copy(input: InputStream, output: OutputStream) = {
+  def copy(input: InputStream, output: OutputStream): Unit = {
     val bytes = new Array[Byte](1024)
     Iterator
       .continually(input.read(bytes))
@@ -33,7 +33,7 @@ class LeaderProxyFilter @Inject() (schedulerService: MarathonSchedulerService,
       .foreach(read => output.write(bytes, 0, read))
   }
 
-  def buildUrl(leaderData: String, request: HttpServletRequest) = {
+  def buildUrl(leaderData: String, request: HttpServletRequest): URL = {
     // TODO handle https
     if (request.getQueryString != null) {
       new URL("http://%s%s?%s".format(leaderData, request.getRequestURI, request.getQueryString))

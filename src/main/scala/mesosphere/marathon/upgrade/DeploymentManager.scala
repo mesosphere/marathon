@@ -32,7 +32,7 @@ class DeploymentManager(
     case NonFatal(e) => Stop
   }
 
-  def receive = {
+  def receive: Receive = {
     case CancelConflictingDeployments(plan, reason) =>
       val origSender = sender()
       val conflictingDeployments = for {

@@ -15,7 +15,7 @@ class SubscribersKeeperActor(val store: MarathonStore[EventSubscribers]) extends
 
   implicit val ec = HttpEventModule.executionContext
 
-  override def receive = {
+  override def receive: Receive = {
 
     case event @ Subscribe(_, callbackUrl, _, _) =>
       val addResult: Future[Option[EventSubscribers]] = add(callbackUrl)

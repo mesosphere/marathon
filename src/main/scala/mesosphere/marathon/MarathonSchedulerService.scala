@@ -213,9 +213,7 @@ class MarathonSchedulerService @Inject() (
     driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
   }
 
-  def isLeader = {
-    leader.get()
-  }
+  def isLeader(): Boolean = leader.get()
 
   def getLeader: Option[String] = {
     candidate.flatMap { c =>

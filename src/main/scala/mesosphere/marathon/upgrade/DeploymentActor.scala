@@ -46,7 +46,7 @@ class DeploymentActor(
     parent ! DeploymentFinished(plan.id)
   }
 
-  def receive = {
+  def receive: Receive = {
     case NextStep if steps.hasNext =>
       val step = steps.next()
       currentStepNr += 1

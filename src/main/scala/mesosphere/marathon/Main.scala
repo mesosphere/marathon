@@ -48,7 +48,7 @@ object Main extends App {
     client
   }
 
-  def modules() = {
+  def modules(): Seq[AbstractModule] = {
     Seq(
       new HttpModule(conf) {
         // burst browser cache for assets

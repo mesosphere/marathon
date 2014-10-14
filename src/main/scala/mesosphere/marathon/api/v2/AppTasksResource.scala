@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import javax.inject.Inject
 import javax.ws.rs._
-import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import org.apache.log4j.Logger
@@ -29,9 +29,9 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def indexJson(@PathParam("appId") appId: String) = {
+  def indexJson(@PathParam("appId") appId: String): Response = {
 
-    def tasks(appIds: Set[PathId]) = for {
+    def tasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
       id <- appIds
       task <- taskTracker.get(id)
     } yield EnrichedTask(id, task, result(healthCheckManager.status(id, task.getId)))
@@ -49,7 +49,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
-  def indexTxt(@PathParam("appId") appId: String) = {
+  def indexTxt(@PathParam("appId") appId: String): Response = {
     val id = appId.toRootPath
     service.getApp(id).fold(unknownApp(id)) { app =>
       ok(EndpointsHelper.appsToEndpointString(taskTracker, Seq(app), "\t"))
@@ -60,7 +60,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @Timed
   def deleteMany(@PathParam("appId") appId: String,
                  @QueryParam("host") host: String,
-                 @QueryParam("scale") scale: Boolean = false) = {
+                 @QueryParam("scale") scale: Boolean = false): Response = {
     val id = appId.toRootPath
     if (taskTracker.contains(id)) {
       val tasks = taskTracker.get(id)
@@ -82,7 +82,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @Timed
   def deleteOne(@PathParam("appId") appId: String,
                 @PathParam("taskId") id: String,
-                @QueryParam("scale") scale: Boolean = false) = {
+                @QueryParam("scale") scale: Boolean = false): Response = {
     val pathId = appId.toRootPath
     if (taskTracker.contains(pathId)) {
       val tasks = taskTracker.get(pathId)

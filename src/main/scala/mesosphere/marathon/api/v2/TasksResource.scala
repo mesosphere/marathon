@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import java.util
 import javax.ws.rs._
-import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.{ MediaType, Response }
 import javax.inject.Inject
 import mesosphere.marathon.api.{ EndpointsHelper, RestResource }
 import mesosphere.marathon.api.v2.json.EnrichedTask
@@ -28,10 +28,10 @@ class TasksResource @Inject() (
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
   def indexJson(@QueryParam("status") status: String,
-                @QueryParam("status[]") statuses: util.List[String]) = {
+                @QueryParam("status[]") statuses: util.List[String]): Response = {
     if (status != null) statuses.add(status)
     val statusSet = statuses.asScala.flatMap(toTaskState).toSet
-    Map(
+    ok(Map(
       "tasks" -> taskTracker.list.flatMap {
         case (appId, setOfTasks) =>
           setOfTasks.tasks.collect {
@@ -44,17 +44,17 @@ class TasksResource @Inject() (
               )
           }
       }
-    )
+    ))
   }
 
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
-  def indexTxt() = EndpointsHelper.appsToEndpointString(
+  def indexTxt(): Response = ok(EndpointsHelper.appsToEndpointString(
     taskTracker,
     service.listApps().toSeq,
     "\t"
-  )
+  ))
 
   private def toTaskState(state: String): Option[TaskState] = state.toLowerCase match {
     case "running" => Some(TaskState.TASK_RUNNING)

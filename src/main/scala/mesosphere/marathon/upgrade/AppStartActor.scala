@@ -20,7 +20,8 @@ class AppStartActor(
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
   val expectedSize = scaleTo
-  def withHealthChecks = app.healthChecks.nonEmpty
+
+  def withHealthChecks(): Boolean = app.healthChecks.nonEmpty
 
   def initializeStart(): Unit = {
     scheduler.startApp(driver, app.copy(instances = scaleTo))

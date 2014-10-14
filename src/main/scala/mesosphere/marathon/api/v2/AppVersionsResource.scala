@@ -1,14 +1,14 @@
 package mesosphere.marathon.api.v2
 
 import javax.ws.rs._
-import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import org.apache.log4j.Logger
 
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -19,7 +19,7 @@ class AppVersionsResource(service: MarathonSchedulerService, val config: Maratho
 
   @GET
   @Timed
-  def index(@PathParam("appId") appId: String) = {
+  def index(@PathParam("appId") appId: String): Response = {
     val id = appId.toRootPath
     val versions = service.listAppVersions(id).toSeq
     if (versions.isEmpty) unknownApp(id)
@@ -30,8 +30,8 @@ class AppVersionsResource(service: MarathonSchedulerService, val config: Maratho
   @Timed
   @Path("{version}")
   def show(@PathParam("appId") appId: String,
-           @PathParam("version") version: String) = {
+           @PathParam("version") version: String): Response = {
     val id = appId.toRootPath
-    service.getApp(id, Timestamp(version)) getOrElse unknownApp(id)
+    service.getApp(id, Timestamp(version)).map(ok(_)) getOrElse unknownApp(id)
   }
 }

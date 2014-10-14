@@ -201,7 +201,7 @@ class TaskBuilder(app: AppDefinition,
 
 object TaskBuilder {
 
-  def commandInfo(app: AppDefinition, host: Option[String], ports: Seq[Long]) = {
+  def commandInfo(app: AppDefinition, host: Option[String], ports: Seq[Long]): CommandInfo = {
     val envMap = app.env ++ portsEnv(ports) ++ host.map("HOST" -> _)
 
     val builder = CommandInfo.newBuilder()
@@ -245,7 +245,7 @@ object TaskBuilder {
       stringuri.endsWith(".zip")
   }
 
-  def environment(vars: Map[String, String]) = {
+  def environment(vars: Map[String, String]): Environment = {
     val builder = Environment.newBuilder()
 
     for ((key, value) <- vars) {

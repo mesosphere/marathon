@@ -15,7 +15,7 @@ case class Timestamp(dateTime: DateTime) extends Ordered[Timestamp] {
     case _               => false
   }
 
-  def compare(that: Timestamp) = this.time compareTo that.time
+  def compare(that: Timestamp): Int = this.time compareTo that.time
 
   override def toString: String = time.toString
 }

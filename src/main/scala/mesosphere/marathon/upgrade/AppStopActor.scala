@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.event.MesosStatusUpdateEvent
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 import org.apache.mesos.SchedulerDriver
 
@@ -18,8 +18,9 @@ class AppStopActor(
     app: AppDefinition,
     val promise: Promise[Unit]) extends StoppingBehavior {
 
-  var idsToKill = taskTracker.get(app.id).map(_.getId).to[mutable.Set]
-  def appId = app.id
+  var idsToKill: mutable.Set[String] = taskTracker.get(app.id).map(_.getId).to[mutable.Set]
+
+  def appId(): PathId = app.id
 
   def initializeStop(): Unit = {
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])

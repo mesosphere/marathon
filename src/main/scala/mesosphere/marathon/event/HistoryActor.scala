@@ -8,12 +8,12 @@ import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository }
 class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepository)
     extends Actor with ActorLogging {
 
-  override def preStart() = {
+  override def preStart(): Unit = {
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[AppTerminatedEvent])
   }
 
-  def receive = {
+  def receive: Receive = {
     case TaskFailure.FromMesosStatusUpdateEvent(taskFailure) =>
       taskFailureRepository.store(taskFailure.appId, taskFailure)
 

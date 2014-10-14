@@ -52,38 +52,38 @@ trait ModelValidation extends BeanValidation {
     isTrue(product, prop, path, "not allowed in conjunction with other properties", definedOptionsCount == 1)
   }
 
-  def noAppsAndGroupsWithSameName[T](t: T, path: String, apps: Set[AppDefinition], groups: Set[Group])(implicit ct: ClassTag[T]) = {
+  def noAppsAndGroupsWithSameName[T](t: T, path: String, apps: Set[AppDefinition], groups: Set[Group])(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[_]] = {
     val groupIds = groups.map(_.id)
     val clashingIds = apps.map(_.id).filter(groupIds.contains)
     isTrue(t, apps, path, s"Groups and Applications may not have the same identifier: ${clashingIds.mkString(", ")}", clashingIds.isEmpty)
   }
 
-  def noCyclicDependencies(group: Group, path: String) = {
+  def noCyclicDependencies(group: Group, path: String): Iterable[ConstraintViolation[Group]] = {
     isTrue(group, group.dependencies, path, "Dependency graph has cyclic dependencies", group.hasNonCyclicDependencies)
   }
 
-  def checkGroupUpdates(groups: Iterable[GroupUpdate], path: String = "res", parent: PathId = PathId.empty) = {
+  def checkGroupUpdates(groups: Iterable[GroupUpdate], path: String = "res", parent: PathId = PathId.empty): Iterable[ConstraintViolation[GroupUpdate]] = {
     groups.zipWithIndex.flatMap{ case (group, pos) => checkGroupUpdate(group, needsId = true, s"$path[$pos].", parent) }
   }
 
-  def checkGroups(groups: Iterable[Group], path: String = "res", parent: PathId = PathId.empty) = {
+  def checkGroups(groups: Iterable[Group], path: String = "res", parent: PathId = PathId.empty): Iterable[ConstraintViolation[Group]] = {
     groups.zipWithIndex.flatMap{ case (group, pos) => checkGroup(group, s"$path[$pos].", parent) }
   }
 
-  def checkUpdates(apps: Iterable[AppUpdate], path: String = "res") = {
+  def checkUpdates(apps: Iterable[AppUpdate], path: String = "res"): Iterable[ConstraintViolation[AppUpdate]] = {
     apps.zipWithIndex.flatMap{ case (app, pos) => checkUpdate(app, s"$path[$pos].") }
   }
 
-  def checkPath[T](t: T, parent: PathId, child: PathId, path: String)(implicit ct: ClassTag[T]) = {
+  def checkPath[T](t: T, parent: PathId, child: PathId, path: String)(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[T]] = {
     val isParent = child.canonicalPath(parent).parent == parent
     if (!isParent) List(violation(t, child, path, s"identifier $child is not child of $parent. Hint: use relative paths.")) else Nil
   }
 
-  def checkApps(apps: Iterable[AppDefinition], path: String = "res", parent: PathId = PathId.empty) = {
+  def checkApps(apps: Iterable[AppDefinition], path: String = "res", parent: PathId = PathId.empty): Iterable[ConstraintViolation[AppDefinition]] = {
     apps.zipWithIndex.flatMap{ case (app, pos) => checkApp(app, parent, s"$path[$pos].") }
   }
 
-  def checkUpdate(app: AppUpdate, path: String = "", needsId: Boolean = false) = {
+  def checkUpdate(app: AppUpdate, path: String = "", needsId: Boolean = false): Iterable[ConstraintViolation[AppUpdate]] = {
     validate(app,
       defined(app, app.id, "id", (b: AppUpdate, p: PathId, i: String) => idErrors(b, PathId.empty, p, i), needsId),
       defined(app, app.upgradeStrategy, "upgradeStrategy", (b: AppUpdate, p: UpgradeStrategy, i: String) => healthErrors(b, p, i)),
@@ -92,7 +92,7 @@ trait ModelValidation extends BeanValidation {
     )
   }
 
-  def checkApp(app: AppDefinition, parent: PathId, path: String = "") = {
+  def checkApp(app: AppDefinition, parent: PathId, path: String = ""): Iterable[ConstraintViolation[AppDefinition]] = {
     validate(app,
       idErrors(app, parent, app.id, path + "id"),
       checkPath(app, parent, app.id, path + "id"),
@@ -102,8 +102,8 @@ trait ModelValidation extends BeanValidation {
     )
   }
 
-  def urlsCanBeResolved[T](t: T, urls: Seq[String], path: String)(implicit ct: ClassTag[T]): List[ConstraintViolation[T]] = {
-    def urlIsValid(url: String) = Try {
+  def urlsCanBeResolved[T](t: T, urls: Seq[String], path: String)(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[T]] = {
+    def urlIsValid(url: String): Boolean = Try {
       new URL(url).openConnection() match {
         case http: HttpURLConnection =>
           http.setRequestMethod("HEAD")
@@ -116,7 +116,7 @@ trait ModelValidation extends BeanValidation {
     urls.toList.zipWithIndex.collect{ case (url, pos) if !urlIsValid(url) => violation(t, urls, s"$path[$pos]", s"Can not resolve url $url") }
   }
 
-  def idErrors[T](t: T, base: PathId, id: PathId, path: String)(implicit ct: ClassTag[T]): List[ConstraintViolation[T]] = {
+  def idErrors[T](t: T, base: PathId, id: PathId, path: String)(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[T]] = {
     val p = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
     val valid = id.path.forall(p.pattern.matcher(_).matches())
     val errors = if (!valid) List(violation(t, id, path, "contains invalid characters (allowed: [a-z0-9]* . and .. in path)")) else Nil
@@ -127,11 +127,11 @@ trait ModelValidation extends BeanValidation {
     errors
   }
 
-  def dependencyErrors[T](t: T, base: PathId, set: Set[PathId], path: String)(implicit ct: ClassTag[T]) = {
+  def dependencyErrors[T](t: T, base: PathId, set: Set[PathId], path: String)(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[T]] = {
     set.zipWithIndex.flatMap{ case (id, pos) => idErrors(t, base, id, s"$path[$pos]") }
   }
 
-  def healthErrors[T](t: T, upgradeStrategy: UpgradeStrategy, path: String)(implicit ct: ClassTag[T]) = {
+  def healthErrors[T](t: T, upgradeStrategy: UpgradeStrategy, path: String)(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[T]] = {
     if (upgradeStrategy.minimumHealthCapacity < 0) Some("is less than 0")
     else if (upgradeStrategy.minimumHealthCapacity > 1) Some("is greater than 1")
     else None
