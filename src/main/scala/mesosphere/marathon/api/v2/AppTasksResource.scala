@@ -37,8 +37,11 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
     } yield EnrichedTask(id, task, result(healthCheckManager.status(id, task.getId)))
 
     val matchingApps = appId match {
-      case GroupTasks(gid) => result(groupManager.group(gid.toRootPath)).map(_.transitiveApps.map(_.id)).getOrElse(Set.empty)
-      case _               => Set(appId.toRootPath)
+      case GroupTasks(gid) =>
+        result(groupManager.group(gid.toRootPath))
+          .map(_.transitiveApps.map(_.id))
+          .getOrElse(Set.empty)
+      case _ => Set(appId.toRootPath)
     }
 
     val running = matchingApps.filter(taskTracker.contains)

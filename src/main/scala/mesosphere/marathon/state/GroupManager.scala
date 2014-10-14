@@ -40,7 +40,8 @@ class GroupManager @Singleton @Inject() (
   private[this] val log = Logger.getLogger(getClass.getName)
   private[this] val zkName = "root"
 
-  def root(withLatestApps: Boolean = true): Future[Group] = groupRepo.group(zkName, withLatestApps).map(_.getOrElse(Group.empty))
+  def root(withLatestApps: Boolean = true): Future[Group] =
+    groupRepo.group(zkName, withLatestApps).map(_.getOrElse(Group.empty))
 
   /**
     * Get all available versions for given group identifier.
@@ -92,9 +93,12 @@ class GroupManager @Singleton @Inject() (
     *              one can control, to stop a current deployment and start a new one.
     * @return the deployment plan which will be executed.
     */
-  def update(gid: PathId, fn: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = {
+  def update(
+    gid: PathId,
+    fn: Group => Group,
+    version: Timestamp = Timestamp.now(),
+    force: Boolean = false): Future[DeploymentPlan] =
     upgrade(gid, _.update(gid, fn, version), version, force)
-  }
 
   /**
     * Update application with given identifier and update function.
@@ -107,11 +111,18 @@ class GroupManager @Singleton @Inject() (
     * @param force if the change has to be forced.
     * @return the deployment plan which will be executed.
     */
-  def updateApp(appId: PathId, fn: AppDefinition => AppDefinition, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = {
+  def updateApp(
+    appId: PathId,
+    fn: AppDefinition => AppDefinition,
+    version: Timestamp = Timestamp.now(),
+    force: Boolean = false): Future[DeploymentPlan] =
     upgrade(appId.parent, _.updateApp(appId, fn, version), version, force)
-  }
 
-  private def upgrade(gid: PathId, change: Group => Group, version: Timestamp = Timestamp.now(), force: Boolean = false): Future[DeploymentPlan] = synchronized {
+  private def upgrade(
+    gid: PathId,
+    change: Group => Group,
+    version: Timestamp = Timestamp.now(),
+    force: Boolean = false): Future[DeploymentPlan] = synchronized {
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
     def deploy(from: Group, to: Group, resolve: Seq[ResolveArtifacts]): Future[DeploymentPlan] = {
@@ -142,22 +153,26 @@ class GroupManager @Singleton @Inject() (
 
   private[state] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
     def url2Path(url: String): Future[(String, String)] = contentPath(new URL(url)).map(url -> _)
-    Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path)).map(_.toMap).map { paths => // TODO: refactor this for clarity
-      //Filter out all items with already existing path.
-      //Since the path is derived from the content itself,
-      //it will only change, if the content changes.
-      val downloads = mutable.Map(paths.toSeq.filterNot{ case (url, path) => storage.item(path).exists }: _*)
-      val actions = Seq.newBuilder[ResolveArtifacts]
-      group.updateApp(group.version) { app =>
-        if (app.storeUrls.isEmpty) app else {
-          val storageUrls = app.storeUrls.map(paths).map(storage.item(_).url)
-          val resolved = app.copy(uris = app.uris ++ storageUrls, storeUrls = Seq.empty)
-          val appDownloads = app.storeUrls.flatMap(url => downloads.remove(url).map(path => new URL(url) -> path)).toMap
-          if (appDownloads.nonEmpty) actions += ResolveArtifacts(resolved, appDownloads)
-          resolved
-        }
-      } -> actions.result()
-    }
+    Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path))
+      .map(_.toMap)
+      .map { paths =>
+        //Filter out all items with already existing path.
+        //Since the path is derived from the content itself,
+        //it will only change, if the content changes.
+        val downloads = mutable.Map(paths.toSeq.filterNot{ case (url, path) => storage.item(path).exists }: _*)
+        val actions = Seq.newBuilder[ResolveArtifacts]
+        group.updateApp(group.version) { app =>
+          if (app.storeUrls.isEmpty) app else {
+            val storageUrls = app.storeUrls.map(paths).map(storage.item(_).url)
+            val resolved = app.copy(uris = app.uris ++ storageUrls, storeUrls = Seq.empty)
+            val appDownloads: Map[URL, String] =
+              app.storeUrls
+                .flatMap { url => downloads.remove(url).map { path => new URL(url) -> path } }.toMap
+            if (appDownloads.nonEmpty) actions += ResolveArtifacts(resolved, appDownloads)
+            resolved
+          }
+        } -> actions.result()
+      }
   }
 
   private[state] def assignDynamicAppPort(from: Group, to: Group): Group = {

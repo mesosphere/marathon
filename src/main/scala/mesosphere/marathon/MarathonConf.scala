@@ -76,7 +76,9 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     default = new SystemProperties().get("user.name")) // Current logged in user
 
   lazy val artifactStore = opt[String]("artifact_store",
-    descr = s"""URL to the artifact store. Supported store types ${StorageProvider.examples.keySet.mkString(", ")}. Example: ${StorageProvider.examples.values.mkString(", ")}""",
+    descr = "URL to the artifact store. " +
+      s"""Supported store types ${StorageProvider.examples.keySet.mkString(", ")}. """ +
+      s"""Example: ${StorageProvider.examples.values.mkString(", ")}""",
     validate = StorageProvider.isValidUrl,
     noshort = true
   )

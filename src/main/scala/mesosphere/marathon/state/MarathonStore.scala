@@ -10,10 +10,11 @@ import mesosphere.util.{ ThreadPoolContext, BackToTheFuture }
 import org.slf4j.LoggerFactory
 
 class MarathonStore[S <: MarathonState[_, S]](
-    state: State,
-    newState: () => S,
-    prefix: String = "app:")(
-        implicit val timeout: BackToTheFuture.Timeout = BackToTheFuture.Implicits.defaultTimeout) extends PersistenceStore[S] {
+  state: State,
+  newState: () => S,
+  prefix: String = "app:")(
+    implicit val timeout: BackToTheFuture.Timeout = BackToTheFuture.Implicits.defaultTimeout)
+    extends PersistenceStore[S] {
 
   import ThreadPoolContext.context
   import BackToTheFuture.futureToFutureOption

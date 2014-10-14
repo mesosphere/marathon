@@ -67,7 +67,22 @@ class DeploymentManager(
       deploymentStatus -= id
 
     case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.id) =>
-      val ref = context.actorOf(Props(classOf[DeploymentActor], self, sender(), appRepository, driver, scheduler, plan, taskTracker, taskQueue, storage, eventBus), plan.id)
+      val ref = context.actorOf(
+        Props(
+          classOf[DeploymentActor],
+          self,
+          sender(),
+          appRepository,
+          driver,
+          scheduler,
+          plan,
+          taskTracker,
+          taskQueue,
+          storage,
+          eventBus
+        ),
+        plan.id
+      )
       runningDeployments += plan.id -> DeploymentInfo(ref, plan)
 
     case stepInfo: DeploymentStepInfo => deploymentStatus += stepInfo.plan.id -> stepInfo
@@ -76,7 +91,8 @@ class DeploymentManager(
       sender() ! Status.Failure(new ConcurrentTaskUpgradeException("Deployment is already in progress"))
 
     case RetrieveRunningDeployments =>
-      val deployments: Iterable[(DeploymentPlan, DeploymentStepInfo)] = deploymentStatus.values.map(step => step.plan -> step)
+      val deployments: Iterable[(DeploymentPlan, DeploymentStepInfo)] =
+        deploymentStatus.values.map(step => step.plan -> step)
       sender() ! RunningDeployments(deployments.to[Seq])
   }
 

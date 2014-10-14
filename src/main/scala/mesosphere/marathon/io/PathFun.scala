@@ -24,7 +24,9 @@ trait PathFun extends IO {
 
   def contentPath(url: URL): Future[String] = contentHeader(url).map { header =>
     //filter only strong eTags and make sure, it can be used as path
-    val eTag = header.get("ETag").flatMap(_.filterNot(_.startsWith("W/")).headOption).map(_.replaceAll("[^A-z0-9\\-]", ""))
+    val eTag: Option[String] = header.get("ETag")
+      .flatMap(_.filterNot(_.startsWith("W/")).headOption)
+      .map(_.replaceAll("[^A-z0-9\\-]", ""))
     val contentPart = eTag.getOrElse(mdSum(url.openStream()))
     s"$contentPart/${fileName(url)}"
   }

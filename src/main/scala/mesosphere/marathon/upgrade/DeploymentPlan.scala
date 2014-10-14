@@ -44,7 +44,8 @@ final case class DeploymentPlan(
 
   def affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
 
-  def isAffectedBy(other: DeploymentPlan): Boolean = affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
+  def isAffectedBy(other: DeploymentPlan): Boolean =
+    affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
   override def toString: String = {
     def appString(app: AppDefinition): String = s"App(${app.id}, ${app.cmd}))"
@@ -60,7 +61,8 @@ final case class DeploymentPlan(
     s"DeploymentPlan($version, $stepString)"
   }
 
-  override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan = mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
+  override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan =
+    mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
 
   override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
     original = Group.empty.mergeFromProto(msg.getOriginal),
@@ -79,11 +81,16 @@ final case class DeploymentPlan(
 }
 
 object DeploymentPlan extends Logging {
-  def empty: DeploymentPlan = DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
+  def empty: DeploymentPlan =
+    DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
 
   def fromProto(message: Protos.DeploymentPlanDefinition): DeploymentPlan = empty.mergeFromProto(message)
 
-  def apply(original: Group, target: Group, resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty, version: Timestamp = Timestamp.now()): DeploymentPlan = {
+  def apply(
+    original: Group,
+    target: Group,
+    resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
+    version: Timestamp = Timestamp.now()): DeploymentPlan = {
     log.info(s"Compute DeploymentPlan from $original to $target")
 
     //lookup maps for original and target apps
@@ -104,8 +111,11 @@ object DeploymentPlan extends Logging {
     val changedApplications = toStart ++ toRestart ++ toScale ++ toStop
     val (dependent, nonDependent) = target.dependencyList
 
-    //compute the restart actions: restart, kill, scale for one app
-    def restartActions(app: AppDefinition, orig: AppDefinition): (DeploymentAction, DeploymentAction, DeploymentAction) = ( // TODO: Let's create an ADT for this or refactor to a Seq
+    // compute the restart actions: restart, kill, scale for one app
+    // TODO: Let's create an ADT for this or refactor to a Seq
+    def restartActions(
+      app: AppDefinition,
+      orig: AppDefinition): (DeploymentAction, DeploymentAction, DeploymentAction) = (
       RestartApplication(
         app,
         (orig.upgradeStrategy.minimumHealthCapacity * orig.instances).ceil.toInt,

@@ -20,11 +20,12 @@ import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success, Try }
 
 class Migration @Inject() (
-    state: State,
-    appRepo: AppRepository,
-    groupRepo: GroupRepository,
-    config: MarathonConf,
-    implicit val timeout: BackToTheFuture.Timeout = BackToTheFuture.Implicits.defaultTimeout) extends Logging {
+  state: State,
+  appRepo: AppRepository,
+  groupRepo: GroupRepository,
+  config: MarathonConf,
+  implicit val timeout: BackToTheFuture.Timeout = BackToTheFuture.Implicits.defaultTimeout)
+    extends Logging {
 
   type MigrationAction = (StorageVersion, () => Future[Any])
 
@@ -33,20 +34,24 @@ class Migration @Inject() (
     * They get applied after the master has been elected.
     */
   def migrations: List[MigrationAction] = List(
-    StorageVersions(0, 5, 0) -> { () => changeApps(app => app.copy(id = app.id.toString.toLowerCase.replaceAll("_", "-").toRootPath)) },
-    StorageVersions(0, 7, 0) -> { () =>
-      {
+    StorageVersions(0, 5, 0) -> {
+      () => changeApps(app => app.copy(id = app.id.toString.toLowerCase.replaceAll("_", "-").toRootPath))
+    },
+    StorageVersions(0, 7, 0) -> {
+      () =>
         changeTasks(app => new InternalApp(app.appName.canonicalPath(), app.tasks, app.shutdown))
         changeApps(app => app.copy(id = app.id.canonicalPath()))
         putAppsIntoGroup()
-      }
     }
   )
 
   def applyMigrationSteps(from: StorageVersion): Future[List[StorageVersion]] = {
     val result = migrations.filter(_._1 > from).sortBy(_._1).map {
       case (migrateVersion, change) =>
-        log.info(s"Migration for storage: ${from.str} to current: ${current.str}: apply change for version: ${migrateVersion.str} ")
+        log.info(
+          s"Migration for storage: ${from.str} to current: ${current.str}: " +
+            s"apply change for version: ${migrateVersion.str} "
+        )
         change.apply().map(_ => migrateVersion)
     }
     Future.sequence(result)

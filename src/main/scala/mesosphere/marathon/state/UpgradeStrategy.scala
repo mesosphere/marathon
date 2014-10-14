@@ -10,5 +10,6 @@ case class UpgradeStrategy(minimumHealthCapacity: Double) {
 
 object UpgradeStrategy {
   def empty: UpgradeStrategy = UpgradeStrategy(1)
-  def fromProto(upgradeStrategy: UpgradeStrategyDefinition): UpgradeStrategy = UpgradeStrategy(upgradeStrategy.getMinimumHealthCapacity)
+  def fromProto(upgradeStrategy: UpgradeStrategyDefinition): UpgradeStrategy =
+    UpgradeStrategy(upgradeStrategy.getMinimumHealthCapacity)
 }

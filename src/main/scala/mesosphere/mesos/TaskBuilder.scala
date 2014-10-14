@@ -43,7 +43,10 @@ class TaskBuilder(app: AppDefinition,
         diskRole = disk
         portsResource = ranges
       case _ =>
-        log.info(s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, disk=${app.disk}, ports=${app.hostPorts}) : " + offer)
+        log.info(
+          s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, " +
+            s"disk=${app.disk}, ports=${app.hostPorts}) : " + offer
+        )
         return None
     }
 
