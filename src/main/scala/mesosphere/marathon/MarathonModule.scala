@@ -11,6 +11,7 @@ import akka.actor.SupervisorStrategy.Restart
 import akka.actor.{ ActorRef, ActorSystem, OneForOneStrategy, Props }
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
+import com.codahale.metrics.MetricRegistry
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.inject._
 import com.google.inject.name.Names
@@ -47,6 +48,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
+    bind(classOf[MetricRegistry]).asEagerSingleton()
 
     bind(classOf[GroupManager]).in(Scopes.SINGLETON)
 
@@ -161,23 +163,39 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideAppRepository(state: State, conf: MarathonConf): AppRepository = new AppRepository(
-    new MarathonStore[AppDefinition](state, () => AppDefinition.apply()), conf.zooKeeperMaxVersions.get
-  )
-
-  @Provides
-  @Singleton
-  def provideGroupRepository(state: State, appRepository: AppRepository, conf: MarathonConf): GroupRepository =
-    new GroupRepository(
-      new MarathonStore[Group](state, () => Group.empty, "group:"), appRepository, conf.zooKeeperMaxVersions.get
+  def provideAppRepository(
+    state: State,
+    conf: MarathonConf,
+    registry: MetricRegistry): AppRepository =
+    new AppRepository(
+      new MarathonStore[AppDefinition](state, () => AppDefinition.apply()),
+      maxVersions = conf.zooKeeperMaxVersions.get,
+      registry
     )
 
   @Provides
   @Singleton
-  def provideDeploymentRepository(state: State, conf: MarathonConf): DeploymentRepository =
+  def provideGroupRepository(
+    state: State,
+    appRepository: AppRepository,
+    conf: MarathonConf,
+    registry: MetricRegistry): GroupRepository =
+    new GroupRepository(
+      new MarathonStore[Group](state, () => Group.empty, "group:"),
+      appRepository, conf.zooKeeperMaxVersions.get,
+      registry
+    )
+
+  @Provides
+  @Singleton
+  def provideDeploymentRepository(
+    state: State,
+    conf: MarathonConf,
+    registry: MetricRegistry): DeploymentRepository =
     new DeploymentRepository(
       new MarathonStore[DeploymentPlan](state, () => DeploymentPlan.empty, "deployment:"),
-      conf.zooKeeperMaxVersions.get
+      conf.zooKeeperMaxVersions.get,
+      registry
     )
 
   @Provides
@@ -195,8 +213,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     state: State,
     appRepo: AppRepository,
     groupRepo: GroupRepository,
+    registry: MetricRegistry,
     config: MarathonConf): Migration =
-    new Migration(state, appRepo, groupRepo, config)
+    new Migration(state, appRepo, groupRepo, config, registry)
 
   @Provides
   @Singleton

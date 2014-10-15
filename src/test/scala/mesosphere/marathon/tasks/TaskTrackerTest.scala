@@ -28,11 +28,11 @@ class TaskTrackerTest extends MarathonSpec {
   var state: State = null
   val config = mock[MarathonConf]
   val taskIdUtil = new TaskIdUtil
+  val registry = new MetricRegistry
 
   before {
-    val metricRegistry = new MetricRegistry
     state = spy(new InMemoryState)
-    taskTracker = new TaskTracker(state, config)
+    taskTracker = new TaskTracker(state, config, registry)
   }
 
   def makeSampleTask(id: String) = {

@@ -2,6 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestKit }
 import akka.actor.{ Props, ActorSystem }
+import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
 import mesosphere.marathon.{ MarathonConf, AppStartCanceledException, SchedulerActions, MarathonSpec }
 import org.apache.mesos.state.InMemoryState
@@ -31,7 +32,7 @@ class AppStartActorTest
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
     taskQueue = new TaskQueue
-    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
+    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new MetricRegistry)
   }
 
   test("Without Health Checks") {

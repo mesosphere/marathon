@@ -6,6 +6,7 @@ import akka.pattern.ask
 import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
 import akka.testkit.{ TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
+import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
@@ -38,6 +39,7 @@ class DeploymentManagerTest
   var eventBus: EventStream = _
   var taskQueue: TaskQueue = _
   var config: MarathonConf = _
+  var registry: MetricRegistry = _
   var taskTracker: TaskTracker = _
   var scheduler: SchedulerActions = _
   var appRepo: AppRepository = _
@@ -48,10 +50,15 @@ class DeploymentManagerTest
     eventBus = mock[EventStream]
     taskQueue = mock[TaskQueue]
     config = mock[MarathonConf]
-    taskTracker = new TaskTracker(new InMemoryState, config)
+    registry = new com.codahale.metrics.MetricRegistry
+    taskTracker = new TaskTracker(new InMemoryState, config, registry)
     scheduler = mock[SchedulerActions]
     storage = mock[StorageProvider]
-    appRepo = new AppRepository(new MarathonStore[AppDefinition](new InMemoryState, () => AppDefinition()))
+    appRepo = new AppRepository(
+      new MarathonStore[AppDefinition](new InMemoryState, () => AppDefinition()),
+      None,
+      registry
+    )
   }
 
   test("deploy") {

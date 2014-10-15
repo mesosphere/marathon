@@ -1,6 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.MarathonConf
+import com.codahale.metrics.MetricRegistry
 import org.apache.mesos.state.State
 import org.scalatest.{ Matchers, FunSuite }
 import org.scalatest.mock.MockitoSugar
@@ -24,6 +25,6 @@ class MigrationTest extends FunSuite with MockitoSugar with Matchers {
     val appRepo = mock[AppRepository]
     val groupRepo = mock[GroupRepository]
     val config = mock[MarathonConf]
-    new Migration(state, appRepo, groupRepo, config)
+    new Migration(state, appRepo, groupRepo, config, new MetricRegistry)
   }
 }

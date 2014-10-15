@@ -4,8 +4,9 @@ import java.io._
 import javax.inject.Inject
 
 import mesosphere.marathon.Protos._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, StateMetrics }
 import mesosphere.marathon.{ Main, MarathonConf }
+import com.codahale.metrics.MetricRegistry
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.state.{ State, Variable }
@@ -16,7 +17,11 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Set
 import scala.concurrent.Future
 
-class TaskTracker @Inject() (state: State, config: MarathonConf) {
+class TaskTracker @Inject() (
+  state: State,
+  config: MarathonConf,
+  val registry: MetricRegistry)
+    extends StateMetrics {
 
   import mesosphere.marathon.tasks.TaskTracker._
   import mesosphere.util.BackToTheFuture.futureToFuture
@@ -31,7 +36,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
 
   private[this] val apps = TrieMap[PathId, InternalApp]()
 
-  private[tasks] def fetchFromState(id: String) = state.fetch(id).get()
+  private[tasks] def fetchFromState(id: String) = timedRead { state.fetch(id).get() }
 
   private[tasks] def getKey(appId: PathId, taskId: String): String = {
     PREFIX + appId.safePath + ID_DELIMITER + taskId
@@ -89,7 +94,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
         app.tasks.remove(task.getId)
 
         val variable = fetchFromState(getKey(appId, taskId))
-        state.expunge(variable)
+        timedWrite { state.expunge(variable) }
 
         log.info(s"Task $taskId expunged and removed from TaskTracker")
 
@@ -155,7 +160,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
   def expungeOrphanedTasks(): Unit = {
     // Remove tasks that don't have any tasks associated with them. Expensive!
     log.info("Expunging orphaned tasks from store")
-    val stateTaskKeys = state.names.get.asScala.filter(_.startsWith(PREFIX))
+    val stateTaskKeys = timedRead { state.names.get.asScala.filter(_.startsWith(PREFIX)) }
     val appsTaskKeys = apps.values.flatMap { app =>
       app.tasks.keys.map(taskId => getKey(app.appName, taskId))
     }.toSet
@@ -163,15 +168,15 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     for (stateTaskKey <- stateTaskKeys) {
       if (!appsTaskKeys.contains(stateTaskKey)) {
         log.info(s"Expunging orphaned task with key $stateTaskKey")
-        val variable = state.fetch(stateTaskKey).get
-        state.expunge(variable)
+        val variable = timedRead { state.fetch(stateTaskKey).get }
+        timedWrite { state.expunge(variable) }
       }
     }
   }
 
   private[tasks] def fetchApp(appId: PathId): InternalApp = {
     log.debug(s"Fetching app from store $appId")
-    val names = state.names().get.asScala.toSet
+    val names = timedRead { state.names().get.asScala.toSet }
     val tasks = TrieMap[String, MarathonTask]()
     val taskKeys = names.filter(name => name.startsWith(PREFIX + appId.safePath + ID_DELIMITER))
     for {
@@ -252,7 +257,7 @@ class TaskTracker @Inject() (state: State, config: MarathonConf) {
     val output = new ObjectOutputStream(bytes)
     serialize(task, output)
     val newVar = oldVar.mutate(bytes.toByteArray)
-    state.store(newVar)
+    timedWrite { state.store(newVar) }
   }
 
   private[tasks] def statusDidChange(statusA: TaskStatus, statusB: TaskStatus): Boolean = {
