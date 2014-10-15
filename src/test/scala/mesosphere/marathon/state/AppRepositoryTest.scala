@@ -19,7 +19,8 @@ class AppRepositoryTest extends MarathonSpec {
 
     when(store.fetch(s"testApp:$timestamp")).thenReturn(future)
 
-    val repo = new AppRepository(store)
+    val registry = new com.codahale.metrics.MetricRegistry
+    val repo = new AppRepository(store, None, registry)
     val res = repo.app(path, timestamp)
 
     assert(Some(appDef) == Await.result(res, 5.seconds), "Should return the correct AppDefinition")
@@ -36,7 +37,8 @@ class AppRepositoryTest extends MarathonSpec {
     when(store.store(versionedKey, appDef)).thenReturn(future)
     when(store.store("testApp", appDef)).thenReturn(future)
 
-    val repo = new AppRepository(store)
+    val registry = new com.codahale.metrics.MetricRegistry
+    val repo = new AppRepository(store, None, registry)
     val res = repo.store(appDef)
 
     assert(appDef == Await.result(res, 5.seconds), "Should return the correct AppDefinition")
@@ -50,7 +52,8 @@ class AppRepositoryTest extends MarathonSpec {
 
     when(store.names()).thenReturn(future)
 
-    val repo = new AppRepository(store)
+    val registry = new com.codahale.metrics.MetricRegistry
+    val repo = new AppRepository(store, None, registry)
     val res = repo.allIds()
 
     assert(Seq("app1", "app2") == Await.result(res, 5.seconds), "Should return only unversioned names")
@@ -71,7 +74,8 @@ class AppRepositoryTest extends MarathonSpec {
     when(store.fetch(appDef1.id.toString)).thenReturn(Future.successful(Some(appDef1)))
     when(store.fetch(appDef2.id.toString)).thenReturn(Future.successful(Some(appDef2)))
 
-    val repo = new AppRepository(store)
+    val registry = new com.codahale.metrics.MetricRegistry
+    val repo = new AppRepository(store, None, registry)
     val res = repo.apps()
 
     assert(Seq(appDef1, appDef2) == Await.result(res, 5.seconds), "Should return only current versions")
@@ -93,7 +97,8 @@ class AppRepositoryTest extends MarathonSpec {
 
     when(store.names()).thenReturn(future)
 
-    val repo = new AppRepository(store)
+    val registry = new com.codahale.metrics.MetricRegistry
+    val repo = new AppRepository(store, None, registry)
     val res = repo.listVersions(appDef1.id)
 
     val expected = Seq(appDef1.version, version1.version, version2.version, version3.version)
@@ -115,7 +120,8 @@ class AppRepositoryTest extends MarathonSpec {
     when(store.names()).thenReturn(future)
     when(store.expunge(any())).thenReturn(Future.successful(true))
 
-    val repo = new AppRepository(store)
+    val registry = new com.codahale.metrics.MetricRegistry
+    val repo = new AppRepository(store, None, registry)
     val res = Await.result(repo.expunge(appDef1.id), 5.seconds).toSeq
 
     assert(res.size == 5, "Should expunge all versions")

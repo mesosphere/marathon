@@ -2,6 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
+import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
@@ -32,7 +33,8 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
+    val registry = new MetricRegistry
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
@@ -64,7 +66,8 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
+    val registry = new MetricRegistry
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 0)
 
@@ -91,7 +94,8 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
+    val registry = new MetricRegistry
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
@@ -123,7 +127,8 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
+    val registry = new MetricRegistry
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 0)
 
@@ -150,7 +155,8 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = new TaskQueue
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
+    val registry = new MetricRegistry
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
     val app = AppDefinition("myApp".toPath, instances = 5)
 
@@ -181,7 +187,8 @@ class TaskStartActorTest
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
     val taskQueue = spy(new TaskQueue)
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf])
+    val registry = new MetricRegistry
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
     val app = AppDefinition("myApp".toPath, instances = 1)
 

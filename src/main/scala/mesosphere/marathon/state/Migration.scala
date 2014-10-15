@@ -12,6 +12,7 @@ import mesosphere.marathon.{ BuildInfo, MarathonConf, StorageException }
 import mesosphere.util.BackToTheFuture.futureToFutureOption
 import mesosphere.util.ThreadPoolContext.context
 import mesosphere.util.{ BackToTheFuture, Logging }
+import com.codahale.metrics.MetricRegistry
 import org.apache.mesos.state.{ State, Variable }
 
 import scala.collection.JavaConverters._
@@ -24,6 +25,7 @@ class Migration @Inject() (
   appRepo: AppRepository,
   groupRepo: GroupRepository,
   config: MarathonConf,
+  registry: MetricRegistry,
   implicit val timeout: BackToTheFuture.Timeout = BackToTheFuture.Implicits.defaultTimeout)
     extends Logging {
 
@@ -101,7 +103,7 @@ class Migration @Inject() (
   }
 
   private def changeTasks(fn: InternalApp => InternalApp): Future[Any] = {
-    val taskTracker = new TaskTracker(state, config)
+    val taskTracker = new TaskTracker(state, config, registry)
     def fetchApp(appId: PathId): Option[InternalApp] = {
       val bytes = state.fetch("tasks:" + appId.safePath).get().value
       if (bytes.length > 0) {

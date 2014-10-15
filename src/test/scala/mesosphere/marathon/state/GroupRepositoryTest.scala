@@ -20,7 +20,8 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
     when(store.store(versionedKey, group)).thenReturn(future)
     when(store.store("root", group)).thenReturn(future)
 
-    val repo = new GroupRepository(store, appRepo)
+    val registry = new com.codahale.metrics.MetricRegistry
+    val repo = new GroupRepository(store, appRepo, None, registry)
     val res = repo.store("root", group)
 
     assert(group == Await.result(res, 5 seconds), "Should return the correct Group")

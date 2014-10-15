@@ -1,11 +1,13 @@
 package mesosphere.marathon.state
 
+import com.codahale.metrics.MetricRegistry
 import scala.concurrent.Future
 
 class GroupRepository(
   val store: PersistenceStore[Group],
   appRepo: AppRepository,
-  val maxVersions: Option[Int] = None)
+  val maxVersions: Option[Int] = None,
+  val registry: MetricRegistry)
     extends EntityRepository[Group] {
 
   import mesosphere.util.ThreadPoolContext.context
