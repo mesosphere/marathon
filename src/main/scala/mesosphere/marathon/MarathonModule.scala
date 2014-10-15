@@ -145,12 +145,16 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideTaskFailureRepository(state: State, conf: MarathonConf): TaskFailureRepository = {
+  def provideTaskFailureRepository(
+    state: State,
+    conf: MarathonConf,
+    registry: MetricRegistry): TaskFailureRepository = {
     import mesosphere.marathon.state.PathId
     import org.apache.mesos.{ Protos => mesos }
     new TaskFailureRepository(
       new MarathonStore[TaskFailure](
         state,
+        registry,
         () => TaskFailure(
           PathId.empty,
           mesos.TaskID.newBuilder().setValue("").build,
@@ -168,7 +172,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     conf: MarathonConf,
     registry: MetricRegistry): AppRepository =
     new AppRepository(
-      new MarathonStore[AppDefinition](state, () => AppDefinition.apply()),
+      new MarathonStore[AppDefinition](state, registry, () => AppDefinition.apply()),
       maxVersions = conf.zooKeeperMaxVersions.get,
       registry
     )
@@ -181,7 +185,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     conf: MarathonConf,
     registry: MetricRegistry): GroupRepository =
     new GroupRepository(
-      new MarathonStore[Group](state, () => Group.empty, "group:"),
+      new MarathonStore[Group](state, registry, () => Group.empty, "group:"),
       appRepository, conf.zooKeeperMaxVersions.get,
       registry
     )
@@ -193,7 +197,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     conf: MarathonConf,
     registry: MetricRegistry): DeploymentRepository =
     new DeploymentRepository(
-      new MarathonStore[DeploymentPlan](state, () => DeploymentPlan.empty, "deployment:"),
+      new MarathonStore[DeploymentPlan](state, registry, () => DeploymentPlan.empty, "deployment:"),
       conf.zooKeeperMaxVersions.get,
       registry
     )
