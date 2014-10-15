@@ -22,6 +22,7 @@ import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
+import scala.concurrent.Future
 import scala.concurrent.duration.Deadline
 
 class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with MarathonSpec with BeforeAndAfterAll {
@@ -88,6 +89,8 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     when(queue.list).thenReturn(list)
     when(queue.removeAll()).thenReturn(list)
     when(queue.listApps).thenReturn(allApps)
+    when(repo.currentAppVersions())
+      .thenReturn(Future.successful(Map(app.id -> app.version)))
 
     scheduler.resourceOffers(driver, offers)
 

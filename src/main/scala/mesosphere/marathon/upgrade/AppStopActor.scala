@@ -20,7 +20,7 @@ class AppStopActor(
 
   var idsToKill: mutable.Set[String] = taskTracker.get(app.id).map(_.getId).to[mutable.Set]
 
-  def appId(): PathId = app.id
+  def appId: PathId = app.id
 
   def initializeStop(): Unit = {
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
