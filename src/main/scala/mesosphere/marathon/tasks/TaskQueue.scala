@@ -50,13 +50,8 @@ class TaskQueue {
   /**
     * Retains only elements that satisfy the supplied predicate.
     */
-  def filter(f: (QueuedTask => Boolean)): Unit =
+  def retain(f: (QueuedTask => Boolean)): Unit =
     queue.iterator.asScala.foreach { qt => if (!f(qt)) queue.remove(qt) }
-
-  /**
-    * Retains only elements that do not satisfy the supplied predicate.
-    */
-  def filterNot(f: (QueuedTask => Boolean)): Unit = filter { qt: QueuedTask => !f(qt) }
 
   def addAll(xs: Seq[QueuedTask]): Unit = queue.addAll(xs.asJavaCollection)
 
