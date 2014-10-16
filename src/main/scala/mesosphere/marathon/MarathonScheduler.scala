@@ -90,7 +90,7 @@ class MarathonScheduler @Inject() (
 
     // remove queued tasks with stale (non-current) app definition versions
     val appVersions: Map[PathId, Timestamp] =
-      Await.result(appRepo.currentAppVersions, config.zkTimeoutDuration)
+      Await.result(appRepo.currentAppVersions(), config.zkTimeoutDuration)
 
     taskQueue.retain {
       case QueuedTask(app, _) =>
@@ -103,11 +103,18 @@ class MarathonScheduler @Inject() (
 
         val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
 
-        val withTaskInfos: Seq[(QueuedTask, Option[(TaskInfo, Seq[Long])])] =
-          queuedTasks.view.map { qt => qt -> newTask(qt.app, offer) }.to[Seq]
+        val withTaskInfos: Seq[(QueuedTask, (TaskInfo, Seq[Long]))] =
+          queuedTasks.view.flatMap { qt => newTask(qt.app, offer).map(qt -> _) }.to[Seq]
 
-        val launchedTask: Option[QueuedTask] = withTaskInfos.collectFirst {
-          case (qt, Some((taskInfo, ports))) if qt.delay.isOverdue =>
+        val launchedTask = withTaskInfos.dropWhile {
+          case (qt, (taskInfo, ports)) if qt.delay.isOverdue() => false
+          case (_, (taskInfo, _)) =>
+            log.debug(s"Ignoring task ${taskInfo.getTaskId.getValue}")
+            true
+        }.headOption
+
+        launchedTask.map {
+          case (qt, (taskInfo, ports)) =>
             val taskInfos = Seq(taskInfo)
             log.debug("Launching tasks: " + taskInfos)
 
@@ -159,7 +166,7 @@ class MarathonScheduler @Inject() (
 
     if (status.getState == TASK_FAILED || killedForFailingHealthChecks)
       appRepo.currentVersion(appId).foreach {
-        _.foreach(taskQueue.rateLimiter.addDelay(_))
+        _.foreach(taskQueue.rateLimiter.addDelay)
       }
     status.getState match {
       case TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>

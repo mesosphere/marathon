@@ -64,7 +64,7 @@ object Constraints {
             // or all groups are the same size
             orderedByCount.headOption.map(_._2.size) == orderedByCount.lastOption.map(_._2.size))
 
-      def condB: Boolean = !orderedByCount.exists(_._1.exists(_ == attr.get.getText.getValue))
+      def condB: Boolean = !orderedByCount.exists(_._1.contains(attr.get.getText.getValue))
 
       condA || condB
     }
@@ -114,10 +114,6 @@ object Constraints {
 
     /**
       * Filters running tasks by matching their attributes to this field & value.
-      * @param tasks
-      * @param field
-      * @param value
-      * @return
       */
     private def matchTaskAttributes(tasks: Iterable[MarathonTask], field: String, value: String) =
       tasks.filter {
