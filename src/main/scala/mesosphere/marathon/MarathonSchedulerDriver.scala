@@ -1,7 +1,9 @@
 package mesosphere.marathon
 
-import org.apache.mesos.Protos.{ FrameworkID, FrameworkInfo }
+import org.apache.mesos.Protos.{ FrameworkID, FrameworkInfo, Credential }
 import org.apache.mesos.{ SchedulerDriver, MesosSchedulerDriver }
+
+import com.google.protobuf.ByteString;
 
 /**
   * Wrapper class for the scheduler
@@ -29,11 +31,28 @@ object MarathonSchedulerDriver {
     // Set the ID, if provided
     frameworkId.foreach(builder.setId)
 
-    val newDriver = new MesosSchedulerDriver(
-      newScheduler,
-      builder.build(),
-      config.mesosMaster()
-    )
+    var newDriver: MesosSchedulerDriver = null
+    if (config.mesosAuthUser.get.getOrElse("") != "" && config.mesosAuthPassword.get.getOrElse("") != "") {
+      val credential = Credential.newBuilder()
+        .setPrincipal(config.mesosAuthUser())
+        .setSecret(ByteString.copyFromUtf8(config.mesosAuthPassword()))
+        .build()
+
+      newDriver = new MesosSchedulerDriver(
+        newScheduler,
+        builder.build(),
+        config.mesosMaster(),
+        credential
+      )
+    }
+    else {
+      newDriver = new MesosSchedulerDriver(
+        newScheduler,
+        builder.build(),
+        config.mesosMaster()
+      )
+    }
+
     driver = Some(newDriver)
     scheduler = Some(newScheduler)
     newDriver
