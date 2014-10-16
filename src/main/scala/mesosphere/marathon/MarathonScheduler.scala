@@ -113,7 +113,7 @@ class MarathonScheduler @Inject() (
             true
         }.headOption
 
-        launchedTask.map {
+        launchedTask.foreach {
           case (qt, (taskInfo, ports)) =>
             val taskInfos = Seq(taskInfo)
             log.debug("Launching tasks: " + taskInfos)
@@ -124,7 +124,6 @@ class MarathonScheduler @Inject() (
 
             taskTracker.created(qt.app.id, marathonTask)
             driver.launchTasks(Seq(offer.getId).asJava, taskInfos.asJava)
-            qt
         }
 
         // put unscheduled tasks back in the queue
