@@ -4,6 +4,7 @@ import org.apache.mesos.Protos.{ FrameworkID, FrameworkInfo, Credential }
 import org.apache.mesos.{ SchedulerDriver, MesosSchedulerDriver }
 
 import com.google.protobuf.ByteString;
+import java.nio.file.{ Files, Paths };
 
 /**
   * Wrapper class for the scheduler
@@ -32,15 +33,19 @@ object MarathonSchedulerDriver {
     frameworkId.foreach(builder.setId)
 
     val credential: Option[Credential] = (config.mesosAuthPrincipal.get, config.mesosAuthSecret.get) match {
-      case (Some(principal), Some(secret)) => Option(Credential.newBuilder()
-        .setPrincipal(config.mesosAuthPrincipal())
-        .setSecret(ByteString.copyFromUtf8(config.mesosAuthSecret()))
-        .build()
-      )
-      case (Some(principal), None) => Option(Credential.newBuilder()
-        .setPrincipal(config.mesosAuthPrincipal())
-        .build()
-      )
+      case (Some(principal), Some(secret)) => {
+        Option(Credential.newBuilder()
+          .setPrincipal(config.mesosAuthPrincipal())
+          .setSecret(ByteString.copyFrom(Files.readAllBytes(Paths.get(config.mesosAuthSecret()))))
+          .build()
+        )
+      }
+      case (Some(principal), None) => {
+        Option(Credential.newBuilder()
+          .setPrincipal(config.mesosAuthPrincipal())
+          .build()
+        )
+      }
 
       case _ => None
     }
