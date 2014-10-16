@@ -32,10 +32,10 @@ object MarathonSchedulerDriver {
     frameworkId.foreach(builder.setId)
 
     var newDriver: MesosSchedulerDriver = null
-    if (config.mesosAuthUser.get.getOrElse("") != "" && config.mesosAuthPassword.get.getOrElse("") != "") {
+    if (config.mesosAuthPrincipal.get.getOrElse("") != "" && config.mesosAuthSecret.get.getOrElse("") != "") {
       val credential = Credential.newBuilder()
-        .setPrincipal(config.mesosAuthUser())
-        .setSecret(ByteString.copyFromUtf8(config.mesosAuthPassword()))
+        .setPrincipal(config.mesosAuthPrincipal())
+        .setSecret(ByteString.copyFromUtf8(config.mesosAuthSecret()))
         .build()
 
       newDriver = new MesosSchedulerDriver(

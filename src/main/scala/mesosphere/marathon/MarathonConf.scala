@@ -83,13 +83,13 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     noshort = true
   )
 
-  lazy val mesosAuthUser = opt[String]("mesos_auth_user",
-    descr = "Mesos Authentication User",
+  lazy val mesosAuthPrincipal = opt[String]("mesos_auth_principal",
+    descr = "Mesos Authentication Principal",
     noshort = true
   )
 
-  lazy val mesosAuthPassword = opt[String]("mesos_auth_password",
-    descr = "Mesos Authentication Password",
+  lazy val mesosAuthSecret = opt[String]("mesos_auth_secret",
+    descr = "Mesos Authentication Secret",
     noshort = true
   )
 }
