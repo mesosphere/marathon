@@ -2,21 +2,9 @@ package mesosphere.marathon.upgrade
 
 import java.util.UUID
 
-import scala.concurrent.Future
-import scala.concurrent.duration._
-
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
-import org.apache.mesos.Protos.Status
-import org.apache.mesos.SchedulerDriver
-import org.mockito.Matchers.any
-import org.mockito.Mockito.{ times, verify, when }
-import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
-import org.scalatest.mock.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
-
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
@@ -26,6 +14,17 @@ import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, Deplo
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
+import org.apache.mesos.Protos.Status
+import org.apache.mesos.SchedulerDriver
+import org.mockito.Matchers.any
+import org.mockito.Mockito.{ times, verify, when }
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
+import org.scalatest.mock.MockitoSugar
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class DeploymentActorTest
     extends TestKit(ActorSystem("System"))
@@ -182,10 +181,16 @@ class DeploymentActorTest
     })
 
     val taskIDs = Iterator.from(3)
+    var taskCount = 0
+
+    when(queue.count(appNew)).thenAnswer(new Answer[Int] {
+      override def answer(p1: InvocationOnMock): Int = taskCount
+    })
 
     when(queue.add(appNew)).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", s"task1_${taskIDs.next}", "TASK_RUNNING", "", app.id, "", Nil, appNew.version.toString))
+        taskCount += 1
+        system.eventStream.publish(MesosStatusUpdateEvent("", s"task1_${taskIDs.next()}", "TASK_RUNNING", "", app.id, "", Nil, appNew.version.toString))
         true
       }
     })
