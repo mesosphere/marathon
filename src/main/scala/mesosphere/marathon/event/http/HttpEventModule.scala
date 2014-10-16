@@ -1,6 +1,7 @@
 package mesosphere.marathon.event.http
 
 import scala.language.postfixOps
+import com.codahale.metrics.MetricRegistry
 import com.google.inject.{ Scopes, Singleton, Provides, AbstractModule }
 import akka.actor.{ Props, ActorRef, ActorSystem }
 import akka.pattern.ask
@@ -65,8 +66,8 @@ class HttpEventModule extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideCallbackUrlsStore(state: State): MarathonStore[EventSubscribers] =
-    new MarathonStore[EventSubscribers](state, () => new EventSubscribers(Set.empty[String]), "events:")
+  def provideCallbackUrlsStore(state: State, registry: MetricRegistry): MarathonStore[EventSubscribers] =
+    new MarathonStore[EventSubscribers](state, registry, () => new EventSubscribers(Set.empty[String]), "events:")
 }
 
 object HttpEventModule {

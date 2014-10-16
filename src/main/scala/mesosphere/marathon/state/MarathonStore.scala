@@ -1,5 +1,7 @@
 package mesosphere.marathon.state
 
+import com.codahale.metrics.{ Histogram, MetricRegistry }
+import com.codahale.metrics.MetricRegistry.name
 import com.google.protobuf.InvalidProtocolBufferException
 import org.apache.mesos.state.State
 import scala.collection.JavaConverters._
@@ -11,6 +13,7 @@ import org.slf4j.LoggerFactory
 
 class MarathonStore[S <: MarathonState[_, S]](
   state: State,
+  registry: MetricRegistry,
   newState: () => S,
   prefix: String = "app:")(
     implicit val timeout: BackToTheFuture.Timeout = BackToTheFuture.Implicits.defaultTimeout)
@@ -22,10 +25,18 @@ class MarathonStore[S <: MarathonState[_, S]](
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] lazy val locks = LockManager[String]()
 
+  def contentClassName: String = newState().getClass.getSimpleName
+
+  protected[this] val bytesRead: Histogram = registry.histogram(name(getClass, contentClassName, "read-data-size"))
+  protected[this] val bytesWritten: Histogram = registry.histogram(name(getClass, contentClassName, "write-data-size"))
+
   def fetch(key: String): Future[Option[S]] = {
     state.fetch(prefix + key) map {
-      case Some(variable) => stateFromBytes(variable.value)
-      case None           => throw new StorageException(s"Failed to read $key")
+      case Some(variable) =>
+        bytesRead.update(variable.value.length)
+        stateFromBytes(variable.value)
+      case None =>
+        throw new StorageException(s"Failed to read $key")
     }
   }
 
@@ -35,10 +46,14 @@ class MarathonStore[S <: MarathonState[_, S]](
 
     val res = state.fetch(prefix + key) flatMap {
       case Some(variable) =>
+        bytesRead.update(variable.value.length)
         val deserialize = () => stateFromBytes(variable.value).getOrElse(newState())
         state.store(variable.mutate(f(deserialize).toProtoByteArray)) map {
-          case Some(newVar) => stateFromBytes(newVar.value)
-          case None         => throw new StorageException(s"Failed to store $key")
+          case Some(newVar) =>
+            bytesWritten.update(newVar.value.size)
+            stateFromBytes(newVar.value)
+          case None =>
+            throw new StorageException(s"Failed to store $key")
         }
       case None => throw new StorageException(s"Failed to read $key")
     }
@@ -56,6 +71,7 @@ class MarathonStore[S <: MarathonState[_, S]](
 
     val res = state.fetch(prefix + key) flatMap {
       case Some(variable) =>
+        bytesRead.update(Option(variable.value).map(_.length).getOrElse(0))
         state.expunge(variable) map {
           case Some(b) => b.booleanValue()
           case None    => throw new StorageException(s"Failed to expunge $key")

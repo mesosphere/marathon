@@ -55,7 +55,7 @@ class DeploymentManagerTest
     scheduler = mock[SchedulerActions]
     storage = mock[StorageProvider]
     appRepo = new AppRepository(
-      new MarathonStore[AppDefinition](new InMemoryState, () => AppDefinition()),
+      new MarathonStore[AppDefinition](new InMemoryState, registry, () => AppDefinition()),
       None,
       registry
     )
