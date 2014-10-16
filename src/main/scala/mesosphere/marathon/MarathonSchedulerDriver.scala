@@ -31,22 +31,28 @@ object MarathonSchedulerDriver {
     // Set the ID, if provided
     frameworkId.foreach(builder.setId)
 
-    var newDriver: MesosSchedulerDriver = null
-    if (config.mesosAuthPrincipal.get.getOrElse("") != "" && config.mesosAuthSecret.get.getOrElse("") != "") {
-      val credential = Credential.newBuilder()
+    val credential: Option[Credential] = (config.mesosAuthPrincipal.get, config.mesosAuthSecret.get) match {
+      case (Some(principal), Some(secret)) => Option(Credential.newBuilder()
         .setPrincipal(config.mesosAuthPrincipal())
         .setSecret(ByteString.copyFromUtf8(config.mesosAuthSecret()))
         .build()
+      )
+      case (Some(principal), None) => Option(Credential.newBuilder()
+        .setPrincipal(config.mesosAuthPrincipal())
+        .build()
+      )
 
-      newDriver = new MesosSchedulerDriver(
+      case _ => None
+    }
+
+    val newDriver: MesosSchedulerDriver = credential match {
+      case Some(cred) => new MesosSchedulerDriver(
         newScheduler,
         builder.build(),
         config.mesosMaster(),
-        credential
+        cred
       )
-    }
-    else {
-      newDriver = new MesosSchedulerDriver(
+      case None => new MesosSchedulerDriver(
         newScheduler,
         builder.build(),
         config.mesosMaster()
