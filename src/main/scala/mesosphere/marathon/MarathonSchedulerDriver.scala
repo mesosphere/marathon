@@ -4,7 +4,7 @@ import org.apache.mesos.Protos.{ FrameworkID, FrameworkInfo, Credential }
 import org.apache.mesos.{ SchedulerDriver, MesosSchedulerDriver }
 
 import com.google.protobuf.ByteString;
-import java.nio.file.{ Files, Paths };
+import java.io.FileInputStream;
 
 /**
   * Wrapper class for the scheduler
@@ -36,7 +36,7 @@ object MarathonSchedulerDriver {
       case (Some(principal), Some(secret)) => {
         Option(Credential.newBuilder()
           .setPrincipal(config.mesosAuthPrincipal())
-          .setSecret(ByteString.copyFrom(Files.readAllBytes(Paths.get(config.mesosAuthSecret()))))
+          .setSecret(ByteString.readFrom(new FileInputStream(config.mesosAuthSecret())))
           .build()
         )
       }
