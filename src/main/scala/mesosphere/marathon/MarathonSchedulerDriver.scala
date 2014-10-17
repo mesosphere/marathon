@@ -35,6 +35,8 @@ object MarathonSchedulerDriver {
     val credential: Option[Credential] =
       (config.mesosAuthenticationPrincipal.get, config.mesosAuthenticationSecretFile.get) match {
         case (Some(principal), Some(secret_file)) => {
+          builder.setPrincipal(principal)
+
           Option(Credential.newBuilder()
             .setPrincipal(principal)
             .setSecret(ByteString.readFrom(new FileInputStream(secret_file)))
@@ -42,6 +44,8 @@ object MarathonSchedulerDriver {
           )
         }
         case (Some(principal), None) => {
+          builder.setPrincipal(principal)
+
           Option(Credential.newBuilder()
             .setPrincipal(principal)
             .build()
