@@ -67,6 +67,10 @@ The following options can influence how Marathon works:
     stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
     in milliseconds.
+* `--mesos_authentication_principal` (Optional.): The Mesos principal used for
+    authentication
+* `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret
+    file containing the authentication secret
 
 ### Optional Flags Inherited from [Chaos](https://github.com/mesosphere/chaos)
 

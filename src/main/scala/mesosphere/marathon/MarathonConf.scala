@@ -82,4 +82,14 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     validate = StorageProvider.isValidUrl,
     noshort = true
   )
+
+  lazy val mesosAuthenticationPrincipal = opt[String]("mesos_authentication_principal",
+    descr = "Mesos Authentication Principal",
+    noshort = true
+  )
+
+  lazy val mesosAuthenticationSecretFile = opt[String]("mesos_authentication_secret_file",
+    descr = "Mesos Authentication Secret",
+    noshort = true
+  )
 }
