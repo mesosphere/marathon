@@ -109,7 +109,7 @@ class MarathonScheduler @Inject() (
         val launchedTask = withTaskInfos.dropWhile {
           case (qt, (taskInfo, ports)) if qt.delay.isOverdue() => false
           case (_, (taskInfo, _)) =>
-            log.debug(s"Delaying task ${taskInfo.getTaskId.getValue} due to backoff.")
+            log.info(s"Delaying task ${taskInfo.getTaskId.getValue} due to backoff.")
             true
         }.headOption
 
