@@ -60,36 +60,14 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   }
 
   final def checkForRunning: Receive = {
-    case MesosStatusUpdateEvent(
-      _,
-      taskId,
-      "TASK_RUNNING",
-      _,
-      app.`id`,
-      _,
-      _,
-      Version,
-      _,
-      _
-      ) if !runningTasks(taskId) =>
+    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", _, app.`id`, _, _, Version, _, _) if !runningTasks(taskId) =>
       runningTasks += taskId
       log.info(s"Started $taskId")
       checkFinished()
   }
 
   def commonBehavior: Receive = {
-    case MesosStatusUpdateEvent(
-      _,
-      taskId,
-      "TASK_FAILED" | "TASK_LOST" | "TASK_KILLED",
-      _,
-      app.`id`,
-      _,
-      _,
-      Version,
-      _,
-      _
-      ) =>
+    case MesosStatusUpdateEvent(_, taskId, "TASK_FAILED" | "TASK_LOST" | "TASK_KILLED", _, app.`id`, _, _, Version, _, _) => // scalastyle:off line.size.limit
       log.warning(s"Failed to start $taskId for app ${app.id}. Rescheduling.")
       runningTasks -= taskId
       taskQueue.add(app)
