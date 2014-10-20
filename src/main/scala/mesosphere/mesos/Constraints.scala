@@ -40,14 +40,10 @@ object Constraints {
         false
       }
 
-    private def checkGroupBy = {
+    private def checkGroupBy(constraintValue: String, groupFunc: (MarathonTask) => Option[String]) = {
       val minimum = List(GroupByDefault, getIntValue(value, GroupByDefault)).max
       // Group tasks by the constraint value
-      val groupedTasks = tasks.groupBy(
-        _.getAttributesList.asScala
-          .find(_.getName == field)
-          .map(_.getText.getValue)
-      )
+      val groupedTasks = tasks.groupBy(groupFunc)
 
       // Order groupings by smallest first
       val orderedByCount = groupedTasks.toSeq.sortBy(_._2.size)
@@ -60,21 +56,22 @@ object Constraints {
       val condA =
         orderedByCount.size >= minimum &&
           // true if the smallest group has this attribute value
-          (minValue == attr.get.getText.getValue ||
+          (minValue == constraintValue ||
             // or all groups are the same size
             orderedByCount.headOption.map(_._2.size) == orderedByCount.lastOption.map(_._2.size))
 
-      def condB: Boolean = !orderedByCount.exists(_._1.contains(attr.get.getText.getValue))
+      def condB: Boolean = !orderedByCount.exists(_._1.contains(constraintValue))
 
       condA || condB
     }
 
     private def checkHostName =
       constraint.getOperator match {
-        case Operator.LIKE   => offer.getHostname.matches(value)
-        case Operator.UNLIKE => !offer.getHostname.matches(value)
+        case Operator.LIKE     => offer.getHostname.matches(value)
+        case Operator.UNLIKE   => !offer.getHostname.matches(value)
         // All running tasks must have a hostname that is different from the one in the offer
-        case Operator.UNIQUE => tasks.forall(_.getHost != offer.getHostname)
+        case Operator.UNIQUE   => tasks.forall(_.getHost != offer.getHostname)
+        case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (task: MarathonTask) => Option(task.getHost))
         case Operator.CLUSTER =>
           // Hostname must match or be empty
           (value.isEmpty || value == offer.getHostname) &&
@@ -92,7 +89,13 @@ object Constraints {
           (value.isEmpty || attr.get.getText.getValue == value) &&
             // All running tasks should have the matching attribute
             matches.size == tasks.size
-        case Operator.GROUP_BY => checkGroupBy
+        case Operator.GROUP_BY => {
+          val groupFunc = (task: MarathonTask) =>
+            task.getAttributesList.asScala
+              .find(_.getName == field)
+              .map(_.getText.getValue)
+          checkGroupBy(attr.get.getText.getValue, groupFunc)
+        }
         case Operator.LIKE =>
           if (value.nonEmpty) {
             attr.get.getText.getValue.matches(value)
