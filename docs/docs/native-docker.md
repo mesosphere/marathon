@@ -44,7 +44,7 @@ Docker version 1.0.0 or later installed on each slave node.
 
 ### Configure marathon
 
-1. Increase the marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html") `--task_launch_timeout` to at least the executor timeout you set on your slaves in the previous step.
+1. Increase the marathon [command line option](command-line-flags.md) `--task_launch_timeout` to at least the executor timeout you set on your slaves in the previous step.
 
 ### Resources
 
