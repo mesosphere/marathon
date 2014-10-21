@@ -41,28 +41,21 @@ object Constraints {
       }
 
     private def checkGroupBy(constraintValue: String, groupFunc: (MarathonTask) => Option[String]) = {
+      // Minimum group count
       val minimum = List(GroupByDefault, getIntValue(value, GroupByDefault)).max
-      // Group tasks by the constraint value
-      val groupedTasks = tasks.groupBy(groupFunc)
-
-      // Order groupings by smallest first
-      val orderedByCount = groupedTasks.toSeq.sortBy(_._2.size)
-      def minValue: String = orderedByCount.headOption.flatMap(_._1).getOrElse("")
+      // Group tasks by the constraint value, and calculate the task count of each group
+      val groupedTasks = tasks.groupBy(groupFunc).mapValues(_.size)
+      // Task count of the smallest group
+      val minCount = groupedTasks.values.reduceOption(_ min _).getOrElse(0)
 
       // Return true if any of these are also true:
       // a) this offer matches the smallest grouping when there
       // are >= minimum groupings
       // b) the constraint value from the offer is not yet in the grouping
-      val condA =
-        orderedByCount.size >= minimum &&
-          // true if the smallest group has this attribute value
-          (minValue == constraintValue ||
-            // or all groups are the same size
-            orderedByCount.headOption.map(_._2.size) == orderedByCount.lastOption.map(_._2.size))
-
-      def condB: Boolean = !orderedByCount.exists(_._1.contains(constraintValue))
-
-      condA || condB
+      groupedTasks.find(_._1.contains(constraintValue)) match {
+        case Some(pair) => (groupedTasks.size >= minimum) && (pair._2 == minCount)
+        case None       => true
+      }
     }
 
     private def checkHostName =

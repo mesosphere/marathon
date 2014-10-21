@@ -400,5 +400,12 @@ class ConstraintsTest extends MarathonSpec {
       groupByHost)
 
     assert(clusterHostMet5, "Should meet group-by-host constraint.")
+
+    val clusterHostMet6 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host2", attributes),
+      groupByHost)
+
+    assert(clusterHostMet6, "Should meet group-by-host constraint.")
   }
 }
