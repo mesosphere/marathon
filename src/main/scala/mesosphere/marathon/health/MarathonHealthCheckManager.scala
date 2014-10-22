@@ -11,8 +11,9 @@ import akka.util.Timeout
 import org.apache.mesos.Protos.TaskStatus
 
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.util.ThreadPoolContext.context
 
 class MarathonHealthCheckManager @Inject() (
@@ -88,7 +89,37 @@ class MarathonHealthCheckManager @Inject() (
     for (hc <- toAdd) add(app.id, hc)
   }
 
-  override def update(taskStatus: TaskStatus, version: String): Unit = {}
+  override def update(taskStatus: TaskStatus, version: String): Unit = {
+    // construct a health result from the incoming task status
+    val taskId = taskStatus.getTaskId.getValue
+    val maybeResult: Option[HealthResult] =
+      if (taskStatus.hasHealthy) {
+        val healthy = taskStatus.getHealthy
+        log.info(s"Received status for [$taskId] with healthy=[$healthy]")
+        Some(if (healthy) Healthy(taskId, version) else Unhealthy(taskId, version, ""))
+      }
+      else {
+        log.info(s"Ignoring status for [$taskId] with no health information")
+        None
+      }
+
+    // look up the app ID for the incoming task status
+    val appId = TaskIdUtil.appId(taskStatus.getTaskId)
+
+    // collect health check actors for the associated app's command checks.
+    val healthCheckActors: Iterable[ActorRef] = appHealthChecks.get(appId).getOrElse(Nil).collect {
+      case ActiveHealthCheck(hc, ref) if hc.protocol == Protocol.COMMAND => ref
+    }
+
+    // send the result to each health check actor
+    for {
+      result <- maybeResult
+      ref <- healthCheckActors
+    } {
+      log.info(s"Forwarding health result [$result] to health check actor [$ref]")
+      ref ! result
+    }
+  }
 
   override def status(
     appId: PathId,
@@ -109,3 +140,4 @@ class MarathonHealthCheckManager @Inject() (
     system stop healthCheck.actor
 
 }
+

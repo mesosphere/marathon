@@ -200,7 +200,7 @@ operating as expected. Health checks begin immediately upon task launch. For
 design details, refer to the [health checks]({{ site.baseurl}}/docs/health-checks.html)
 doc.  By default, health checks are executed by the Marathon scheduler.
 It's possible with Mesos `0.20.0` and higher to execute health checks on the hosts where
-the tasks are running by supplying the `--executor_health_checks` flag to Marathon.
+the tasks are running.
 In this case, the only supported protocol is `COMMAND` and each app is limited to
 at most one defined health check.
 
@@ -212,8 +212,7 @@ health checks consecutively, that task is killed.
 ###### HEALTH CHECK OPTIONS
 
 * `command`: Command to run in order to determine the health of a task.
-  *Note: only used if `protocol == "COMMAND"`, and only available if Marathon is
-  started with the `--executor_health_checks` flag.*
+  _Note: only used if `protocol == "COMMAND"`._
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
   ignored within this number of seconds of the task being started or until the
   task becomes healthy for the first time.

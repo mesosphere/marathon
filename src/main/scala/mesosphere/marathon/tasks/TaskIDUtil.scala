@@ -29,3 +29,5 @@ class TaskIdUtil {
       .build
   }
 }
+
+object TaskIdUtil extends TaskIdUtil
