@@ -117,18 +117,19 @@ class TaskBuilder(app: AppDefinition,
 
     // Mesos supports at most one health check, and only COMMAND checks
     // are currently implemented in the Mesos health check helper program.
-    val mesosHealthChecks: Seq[org.apache.mesos.Protos.HealthCheck] =
-      app.healthChecks.collect {
-        case healthCheck if healthCheck.protocol == Protocol.COMMAND =>
-          Try(healthCheck.toMesos(ports.map(_.toInt))) match {
-            case Success(mhc) => Some(mhc)
-            case Failure(cause) =>
-              log.warn(
-                s"An error occurred with health check [$healthCheck]\n" +
-                  s"Error: [${cause.getMessage}]")
+    val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
+      app.healthChecks.flatMap { healthCheck =>
+        if (healthCheck.protocol != Protocol.COMMAND) None
+        else {
+          try { Some(healthCheck.toMesos(ports.map(_.toInt))) }
+          catch {
+            case cause: Throwable =>
+              log.warn(s"An error occurred with health check [$healthCheck]\n" +
+                s"Error: [${cause.getMessage}]")
               None
           }
-      }.flatten.to[Seq]
+        }
+      }
 
     if (mesosHealthChecks.size > 1) {
       val numUnusedChecks = mesosHealthChecks.size - 1
