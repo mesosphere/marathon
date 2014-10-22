@@ -5,6 +5,8 @@ title: Contributor Guidelines
 
 # Contributor Guidelines
 
+## Getting Started
+
 Maybe you already have a bugfix or enhancement in mind.  If not, there are a
 number of relatively approachable issues with the label
 ["good first bug"](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+bug%22).
@@ -69,12 +71,16 @@ xs.map(f)
 ```
 
 ```scala
-xs.map(f(_))
+xs.map(_.size)
+```
+
+```scala
+xs.map(_ * 2)
 ```
 
 ```scala
 xs.map { item =>
-  f(item)
+  item -> f(item)
 }
 ```
 
@@ -83,8 +89,13 @@ xs.map {
   case a: A if a.isEmpty => f(a)
   case a: A              => g(a)
   case b: B              => h(b)
+  case other: _          => e(other)
 }
 ```
+
+_Note: match expressions must be exhaustive unless the higher-order function
+signature explicitly expects a `PartialFunction[_, _]` as in `collect`, and
+`collectFirst`._
 
 ```scala
 for {
