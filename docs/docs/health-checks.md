@@ -25,7 +25,7 @@ health checks consecutively, that task is killed.
   "gracePeriodSeconds": 30,
   "intervalSeconds": 30,
   "timeoutSeconds": 30,
-  "maxConsecutiveFailures": 0
+  "maxConsecutiveFailures": 3
 }
 ```
 
@@ -42,6 +42,19 @@ OR
 }
 ```
 
+OR
+
+```json
+{
+  "protocol": "COMMAND",
+  "command": { "value": "curl -f -X GET http://$HOST:$PORT0/health" },
+  "gracePeriodSeconds": 30,
+  "intervalSeconds": 30,
+  "timeoutSeconds": 30,
+  "maxConsecutiveFailures": 3
+}
+```
+
 #### Health check options
 
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
@@ -50,7 +63,8 @@ OR
 * `intervalSeconds` (Optional. Default: 10): Number of seconds to wait between
   health checks.
 * `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
-  check failures after which the unhealthy task should be killed.
+  check failures after which the unhealthy task should be killed. If this value
+  is `0`, then tasks will not be killed due to failing this check.
 * `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
   will provide health  status. Example: "/path/to/health".
   _Note: only used if `protocol == "HTTP"`._

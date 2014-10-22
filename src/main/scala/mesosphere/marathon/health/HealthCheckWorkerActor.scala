@@ -56,8 +56,8 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         case TCP  => tcp(task, check, port)
         case COMMAND =>
           Future.failed {
-            val message = s"$COMMAND health checks are only supported when " +
-              "running Marathon with --executor_health_checks enabled"
+            val message = s"COMMAND health checks can only be performed " +
+              "by the Mesos executor."
             log.warning(message)
             new UnsupportedOperationException(message)
           }

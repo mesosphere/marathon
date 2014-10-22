@@ -23,7 +23,7 @@ import org.apache.zookeeper.ZooDefs
 
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.event.EventModule
-import mesosphere.marathon.health.{ DelegatingHealthCheckManager, HealthCheckManager, MarathonHealthCheckManager }
+import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
@@ -52,12 +52,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
     bind(classOf[GroupManager]).in(Scopes.SINGLETON)
 
-    bind(classOf[HealthCheckManager]).to(
-      conf.executorHealthChecks() match {
-        case false => classOf[MarathonHealthCheckManager]
-        case true  => classOf[DelegatingHealthCheckManager]
-      }
-    ).asEagerSingleton()
+    bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))

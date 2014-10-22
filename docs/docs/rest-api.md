@@ -199,21 +199,27 @@ An array of checks to be performed on running tasks to determine if they are
 operating as expected. Health checks begin immediately upon task launch. For
 design details, refer to the [health checks]({{ site.baseurl}}/docs/health-checks.html)
 doc.  By default, health checks are executed by the Marathon scheduler.
-It's possible with Mesos `0.20.0` and higher to execute health checks on the hosts where
-the tasks are running by supplying the `--executor_health_checks` flag to Marathon.
-In this case, the only supported protocol is `COMMAND` and each app is limited to
-at most one defined health check.
+With Mesos `0.20.0` and higher, the COMMAND protocol can be used to
+execute health checks on the hosts where the tasks are running.
+Mesos currently supports only one such health check per task.
+A COMMAND health check is considered passing if the command exits with status
+`0` within the `timeoutSeconds` period.
+COMMAND and other health checks can be defined on the same app as of
+Marathon `0.7.4`.
 
 An HTTP health check is considered passing if (1) its HTTP response code is between
 200 and 399, inclusive, and (2) its response is received within the
-`timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
-health checks consecutively, that task is killed.
+`timeoutSeconds` period.
+
+If a task fails more than `maxConseutiveFailures`
+health checks consecutively, that task is killed causing Marathon to start
+more instances. These restarts are modulated like any other failing app
+by `backoffSeconds` and `backoffFactor`.
 
 ###### HEALTH CHECK OPTIONS
 
 * `command`: Command to run in order to determine the health of a task.
-  *Note: only used if `protocol == "COMMAND"`, and only available if Marathon is
-  started with the `--executor_health_checks` flag.*
+  _Note: only used if `protocol == "COMMAND"`._
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
   ignored within this number of seconds of the task being started or until the
   task becomes healthy for the first time.

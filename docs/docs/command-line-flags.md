@@ -27,10 +27,6 @@ The following options can influence how Marathon works:
     during mesos-slave restarts and upgrades.
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
-* `--executor_health_checks` (Optional. Default: false)): If this flag is supplied,
-    health checks are executed on the slaves on which the tasks are running.
-    Requires Mesos `0.20.0` or higher. Use of this option limits app health
-    checks to at most one. The only protocol supported by Mesos is COMMAND.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
     failover_timeout for Mesos in seconds.
 * `--ha` (Optional. Default: true): Runs Marathon in HA mode with leader election.

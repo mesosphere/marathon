@@ -23,6 +23,14 @@
       "gracePeriodSeconds": 5,
       "intervalSeconds": 20,
       "maxConsecutiveFailures": 3
+    },
+    {
+      "protocol": "COMMAND",
+      "command": { "value": "curl -f -X GET http://$HOST:$PORT" },
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 20,
+      "maxConsecutiveFailures": 3
     }
+
   ]
 }
