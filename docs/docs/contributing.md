@@ -17,10 +17,17 @@ number of relatively approachable issues with the label
 _TODO_: Do we need a CLA?
 -->
 
-## Tests
+## Submitting Changes to Marathon
+
+- A GitHub pull request is the preferred way of submitting patch sets.
+
+- Any changes in the public API or behavior must be reflected in the project
+  documentation.
 
 - Pull requests should include appropriate additions to the unit test suite.
-  If the change is a bugfix, then the added tests should fail without the patch.
+
+- If the change is a bugfix, then the added tests must fail without the patch
+  as a safeguard against future regressions.
 
 ## Source Files
 
