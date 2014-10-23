@@ -59,6 +59,8 @@ function install_haproxy_system {
   elif [[ $os == "Ubuntu" ]] || [[ $os == "Debian" ]]
   then sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
   sudo sed -i 's/^ENABLED=0/ENABLED=1/' /etc/default/haproxy
+  else echo "$os is not a supported OS for this feature."
+  exit 1
   fi
   install_cronjob "$@"
 }
