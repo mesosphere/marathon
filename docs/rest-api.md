@@ -63,7 +63,7 @@ The full JSON format of an application resource is as follows:
         "docker": {
             "image": "group/image",
             "network": "BRIDGE",
-            "portMappings": {
+            "portMappings": [
                 {
                     "containerPort": 8080,
                     "hostPort": 0,
@@ -75,7 +75,7 @@ The full JSON format of an application resource is as follows:
                     "hostPort": 0,
                     "protocol": "udp"
                 }
-            }
+            ]
         },
         "volumes": [
             {
