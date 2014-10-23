@@ -206,14 +206,15 @@ class GroupManager @Singleton @Inject() (
         c <- app.container
         d <- c.docker
         pms <- d.portMappings
-      } yield c.copy(
-        docker = Some(d.copy(
-          portMappings = Some(
-            pms.zip(servicePorts).map {
-              case (pm, sp) => pm.copy(servicePort = sp)
-            })
-        ))
-      )
+      } yield {
+        val mappings = pms.zip(servicePorts).map {
+          case (pm, sp) => pm.copy(servicePort = sp)
+        }
+        c.copy(
+          docker = Some(d.copy(
+            portMappings = Some(mappings)))
+        )
+      }
 
       app.copy(
         ports = servicePorts,
@@ -224,12 +225,9 @@ class GroupManager @Singleton @Inject() (
     val dynamicApps: Set[AppDefinition] =
       to.transitiveApps.filter(_.hasDynamicPort).map(assignPorts)
 
-    val resultGroup: Group = dynamicApps.foldLeft(to) { (group, app) =>
-      val newGroup = group.updateApp(app.id, _ => app, app.version)
-      newGroup
+    dynamicApps.foldLeft(to) { (group, app) =>
+      group.updateApp(app.id, _ => app, app.version)
     }
-
-    resultGroup
   }
 
 }
