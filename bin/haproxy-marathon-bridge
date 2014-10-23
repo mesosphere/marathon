@@ -52,7 +52,12 @@ function refresh_system_haproxy {
 }
 
 function install_haproxy_system {
-  sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
+  os=$(lsb_release -si)
+  if [[ $os == "CentOS" ]] || [[ $os == "RHEL" ]]
+  then sudo yum install -y haproxy
+  elif [[ $os == "Ubuntu" ]] || [[ $os == "Debian" ]]
+  then sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
+  fi
   sudo sed -i 's/^ENABLED=0/ENABLED=1/' /etc/default/haproxy
   install_cronjob "$@"
 }
