@@ -55,10 +55,11 @@ function install_haproxy_system {
   os=$(lsb_release -si)
   if [[ $os == "CentOS" ]] || [[ $os == "RHEL" ]]
   then sudo yum install -y haproxy
+  sudo chkconfig haproxy on
   elif [[ $os == "Ubuntu" ]] || [[ $os == "Debian" ]]
   then sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
-  fi
   sudo sed -i 's/^ENABLED=0/ENABLED=1/' /etc/default/haproxy
+  fi
   install_cronjob "$@"
 }
 
