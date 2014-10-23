@@ -5,6 +5,7 @@ import javax.inject.Inject
 import java.lang.{ Integer => JInt }
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+import scala.collection.immutable.Seq
 import scala.collection.mutable
 
 import akka.event.EventStream
@@ -19,11 +20,7 @@ import mesosphere.marathon.upgrade._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
 import mesosphere.util.ThreadPoolContext.context
 import org.apache.log4j.Logger
-
-import scala.collection.immutable.Seq
-import scala.collection.mutable
-import scala.concurrent.Future
-import scala.util.{ Failure, Success }
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 
 /**
   * The group manager is the facade for all group related actions.
@@ -201,19 +198,38 @@ class GroupManager @Singleton @Inject() (
         if (alreadyAssigned.nonEmpty) alreadyAssigned.dequeue()
         else nextGlobalFreePort
 
-      val ports: Seq[JInt] = app.servicePorts.map { port =>
+      val servicePorts: Seq[JInt] = app.servicePorts.map { port =>
         if (port == 0) nextFreeAppPort else new JInt(port)
       }
 
-      app.copy(ports = ports)
+      val container: Option[Container] = for {
+        c <- app.container
+        d <- c.docker
+        pms <- d.portMappings
+      } yield c.copy(
+        docker = Some(d.copy(
+          portMappings = Some(
+            pms.zip(servicePorts).map {
+              case (pm, sp) => pm.copy(servicePort = sp)
+            })
+        ))
+      )
+
+      app.copy(
+        ports = servicePorts,
+        container = container
+      )
     }
 
     val dynamicApps: Set[AppDefinition] =
       to.transitiveApps.filter(_.hasDynamicPort).map(assignPorts)
 
-    dynamicApps.foldLeft(to) { (update, app) =>
-      update.updateApp(app.id, _ => app, app.version)
+    val resultGroup: Group = dynamicApps.foldLeft(to) { (group, app) =>
+      val newGroup = group.updateApp(app.id, _ => app, app.version)
+      newGroup
     }
+
+    resultGroup
   }
 
 }

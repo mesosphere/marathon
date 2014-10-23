@@ -49,7 +49,7 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
       AppDefinition("/app1".toPath, ports = Seq(), container = Some(container))
     ))
     val update = manager(10, 20).assignDynamicAppPort(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicPort) should not be ('empty)
+    update.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
     update.transitiveApps.flatMap(_.ports.filter(x => x >= 10 && x <= 20)) should have size 2
   }
 
