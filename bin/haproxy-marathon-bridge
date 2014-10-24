@@ -33,17 +33,18 @@ name=haproxy-marathon-bridge
 cronjob_conf_file=/etc/"$name"/marathons
 cronjob=/etc/cron.d/"$name"
 script_path=/usr/local/bin/"$name"
+conf_file=haproxy.cfg
 
 function main {
   config "$@"
 }
 
 function refresh_system_haproxy {
-  config "$@" > /tmp/haproxy.cfg
-  if ! diff -q /tmp/haproxy.cfg /etc/haproxy/haproxy.cfg >&2
+  config "$@" > /tmp/"$conf_file"
+  if ! diff -q /tmp/"$conf_file" /etc/haproxy/"$conf_file" >&2
   then
     msg "Found changes. Sending reload request to HAProxy..."
-    cat /tmp/haproxy.cfg > /etc/haproxy/haproxy.cfg
+    cat /tmp/"$conf_file" > /etc/haproxy/"$conf_file"
     if [[ -f /etc/init/haproxy.conf ]]
     then reload haproxy ## In case it switches to Upstart
     else /etc/init.d/haproxy reload
@@ -54,13 +55,16 @@ function refresh_system_haproxy {
 function install_haproxy_system {
   os=$(lsb_release -si)
   if [[ $os == "CentOS" ]] || [[ $os == "RHEL" ]]
-  then sudo yum install -y haproxy
-  sudo chkconfig haproxy on
+  then
+    sudo yum install -y haproxy
+    sudo chkconfig haproxy on
   elif [[ $os == "Ubuntu" ]] || [[ $os == "Debian" ]]
-  then sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
-  sudo sed -i 's/^ENABLED=0/ENABLED=1/' /etc/default/haproxy
-  else echo "$os is not a supported OS for this feature."
-  exit 1
+  then 
+    sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
+    sudo sed -i 's/^ENABLED=0/ENABLED=1/' /etc/default/haproxy
+  else 
+    echo "$os is not a supported OS for this feature."
+    exit 1
   fi
   install_cronjob "$@"
 }
@@ -74,7 +78,7 @@ function install_cronjob {
   cat "$0" | sudo dd of="$script_path"
   sudo chmod ug+rx "$script_path"
   cronjob  | sudo dd of="$cronjob"
-  header   | sudo dd of=/etc/haproxy/haproxy.cfg
+  header   | sudo dd of=/etc/haproxy/"$conf_file"
 }
 
 function cronjob {
