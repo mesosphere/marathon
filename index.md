@@ -14,7 +14,7 @@ title: A cluster-wide init and control system for services in cgroups or Docker 
     </a>
   </p>
   <a class="btn btn-link"
-      href="http://downloads.mesosphere.com/marathon/v0.7.3/marathon-0.7.3.tgz.sha256">
+      href="http://downloads.mesosphere.com/marathon/v0.7.1/marathon-0.7.3.tgz.sha256">
     v0.7.3 SHA-256 Checksum
   </a> &middot;
   <a class="btn btn-link"
