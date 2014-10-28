@@ -138,6 +138,8 @@ object Container {
         servicePort: JInt = 0,
         protocol: String = "tcp") {
 
+      require(protocol == "tcp" || protocol == "udp", "protocol can only be 'tcp' or 'udp'")
+
       def toProto(): Protos.ExtendedContainerInfo.DockerInfo.PortMapping = {
         Protos.ExtendedContainerInfo.DockerInfo.PortMapping.newBuilder
           .setContainerPort(containerPort)
