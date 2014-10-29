@@ -59,6 +59,7 @@ object MarathonBuild extends Build {
     resolvers ++= Seq(
       "Mesosphere Public Repo"    at "http://downloads.mesosphere.io/maven",
       "Twitter Maven2 Repository" at "http://maven.twttr.com/",
+      "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
       "Spray Maven Repository"    at "http://repo.spray.io/"
     ),
     sourceGenerators in Compile <+= buildInfo,
@@ -131,7 +132,6 @@ object Dependencies {
     akkaSlf4j % "compile",
     sprayClient % "compile",
     sprayHttpx % "compile",
-    json4s % "compile",
     chaos % "compile",
     mesosUtils % "compile",
     jacksonCaseClass % "compile",
@@ -147,6 +147,7 @@ object Dependencies {
     hadoopCommon % "compile",
     beanUtils % "compile",
     scallop % "compile",
+    playJson % "compile",
 
     // test
     Test.scalatest % "test",
@@ -163,7 +164,6 @@ object Dependency {
     val MesosUtils = "0.20.1-1"
     val Akka = "2.3.6"
     val Spray = "1.3.1"
-    val Json4s = "3.2.10"
     val TwitterCommons = "0.0.60"
     val TwitterZKClient = "0.0.60"
     val Jersey = "1.18.1"
@@ -173,6 +173,7 @@ object Dependency {
     val JGraphT = "0.9.1"
     val Hadoop = "2.4.1"
     val Scallop = "0.9.5"
+    val PlayJson = "2.3.4"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -186,7 +187,7 @@ object Dependency {
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
-  val json4s = "org.json4s" %% "json4s-jackson" % V.Json4s
+  val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
