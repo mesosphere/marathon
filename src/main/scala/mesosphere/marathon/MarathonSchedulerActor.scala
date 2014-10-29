@@ -72,6 +72,7 @@ class MarathonSchedulerActor(
         taskQueue,
         scheduler,
         storage,
+        healthCheckManager,
         eventBus
       ),
       "UpgradeManager"
@@ -84,6 +85,7 @@ class MarathonSchedulerActor(
       case Success(deployments) => self ! RecoveredDeployments(deployments)
       case Failure(_)           => self ! RecoveredDeployments(Nil)
     }
+
   }
 
   def receive: Receive = recovering
@@ -96,6 +98,7 @@ class MarathonSchedulerActor(
       }
       unstashAll()
       context.become(ready)
+      self ! ReconcileHealthChecks
 
     case _ => stash()
   }
@@ -104,6 +107,9 @@ class MarathonSchedulerActor(
     case ReconcileTasks =>
       scheduler.reconcileTasks(driver)
       sender ! ReconcileTasks.answer
+
+    case ReconcileHealthChecks =>
+      scheduler.reconcileHealthChecks()
 
     case cmd @ ScaleApp(appId) =>
       val origSender = sender()
@@ -269,6 +275,8 @@ object MarathonSchedulerActor {
     def answer: Event = TasksReconciled
   }
 
+  case object ReconcileHealthChecks
+
   case class ScaleApp(appId: PathId) extends Command {
     def answer: Event = AppScaled(appId)
   }
@@ -401,6 +409,10 @@ class SchedulerActions(
         log.warn("Failed to get task names", t)
     }
   }
+
+  def reconcileHealthChecks(): Unit =
+    for (apps <- appRepository.apps; app <- apps)
+      healthCheckManager.reconcileWith(app)
 
   private def newTask(app: AppDefinition,
                       offer: Offer): Option[(TaskInfo, Seq[Long])] = {

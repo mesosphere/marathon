@@ -7,6 +7,7 @@ import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
 import akka.testkit.{ TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
@@ -44,6 +45,7 @@ class DeploymentManagerTest
   var scheduler: SchedulerActions = _
   var appRepo: AppRepository = _
   var storage: StorageProvider = _
+  var hcManager: HealthCheckManager = _
 
   before {
     driver = mock[SchedulerDriver]
@@ -59,10 +61,11 @@ class DeploymentManagerTest
       None,
       registry
     )
+    hcManager = mock[HealthCheckManager]
   }
 
   test("deploy") {
-    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, storage, eventBus))
+    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus))
 
     val app = AppDefinition("app".toRootPath)
 
@@ -79,7 +82,7 @@ class DeploymentManagerTest
   }
 
   test("StopActor") {
-    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, storage, eventBus))
+    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus))
     val probe = TestProbe()
 
     probe.setAutoPilot(new AutoPilot {
@@ -98,7 +101,7 @@ class DeploymentManagerTest
   }
 
   test("Cancel deployment") {
-    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, storage, eventBus))
+    val manager = TestActorRef[DeploymentManager](Props(classOf[DeploymentManager], appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus))
 
     implicit val timeout = Timeout(1.minute)
 

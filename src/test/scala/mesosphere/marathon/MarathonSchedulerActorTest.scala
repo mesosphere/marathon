@@ -72,6 +72,8 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(deploymentRepo.all()).thenReturn(Future.successful(Nil))
 
+    when(repo.apps()).thenReturn(Future.successful(Nil))
+
     schedulerActor = system.actorOf(Props(
       classOf[MarathonSchedulerActor],
       new ObjectMapper(),

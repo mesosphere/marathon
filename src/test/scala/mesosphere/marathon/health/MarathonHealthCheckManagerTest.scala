@@ -7,11 +7,13 @@ import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.state.{ AppRepository, Timestamp }
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.util.Logging
 import org.apache.mesos.state.InMemoryState
-import org.apache.mesos.Protos
+import org.apache.mesos.{ Protos => mesos }
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -19,6 +21,8 @@ import scala.concurrent.duration._
 class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
   var hcManager: MarathonHealthCheckManager = _
+  var taskTracker: TaskTracker = _
+  var repo: AppRepository = _
 
   implicit var system: ActorSystem = _
 
@@ -32,10 +36,15 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
       )
     )
 
+    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
+
+    repo = mock[AppRepository]
+
     hcManager = new MarathonHealthCheckManager(
       system,
       mock[EventStream],
-      new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
+      taskTracker,
+      repo
     )
   }
 
@@ -45,28 +54,42 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
   test("Add") {
     val healthCheck = HealthCheck()
-    hcManager.add("test".toRootPath, healthCheck)
+    val version = Timestamp(1024)
+    hcManager.add("test".toRootPath, version, healthCheck)
     assert(hcManager.list("test".toRootPath).size == 1)
   }
 
   test("Update") {
     val appId = "test".toRootPath
+
     val taskId = TaskIdUtil.newTaskId(appId)
-    val taskStatus = Protos.TaskStatus.newBuilder
+
+    val version = Timestamp(1024)
+
+    val taskStatus = mesos.TaskStatus.newBuilder
       .setTaskId(taskId)
-      .setState(Protos.TaskState.TASK_RUNNING)
+      .setState(mesos.TaskState.TASK_RUNNING)
       .setHealthy(false)
       .build
 
-    val healthCheck = HealthCheck(protocol = Protocol.COMMAND)
-    hcManager.add(appId, healthCheck)
+    val marathonTask = MarathonTask.newBuilder
+      .setId(taskId.getValue)
+      .setVersion(version.toString)
+      .build
+
+    val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
+
+    taskTracker.created(appId, marathonTask)
+    taskTracker.running(appId, taskStatus)
+
+    hcManager.add(appId, version, healthCheck)
 
     val status1 = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
     assert(status1 == Seq(None))
 
     // send unhealthy task status
     EventFilter.info(start = "Received health result: [", occurrences = 1).intercept {
-      hcManager.update(taskStatus.toBuilder.setHealthy(false).build, "")
+      hcManager.update(taskStatus.toBuilder.setHealthy(false).build, version)
     }
 
     val Seq(Some(health2)) = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
@@ -75,7 +98,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
     // send healthy task status
     EventFilter.info(start = "Received health result: [", occurrences = 1).intercept {
-      hcManager.update(taskStatus.toBuilder.setHealthy(true).build, "")
+      hcManager.update(taskStatus.toBuilder.setHealthy(true).build, version)
     }
 
     val Seq(Some(health3)) = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)

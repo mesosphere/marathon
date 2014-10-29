@@ -303,6 +303,7 @@ class MarathonSchedulerService @Inject() (
         def run() {
           if (isLeader) {
             schedulerActor ! ReconcileTasks
+            schedulerActor ! ReconcileHealthChecks
           }
           else log.info("Not leader therefore not reconciling tasks")
         }

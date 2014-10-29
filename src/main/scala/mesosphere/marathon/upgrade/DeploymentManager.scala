@@ -4,6 +4,7 @@ import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -21,6 +22,7 @@ class DeploymentManager(
     taskQueue: TaskQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
+    healthCheckManager: HealthCheckManager,
     eventBus: EventStream) extends Actor with ActorLogging {
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentManager._
@@ -79,6 +81,7 @@ class DeploymentManager(
           taskTracker,
           taskQueue,
           storage,
+          healthCheckManager,
           eventBus
         ),
         plan.id

@@ -12,6 +12,7 @@ import org.apache.mesos.SchedulerDriver
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ PathId, AppDefinition, AppRepository }
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -27,6 +28,7 @@ class DeploymentActor(
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     storage: StorageProvider,
+    healthCheckManager: HealthCheckManager,
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
@@ -97,6 +99,7 @@ class DeploymentActor(
   }
 
   def startApp(app: AppDefinition, scaleTo: Int): Future[Unit] = {
+    healthCheckManager.addAllFor(app) // ensure health check actors are in place before tasks are launched
     val promise = Promise[Unit]()
     context.actorOf(
       Props(
@@ -159,6 +162,7 @@ class DeploymentActor(
   }
 
   def restartApp(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int): Future[Unit] = {
+    healthCheckManager.addAllFor(app) // ensure health check actors are in place before tasks are launched
     val startPromise = Promise[Unit]()
     val stopPromise = Promise[Unit]()
     val runningTasks = taskTracker.get(app.id).toSeq.sortBy(_.getStartedAt)
@@ -207,6 +211,7 @@ class DeploymentActor(
     _ <- appRepository.store(app)
     x <- future
   } yield x
+
 }
 
 object DeploymentActor {

@@ -6,6 +6,7 @@ import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
@@ -40,6 +41,7 @@ class DeploymentActorTest
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
   var storage: StorageProvider = _
+  var hcManager: HealthCheckManager = _
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -50,6 +52,7 @@ class DeploymentActorTest
     queue = mock[TaskQueue]
     scheduler = mock[SchedulerActions]
     storage = mock[StorageProvider]
+    hcManager = mock[HealthCheckManager]
   }
 
   override def afterAll(): Unit = {
@@ -134,6 +137,7 @@ class DeploymentActorTest
         tracker,
         queue,
         storage,
+        hcManager,
         system.eventStream
       )
     )
@@ -209,6 +213,7 @@ class DeploymentActorTest
         tracker,
         queue,
         storage,
+        hcManager,
         system.eventStream
       )
     )
