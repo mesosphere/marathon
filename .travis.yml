@@ -6,7 +6,7 @@ before_script:
 jdk:
   - openjdk6
 scala:
-  - 2.10.2
+  - 2.11.2
 env:
   global:
     - ARTIFACTS_AWS_REGION=us-east-1
