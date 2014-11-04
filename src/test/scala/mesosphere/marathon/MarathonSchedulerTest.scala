@@ -100,6 +100,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
 
     verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
     verify(tracker).created(same(app.id), marathonTaskCaptor.capture())
+    verify(queue).addAll(Seq.empty)
 
     assert(1 == offersCaptor.getValue.size())
     assert(offer.getId == offersCaptor.getValue.get(0))
