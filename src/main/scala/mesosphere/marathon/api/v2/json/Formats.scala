@@ -2,11 +2,11 @@ package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble }
 
-import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.event._
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state._
 import mesosphere.marathon.state.Container.{ Volume, Docker }
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -19,22 +19,247 @@ import mesos.ContainerInfo.DockerInfo.Network
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
-object Formats {
+object Formats extends Formats {
 
-  implicit val IntegerFormat: Format[Integer] = __.format[Int].inmap(Int.box, Int.unbox)
-  implicit val DoubleFormat: Format[JDouble] = __.format[Double].inmap(Double.box, Double.unbox)
+  implicit class ReadsWithDefault[A](val reads: Reads[Option[A]]) extends AnyVal {
+    def withDefault(a: A): Reads[A] = reads.map(_.getOrElse(a))
+  }
 
-  implicit val CommandFormat: Format[Command] = Json.format[Command]
+  implicit class FormatWithDefault[A](val m: OFormat[Option[A]]) extends AnyVal {
+    def withDefault(a: A): OFormat[A] = m.inmap(_.getOrElse(a), Some(_))
+  }
+
+  implicit class ReadsAsSeconds(val reads: Reads[Long]) extends AnyVal {
+    def asSeconds: Reads[FiniteDuration] = reads.map(_.seconds)
+  }
+
+  implicit class FormatAsSeconds(val format: OFormat[Long]) extends AnyVal {
+    def asSeconds: OFormat[FiniteDuration] =
+      format.inmap(
+        _.seconds,
+        _.toSeconds
+      )
+  }
+
+  /*
+   * Helpers
+   */
+
+  def uniquePorts: Reads[Seq[Integer]] = Format.of[Seq[Integer]].filter { ports =>
+    val withoutRandom = ports.filterNot(_ == AppDefinition.RandomPortValue)
+    withoutRandom.distinct.size == withoutRandom.size
+  }
+
+  def minValue[A](min: A)(implicit O: Ordering[A], reads: Reads[A]): Reads[A] =
+    Reads.filterNot[A](ValidationError(s"value must not be less than $min"))(x => O.lt(x, min))(reads)
+
+  def regex(pattern: String): Reads[String] =
+    Reads.filter[String](ValidationError("invalid value"))(_.matches(pattern))
+
+  def enumFormat[A <: java.lang.Enum[A]](read: String => A, errorMsg: String => String): Format[A] = {
+    val reads = Reads[A] {
+      case JsString(str) =>
+        try {
+          JsSuccess(read(str))
+        }
+        catch {
+          case _: IllegalArgumentException => JsError(errorMsg(str))
+        }
+
+      case x => JsError(s"expected string, got $x")
+    }
+
+    val writes = Writes[A] { a: A => JsString(a.name) }
+
+    Format(reads, writes)
+  }
+}
+
+trait Formats
+    extends AppDefinitionFormats
+    with HealthCheckFormats
+    with ContainerFormats
+    with DeploymentFormats
+    with EventFormats {
+  import scala.collection.JavaConverters._
+
+  implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
+    Json.obj(
+      "appId" -> failure.appId,
+      "host" -> failure.host,
+      "message" -> failure.message,
+      "state" -> failure.state.name(),
+      "taskId" -> failure.taskId.getValue,
+      "timestamp" -> failure.timestamp,
+      "version" -> failure.version
+    )
+  }
+
+  implicit lazy val MarathonTaskWrites: Writes[MarathonTask] = Writes { task =>
+    Json.obj(
+      "id" -> task.getId,
+      "host" -> (if (task.hasHost) task.getHost else JsNull),
+      "ports" -> task.getPortsList.asScala,
+      "startedAt" -> (if (task.getStartedAt != 0) JsNumber(task.getStartedAt) else JsNull),
+      "stagedAt" -> (if (task.getStagedAt != 0) task.getStagedAt else JsNull),
+      "version" -> task.getVersion
+    )
+  }
+
+  implicit lazy val EnrichedTaskWrites: Writes[EnrichedTask] = Writes { task =>
+    val taskJson = MarathonTaskWrites.writes(task.task).as[JsObject]
+
+    val enrichedJson = taskJson ++ Json.obj(
+      "appId" -> task.appId
+    )
+
+    val withServicePorts = if (task.servicePorts.nonEmpty)
+      enrichedJson ++ Json.obj("servicePorts" -> task.servicePorts)
+    else
+      enrichedJson
+
+    if (task.healthCheckResults.nonEmpty)
+      withServicePorts ++ Json.obj("healthCheckResults" -> task.healthCheckResults)
+    else
+      withServicePorts
+  }
+
+  implicit lazy val PathIdFormat: Format[PathId] = Format(
+    Reads.of[String].map(PathId(_)),
+    Writes[PathId] { id => JsString(id.toString) }
+  )
+
+  implicit lazy val TimestampFormat: Format[Timestamp] = Format(
+    Reads.of[String].map(Timestamp(_)),
+    Writes[Timestamp] { t => JsString(t.toString) }
+  )
+
+  implicit lazy val IntegerFormat: Format[Integer] = Format(
+    Reads.of[Int].map(Int.box),
+    Writes[Integer] { i => JsNumber(i.intValue) }
+  )
+  implicit lazy val DoubleFormat: Format[JDouble] = Format(
+    Reads.of[Double].map(Double.box),
+    Writes[JDouble] { d => JsNumber(d.doubleValue()) }
+  )
+
+  implicit lazy val CommandFormat: Format[Command] = Json.format[Command]
+}
+
+trait ContainerFormats {
+  import Formats._
+
+  implicit lazy val NetworkFormat: Format[Network] =
+    enumFormat(Network.valueOf, str => s"$str is not a valid network type")
+
+  implicit lazy val PortMappingFormat: Format[Docker.PortMapping] = (
+    (__ \ "containerPort").format[Integer] ~
+    (__ \ "hostPort").formatNullable[Integer].withDefault(0) ~
+    (__ \ "servicePort").formatNullable[Integer].withDefault(0) ~
+    (__ \ "protocol").formatNullable[String].withDefault("tcp")
+  )(PortMapping(_, _, _, _), unlift(PortMapping.unapply))
+
+  implicit lazy val DockerFormat: Format[Docker] = (
+    (__ \ "image").format[String] ~
+    (__ \ "network").formatNullable[Network] ~
+    (__ \ "portMappings").formatNullable[Seq[Docker.PortMapping]]
+  )(Docker(_, _, _), unlift(Docker.unapply))
+
+  implicit val ModeFormat: Format[mesos.Volume.Mode] =
+    enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mode")
+
+  implicit lazy val VolumeFormat: Format[Volume] = (
+    (__ \ "containerPath").format[String] ~
+    (__ \ "hostPath").format[String] ~
+    (__ \ "mode").format[mesos.Volume.Mode]
+  )(Volume(_, _, _), unlift(Volume.unapply))
+
+  implicit val ContainerTypeFormat: Format[mesos.ContainerInfo.Type] =
+    enumFormat(mesos.ContainerInfo.Type.valueOf, str => s"$str is not a valid container type")
+
+  implicit lazy val ContainerFormat: Format[Container] = (
+    (__ \ "type").formatNullable[mesos.ContainerInfo.Type].withDefault(mesos.ContainerInfo.Type.DOCKER) ~
+    (__ \ "volumes").formatNullable[Seq[Volume]].withDefault(Nil) ~
+    (__ \ "docker").formatNullable[Docker]
+  )(Container(_, _, _), unlift(Container.unapply))
+}
+
+trait DeploymentFormats {
+  import Formats._
+
+  implicit lazy val ByteArrayFormat: Format[Array[Byte]] =
+    Format(
+      Reads.of[Seq[Int]].map(_.map(_.toByte).toArray),
+      Writes { xs =>
+        JsArray(xs.to[Seq].map(b => JsNumber(b.toInt)))
+      }
+    )
+  implicit lazy val GroupFormat: Format[Group] = Json.format[Group]
+  implicit lazy val URLToStringMapFormat: Format[Map[java.net.URL, String]] = Format(
+    Reads.of[Map[String, String]]
+      .map(
+        _.map { case (k, v) => new java.net.URL(k) -> v }
+      ),
+    Writes[Map[java.net.URL, String]] { m =>
+      val mapped = m.map { case (k, v) => k.toString -> v }
+      Json.toJson(m)
+    }
+  )
+  implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
+    Json.obj(
+      "type" -> action.getClass.getSimpleName,
+      "app" -> action.app.id
+    )
+  }
+
+  implicit lazy val DeploymentStepWrites: Writes[DeploymentStep] = Json.writes[DeploymentStep]
+  implicit lazy val DeploymentPlanWrites: Writes[DeploymentPlan] = (
+    (__ \ "id").write[String] ~
+    (__ \ "original").write[Group] ~
+    (__ \ "target").write[Group] ~
+    (__ \ "steps").write[List[DeploymentStep]] ~
+    (__ \ "version").write[Timestamp]
+  )(unlift(DeploymentPlan.unapply))
+}
+
+trait EventFormats {
+  import Formats._
+
+  implicit lazy val AppTerminatedEventWrites: Writes[AppTerminatedEvent] = Json.writes[AppTerminatedEvent]
+  implicit lazy val ApiPostEventWrites: Writes[ApiPostEvent] = Json.writes[ApiPostEvent]
+  implicit lazy val SubscribeWrites: Writes[Subscribe] = Json.writes[Subscribe]
+  implicit lazy val UnsubscribeWrites: Writes[Unsubscribe] = Json.writes[Unsubscribe]
+  implicit lazy val AddHealthCheckWrites: Writes[AddHealthCheck] = Json.writes[AddHealthCheck]
+  implicit lazy val RemoveHealthCheckWrites: Writes[RemoveHealthCheck] = Json.writes[RemoveHealthCheck]
+  implicit lazy val FailedHealthCheckWrites: Writes[FailedHealthCheck] = Json.writes[FailedHealthCheck]
+  implicit lazy val HealthStatusChangedWrites: Writes[HealthStatusChanged] = Json.writes[HealthStatusChanged]
+  implicit lazy val GroupChangeSuccessWrites: Writes[GroupChangeSuccess] = Json.writes[GroupChangeSuccess]
+  implicit lazy val GroupChangeFailedWrites: Writes[GroupChangeFailed] = Json.writes[GroupChangeFailed]
+  implicit lazy val DeploymentSuccessWrites: Writes[DeploymentSuccess] = Json.writes[DeploymentSuccess]
+  implicit lazy val DeploymentFailedWrites: Writes[DeploymentFailed] = Json.writes[DeploymentFailed]
+  implicit lazy val DeploymentStatusWrites: Writes[DeploymentStatus] = Json.writes[DeploymentStatus]
+  implicit lazy val DeploymentStepSuccessWrites: Writes[DeploymentStepSuccess] = Json.writes[DeploymentStepSuccess]
+  implicit lazy val DeploymentStepFailureWrites: Writes[DeploymentStepFailure] = Json.writes[DeploymentStepFailure]
+  implicit lazy val MesosStatusUpdateEventWrites: Writes[MesosStatusUpdateEvent] = Json.writes[MesosStatusUpdateEvent]
+  implicit lazy val MesosFrameworkMessageEventWrites: Writes[MesosFrameworkMessageEvent] =
+    Json.writes[MesosFrameworkMessageEvent]
+}
+
+trait HealthCheckFormats {
+  import Formats._
 
   /*
    * HealthCheck related formats
    */
 
-  implicit val ProtocolFormat: Format[Protocol] =
+  implicit lazy val HealthWrites: Writes[Health] = Json.writes[Health]
+
+  implicit lazy val ProtocolFormat: Format[Protocol] =
     enumFormat(Protocol.valueOf, str => s"$str is not a valid protocol")
 
-  implicit val HealtCheckFormat: Format[HealthCheck] = {
+  implicit lazy val HealtCheckFormat: Format[HealthCheck] = {
     import HealthCheck._
 
     (
@@ -48,55 +273,17 @@ object Formats {
       (__ \ "maxConsecutiveFailures").formatNullable[Integer].withDefault(DefaultMaxConsecutiveFailures)
     )(HealthCheck.apply, unlift(HealthCheck.unapply))
   }
+}
 
-  /*
-   * Container related formats
-   */
+trait AppDefinitionFormats {
+  import Formats._
 
-  implicit val NetworkFormat: Format[Network] =
-    enumFormat(Network.valueOf, str => s"$str is not a valid network type")
+  implicit lazy val IdentifiableWrites = Json.writes[Identifiable]
 
-  implicit val PortMappingFormat: Format[Docker.PortMapping] = (
-    (__ \ "containerPort").format[Integer] ~
-    (__ \ "hostPort").formatNullable[Integer].withDefault(0) ~
-    (__ \ "servicePort").formatNullable[Integer].withDefault(0) ~
-    (__ \ "protocol").formatNullable[String].withDefault("tcp")
-  )(PortMapping(_, _, _, _), unlift(PortMapping.unapply))
+  implicit lazy val UpgradeStrategyFormat: Format[UpgradeStrategy] = Json.format[UpgradeStrategy]
 
-  implicit val DockerFormat: Format[Docker] = (
-    (__ \ "image").format[String] ~
-    (__ \ "network").formatNullable[Network] ~
-    (__ \ "portMappings").formatNullable[Seq[Docker.PortMapping]]
-  )(Docker(_, _, _), unlift(Docker.unapply))
-
-  implicit val ModeFormat: Format[mesos.Volume.Mode] =
-    enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mode")
-
-  implicit val VolumeFormat: Format[Volume] = (
-    (__ \ "containerPath").format[String] ~
-    (__ \ "hostPath").format[String] ~
-    (__ \ "mode").format[mesos.Volume.Mode]
-  )(Volume(_, _, _), unlift(Volume.unapply))
-
-  implicit val ContainerTypeFormat: Format[mesos.ContainerInfo.Type] =
-    enumFormat(mesos.ContainerInfo.Type.valueOf, str => s"$str is not a valid container type")
-
-  implicit val ContainerFormat: Format[Container] = (
-    (__ \ "type").formatNullable[mesos.ContainerInfo.Type].withDefault(mesos.ContainerInfo.Type.DOCKER) ~
-    (__ \ "volumes").formatNullable[Seq[Volume]].withDefault(Nil) ~
-    (__ \ "docker").formatNullable[Docker]
-  )(Container(_, _, _), unlift(Container.unapply))
-
-  /*
-   * AppDefinition related formats
-   */
-
-  implicit val TimestampFormat: Format[Timestamp] = __.format[String].inmap(Timestamp(_), _.toString)
-
-  implicit val UpgradeStrategyFormat: Format[UpgradeStrategy] = Json.format[UpgradeStrategy]
-  implicit val PathIdFormat: Format[PathId] = __.format[String].inmap(PathId(_), _.toString)
-  implicit val ConstraintFormat: Format[Constraint] = __.format[Seq[String]].inmap(
-    seq => {
+  implicit lazy val ConstraintFormat: Format[Constraint] = Format(
+    Reads.of[Seq[String]].map { seq =>
       val builder = Constraint
         .newBuilder()
         .setField(seq(0))
@@ -104,16 +291,16 @@ object Formats {
       if (seq.size == 3) builder.setValue(seq(2))
       builder.build()
     },
-    constraint => {
-      val builder = Seq.newBuilder[String]
-      builder += constraint.getField
-      builder += constraint.getOperator.name
-      if (constraint.hasValue) builder += constraint.getValue
-      builder.result()
+    Writes[Constraint] { constraint =>
+      val builder = Seq.newBuilder[JsString]
+      builder += JsString(constraint.getField)
+      builder += JsString(constraint.getOperator.name)
+      if (constraint.hasValue) builder += JsString(constraint.getValue)
+      JsArray(builder.result())
     }
   )
 
-  implicit val AppDefinitionFormat: Reads[AppDefinition] = {
+  implicit lazy val AppDefinitionReads: Reads[AppDefinition] = {
     import AppDefinition._
 
     (
@@ -146,142 +333,42 @@ object Formats {
       }
   }
 
-  implicit val AppDefinitionWrites = {
+  implicit lazy val AppDefinitionWrites: Writes[AppDefinition] = {
     implicit val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
     }
 
-    import Json.toJson
-
     Writes[AppDefinition] { app =>
-      Json.obj(
-        "id" -> toJson(app.id),
-        "cmd" -> toJson(app.cmd),
-        "args" -> toJson(app.args),
-        "user" -> toJson(app.user),
-        "env" -> toJson(app.env),
-        "instances" -> toJson(app.instances),
-        "cpus" -> toJson(app.cpus),
-        "mem" -> toJson(app.mem),
-        "disk" -> toJson(app.disk),
-        "executor" -> toJson(app.executor),
-        "constraints" -> toJson(app.constraints),
-        "uris" -> toJson(app.uris),
-        "storeUrls" -> toJson(app.storeUrls),
-        "ports" -> toJson(app.ports),
-        "requirePorts" -> toJson(app.requirePorts),
-        "backoffSeconds" -> toJson(app.backoff),
-        "backoffFactor" -> toJson(app.backoffFactor),
-        "container" -> toJson(app.container),
-        "healthChecks" -> toJson(app.healthChecks),
-        "dependencies" -> toJson(app.dependencies),
-        "upgradeStrategy" -> toJson(app.upgradeStrategy),
-        "version" -> toJson(app.version)
-      )
+      try {
+        Json.obj(
+          "id" -> app.id.toString,
+          "cmd" -> app.cmd,
+          "args" -> app.args,
+          "user" -> app.user,
+          "env" -> app.env,
+          "instances" -> app.instances,
+          "cpus" -> app.cpus,
+          "mem" -> app.mem,
+          "disk" -> app.disk,
+          "executor" -> app.executor,
+          "constraints" -> app.constraints,
+          "uris" -> app.uris,
+          "storeUrls" -> app.storeUrls,
+          "ports" -> app.ports,
+          "requirePorts" -> app.requirePorts,
+          "backoffSeconds" -> app.backoff,
+          "backoffFactor" -> app.backoffFactor,
+          "container" -> app.container,
+          "healthChecks" -> app.healthChecks,
+          "dependencies" -> app.dependencies,
+          "upgradeStrategy" -> app.upgradeStrategy,
+          "version" -> app.version
+        )
+      }
+      catch {
+        case NonFatal(e) =>
+          throw e
+      }
     }
-  }
-
-  /*
-   * Deployment related formats
-   */
-
-  implicit val ByteArrayFormat: Format[Array[Byte]] =
-    __.format[Seq[Int]].inmap(_.map(_.toByte).toArray, _.to[Seq].map(_.toInt))
-  implicit val GroupFormat: Format[Group] = Json.format[Group]
-  implicit val URLToStringMapFormat: Format[Map[java.net.URL, String]] = __.format[Map[String, String]]
-    .inmap(
-      _.map { case (k, v) => new java.net.URL(k) -> v },
-      _.map { case (k, v) => k.toString -> v }
-    )
-  implicit val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
-    Json.obj(
-      "type" -> action.getClass.getSimpleName,
-      "app" -> action.app.id
-    )
-  }
-
-  implicit val DeploymentStepWrites: Writes[DeploymentStep] = Json.writes[DeploymentStep]
-  implicit val DeploymentPlanWrites: Writes[DeploymentPlan] = (
-    (__ \ "id").write[String] ~
-    (__ \ "original").write[Group] ~
-    (__ \ "target").write[Group] ~
-    (__ \ "steps").write[List[DeploymentStep]] ~
-    (__ \ "version").write[Timestamp]
-  )(unlift(DeploymentPlan.unapply))
-
-  /*
-   * Event related formats
-   */
-
-  implicit val AppTerminatedEventWrites: Writes[AppTerminatedEvent] = Json.writes[AppTerminatedEvent]
-  implicit val ApiPostEventWrites: Writes[ApiPostEvent] = Json.writes[ApiPostEvent]
-  implicit val SubscribeWrites: Writes[Subscribe] = Json.writes[Subscribe]
-  implicit val UnsubscribeWrites: Writes[Unsubscribe] = Json.writes[Unsubscribe]
-  implicit val AddHealthCheckWrites: Writes[AddHealthCheck] = Json.writes[AddHealthCheck]
-  implicit val RemoveHealthCheckWrites: Writes[RemoveHealthCheck] = Json.writes[RemoveHealthCheck]
-  implicit val FailedHealthCheckWrites: Writes[FailedHealthCheck] = Json.writes[FailedHealthCheck]
-  implicit val HealthStatusChangedWrites: Writes[HealthStatusChanged] = Json.writes[HealthStatusChanged]
-  implicit val GroupChangeSuccessWrites: Writes[GroupChangeSuccess] = Json.writes[GroupChangeSuccess]
-  implicit val GroupChangeFailedWrites: Writes[GroupChangeFailed] = Json.writes[GroupChangeFailed]
-  implicit val DeploymentSuccessWrites: Writes[DeploymentSuccess] = Json.writes[DeploymentSuccess]
-  implicit val DeploymentFailedWrites: Writes[DeploymentFailed] = Json.writes[DeploymentFailed]
-  implicit val DeploymentStatusWrites: Writes[DeploymentStatus] = Json.writes[DeploymentStatus]
-  implicit val DeploymentStepSuccessWrites: Writes[DeploymentStepSuccess] = Json.writes[DeploymentStepSuccess]
-  implicit val DeploymentStepFailureWrites: Writes[DeploymentStepFailure] = Json.writes[DeploymentStepFailure]
-  implicit val MesosStatusUpdateEventWrites: Writes[MesosStatusUpdateEvent] = Json.writes[MesosStatusUpdateEvent]
-  implicit val MesosFrameworkMessageEventWrites: Writes[MesosFrameworkMessageEvent] =
-    Json.writes[MesosFrameworkMessageEvent]
-
-  /*
-   * Helpers
-   */
-
-  def uniquePorts: Reads[Seq[Integer]] = __.read[Seq[Integer]].filter { ports =>
-    val withoutRandom = ports.filterNot(_ == AppDefinition.RandomPortValue)
-    withoutRandom.distinct.size == withoutRandom.size
-  }
-
-  def minValue[A](min: A)(implicit O: Ordering[A], reads: Reads[A]): Reads[A] =
-    Reads.filterNot[A](ValidationError(s"value must not be less than $min"))(x => O.lt(x, min))(reads)
-
-  def regex(pattern: String): Reads[String] =
-    Reads.filter[String](ValidationError("invalid value"))(_.matches(pattern))
-
-  implicit class ReadsWithDefault[A](val reads: Reads[Option[A]]) extends AnyVal {
-    def withDefault(a: A): Reads[A] = reads.map(_.getOrElse(a))
-  }
-
-  implicit class FormatWithDefault[A](val m: OFormat[Option[A]]) extends AnyVal {
-    def withDefault(a: A): OFormat[A] = m.inmap(_.getOrElse(a), Some(_))
-  }
-
-  implicit class ReadsAsSeconds(val reads: Reads[Long]) extends AnyVal {
-    def asSeconds: Reads[FiniteDuration] = reads.map(_.seconds)
-  }
-
-  implicit class FormatAsSeconds(val format: OFormat[Long]) extends AnyVal {
-    def asSeconds: OFormat[FiniteDuration] =
-      format.inmap(
-        _.seconds,
-        _.toSeconds
-      )
-  }
-
-  private def enumFormat[A <: java.lang.Enum[A]](read: String => A, errorMsg: String => String): Format[A] = {
-    val reads = Reads[A] {
-      case JsString(str) =>
-        try {
-          JsSuccess(read(str))
-        }
-        catch {
-          case _: IllegalArgumentException => JsError(errorMsg(str))
-        }
-
-      case x => JsError(s"expected string, got $x")
-    }
-
-    val writes = Writes[A] { a: A => JsString(a.name) }
-
-    Format(reads, writes)
   }
 }

@@ -3,9 +3,11 @@ package mesosphere.marathon.state
 import javax.validation.Validation
 
 import com.google.common.collect.Lists
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.{ Protos, MarathonSpec }
 import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
 import mesosphere.marathon.api.ModelValidation
+import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
@@ -432,7 +434,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.Formats.AppDefinitionFormat
+    import mesosphere.marathon.api.v2.json.Formats.AppDefinitionReads
     import mesosphere.marathon.api.v2.json.MarathonModule
 
     val mapper = new ObjectMapper
@@ -441,6 +443,111 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     mapper.registerModule(CaseClassModule)
 
     assert(mapper.readValue(fullAppJson, classOf[AppDefinition]) == Json.parse(fullAppJson).as[AppDefinition])
+  }
+
+  test("AppDefinition.WithTaskCountsAndDeploymentsWrites output of play-json matches jackson") {
+    val app = AppDefinition()
+
+    val task = Protos.MarathonTask
+      .newBuilder
+      .setHost("localhost")
+      .setId("my-task")
+      .addPorts(9999)
+      .setStagedAt(0)
+      .setStartedAt(0)
+      .setVersion("some-version")
+      .build()
+
+    val appGroup = Group(PathId("/foo"), Set(app))
+
+    val enrichedApp = app.withTaskCountsAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), Seq(DeploymentPlan(Group.empty, appGroup)))
+
+    import com.fasterxml.jackson.databind.ObjectMapper
+    import com.fasterxml.jackson.module.scala.DefaultScalaModule
+    import mesosphere.jackson.CaseClassModule
+    import mesosphere.marathon.api.v2.AppsResource.WithTaskCountsAndDeploymentsWrites
+    import mesosphere.marathon.api.v2.json.MarathonModule
+
+    val mapper = new ObjectMapper
+    mapper.registerModule(DefaultScalaModule)
+    mapper.registerModule(new MarathonModule)
+    mapper.registerModule(CaseClassModule)
+
+    val playRes = Json.parse(Json.toJson(enrichedApp).toString())
+    val jacksonRes = Json.parse(mapper.writeValueAsString(enrichedApp))
+    assert(playRes == jacksonRes)
+  }
+
+  test("AppDefinition.WithTasksAndDeploymentsWrites output of play-json matches jackson") {
+    val app = AppDefinition()
+
+    val task = Protos.MarathonTask
+      .newBuilder
+      .setHost("localhost")
+      .setId("my-task")
+      .addPorts(9999)
+      .setStagedAt(0)
+      .setStartedAt(0)
+      .setVersion("some-version")
+      .build()
+
+    val appGroup = Group(PathId("/foo"), Set(app))
+
+    val enrichedApp = app.withTasksAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), Seq(DeploymentPlan(Group.empty, appGroup)))
+
+    import com.fasterxml.jackson.databind.ObjectMapper
+    import com.fasterxml.jackson.module.scala.DefaultScalaModule
+    import mesosphere.jackson.CaseClassModule
+    import mesosphere.marathon.api.v2.AppsResource.WithTasksAndDeploymentsWrites
+    import mesosphere.marathon.api.v2.json.MarathonModule
+
+    val mapper = new ObjectMapper
+    mapper.registerModule(DefaultScalaModule)
+    mapper.registerModule(new MarathonModule)
+    mapper.registerModule(CaseClassModule)
+
+    val playRes = Json.parse(Json.toJson(enrichedApp).toString())
+    val jacksonRes = Json.parse(mapper.writeValueAsString(enrichedApp))
+    assert(playRes == jacksonRes)
+  }
+
+  test("AppDefinition.WithTasksAndDeploymentsAndFailuresWrites output of play-json matches jackson") {
+    val app = AppDefinition()
+
+    val task = Protos.MarathonTask
+      .newBuilder
+      .setHost("localhost")
+      .setId("my-task")
+      .addPorts(9999)
+      .setStagedAt(0)
+      .setStartedAt(0)
+      .setVersion("some-version")
+      .build()
+
+    val appGroup = Group(PathId("/foo"), Set(app))
+
+    val failure = TaskFailure(
+      app.id,
+      mesos.TaskID.newBuilder.setValue(task.getId).build(),
+      mesos.TaskState.TASK_FAILED
+    )
+
+    val enrichedApp = app.withTasksAndDeploymentsAndFailures(Seq(EnrichedTask(app.id, task, Nil, Nil)), Seq(DeploymentPlan(Group.empty, appGroup)), Some(failure))
+
+    import com.fasterxml.jackson.databind.ObjectMapper
+    import com.fasterxml.jackson.module.scala.DefaultScalaModule
+    import mesosphere.jackson.CaseClassModule
+    import mesosphere.marathon.api.v2.AppsResource.WithTasksAndDeploymentsAndFailuresWrites
+    import mesosphere.marathon.api.v2.json.MarathonModule
+
+    val mapper = new ObjectMapper
+    mapper.registerModule(DefaultScalaModule)
+    mapper.registerModule(new MarathonModule)
+    mapper.registerModule(CaseClassModule)
+
+    val playRes = Json.parse(Json.toJson(enrichedApp).toString())
+    val jacksonRes = Json.parse(mapper.writeValueAsString(enrichedApp))
+    assert(playRes == jacksonRes)
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
