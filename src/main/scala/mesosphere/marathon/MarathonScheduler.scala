@@ -132,7 +132,8 @@ class MarathonScheduler @Inject() (
         }
 
         // put unscheduled tasks back in the queue
-        taskQueue.addAll(queuedTasks diff launchedTask.map(_._1).to[Seq])
+        val launchedTaskSeq: Seq[QueuedTask] = launchedTask.map(_._1).to[Seq]
+        taskQueue.addAll(queuedTasks diff launchedTaskSeq)
 
         if (launchedTask.isEmpty) {
           log.debug("Offer doesn't match request. Declining.")
