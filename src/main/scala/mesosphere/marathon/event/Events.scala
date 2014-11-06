@@ -83,6 +83,7 @@ sealed trait MarathonHealthCheckEvent extends MarathonEvent {
 
 case class AddHealthCheck(
   appId: PathId,
+  version: Timestamp,
   healthCheck: HealthCheck,
   eventType: String = "add_health_check_event",
   timestamp: String = Timestamp.now().toString)

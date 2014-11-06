@@ -4,7 +4,7 @@ import java.io._
 import javax.inject.Inject
 
 import mesosphere.marathon.Protos._
-import mesosphere.marathon.state.{ PathId, StateMetrics }
+import mesosphere.marathon.state.{ PathId, StateMetrics, Timestamp }
 import mesosphere.marathon.{ Main, MarathonConf }
 import com.codahale.metrics.MetricRegistry
 import org.apache.log4j.Logger
@@ -44,6 +44,12 @@ class TaskTracker @Inject() (
 
   def get(appId: PathId): Set[MarathonTask] =
     getInternal(appId).values.toSet
+
+  def getVersion(appId: PathId, taskId: String): Option[Timestamp] =
+    get(appId).collectFirst {
+      case mt: MarathonTask if mt.getId == taskId =>
+        Timestamp(mt.getVersion)
+    }
 
   private def getInternal(appId: PathId): TrieMap[String, MarathonTask] =
     apps.getOrElseUpdate(appId, fetchApp(appId)).tasks
