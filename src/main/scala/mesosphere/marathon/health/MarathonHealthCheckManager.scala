@@ -41,9 +41,9 @@ class MarathonHealthCheckManager @Inject() (
     * lock, and releasing it afterward.
     */
   private[this] def withLock[T](lock: Lock)(op: => T): T = {
-    readLock.lock() // blocking
+    lock.lock() // blocking
     try { op }
-    finally { readLock.unlock() }
+    finally { lock.unlock() }
   }
 
   protected[this] def withReadLock[T](op: => T): T = withLock(readLock)(op)
