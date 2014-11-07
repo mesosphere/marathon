@@ -122,6 +122,9 @@ class MarathonSchedulerActor(
           res
       }
 
+    case cmd: CancelDeployment =>
+      deploymentManager forward cmd
+
     case cmd @ Deploy(plan, false) =>
       deploy(sender(), cmd, plan, blocking = false)
 

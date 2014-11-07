@@ -18,7 +18,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
+import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
@@ -90,6 +90,12 @@ class MarathonSchedulerService @Inject() (
       case CommandFailed(_, t)  => throw t
     }
   }
+
+  def cancelDeployment(id: String): Unit =
+    schedulerActor ! CancelDeployment(
+      id,
+      new DeploymentCanceledException("The upgrade has been cancelled")
+    )
 
   def listApps(): Iterable[AppDefinition] =
     Await.result(appRepository.apps(), config.zkTimeoutDuration)
