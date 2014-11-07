@@ -47,32 +47,43 @@ class AppsResource @Inject() (
             @QueryParam("embed") embed: String): String = {
     val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
     val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
-    val mapped =
-      if (embed == EmbedTasks) apps.map { app =>
-        val enrichedApp = app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
-        WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
-      }
-      else if (embed == EmbedTasksAndFailures) apps.map { app =>
-        WithTasksAndDeploymentsAndFailuresWrites.writes(
-          app.withTasksAndDeploymentsAndFailures(
-            enrichedTasks(app),
-            runningDeployments,
-            taskFailureRepository.current(app.id)
+    val mapped = embed match {
+      case EmbedTasks =>
+        apps.map { app =>
+          val enrichedApp = app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
+          WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
+        }
+
+      case EmbedTasksAndFailures =>
+        apps.map { app =>
+          WithTasksAndDeploymentsAndFailuresWrites.writes(
+            app.withTasksAndDeploymentsAndFailures(
+              enrichedTasks(app),
+              runningDeployments,
+              taskFailureRepository.current(app.id)
+            )
           )
-        )
-      }
-      else apps.map { app =>
-        val enrichedApp = app.withTaskCountsAndDeployments(enrichedTasks(app), runningDeployments)
-        WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
-      }
+        }
+
+      case _ =>
+        apps.map { app =>
+          val enrichedApp = app.withTaskCountsAndDeployments(enrichedTasks(app), runningDeployments)
+          WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
+        }
+    }
 
     Json.obj("apps" -> mapped).toString()
   }
 
   @POST
   @Timed
-  def create(@Context req: HttpServletRequest, app: AppDefinition,
+  def create(@Context req: HttpServletRequest, body: Array[Byte],
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    val app = Json.parse(body).as[AppDefinition]
+    create(req, app, force)
+  }
+
+  private def create(req: HttpServletRequest, app: AppDefinition, force: Boolean): Response = {
     val baseId = app.id.canonicalPath()
     requireValid(checkApp(app, baseId.parent))
     maybePostEvent(req, app)
@@ -89,13 +100,15 @@ class AppsResource @Inject() (
     def transitiveApps(gid: PathId): Response = {
       val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
       val withTasks = apps.map { app =>
-        app.withTasksAndDeploymentsAndFailures(
+        val enrichedApp = app.withTasksAndDeploymentsAndFailures(
           enrichedTasks(app),
           runningDeployments,
           taskFailureRepository.current(app.id)
         )
+
+        WithTasksAndDeploymentsAndFailuresWrites.writes(enrichedApp)
       }
-      ok(Map("*" -> withTasks))
+      ok(Json.obj("*" -> withTasks).toString())
     }
     def app(): Response = service.getApp(id.toRootPath) match {
       case Some(app) =>
@@ -104,7 +117,7 @@ class AppsResource @Inject() (
           runningDeployments,
           taskFailureRepository.current(app.id)
         )
-        ok(Map("app" -> mapped))
+        ok(Json.obj("app" -> WithTasksAndDeploymentsAndFailuresWrites.writes(mapped)).toString())
 
       case None => unknownApp(id.toRootPath)
     }
@@ -120,7 +133,8 @@ class AppsResource @Inject() (
   def replace(@Context req: HttpServletRequest,
               @PathParam("id") id: String,
               @DefaultValue("false")@QueryParam("force") force: Boolean,
-              appUpdate: AppUpdate): Response = {
+              body: Array[Byte]): Response = {
+    val appUpdate = Json.parse(body).as[AppUpdate]
     // prefer the id from the AppUpdate over that in the UI
     val appId = appUpdate.id.map(_.canonicalPath()).getOrElse(id.toRootPath)
     // TODO error if they're not the same?
@@ -145,8 +159,8 @@ class AppsResource @Inject() (
 
   @PUT
   @Timed
-  def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean,
-                      updates: Seq[AppUpdate]): Response = {
+  def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean, body: Array[Byte]): Response = {
+    val updates = Json.parse(body).as[Seq[AppUpdate]]
     requireValid(checkUpdates(updates))
     val version = Timestamp.now()
     def updateApp(update: AppUpdate, app: AppDefinition): AppDefinition = {

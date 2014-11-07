@@ -5,6 +5,7 @@ import java.lang.{ Double => JDouble }
 import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state._
@@ -370,5 +371,37 @@ trait AppDefinitionFormats {
           throw e
       }
     }
+  }
+
+  implicit lazy val AppUpdateFormat: Reads[AppUpdate] = {
+
+    (
+      (__ \ "id").readNullable[PathId] ~
+      (__ \ "cmd").readNullable[String] ~
+      (__ \ "args").readNullable[Seq[String]] ~
+      (__ \ "user").readNullable[String] ~
+      (__ \ "env").readNullable[Map[String, String]] ~
+      (__ \ "instances").readNullable[Integer](minValue(0)) ~
+      (__ \ "cpus").readNullable[JDouble] ~
+      (__ \ "mem").readNullable[JDouble] ~
+      (__ \ "disk").readNullable[JDouble] ~
+      (__ \ "executor").readNullable[String](regex("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")) ~
+      (__ \ "constraints").readNullable[Set[Constraint]] ~
+      (__ \ "uris").readNullable[Seq[String]] ~
+      (__ \ "storeUrls").readNullable[Seq[String]] ~
+      (__ \ "ports").readNullable[Seq[Integer]](uniquePorts) ~
+      (__ \ "requirePorts").readNullable[Boolean] ~
+      (__ \ "backoffSeconds").readNullable[Long].map(_.map(_.seconds)) ~
+      (__ \ "backoffFactor").readNullable[JDouble] ~
+      (__ \ "container").readNullable[Container] ~
+      (__ \ "healthChecks").readNullable[Set[HealthCheck]] ~
+      (__ \ "dependencies").readNullable[Set[PathId]] ~
+      (__ \ "upgradeStrategy").readNullable[UpgradeStrategy]
+    )(AppUpdate(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { app =>
+        // necessary because of case class limitations
+        (__ \ "version").readNullable[Timestamp].map { v =>
+          app.copy(version = v)
+        }
+      }
   }
 }
