@@ -13,7 +13,7 @@ Constraints can be set via the REST API or the [Marathon gem](https://rubygems.o
 
 `hostname` field matches the slave hostnames, see `UNIQUE operator` for usage example.
 
-`hostname` field supports all operators except `CLUSTER`, since it's useless for hostnames.
+`hostname` field supports all operators except `GROUP_BY`.
 
 ### Attribute field
 

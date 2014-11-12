@@ -96,7 +96,7 @@ The full JSON format of an application resource is as follows:
         {
             "id": "5cd987cd-85ae-4e70-8df7-f1438367d9cb"
         }
-    ], 
+    ],
     "env": {
         "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
     },
@@ -135,8 +135,8 @@ The full JSON format of an application resource is as follows:
     ],
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
-    "tasksRunning": 3, 
-    "tasksStaged": 0, 
+    "tasksRunning": 3,
+    "tasksStaged": 0,
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
     ],
@@ -155,7 +155,7 @@ Each name must be at least 1 character and may
 only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters
 (`a-z`). The name may not begin or end with a dash.
 
-The allowable format is represented by the following regular expression  
+The allowable format is represented by the following regular expression 
 `^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$`
 
 ##### args
@@ -199,21 +199,27 @@ An array of checks to be performed on running tasks to determine if they are
 operating as expected. Health checks begin immediately upon task launch. For
 design details, refer to the [health checks]({{ site.baseurl}}/docs/health-checks.html)
 doc.  By default, health checks are executed by the Marathon scheduler.
-It's possible with Mesos `0.20.0` and higher to execute health checks on the hosts where
-the tasks are running by supplying the `--executor_health_checks` flag to Marathon.
-In this case, the only supported protocol is `COMMAND` and each app is limited to
-at most one defined health check.
+With Mesos `0.20.0` and higher, the COMMAND protocol can be used to
+execute health checks on the hosts where the tasks are running.
+Mesos currently supports only one such health check per task.
+A COMMAND health check is considered passing if the command exits with status
+`0` within the `timeoutSeconds` period.
+COMMAND and other health checks can be defined on the same app as of
+Marathon `0.7.4`.
 
 An HTTP health check is considered passing if (1) its HTTP response code is between
 200 and 399, inclusive, and (2) its response is received within the
-`timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
-health checks consecutively, that task is killed.
+`timeoutSeconds` period.
+
+If a task fails more than `maxConseutiveFailures`
+health checks consecutively, that task is killed causing Marathon to start
+more instances. These restarts are modulated like any other failing app
+by `backoffSeconds` and `backoffFactor`.
 
 ###### HEALTH CHECK OPTIONS
 
 * `command`: Command to run in order to determine the health of a task.
-  *Note: only used if `protocol == "COMMAND"`, and only available if Marathon is
-  started with the `--executor_health_checks` flag.*
+  _Note: only used if `protocol == "COMMAND"`._
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
   ignored within this number of seconds of the task being started or until the
   task becomes healthy for the first time.
@@ -243,11 +249,11 @@ via the task resource.
 
 ##### upgradeStrategy
 During an upgrade all instances of an application get replaced by a new version.
-The `minimumHealthCapacity` defines the minimum number of healthy nodes, that do not sacrifice overall application purpose. 
-It is a number between `0` and `1` which is multiplied with the instance count. 
-The default `minimumHealthCapacity` is `1`, which means no old instance can be stopped, before all new instances are deployed. 
-A value of `0.5` means that an upgrade can be deployed side by side, by taking half of the instances down in the first step, 
-deploy half of the new version and then take the other half down and deploy the rest. 
+The `minimumHealthCapacity` defines the minimum number of healthy nodes, that do not sacrifice overall application purpose.
+It is a number between `0` and `1` which is multiplied with the instance count.
+The default `minimumHealthCapacity` is `1`, which means no old instance can be stopped, before all new instances are deployed.
+A value of `0.5` means that an upgrade can be deployed side by side, by taking half of the instances down in the first step,
+deploy half of the new version and then take the other half down and deploy the rest.
 A value of `0` means take all instances down immediately and replace with the new application.
 
 ##### Example
@@ -265,37 +271,37 @@ Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
 
 {
-    "cmd": "env && python3 -m http.server $PORT0", 
+    "cmd": "env && python3 -m http.server $PORT0",
     "constraints": [
         [
-            "hostname", 
+            "hostname",
             "UNIQUE"
         ]
-    ], 
+    ],
     "container": {
         "docker": {
             "image": "python:3"
-        }, 
+        },
         "type": "DOCKER"
-    }, 
-    "cpus": 0.25, 
+    },
+    "cpus": 0.25,
     "healthChecks": [
         {
-            "gracePeriodSeconds": 3, 
-            "intervalSeconds": 10, 
-            "maxConsecutiveFailures": 3, 
-            "path": "/", 
-            "portIndex": 0, 
-            "protocol": "HTTP", 
+            "gracePeriodSeconds": 3,
+            "intervalSeconds": 10,
+            "maxConsecutiveFailures": 3,
+            "path": "/",
+            "portIndex": 0,
+            "protocol": "HTTP",
             "timeoutSeconds": 5
         }
-    ], 
-    "id": "my-app", 
-    "instances": 2, 
-    "mem": 50, 
+    ],
+    "id": "my-app",
+    "instances": 2,
+    "mem": 50,
     "ports": [
         0
-    ], 
+    ],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5
     }
@@ -313,53 +319,53 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "args": null, 
-    "backoffFactor": 1.15, 
-    "backoffSeconds": 1, 
-    "cmd": "env && python3 -m http.server $PORT0", 
+    "args": null,
+    "backoffFactor": 1.15,
+    "backoffSeconds": 1,
+    "cmd": "env && python3 -m http.server $PORT0",
     "constraints": [
         [
-            "hostname", 
+            "hostname",
             "UNIQUE"
         ]
-    ], 
+    ],
     "container": {
         "docker": {
             "image": "python:3"
-        }, 
-        "type": "DOCKER", 
+        },
+        "type": "DOCKER",
         "volumes": []
-    }, 
-    "cpus": 0.25, 
-    "dependencies": [], 
-    "disk": 0.0, 
-    "env": {}, 
-    "executor": "", 
+    },
+    "cpus": 0.25,
+    "dependencies": [],
+    "disk": 0.0,
+    "env": {},
+    "executor": "",
     "healthChecks": [
         {
-            "command": null, 
-            "gracePeriodSeconds": 3, 
-            "intervalSeconds": 10, 
-            "maxConsecutiveFailures": 3, 
-            "path": "/", 
-            "portIndex": 0, 
-            "protocol": "HTTP", 
+            "command": null,
+            "gracePeriodSeconds": 3,
+            "intervalSeconds": 10,
+            "maxConsecutiveFailures": 3,
+            "path": "/",
+            "portIndex": 0,
+            "protocol": "HTTP",
             "timeoutSeconds": 5
         }
-    ], 
-    "id": "/my-app", 
-    "instances": 2, 
-    "mem": 50.0, 
+    ],
+    "id": "/my-app",
+    "instances": 2,
+    "mem": 50.0,
     "ports": [
         0
-    ], 
-    "requirePorts": false, 
-    "storeUrls": [], 
+    ],
+    "requirePorts": false,
+    "storeUrls": [],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5
-    }, 
-    "uris": [], 
-    "user": null, 
+    },
+    "uris": [],
+    "user": null,
     "version": "2014-08-18T22:36:41.451Z"
 }
 {% endhighlight %}
@@ -390,9 +396,20 @@ List all running applications.
     <tr>
       <td><code>embed</code></td>
       <td><code>string</code></td>
-      <td>Embeds nested resources that match the supplied path. Possible values:
-        <code>"apps.tasks"</code>. Apps' tasks are not embedded in the response
-        by default. Default: <code>none</code>.</td>
+      <td>
+        Embeds nested resources that match the supplied path.
+        Default: <code>none</code>. Possible values:
+        <ul>
+          <li>
+            <code>"apps.tasks"</code>. Apps' tasks are not embedded in the response
+            by default.
+          </li>
+          <li>
+            <code>"apps.failures"</code>. Apps' last failures are not embedded in
+            the response by default.
+          </li>
+        </ul>
+      </td>
     </tr>
   </tbody>
 </table>
@@ -408,6 +425,8 @@ Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
 {%endhighlight%}
+
+**Response:**
 
 {% highlight http %}
 HTTP/1.1 200 OK
@@ -484,6 +503,92 @@ Transfer-Encoding: chunked
 }
 {%endhighlight%}
 
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "apps": [
+        {
+            "args": null,
+            "backoffFactor": 1.15,
+            "backoffSeconds": 1,
+            "cmd": "while sleep 10; do date -u +%T; done",
+            "constraints": [],
+            "container": {
+                "docker": {
+                    "image": "libmesos/ubun2",
+                    "network": null,
+                    "portMappings": null
+                },
+                "type": "DOCKER",
+                "volumes": [
+                    {
+                        "containerPath": "/etc/a",
+                        "hostPath": "/var/data/a",
+                        "mode": "RO"
+                    },
+                    {
+                        "containerPath": "/etc/b",
+                        "hostPath": "/var/data/b",
+                        "mode": "RW"
+                    }
+                ]
+            },
+            "cpus": 0.5,
+            "dependencies": [],
+            "deployments": [
+                {
+                    "id": "f945548f-dd80-49a2-8b1a-d07ad9245688"
+                }
+            ],
+            "disk": 0.0,
+            "env": {},
+            "executor": "",
+            "healthChecks": [],
+            "id": "/ubuntu",
+            "instances": 1,
+            "lastTaskFailure": {
+                "appId": "/ubuntu",
+                "host": "10.141.141.10",
+                "message": "Abnormal executor termination",
+                "state": "TASK_FAILED",
+                "taskId": "ubuntu.4b20f4a9-503f-11e4-bd18-56847afe9799",
+                "timestamp": "2014-10-10T05:35:52.025Z",
+                "version": "2014-10-09T23:03:33.993Z"
+            },
+            "mem": 512.0,
+            "ports": [10000],
+            "requirePorts": false,
+            "storeUrls": [],
+            "tasks": [
+                {
+                    "appId": "/ubuntu",
+                    "host": "10.141.141.10",
+                    "id": "ubuntu.55de96ed-503f-11e4-bd18-56847afe9799",
+                    "ports": [31467],
+                    "stagedAt": "2014-10-10T05:36:08.178Z",
+                    "startedAt": null,
+                    "version": "2014-10-09T23:03:33.993Z"
+                }
+            ],
+            "tasksRunning": 0,
+            "tasksStaged": 1,
+            "upgradeStrategy": {
+                "minimumHealthCapacity": 1.0
+            },
+            "uris": [],
+            "user": null,
+            "version": "2014-10-09T23:03:33.993Z"
+        }
+    ]
+}
+{%endhighlight%}
+
 #### GET `/v2/apps/{appId}`
 
 List the application with id `appId`.
@@ -510,91 +615,100 @@ Transfer-Encoding: chunked
 
 {
     "app": {
-        "args": null, 
-        "backoffFactor": 1.15, 
-        "backoffSeconds": 1, 
-        "cmd": "python toggle.py $PORT0", 
-        "constraints": [], 
-        "container": null, 
-        "cpus": 0.2, 
-        "dependencies": [], 
-        "deployments": [], 
-        "disk": 0.0, 
-        "env": {}, 
-        "executor": "", 
+        "args": null,
+        "backoffFactor": 1.15,
+        "backoffSeconds": 1,
+        "cmd": "python toggle.py $PORT0",
+        "constraints": [],
+        "container": null,
+        "cpus": 0.2,
+        "dependencies": [],
+        "deployments": [],
+        "disk": 0.0,
+        "env": {},
+        "executor": "",
         "healthChecks": [
             {
-                "command": null, 
-                "gracePeriodSeconds": 5, 
-                "intervalSeconds": 10, 
-                "maxConsecutiveFailures": 3, 
-                "path": "/health", 
-                "portIndex": 0, 
-                "protocol": "HTTP", 
+                "command": null,
+                "gracePeriodSeconds": 5,
+                "intervalSeconds": 10,
+                "maxConsecutiveFailures": 3,
+                "path": "/health",
+                "portIndex": 0,
+                "protocol": "HTTP",
                 "timeoutSeconds": 10
             }
-        ], 
-        "id": "/toggle", 
-        "instances": 2, 
-        "mem": 32.0, 
+        ],
+        "id": "/toggle",
+        "instances": 2,
+        "lastTaskFailure": {
+            "appId": "/toggle",
+            "host": "10.141.141.10",
+            "message": "Abnormal executor termination",
+            "state": "TASK_FAILED",
+            "taskId": "toggle.cc427e60-5046-11e4-9e34-56847afe9799",
+            "timestamp": "2014-09-12T23:23:41.711Z",
+            "version": "2014-09-12T23:28:21.737Z"
+        },
+        "mem": 32.0,
         "ports": [
             10000
-        ], 
-        "requirePorts": false, 
-        "storeUrls": [], 
+        ],
+        "requirePorts": false,
+        "storeUrls": [],
         "tasks": [
             {
-                "appId": "/toggle", 
+                "appId": "/toggle",
                 "healthCheckResults": [
                     {
-                        "alive": true, 
-                        "consecutiveFailures": 0, 
-                        "firstSuccess": "2014-09-13T00:20:28.101Z", 
-                        "lastFailure": null, 
-                        "lastSuccess": "2014-09-13T00:25:07.506Z", 
+                        "alive": true,
+                        "consecutiveFailures": 0,
+                        "firstSuccess": "2014-09-13T00:20:28.101Z",
+                        "lastFailure": null,
+                        "lastSuccess": "2014-09-13T00:25:07.506Z",
                         "taskId": "toggle.802df2ae-3ad4-11e4-a400-56847afe9799"
                     }
-                ], 
-                "host": "10.141.141.10", 
-                "id": "toggle.802df2ae-3ad4-11e4-a400-56847afe9799", 
+                ],
+                "host": "10.141.141.10",
+                "id": "toggle.802df2ae-3ad4-11e4-a400-56847afe9799",
                 "ports": [
                     31045
-                ], 
-                "stagedAt": "2014-09-12T23:28:28.594Z", 
-                "startedAt": "2014-09-13T00:24:46.959Z", 
+                ],
+                "stagedAt": "2014-09-12T23:28:28.594Z",
+                "startedAt": "2014-09-13T00:24:46.959Z",
                 "version": "2014-09-12T23:28:21.737Z"
-            }, 
+            },
             {
-                "appId": "/toggle", 
+                "appId": "/toggle",
                 "healthCheckResults": [
                     {
-                        "alive": true, 
-                        "consecutiveFailures": 0, 
-                        "firstSuccess": "2014-09-13T00:20:28.101Z", 
-                        "lastFailure": null, 
-                        "lastSuccess": "2014-09-13T00:25:07.508Z", 
+                        "alive": true,
+                        "consecutiveFailures": 0,
+                        "firstSuccess": "2014-09-13T00:20:28.101Z",
+                        "lastFailure": null,
+                        "lastSuccess": "2014-09-13T00:25:07.508Z",
                         "taskId": "toggle.7c99814d-3ad4-11e4-a400-56847afe9799"
                     }
-                ], 
-                "host": "10.141.141.10", 
-                "id": "toggle.7c99814d-3ad4-11e4-a400-56847afe9799", 
+                ],
+                "host": "10.141.141.10",
+                "id": "toggle.7c99814d-3ad4-11e4-a400-56847afe9799",
                 "ports": [
                     31234
-                ], 
-                "stagedAt": "2014-09-12T23:28:22.587Z", 
-                "startedAt": "2014-09-13T00:24:46.965Z", 
+                ],
+                "stagedAt": "2014-09-12T23:28:22.587Z",
+                "startedAt": "2014-09-13T00:24:46.965Z",
                 "version": "2014-09-12T23:28:21.737Z"
             }
-        ], 
-        "tasksRunning": 2, 
-        "tasksStaged": 0, 
+        ],
+        "tasksRunning": 2,
+        "tasksStaged": 0,
         "upgradeStrategy": {
             "minimumHealthCapacity": 1.0
-        }, 
+        },
         "uris": [
             "http://downloads.mesosphere.com/misc/toggle.tgz"
-        ], 
-        "user": null, 
+        ],
+        "user": null,
         "version": "2014-09-12T23:28:21.737Z"
     }
 }
@@ -657,22 +771,22 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "cmd": "sleep 60", 
-    "constraints": [], 
-    "container": null, 
-    "cpus": 0.1, 
-    "env": {}, 
-    "executor": "", 
-    "id": "my-app", 
-    "instances": 4, 
-    "mem": 5.0, 
+    "cmd": "sleep 60",
+    "constraints": [],
+    "container": null,
+    "cpus": 0.1,
+    "env": {},
+    "executor": "",
+    "id": "my-app",
+    "instances": 4,
+    "mem": 5.0,
     "ports": [
-        18027, 
+        18027,
         13200
-    ], 
+    ],
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
-    ], 
+    ],
     "version": "2014-03-01T23:17:50.295Z"
 }
 {% endhighlight %}
@@ -719,17 +833,17 @@ Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
 {
-    "cmd": "sleep 55", 
+    "cmd": "sleep 55",
     "constraints": [
         [
-            "hostname", 
-            "UNIQUE", 
+            "hostname",
+            "UNIQUE",
             ""
         ]
-    ], 
-    "cpus": "0.3", 
-    "instances": "2", 
-    "mem": "9", 
+    ],
+    "cpus": "0.3",
+    "instances": "2",
+    "mem": "9",
     "ports": [
         9000
     ]
@@ -745,7 +859,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438", 
+    "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438",
     "version": "2014-08-26T07:37:50.462Z"
 }
 {% endhighlight %}
@@ -777,7 +891,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438", 
+    "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438",
     "version": "2014-08-26T07:37:50.462Z"
 }
 {% endhighlight %}
@@ -816,7 +930,7 @@ Transfer-Encoding: chunked
         {
             "id": "5cd987cd-85ae-4e70-8df7-f1438367d9cb"
         }
-    ], 
+    ],
     "message": "App is locked by one or more deployments. Override with the option '?force=true'. View details at '/v2/deployments/<DEPLOYMENT_ID>'."
 }
 {% endhighlight %}
@@ -877,25 +991,25 @@ Transfer-Encoding: chunked
 {
     "tasks": [
         {
-            "host": "agouti.local", 
-            "id": "my-app_1-1396592790353", 
+            "host": "agouti.local",
+            "id": "my-app_1-1396592790353",
             "ports": [
-                31336, 
+                31336,
                 31337
-            ], 
-            "stagedAt": "2014-04-04T06:26:30.355Z", 
-            "startedAt": "2014-04-04T06:26:30.860Z", 
+            ],
+            "stagedAt": "2014-04-04T06:26:30.355Z",
+            "startedAt": "2014-04-04T06:26:30.860Z",
             "version": "2014-04-04T06:26:23.051Z"
-        }, 
+        },
         {
-            "host": "agouti.local", 
-            "id": "my-app_0-1396592784349", 
+            "host": "agouti.local",
+            "id": "my-app_0-1396592784349",
             "ports": [
-                31382, 
+                31382,
                 31383
-            ], 
-            "stagedAt": "2014-04-04T06:26:24.351Z", 
-            "startedAt": "2014-04-04T06:26:24.919Z", 
+            ],
+            "stagedAt": "2014-04-04T06:26:24.351Z",
+            "startedAt": "2014-04-04T06:26:24.919Z",
             "version": "2014-04-04T06:26:23.051Z"
         }
     ]
@@ -922,8 +1036,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382  
-my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383  
+my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382 
+my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383 
 {% endhighlight %}
 
 #### DELETE `/v2/apps/{appId}/tasks`
@@ -1070,47 +1184,47 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "apps": [], 
-    "dependencies": [], 
+    "apps": [],
+    "dependencies": [],
     "groups": [
         {
             "apps": [
                 {
-                    "args": null, 
-                    "backoffFactor": 1.15, 
-                    "backoffSeconds": 1, 
-                    "cmd": "sleep 30", 
-                    "constraints": [], 
-                    "container": null, 
-                    "cpus": 1.0, 
-                    "dependencies": [], 
-                    "disk": 0.0, 
-                    "env": {}, 
-                    "executor": "", 
-                    "healthChecks": [], 
-                    "id": "/test/app", 
-                    "instances": 1, 
-                    "mem": 128.0, 
+                    "args": null,
+                    "backoffFactor": 1.15,
+                    "backoffSeconds": 1,
+                    "cmd": "sleep 30",
+                    "constraints": [],
+                    "container": null,
+                    "cpus": 1.0,
+                    "dependencies": [],
+                    "disk": 0.0,
+                    "env": {},
+                    "executor": "",
+                    "healthChecks": [],
+                    "id": "/test/app",
+                    "instances": 1,
+                    "mem": 128.0,
                     "ports": [
                         10000
-                    ], 
-                    "requirePorts": false, 
-                    "storeUrls": [], 
+                    ],
+                    "requirePorts": false,
+                    "storeUrls": [],
                     "upgradeStrategy": {
                         "minimumHealthCapacity": 1.0
-                    }, 
-                    "uris": [], 
-                    "user": null, 
+                    },
+                    "uris": [],
+                    "user": null,
                     "version": "2014-08-28T01:05:40.586Z"
                 }
-            ], 
-            "dependencies": [], 
-            "groups": [], 
-            "id": "/test", 
+            ],
+            "dependencies": [],
+            "groups": [],
+            "id": "/test",
             "version": "2014-08-28T01:09:46.212Z"
         }
-    ], 
-    "id": "/", 
+    ],
+    "id": "/",
     "version": "2014-08-28T01:09:46.212Z"
 }
 {% endhighlight %}
@@ -1140,37 +1254,37 @@ Transfer-Encoding: chunked
 {
     "apps": [
         {
-            "args": null, 
-            "backoffFactor": 1.15, 
-            "backoffSeconds": 1, 
-            "cmd": "sleep 30", 
-            "constraints": [], 
-            "container": null, 
-            "cpus": 1.0, 
-            "dependencies": [], 
-            "disk": 0.0, 
-            "env": {}, 
-            "executor": "", 
-            "healthChecks": [], 
-            "id": "/test/app", 
-            "instances": 1, 
-            "mem": 128.0, 
+            "args": null,
+            "backoffFactor": 1.15,
+            "backoffSeconds": 1,
+            "cmd": "sleep 30",
+            "constraints": [],
+            "container": null,
+            "cpus": 1.0,
+            "dependencies": [],
+            "disk": 0.0,
+            "env": {},
+            "executor": "",
+            "healthChecks": [],
+            "id": "/test/app",
+            "instances": 1,
+            "mem": 128.0,
             "ports": [
                 10000
-            ], 
-            "requirePorts": false, 
-            "storeUrls": [], 
+            ],
+            "requirePorts": false,
+            "storeUrls": [],
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
-            }, 
-            "uris": [], 
-            "user": null, 
+            },
+            "uris": [],
+            "user": null,
             "version": "2014-08-28T01:05:40.586Z"
         }
-    ], 
-    "dependencies": [], 
-    "groups": [], 
-    "id": "/test", 
+    ],
+    "dependencies": [],
+    "groups": [],
+    "id": "/test",
     "version": "2014-08-28T01:09:46.212Z"
 }
 {% endhighlight %}
@@ -1193,7 +1307,7 @@ The JSON format of a group resource is as follows:
       "apps": [{
         "id": "app1",
         "cmd": "someExecutable"
-      },  
+      }, 
       {
         "id": "app2",
         "cmd": "someOtherExecutable"
@@ -1224,7 +1338,7 @@ Content-Length: 273
 
 {
   "id" : "product",
-  "apps":[ 
+  "apps":[
     {
       "id": "myapp",
       "cmd": "ruby app2.rb",
@@ -1261,7 +1375,7 @@ The JSON format of a group resource is as follows:
       "apps": [{
         "id": "app1",
         "cmd": "someExecutable"
-      },  
+      }, 
       {
         "id": "app2",
         "cmd": "someOtherExecutable"
@@ -1293,7 +1407,7 @@ Content-Length: 273
 
 {
   "id" : "product",
-  "apps":[ 
+  "apps":[
     {
       "id": "myapp",
       "cmd": "ruby app2.rb",
@@ -1355,28 +1469,28 @@ User-Agent: HTTPie/0.8.0
 {
     "apps": [
         {
-            "cmd": "ruby app2.rb", 
-            "constraints": [], 
-            "container": null, 
-            "cpus": 0.2, 
-            "env": {}, 
-            "executor": "//cmd", 
+            "cmd": "ruby app2.rb",
+            "constraints": [],
+            "container": null,
+            "cpus": 0.2,
+            "env": {},
+            "executor": "//cmd",
             "healthChecks": [
                 {
-                    "initialDelaySeconds": 15, 
-                    "intervalSeconds": 5, 
-                    "path": "/health", 
-                    "portIndex": 0, 
-                    "protocol": "HTTP", 
+                    "initialDelaySeconds": 15,
+                    "intervalSeconds": 5,
+                    "path": "/health",
+                    "portIndex": 0,
+                    "protocol": "HTTP",
                     "timeoutSeconds": 15
                 }
-            ], 
-            "id": "app", 
-            "instances": 6, 
-            "mem": 128.0, 
+            ],
+            "id": "app",
+            "instances": 6,
+            "mem": 128.0,
             "ports": [
                 19970
-            ], 
+            ],
             "uris": []
         }
     ]
@@ -1390,7 +1504,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231", 
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231",
     "version": "2014-08-28T16:45:41.063Z"
 }
 {% endhighlight %}
@@ -1425,7 +1539,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231", 
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231",
     "version": "2014-08-28T16:45:41.063Z"
 }
 {% endhighlight %}
@@ -1486,7 +1600,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231", 
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231",
     "version": "2014-08-28T16:45:41.063Z"
 }
 {% endhighlight %}
@@ -1574,51 +1688,51 @@ Transfer-Encoding: chunked
 {
     "tasks": [
         {
-            "appId": "/bridged-webapp", 
+            "appId": "/bridged-webapp",
             "healthCheckResults": [
                 {
-                    "alive": true, 
-                    "consecutiveFailures": 0, 
-                    "firstSuccess": "2014-10-03T22:57:02.246Z", 
-                    "lastFailure": null, 
-                    "lastSuccess": "2014-10-03T22:57:41.643Z", 
+                    "alive": true,
+                    "consecutiveFailures": 0,
+                    "firstSuccess": "2014-10-03T22:57:02.246Z",
+                    "lastFailure": null,
+                    "lastSuccess": "2014-10-03T22:57:41.643Z",
                     "taskId": "bridged-webapp.eb76c51f-4b4a-11e4-ae49-56847afe9799"
                 }
-            ], 
-            "host": "10.141.141.10", 
-            "id": "bridged-webapp.eb76c51f-4b4a-11e4-ae49-56847afe9799", 
+            ],
+            "host": "10.141.141.10",
+            "id": "bridged-webapp.eb76c51f-4b4a-11e4-ae49-56847afe9799",
             "ports": [
                 31000
-            ], 
+            ],
             "servicePorts": [
                 9000
-            ], 
-            "stagedAt": "2014-10-03T22:16:27.811Z", 
-            "startedAt": "2014-10-03T22:57:41.587Z", 
+            ],
+            "stagedAt": "2014-10-03T22:16:27.811Z",
+            "startedAt": "2014-10-03T22:57:41.587Z",
             "version": "2014-10-03T22:16:23.634Z"
-        }, 
+        },
         {
-            "appId": "/bridged-webapp", 
+            "appId": "/bridged-webapp",
             "healthCheckResults": [
                 {
-                    "alive": true, 
-                    "consecutiveFailures": 0, 
-                    "firstSuccess": "2014-10-03T22:57:02.246Z", 
-                    "lastFailure": null, 
-                    "lastSuccess": "2014-10-03T22:57:41.649Z", 
+                    "alive": true,
+                    "consecutiveFailures": 0,
+                    "firstSuccess": "2014-10-03T22:57:02.246Z",
+                    "lastFailure": null,
+                    "lastSuccess": "2014-10-03T22:57:41.649Z",
                     "taskId": "bridged-webapp.ef0b5d91-4b4a-11e4-ae49-56847afe9799"
                 }
-            ], 
-            "host": "10.141.141.10", 
-            "id": "bridged-webapp.ef0b5d91-4b4a-11e4-ae49-56847afe9799", 
+            ],
+            "host": "10.141.141.10",
+            "id": "bridged-webapp.ef0b5d91-4b4a-11e4-ae49-56847afe9799",
             "ports": [
                 31001
-            ], 
+            ],
             "servicePorts": [
                 9000
-            ], 
-            "stagedAt": "2014-10-03T22:16:33.814Z", 
-            "startedAt": "2014-10-03T22:57:41.593Z", 
+            ],
+            "stagedAt": "2014-10-03T22:16:33.814Z",
+            "startedAt": "2014-10-03T22:57:41.593Z",
             "version": "2014-10-03T22:16:23.634Z"
         }
     ]
@@ -1648,8 +1762,8 @@ Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
-my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382  
-my-app2  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383  
+my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382 
+my-app2  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383 
 {% endhighlight %}
 
 ### Deployments
@@ -1707,6 +1821,32 @@ Transfer-Encoding: chunked
 
 #### DELETE /v2/deployments/{deploymentId}
 
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>force</code></td>
+      <td><code>boolean</code></td>
+      <td>
+        If set to <code>false</code> (the default) then the deployment is
+        canceled and a new deployment is created to restore the previous
+        configuration.  If set to <code>true</code>, then the deployment
+        is still canceled but no rollback deployment is created.
+        Default: <code>false</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+##### Example
+
 Cancel the deployment with `deploymentId`
 
 **Request:**
@@ -1729,9 +1869,33 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "deploymentId": "0b1467fc-d5cd-4bbc-bac2-2805351cee1e", 
+    "deploymentId": "0b1467fc-d5cd-4bbc-bac2-2805351cee1e",
     "version": "2014-08-26T08:20:26.171Z"
 }
+{% endhighlight %}
+
+##### Example
+
+Cancel the deployment with `deploymendId`, and do not create a new rollback deployment.
+
+**Request:**
+
+{% highlight http %}
+DELETE /v2/deployments/177b7556-1287-4e09-8432-3d862981a987?force=true HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Content-Length: 0
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 202 Accepted
+Content-Length: 0
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
 {% endhighlight %}
 
 ### Event Subscriptions
@@ -1782,8 +1946,8 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "callbackUrl": "http://localhost:9292/callback", 
-    "clientIp": "0:0:0:0:0:0:0:1", 
+    "callbackUrl": "http://localhost:9292/callback",
+    "clientIp": "0:0:0:0:0:0:0:1",
     "eventType": "subscribe_event"
 }
 {% endhighlight %}
@@ -1870,8 +2034,8 @@ Server: Jetty(8.y.z-SNAPSHOT)
 Transfer-Encoding: chunked
 
 {
-    "callbackUrl": "http://localhost:9292/callback", 
-    "clientIp": "0:0:0:0:0:0:0:1", 
+    "callbackUrl": "http://localhost:9292/callback",
+    "clientIp": "0:0:0:0:0:0:0:1",
     "eventType": "unsubscribe_event"
 }
 {% endhighlight %}
@@ -1965,7 +2129,7 @@ Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 
 {
-    "frameworkId": "20140730-222531-1863654316-5050-10422-0000", 
+    "frameworkId": "20140730-222531-1863654316-5050-10422-0000",
     "leader": "127.0.0.1:8080",
     "http_config": {
         "assets_path": null,
@@ -1979,30 +2143,30 @@ Server: Jetty(8.y.z-SNAPSHOT)
         ]
     },
     "marathon_config": {
-        "checkpoint": false, 
-        "executor": "//cmd", 
-        "failover_timeout": 604800, 
-        "ha": true, 
-        "hostname": "127.0.0.1", 
-        "local_port_max": 49151, 
-        "local_port_min": 32767, 
-        "master": "zk://localhost:2181/mesos", 
-        "mesos_role": null, 
-        "mesos_user": "root", 
-        "reconciliation_initial_delay": 30000, 
-        "reconciliation_interval": 30000, 
+        "checkpoint": false,
+        "executor": "//cmd",
+        "failover_timeout": 604800,
+        "ha": true,
+        "hostname": "127.0.0.1",
+        "local_port_max": 49151,
+        "local_port_min": 32767,
+        "master": "zk://localhost:2181/mesos",
+        "mesos_role": null,
+        "mesos_user": "root",
+        "reconciliation_initial_delay": 30000,
+        "reconciliation_interval": 30000,
         "task_launch_timeout": 60000
-    }, 
-    "name": "marathon", 
-    "version": "0.7.0-SNAPSHOT", 
+    },
+    "name": "marathon",
+    "version": "0.7.0-SNAPSHOT",
     "zookeeper_config": {
-        "zk": "zk://localhost:2181/marathon", 
+        "zk": "zk://localhost:2181/marathon",
         "zk_future_timeout": {
             "duration": 10
-        }, 
-        "zk_hosts": "localhost:2181", 
-        "zk_path": "/marathon", 
-        "zk_state": "/marathon", 
+        },
+        "zk_hosts": "localhost:2181",
+        "zk_path": "/marathon",
+        "zk_state": "/marathon",
         "zk_timeout": 10
     }
 }
@@ -2100,17 +2264,17 @@ Transfer-Encoding: chunked
 {
     "counters": {
         ...
-    }, 
+    },
     "gauges": {
         ...
-    }, 
-    "histograms": {}, 
+    },
+    "histograms": {},
     "meters": {
         ...
-    }, 
+    },
     "timers": {
         ...
-    }, 
+    },
     "version": "3.0.0"
 }
 {% endhighlight %}
