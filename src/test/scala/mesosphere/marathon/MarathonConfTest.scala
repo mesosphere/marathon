@@ -1,8 +1,5 @@
 package mesosphere.marathon
 
-import org.rogach.scallop.ScallopConf
-import scala.util.Try
-
 class MarathonConfTest extends MarathonSpec {
 
   private[this] val principal = "foo"

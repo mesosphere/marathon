@@ -42,7 +42,19 @@ object MarathonBuild extends Build {
   lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
     organization := "mesosphere",
     scalaVersion := "2.11.2",
-    scalacOptions in Compile ++= Seq("-encoding", "UTF-8", "-target:jvm-1.6", "-deprecation", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint"),
+    scalacOptions in Compile ++= Seq(
+      "-encoding", "UTF-8",
+      "-target:jvm-1.6",
+      "-deprecation",
+      "-feature",
+      "-unchecked",
+      "-Xlog-reflective-calls",
+      "-Xlint",
+      "-Ywarn-unused-import",
+      "-Xfatal-warnings",
+      "-Yno-adapted-args",
+      "-Ywarn-numeric-widen"
+  ),
     javacOptions in Compile ++= Seq("-encoding", "UTF-8", "-source", "1.6", "-target", "1.6", "-Xlint:unchecked", "-Xlint:deprecation"),
     resolvers ++= Seq(
       "Mesosphere Public Repo"    at "http://downloads.mesosphere.io/maven",

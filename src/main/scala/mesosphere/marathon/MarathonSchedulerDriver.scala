@@ -22,7 +22,7 @@ object MarathonSchedulerDriver {
                 frameworkId: Option[FrameworkID]): SchedulerDriver = {
     val frameworkInfoBuilder = FrameworkInfo.newBuilder()
       .setName(frameworkName)
-      .setFailoverTimeout(config.mesosFailoverTimeout())
+      .setFailoverTimeout(config.mesosFailoverTimeout().toDouble)
       .setUser(config.mesosUser())
       .setCheckpoint(config.checkpoint())
 

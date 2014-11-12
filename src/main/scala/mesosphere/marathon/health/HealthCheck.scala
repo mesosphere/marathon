@@ -1,19 +1,16 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.Protos
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.state.{ Command, MarathonState }
-import mesosphere.marathon.api.validation.ValidHealthCheck
+import java.lang.{ Integer => JInt }
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonInclude.Include
+import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.api.validation.FieldConstraints._
+import mesosphere.marathon.api.validation.ValidHealthCheck
+import mesosphere.marathon.state.{ Command, MarathonState }
 import org.apache.mesos.{ Protos => MesosProtos }
 
-import scala.concurrent.duration.FiniteDuration
-import java.util.concurrent.TimeUnit.SECONDS
-
-import java.lang.{ Integer => JInt }
+import scala.concurrent.duration._
 
 @ValidHealthCheck
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -61,9 +58,9 @@ case class HealthCheck(
       command =
         if (proto.hasCommand) Some(Command("").mergeFromProto(proto.getCommand))
         else None,
-      gracePeriod = FiniteDuration(proto.getGracePeriodSeconds, SECONDS),
-      timeout = FiniteDuration(proto.getTimeoutSeconds, SECONDS),
-      interval = FiniteDuration(proto.getIntervalSeconds, SECONDS),
+      gracePeriod = proto.getGracePeriodSeconds.seconds,
+      timeout = proto.getTimeoutSeconds.seconds,
+      interval = proto.getIntervalSeconds.seconds,
       maxConsecutiveFailures = proto.getMaxConsecutiveFailures
     )
 
@@ -100,10 +97,10 @@ case class HealthCheck(
     }
 
     builder.setDelaySeconds(0)
-      .setIntervalSeconds(this.interval.toSeconds.toInt)
-      .setTimeoutSeconds(this.timeout.toSeconds.toInt)
+      .setIntervalSeconds(this.interval.toSeconds.toDouble)
+      .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
       .setConsecutiveFailures(this.maxConsecutiveFailures)
-      .setGracePeriodSeconds(this.gracePeriod.toSeconds.toInt)
+      .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
       .build
   }
 
@@ -114,8 +111,8 @@ object HealthCheck {
   val DefaultProtocol = Protocol.HTTP
   val DefaultPortIndex = 0
   val DefaultCommand = None
-  val DefaultGracePeriod = FiniteDuration(15, SECONDS)
-  val DefaultInterval = FiniteDuration(10, SECONDS)
-  val DefaultTimeout = FiniteDuration(20, SECONDS)
+  val DefaultGracePeriod = 15.seconds
+  val DefaultInterval = 10.seconds
+  val DefaultTimeout = 20.seconds
   val DefaultMaxConsecutiveFailures = 3
 }
