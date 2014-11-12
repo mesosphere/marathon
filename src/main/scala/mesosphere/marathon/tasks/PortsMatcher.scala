@@ -88,7 +88,7 @@ class PortsMatcher(app: AppDefinition, offer: Offer) extends Logging {
       // TODO use multiple ranges if one is not enough
       if (range.getEnd - range.getBegin + 1 >= app.ports.length) {
         val maxOffset = (range.getEnd - range.getBegin - app.ports.length + 2).toInt
-        val firstPort = range.getBegin.toInt + Random.nextInt(maxOffset)
+        val firstPort = range.getBegin + Random.nextInt(maxOffset)
         val rangeProto = protos.Range(firstPort, firstPort + app.ports.length - 1)
         return Some(
           RangesResource(Resource.PORTS, Seq(rangeProto), role)

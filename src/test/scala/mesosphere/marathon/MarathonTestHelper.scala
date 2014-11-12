@@ -29,7 +29,7 @@ trait MarathonTestHelper {
     val diskResource = ScalarResource(Resource.DISK, disk)
     val portsResource = RangesResource(
       Resource.PORTS,
-      Seq(Range(beginPort, endPort)),
+      Seq(Range(beginPort.toLong, endPort.toLong)),
       "*"
     )
     Offer.newBuilder
@@ -47,7 +47,7 @@ trait MarathonTestHelper {
                              beginPort: Int, endPort: Int, role: String) = {
     val portsResource = RangesResource(
       Resource.PORTS,
-      Seq(Range(beginPort, endPort)),
+      Seq(Range(beginPort.toLong, endPort.toLong)),
       role
     )
     val cpusResource = ScalarResource(Resource.CPUS, cpus, role)

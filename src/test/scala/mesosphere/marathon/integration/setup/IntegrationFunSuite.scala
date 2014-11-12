@@ -1,6 +1,7 @@
 package mesosphere.marathon.integration.setup
 
 import java.io.File
+import java.util.concurrent.ConcurrentLinkedQueue
 import mesosphere.marathon.state.PathId
 import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
 import org.scalatest._
@@ -114,7 +115,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
 
   var config = IntegrationTestConfig(ConfigMap.empty)
   lazy val marathon: MarathonFacade = new MarathonFacade(s"http://localhost:${config.singleMarathonPort}")
-  val events = new mutable.SynchronizedQueue[CallbackEvent]()
+  val events = new ConcurrentLinkedQueue[CallbackEvent]()
 
   override protected def beforeAll(configMap: ConfigMap): Unit = {
     config = IntegrationTestConfig(configMap)
@@ -152,7 +153,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     zooKeeper.close()
   }
 
-  override def handleEvent(event: CallbackEvent): Unit = events.enqueue(event)
+  override def handleEvent(event: CallbackEvent): Unit = events.add(event)
 
   def waitForEvent(kind: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
   def waitForChange(change: RestResult[ITDeploymentResult], maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
@@ -161,7 +162,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
 
   def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
     def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
-      val event = events.dequeue()
+      val event = events.poll()
       if (event.eventType == kind) Some(event) else None
     }
     waitFor(s"event $kind to arrive", maxWait)(nextEvent)
@@ -215,7 +216,7 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     val main = classOf[AppMock].getName
     val exec = Some(s"""$javaExecutable -classpath $classPath $main $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId""")
     val health = if (withHealth) Set(HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)) else Set.empty[HealthCheck]
-    AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128, healthChecks = health, dependencies = dependencies)
+    AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128.0, healthChecks = health, dependencies = dependencies)
   }
 
   def appProxyCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {

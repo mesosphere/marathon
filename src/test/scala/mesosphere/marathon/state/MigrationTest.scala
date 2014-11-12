@@ -11,7 +11,7 @@ class MigrationTest extends FunSuite with MockitoSugar with Matchers {
 
   test("migrations can be filtered by version") {
     val all = migration.migrations.filter(_._1 > StorageVersions(0, 0, 0)).sortBy(_._1)
-    all should have size migration.migrations.size
+    all should have size migration.migrations.size.toLong
 
     val none = migration.migrations.filter(_._1 > StorageVersions(Int.MaxValue, 0, 0))
     none should have size 0

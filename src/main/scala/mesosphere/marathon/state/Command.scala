@@ -1,10 +1,7 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.Protos
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import org.apache.mesos.{ Protos => MesosProtos }
-import scala.collection.mutable
-import scala.collection.JavaConverters._
 
 // TODO (if supported in the future):
 //   - user
