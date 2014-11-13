@@ -202,7 +202,8 @@ class GroupManager @Singleton @Inject() (
         if (port == 0) nextFreeAppPort else new JInt(port)
       }
 
-      val container: Option[Container] = for {
+      // defined only if there are port mappings
+      val newContainer: Option[Container] = for {
         c <- app.container
         d <- c.docker
         pms <- d.portMappings
@@ -218,7 +219,7 @@ class GroupManager @Singleton @Inject() (
 
       app.copy(
         ports = servicePorts,
-        container = container
+        container = newContainer.orElse(app.container)
       )
     }
 
