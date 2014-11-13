@@ -75,6 +75,28 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
     ex.maxPort should be(15)
   }
 
+  test("Retain the original container definition if port mappings are missing") {
+    import Container.Docker
+
+    val container = Container(
+      docker = Some(Docker(
+        image = "busybox"
+      ))
+    )
+
+    val group = Group(PathId.empty, Set(
+      AppDefinition(
+        id = "/app1".toPath,
+        container = Some(container)
+      )
+    ))
+
+    val result = manager(10, 15).assignDynamicAppPort(Group.empty, group)
+    result.apps.size should be(1)
+    val app = result.apps.head
+    app.container should be (Some(container))
+  }
+
   test("Don't store invalid groups") {
     val scheduler = mock[MarathonSchedulerService]
     val taskTracker = mock[TaskTracker]
