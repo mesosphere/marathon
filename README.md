@@ -127,6 +127,7 @@ If you want to inspect the contents of the Docker:
 ## Companies using Marathon
 
 * [Airbnb](https://www.airbnb.com/)
+* [bol.com](https://www.bol.com/)
 * [Daemon](http://www.daemon.com.au/)
 * [Disqus](https://www.disqus.com/)
 * [eBay](http://www.ebay.com/)
