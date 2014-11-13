@@ -187,7 +187,7 @@ class AppsResource @Inject() (
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
   private def search(cmd: String, id: String): Iterable[AppDefinition] = {
-    /** Returns true iff `a` is a prefix of `b`, case-insensitively */
+    /* Returns true iff `a` is a prefix of `b`, case-insensitively */
     def isPrefix(a: String, b: String): Boolean =
       b.toLowerCase contains a.toLowerCase
 

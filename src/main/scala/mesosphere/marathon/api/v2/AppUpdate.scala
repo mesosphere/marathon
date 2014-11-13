@@ -68,8 +68,8 @@ case class AppUpdate(
     version: Option[Timestamp] = None) {
 
   /**
-    * Returns the supplied [[AppDefinition]] after updating its members
-    * with respect to this update request.
+    * Returns the supplied [[mesosphere.marathon.state.AppDefinition]] after
+    * updating its members with respect to this update request.
     */
   def apply(app: AppDefinition): AppDefinition = app.copy(
     app.id,
