@@ -7,16 +7,17 @@ title: Setting Up and Running Marathon
 ### Quickstart on Google Cloud Platform
 
 A quick way to try out Marathon is to launch a cluster using
-[Mesosphere for Google Cloud Platform](https://google.mesosphere.io).
+[Mesosphere for Google Cloud Platform](https://google.mesosphere.io) or
+[Mesosphere for Digital Ocean](https://digitalocean.mesosphere.io).
 Each cluster has Mesos and Marathon configured and offers secure access
 over a custom VPN.
 
 ### Requirements
 
-* [Apache Mesos][Mesos] 0.15.0+
+* [Apache Mesos][Mesos] 0.20.0+
 * [Apache ZooKeeper][ZooKeeper]
 * JDK 1.6+
-* Scala 2.10+
+* Scala 2.11+
 * sbt 0.13.5
 
 ### Installation
@@ -47,8 +48,8 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
     **For Mesos 0.20.0:**
 
     ``` bash
-    $ curl -O http://downloads.mesosphere.com/marathon/v0.7.1/marathon-0.7.1.tgz
-    $ tar xzf marathon-0.7.1.tgz
+    $ curl -O http://downloads.mesosphere.com/marathon/v0.7.5/marathon-0.7.5.tgz
+    $ tar xzf marathon-0.7.5.tgz
     ```
 
     **For Mesos 0.19.0:**
