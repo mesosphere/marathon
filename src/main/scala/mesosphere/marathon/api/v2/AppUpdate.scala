@@ -67,6 +67,13 @@ case class AppUpdate(
 
     version: Option[Timestamp] = None) {
 
+  require(version.isEmpty || onlyVersionSet, "The 'version' field may not be combined with other fields.")
+
+  private def onlyVersionSet: Boolean = productIterator forall {
+    case x @ Some(_) => x == version
+    case _           => true
+  }
+
   /**
     * Returns the supplied [[mesosphere.marathon.state.AppDefinition]] after
     * updating its members with respect to this update request.
