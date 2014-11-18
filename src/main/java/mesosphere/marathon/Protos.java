@@ -9859,6 +9859,76 @@ public final class Protos {
        */
       mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder getPortMappingsOrBuilder(
           int index);
+
+      // optional bool privileged = 4 [default = false];
+      /**
+       * <code>optional bool privileged = 4 [default = false];</code>
+       */
+      boolean hasPrivileged();
+      /**
+       * <code>optional bool privileged = 4 [default = false];</code>
+       */
+      boolean getPrivileged();
+
+      // repeated .mesos.Parameter parameters = 5;
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      java.util.List<org.apache.mesos.Protos.Parameter> 
+          getParametersList();
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      org.apache.mesos.Protos.Parameter getParameters(int index);
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      int getParametersCount();
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      java.util.List<? extends org.apache.mesos.Protos.ParameterOrBuilder> 
+          getParametersOrBuilderList();
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      org.apache.mesos.Protos.ParameterOrBuilder getParametersOrBuilder(
+          int index);
     }
     /**
      * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.DockerInfo}
@@ -9935,6 +10005,19 @@ public final class Protos {
                 portMappings_.add(input.readMessage(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.PARSER, extensionRegistry));
                 break;
               }
+              case 32: {
+                bitField0_ |= 0x00000004;
+                privileged_ = input.readBool();
+                break;
+              }
+              case 42: {
+                if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                  parameters_ = new java.util.ArrayList<org.apache.mesos.Protos.Parameter>();
+                  mutable_bitField0_ |= 0x00000010;
+                }
+                parameters_.add(input.readMessage(org.apache.mesos.Protos.Parameter.PARSER, extensionRegistry));
+                break;
+              }
             }
           }
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -9945,6 +10028,9 @@ public final class Protos {
         } finally {
           if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
             portMappings_ = java.util.Collections.unmodifiableList(portMappings_);
+          }
+          if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+            parameters_ = java.util.Collections.unmodifiableList(parameters_);
           }
           this.unknownFields = unknownFields.build();
           makeExtensionsImmutable();
@@ -10803,10 +10889,99 @@ public final class Protos {
         return portMappings_.get(index);
       }
 
+      // optional bool privileged = 4 [default = false];
+      public static final int PRIVILEGED_FIELD_NUMBER = 4;
+      private boolean privileged_;
+      /**
+       * <code>optional bool privileged = 4 [default = false];</code>
+       */
+      public boolean hasPrivileged() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bool privileged = 4 [default = false];</code>
+       */
+      public boolean getPrivileged() {
+        return privileged_;
+      }
+
+      // repeated .mesos.Parameter parameters = 5;
+      public static final int PARAMETERS_FIELD_NUMBER = 5;
+      private java.util.List<org.apache.mesos.Protos.Parameter> parameters_;
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      public java.util.List<org.apache.mesos.Protos.Parameter> getParametersList() {
+        return parameters_;
+      }
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      public java.util.List<? extends org.apache.mesos.Protos.ParameterOrBuilder> 
+          getParametersOrBuilderList() {
+        return parameters_;
+      }
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      public int getParametersCount() {
+        return parameters_.size();
+      }
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      public org.apache.mesos.Protos.Parameter getParameters(int index) {
+        return parameters_.get(index);
+      }
+      /**
+       * <code>repeated .mesos.Parameter parameters = 5;</code>
+       *
+       * <pre>
+       * Allowing arbitrary parameters to be passed to docker CLI.
+       * Note that anything passed to this field is not guranteed
+       * to be supported moving forward, as we might move away from
+       * the docker CLI.
+       * </pre>
+       */
+      public org.apache.mesos.Protos.ParameterOrBuilder getParametersOrBuilder(
+          int index) {
+        return parameters_.get(index);
+      }
+
       private void initFields() {
         image_ = "";
         network_ = org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.HOST;
         portMappings_ = java.util.Collections.emptyList();
+        privileged_ = false;
+        parameters_ = java.util.Collections.emptyList();
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -10819,6 +10994,12 @@ public final class Protos {
         }
         for (int i = 0; i < getPortMappingsCount(); i++) {
           if (!getPortMappings(i).isInitialized()) {
+            memoizedIsInitialized = 0;
+            return false;
+          }
+        }
+        for (int i = 0; i < getParametersCount(); i++) {
+          if (!getParameters(i).isInitialized()) {
             memoizedIsInitialized = 0;
             return false;
           }
@@ -10838,6 +11019,12 @@ public final class Protos {
         }
         for (int i = 0; i < portMappings_.size(); i++) {
           output.writeMessage(3, portMappings_.get(i));
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          output.writeBool(4, privileged_);
+        }
+        for (int i = 0; i < parameters_.size(); i++) {
+          output.writeMessage(5, parameters_.get(i));
         }
         getUnknownFields().writeTo(output);
       }
@@ -10859,6 +11046,14 @@ public final class Protos {
         for (int i = 0; i < portMappings_.size(); i++) {
           size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(3, portMappings_.get(i));
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBoolSize(4, privileged_);
+        }
+        for (int i = 0; i < parameters_.size(); i++) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(5, parameters_.get(i));
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -10969,6 +11164,7 @@ public final class Protos {
         private void maybeForceBuilderInitialization() {
           if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
             getPortMappingsFieldBuilder();
+            getParametersFieldBuilder();
           }
         }
         private static Builder create() {
@@ -10986,6 +11182,14 @@ public final class Protos {
             bitField0_ = (bitField0_ & ~0x00000004);
           } else {
             portMappingsBuilder_.clear();
+          }
+          privileged_ = false;
+          bitField0_ = (bitField0_ & ~0x00000008);
+          if (parametersBuilder_ == null) {
+            parameters_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000010);
+          } else {
+            parametersBuilder_.clear();
           }
           return this;
         }
@@ -11031,6 +11235,19 @@ public final class Protos {
             result.portMappings_ = portMappings_;
           } else {
             result.portMappings_ = portMappingsBuilder_.build();
+          }
+          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+            to_bitField0_ |= 0x00000004;
+          }
+          result.privileged_ = privileged_;
+          if (parametersBuilder_ == null) {
+            if (((bitField0_ & 0x00000010) == 0x00000010)) {
+              parameters_ = java.util.Collections.unmodifiableList(parameters_);
+              bitField0_ = (bitField0_ & ~0x00000010);
+            }
+            result.parameters_ = parameters_;
+          } else {
+            result.parameters_ = parametersBuilder_.build();
           }
           result.bitField0_ = to_bitField0_;
           onBuilt();
@@ -11082,6 +11299,35 @@ public final class Protos {
               }
             }
           }
+          if (other.hasPrivileged()) {
+            setPrivileged(other.getPrivileged());
+          }
+          if (parametersBuilder_ == null) {
+            if (!other.parameters_.isEmpty()) {
+              if (parameters_.isEmpty()) {
+                parameters_ = other.parameters_;
+                bitField0_ = (bitField0_ & ~0x00000010);
+              } else {
+                ensureParametersIsMutable();
+                parameters_.addAll(other.parameters_);
+              }
+              onChanged();
+            }
+          } else {
+            if (!other.parameters_.isEmpty()) {
+              if (parametersBuilder_.isEmpty()) {
+                parametersBuilder_.dispose();
+                parametersBuilder_ = null;
+                parameters_ = other.parameters_;
+                bitField0_ = (bitField0_ & ~0x00000010);
+                parametersBuilder_ = 
+                  com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                     getParametersFieldBuilder() : null;
+              } else {
+                parametersBuilder_.addAllMessages(other.parameters_);
+              }
+            }
+          }
           this.mergeUnknownFields(other.getUnknownFields());
           return this;
         }
@@ -11093,6 +11339,12 @@ public final class Protos {
           }
           for (int i = 0; i < getPortMappingsCount(); i++) {
             if (!getPortMappings(i).isInitialized()) {
+              
+              return false;
+            }
+          }
+          for (int i = 0; i < getParametersCount(); i++) {
+            if (!getParameters(i).isInitialized()) {
               
               return false;
             }
@@ -11467,6 +11719,405 @@ public final class Protos {
             portMappings_ = null;
           }
           return portMappingsBuilder_;
+        }
+
+        // optional bool privileged = 4 [default = false];
+        private boolean privileged_ ;
+        /**
+         * <code>optional bool privileged = 4 [default = false];</code>
+         */
+        public boolean hasPrivileged() {
+          return ((bitField0_ & 0x00000008) == 0x00000008);
+        }
+        /**
+         * <code>optional bool privileged = 4 [default = false];</code>
+         */
+        public boolean getPrivileged() {
+          return privileged_;
+        }
+        /**
+         * <code>optional bool privileged = 4 [default = false];</code>
+         */
+        public Builder setPrivileged(boolean value) {
+          bitField0_ |= 0x00000008;
+          privileged_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional bool privileged = 4 [default = false];</code>
+         */
+        public Builder clearPrivileged() {
+          bitField0_ = (bitField0_ & ~0x00000008);
+          privileged_ = false;
+          onChanged();
+          return this;
+        }
+
+        // repeated .mesos.Parameter parameters = 5;
+        private java.util.List<org.apache.mesos.Protos.Parameter> parameters_ =
+          java.util.Collections.emptyList();
+        private void ensureParametersIsMutable() {
+          if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+            parameters_ = new java.util.ArrayList<org.apache.mesos.Protos.Parameter>(parameters_);
+            bitField0_ |= 0x00000010;
+           }
+        }
+
+        private com.google.protobuf.RepeatedFieldBuilder<
+            org.apache.mesos.Protos.Parameter, org.apache.mesos.Protos.Parameter.Builder, org.apache.mesos.Protos.ParameterOrBuilder> parametersBuilder_;
+
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public java.util.List<org.apache.mesos.Protos.Parameter> getParametersList() {
+          if (parametersBuilder_ == null) {
+            return java.util.Collections.unmodifiableList(parameters_);
+          } else {
+            return parametersBuilder_.getMessageList();
+          }
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public int getParametersCount() {
+          if (parametersBuilder_ == null) {
+            return parameters_.size();
+          } else {
+            return parametersBuilder_.getCount();
+          }
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public org.apache.mesos.Protos.Parameter getParameters(int index) {
+          if (parametersBuilder_ == null) {
+            return parameters_.get(index);
+          } else {
+            return parametersBuilder_.getMessage(index);
+          }
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public Builder setParameters(
+            int index, org.apache.mesos.Protos.Parameter value) {
+          if (parametersBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureParametersIsMutable();
+            parameters_.set(index, value);
+            onChanged();
+          } else {
+            parametersBuilder_.setMessage(index, value);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public Builder setParameters(
+            int index, org.apache.mesos.Protos.Parameter.Builder builderForValue) {
+          if (parametersBuilder_ == null) {
+            ensureParametersIsMutable();
+            parameters_.set(index, builderForValue.build());
+            onChanged();
+          } else {
+            parametersBuilder_.setMessage(index, builderForValue.build());
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public Builder addParameters(org.apache.mesos.Protos.Parameter value) {
+          if (parametersBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureParametersIsMutable();
+            parameters_.add(value);
+            onChanged();
+          } else {
+            parametersBuilder_.addMessage(value);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public Builder addParameters(
+            int index, org.apache.mesos.Protos.Parameter value) {
+          if (parametersBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureParametersIsMutable();
+            parameters_.add(index, value);
+            onChanged();
+          } else {
+            parametersBuilder_.addMessage(index, value);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public Builder addParameters(
+            org.apache.mesos.Protos.Parameter.Builder builderForValue) {
+          if (parametersBuilder_ == null) {
+            ensureParametersIsMutable();
+            parameters_.add(builderForValue.build());
+            onChanged();
+          } else {
+            parametersBuilder_.addMessage(builderForValue.build());
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public Builder addParameters(
+            int index, org.apache.mesos.Protos.Parameter.Builder builderForValue) {
+          if (parametersBuilder_ == null) {
+            ensureParametersIsMutable();
+            parameters_.add(index, builderForValue.build());
+            onChanged();
+          } else {
+            parametersBuilder_.addMessage(index, builderForValue.build());
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public Builder addAllParameters(
+            java.lang.Iterable<? extends org.apache.mesos.Protos.Parameter> values) {
+          if (parametersBuilder_ == null) {
+            ensureParametersIsMutable();
+            super.addAll(values, parameters_);
+            onChanged();
+          } else {
+            parametersBuilder_.addAllMessages(values);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public Builder clearParameters() {
+          if (parametersBuilder_ == null) {
+            parameters_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000010);
+            onChanged();
+          } else {
+            parametersBuilder_.clear();
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public Builder removeParameters(int index) {
+          if (parametersBuilder_ == null) {
+            ensureParametersIsMutable();
+            parameters_.remove(index);
+            onChanged();
+          } else {
+            parametersBuilder_.remove(index);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public org.apache.mesos.Protos.Parameter.Builder getParametersBuilder(
+            int index) {
+          return getParametersFieldBuilder().getBuilder(index);
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public org.apache.mesos.Protos.ParameterOrBuilder getParametersOrBuilder(
+            int index) {
+          if (parametersBuilder_ == null) {
+            return parameters_.get(index);  } else {
+            return parametersBuilder_.getMessageOrBuilder(index);
+          }
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public java.util.List<? extends org.apache.mesos.Protos.ParameterOrBuilder> 
+             getParametersOrBuilderList() {
+          if (parametersBuilder_ != null) {
+            return parametersBuilder_.getMessageOrBuilderList();
+          } else {
+            return java.util.Collections.unmodifiableList(parameters_);
+          }
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public org.apache.mesos.Protos.Parameter.Builder addParametersBuilder() {
+          return getParametersFieldBuilder().addBuilder(
+              org.apache.mesos.Protos.Parameter.getDefaultInstance());
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public org.apache.mesos.Protos.Parameter.Builder addParametersBuilder(
+            int index) {
+          return getParametersFieldBuilder().addBuilder(
+              index, org.apache.mesos.Protos.Parameter.getDefaultInstance());
+        }
+        /**
+         * <code>repeated .mesos.Parameter parameters = 5;</code>
+         *
+         * <pre>
+         * Allowing arbitrary parameters to be passed to docker CLI.
+         * Note that anything passed to this field is not guranteed
+         * to be supported moving forward, as we might move away from
+         * the docker CLI.
+         * </pre>
+         */
+        public java.util.List<org.apache.mesos.Protos.Parameter.Builder> 
+             getParametersBuilderList() {
+          return getParametersFieldBuilder().getBuilderList();
+        }
+        private com.google.protobuf.RepeatedFieldBuilder<
+            org.apache.mesos.Protos.Parameter, org.apache.mesos.Protos.Parameter.Builder, org.apache.mesos.Protos.ParameterOrBuilder> 
+            getParametersFieldBuilder() {
+          if (parametersBuilder_ == null) {
+            parametersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+                org.apache.mesos.Protos.Parameter, org.apache.mesos.Protos.Parameter.Builder, org.apache.mesos.Protos.ParameterOrBuilder>(
+                    parameters_,
+                    ((bitField0_ & 0x00000010) == 0x00000010),
+                    getParentForChildren(),
+                    isClean());
+            parameters_ = null;
+          }
+          return parametersBuilder_;
         }
 
         // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ExtendedContainerInfo.DockerInfo)
@@ -17966,36 +18617,38 @@ public final class Protos {
       "\021.mesos.TaskStatus\"M\n\013MarathonApp\022\014\n\004nam" +
       "e\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.mara" +
       "thon.MarathonTask\"1\n\rContainerInfo\022\017\n\005im",
-      "age\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\304\003\n\025Extende" +
+      "age\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\205\004\n\025Extende" +
       "dContainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Con" +
       "tainerInfo.Type\022\036\n\007volumes\030\002 \003(\0132\r.mesos" +
       ".Volume\022E\n\006docker\030\003 \001(\01325.mesosphere.mar" +
-      "athon.ExtendedContainerInfo.DockerInfo\032\232" +
+      "athon.ExtendedContainerInfo.DockerInfo\032\333" +
       "\002\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022>\n\007network\030" +
       "\002 \001(\0162\'.mesos.ContainerInfo.DockerInfo.N" +
       "etwork:\004HOST\022X\n\rport_mappings\030\003 \003(\0132A.me" +
       "sosphere.marathon.ExtendedContainerInfo." +
-      "DockerInfo.PortMapping\032c\n\013PortMapping\022\021\n",
-      "\thost_port\030\001 \002(\r\022\026\n\016container_port\030\002 \002(\r" +
-      "\022\020\n\010protocol\030\003 \001(\t\022\027\n\014service_port\030d \001(\r" +
-      ":\0010\")\n\020EventSubscribers\022\025\n\rcallback_urls" +
-      "\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022" +
-      "\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\":\n\031Upgrade" +
-      "StrategyDefinition\022\035\n\025minimumHealthCapac" +
-      "ity\030\001 \002(\001\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(" +
-      "\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesos" +
-      "phere.marathon.ServiceDefinition\0224\n\006grou" +
-      "ps\030\004 \003(\0132$.mesosphere.marathon.GroupDefi",
-      "nition\022\024\n\014dependencies\030\005 \003(\t\"\245\001\n\030Deploym" +
-      "entPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007version" +
-      "\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosphere.ma" +
-      "rathon.GroupDefinition\0224\n\006target\030\005 \002(\0132$" +
-      ".mesosphere.marathon.GroupDefinition\"\245\001\n" +
-      "\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030" +
-      "\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.me" +
-      "sos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host" +
-      "\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007" +
-      " \002(\tB\035\n\023mesosphere.marathonB\006Protos"
+      "DockerInfo.PortMapping\022\031\n\nprivileged\030\004 \001",
+      "(\010:\005false\022$\n\nparameters\030\005 \003(\0132\020.mesos.Pa" +
+      "rameter\032c\n\013PortMapping\022\021\n\thost_port\030\001 \002(" +
+      "\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010protocol\030\003 " +
+      "\001(\t\022\027\n\014service_port\030d \001(\r:\0010\")\n\020EventSub" +
+      "scribers\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016Stora" +
+      "geVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022" +
+      "\r\n\005patch\030\003 \002(\r\":\n\031UpgradeStrategyDefinit" +
+      "ion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\"\260\001\n\017G" +
+      "roupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 " +
+      "\002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere.marathon.",
+      "ServiceDefinition\0224\n\006groups\030\004 \003(\0132$.meso" +
+      "sphere.marathon.GroupDefinition\022\024\n\014depen" +
+      "dencies\030\005 \003(\t\"\245\001\n\030DeploymentPlanDefiniti" +
+      "on\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010origi" +
+      "nal\030\004 \002(\0132$.mesosphere.marathon.GroupDef" +
+      "inition\0224\n\006target\030\005 \002(\0132$.mesosphere.mar" +
+      "athon.GroupDefinition\"\245\001\n\013TaskFailure\022\016\n" +
+      "\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.T" +
+      "askID\022\037\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021" +
+      "\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007ver",
+      "sion\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\tB\035\n\023mesosph" +
+      "ere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -18049,7 +18702,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_descriptor,
-              new java.lang.String[] { "Image", "Network", "PortMappings", });
+              new java.lang.String[] { "Image", "Network", "PortMappings", "Privileged", "Parameters", });
           internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_descriptor =
             internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_descriptor.getNestedTypes().get(0);
           internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_fieldAccessorTable = new
