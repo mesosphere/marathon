@@ -79,8 +79,7 @@ class AppUpdateTest extends MarathonSpec {
       ),
       healthChecks = Some(Set[HealthCheck]()),
       dependencies = Some(Set[PathId]()),
-      upgradeStrategy = Some(UpgradeStrategy.empty),
-      version = Some(Timestamp.now)
+      upgradeStrategy = Some(UpgradeStrategy.empty)
     )
     val json1 = mapper.writeValueAsString(update1)
     val readResult1 = mapper.readValue(json1, classOf[AppUpdate])
@@ -121,5 +120,11 @@ class AppUpdateTest extends MarathonSpec {
     val readResult4 = mapper.readValue(json4, classOf[AppUpdate])
     assert(readResult4 == update4)
 
+  }
+
+  test("'version' field has to be exclusive") {
+    intercept[Exception] {
+      AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
+    }
   }
 }
