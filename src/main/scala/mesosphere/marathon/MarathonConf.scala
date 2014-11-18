@@ -26,7 +26,7 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     descr = "Enable checkpointing of tasks. " +
       "Requires checkpointing enabled on slaves. Allows tasks to continue " +
       "running during mesos-slave restarts and upgrades",
-    noshort = true)
+    noshort = true, default = Some(true))
 
   lazy val localPortMin = opt[Int]("local_port_min",
     descr = "Min port number to use when assigning ports to apps",

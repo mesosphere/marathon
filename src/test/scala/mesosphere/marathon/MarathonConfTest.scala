@@ -11,6 +11,7 @@ class MarathonConfTest extends MarathonSpec {
     )
     assert(conf.mesosAuthenticationPrincipal.isEmpty)
     assert(conf.mesosAuthenticationSecretFile.isEmpty)
+    assert(conf.checkpoint.get == Some(true))
   }
 
   test("MesosAuthenticationPrincipal") {
