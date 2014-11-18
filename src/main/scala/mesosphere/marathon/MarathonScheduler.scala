@@ -70,10 +70,14 @@ class MarathonScheduler @Inject() (
     master: MasterInfo): Unit = {
     log.info(s"Registered as ${frameworkId.getValue} to master '${master.getId}'")
     frameworkIdUtil.store(frameworkId)
+
+    eventBus.publish(SchedulerRegisteredEvent(frameworkId.getValue, master.getHostname))
   }
 
   override def reregistered(driver: SchedulerDriver, master: MasterInfo): Unit = {
     log.info("Re-registered to %s".format(master))
+
+    eventBus.publish(SchedulerReregisteredEvent(master.getHostname))
   }
 
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
@@ -227,6 +231,8 @@ class MarathonScheduler @Inject() (
 
   override def disconnected(driver: SchedulerDriver) {
     log.warn("Disconnected")
+
+    eventBus.publish(SchedulerDisconnectedEvent())
 
     // Disconnection from the Mesos master has occurred.
     // Thus, call the scheduler callbacks.

@@ -7,21 +7,22 @@ import com.codahale.metrics.MetricRegistry
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
-import org.apache.mesos.Protos.{ OfferID, TaskID, TaskInfo }
+import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers.same
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfterAll
 
-import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration.Deadline
 
@@ -36,6 +37,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
   var probe: TestProbe = _
   var taskIdUtil: TaskIdUtil = _
   var config: MarathonConf = _
+  var eventBus: EventStream = _
 
   val metricRegistry = new MetricRegistry
 
@@ -48,8 +50,9 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     config = defaultConfig()
     taskIdUtil = mock[TaskIdUtil]
     probe = TestProbe()
+    eventBus = system.eventStream
     scheduler = new MarathonScheduler(
-      mock[EventStream],
+      eventBus,
       new ObjectMapper,
       probe.ref,
       repo,
@@ -114,4 +117,77 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     val marathonTaskVersion = marathonTaskCaptor.getValue.getVersion
     assert(now.toString() == marathonTaskVersion)
   }
+
+  test("Publishes event when registered") {
+    val driver = mock[SchedulerDriver]
+    val frameworkId = FrameworkID.newBuilder
+      .setValue("some_id")
+      .build()
+
+    val masterInfo = MasterInfo.newBuilder()
+      .setId("")
+      .setIp(0)
+      .setPort(5050)
+      .setHostname("some_host")
+      .build()
+
+    eventBus.subscribe(probe.ref, classOf[SchedulerRegisteredEvent])
+
+    scheduler.registered(driver, frameworkId, masterInfo)
+
+    try {
+      val msg = probe.expectMsgType[SchedulerRegisteredEvent]
+
+      assert(msg.frameworkId == frameworkId.getValue)
+      assert(msg.master == masterInfo.getHostname)
+      assert(msg.eventType == "scheduler_registered_event")
+    }
+    finally {
+      eventBus.unsubscribe(probe.ref)
+    }
+  }
+
+  test("Publishes event when reregistered") {
+    val driver = mock[SchedulerDriver]
+    val masterInfo = MasterInfo.newBuilder()
+      .setId("")
+      .setIp(0)
+      .setPort(5050)
+      .setHostname("some_host")
+      .build()
+
+    eventBus.subscribe(probe.ref, classOf[SchedulerReregisteredEvent])
+
+    scheduler.reregistered(driver, masterInfo)
+
+    try {
+      val msg = probe.expectMsgType[SchedulerReregisteredEvent]
+
+      assert(msg.master == masterInfo.getHostname)
+      assert(msg.eventType == "scheduler_reregistered_event")
+    }
+    finally {
+      eventBus.unsubscribe(probe.ref)
+    }
+  }
+
+  // Currently does not work because of the injection used in MarathonScheduler.callbacks
+  /*
+  test("Publishes event when disconnected") {
+    val driver = mock[SchedulerDriver]
+
+    eventBus.subscribe(probe.ref, classOf[SchedulerDisconnectedEvent])
+
+    scheduler.disconnected(driver)
+
+    try {
+      val msg = probe.expectMsgType[SchedulerDisconnectedEvent]
+
+      assert(msg.eventType == "scheduler_reregistered_event")
+    }
+    finally {
+      eventBus.unsubscribe(probe.ref)
+    }
+  }
+  */
 }
