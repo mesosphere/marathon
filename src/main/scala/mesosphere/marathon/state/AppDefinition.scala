@@ -244,7 +244,8 @@ case class AppDefinition(
       storeUrls.toSet != to.storeUrls.toSet ||
       user != to.user ||
       backoff != to.backoff ||
-      backoffFactor != to.backoffFactor
+      backoffFactor != to.backoffFactor ||
+      args != to.args
   }
 }
 

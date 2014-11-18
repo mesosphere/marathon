@@ -2,8 +2,10 @@ package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state._
 import org.scalatest.{ GivenWhenThen, Matchers }
+
+import scala.collection.immutable.Seq
 
 class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
@@ -163,5 +165,18 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     Then("the deployment contains steps for dependent and independent applications")
     plan.steps should have size 1
     plan.steps(0).actions.toSet should be(Set(StopApplication(app._1)))
+  }
+
+  // regression test for #765
+  test("Should create non-empty deployment plan when only args have changed") {
+    val app = AppDefinition(id = "/test".toPath, cmd = Some("sleep 5"))
+    val appNew = app.copy(args = Some(Seq("foo")))
+
+    val from = Group("/".toPath, apps = Set(app))
+    val to = from.copy(apps = Set(appNew))
+
+    val plan = DeploymentPlan(from, to)
+
+    plan.steps should not be empty
   }
 }
