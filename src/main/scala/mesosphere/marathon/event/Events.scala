@@ -54,6 +54,27 @@ case class ApiPostEvent(
   eventType: String = "api_post_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
+// scheduler messages
+sealed trait MarathonSchedulerEvent extends MarathonEvent
+
+final case class SchedulerRegisteredEvent(
+  frameworkId: String,
+  master: String,
+  eventType: String = "scheduler_registered_event",
+  timestamp: String = Timestamp.now().toString)
+    extends MarathonSchedulerEvent
+
+final case class SchedulerReregisteredEvent(
+  master: String,
+  eventType: String = "scheduler_reregistered_event",
+  timestamp: String = Timestamp.now().toString)
+    extends MarathonSchedulerEvent
+
+final case class SchedulerDisconnectedEvent(
+  eventType: String = "scheduler_disconnected_event",
+  timestamp: String = Timestamp.now().toString)
+    extends MarathonSchedulerEvent
+
 // event subscriptions
 
 sealed trait MarathonSubscriptionEvent extends MarathonEvent {
