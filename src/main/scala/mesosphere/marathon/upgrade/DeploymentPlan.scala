@@ -102,8 +102,8 @@ object DeploymentPlan extends Logging {
       val isUpdate = targetApp.keySet.intersect(originalApp.keySet)
       val updateList = isUpdate.toList
       val origTarget = updateList.map(originalApp).zip(updateList.map(targetApp))
-      (targetApp.keySet.filterNot(isUpdate.contains),
-        originalApp.keySet.filterNot(isUpdate.contains),
+      (targetApp.keySet.filterNot(isUpdate),
+        originalApp.keySet.filterNot(isUpdate),
         origTarget.filter{ case (from, to) => from.isOnlyScaleChange(to) }.map(_._2.id),
         origTarget.filter { case (from, to) => from.isUpgrade(to) }.map(_._2.id)
       )
