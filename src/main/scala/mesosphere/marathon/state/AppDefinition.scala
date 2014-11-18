@@ -224,29 +224,8 @@ case class AppDefinition(
   def isOnlyScaleChange(to: AppDefinition): Boolean =
     !isUpgrade(to) && (instances != to.instances)
 
-  def isUpgrade(to: AppDefinition): Boolean = {
-    cmd != to.cmd ||
-      env != to.env ||
-      cpus != to.cpus ||
-      mem != to.mem ||
-      disk != to.disk ||
-      uris.toSet != to.uris.toSet ||
-      constraints != to.constraints ||
-      container != to.container ||
-      ports.toSet != to.ports.toSet ||
-      requirePorts != to.requirePorts ||
-      executor != to.executor ||
-      healthChecks != to.healthChecks ||
-      backoff != to.backoff ||
-      backoffFactor != to.backoffFactor ||
-      dependencies != to.dependencies ||
-      upgradeStrategy != to.upgradeStrategy ||
-      storeUrls.toSet != to.storeUrls.toSet ||
-      user != to.user ||
-      backoff != to.backoff ||
-      backoffFactor != to.backoffFactor ||
-      args != to.args
-  }
+  def isUpgrade(to: AppDefinition): Boolean =
+    this != to.copy(instances = instances, version = version)
 }
 
 object AppDefinition {
