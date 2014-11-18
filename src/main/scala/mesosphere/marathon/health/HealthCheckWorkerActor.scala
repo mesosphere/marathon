@@ -14,7 +14,6 @@ import akka.util.Timeout
 
 import spray.http._
 import spray.client.pipelining._
-import spray.io.ClientSSLEngineProvider
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
@@ -118,10 +117,16 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     def get(url: String): Future[HttpResponse] = {
       implicit val requestTimeout = Timeout(check.timeout)
-      implicit val EngineProvider = ClientSSLEngineProvider { engine =>
-        engine.setEnabledCipherSuites(Array("TLS_RSA_WITH_AES_256_CBC_SHA"))
-        engine.setEnabledProtocols(Array("SSLv3", "TLSv1"))
-        engine
+      implicit def trustfulSslContext: SSLContext = {
+        object BlindFaithX509TrustManager extends X509TrustManager {
+          def checkClientTrusted(chain: Array[X509Certificate], authType: String) = ()
+          def checkServerTrusted(chain: Array[X509Certificate], authType: String) = ()
+          def getAcceptedIssuers = Array[X509Certificate]()
+        }
+
+        val context = SSLContext.getInstance("TLS")
+        context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
+        context
       }
       val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
       pipeline(Get(url))
