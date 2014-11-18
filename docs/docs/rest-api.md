@@ -24,7 +24,6 @@ title: REST API
   * [GET /v2/groups/{groupId}](#get-/v2/groups/{groupid}): List the group with the specified ID
   * [POST /v2/groups](#post-/v2/groups): Create and start a new groups
   * [PUT /v2/groups/{groupId}](#put-/v2/groups/{groupid}): Change parameters of a deployed application group
-  * [PUT /v2/groups/{groupId}/version/{version}](#put-/v2/groups/{groupid}/version/{version}): Rollback group to a previous version
   * [DELETE /v2/groups/{groupId}](#delete-/v2/groups/{groupid}): Destroy a group
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
@@ -1443,7 +1442,7 @@ During restart marathon keeps track, that the configured amount of minimal runni
 A deployment can run forever. This is the case, when the new application has a problem and does not become healthy.
 In this case, human interaction is needed with 2 possible choices:
 
-* Rollback to an existing older version (use the rollback endpoint)
+* Rollback to an existing older version (send an existing `version` in the body)
 * Update with a newer version of the group which does not have the problems of the old one.
 
 If there is an upgrade process already in progress, a new update will be rejected unless the force flag is set.
@@ -1543,68 +1542,6 @@ Transfer-Encoding: chunked
     "version": "2014-08-28T16:45:41.063Z"
 }
 {% endhighlight %}
-
-
-#### PUT `/v2/groups/{groupId}/version/{version}`
-
-Rollback this group to a previous version.
-All changes to a group will create a new version.
-With this endpoint it is possible to an older version of this group.
-
-The rollback to a version is handled as normal update.
-All implications of an update will take place.
-
-Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a
-`group_change_success` and `group_change_failed` event with the given version.
-
-##### Parameters
-
-<table class="table table-bordered">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>force</code></td>
-      <td><code>boolean</code></td>
-      <td>If there is an upgrade process already in progress, this rollback will
-        be rejected unless the force flag is set. With the force flag given,
-        a running upgrade is terminated and a new one is started.
-        Default: <code>false</code>.</td>
-    </tr>
-  </tbody>
-</table>
-
-##### Example
-
-**Request:**
-
-{% highlight http %}
-PUT /v2/groups/myproduct/version/2014-03-01T23:29:30.158?force=true HTTP/1.1
-Content-Length: 0
-Host: localhost:8080
-User-Agent: HTTPie/0.7.2
-{% endhighlight %}
-
-**Response:**
-
-{% highlight http %}
-HTTP/1.1 200 OK
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-Transfer-Encoding: chunked
-
-{
-    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231",
-    "version": "2014-08-28T16:45:41.063Z"
-}
-{% endhighlight %}
-
 
 #### DELETE `/v2/groups/{groupId}`
 
