@@ -1543,6 +1543,37 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
+### Example
+
+Rollback a group.
+
+In case of an erroneous update, a group can be rolled back by sending just a version, that is known to work, to the update
+endpoint.
+
+**Request:**
+
+{% highlight http %}
+PUT /v2/groups/product/service HTTP/1.1
+Content-Length: 123
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{ "version": "2014-08-27T15:34:48.163Z" }
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231",
+    "version": "2014-08-28T16:45:41.063Z"
+}
+{% endhighlight %}
+
 #### DELETE `/v2/groups/{groupId}`
 
 Destroy a group. All data about that group and all associated applications will be deleted.
