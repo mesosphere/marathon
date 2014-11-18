@@ -92,23 +92,59 @@ object Container {
   case class Docker(
       image: String = "",
       network: Option[mesos.ContainerInfo.DockerInfo.Network] = None,
-      portMappings: Option[Seq[Docker.PortMapping]] = None) {
+      portMappings: Option[Seq[Docker.PortMapping]] = None,
+      privileged: Boolean = false,
+      parameters: Map[String, String] = Map[String, String]()) {
 
     def toProto(): Protos.ExtendedContainerInfo.DockerInfo = {
-      val builder = Protos.ExtendedContainerInfo.DockerInfo.newBuilder.setImage(image)
+      val builder = Protos.ExtendedContainerInfo.DockerInfo.newBuilder
+
+      builder.setImage(image)
+
       network foreach builder.setNetwork
+
       portMappings.foreach { pms =>
         builder.addAllPortMappings(pms.map(_.toProto).asJava)
       }
+
+      builder.setPrivileged(privileged)
+
+      builder.addAllParameters(
+        parameters.map {
+          case (key, value) =>
+            mesos.Parameter.newBuilder
+              .setKey(key)
+              .setValue(value)
+              .build
+        }.asJava
+      )
+
       builder.build
     }
 
     def toMesos(): mesos.ContainerInfo.DockerInfo = {
-      val builder = mesos.ContainerInfo.DockerInfo.newBuilder.setImage(image)
+      val builder = mesos.ContainerInfo.DockerInfo.newBuilder
+
+      builder.setImage(image)
+
       network foreach builder.setNetwork
+
       portMappings.foreach { pms =>
         builder.addAllPortMappings(pms.map(_.toMesos).asJava)
       }
+
+      builder.setPrivileged(privileged)
+
+      builder.addAllParameters(
+        parameters.map {
+          case (key, value) =>
+            mesos.Parameter.newBuilder
+              .setKey(key)
+              .setValue(value)
+              .build
+        }.asJava
+      )
+
       builder.build
     }
   }
@@ -117,13 +153,21 @@ object Container {
     def apply(proto: Protos.ExtendedContainerInfo.DockerInfo): Docker =
       Docker(
         image = proto.getImage,
-        if (proto.hasNetwork) Some(proto.getNetwork) else None,
-        {
+
+        network = if (proto.hasNetwork) Some(proto.getNetwork) else None,
+
+        portMappings = {
           val pms = proto.getPortMappingsList.asScala
 
           if (pms.isEmpty) None
           else Some(pms.map(PortMapping(_)).to[Seq])
-        }
+        },
+
+        privileged = proto.getPrivileged,
+
+        parameters = proto.getParametersList.asScala.map { parameter =>
+          parameter.getKey -> parameter.getValue
+        }.toMap
       )
 
     /**

@@ -38,6 +38,23 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
         )
       )
     )
+
+    lazy val container3 = Container(
+      `type` = mesos.ContainerInfo.Type.DOCKER,
+      volumes = Nil,
+      docker = Some(
+        Container.Docker(
+          image = "group/image",
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.NONE),
+          privileged = true,
+          parameters = Map(
+            "abc" -> "123",
+            "def" -> "456"
+          )
+        )
+      )
+    )
+
   }
 
   def fixture(): Fixture = new Fixture
@@ -54,6 +71,14 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
     assert("group/image" == proto2.getDocker.getImage)
     assert(f.container2.docker.get.network == Some(proto2.getDocker.getNetwork))
     assert(f.container2.docker.get.portMappings == Some(proto2.getDocker.getPortMappingsList.asScala.map(Container.Docker.PortMapping.apply)))
+
+    val proto3 = f.container3.toProto
+    assert(mesos.ContainerInfo.Type.DOCKER == proto3.getType)
+    assert("group/image" == proto3.getDocker.getImage)
+    assert(f.container3.docker.get.network == Some(proto3.getDocker.getNetwork))
+    assert(f.container3.docker.get.privileged == proto3.getDocker.getPrivileged)
+    assert(f.container3.docker.get.parameters.keys.toSeq == proto3.getDocker.getParametersList.asScala.map(_.getKey))
+    assert(f.container3.docker.get.parameters.values.toSeq == proto3.getDocker.getParametersList.asScala.map(_.getValue))
   }
 
   test("ConstructFromProto") {
@@ -76,6 +101,13 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
     val container2 = Container(containerInfo2)
     assert(container2 == f.container2)
 
+    val containerInfo3 = Protos.ExtendedContainerInfo.newBuilder
+      .setType(mesos.ContainerInfo.Type.DOCKER)
+      .setDocker(f.container3.docker.get.toProto)
+      .build
+
+    val container3 = Container(containerInfo3)
+    assert(container3 == f.container3)
   }
 
   test("SerializationRoundtrip") {
@@ -142,6 +174,29 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
 
     val readResult4 = mapper.readValue(json4, classOf[Container])
     assert(readResult4 == f.container2)
+
+    val json5 = mapper.writeValueAsString(f.container3)
+    val readResult5 = mapper.readValue(json5, classOf[Container])
+    assert(readResult5 == f.container3)
+
+    val json6 =
+      """
+      {
+        "type": "DOCKER",
+        "docker": {
+          "image": "group/image",
+          "network": "NONE",
+          "privileged": true,
+          "parameters": {
+            "abc": "123",
+            "def": "456"
+          }
+        }
+      }
+      """
+
+    val readResult6 = mapper.readValue(json6, classOf[Container])
+    assert(readResult6 == f.container3)
   }
 
 }
