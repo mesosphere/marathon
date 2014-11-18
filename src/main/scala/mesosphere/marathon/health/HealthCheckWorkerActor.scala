@@ -20,6 +20,8 @@ import scala.concurrent.Future
 import scala.util.{ Success, Failure }
 
 import java.net.{ Socket, InetSocketAddress }
+import java.security.cert.X509Certificate
+import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 
 class HealthCheckWorkerActor extends Actor with ActorLogging {
 
@@ -52,8 +54,8 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         Future { Some(Unhealthy(task.getId, task.getVersion, "Invalid port index")) }
 
       case Some(port) => check.protocol match {
-        case HTTP => http(task, check, port)
-        case TCP  => tcp(task, check, port)
+        case HTTP  => http(task, check, port)
+        case TCP   => tcp(task, check, port)
         case HTTPS => https(task, check, port)
         case COMMAND =>
           Future.failed {

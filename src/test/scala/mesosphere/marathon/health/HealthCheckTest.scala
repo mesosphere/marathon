@@ -49,6 +49,26 @@ class HealthCheckTest extends MarathonSpec {
     assert(10 == proto.getMaxConsecutiveFailures)
   }
 
+  test("ToProtoHttps") {
+    val healthCheck = HealthCheck(
+      path = Some("/health"),
+      protocol = Protocol.HTTPS,
+      portIndex = 0,
+      gracePeriod = FiniteDuration(10, SECONDS),
+      interval = FiniteDuration(60, SECONDS),
+      maxConsecutiveFailures = 0
+    )
+
+    val proto = healthCheck.toProto
+
+    assert("/health" == proto.getPath)
+    assert(Protocol.HTTPS == proto.getProtocol)
+    assert(0 == proto.getPortIndex)
+    assert(10 == proto.getGracePeriodSeconds)
+    assert(60 == proto.getIntervalSeconds)
+    assert(0 == proto.getMaxConsecutiveFailures)
+  }
+
   test("MergeFromProto") {
     val proto = Protos.HealthCheckDefinition.newBuilder
       .setPath("/health")
@@ -93,6 +113,32 @@ class HealthCheckTest extends MarathonSpec {
       portIndex = 1,
       gracePeriod = FiniteDuration(7, SECONDS),
       interval = FiniteDuration(35, SECONDS),
+      timeout = FiniteDuration(10, SECONDS),
+      maxConsecutiveFailures = 10
+    )
+
+    assert(mergeResult == expectedResult)
+  }
+
+  test("MergeFromProtoHttps") {
+    val proto = Protos.HealthCheckDefinition.newBuilder
+      .setPath("/health")
+      .setProtocol(Protocol.HTTPS)
+      .setPortIndex(0)
+      .setGracePeriodSeconds(10)
+      .setIntervalSeconds(60)
+      .setTimeoutSeconds(10)
+      .setMaxConsecutiveFailures(10)
+      .build
+
+    val mergeResult = HealthCheck().mergeFromProto(proto)
+
+    val expectedResult = HealthCheck(
+      path = Some("/health"),
+      protocol = Protocol.HTTPS,
+      portIndex = 0,
+      gracePeriod = FiniteDuration(10, SECONDS),
+      interval = FiniteDuration(60, SECONDS),
       timeout = FiniteDuration(10, SECONDS),
       maxConsecutiveFailures = 10
     )
