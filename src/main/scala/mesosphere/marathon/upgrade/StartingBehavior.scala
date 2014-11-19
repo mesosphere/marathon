@@ -1,19 +1,18 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ ActorLogging, Actor }
+import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
-import mesosphere.marathon.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent, HealthStatusChanged }
+import mesosphere.marathon.event.{ HealthStatusChanged, MarathonHealthCheckEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
-import org.apache.mesos.Protos.TaskState
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._
 
 trait StartingBehavior { this: Actor with ActorLogging =>
-  import StartingBehavior._
   import context.dispatcher
+  import mesosphere.marathon.upgrade.StartingBehavior._
 
   def eventBus: EventStream
   def expectedSize: Int
@@ -67,7 +66,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   }
 
   def commonBehavior: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, "TASK_FAILED" | "TASK_LOST" | "TASK_KILLED", _, app.`id`, _, _, Version, _, _) => // scalastyle:off line.size.limit
+    case MesosStatusUpdateEvent(_, taskId, "TASK_ERROR" | "TASK_FAILED" | "TASK_LOST" | "TASK_KILLED", _, app.`id`, _, _, Version, _, _) => // scalastyle:off line.size.limit
       log.warning(s"Failed to start $taskId for app ${app.id}. Rescheduling.")
       runningTasks -= taskId
       taskQueue.add(app)

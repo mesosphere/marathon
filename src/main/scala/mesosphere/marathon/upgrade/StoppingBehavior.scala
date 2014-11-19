@@ -41,7 +41,7 @@ trait StoppingBehavior extends Actor with ActorLogging {
           "The operation has been cancelled"))
   }
 
-  val taskFinished = "^TASK_(FAILED|FINISHED|LOST|KILLED)$".r
+  val taskFinished = "^TASK_(ERROR|FAILED|FINISHED|LOST|KILLED)$".r
 
   def receive: Receive = {
     case MesosStatusUpdateEvent(_, taskId, taskFinished(_), _, _, _, _, _, _, _) if idsToKill(taskId) =>
