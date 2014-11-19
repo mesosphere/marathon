@@ -47,11 +47,11 @@ function load_options_and_log {
   # Default zk and master option
   if [[ -s /etc/mesos/zk ]]
   then
-    if [[ "${cmd[@]}" != *'--zk'* ]]
+    if [[ "${cmd[@]} $@" != *'--zk'* ]]
     then
       cmd+=( --zk "$(cut -d / -f 1-3 /etc/mesos/zk)/marathon" )
     fi
-    if [[ "${cmd[@]}" != *'--master'* ]]
+    if [[ "${cmd[@]} $@" != *'--master'* ]]
     then
       cmd+=( --master "$(cat /etc/mesos/zk)" )
     fi
