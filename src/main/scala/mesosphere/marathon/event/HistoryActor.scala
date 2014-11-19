@@ -16,6 +16,8 @@ class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepo
     case TaskFailure.FromMesosStatusUpdateEvent(taskFailure) =>
       taskFailureRepository.store(taskFailure.appId, taskFailure)
 
+    case _: MesosStatusUpdateEvent => // ignore non-failure status updates
+
     case AppTerminatedEvent(appId, eventType, timestamp) =>
       taskFailureRepository.expunge(appId)
   }

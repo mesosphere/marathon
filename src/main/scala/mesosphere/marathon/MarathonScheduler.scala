@@ -173,21 +173,21 @@ class MarathonScheduler @Inject() (
     val killedForFailingHealthChecks =
       status.getState == TASK_KILLED && status.hasHealthy && !status.getHealthy
 
-    if (status.getState == TASK_FAILED || killedForFailingHealthChecks)
+    if (status.getState == TASK_ERROR || status.getState == TASK_FAILED || killedForFailingHealthChecks)
       appRepo.currentVersion(appId).foreach {
         _.foreach(taskQueue.rateLimiter.addDelay)
       }
     status.getState match {
-      case TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
+      case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
         // Remove from our internal list
-        taskTracker.terminated(appId, status).foreach(taskOption => {
+        taskTracker.terminated(appId, status).foreach { taskOption =>
           taskOption match {
             case Some(task) => postEvent(status, task)
             case None       => log.warn(s"Couldn't post event for ${status.getTaskId}")
           }
 
           schedulerActor ! ScaleApp(appId)
-        })
+        }
 
       case TASK_RUNNING =>
         taskQueue.rateLimiter.resetDelay(appId)
