@@ -63,6 +63,6 @@ class DeploymentsResource @Inject() (
   def actionToMap(action: DeploymentAction): Map[String, String] =
     Map(
       "action" -> action.getClass.getSimpleName,
-      "apps" -> action.app.id.toString
+      "app" -> action.app.id.toString
     )
 }

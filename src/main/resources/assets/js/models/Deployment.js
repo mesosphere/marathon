@@ -26,7 +26,7 @@ define([
     affectedAppsString: function() {
       var actions = this.get("currentActions");
       var apps = actions.map(function(action) {
-        return action.apps;
+        return action.app;
       });
       return apps.join(", ");
     },
