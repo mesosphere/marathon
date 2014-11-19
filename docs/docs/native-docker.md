@@ -218,7 +218,7 @@ containers: `privileged` and `parameters`.  The `privileged` flag allows users
 to run containers in privileged mode.  This flag is `false` by default.  The
 `parameters` object allows users to supply arbitrary command-line options
 for the `docker run` command executed by the Mesos containerizer.  Note that
-any parameters passed in this manner are not guranteed to be supported in
+any parameters passed in this manner are not guaranteed to be supported in
 the future, as Mesos may not always interact with Docker via the CLI.
 
 ```json

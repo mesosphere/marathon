@@ -109,15 +109,7 @@ object Container {
 
       builder.setPrivileged(privileged)
 
-      builder.addAllParameters(
-        parameters.map {
-          case (key, value) =>
-            mesos.Parameter.newBuilder
-              .setKey(key)
-              .setValue(value)
-              .build
-        }.asJava
-      )
+      builder.addAllParameters(Docker.mapToParameters(parameters).asJava)
 
       builder.build
     }
@@ -135,18 +127,11 @@ object Container {
 
       builder.setPrivileged(privileged)
 
-      builder.addAllParameters(
-        parameters.map {
-          case (key, value) =>
-            mesos.Parameter.newBuilder
-              .setKey(key)
-              .setValue(value)
-              .build
-        }.asJava
-      )
+      builder.addAllParameters(Docker.mapToParameters(parameters).asJava)
 
       builder.build
     }
+
   }
 
   object Docker {
@@ -165,10 +150,22 @@ object Container {
 
         privileged = proto.getPrivileged,
 
-        parameters = proto.getParametersList.asScala.map { parameter =>
-          parameter.getKey -> parameter.getValue
-        }.toMap
+        parameters = parametersToMap(proto.getParametersList.asScala.to[Seq])
       )
+
+    protected def mapToParameters(ps: Map[String, String]): Iterable[mesos.Parameter] =
+      ps.map {
+        case (key, value) =>
+          mesos.Parameter.newBuilder
+            .setKey(key)
+            .setValue(value)
+            .build
+      }
+
+    protected def parametersToMap(ps: Seq[mesos.Parameter]): Map[String, String] =
+      ps.map { parameter =>
+        parameter.getKey -> parameter.getValue
+      }.toMap
 
     /**
       * @param containerPort The container port to expose
