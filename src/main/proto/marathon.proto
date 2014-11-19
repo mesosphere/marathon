@@ -105,6 +105,14 @@ message ExtendedContainerInfo {
     }
 
     repeated PortMapping port_mappings = 3;
+
+    optional bool privileged = 4 [default = false];
+
+    // Allowing arbitrary parameters to be passed to docker CLI.
+    // Note that anything passed to this field is not guaranteed
+    // to be supported moving forward, as we might move away from
+    // the docker CLI.
+    repeated mesos.Parameter parameters = 5;
   }
 
   required mesos.ContainerInfo.Type type = 1;

@@ -75,7 +75,12 @@ The full JSON format of an application resource is as follows:
                     "hostPort": 0,
                     "protocol": "udp"
                 }
-            ]
+            ],
+            "privileged": false,
+            "parameters": {
+                "a-docker-option": "xxx",
+                "b-docker-option": "yyy"
+            }
         },
         "volumes": [
             {
@@ -182,7 +187,12 @@ the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
 
 ##### container
 
-Additional data passed to the containerizer on application launch.  These consist of a type, zero or more volumes, and additional type-specific options.  Volumes and type are optional (the default type is DOCKER).  In order to make use of the docker containerizer, specify `--containerizers=docker,mesos` to the Mesos slave.
+Additional data passed to the containerizer on application launch.  These
+consist of a type, zero or more volumes, and additional type-specific options.
+Volumes and type are optional (the default type is DOCKER).  In order to make
+use of the docker containerizer, specify `--containerizers=docker,mesos` to
+the Mesos slave.  For a discussion of docker-specific options, see the
+[native docker document]({{site.baseurl}}/docs/native-docker.html).
 
 ##### dependencies
 
