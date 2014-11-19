@@ -129,7 +129,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
           def getAcceptedIssuers = Array[X509Certificate]()
         }
 
-        val context = SSLContext.getInstance("TLS")
+        val context = SSLContext.getInstance("Default")
         context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
         context
       }
