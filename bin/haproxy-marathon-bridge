@@ -101,12 +101,12 @@ global
   maxconn 4096
 
 defaults
-  log         global
-  retries     3
-  maxconn     2000
-  contimeout  5000
-  clitimeout  50000
-  srvtimeout  50000
+  log            global
+  retries             3
+  maxconn          2000
+  timeout connect  5000
+  timeout client  50000
+  timeout server  50000
 
 listen stats
   bind 127.0.0.1:9090
