@@ -67,6 +67,8 @@ The following options can influence how Marathon works:
     authentication
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret
     file containing the authentication secret
+* `--marathon_store_timeout` (Optional. Default: 2000 (2 seconds)): Timeout for
+    marathon store in milliseconds. 
 
 ### Optional Flags Inherited from [Chaos](https://github.com/mesosphere/chaos)
 
