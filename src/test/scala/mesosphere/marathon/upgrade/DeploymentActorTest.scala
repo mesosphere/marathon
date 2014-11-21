@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import java.util.UUID
 
 import akka.actor.{ ActorSystem, Props }
-import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
+import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
@@ -28,12 +28,10 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class DeploymentActorTest
-    extends TestKit(ActorSystem("System"))
-    with MarathonSpec
+    extends MarathonSpec
     with Matchers
     with BeforeAndAfterAll
-    with MockitoSugar
-    with ImplicitSender {
+    with MockitoSugar {
 
   var repo: AppRepository = _
   var tracker: TaskTracker = _
@@ -55,11 +53,8 @@ class DeploymentActorTest
     hcManager = mock[HealthCheckManager]
   }
 
-  override def afterAll(): Unit = {
-    system.shutdown()
-  }
-
   test("Deploy") {
+    implicit val system = ActorSystem("TestSystem")
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, version = Timestamp(0))
@@ -125,35 +120,41 @@ class DeploymentActorTest
       }
     })
 
-    TestActorRef(
-      Props(
-        classOf[DeploymentActor],
-        managerProbe.ref,
-        receiverProbe.ref,
-        repo,
-        driver,
-        scheduler,
-        plan,
-        tracker,
-        queue,
-        storage,
-        hcManager,
-        system.eventStream
+    try {
+      TestActorRef(
+        Props(
+          classOf[DeploymentActor],
+          managerProbe.ref,
+          receiverProbe.ref,
+          repo,
+          driver,
+          scheduler,
+          plan,
+          tracker,
+          queue,
+          storage,
+          hcManager,
+          system.eventStream
+        )
       )
-    )
 
-    plan.steps.zipWithIndex.foreach {
-      case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
+      plan.steps.zipWithIndex.foreach {
+        case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
+      }
+
+      managerProbe.expectMsg(5.seconds, DeploymentFinished(plan.id))
+
+      verify(scheduler).startApp(driver, app3)
+      verify(driver, times(1)).killTask(TaskID(task1_2.getId))
+      verify(scheduler).stopApp(driver, app4)
     }
-
-    managerProbe.expectMsg(5.seconds, DeploymentFinished(plan.id))
-
-    verify(scheduler).startApp(driver, app3)
-    verify(driver, times(1)).killTask(TaskID(task1_2.getId))
-    verify(scheduler).stopApp(driver, app4)
+    finally {
+      system.shutdown()
+    }
   }
 
   test("Restart app") {
+    implicit val system = ActorSystem("TestSystem")
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, version = Timestamp(0))
@@ -172,7 +173,7 @@ class DeploymentActorTest
 
     when(driver.killTask(TaskID(task1_1.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_1", "TASK_KILLED", "", app.id, "", Nil, appNew.version.toString))
+        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_1", "TASK_KILLED", "", app.id, "", Nil, app.version.toString))
         Status.DRIVER_RUNNING
       }
     })
@@ -193,6 +194,7 @@ class DeploymentActorTest
 
     when(queue.add(appNew)).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
+        if (taskCount >= 2) throw new Exception("Too many invocations.")
         taskCount += 1
         system.eventStream.publish(MesosStatusUpdateEvent("", s"task1_${taskIDs.next()}", "TASK_RUNNING", "", app.id, "", Nil, appNew.version.toString))
         true
@@ -201,27 +203,32 @@ class DeploymentActorTest
 
     when(repo.store(appNew)).thenReturn(Future.successful(appNew))
 
-    val deployer = TestActorRef(
-      Props(
-        classOf[DeploymentActor],
-        managerProbe.ref,
-        receiverProbe.ref,
-        repo,
-        driver,
-        scheduler,
-        plan,
-        tracker,
-        queue,
-        storage,
-        hcManager,
-        system.eventStream
+    try {
+      TestActorRef(
+        Props(
+          classOf[DeploymentActor],
+          managerProbe.ref,
+          receiverProbe.ref,
+          repo,
+          driver,
+          scheduler,
+          plan,
+          tracker,
+          queue,
+          storage,
+          hcManager,
+          system.eventStream
+        )
       )
-    )
 
-    receiverProbe.expectMsg(Finished)
+      receiverProbe.expectMsg(Finished)
 
-    verify(driver).killTask(TaskID(task1_1.getId))
-    verify(driver).killTask(TaskID(task1_2.getId))
-    verify(queue, times(2)).add(appNew)
+      verify(driver).killTask(TaskID(task1_1.getId))
+      verify(driver).killTask(TaskID(task1_2.getId))
+      verify(queue, times(2)).add(appNew)
+    }
+    finally {
+      system.shutdown()
+    }
   }
 }
