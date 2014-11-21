@@ -29,6 +29,7 @@ class InfoResource @Inject() (
     "task_launch_timeout" -> conf.taskLaunchTimeout.get,
     "reconciliation_initial_delay" -> conf.reconciliationInitialDelay.get,
     "reconciliation_interval" -> conf.reconciliationInterval.get,
+    "marathon_store_timeout" -> conf.marathonStoreTimeout.get,
     "mesos_user" -> conf.mesosUser.get)
 
   // Zookeeper congiurations

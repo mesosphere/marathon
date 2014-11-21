@@ -16,6 +16,7 @@ import org.apache.mesos.state.State
 import mesosphere.marathon.state.MarathonStore
 import mesosphere.marathon.Main
 import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe }
+import mesosphere.marathon.MarathonConf
 
 trait HttpEventConfiguration extends ScallopConf {
 
@@ -66,8 +67,9 @@ class HttpEventModule extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideCallbackUrlsStore(state: State, registry: MetricRegistry): MarathonStore[EventSubscribers] =
-    new MarathonStore[EventSubscribers](state, registry, () => new EventSubscribers(Set.empty[String]), "events:")
+  def provideCallbackUrlsStore(conf: MarathonConf,
+                               state: State, registry: MetricRegistry): MarathonStore[EventSubscribers] =
+    new MarathonStore[EventSubscribers](conf, state, registry, () => new EventSubscribers(Set.empty[String]), "events:")
 }
 
 object HttpEventModule {
