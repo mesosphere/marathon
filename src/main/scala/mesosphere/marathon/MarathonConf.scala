@@ -66,6 +66,11 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
       "reconciliation operations.",
     default = Some(30000L)) // 30 seconds
 
+  lazy val marathonStoreTimeout = opt[Long]("marathon_store_timeout",
+    descr = "Time, in milliseconds, to wait for a task to store " +
+      "in marathon",
+    default = Some(2000L)) // 2 seconds
+
   lazy val mesosUser = opt[String]("mesos_user",
     descr = "Mesos user for this framework",
     default = new SystemProperties().get("user.name")) // Current logged in user
