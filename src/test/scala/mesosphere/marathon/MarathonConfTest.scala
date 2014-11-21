@@ -36,5 +36,13 @@ class MarathonConfTest extends MarathonSpec {
     assert(conf.mesosAuthenticationSecretFile.get == Some(secretFile))
   }
 
+  test("MarathonStoreTimeOut") {
+    val conf = makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--marathon_store_timeout", "5000"
+    )
+    assert(conf.marathonStoreTimeout.isDefined)
+    assert(conf.marathonStoreTimeout.get == Some(5000))
+  }
 }
 
