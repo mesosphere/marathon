@@ -325,4 +325,87 @@ class ConstraintsTest extends MarathonSpec {
 
     assert(clusterRackMet4, "Should meet clustered-in-rack constraints.")
   }
+
+  test("HostnameGroupedByConstraints") {
+    val task1_host1 = makeTaskWithHost("task1", "host1")
+    val task2_host1 = makeTaskWithHost("task2", "host1")
+    val task3_host2 = makeTaskWithHost("task3", "host2")
+    val task4_host3 = makeTaskWithHost("task4", "host3")
+
+    var groupHost = Set[MarathonTask]()
+    val attributes: Set[Attribute] = Set()
+
+    val groupByHost = makeConstraint("hostname", Constraint.Operator.GROUP_BY, "2")
+
+    val clusterFreshHostMet = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host1", attributes),
+      groupByHost)
+
+    assert(clusterFreshHostMet, "Should be able to schedule in fresh host.")
+
+    groupHost ++= Set(task1_host1)
+
+    val clusterHostMet = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host1", attributes),
+      groupByHost)
+
+    assert(!clusterHostMet, "Should not meet group-by-host constraint.")
+
+    val clusterHostMet2 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host2", attributes),
+      groupByHost)
+
+    assert(clusterHostMet2, "Should meet group-by-host constraint.")
+
+    groupHost ++= Set(task3_host2)
+
+    val clusterHostMet3 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host1", attributes),
+      groupByHost)
+
+    assert(clusterHostMet3, "Should meet group-by-host constraint.")
+
+    groupHost ++= Set(task2_host1)
+
+    val clusterHostNotMet = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host1", attributes),
+      groupByHost)
+
+    assert(!clusterHostNotMet, "Should not meet group-by-host constraint.")
+
+    val clusterHostMet4 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host3", attributes),
+      groupByHost)
+
+    assert(clusterHostMet4, "Should meet group-by-host constraint.")
+
+    groupHost ++= Set(task4_host3)
+
+    val clusterHostNotMet2 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host1", attributes),
+      groupByHost)
+
+    assert(!clusterHostNotMet2, "Should not meet group-by-host constraint.")
+
+    val clusterHostMet5 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host3", attributes),
+      groupByHost)
+
+    assert(clusterHostMet5, "Should meet group-by-host constraint.")
+
+    val clusterHostMet6 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host2", attributes),
+      groupByHost)
+
+    assert(clusterHostMet6, "Should meet group-by-host constraint.")
+  }
 }
