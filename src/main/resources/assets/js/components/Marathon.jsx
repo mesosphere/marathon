@@ -437,6 +437,7 @@ define([
         );
       }
 
+    /* jshint trailing:false, quotmark:false, newcap:false */
       if(!this.state.pageClass) {
         applist = (
           <div>
