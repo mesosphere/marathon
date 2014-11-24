@@ -9,7 +9,6 @@ define([
   "models/DeploymentCollection",
   "jsx!components/AppListComponent",
   "jsx!components/modals/AboutModalComponent",
-  "jsx!components/AppModalComponent",
   "jsx!components/AppPageComponent",
   "jsx!components/DeploymentsListComponent",
   "jsx!components/NewAppModalComponent",
@@ -17,7 +16,7 @@ define([
   "jsx!components/TogglableTabsComponent",
   "jsx!components/NavTabsComponent"
 ], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
-    AppListComponent, AboutModalComponent, AppModalComponent, AppPageComponent,
+    AppListComponent, AboutModalComponent, AppPageComponent,
     DeploymentsListComponent, NewAppModalComponent, TabPaneComponent,
     TogglableTabsComponent, NavTabsComponent) {
 
@@ -102,7 +101,13 @@ define([
         // Otherwise stop polling since the modal went from closed to open.
         if (this.state.modalClass === null) {
           this.setPollResource(this.fetchApps);
-        } else if (this.state.modalClass === AppModalComponent) {
+        } else {
+          this.stopPolling();
+        }
+      }
+
+      if (prevState.pageClass !== this.state.pageClass) {
+        if (this.state.pageClass === AppPageComponent) {
           this.setPollResource(this.fetchTasks);
         } else {
           this.stopPolling();
@@ -351,23 +356,10 @@ define([
       });
     },
 
-    showAppModal: function(app) {
-      if (this.state.modalClass !== null) {
-        return;
-      }
-
-      this.setState({
-        activeApp: app,
-        modalClass: AppModalComponent
-      });
-    },
-
     showAppPage: function(app) {
       if (this.state.pageClass !== null) {
         return;
       }
-
-      console.log("STATE 2");
 
       this.setState({
         activeApp: app,
@@ -390,6 +382,10 @@ define([
         activeTabId: id
       });
 
+      if(this.state.pageClass !== null) {
+        this.handlePageDestroy();
+      }
+
       if (id === tabs[0].id) {
         this.setPollResource(this.fetchApps);
       } else if (id === tabs[1].id) {
@@ -403,26 +399,7 @@ define([
           applist;
 
       /* jshint trailing:false, quotmark:false, newcap:false */
-      if (this.state.modalClass === AppModalComponent) {
-        modal = (
-          <AppModalComponent
-            activeTask={this.state.activeTask}
-            appVersionsFetchState={this.state.appVersionsFetchState}
-            destroyApp={this.destroyApp}
-            fetchTasks={this.fetchTasks}
-            fetchAppVersions={this.fetchAppVersions}
-            model={this.state.activeApp}
-            onDestroy={this.handleModalDestroy}
-            onShowTaskDetails={this.handleShowTaskDetails}
-            onShowTaskList={this.handleShowTaskList}
-            onTasksKilled={this.handleTasksKilled}
-            rollBackApp={this.rollbackToAppVersion}
-            scaleApp={this.scaleApp}
-            suspendApp={this.suspendApp}
-            tasksFetchState={this.state.tasksFetchState}
-            ref="modal" />
-        );
-      } else if (this.state.modalClass === NewAppModalComponent) {
+      if (this.state.modalClass === NewAppModalComponent) {
         modal = (
           <NewAppModalComponent
             model={this.state.activeApp}
@@ -476,7 +453,6 @@ define([
         );
       }
 
-
       return (
         <div>
           <nav className="navbar navbar-inverse navbar-static-top" role="navigation">
@@ -508,8 +484,8 @@ define([
           <div className="container-fluid">
             <TogglableTabsComponent activeTabId={this.state.activeTabId} >
               <TabPaneComponent id="apps">
-                {applist}
-                {page}
+                  {applist}
+                  {page}
               </TabPaneComponent>
               <TabPaneComponent
                   id="deployments"
