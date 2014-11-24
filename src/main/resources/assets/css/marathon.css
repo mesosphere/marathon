@@ -124,10 +124,7 @@ a,
 }
 
 .page-header {
-  margin: -18px -16px 0px -18px;
-  padding: 16px 18px;
-  background-color: #000;
-  border: 0;
+  margin: 0;
 }
 
 .has-error .help-block,
