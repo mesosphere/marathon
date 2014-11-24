@@ -10,13 +10,14 @@ define([
   "jsx!components/AppListComponent",
   "jsx!components/modals/AboutModalComponent",
   "jsx!components/AppModalComponent",
+  "jsx!components/AppPageComponent",
   "jsx!components/DeploymentsListComponent",
   "jsx!components/NewAppModalComponent",
   "jsx!components/TabPaneComponent",
   "jsx!components/TogglableTabsComponent",
   "jsx!components/NavTabsComponent"
 ], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
-    AppListComponent, AboutModalComponent, AppModalComponent,
+    AppListComponent, AboutModalComponent, AppModalComponent, AppPageComponent,
     DeploymentsListComponent, NewAppModalComponent, TabPaneComponent,
     TogglableTabsComponent, NavTabsComponent) {
 
@@ -43,6 +44,7 @@ define([
         deploymentsFetchState: States.STATE_LOADING,
         fetchState: States.STATE_LOADING,
         modalClass: null,
+        pageClass: null,
         tasksFetchState: States.STATE_LOADING
       };
     },
@@ -174,6 +176,15 @@ define([
       this.setState({
         activeApp: null,
         modalClass: null,
+        tasksFetchState: States.STATE_LOADING,
+        appVersionsFetchState: States.STATE_LOADING
+      });
+    },
+
+    handlePageDestroy: function() {
+      this.setState({
+        activeApp: null,
+        pageClass: null,
         tasksFetchState: States.STATE_LOADING,
         appVersionsFetchState: States.STATE_LOADING
       });
@@ -351,6 +362,19 @@ define([
       });
     },
 
+    showAppPage: function(app) {
+      if (this.state.pageClass !== null) {
+        return;
+      }
+
+      console.log("STATE 2");
+
+      this.setState({
+        activeApp: app,
+        pageClass: AppPageComponent
+      });
+    },
+
     showNewAppModal: function(event) {
       if (this.state.modalClass !== null) {
         return;
@@ -374,7 +398,9 @@ define([
     },
 
     render: function() {
-      var modal;
+      var modal,
+          page,
+          applist;
 
       /* jshint trailing:false, quotmark:false, newcap:false */
       if (this.state.modalClass === AppModalComponent) {
@@ -412,6 +438,45 @@ define([
         );
       }
 
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      if(this.state.pageClass === AppPageComponent) {
+        page = (
+          <AppPageComponent
+            activeTask={this.state.activeTask}
+            appVersionsFetchState={this.state.appVersionsFetchState}
+            destroyApp={this.destroyApp}
+            fetchTasks={this.fetchTasks}
+            fetchAppVersions={this.fetchAppVersions}
+            model={this.state.activeApp}
+            onDestroy={this.handlePageDestroy}
+            onShowTaskDetails={this.handleShowTaskDetails}
+            onShowTaskList={this.handleShowTaskList}
+            onTasksKilled={this.handleTasksKilled}
+            rollBackApp={this.rollbackToAppVersion}
+            scaleApp={this.scaleApp}
+            suspendApp={this.suspendApp}
+            tasksFetchState={this.state.tasksFetchState}
+            ref="page" />
+        );
+      }
+
+      if(!this.state.pageClass) {
+        applist = (
+          <div>
+            <button type="button" className="btn btn-success navbar-btn"
+                onClick={this.showNewAppModal} >
+              + New App
+            </button>
+            <AppListComponent
+              collection={this.state.collection}
+              onSelectApp={this.showAppPage}
+              fetchState={this.state.fetchState}
+              ref="appList" />
+          </div>
+        );
+      }
+
+
       return (
         <div>
           <nav className="navbar navbar-inverse navbar-static-top" role="navigation">
@@ -443,15 +508,8 @@ define([
           <div className="container-fluid">
             <TogglableTabsComponent activeTabId={this.state.activeTabId} >
               <TabPaneComponent id="apps">
-                <button type="button" className="btn btn-success navbar-btn"
-                    onClick={this.showNewAppModal} >
-                  + New App
-                </button>
-                <AppListComponent
-                  collection={this.state.collection}
-                  onSelectApp={this.showAppModal}
-                  fetchState={this.state.fetchState}
-                  ref="appList" />
+                {applist}
+                {page}
               </TabPaneComponent>
               <TabPaneComponent
                   id="deployments"
