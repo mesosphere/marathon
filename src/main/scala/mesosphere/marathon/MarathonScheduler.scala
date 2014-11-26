@@ -195,8 +195,6 @@ class MarathonScheduler @Inject() (
           case Success(task) => postEvent(status, task)
           case Failure(t) =>
             log.warn(s"Couldn't post event for ${status.getTaskId}", t)
-            log.warn(s"Killing task ${status.getTaskId}")
-            driver.killTask(status.getTaskId)
         }
 
       case TASK_STAGING if !taskTracker.contains(appId) =>
