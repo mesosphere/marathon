@@ -3,8 +3,11 @@ package mesosphere.marathon.api
 import java.net.URI
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.{ ResponseBuilder, Status }
+import play.api.libs.json.Json
+
 import scala.concurrent.{ Await, Awaitable }
 
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -24,11 +27,11 @@ trait RestResource {
   }
 
   protected def notFound(message: String): Response = {
-    Response.status(Status.NOT_FOUND).entity(Map("message" -> message)).build
+    Response.status(Status.NOT_FOUND).entity(Json.obj("message" -> message).toString()).build()
   }
 
   protected def deploymentResult(d: DeploymentPlan, response: ResponseBuilder = Response.ok()) = {
-    response.entity(Map("version" -> d.version, "deploymentId" -> d.id)).build()
+    response.entity(Json.obj("version" -> d.version, "deploymentId" -> d.id).toString()).build()
   }
 
   protected def status(code: Status) = Response.status(code).build()
