@@ -2,21 +2,21 @@ package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble }
 
-import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.{ Health, HealthCheck }
-import mesosphere.marathon.state._
-import mesosphere.marathon.state.Container.{ Volume, Docker }
 import mesosphere.marathon.state.Container.Docker.PortMapping
+import mesosphere.marathon.state.Container.{ Docker, Volume }
+import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade._
-import play.api.data.validation.ValidationError
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.apache.mesos.{ Protos => mesos }
-import mesos.ContainerInfo.DockerInfo.Network
+import play.api.data.validation.ValidationError
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -42,39 +42,6 @@ object Formats extends Formats {
         _.seconds,
         _.toSeconds
       )
-  }
-
-  /*
-   * Helpers
-   */
-
-  def uniquePorts: Reads[Seq[Integer]] = Format.of[Seq[Integer]].filter { ports =>
-    val withoutRandom = ports.filterNot(_ == AppDefinition.RandomPortValue)
-    withoutRandom.distinct.size == withoutRandom.size
-  }
-
-  def minValue[A](min: A)(implicit O: Ordering[A], reads: Reads[A]): Reads[A] =
-    Reads.filterNot[A](ValidationError(s"value must not be less than $min"))(x => O.lt(x, min))(reads)
-
-  def regex(pattern: String): Reads[String] =
-    Reads.filter[String](ValidationError("invalid value"))(_.matches(pattern))
-
-  def enumFormat[A <: java.lang.Enum[A]](read: String => A, errorMsg: String => String): Format[A] = {
-    val reads = Reads[A] {
-      case JsString(str) =>
-        try {
-          JsSuccess(read(str))
-        }
-        catch {
-          case _: IllegalArgumentException => JsError(errorMsg(str))
-        }
-
-      case x => JsError(s"expected string, got $x")
-    }
-
-    val writes = Writes[A] { a: A => JsString(a.name) }
-
-    Format(reads, writes)
   }
 }
 
@@ -147,6 +114,36 @@ trait Formats
   )
 
   implicit lazy val CommandFormat: Format[Command] = Json.format[Command]
+
+  /*
+ * Helpers
+ */
+
+  def uniquePorts: Reads[Seq[Integer]] = Format.of[Seq[Integer]].filter { ports =>
+    val withoutRandom = ports.filterNot(_ == AppDefinition.RandomPortValue)
+    withoutRandom.distinct.size == withoutRandom.size
+  }
+
+  def minValue[A](min: A)(implicit O: Ordering[A], reads: Reads[A]): Reads[A] =
+    Reads.filterNot[A](ValidationError(s"value must not be less than $min"))(x => O.lt(x, min))(reads)
+
+  def enumFormat[A <: java.lang.Enum[A]](read: String => A, errorMsg: String => String): Format[A] = {
+    val reads = Reads[A] {
+      case JsString(str) =>
+        try {
+          JsSuccess(read(str))
+        }
+        catch {
+          case _: IllegalArgumentException => JsError(errorMsg(str))
+        }
+
+      case x => JsError(s"expected string, got $x")
+    }
+
+    val writes = Writes[A] { a: A => JsString(a.name) }
+
+    Format(reads, writes)
+  }
 }
 
 trait ContainerFormats {
@@ -261,7 +258,7 @@ trait HealthCheckFormats {
     enumFormat(Protocol.valueOf, str => s"$str is not a valid protocol")
 
   implicit lazy val HealtCheckFormat: Format[HealthCheck] = {
-    import HealthCheck._
+    import mesosphere.marathon.health.HealthCheck._
 
     (
       (__ \ "path").formatNullable[Option[String]].withDefault(DefaultPath) ~
@@ -302,7 +299,7 @@ trait AppDefinitionFormats {
   )
 
   implicit lazy val AppDefinitionReads: Reads[AppDefinition] = {
-    import AppDefinition._
+    import mesosphere.marathon.state.AppDefinition._
 
     (
       (__ \ "id").read[PathId] ~
@@ -314,7 +311,7 @@ trait AppDefinitionFormats {
       (__ \ "cpus").readNullable[JDouble].withDefault(DefaultCpus) ~
       (__ \ "mem").readNullable[JDouble].withDefault(DefaultMem) ~
       (__ \ "disk").readNullable[JDouble].withDefault(DefaultDisk) ~
-      (__ \ "executor").readNullable[String](regex("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")).withDefault("") ~
+      (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)).withDefault("") ~
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(Set.empty) ~
       (__ \ "uris").readNullable[Seq[String]].withDefault(Nil) ~
       (__ \ "storeUrls").readNullable[Seq[String]].withDefault(Nil) ~
@@ -385,7 +382,7 @@ trait AppDefinitionFormats {
       (__ \ "cpus").readNullable[JDouble] ~
       (__ \ "mem").readNullable[JDouble] ~
       (__ \ "disk").readNullable[JDouble] ~
-      (__ \ "executor").readNullable[String](regex("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")) ~
+      (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)) ~
       (__ \ "constraints").readNullable[Set[Constraint]] ~
       (__ \ "uris").readNullable[Seq[String]] ~
       (__ \ "storeUrls").readNullable[Seq[String]] ~
