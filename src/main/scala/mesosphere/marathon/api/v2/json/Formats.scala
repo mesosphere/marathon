@@ -162,8 +162,10 @@ trait ContainerFormats {
   implicit lazy val DockerFormat: Format[Docker] = (
     (__ \ "image").format[String] ~
     (__ \ "network").formatNullable[Network] ~
-    (__ \ "portMappings").formatNullable[Seq[Docker.PortMapping]]
-  )(Docker(_, _, _), unlift(Docker.unapply))
+    (__ \ "portMappings").formatNullable[Seq[Docker.PortMapping]] ~
+    (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
+    (__ \ "parameters").formatNullable[Map[String, String]].withDefault(Map.empty)
+  )(Docker(_, _, _, _, _), unlift(Docker.unapply))
 
   implicit val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mode")
@@ -243,6 +245,12 @@ trait EventFormats {
   implicit lazy val MesosStatusUpdateEventWrites: Writes[MesosStatusUpdateEvent] = Json.writes[MesosStatusUpdateEvent]
   implicit lazy val MesosFrameworkMessageEventWrites: Writes[MesosFrameworkMessageEvent] =
     Json.writes[MesosFrameworkMessageEvent]
+  implicit lazy val SchedulerDisconnectedEventWrites: Writes[SchedulerDisconnectedEvent] =
+    Json.writes[SchedulerDisconnectedEvent]
+  implicit lazy val SchedulerRegisteredEventWritesWrites: Writes[SchedulerRegisteredEvent] =
+    Json.writes[SchedulerRegisteredEvent]
+  implicit lazy val SchedulerReregisteredEventWritesWrites: Writes[SchedulerReregisteredEvent] =
+    Json.writes[SchedulerReregisteredEvent]
 }
 
 trait HealthCheckFormats {

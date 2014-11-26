@@ -71,6 +71,9 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     case event: DeploymentStepFailure      => Json.toJson(event)
     case event: MesosStatusUpdateEvent     => Json.toJson(event)
     case event: MesosFrameworkMessageEvent => Json.toJson(event)
+    case event: SchedulerDisconnectedEvent => Json.toJson(event)
+    case event: SchedulerRegisteredEvent   => Json.toJson(event)
+    case event: SchedulerReregisteredEvent => Json.toJson(event)
   }
 }
 
