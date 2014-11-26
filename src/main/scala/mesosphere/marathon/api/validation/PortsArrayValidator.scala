@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.validation
 
-import mesosphere.marathon.state.AppDefinition.RandomPortValue
+import mesosphere.marathon.state.AppDefinition.RANDOM_PORT_VALUE
 import javax.validation.{ ConstraintValidator, ConstraintValidatorContext }
 
 /**
@@ -17,7 +17,7 @@ class PortsArrayValidator
     obj match {
       case opt: Option[_] => opt.forall { isValid(_, context) }
       case it: Iterable[_] => {
-        val withoutRandoms = it.toSeq.filterNot { _ == RandomPortValue }
+        val withoutRandoms = it.toSeq.filterNot { _ == RANDOM_PORT_VALUE }
         withoutRandoms.size == withoutRandoms.distinct.size
       }
       case _ => false

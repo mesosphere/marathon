@@ -135,7 +135,7 @@ case class HealthStatusChanged(
 
 // upgrade messages
 
-sealed trait UpgradeEvent extends MarathonEvent
+trait UpgradeEvent extends MarathonEvent
 
 case class GroupChangeSuccess(
   groupId: PathId,

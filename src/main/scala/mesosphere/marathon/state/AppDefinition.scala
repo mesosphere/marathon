@@ -35,13 +35,13 @@ case class AppDefinition(
 
   env: Map[String, String] = Map.empty,
 
-  @FieldMin(0) instances: JInt = AppDefinition.DefaultInstances,
+  @FieldMin(0) instances: JInt = AppDefinition.DEFAULT_INSTANCES,
 
-  cpus: JDouble = AppDefinition.DefaultCpus,
+  cpus: JDouble = AppDefinition.DEFAULT_CPUS,
 
-  mem: JDouble = AppDefinition.DefaultMem,
+  mem: JDouble = AppDefinition.DEFAULT_MEM,
 
-  disk: JDouble = AppDefinition.DefaultDisk,
+  disk: JDouble = AppDefinition.DEFAULT_DISK,
 
   @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = "",
 
@@ -51,13 +51,13 @@ case class AppDefinition(
 
   storeUrls: Seq[String] = Seq.empty,
 
-  @FieldPortsArray ports: Seq[JInt] = AppDefinition.DefaultPorts,
+  @FieldPortsArray ports: Seq[JInt] = AppDefinition.DEFAULT_PORTS,
 
-  requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
+  requirePorts: Boolean = AppDefinition.DEFAULT_REQUIRE_PORTS,
 
-  @FieldJsonProperty("backoffSeconds") backoff: FiniteDuration = AppDefinition.DefaultBackoff,
+  @FieldJsonProperty("backoffSeconds") backoff: FiniteDuration = AppDefinition.DEFAULT_BACKOFF,
 
-  backoffFactor: JDouble = AppDefinition.DefaultBackoffFactor,
+  backoffFactor: JDouble = AppDefinition.DEFAULT_BACKOFF_FACTOR,
 
   container: Option[Container] = None,
 
@@ -229,23 +229,23 @@ case class AppDefinition(
 }
 
 object AppDefinition {
-  val DefaultCpus = 1.0
+  val DEFAULT_CPUS = 1.0
 
-  val DefaultMem = 128.0
+  val DEFAULT_MEM = 128.0
 
-  val DefaultDisk = 0.0
+  val DEFAULT_DISK = 0.0
 
-  val RandomPortValue = 0
+  val RANDOM_PORT_VALUE = 0
 
-  val DefaultPorts: Seq[JInt] = Seq(RandomPortValue)
+  val DEFAULT_PORTS: Seq[JInt] = Seq(RANDOM_PORT_VALUE)
 
-  val DefaultRequirePorts = false
+  val DEFAULT_REQUIRE_PORTS = false
 
-  val DefaultInstances = 1
+  val DEFAULT_INSTANCES = 1
 
-  val DefaultBackoff = 1.second
+  val DEFAULT_BACKOFF = 1.second
 
-  val DefaultBackoffFactor = 1.15
+  val DEFAULT_BACKOFF_FACTOR = 1.15
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)

@@ -2,18 +2,20 @@ package mesosphere.marathon.event.http
 
 import akka.actor._
 import akka.pattern.ask
-import mesosphere.marathon.event._
+import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
-import play.api.libs.json.{ JsValue, Json }
+import mesosphere.marathon.state.{ AppDefinition, PathId }
+import org.json4s.JsonAST.JString
+import org.json4s.{ CustomSerializer, DefaultFormats, FieldSerializer }
 import spray.client.pipelining.{ sendReceive, _ }
 import spray.http.{ HttpRequest, HttpResponse }
-import spray.httpx.PlayJsonSupport
-import mesosphere.marathon.api.v2.json.Formats._
+import spray.httpx.Json4sJacksonSupport
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
-class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLogging with PlayJsonSupport {
+class HttpEventActor(val subscribersKeeper: ActorRef)
+    extends Actor with ActorLogging with Json4sJacksonSupport {
 
   implicit val ec = HttpEventModule.executionContext
   implicit val timeout = HttpEventModule.timeout
@@ -39,7 +41,7 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
   def post(urlString: String, event: MarathonEvent): Unit = {
     log.info("Sending POST to:" + urlString)
 
-    val request = Post(urlString, eventToJson(event))
+    val request = Post(urlString, event)
     val response = pipeline(request)
 
     response.onComplete {
@@ -53,24 +55,13 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     }
   }
 
-  def eventToJson(event: MarathonEvent): JsValue = event match {
-    case event: AppTerminatedEvent         => Json.toJson(event)
-    case event: ApiPostEvent               => Json.toJson(event)
-    case event: Subscribe                  => Json.toJson(event)
-    case event: Unsubscribe                => Json.toJson(event)
-    case event: AddHealthCheck             => Json.toJson(event)
-    case event: RemoveHealthCheck          => Json.toJson(event)
-    case event: FailedHealthCheck          => Json.toJson(event)
-    case event: HealthStatusChanged        => Json.toJson(event)
-    case event: GroupChangeSuccess         => Json.toJson(event)
-    case event: GroupChangeFailed          => Json.toJson(event)
-    case event: DeploymentSuccess          => Json.toJson(event)
-    case event: DeploymentFailed           => Json.toJson(event)
-    case event: DeploymentStatus           => Json.toJson(event)
-    case event: DeploymentStepSuccess      => Json.toJson(event)
-    case event: DeploymentStepFailure      => Json.toJson(event)
-    case event: MesosStatusUpdateEvent     => Json.toJson(event)
-    case event: MesosFrameworkMessageEvent => Json.toJson(event)
-  }
+  class PathIdSerializer extends CustomSerializer[PathId](format => (
+    { case JString(path) => PathId(path) },
+    { case path: PathId => JString(path.toString) }
+  ))
+
+  implicit def json4sJacksonFormats: org.json4s.Formats =
+    DefaultFormats + FieldSerializer[AppDefinition]() + new PathIdSerializer
+
 }
 

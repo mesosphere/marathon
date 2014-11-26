@@ -414,10 +414,8 @@ class SchedulerActions(
   }
 
   def reconcileHealthChecks(): Unit =
-    for {
-      apps <- appRepository.apps()
-      app <- apps
-    } healthCheckManager.reconcileWith(app)
+    for (apps <- appRepository.apps; app <- apps)
+      healthCheckManager.reconcileWith(app)
 
   private def newTask(app: AppDefinition,
                       offer: Offer): Option[(TaskInfo, Seq[Long])] = {
