@@ -15,7 +15,7 @@ else
 PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S').$(PKG_TAG)
 endif
 
-FPM_OPTS := -s dir -n marathon -v $(PKG_VER) --iteration $(PKG_REL) \
+FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
 	--architecture native \
 	--url "https://github.com/mesosphere/marathon" \
 	--license Apache-2.0 \
@@ -33,11 +33,12 @@ FPM_OPTS_RPM := -t rpm \
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
 .PHONY: all
-all: deb rpm
+all: deb rpm centos7
 
 .PHONY: help
 help:
-	@echo "Please choose one of the following targets: deb, rpm, fedora, osx"
+	@echo "Please choose one of the following targets:"
+	@echo "  all, deb, rpm, fedora, osx, or centos7"
 	@echo "For release builds:"
 	@echo "  make PKG_REL=1.0 deb"
 	@echo "To override package release version:"
@@ -47,12 +48,21 @@ help:
 .PHONY: rpm
 rpm: toor/rpm/etc/init/marathon.conf
 rpm: toor/rpm/$(PREFIX)/bin/marathon
-	fpm -C toor/rpm --config-files etc/ $(FPM_OPTS_RPM) $(FPM_OPTS) .
+	fpm -C toor/rpm --config-files etc/ --iteration $(PKG_REL) \
+		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: fedora
 fedora: toor/fedora/usr/lib/systemd/system/marathon.service
 fedora: toor/fedora/$(PREFIX)/bin/marathon
 	fpm -C toor/fedora --config-files usr/lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL) \
+		$(FPM_OPTS_RPM) $(FPM_OPTS) .
+
+.PHONY: centos7
+centos7: toor/centos7/usr/lib/systemd/system/marathon.service
+centos7: toor/centos7/$(PREFIX)/bin/marathon
+	fpm -C toor/centos7 --config-files usr/lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).centos7 \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: deb
@@ -61,11 +71,12 @@ deb: toor/deb/etc/init.d/marathon
 deb: toor/deb/$(PREFIX)/bin/marathon
 deb: marathon.postinst
 deb: marathon.postrm
-	fpm -C toor/deb --config-files etc/ $(FPM_OPTS_DEB) $(FPM_OPTS) .
+	fpm -C toor/deb --config-files etc/ --iteration $(PKG_REL) \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: osx
 osx: toor/osx/$(PREFIX)/bin/marathon
-	fpm -C toor/osx $(FPM_OPTS_OSX) $(FPM_OPTS) .
+	fpm -C toor/osx --iteration $(PKG_REL) $(FPM_OPTS_OSX) $(FPM_OPTS) .
 
 toor/%/etc/init/marathon.conf: marathon.conf
 	mkdir -p "$(dir $@)"
