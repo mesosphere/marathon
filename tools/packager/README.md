@@ -55,8 +55,10 @@ git submodule update
 * Call the make target appropriate to your platform.
 
 ```bash
-make deb 								## For Debian/Ubuntu
-make rpm                                ## On RedHat-alikes
+make all                                ## Build all packages
+make deb                                ## For Debian/Ubuntu
+make rpm                                ## For EL6 packages
+make centos7                            ## For EL7 packages
 make osx                                ## For Apple Macintosh
 ```
 
