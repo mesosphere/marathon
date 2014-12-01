@@ -203,7 +203,9 @@ class TaskBuilder(app: AppDefinition,
 object TaskBuilder {
 
   def commandInfo(app: AppDefinition, host: Option[String], ports: Seq[Long]): CommandInfo = {
-    val envMap = app.env ++ portsEnv(ports) ++ host.map("HOST" -> _)
+    val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
+    val declaredPorts = containerPorts.getOrElse(app.ports)
+    val envMap = app.env ++ portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _)
 
     val builder = CommandInfo.newBuilder()
       .setEnvironment(environment(envMap))
@@ -257,19 +259,27 @@ object TaskBuilder {
     builder.build()
   }
 
-  def portsEnv(ports: Seq[Long]): scala.collection.Map[String, String] = {
-    if (ports.isEmpty) {
+  def portsEnv(definedPorts: Seq[Integer], assignedPorts: Seq[Long]): scala.collection.Map[String, String] = {
+    if (assignedPorts.isEmpty) {
       return Map.empty
     }
 
     val env = mutable.HashMap.empty[String, String]
 
-    ports.zipWithIndex.foreach(p => {
-      env += (s"PORT${p._2}" -> p._1.toString)
-    })
+    assignedPorts.zipWithIndex.foreach {
+      case (p, n) =>
+        env += (s"PORT$n" -> p.toString)
+    }
 
-    env += ("PORT" -> ports.head.toString)
-    env += ("PORTS" -> ports.mkString(","))
+    definedPorts.zip(assignedPorts).foreach {
+      case (defined, assigned) =>
+        if (defined != AppDefinition.RANDOM_PORT_VALUE) {
+          env += (s"PORT_$defined" -> assigned.toString)
+        }
+    }
+
+    env += ("PORT" -> assignedPorts.head.toString)
+    env += ("PORTS" -> assignedPorts.mkString(","))
     env
   }
 }

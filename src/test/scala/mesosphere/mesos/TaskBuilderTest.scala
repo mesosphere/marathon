@@ -4,10 +4,13 @@ import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp }
+import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
@@ -63,6 +66,15 @@ class TaskBuilderTest extends MarathonSpec {
     assert(envVars.exists(v => v.getName == "HOST" && v.getValue == offer.getHostname))
     assert(envVars.exists(v => v.getName == "PORT0" && v.getValue.nonEmpty))
     assert(envVars.exists(v => v.getName == "PORT1" && v.getValue.nonEmpty))
+    assert(envVars.exists(v => v.getName == "PORT_8080" && v.getValue.nonEmpty))
+    assert(envVars.exists(v => v.getName == "PORT_8081" && v.getValue.nonEmpty))
+
+    val exposesFirstPort =
+      envVars.find(v => v.getName == "PORT0").get.getValue == envVars.find(v => v.getName == "PORT_8080").get.getValue
+    assert(exposesFirstPort)
+    val exposesSecondPort =
+      envVars.find(v => v.getName == "PORT1").get.getValue == envVars.find(v => v.getName == "PORT_8081").get.getValue
+    assert(exposesSecondPort)
 
     for (r <- taskInfo.getResourcesList.asScala) {
       assert("*" == r.getRole)
@@ -402,15 +414,94 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("PortsEnv") {
-    val env = TaskBuilder.portsEnv(Seq(1001, 1002))
+    val env = TaskBuilder.portsEnv(Seq(0, 0), Seq(1001, 1002))
     assert("1001" == env("PORT"))
     assert("1001" == env("PORT0"))
     assert("1002" == env("PORT1"))
+    assert(!env.contains("PORT_0"))
   }
 
   test("PortsEnvEmpty") {
-    val env = TaskBuilder.portsEnv(Seq())
+    val env = TaskBuilder.portsEnv(Seq(), Seq())
     assert(Map.empty == env)
+  }
+
+  test("DeclaredPortsEnv") {
+    val env = TaskBuilder.portsEnv(Seq(80, 8080), Seq(1001, 1002))
+    assert("1001" == env("PORT"))
+    assert("1001" == env("PORT0"))
+    assert("1002" == env("PORT1"))
+
+    assert("1001" == env("PORT_80"))
+    assert("1002" == env("PORT_8080"))
+  }
+
+  test("PortsEnvWithOnlyPorts") {
+    val command =
+      TaskBuilder.commandInfo(
+        AppDefinition(
+          ports = Seq(8080, 8081)
+        ),
+        Some("host.mega.corp"),
+        Seq(1000, 1001)
+      )
+    val env: Map[String, String] =
+      command.getEnvironment().getVariablesList().asScala.toList.map(v => v.getName() -> v.getValue()).toMap
+
+    assert("1000" == env("PORT_8080"))
+    assert("1001" == env("PORT_8081"))
+  }
+
+  test("PortsEnvWithOnlyMappings") {
+    val command =
+      TaskBuilder.commandInfo(
+        AppDefinition(
+          container = Some(Container(
+            docker = Some(Docker(
+              network = Some(Network.BRIDGE),
+              portMappings = Some(Seq(
+                PortMapping(containerPort = 8080, hostPort = 0, servicePort = 9000, protocol = "tcp"),
+                PortMapping(containerPort = 8081, hostPort = 0, servicePort = 9000, protocol = "tcp")
+              ))
+            ))
+          ))
+        ),
+        Some("host.mega.corp"),
+        Seq(1000, 1001)
+      )
+    val env: Map[String, String] =
+      command.getEnvironment().getVariablesList().asScala.toList.map(v => v.getName() -> v.getValue()).toMap
+
+    assert("1000" == env("PORT_8080"))
+    assert("1001" == env("PORT_8081"))
+  }
+
+  test("PortsEnvWithBothPortsAndMappings") {
+    val command =
+      TaskBuilder.commandInfo(
+        AppDefinition(
+          ports = Seq(22, 23),
+          container = Some(Container(
+            docker = Some(Docker(
+              network = Some(Network.BRIDGE),
+              portMappings = Some(Seq(
+                PortMapping(containerPort = 8080, hostPort = 0, servicePort = 9000, protocol = "tcp"),
+                PortMapping(containerPort = 8081, hostPort = 0, servicePort = 9000, protocol = "tcp")
+              ))
+            ))
+          ))
+        ),
+        Some("host.mega.corp"),
+        Seq(1000, 1001)
+      )
+    val env: Map[String, String] =
+      command.getEnvironment().getVariablesList().asScala.toList.map(v => v.getName() -> v.getValue()).toMap
+
+    assert("1000" == env("PORT_8080"))
+    assert("1001" == env("PORT_8081"))
+
+    assert(!env.contains("PORT_22"))
+    assert(!env.contains("PORT_23"))
   }
 
   test("TaskNoURIExtraction") {
