@@ -61,8 +61,10 @@ fedora: toor/fedora/$(PREFIX)/bin/marathon
 .PHONY: centos7
 centos7: toor/centos7/usr/lib/systemd/system/marathon.service
 centos7: toor/centos7/$(PREFIX)/bin/marathon
+centos7: marathon.centos7.postinst
 	fpm -C toor/centos7 --config-files usr/lib/systemd/system/marathon.service \
 		--iteration $(PKG_REL).centos7 \
+		--after-install marathon.centos7.postinst \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: deb
