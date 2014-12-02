@@ -81,12 +81,9 @@ class DeploymentActor(
       eventBus.publish(DeploymentStatus(plan, step))
 
       val futures = step.actions.map {
-        case StartApplication(app, scaleTo) => startApp(app, scaleTo)
-        case ScaleApplication(app, scaleTo) => scaleApp(app, scaleTo)
-        case StopApplication(app)           => stopApp(app)
-        case KillAllOldTasksOf(app) =>
-          val runningTasks = taskTracker.get(app.id).toSeq
-          killTasks(app.id, runningTasks.filterNot(_.getVersion == app.version.toString))
+        case StartApplication(app, scaleTo)                  => startApp(app, scaleTo)
+        case ScaleApplication(app, scaleTo)                  => scaleApp(app, scaleTo)
+        case StopApplication(app)                            => stopApp(app)
         case RestartApplication(app, scaleOldTo, scaleNewTo) => restartApp(app, scaleOldTo, scaleNewTo)
         case ResolveArtifacts(app, urls)                     => resolveArtifacts(app, urls)
       }
