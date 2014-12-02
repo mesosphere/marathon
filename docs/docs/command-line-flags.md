@@ -29,6 +29,8 @@ The following options can influence how Marathon works:
     specified.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
     failover_timeout for Mesos in seconds.
+* `--framework_name` (Optional. Default: marathon-VERSION): The framework name
+    to register with Mesos.
 * `--ha` (Optional. Default: true): Runs Marathon in HA mode with leader election.
     Allows starting an arbitrary number of other Marathons but all need to be
     started in HA mode. This mode requires a running ZooKeeper. See `--master`.

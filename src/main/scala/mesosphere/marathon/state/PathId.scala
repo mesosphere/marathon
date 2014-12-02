@@ -53,6 +53,8 @@ case class PathId(path: List[String], absolute: Boolean = true) {
     path.mkString("_")
   }
 
+  def toHostname: String = path.reverse.mkString(".")
+
   override def toString: String = toString("/")
   private def toString(delimiter: String): String = path.mkString(if (absolute) delimiter else "", delimiter, "")
 }
@@ -68,4 +70,3 @@ object PathId {
     def toRootPath: PathId = PathId(stringPath).canonicalPath()
   }
 }
-

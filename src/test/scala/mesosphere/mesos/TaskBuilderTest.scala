@@ -32,7 +32,7 @@ class TaskBuilderTest extends MarathonSpec {
     val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
       AppDefinition(
-        id = "testApp".toPath,
+        id = "/product/frontend".toPath,
         cmd = Some("foo"),
         cpus = 1,
         mem = 64,
@@ -49,6 +49,8 @@ class TaskBuilderTest extends MarathonSpec {
       .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRange(0))
     assert(range.isDefined)
+    // The taskName is the elements of the path, reversed, and joined by dots
+    assert("frontend.product" == taskInfo.getName)
     assert(2 == taskPorts.size)
     assert(taskPorts(0) == range.get.getBegin.toInt)
     assert(taskPorts(1) == range.get.getEnd.toInt)

@@ -75,6 +75,10 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     descr = "Mesos user for this framework",
     default = new SystemProperties().get("user.name")) // Current logged in user
 
+  lazy val frameworkName = opt[String]("framework_name",
+    descr = "Framework name to register with Mesos.",
+    default = Some(s"marathon-${BuildInfo.version}"))
+
   lazy val artifactStore = opt[String]("artifact_store",
     descr = "URL to the artifact store. " +
       s"""Supported store types ${StorageProvider.examples.keySet.mkString(", ")}. """ +
