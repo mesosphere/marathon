@@ -95,5 +95,22 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       parent2 should be(PathId.empty)
       parent3 should be(PathId.empty)
     }
+
+    it("can convert to a hostname") {
+      Given("base id's")
+      val id1 = PathId("/a/b/c")
+      val id2 = PathId("/a")
+      val id3 = PathId.empty
+
+      When("hostnames get computed")
+      val host1 = id1.toHostname
+      val host2 = id2.toHostname
+      val host3 = id3.toHostname
+
+      Then("the hostname is valid")
+      host1 should be("c.b.a")
+      host2 should be("a")
+      host3 should be("")
+    }
   }
 }

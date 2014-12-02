@@ -64,7 +64,8 @@ class TaskBuilder(app: AppDefinition,
 
     val taskId = newTaskId(app.id)
     val builder = TaskInfo.newBuilder
-      .setName(taskId.getValue)
+      // Use a valid hostname to make service discovery easier
+      .setName(app.id.toHostname)
       .setTaskId(taskId)
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))

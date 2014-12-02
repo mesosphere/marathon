@@ -15,13 +15,11 @@ object MarathonSchedulerDriver {
 
   var scheduler: Option[MarathonScheduler] = None
 
-  val frameworkName = s"marathon-${BuildInfo.version}"
-
   def newDriver(config: MarathonConf,
                 newScheduler: MarathonScheduler,
                 frameworkId: Option[FrameworkID]): SchedulerDriver = {
     val frameworkInfoBuilder = FrameworkInfo.newBuilder()
-      .setName(frameworkName)
+      .setName(config.frameworkName())
       .setFailoverTimeout(config.mesosFailoverTimeout().toDouble)
       .setUser(config.mesosUser())
       .setCheckpoint(config.checkpoint())
