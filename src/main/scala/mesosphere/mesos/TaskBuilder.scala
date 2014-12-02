@@ -273,7 +273,7 @@ object TaskBuilder {
 
     definedPorts.zip(assignedPorts).foreach {
       case (defined, assigned) =>
-        if (defined != AppDefinition.RANDOM_PORT_VALUE) {
+        if (defined != AppDefinition.RandomPortValue) {
           env += (s"PORT_$defined" -> assigned.toString)
         }
     }
