@@ -138,7 +138,7 @@ class MarathonHealthCheckManager @Inject() (
           Some(if (healthy) Healthy(taskId, version.toString) else Unhealthy(taskId, version.toString, ""))
         }
         else {
-          log.info(s"Ignoring status for [$taskId] with no health information")
+          log.debug(s"Ignoring status for [$taskId] with no health information")
           None
         }
 
