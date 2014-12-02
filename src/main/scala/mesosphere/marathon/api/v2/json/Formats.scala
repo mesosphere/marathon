@@ -70,8 +70,8 @@ trait Formats
       "id" -> task.getId,
       "host" -> (if (task.hasHost) task.getHost else JsNull),
       "ports" -> task.getPortsList.asScala,
-      "startedAt" -> (if (task.getStartedAt != 0) JsNumber(task.getStartedAt) else JsNull),
-      "stagedAt" -> (if (task.getStagedAt != 0) task.getStagedAt else JsNull),
+      "startedAt" -> (if (task.getStartedAt != 0) Timestamp(task.getStartedAt) else JsNull),
+      "stagedAt" -> (if (task.getStagedAt != 0) Timestamp(task.getStagedAt) else JsNull),
       "version" -> task.getVersion
     )
   }
