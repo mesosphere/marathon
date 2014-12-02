@@ -206,7 +206,8 @@ class AppsResource @Inject() (
   @Path("{id:.+}/restart")
   def restart(@PathParam("id") id: String,
               @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    service.getApp(id.toRootPath) match {
+    val appId = id.toRootPath
+    service.getApp(appId) match {
       case Some(app) =>
         val future = groupManager.group(app.id.parent).map {
           case Some(group) =>
@@ -219,13 +220,14 @@ class AppsResource @Inject() (
               DeploymentStep(RestartApplication(newApp, 0, newApp.instances) :: Nil) :: Nil,
               Timestamp.now())
             val res = service.deploy(plan)
-            val deployment = result(res)
+            result(res)
             deploymentResult(plan)
-          case None => Response.status(404).build()
+
+          case None => unknownGroup(app.id.parent)
         }
         result(future)
 
-      case None => Response.status(404).build()
+      case None => unknownApp(appId)
     }
   }
 
