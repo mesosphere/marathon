@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import java.net.URI
+import java.util.UUID
 import javax.inject.{ Inject, Named }
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
@@ -15,7 +16,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.upgrade.{ DeploymentStep, RestartApplication, DeploymentPlan }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.json.{ Writes, JsObject, Json }
@@ -35,6 +36,7 @@ class AppsResource @Inject() (
     groupManager: GroupManager) extends RestResource with ModelValidation {
 
   import AppsResource._
+  import mesosphere.util.ThreadPoolContext.context
 
   val ListApps = """^((?:.+/)|)\*$""".r
   val EmbedTasks = "apps.tasks"
@@ -199,6 +201,35 @@ class AppsResource @Inject() (
 
   @Path("{appId:.+}/versions")
   def appVersionsResource(): AppVersionsResource = new AppVersionsResource(service, config)
+
+  @POST
+  @Path("{id:.+}/restart")
+  def restart(@PathParam("id") id: String,
+              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+    val appId = id.toRootPath
+    service.getApp(appId) match {
+      case Some(app) =>
+        val future = groupManager.group(app.id.parent).map {
+          case Some(group) =>
+            val newApp = app.copy(version = Timestamp.now())
+            val newGroup = group.updateApp(app.id, _ => newApp, Timestamp.now())
+            val plan = DeploymentPlan(
+              UUID.randomUUID().toString,
+              group,
+              newGroup,
+              DeploymentStep(RestartApplication(newApp, 0, newApp.instances) :: Nil) :: Nil,
+              Timestamp.now())
+            val res = service.deploy(plan)
+            result(res)
+            deploymentResult(plan)
+
+          case None => unknownGroup(app.id.parent)
+        }
+        result(future)
+
+      case None => unknownApp(appId)
+    }
+  }
 
   private def enrichedTasks(app: AppDefinition): Seq[EnrichedTask] =
     taskTracker.get(app.id).map { task =>

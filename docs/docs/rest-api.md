@@ -12,6 +12,7 @@ title: REST API
   * [GET /v2/apps/{appId}/versions/{version}](#get-/v2/apps/{appid}/versions/{version}): List the configuration of the application with id `appId` at version `version`.
   * [PUT /v2/apps/{appId}](#put-/v2/apps/{appid}): Change config of the app
     `appId`
+  * [POST /v2/apps/{appId}/restart](#post-/v2/apps/{appid}/restart): Rolling restart of all tasks of the given app
   * [DELETE /v2/apps/{appId}](#delete-/v2/apps/{appid}): Destroy app `appId`
   * [GET /v2/apps/{appId}/tasks](#get-/v2/apps/{appid}/tasks): List running tasks
     for app `appId`
@@ -941,6 +942,60 @@ Transfer-Encoding: chunked
         }
     ],
     "message": "App is locked by one or more deployments. Override with the option '?force=true'. View details at '/v2/deployments/<DEPLOYMENT_ID>'."
+}
+{% endhighlight %}
+
+#### POST `/v2/apps/{appId}/restart`
+
+Initiates a rolling restart of all running tasks of the given app. This call respects the configured `minimumHealthCapacity`.
+
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>force</code></td>
+      <td><code>boolean</code></td>
+      <td>If the app is affected by a running deployment, then the update
+        operation will fail. The current deployment can be overridden by setting
+        the `force` query parameter.
+        Default: <code>false</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+##### Example
+
+**Request:**
+
+{% highlight http %}
+POST /v2/apps/my-app/restart HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Length: 0
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438",
+    "version": "2014-08-26T07:37:50.462Z"
 }
 {% endhighlight %}
 
