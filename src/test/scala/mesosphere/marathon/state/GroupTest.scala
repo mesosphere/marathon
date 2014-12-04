@@ -4,6 +4,7 @@ import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
+import scala.collection.JavaConverters._
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -163,23 +164,26 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
         ))))
       current.hasNonCyclicDependencies should equal(true)
 
-      When("The application dependency list")
-      val (dependent, independent) = current.dependencyList
-      val ids = dependent.map(_.id)
+      When("the dependency graph is computed")
+      val dependencyGraph = current.dependencyGraph
+      val ids: Set[PathId] = dependencyGraph.vertexSet.asScala.map(_.id).toSet
 
-      Then("The dependency list is correct")
-      ids should have size 7
-      ids should not contain PathId("/test/cache/c1")
-      val expected = List[PathId](
+      Then("the dependency graph is correct")
+      ids should have size 8
+
+      val expectedIds = Set[PathId](
         "/test/database/redis/r1".toPath,
         "/test/database/mongo/m1".toPath,
         "/test/database/memcache/c1".toPath,
         "/test/service/service1/s1".toPath,
         "/test/service/service2/s2".toPath,
         "/test/frontend/app1/a1".toPath,
-        "/test/frontend/app2/a2".toPath)
-      ids should be(expected)
-      independent should have size 1
+        "/test/frontend/app2/a2".toPath,
+        "/test/cache/c1/c1".toPath
+      )
+      ids should equal (expectedIds)
+
+      current.appsWithNoDependencies should have size 2
     }
 
     it("can turn a group with app dependencies into a dependency graph") {
@@ -205,27 +209,29 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ))
       current.hasNonCyclicDependencies should equal(true)
 
-      When("The application dependency list")
-      val (dependent, independent) = current.dependencyList
-      val ids = dependent.map(_.id)
+      When("the dependency graph is calculated")
+      val dependencyGraph = current.dependencyGraph
+      val ids: Set[PathId] = dependencyGraph.vertexSet.asScala.map(_.id).toSet
 
-      Then("The dependency list is correct")
-      ids should have size 7
+      Then("the dependency graph is correct")
+      ids should have size 8
       ids should not contain PathId("/test/cache/c1")
-      val expected = List[PathId](
+      val expected = Set[PathId](
         "/test/database/redis".toPath,
         "/test/database/mongo".toPath,
         "/test/database/memcache".toPath,
         "/test/service/srv1".toPath,
         "/test/service/srv2".toPath,
         "/test/frontend/app1".toPath,
-        "/test/frontend/app2".toPath)
+        "/test/frontend/app2".toPath,
+        "/test/cache/cache1".toPath
+      )
       ids should be(expected)
-      independent should have size 1
 
+      current.appsWithNoDependencies should have size 2
     }
 
-    it("can turn a group without dependencies into a single step plan") {
+    it("can turn a group without dependencies into a dependency graph") {
       Given("a group with subgroups and dependencies")
       val current: Group = Group.empty.copy(groups = Set(
         Group("/test".toPath, groups = Set(
@@ -248,16 +254,15 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
         ))))
       current.hasNonCyclicDependencies should equal(true)
 
-      When("The application dependency list")
-      val (dependent, independent) = current.dependencyList
+      When("the dependency graph is calculated")
+      val dependencyGraph = current.dependencyGraph
 
-      Then("The dependency list is correct")
-      dependent should have size 0
-      independent should have size 8
+      Then("the dependency graph is correct")
+      current.appsWithNoDependencies should have size 8
     }
 
-    it("can not compute the dependencies, if the dependency graph is not strictly acyclic") {
-      Given("a group with cycled dependencies")
+    it("detects a cyclic dependency graph") {
+      Given("a group with cyclic dependencies")
       val current: Group = Group("/test".toPath, groups = Set(
         Group("/test/database".toPath, groups = Set(
           Group("/test/database/mongo".toPath, Set(AppDefinition("/test/database/mongo/m1".toPath, dependencies = Set("/test/service".toPath))))
@@ -266,14 +271,9 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
           Group("/test/service/service1".toPath, Set(AppDefinition("/test/service/service1/srv1".toPath, dependencies = Set("/test/database".toPath))))
         ))
       ))
+
+      Then("the cycle is detected")
       current.hasNonCyclicDependencies should equal(false)
-
-      When("The application dependency list can not be computed")
-      val exception = intercept[IllegalArgumentException] {
-        current.dependencyList
-      }
-
-      Then("An exception is thrown")
     }
   }
 }

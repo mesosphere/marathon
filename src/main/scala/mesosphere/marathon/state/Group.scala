@@ -136,23 +136,16 @@ case class Group(
 
   def dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
     val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
-    for ((app, dependent) <- applicationDependencies) {
+    for (app <- transitiveApps)
       graph.addVertex(app)
-      graph.addVertex(dependent)
+    for ((app, dependent) <- applicationDependencies)
       graph.addEdge(app, dependent)
-    }
-    graph
+    new UnmodifiableDirectedGraph(graph)
   }
 
-  /**
-    * Get all dependencies of this group which has applications and all non dependant groups.
-    * @return The resolved dependency list in topological order, all non dependant groups.
-    */
-  def dependencyList: (List[AppDefinition], Set[AppDefinition]) = {
-    require(hasNonCyclicDependencies, "dependency graph is not acyclic!")
-    val dependantApps = new TopologicalOrderIterator(dependencyGraph).toList.reverse
-    val independentApps = transitiveApps.toSet -- dependantApps
-    (dependantApps, independentApps)
+  def appsWithNoDependencies: Set[AppDefinition] = {
+    val g = dependencyGraph
+    g.vertexSet.filter { v => g.outDegreeOf(v) == 0 }.toSet
   }
 
   def hasNonCyclicDependencies: Boolean = {

@@ -219,7 +219,7 @@ trait DeploymentFormats {
     (__ \ "id").write[String] ~
     (__ \ "original").write[Group] ~
     (__ \ "target").write[Group] ~
-    (__ \ "steps").write[List[DeploymentStep]] ~
+    (__ \ "steps").write[Seq[DeploymentStep]] ~
     (__ \ "version").write[Timestamp]
   )(unlift(DeploymentPlan.unapply))
 }

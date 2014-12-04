@@ -108,6 +108,13 @@ class DeploymentActorTest
 
     when(scheduler.startApp(driver, app3)).thenAnswer(new Answer[Future[Unit]] {
       def answer(invocation: InvocationOnMock): Future[Unit] = {
+        // system.eventStream.publish(MesosStatusUpdateEvent("", "task3_1", "TASK_RUNNING", "", app3.id, "", Nil, app3.version.toString))
+        Future.successful(())
+      }
+    })
+
+    when(scheduler.scale(driver, app3)).thenAnswer(new Answer[Future[Unit]] {
+      def answer(invocation: InvocationOnMock): Future[Unit] = {
         system.eventStream.publish(MesosStatusUpdateEvent("", "task3_1", "TASK_RUNNING", "", app3.id, "", Nil, app3.version.toString))
         Future.successful(())
       }
@@ -144,7 +151,7 @@ class DeploymentActorTest
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan.id))
 
-      verify(scheduler).startApp(driver, app3)
+      verify(scheduler).startApp(driver, app3.copy(instances = 0))
       verify(driver, times(1)).killTask(TaskID(task1_2.getId))
       verify(scheduler).stopApp(driver, app4)
     }
