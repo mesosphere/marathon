@@ -194,7 +194,7 @@ class TaskBuilder(app: AppDefinition,
         None
 
       case Some(portRanges) =>
-        log.info("Met all constraints.")
+        log.debug("Met all constraints.")
         Some((cpuRole, memRole, diskRole, portRanges))
     }
   }
