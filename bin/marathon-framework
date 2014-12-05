@@ -67,11 +67,13 @@ function run_jar {
   local log_format='%2$s%5$s%6$s%n' # Class name, message, exception
   ulimit -n 8192
   export PATH=/usr/local/bin:"$PATH"
-  local vm_opts=( -Xmx512m
-                  -Djava.library.path=/usr/local/lib
+  local vm_opts=( -Djava.library.path=/usr/local/lib
                   -Djava.util.logging.SimpleFormatter.format="$log_format" )
+  for j_opt in ${JAVA_OPTS:-"-Xmx512m"}; do
+   vm_opts+=( ${j_opt} )
+  done
   # TODO: Set main class in pom.xml and use -jar
-  exec java "${JAVA_OPTS:-""} ${vm_opts[@]}" -cp "$marathon_jar" mesosphere.marathon.Main "$@"
+  exec java "${vm_opts[@]}" -cp "$marathon_jar" mesosphere.marathon.Main "$@"
 }
 
 function logged {
