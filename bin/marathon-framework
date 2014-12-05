@@ -79,7 +79,7 @@ function run_jar {
   local vm_opts=( -Djava.library.path=/usr/local/lib
                   -Djava.util.logging.SimpleFormatter.format="$log_format" )
   for j_opt in ${JAVA_OPTS:-"-Xmx512m"}; do
-   vm_opts+=( ${j_opt} )
+    vm_opts+=( ${j_opt} )
   done
   # TODO: Set main class in pom.xml and use -jar
   exec java "${vm_opts[@]}" -cp "$marathon_jar" mesosphere.marathon.Main "$@"
