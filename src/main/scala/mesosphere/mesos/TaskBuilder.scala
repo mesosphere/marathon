@@ -95,7 +95,7 @@ class TaskBuilder(app: AppDefinition,
 
     executor match {
       case CommandExecutor() =>
-        builder.setCommand(TaskBuilder.commandInfo(app, host, ports))
+        builder.setCommand(TaskBuilder.commandInfo(app, Some(taskId), host, ports))
         for (c <- containerProto) builder.setContainer(c)
 
       case PathExecutor(path) =>
@@ -104,7 +104,7 @@ class TaskBuilder(app: AppDefinition,
         val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
         val command =
-          TaskBuilder.commandInfo(app, host, ports).toBuilder.setValue(shell)
+          TaskBuilder.commandInfo(app, Some(taskId), host, ports).toBuilder.setValue(shell)
 
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
@@ -203,10 +203,13 @@ class TaskBuilder(app: AppDefinition,
 
 object TaskBuilder {
 
-  def commandInfo(app: AppDefinition, host: Option[String], ports: Seq[Long]): CommandInfo = {
+  def commandInfo(app: AppDefinition, taskId: Option[TaskID], host: Option[String], ports: Seq[Long]): CommandInfo = {
     val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(app.ports)
-    val envMap = app.env ++ portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _)
+    val envMap: Map[String, String] =
+      app.env ++
+        taskContextEnv(app, taskId) ++
+        portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _)
 
     val builder = CommandInfo.newBuilder()
       .setEnvironment(environment(envMap))
@@ -260,7 +263,7 @@ object TaskBuilder {
     builder.build()
   }
 
-  def portsEnv(definedPorts: Seq[Integer], assignedPorts: Seq[Long]): scala.collection.Map[String, String] = {
+  def portsEnv(definedPorts: Seq[Integer], assignedPorts: Seq[Long]): Map[String, String] = {
     if (assignedPorts.isEmpty) {
       return Map.empty
     }
@@ -281,6 +284,15 @@ object TaskBuilder {
 
     env += ("PORT" -> assignedPorts.head.toString)
     env += ("PORTS" -> assignedPorts.mkString(","))
-    env
+    env.toMap
   }
+
+  def taskContextEnv(app: AppDefinition, taskId: Option[TaskID]): Map[String, String] =
+    if (taskId.isEmpty) Map[String, String]()
+    else Map(
+      "MESOS_TASK_ID" -> taskId.get.getValue,
+      "MARATHON_APP_ID" -> app.id.toString,
+      "MARATHON_APP_VERSION" -> app.version.toString
+    )
+
 }
