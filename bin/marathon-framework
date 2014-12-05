@@ -28,6 +28,12 @@ function main {
   load_options_and_log "$@"
 }
 
+function element_in {
+  local e
+  for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
+  return 1
+}
+
 function load_options_and_log {
   # Load Marathon options from Mesos and Marathon conf files that are present.
   # Launch main program with Syslog enabled.
@@ -38,10 +44,13 @@ function load_options_and_log {
     while read -u 9 -r -d '' path
     do
       local name="${path#./}"
-      case "$name" in
-        '?'*) cmd+=( "--${name#'?'}" ) ;;
-        *)    cmd+=( "--$name" "$(cat "$conf_dir/$name")" ) ;;
-      esac
+      if ! element_in "--${name#'?'}" "$@"
+      then
+        case "$name" in
+          '?'*) cmd+=( "--${name#'?'}" ) ;;
+          *)    cmd+=( "--$name" "$(cat "$conf_dir/$name")" ) ;;
+        esac
+      fi
     done 9< <(cd "$conf_dir" && find . -type f -not -name '.*' -print0)
   fi
   # Default zk and master option
@@ -67,9 +76,11 @@ function run_jar {
   local log_format='%2$s%5$s%6$s%n' # Class name, message, exception
   ulimit -n 8192
   export PATH=/usr/local/bin:"$PATH"
-  local vm_opts=( -Xmx512m
-                  -Djava.library.path=/usr/local/lib
+  local vm_opts=( -Djava.library.path=/usr/local/lib
                   -Djava.util.logging.SimpleFormatter.format="$log_format" )
+  for j_opt in ${JAVA_OPTS:-"-Xmx512m"}; do
+    vm_opts+=( ${j_opt} )
+  done
   # TODO: Set main class in pom.xml and use -jar
   exec java "${vm_opts[@]}" -cp "$marathon_jar" mesosphere.marathon.Main "$@"
 }

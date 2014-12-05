@@ -54,6 +54,14 @@ then
   done
 fi
 
+if [ -n ${JAVA_OPTS+x} ]
+then
+  for arg in ${JAVA_OPTS[@]}
+  do
+    addJava "$arg"
+  done
+fi
+
 # Start Marathon
 marathon_jar=$(find "$FRAMEWORK_HOME"/target -name 'marathon-assembly-*.jar' | sort | tail -1)
 exec java "${java_args[@]}" -jar "$marathon_jar" "${app_args[@]}"

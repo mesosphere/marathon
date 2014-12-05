@@ -2,6 +2,11 @@
 title: Command Line Flags
 ---
 
+# Environment Variables
+
+* `JAVA_OPTS`  Default: `-Xmx512m`
+    Any options that should be passed to the JVM that marathon will run in.
+
 # Marathon Command Line Flags
 
 The following options can influence how Marathon works:
