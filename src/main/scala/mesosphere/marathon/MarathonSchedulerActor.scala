@@ -257,7 +257,7 @@ class MarathonSchedulerActor(
           deploymentRepository.expunge(plan.id)
 
         case Failure(e) =>
-          log.error(s"Deployment of ${plan.target.id} failed", e)
+          log.error(e, s"Deployment of ${plan.target.id} failed")
           plan.affectedApplicationIds.foreach(appId => taskQueue.purge(appId))
           eventBus.publish(DeploymentFailed(plan.id))
           if (e.isInstanceOf[DeploymentCanceledException])
