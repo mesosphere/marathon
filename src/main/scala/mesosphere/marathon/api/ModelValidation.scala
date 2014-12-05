@@ -216,7 +216,15 @@ trait ModelValidation extends BeanValidation {
     val p = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
     val valid = id.path.forall(p.pattern.matcher(_).matches())
     val errors =
-      if (!valid) List(violation(t, id, path, "contains invalid characters (allowed: [a-z0-9]* . and .. in path)"))
+      if (!valid)
+        List(
+          violation(
+            t,
+            id,
+            path,
+            "path contains invalid characters (allowed: lowercase letters, digits, hyphens, \".\", \"..\")"
+          )
+        )
       else Nil
 
     Try(id.canonicalPath(base)) match {

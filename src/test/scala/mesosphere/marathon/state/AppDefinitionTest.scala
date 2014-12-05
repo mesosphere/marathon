@@ -133,7 +133,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       )
     }
 
-    val idError = "contains invalid characters (allowed: [a-z0-9]* . and .. in path)"
+    val idError = "path contains invalid characters (allowed: lowercase letters, digits, hyphens, \".\", \"..\")"
     val app = AppDefinition(id = "a b".toRootPath)
 
     shouldViolate(app, "id", idError)
