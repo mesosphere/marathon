@@ -107,20 +107,20 @@ class MarathonScheduler @Inject() (
 
         val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
 
-        val withTaskInfos: Seq[(QueuedTask, (TaskInfo, Seq[Long]))] =
-          queuedTasks.view.flatMap { qt => newTask(qt.app, offer).map(qt -> _) }.to[Seq]
+        val withTaskInfos: collection.Seq[(QueuedTask, (TaskInfo, Seq[Long]))] =
+          queuedTasks.view.flatMap { case qt => newTask(qt.app, offer).map(qt -> _) }
 
-        val launchedTask = withTaskInfos.dropWhile {
+        val launchedTask = withTaskInfos.find {
           case (qt, (taskInfo, ports)) =>
             val timeLeft = qt.delay.timeLeft
             if (timeLeft.toNanos <= 0) {
-              false
+              true
             }
             else {
               log.info(s"Delaying task ${taskInfo.getTaskId.getValue} due to backoff. Time left: $timeLeft.")
-              true
+              false
             }
-        }.headOption
+        }
 
         launchedTask.foreach {
           case (qt, (taskInfo, ports)) =>
