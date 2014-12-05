@@ -12,7 +12,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
   protected def actionsOf(plan: DeploymentPlan): Seq[DeploymentAction] =
     plan.steps.flatMap(_.actions)
 
-  test("partition a group's apps into concurrently deployable subsets") {
+  test("partition a simple group's apps into concurrently deployable subsets") {
     Given("a group of four apps with some simple dependencies")
     val aId = "/test/database/a".toPath
     val bId = "/test/service/b".toPath
@@ -44,6 +44,40 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     partitionedApps.keySet should contain (3)
 
     partitionedApps(2) should have size (2)
+  }
+
+  test("partition a complex group's apps into concurrently deployable subsets") {
+    Given("a group of four apps with some simple dependencies")
+    val aId = "/a".toPath
+    val bId = "/b".toPath
+    val cId = "/c".toPath
+    val dId = "/d".toPath
+    val eId = "/e".toPath
+    val fId = "/f".toPath
+
+    val a = AppDefinition(aId, dependencies = Set(bId, cId), version = Timestamp(0))
+    val b = AppDefinition(bId, dependencies = Set(cId), version = Timestamp(0))
+    val c = AppDefinition(cId, dependencies = Set(dId), version = Timestamp(0))
+    val d = AppDefinition(dId, version = Timestamp(0))
+    val e = AppDefinition(eId, version = Timestamp(0))
+
+    val group = Group(
+      id = "/".toPath,
+      apps = Set(a, b, c, d, e)
+    )
+
+    When("the group's apps are grouped by the longest outbound path")
+    val partitionedApps = DeploymentPlan.appsGroupedByLongestPath(group)
+
+    Then("three equivalence classes should be computed")
+    partitionedApps should have size (4)
+
+    partitionedApps.keySet should contain (1)
+    partitionedApps.keySet should contain (2)
+    partitionedApps.keySet should contain (3)
+    partitionedApps.keySet should contain (4)
+
+    partitionedApps(1) should have size (2)
   }
 
   test("start from empty group") {
@@ -203,18 +237,6 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     plan.steps(3).actions.toSet should equal (Set(RestartApplication(independent._2, 1, 3)))
     plan.steps(4).actions.toSet should equal (Set(RestartApplication(service._2, 3, 10)))
     plan.steps(5).actions.toSet should equal (Set(ScaleApplication(toStart, 2)))
-
-    /*
-    plan.steps(0).actions.toSet should equal (Set(RestartApplication(independent._2, 1, 3)))
-    plan.steps(1).actions.toSet should equal (Set(KillAllOldTasksOf(independent._2)))
-    plan.steps(2).actions.toSet should equal (Set(ScaleApplication(independent._2, 3)))
-    plan.steps(3).actions.toSet should equal (Set(RestartApplication(mongo._2, 3, 6)))
-    plan.steps(4).actions.toSet should equal (Set(RestartApplication(service._2, 3, 8)))
-    plan.steps(6).actions.toSet should equal (Set(KillAllOldTasksOf(service._2)))
-    plan.steps(7).actions.toSet should equal (Set(KillAllOldTasksOf(mongo._2)))
-    plan.steps(8).actions.toSet should equal (Set(ScaleApplication(mongo._2, 8)))
-    plan.steps(9).actions.toSet should equal (Set(ScaleApplication(service._2, 10)))
-  */
   }
 
   test("when the only action is to stop an application") {
