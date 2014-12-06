@@ -60,6 +60,7 @@ app definition JSON:
   "container": {
     "type": "DOCKER",
     "docker": {
+      "network": "HOST",
       "image": "group/image"
     },
     "volumes": [
@@ -80,11 +81,6 @@ app definition JSON:
 
 where `volumes` and `type` are optional (the default type is `DOCKER`).  More
 container types may be added later.
-
-  <div class="alert alert-info">
-    <strong>Note:</strong> Initially, Mesos supports only the host (`--net=host`) Docker
-    networking mode.
-  </div>
 
 For convenience, the mount point of the mesos sandbox is available in the
 environment as `$MESOS_SANDBOX`.  The `$HOME` environment variable is set
