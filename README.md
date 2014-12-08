@@ -129,6 +129,7 @@ If you want to inspect the contents of the Docker:
 * [Airbnb](https://www.airbnb.com/)
 * [Artirix](http://www.artirix.com/)
 * [bol.com](https://www.bol.com/)
+* [Branding Brand](http://www.brandingbrand.com/)
 * [Daemon](http://www.daemon.com.au/)
 * [Disqus](https://www.disqus.com/)
 * [eBay](http://www.ebay.com/)
