@@ -36,14 +36,14 @@ title: REST API
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
   * [DELETE /v2/eventSubscriptions](#delete-/v2/eventsubscriptions) Unregister a callback URL from the event subscribers list
 * [Queue](#queue) <span class="label label-default">v0.7.0</span>
-  * [GET /v2/queue](#get-v2queue): List content of the staging queue.
+  * [GET /v2/queue](#get-/v2/queue): List content of the staging queue.
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
 * [Miscellaneous](#miscellaneous)
   * [GET /ping](#get-/ping)
   * [GET /logging](#get-/logging)
   * [GET /help](#get-/help)
-  * [GET /metrics](#get-/status)
+  * [GET /metrics](#get-/metrics)
 
 ### Apps
 
