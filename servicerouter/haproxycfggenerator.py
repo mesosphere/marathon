@@ -30,17 +30,17 @@ frontend marathon_http_in
   mode http
 '''
 
-HAPROXY_HTTP_FRONTEND_ACL = '''  acl host_{0} hdr(host) -i {1}
-  use_backend {2} if host_{0}
+HAPROXY_HTTP_FRONTEND_ACL = '''  acl host_{cleanedUpHostname} hdr(host) -i {hostname}
+  use_backend {backend} if host_{cleanedUpHostname}
 '''
 
 HAPROXY_FRONTEND_HEAD = '''
-frontend {0}
-  bind *:{1}
+frontend {backend}
+  bind *:{servicePort}
 '''
 
 HAPROXY_BACKEND_HEAD = '''
-backend {0}
+backend {backend}
   balance roundrobin
 '''
 
@@ -88,25 +88,29 @@ def config(apps):
   backends = str()
 
   for app in sorted(apps, key = attrgetter('appId', 'servicePort')):
-    listener = app.appId[1:].replace('/', '_') + '_' + str(app.servicePort)
+    backend = app.appId[1:].replace('/', '_') + '_' + str(app.servicePort)
 
-    frontends += HAPROXY_FRONTEND_HEAD.format(listener, app.servicePort)
+    frontends += HAPROXY_FRONTEND_HEAD.format(backend=backend, servicePort=app.servicePort)
 
-    backends += HAPROXY_BACKEND_HEAD.format(listener)
+    backends += HAPROXY_BACKEND_HEAD.format(backend=backend)
 
     # if it's a HTTP service
     if app.hostname:
       cleanedUpHostname = re.sub(r'[^a-zA-Z0-9\-]', '_', app.hostname)
-      http_frontends += HAPROXY_HTTP_FRONTEND_ACL.format(cleanedUpHostname, app.hostname, listener)
+      http_frontends += HAPROXY_HTTP_FRONTEND_ACL.format(
+          cleanedUpHostname=cleanedUpHostname,
+          hostname=app.hostname,
+          backend=backend
+        )
       frontends += "  mode http\n"
       backends += HAPROXY_BACKEND_HTTP_OPTIONS
     else:
       frontends += "  mode tcp\n"
 
-    frontends += "  use_backend {0}\n".format(listener)
+    frontends += "  use_backend {backend}\n".format(backend=backend)
 
-    for backend in sorted(app.backends, key = attrgetter('host', 'port')):
-      backends += "  server {0}:{1}\n".format(backend.host, backend.port)
+    for backendServer in sorted(app.backends, key = attrgetter('host', 'port')):
+      backends += "  server {host}:{port}\n".format(host=backendServer.host, port=backendServer.port)
 
 
   config += http_frontends
