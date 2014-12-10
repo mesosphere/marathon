@@ -58,10 +58,10 @@ listen stats
   mode http
   stats enable
   stats auth admin:admin
-
 '''
 
-  http_frontends = '''frontend marathon_http_in
+  http_frontends = '''
+frontend marathon_http_in
   bind *:80
   mode http
 '''
@@ -69,18 +69,25 @@ listen stats
   for app in sorted(apps, key = attrgetter('appId', 'servicePort')):
     listener = app.appId[1:].replace('/', '_') + '_' + str(app.servicePort)
 
-    frontends += "\nfrontend {0}\n".format(listener)
-    frontends += "  bind *:{0}\n".format(app.servicePort)
+    frontends += '''
+frontend {0}
+  bind *:{1}
+'''.format(listener, app.servicePort)
 
-    backends += "\nbackend " + listener + "\n"
-    backends += "  balance roundrobin\n"
+    backends += '''
+backend {0}
+  balance roundrobin
+'''.format(listener)
 
     # if it's a HTTP service
     if app.hostname:
-      frontends += "  mode http\n"
       cleanedUpHostname = re.sub(r'[^a-zA-Z0-9\-]', '_', app.hostname)
-      http_frontends += "  acl host_{0} hdr(host) -i {1}\n".format(cleanedUpHostname, app.hostname)
-      http_frontends += "  use_backend {0} if host_{1}\n".format(listener, cleanedUpHostname)
+
+      http_frontends += '''  acl host_{0} hdr(host) -i {1}
+  use_backend {2} if host_{0}
+'''.format(cleanedUpHostname, app.hostname, listener)
+
+      frontends += "  mode http\n"
 
       backends += '''  option forwardfor
   http-request set-header X-Forwarded-Port %[dst_port]
