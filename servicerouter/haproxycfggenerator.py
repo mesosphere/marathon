@@ -37,6 +37,7 @@ HAPROXY_HTTP_FRONTEND_ACL = '''  acl host_{cleanedUpHostname} hdr(host) -i {host
 HAPROXY_FRONTEND_HEAD = '''
 frontend {backend}
   bind *:{servicePort}
+  mode {mode}
 '''
 
 HAPROXY_BACKEND_HEAD = '''
@@ -92,12 +93,14 @@ def config(apps):
 
     frontends += HAPROXY_FRONTEND_HEAD.format(
         backend = backend,
-        servicePort = app.servicePort
+        servicePort = app.servicePort,
+        mode = 'http' if app.hostname else 'tcp'
       )
 
     backends += HAPROXY_BACKEND_HEAD.format(backend = backend)
 
-    # if it's a HTTP service
+    # if a hostname is set we add the app to the vhost section
+    # of our haproxy config
     if app.hostname:
       cleanedUpHostname = re.sub(r'[^a-zA-Z0-9\-]', '_', app.hostname)
       http_frontends += HAPROXY_HTTP_FRONTEND_ACL.format(
@@ -105,10 +108,7 @@ def config(apps):
           hostname = app.hostname,
           backend = backend
         )
-      frontends += "  mode http\n"
       backends += HAPROXY_BACKEND_HTTP_OPTIONS
-    else:
-      frontends += "  mode tcp\n"
 
     frontends += "  use_backend {backend}\n".format(backend = backend)
 
