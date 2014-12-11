@@ -139,7 +139,7 @@ def reloadConfig():
   elif ( os.path.isfile('/usr/lib/systemd/system/haproxy.service')
       or os.path.isfile('/etc/systemd/system/haproxy.service')
     ):
-    reloadCommand = ['systemctl', 'reload haproxy']
+    reloadCommand = ['systemctl', 'reload', 'haproxy']
   else:
     reloadCommand = ['/etc/init.d/haproxy', 'reload']
 
