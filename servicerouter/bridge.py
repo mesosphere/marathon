@@ -138,7 +138,7 @@ class MarathonEventSubscriber(object):
     # Fetch the base data
     self.update_from_tasks()
 
-  def update_from_takss(self):
+  def update_from_tasks(self):
     tasks = marathon.tasks()
     # For each task, extract self.__apps
     # and the backends within each app.
