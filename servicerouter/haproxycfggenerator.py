@@ -17,10 +17,10 @@ HAPROXY_HEAD = '''global
 defaults
   log            global
   retries             3
-  maxconn          2000
-  timeout connect  5000
-  timeout client  50000
-  timeout server  50000
+  maxconn            2s
+  timeout connect    5s
+  timeout client    50s
+  timeout server    50s
 
 listen stats
   bind 127.0.0.1:9090
