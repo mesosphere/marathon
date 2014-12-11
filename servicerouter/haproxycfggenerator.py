@@ -90,27 +90,33 @@ def config(apps):
   for app in sorted(apps, key = attrgetter('appId', 'servicePort')):
     backend = app.appId[1:].replace('/', '_') + '_' + str(app.servicePort)
 
-    frontends += HAPROXY_FRONTEND_HEAD.format(backend=backend, servicePort=app.servicePort)
+    frontends += HAPROXY_FRONTEND_HEAD.format(
+        backend = backend,
+        servicePort = app.servicePort
+      )
 
-    backends += HAPROXY_BACKEND_HEAD.format(backend=backend)
+    backends += HAPROXY_BACKEND_HEAD.format(backend = backend)
 
     # if it's a HTTP service
     if app.hostname:
       cleanedUpHostname = re.sub(r'[^a-zA-Z0-9\-]', '_', app.hostname)
       http_frontends += HAPROXY_HTTP_FRONTEND_ACL.format(
-          cleanedUpHostname=cleanedUpHostname,
-          hostname=app.hostname,
-          backend=backend
+          cleanedUpHostname = cleanedUpHostname,
+          hostname = app.hostname,
+          backend = backend
         )
       frontends += "  mode http\n"
       backends += HAPROXY_BACKEND_HTTP_OPTIONS
     else:
       frontends += "  mode tcp\n"
 
-    frontends += "  use_backend {backend}\n".format(backend=backend)
+    frontends += "  use_backend {backend}\n".format(backend = backend)
 
     for backendServer in sorted(app.backends, key = attrgetter('host', 'port')):
-      backends += "  server {host}:{port}\n".format(host=backendServer.host, port=backendServer.port)
+      backends += "  server {host}:{port}\n".format(
+          host = backendServer.host,
+          port = backendServer.port
+        )
 
 
   config += http_frontends
