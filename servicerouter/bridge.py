@@ -71,20 +71,23 @@ apps = [
 #TODO(cmaloney): This is a generic marathon api wrapper
 class Marathon(object):
   # TODO(cmaloney): Pass in configuration.
-  def __init__(self, url):
-    self.__base = url
-    self.__api_base = os.path.join(self.__base, 'v2/')
+  def __init__(self, hosts):
+    self.__hosts = hosts
 
   def api_req_raw(self, method, path, body=None, **kwargs):
-    response = requests.request(
-        method,
-        os.path.join(self.__api_base, *path),
-        headers={
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-            },
-        **kwargs
-        )
+    for host in self.__hosts:
+      response = requests.request(
+          method,
+          os.path.join(host, 'v2', *path),
+          headers={
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+              },
+          **kwargs
+          )
+      if reposnse.status_code == 200:
+        break
+
     response.raise_for_status()
     return response
 

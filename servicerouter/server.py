@@ -4,7 +4,7 @@ import bridge
 import json
 from wsgiref.simple_server import make_server
 
-marathon = bridge.Marathon('http://localhost:8080')
+marathon = bridge.Marathon(['http://localhost:8080'])
 subscriber = bridge.MarathonEventSubscriber(marathon, 'http://localhost:8000')
 
 
