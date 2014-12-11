@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 import re
+import os.path
+from subprocess import call
 from operator import attrgetter
+from tempfile import mkstemp
+from shutil import move
+
+HAPROXY_CONFIG = '/Users/lukas/haproxy.cfg'
 
 HAPROXY_HEAD = '''global
   daemon
@@ -82,6 +88,7 @@ apps = [
   ]
 
 def config(apps):
+  print "generating config"
   config = HAPROXY_HEAD
 
   http_frontends = HAPROXY_HTTP_FRONTEND_HEAD
@@ -125,4 +132,37 @@ def config(apps):
 
   return config
 
-print config(apps)
+def reloadConfig():
+  print "reloading"
+  if os.path.isfile('/etc/init/haproxy.conf'):
+    reloadCommand = ['reload', 'haproxy']
+  elif ( os.path.isfile('/usr/lib/systemd/system/haproxy.service')
+      or os.path.isfile('/etc/systemd/system/haproxy.service')
+    ):
+    reloadCommand = ['systemctl', 'reload haproxy']
+  else:
+    reloadCommand = ['/etc/init.d/haproxy', 'reload']
+
+  return call(reloadCommand)
+
+def writeConfig(config, configFile):
+  print "writing config"
+  fd, haproxyTempConfigFile = mkstemp()
+  haproxyTempConfig = os.fdopen(fd, 'w')
+  haproxyTempConfig.write(config)
+  haproxyTempConfig.close()
+  move(haproxyTempConfigFile, HAPROXY_CONFIG)
+
+def compareWriteAndReloadConfig(config, configFile):
+  runningConfig = str()
+  try:
+    with open(configFile, "r") as configFile:
+      runningConfig = configFile.read()
+  except IOError:
+    print "couldn't open config file for reading"
+
+  if runningConfig != config:
+    writeConfig(config, configFile)
+    reloadConfig()
+
+compareWriteAndReloadConfig(config(apps), HAPROXY_CONFIG)
