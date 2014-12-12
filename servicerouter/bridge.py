@@ -85,7 +85,7 @@ class Marathon(object):
               },
           **kwargs
           )
-      if reposnse.status_code == 200:
+      if response.status_code == 200:
         break
 
     response.raise_for_status()
