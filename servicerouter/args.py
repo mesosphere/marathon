@@ -13,7 +13,7 @@ def wsgi_app(env, start_response):
   #TODO(cmaloney): Make this have a simple useful webui for debugging / monitoring
   start_response('200 OK', [('Content-Type', 'text/html')])
 
-  return []
+  return "Got it"
 
 
 if __name__ == '__main__':
@@ -23,7 +23,6 @@ if __name__ == '__main__':
     parser.add_argument("--callback_url", "-c",
                         help="Marathon callback URL")
     args = parser.parse_args()
-    print args
 
     marathon = Marathon(args.marathon_endpoints)
     subscriber = MarathonEventSubscriber(marathon, args.callback_url)

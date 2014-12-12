@@ -57,7 +57,7 @@ class MarathonService(object):
     self.hostname = None
 
   def add_backend(self, host, port):
-    self.backends.insert(MarathonBackend(host, port))
+    self.backends.add(MarathonBackend(host, port))
 
   def __hash__(self):
     return hash(self.servicePort)
@@ -87,9 +87,16 @@ class Marathon(object):
 
   def api_req_raw(self, method, path, body=None, **kwargs):
     for host in self.__hosts:
+      path_str = os.path.join(host, 'v2')
+      if len(path) == 2:
+        # TODO(cmaloney): Hack to join with appIds properly
+        assert(path[0] == 'apps')
+        path_str += '/apps/{0}'.format(path[1])
+      else:
+        path_str += '/' + path[0]
       response = requests.request(
           method,
-          os.path.join(host, 'v2', *path),
+          path_str,
           headers={
               'Accept': 'application/json',
               'Content-Type': 'application/json'
@@ -109,7 +116,7 @@ class Marathon(object):
     return self.api_req('POST', ['apps'], app_json)
 
   def get_app(self, appid):
-    return self.api_req('GET', ['apps', appid])
+    return self.api_req('GET', ['apps', appid])["app"]
 
   # Lists all running apps.
   def list(self):
@@ -143,7 +150,7 @@ class MarathonEventSubscriber(object):
     marathon.add_subscriber(addr)
 
     # Fetch the base data
-    self.update_from_tasks()
+    self.reset_from_tasks()
 
   def reset_from_tasks(self):
     tasks = self.__marathon.tasks()
@@ -153,29 +160,30 @@ class MarathonEventSubscriber(object):
     for task in tasks:
       # For each task, extract self.__apps
       # and the backends within each app.
-      for i in xrange(len(task.servicePorts)):
-        servicePort = task.servicePorts[i]
-        port = task.ports[i]
+      for i in xrange(len(task['servicePorts'])):
+        servicePort = task['servicePorts'][i]
+        port = task['ports'][i]
+        appId = task['appId']
 
-        if task.appId not in self.__apps:
-          self.__apps[task.appId] = MarathonApp(task.appId)
+        if appId not in self.__apps:
+          self.__apps[appId] = MarathonApp(self.__marathon, appId)
 
-        app = self.__apps[task.appId]
-        if task.servicePort not in app.services:
-          app.services[task.servicePort] = MarathonService(task.appId, servicePort)
+        app = self.__apps[appId]
+        if servicePort not in app.services:
+          app.services[servicePort] = MarathonService(appId, servicePort)
 
-        service = app.services[task.servicePort]
+        service = app.services[servicePort]
 
         # Environment variable based config
         #TODO(cmaloney): Move to labels once those are supported throughout the stack
         for key_unformatted in env_keys:
-          key = env_keys.format(i)
-          if key in app.app.env:
-            env_keys[key](app.app.env[key])
+          key = key_unformatted.format(i)
+          if key in app.app[u'env']:
+              env_keys[key](app.app[u'env'][key])
 
-        service.add_backend(task.host, port)
+        service.add_backend(task['host'], port)
 
   def handle_event(self, event):
-    if event.eventType == 'status_update_event':
+    if event['eventType'] == 'status_update_event':
       #TODO (cmaloney): Handle events more intelligently so that we add/remove things well
       self.reset_from_tasks()
