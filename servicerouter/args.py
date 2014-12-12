@@ -24,7 +24,7 @@ if __name__ == '__main__':
     print args
 
     marathon = Marathon(args.marathon_endpoints)
-    subscriber = bridge.MarathonEventSubscriber(marathon, args.callback_url)
+    subscriber = MarathonEventSubscriber(marathon, args.callback_url)
 
     print "Serving on port 8000..."
     httpd = make_server('', 8000, uwsgi_app)
