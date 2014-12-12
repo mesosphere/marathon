@@ -108,6 +108,7 @@ def config(apps):
 
     # if a hostname is set we add the app to the vhost section
     # of our haproxy config
+    # TODO(lukas): Check if the hostname is already defined by another service
     if app.hostname:
       cleanedUpHostname = re.sub(r'[^a-zA-Z0-9\-]', '_', app.hostname)
       http_frontends += HAPROXY_HTTP_FRONTEND_ACL.format(
