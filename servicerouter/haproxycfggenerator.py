@@ -46,6 +46,9 @@ frontend {backend}
   mode {mode}
 '''
 
+HAPROXY_FRONTEND_BACKEND_GLUE = '''  use_backend {backend}
+'''
+
 HAPROXY_BACKEND_HEAD = '''
 backend {backend}
   balance roundrobin
@@ -57,6 +60,9 @@ HAPROXY_BACKEND_HTTP_OPTIONS = '''  option forwardfor
 '''
 
 HAPROXY_BACKEND_STICKY_OPTIONS = '''  cookie mesosphere_server_id insert indirect nocache
+'''
+
+HAPROXY_BACKEND_SERVER_OPTIONS = '''  server {serverName} {host}:{port}{cookieOptions}
 '''
 
 HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS = '''  redirect scheme https if !{ ssl_fc }
@@ -87,7 +93,7 @@ apps = [
     ], True, True, None, '127.0.0.1'),
   MarathonApp('/mm/service/collector', 'collector.mesosphere.com', 7070, [
       MarathonBackend('srv4.hw.ca1.mesosphere.com', 31005)
-    ]),
+    ], True, True, '/etc/ssl/certs/mesosphere.pem'),
   MarathonApp('/mm/service/collector', 'collector2.mesosphere.com', 9990, [
       MarathonBackend('srv4.hw.ca1.mesosphere.com', 31006)
     ]),
@@ -136,11 +142,11 @@ def config(apps):
     if app.sticky:
       backends += HAPROXY_BACKEND_STICKY_OPTIONS
 
-    frontends += "  use_backend {backend}\n".format(backend=backend)
+    frontends += HAPROXY_FRONTEND_BACKEND_GLUE.format(backend=backend)
 
     for backendServer in sorted(app.backends, key=attrgetter('host', 'port')):
       serverName = re.sub(r'[^a-zA-Z0-9\-]', '_', backendServer.host+'_'+str(backendServer.port))
-      backends += "  server {serverName} {host}:{port}{cookieOptions}\n".format(
+      backends += HAPROXY_BACKEND_SERVER_OPTIONS.format(
           host=backendServer.host,
           port=backendServer.port,
           serverName=serverName,
