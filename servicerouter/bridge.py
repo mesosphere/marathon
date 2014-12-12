@@ -136,13 +136,27 @@ class Marathon(object):
   def remove_subscriber(self, callbackUrl):
     return self.api_req('DELETE', ['eventSubscriptions'], params={'callbackUrl': callbackUrl})
 
+def set_hostname(x, y):
+    x.hostname = y
+
+def set_sticky(x, y):
+    x.sticky = y
+
+def redirectHttpToHttps(x, y):
+    x.redirectHttpToHttps = y
+
+def sslCert(x, y):
+    x.sslCert = y
+
+def bindAddr(x, y):
+    x.bindAddr = y
 
 env_keys = {
-  'HAPROXY_VHOST{0}': lambda x: x.hostname,
-  'HAPROXY_VHOST{0}_STICKY': lambda x: x.sticky,
-  'HAPROXY_VHOST{0}_REDIRECT_TO_HTTPS': lambda x: x.redirectHttpToHttps,
-  'HAPROXY_VHOST{0}_SSL_CERT': lambda x: x.sslCert,
-  'HAPROXY_VHOST{0}_BIND_ADDR': lambda x: x.bindAddr
+  'HAPROXY_VHOST{0}': set_hostname,
+  'HAPROXY_VHOST{0}_STICKY': set_sticky,
+  'HAPROXY_VHOST{0}_REDIRECT_TO_HTTPS': redirectHttpToHttps,
+  'HAPROXY_VHOST{0}_SSL_CERT': sslCert,
+  'HAPROXY_VHOST{0}_BIND_ADDR': bindAddr
 }
 
 
@@ -184,7 +198,8 @@ class MarathonEventSubscriber(object):
         for key_unformatted in env_keys:
           key = key_unformatted.format(i)
           if key in app.app[u'env']:
-              env_keys[key](service) = app.app[u'env'][key]
+              func = env_keys[key_unformatted]
+              func(service, app.app[u'env'][key])
 
         service.add_backend(task['host'], port)
 
@@ -193,7 +208,8 @@ class MarathonEventSubscriber(object):
     for app in self.__apps.values():
         for service in app.services.values():
             haproxy_apps.append(service)
-    print haproxycfggenerator.config(haproxy_apps)
+    #haproxycfggenerator.logger.debug(haproxycfggenerator.config(haproxy_apps))
+    haproxycfggenerator.compareWriteAndReloadConfig(haproxycfggenerator.config(haproxy_apps), haproxycfggenerator.HAPROXY_CONFIG)
 
 
   def handle_event(self, event):

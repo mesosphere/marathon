@@ -22,7 +22,7 @@ consoleHandler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 syslogHandler.setFormatter(formatter)
 consoleHandler.setFormatter(formatter)
-syslogHandler.setLevel(logging.ERROR)
+#syslogHandler.setLevel(logging.ERROR)
 logger.addHandler(syslogHandler)
 logger.addHandler(consoleHandler)
 
@@ -72,6 +72,7 @@ HAPROXY_FRONTEND_BACKEND_GLUE = '''  use_backend {backend}
 HAPROXY_BACKEND_HEAD = '''
 backend {backend}
   balance roundrobin
+  mode {mode}
 '''
 
 HAPROXY_BACKEND_HTTP_OPTIONS = '''  option forwardfor
@@ -148,7 +149,10 @@ def config(apps):
       logger.debug("rule to redirect http to https traffic")
       frontends += HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS
 
-    backends += HAPROXY_BACKEND_HEAD.format(backend=backend)
+    backends += HAPROXY_BACKEND_HEAD.format(
+            backend=backend,
+            mode='http' if app.hostname else 'tcp'
+        )
 
     # if a hostname is set we add the app to the vhost section
     # of our haproxy config
