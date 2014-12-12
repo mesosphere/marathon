@@ -38,6 +38,7 @@ TODO:
 import os.path
 import requests
 
+
 # TODO (cmaloney): Merge with lukas' definitions
 class MarathonBackend(object):
   def __init__(self, host, port):
@@ -46,6 +47,7 @@ class MarathonBackend(object):
 
   def __hash__(self):
     return hash((self.host, self.port))
+
 
 class MarathonService(object):
   def __init__(self, appId, servicePort):
@@ -63,6 +65,7 @@ class MarathonService(object):
   def __eq__(self, other):
     return self.servicePort == other.servicePort
 
+
 class MarathonApp(object):
   def __init__(self, marathon, appId):
     self.app = marathon.get_app(appId)
@@ -76,6 +79,7 @@ class MarathonApp(object):
 
   def __eq__(self, other):
     return self.appId == other.appId
+
 
 class Marathon(object):
   def __init__(self, hosts):
@@ -121,6 +125,15 @@ class Marathon(object):
     return self.api_req('DELETE', ['eventSubscriptions'], params={'callbackUrl': callbackUrl})
 
 
+env_keys = {
+  'HAPROXY_VHOST{0}': lambda x: x.hostname,
+  'HAPROXY_VHOST{0}_STICKY': lambda x: x.sticky,
+  'HAPROXY_VHOST{0}_REDIRECT_TO_HTTPS': lambda x: x.redirectHttpToHttps,
+  'HAPROXY_VHOST{0}_SSL_CERT': lambda x: x.sslCert,
+  'HAPROXY_VHOST{0}_BIND_ADDR': lambda x: x.bindAddr
+}
+
+
 class MarathonEventSubscriber(object):
   def __init__(self, marathon, addr):
     self.__marathon = marathon
@@ -133,7 +146,7 @@ class MarathonEventSubscriber(object):
     self.update_from_tasks()
 
   def reset_from_tasks(self):
-    tasks = marathon.tasks()
+    tasks = self.__marathon.tasks()
 
     self.__apps = dict()
 
@@ -147,11 +160,18 @@ class MarathonEventSubscriber(object):
         if task.appId not in self.__apps:
           self.__apps[task.appId] = MarathonApp(task.appId)
 
-        app = self.__apps[appId]
+        app = self.__apps[task.appId]
         if task.servicePort not in app.services:
           app.services[task.servicePort] = MarathonService(task.appId, servicePort)
 
         service = app.services[task.servicePort]
+
+        # Environment variable based config
+        #TODO(cmaloney): Move to labels once those are supported throughout the stack
+        for key_unformatted in env_keys:
+          key = env_keys.format(i)
+          if key in app.app.env:
+            env_keys[key](app.app.env[key])
 
         service.add_backend(task.host, port)
 
@@ -159,4 +179,3 @@ class MarathonEventSubscriber(object):
     if event.eventType == 'status_update_event':
       #TODO (cmaloney): Handle events more intelligently so that we add/remove things well
       self.reset_from_tasks()
-

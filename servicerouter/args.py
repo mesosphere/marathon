@@ -14,6 +14,8 @@ def wsgi_app(env, start_response):
   start_response('200 OK', [('Content-Type', 'text/html')])
 
   return []
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Marathon HAProxy Service Router")
     parser.add_argument("--marathon_endpoints", "-m", required=True, nargs="+",
