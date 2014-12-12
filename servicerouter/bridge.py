@@ -184,7 +184,7 @@ class MarathonEventSubscriber(object):
         for key_unformatted in env_keys:
           key = key_unformatted.format(i)
           if key in app.app[u'env']:
-              env_keys[key](app.app[u'env'][key])
+              env_keys[key](service) = app.app[u'env'][key]
 
         service.add_backend(task['host'], port)
 
@@ -194,7 +194,7 @@ class MarathonEventSubscriber(object):
         for service in app.services.values():
             haproxy_apps.append(service)
     print haproxycfggenerator.config(haproxy_apps)
-    
+
 
   def handle_event(self, event):
     if event['eventType'] == 'status_update_event':
