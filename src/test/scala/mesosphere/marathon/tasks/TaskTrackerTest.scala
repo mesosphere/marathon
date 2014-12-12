@@ -26,7 +26,7 @@ class TaskTrackerTest extends MarathonSpec {
   val TEST_TASK_ID = "sampleTask"
   var taskTracker: TaskTracker = null
   var state: State = null
-  val config = mock[MarathonConf]
+  val config = defaultConfig()
   val taskIdUtil = new TaskIdUtil
   val registry = new MetricRegistry
 

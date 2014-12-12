@@ -35,7 +35,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
       )
     )
 
-    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
+    taskTracker = new TaskTracker(new InMemoryState, defaultConfig(), registry)
 
     hcManager = new MarathonHealthCheckManager(
       system,

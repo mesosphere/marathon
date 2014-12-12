@@ -36,7 +36,9 @@ class TaskTracker @Inject() (
 
   private[this] val apps = TrieMap[PathId, InternalApp]()
 
-  private[tasks] def fetchFromState(id: String) = timedRead { state.fetch(id).get() }
+  private[tasks] def fetchFromState(id: String): Variable = timedRead {
+    state.fetch(id).get(timeout.duration.length, timeout.duration.unit)
+  }
 
   private[tasks] def getKey(appId: PathId, taskId: String): String = {
     PREFIX + appId.safePath + ID_DELIMITER + taskId
@@ -174,7 +176,9 @@ class TaskTracker @Inject() (
     for (stateTaskKey <- stateTaskKeys) {
       if (!appsTaskKeys.contains(stateTaskKey)) {
         log.info(s"Expunging orphaned task with key $stateTaskKey")
-        val variable = timedRead { state.fetch(stateTaskKey).get }
+        val variable = timedRead {
+          state.fetch(stateTaskKey).get(timeout.duration.length, timeout.duration.unit)
+        }
         timedWrite { state.expunge(variable) }
       }
     }
