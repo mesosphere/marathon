@@ -6,7 +6,7 @@ from operator import attrgetter
 from tempfile import mkstemp
 from shutil import move
 
-HAPROXY_CONFIG = '/etc/haproxy/haproxy.cfg'
+HAPROXY_CONFIG = '/Users/lukas/haproxy.cfg'
 
 HAPROXY_HEAD = '''global
   daemon
@@ -56,6 +56,8 @@ HAPROXY_BACKEND_HTTP_OPTIONS = '''  option forwardfor
   http-request add-header X-Forwarded-Proto https if { ssl_fc }
 '''
 
+HAPROXY_BACKEND_STICKY_OPTIONS = '''  cookie mesosphere_server_id insert indirect nocache
+'''
 
 class MarathonBackend(object):
   def __init__(self, host, port):
@@ -63,11 +65,14 @@ class MarathonBackend(object):
     self.port = port
 
 class MarathonApp(object):
-  def __init__(self, appId, hostname, servicePort, backends):
+  def __init__(self, appId, hostname, servicePort, backends, sticky=False, redirectHttpToHttps=False, sslCert=None):
     self.appId = appId
     self.hostname = hostname
     self.servicePort = servicePort
     self.backends = backends
+    self.sticky = sticky
+    self.redirectHttpToHttps = redirectHttpToHttps
+    self.sslCert = sslCert
 
 apps = [
   MarathonApp('/mm/application/portal', 'app.mesosphere.com', 9000, [
@@ -75,7 +80,7 @@ apps = [
       MarathonBackend('srv2.hw.ca1.mesosphere.com', 31671),
       MarathonBackend('srv2.hw.ca1.mesosphere.com', 31030),
       MarathonBackend('srv4.hw.ca1.mesosphere.com', 31006)
-    ]),
+    ], True, False, None),
   MarathonApp('/mm/service/collector', 'collector.mesosphere.com', 7070, [
       MarathonBackend('srv4.hw.ca1.mesosphere.com', 31005)
     ]),
@@ -118,12 +123,18 @@ def config(apps):
         )
       backends += HAPROXY_BACKEND_HTTP_OPTIONS
 
+    if app.sticky:
+      backends += HAPROXY_BACKEND_STICKY_OPTIONS
+
     frontends += "  use_backend {backend}\n".format(backend=backend)
 
     for backendServer in sorted(app.backends, key=attrgetter('host', 'port')):
-      backends += "  server {host}:{port}\n".format(
+      serverName = re.sub(r'[^a-zA-Z0-9\-]', '_', backendServer.host+'_'+str(backendServer.port))
+      backends += "  server {serverName} {host}:{port}{cookieOptions}\n".format(
           host=backendServer.host,
-          port=backendServer.port
+          port=backendServer.port,
+          serverName=serverName,
+          cookieOptions=' check cookie '+serverName if app.sticky else ''
         )
 
 
