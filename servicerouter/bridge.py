@@ -35,6 +35,7 @@ TODO:
   Ping apps endpoint to get environment variables to determine things like hostname to use
 """
 
+import haproxycfggenerator
 import os.path
 import requests
 
@@ -55,6 +56,10 @@ class MarathonService(object):
     self.servicePort = servicePort
     self.backends = set()
     self.hostname = None
+    self.sticky = False
+    self.redirectHttpToHttps = False
+    self.sslCert = None
+    self.bindAddr = '*'
 
   def add_backend(self, host, port):
     self.backends.add(MarathonBackend(host, port))
@@ -182,6 +187,14 @@ class MarathonEventSubscriber(object):
               env_keys[key](app.app[u'env'][key])
 
         service.add_backend(task['host'], port)
+
+    # Convert to haproxycfggenerator format
+    haproxy_apps = list()
+    for app in self.__apps.values():
+        for service in app.services.values():
+            haproxy_apps.append(service)
+    print haproxycfggenerator.config(haproxy_apps)
+    
 
   def handle_event(self, event):
     if event['eventType'] == 'status_update_event':

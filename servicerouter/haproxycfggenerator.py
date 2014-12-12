@@ -226,4 +226,4 @@ def compareWriteAndReloadConfig(config, configFile):
     writeConfig(config, configFile)
     reloadConfig()
 
-compareWriteAndReloadConfig(config(apps), HAPROXY_CONFIG)
+#compareWriteAndReloadConfig(config(apps), HAPROXY_CONFIG)
