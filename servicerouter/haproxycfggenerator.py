@@ -42,7 +42,7 @@ HAPROXY_HTTP_FRONTEND_ACL = '''  acl host_{cleanedUpHostname} hdr(host) -i {host
 
 HAPROXY_FRONTEND_HEAD = '''
 frontend {backend}
-  bind *:{servicePort}
+  bind {bindAddr}:{servicePort}{sslCertOptions}
   mode {mode}
 '''
 
@@ -59,13 +59,16 @@ HAPROXY_BACKEND_HTTP_OPTIONS = '''  option forwardfor
 HAPROXY_BACKEND_STICKY_OPTIONS = '''  cookie mesosphere_server_id insert indirect nocache
 '''
 
+HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS = '''  redirect scheme https if !{ ssl_fc }
+'''
+
 class MarathonBackend(object):
   def __init__(self, host, port):
     self.host = host
     self.port = port
 
 class MarathonApp(object):
-  def __init__(self, appId, hostname, servicePort, backends, sticky=False, redirectHttpToHttps=False, sslCert=None):
+  def __init__(self, appId, hostname, servicePort, backends, sticky=False, redirectHttpToHttps=False, sslCert=None, bindAddr='*'):
     self.appId = appId
     self.hostname = hostname
     self.servicePort = servicePort
@@ -73,6 +76,7 @@ class MarathonApp(object):
     self.sticky = sticky
     self.redirectHttpToHttps = redirectHttpToHttps
     self.sslCert = sslCert
+    self.bindAddr = bindAddr
 
 apps = [
   MarathonApp('/mm/application/portal', 'app.mesosphere.com', 9000, [
@@ -80,7 +84,7 @@ apps = [
       MarathonBackend('srv2.hw.ca1.mesosphere.com', 31671),
       MarathonBackend('srv2.hw.ca1.mesosphere.com', 31030),
       MarathonBackend('srv4.hw.ca1.mesosphere.com', 31006)
-    ], True, False, None),
+    ], True, True, None, '127.0.0.1'),
   MarathonApp('/mm/service/collector', 'collector.mesosphere.com', 7070, [
       MarathonBackend('srv4.hw.ca1.mesosphere.com', 31005)
     ]),
@@ -104,10 +108,16 @@ def config(apps):
     backend = app.appId[1:].replace('/', '_') + '_' + str(app.servicePort)
 
     frontends += HAPROXY_FRONTEND_HEAD.format(
+        bindAddr=app.bindAddr,
         backend=backend,
         servicePort=app.servicePort,
-        mode='http' if app.hostname else 'tcp'
+        mode='http' if app.hostname else 'tcp',
+        sslCertOptions=' ssl crt '+app.sslCert if app.sslCert else ''
       )
+
+    if app.redirectHttpToHttps:
+      frontends += HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS
+
 
     backends += HAPROXY_BACKEND_HEAD.format(backend=backend)
 
