@@ -6,7 +6,7 @@ from operator import attrgetter
 from tempfile import mkstemp
 from shutil import move
 
-HAPROXY_CONFIG = '/Users/lukas/haproxy.cfg'
+HAPROXY_CONFIG = '/etc/haproxy/haproxy.cfg'
 
 HAPROXY_HEAD = '''global
   daemon
