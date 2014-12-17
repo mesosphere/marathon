@@ -35,9 +35,207 @@ TODO:
   Ping apps endpoint to get environment variables to determine things like hostname to use
 """
 
-import haproxycfggenerator
+import argparse
+import json
+import logging
+from logging.handlers import SysLogHandler
+from operator import attrgetter
 import os.path
 import requests
+import re
+from shutil import move
+from subprocess import call
+import sys
+from tempfile import mkstemp
+from wsgiref.simple_server import make_server
+
+
+if sys.platform == "darwin":
+  syslogSocket = "/var/run/syslog"
+else:
+  syslogSocket = "/dev/log"
+
+logger = logging.getLogger('haproxycfggenerator')
+logger.setLevel(logging.DEBUG)
+
+syslogHandler = SysLogHandler(syslogSocket)
+consoleHandler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+syslogHandler.setFormatter(formatter)
+consoleHandler.setFormatter(formatter)
+#syslogHandler.setLevel(logging.ERROR)
+logger.addHandler(syslogHandler)
+logger.addHandler(consoleHandler)
+
+HAPROXY_CONFIG = '/etc/haproxy/haproxy.cfg'
+
+HAPROXY_HEAD = '''global
+  daemon
+  log 127.0.0.1 local0
+  log 127.0.0.1 local1 notice
+  maxconn 4096
+
+defaults
+  log            global
+  retries             3
+  maxconn            2s
+  timeout connect    5s
+  timeout client    50s
+  timeout server    50s
+
+listen stats
+  bind 127.0.0.1:9090
+  balance
+  mode http
+  stats enable
+  stats auth admin:admin
+'''
+
+HAPROXY_HTTP_FRONTEND_HEAD = '''
+frontend marathon_http_in
+  bind *:80
+  mode http
+'''
+
+HAPROXY_HTTP_FRONTEND_ACL = '''  acl host_{cleanedUpHostname} hdr(host) -i {hostname}
+  use_backend {backend} if host_{cleanedUpHostname}
+'''
+
+HAPROXY_FRONTEND_HEAD = '''
+frontend {backend}
+  bind {bindAddr}:{servicePort}{sslCertOptions}
+  mode {mode}
+'''
+
+HAPROXY_FRONTEND_BACKEND_GLUE = '''  use_backend {backend}
+'''
+
+HAPROXY_BACKEND_HEAD = '''
+backend {backend}
+  balance roundrobin
+  mode {mode}
+'''
+
+HAPROXY_BACKEND_HTTP_OPTIONS = '''  option forwardfor
+  http-request set-header X-Forwarded-Port %[dst_port]
+  http-request add-header X-Forwarded-Proto https if { ssl_fc }
+'''
+
+HAPROXY_BACKEND_STICKY_OPTIONS = '''  cookie mesosphere_server_id insert indirect nocache
+'''
+
+HAPROXY_BACKEND_SERVER_OPTIONS = '''  server {serverName} {host}:{port}{cookieOptions}
+'''
+
+HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS = '''  redirect scheme https if !{ ssl_fc }
+'''
+
+def config(apps):
+  logger.info("generating config")
+  config = HAPROXY_HEAD
+
+  http_frontends = HAPROXY_HTTP_FRONTEND_HEAD
+  frontends = str()
+  backends = str()
+
+  for app in sorted(apps, key=attrgetter('appId', 'servicePort')):
+    logger.debug("configuring app %s", app.appId)
+    backend = app.appId[1:].replace('/', '_') + '_' + str(app.servicePort)
+
+    logger.debug("frontend at %s:%d with backend %s",
+      app.bindAddr, app.servicePort, backend)
+    frontends += HAPROXY_FRONTEND_HEAD.format(
+        bindAddr=app.bindAddr,
+        backend=backend,
+        servicePort=app.servicePort,
+        mode='http' if app.hostname else 'tcp',
+        sslCertOptions=' ssl crt '+app.sslCert if app.sslCert else ''
+      )
+
+    if app.redirectHttpToHttps:
+      logger.debug("rule to redirect http to https traffic")
+      frontends += HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS
+
+    backends += HAPROXY_BACKEND_HEAD.format(
+            backend=backend,
+            mode='http' if app.hostname else 'tcp'
+        )
+
+    # if a hostname is set we add the app to the vhost section
+    # of our haproxy config
+    # TODO(lukas): Check if the hostname is already defined by another service
+    if app.hostname:
+      logger.debug("adding virtual host for app with hostname %s", app.hostname)
+      cleanedUpHostname = re.sub(r'[^a-zA-Z0-9\-]', '_', app.hostname)
+      http_frontends += HAPROXY_HTTP_FRONTEND_ACL.format(
+          cleanedUpHostname=cleanedUpHostname,
+          hostname=app.hostname,
+          backend=backend
+        )
+      backends += HAPROXY_BACKEND_HTTP_OPTIONS
+
+    if app.sticky:
+      logger.debug("turning on sticky sessions")
+      backends += HAPROXY_BACKEND_STICKY_OPTIONS
+
+    frontends += HAPROXY_FRONTEND_BACKEND_GLUE.format(backend=backend)
+
+    for backendServer in sorted(app.backends, key=attrgetter('host', 'port')):
+      logger.debug("backend server at %s:%d", backendServer.host, backendServer.port)
+      serverName = re.sub(r'[^a-zA-Z0-9\-]', '_', backendServer.host+'_'+str(backendServer.port))
+      backends += HAPROXY_BACKEND_SERVER_OPTIONS.format(
+          host=backendServer.host,
+          port=backendServer.port,
+          serverName=serverName,
+          cookieOptions=' check cookie '+serverName if app.sticky else ''
+        )
+
+
+  config += http_frontends
+  config += frontends
+  config += backends
+
+  return config
+
+def reloadConfig():
+  logger.debug("trying to find out how to reload the configuration")
+  if os.path.isfile('/etc/init/haproxy.conf'):
+    logger.debug("we seem to be running on an Upstart based system")
+    reloadCommand = ['reload', 'haproxy']
+  elif ( os.path.isfile('/usr/lib/systemd/system/haproxy.service')
+      or os.path.isfile('/etc/systemd/system/haproxy.service')
+    ):
+    logger.debug("we seem to be running on systemd based system")
+    reloadCommand = ['systemctl', 'reload', 'haproxy']
+  else:
+    logger.debug("we seem to be running on a sysvinit based system")
+    reloadCommand = ['/etc/init.d/haproxy', 'reload']
+
+  logger.info("reloading using %s", " ".join(reloadCommand))
+  return call(reloadCommand)
+
+def writeConfig(config, configFile):
+  fd, haproxyTempConfigFile = mkstemp()
+  logger.debug("writing config to temp file %s", haproxyTempConfigFile)
+  haproxyTempConfig = os.fdopen(fd, 'w')
+  haproxyTempConfig.write(config)
+  haproxyTempConfig.close()
+  logger.debug("moving temp file %s to %s", haproxyTempConfigFile, HAPROXY_CONFIG)
+  move(haproxyTempConfigFile, HAPROXY_CONFIG)
+
+def compareWriteAndReloadConfig(config, configFile):
+  runningConfig = str()
+  try:
+    logger.debug("reading running config from %s", configFile)
+    with open(configFile, "r") as configFile:
+      runningConfig = configFile.read()
+  except IOError:
+    logger.warning("couldn't open config file for reading")
+
+  if runningConfig != config:
+    logger.info("running config is different from generated config - reloading")
+    writeConfig(config, configFile)
+    reloadConfig()
 
 
 # TODO (cmaloney): Merge with lukas' definitions
@@ -111,6 +309,7 @@ class Marathon(object):
       if response.status_code == 200:
         break
 
+    print response.content
     response.raise_for_status()
     return response
 
@@ -216,3 +415,29 @@ class MarathonEventSubscriber(object):
     if event['eventType'] == 'status_update_event':
       #TODO (cmaloney): Handle events more intelligently so that we add/remove things well
       self.reset_from_tasks()
+
+
+# TODO(cmaloney): Switch to a sane http server
+# TODO(cmaloney): Good exception catching, etc
+def wsgi_app(env, start_response):
+  subscriber.handle_event(json.load(env['wsgi.input']))
+  #TODO(cmaloney): Make this have a simple useful webui for debugging / monitoring
+  start_response('200 OK', [('Content-Type', 'text/html')])
+
+  return "Got it"
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Marathon HAProxy Service Router")
+    parser.add_argument("--marathon_endpoints", "-m", required=True, nargs="+",
+                        help="Marathon endpoint, eg. http://marathon1,http://marathon2:8080")
+    parser.add_argument("--callback_url", "-c",
+                        help="Marathon callback URL")
+    args = parser.parse_args()
+
+    marathon = Marathon(args.marathon_endpoints)
+    subscriber = MarathonEventSubscriber(marathon, args.callback_url)
+
+    print "Serving on port 8000..."
+    httpd = make_server('', 8000, wsgi_app)
+    httpd.serve_forever()
