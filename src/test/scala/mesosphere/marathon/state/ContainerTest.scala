@@ -67,7 +67,8 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
             Parameter("abc", "123"),
             Parameter("def", "456"),
             Parameter("def", "789")
-          )
+          ),
+          forcePullImage = true
         )
       )
     )
@@ -82,12 +83,17 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
     assert(mesos.ContainerInfo.Type.DOCKER == proto.getType)
     assert("group/image" == proto.getDocker.getImage)
     assert(f.container.volumes == proto.getVolumesList.asScala.map(Container.Volume(_)))
+    assert(proto.getDocker.hasForcePullImage)
+    assert(f.container.docker.get.forcePullImage == proto.getDocker.getForcePullImage)
 
-    val proto2 = f.container2.toProto
+    val proto2: mesosphere.marathon.Protos.ExtendedContainerInfo = f.container2.toProto
     assert(mesos.ContainerInfo.Type.DOCKER == proto2.getType)
     assert("group/image" == proto2.getDocker.getImage)
     assert(f.container2.docker.get.network == Some(proto2.getDocker.getNetwork))
-    assert(f.container2.docker.get.portMappings == Some(proto2.getDocker.getPortMappingsList.asScala.map(Container.Docker.PortMapping.apply)))
+    val portMappings = proto2.getDocker.getPortMappingsList.asScala
+    assert(f.container2.docker.get.portMappings == Some(portMappings.map(Container.Docker.PortMapping.apply)))
+    assert(proto2.getDocker.hasForcePullImage)
+    assert(f.container2.docker.get.forcePullImage == proto2.getDocker.getForcePullImage)
 
     val proto3 = f.container3.toProto
     assert(mesos.ContainerInfo.Type.DOCKER == proto3.getType)
@@ -96,6 +102,51 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
     assert(f.container3.docker.get.privileged == proto3.getDocker.getPrivileged)
     assert(f.container3.docker.get.parameters.map(_.key) == proto3.getDocker.getParametersList.asScala.map(_.getKey))
     assert(f.container3.docker.get.parameters.map(_.value) == proto3.getDocker.getParametersList.asScala.map(_.getValue))
+    assert(proto3.getDocker.hasForcePullImage)
+    assert(f.container3.docker.get.forcePullImage == proto3.getDocker.getForcePullImage)
+
+  }
+
+  test("ToMesos") {
+    val f = fixture()
+    val proto = f.container.toMesos
+    assert(mesos.ContainerInfo.Type.DOCKER == proto.getType)
+    assert("group/image" == proto.getDocker.getImage)
+    assert(f.container.volumes == proto.getVolumesList.asScala.map(Container.Volume(_)))
+    assert(proto.getDocker.hasForcePullImage)
+    assert(f.container.docker.get.forcePullImage == proto.getDocker.getForcePullImage)
+
+    val proto2 = f.container2.toMesos
+    assert(mesos.ContainerInfo.Type.DOCKER == proto2.getType)
+    assert("group/image" == proto2.getDocker.getImage)
+    assert(f.container2.docker.get.network == Some(proto2.getDocker.getNetwork))
+
+    val expectedPortMappings = Seq(
+      mesos.ContainerInfo.DockerInfo.PortMapping.newBuilder
+        .setContainerPort(8080)
+        .setHostPort(32001)
+        .setProtocol("tcp")
+        .build,
+      mesos.ContainerInfo.DockerInfo.PortMapping.newBuilder
+        .setContainerPort(8081)
+        .setHostPort(32002)
+        .setProtocol("udp")
+        .build
+    )
+
+    assert(expectedPortMappings == proto2.getDocker.getPortMappingsList.asScala)
+    assert(proto2.getDocker.hasForcePullImage)
+    assert(f.container2.docker.get.forcePullImage == proto2.getDocker.getForcePullImage)
+
+    val proto3 = f.container3.toMesos
+    assert(mesos.ContainerInfo.Type.DOCKER == proto3.getType)
+    assert("group/image" == proto3.getDocker.getImage)
+    assert(f.container3.docker.get.network == Some(proto3.getDocker.getNetwork))
+    assert(f.container3.docker.get.privileged == proto3.getDocker.getPrivileged)
+    assert(f.container3.docker.get.parameters.map(_.key) == proto3.getDocker.getParametersList.asScala.map(_.getKey))
+    assert(f.container3.docker.get.parameters.map(_.value) == proto3.getDocker.getParametersList.asScala.map(_.getValue))
+    assert(proto3.getDocker.hasForcePullImage)
+    assert(f.container3.docker.get.forcePullImage == proto3.getDocker.getForcePullImage)
   }
 
   test("ConstructFromProto") {
@@ -228,7 +279,8 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
             { "key": "abc", "value": "123" },
             { "key": "def", "value": "456" },
             { "key": "def", "value": "789" }
-          ]
+          ],
+          "forcePullImage": true
         }
       }
       """

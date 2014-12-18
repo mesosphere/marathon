@@ -172,8 +172,9 @@ trait ContainerFormats {
     (__ \ "network").formatNullable[Network] ~
     (__ \ "portMappings").formatNullable[Seq[Docker.PortMapping]] ~
     (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
-    (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty)
-  )(Docker(_, _, _, _, _), unlift(Docker.unapply))
+    (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
+    (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
+  )(Docker(_, _, _, _, _, _), unlift(Docker.unapply))
 
   implicit val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mode")

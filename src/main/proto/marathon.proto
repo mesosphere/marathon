@@ -117,6 +117,11 @@ message ExtendedContainerInfo {
     // to be supported moving forward, as we might move away from
     // the docker CLI.
     repeated mesos.Parameter parameters = 5;
+
+    // With this flag set to true, the docker containerizer will
+    // pull the docker image from the registry even if the image
+    // is already downloaded on the slave.
+    optional bool force_pull_image = 6;
   }
 
   required mesos.ContainerInfo.Type type = 1;
