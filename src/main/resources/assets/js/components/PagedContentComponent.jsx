@@ -23,7 +23,7 @@ define([
     },
 
     render: function() {
-      var wrap = React.DOM[this.props.element];
+      var Wrap = React.DOM[this.props.element];
 
       var children = this.props.children;
       var begin = this.props.currentPage * this.props.itemsPerPage;
@@ -35,9 +35,9 @@ define([
       });
 
       return (
-        <wrap className={this.props.className}>
+        <Wrap className={this.props.className}>
           {pageNodes}
-        </wrap>
+        </Wrap>
       );
     }
   });
