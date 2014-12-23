@@ -62,12 +62,10 @@ import requests
 import re
 import socket
 from shutil import move
-from subprocess import call
+from subprocess import check_call
 import sys
 from tempfile import mkstemp
 from wsgiref.simple_server import make_server
-
-HAPROXY_CONFIG = '/etc/haproxy/haproxy.cfg'
 
 HAPROXY_HEAD = '''global
   daemon
@@ -161,6 +159,8 @@ env_keys = {
     'HAPROXY_{0}_SSL_CERT': sslCert,
     'HAPROXY_{0}_BIND_ADDR': bindAddr
 }
+
+logger = logging.getLogger('haproxycfggenerator')
 
 
 class MarathonBackend(object):
@@ -350,10 +350,17 @@ def reloadConfig():
         reloadCommand = ['/etc/init.d/haproxy', 'reload']
 
     logger.info("reloading using %s", " ".join(reloadCommand))
-    return call(reloadCommand)
+    try:
+      check_call(reloadCommand)
+    except OSError as ex:
+      logger.error("unable to reload config using command %s", " ".join(reloadCommand))
+      logger.error("OSError: %s", ex)
+    except subprocess.CalledProcessError as ex:
+      logger.error("unable to reload config using command %s", " ".join(reloadCommand))
+      logger.error("reload returned non-zero: %s", ex)
 
 
-def writeConfig(config, configFile):
+def writeConfig(config, config_file):
     # Write config to a temporary location
     fd, haproxyTempConfigFile = mkstemp()
     logger.debug("writing config to temp file %s", haproxyTempConfigFile)
@@ -361,26 +368,25 @@ def writeConfig(config, configFile):
       haproxyTempConfig.write(config)
 
     # Move into place
-    logger.debug(
-        "moving temp file %s to %s", haproxyTempConfigFile, HAPROXY_CONFIG)
-    move(haproxyTempConfigFile, HAPROXY_CONFIG)
+    logger.debug("moving temp file %s to %s", haproxyTempConfigFile, config_file)
+    move(haproxyTempConfigFile, config_file)
 
 
-def compareWriteAndReloadConfig(config, configFile):
+def compareWriteAndReloadConfig(config, config_file):
     # See if the last config on disk matches this, and if so don't reload
     # haproxy
     runningConfig = str()
     try:
-        logger.debug("reading running config from %s", configFile)
-        with open(configFile, "r") as configFile:
-            runningConfig = configFile.read()
+        logger.debug("reading running config from %s", config_file)
+        with open(config_file, "r") as f:
+            runningConfig = f.read()
     except IOError:
         logger.warning("couldn't open config file for reading")
 
     if runningConfig != config:
         logger.info(
             "running config is different from generated config - reloading")
-        writeConfig(config, configFile)
+        writeConfig(config, config_file)
         reloadConfig()
 
 
@@ -426,24 +432,25 @@ def get_apps(marathon):
     return apps_list
 
 
-def regenerate_config(apps):
-  compareWriteAndReloadConfig(config(apps), HAPROXY_CONFIG)
+def regenerate_config(apps, config_file):
+  compareWriteAndReloadConfig(config(apps), config_file)
 
 
 class MarathonEventSubscriber(object):
 
-    def __init__(self, marathon, addr):
+    def __init__(self, marathon, addr, config_file):
         marathon.add_subscriber(addr)
         self.__marathon = marathon
         # appId -> MarathonApp
         self.__apps = dict()
+        self.__config_file = config_file
 
         # Fetch the base data
         self.reset_from_tasks()
 
     def reset_from_tasks(self):
-      self.__apps = get_apps()
-      regenerate_config(self.__apps)
+      self.__apps = get_apps(self.__marathon)
+      regenerate_config(self.__apps, self.__config_file)
 
     def handle_event(self, event):
         if event['eventType'] == 'status_update_event':
@@ -460,17 +467,20 @@ def get_arg_parser():
                         nargs="+",
                         help="Marathon endpoint, eg. http://marathon1,http://marathon2:8080")
     parser.add_argument("--listening", "-l",
-                        help="The HTTP address that marathon can call this script back at",
-                        defult="http://{0}:8080".format(socket.gethostbyname(socket.getfqdn())))
+                        help="The HTTP address that marathon can call this script back at (http://lb1:8080)")
     parser.add_argument("--syslog-socket",
                         help="Socket to write syslog messages to",
                         default="/var/run/syslog" if sys.platform == "darwin" else "/dev/log"
                         )
+    parser.add_argument("--haproxy-config",
+                        help="Location of haproxy configuration",
+                        default="/etc/haproxy/haproxy.cfg"
+                        )
     return parser
 
 
-def run_server():
-    subscriber = MarathonEventSubscriber(marathon, args.callback_url)
+def run_server(marathon, callback_url, config_file):
+    subscriber = MarathonEventSubscriber(marathon, callback_url, config_file)
 
     # TODO(cmaloney): Switch to a sane http server
     # TODO(cmaloney): Good exception catching, etc
@@ -488,7 +498,6 @@ def run_server():
 
 
 def setup_logging(syslog_socket):
-    logger = logging.getLogger('haproxycfggenerator')
     logger.setLevel(logging.DEBUG)
 
     syslogHandler = SysLogHandler(args.syslog_socket)
@@ -514,7 +523,7 @@ if __name__ == '__main__':
 
     # If in listening mode, spawn a webserver waiting for events. Otherwise just write the config
     if args.listening:
-      run_server()
+      run_server(marathon, args.listening, args.haproxy_config)
     else:
       # Generate base config
-      regenerate_config(get_apps())
+      regenerate_config(get_apps(marathon), args.haproxy_config)
