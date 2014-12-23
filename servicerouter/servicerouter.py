@@ -61,7 +61,7 @@ import os.path
 import requests
 import re
 from shutil import move
-from subprocess import check_call
+import subprocess
 import sys
 from tempfile import mkstemp
 from wsgiref.simple_server import make_server
@@ -350,13 +350,13 @@ def reloadConfig():
 
     logger.info("reloading using %s", " ".join(reloadCommand))
     try:
-      check_call(reloadCommand)
+        subprocess.check_call(reloadCommand)
     except OSError as ex:
-      logger.error("unable to reload config using command %s", " ".join(reloadCommand))
-      logger.error("OSError: %s", ex)
+        logger.error("unable to reload config using command %s", " ".join(reloadCommand))
+        logger.error("OSError: %s", ex)
     except subprocess.CalledProcessError as ex:
-      logger.error("unable to reload config using command %s", " ".join(reloadCommand))
-      logger.error("reload returned non-zero: %s", ex)
+        logger.error("unable to reload config using command %s", " ".join(reloadCommand))
+        logger.error("reload returned non-zero: %s", ex)
 
 
 def writeConfig(config, config_file):
