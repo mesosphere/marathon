@@ -397,6 +397,9 @@ def get_apps(marathon):
     for task in tasks:
         # For each task, extract the app it belongs to and add a
         # backend for each service it provides
+        if not 'servicePorts' in task:
+          continue
+
         for i in xrange(len(task['servicePorts'])):
             servicePort = task['servicePorts'][i]
             port = task['ports'][i]
@@ -464,7 +467,7 @@ def get_arg_parser():
     parser.add_argument("--marathon", "-m",
                         required=True,
                         nargs="+",
-                        help="Marathon endpoint, eg. http://marathon1,http://marathon2:8080")
+                        help="Marathon endpoint, eg. -m http://marathon1:8080 -m http://marathon2:8080")
     parser.add_argument("--listening", "-l",
                         help="The HTTP address that marathon can call this script back at (http://lb1:8080)")
     parser.add_argument("--syslog-socket",
