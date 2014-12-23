@@ -60,7 +60,6 @@ from operator import attrgetter
 import os.path
 import requests
 import re
-import socket
 from shutil import move
 from subprocess import check_call
 import sys
