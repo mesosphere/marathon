@@ -260,7 +260,16 @@ trait HealthCheckFormats {
    * HealthCheck related formats
    */
 
-  implicit lazy val HealthWrites: Writes[Health] = Json.writes[Health]
+  implicit lazy val HealthWrites: Writes[Health] = Writes { health =>
+    Json.obj(
+      "alive" -> health.alive,
+      "consecutiveFailures" -> health.consecutiveFailures,
+      "firstSuccess" -> health.firstSuccess,
+      "lastFailure" -> health.lastFailure,
+      "lastSuccess" -> health.lastSuccess,
+      "taskId" -> health.taskId
+    )
+  }
 
   implicit lazy val ProtocolFormat: Format[Protocol] =
     enumFormat(Protocol.valueOf, str => s"$str is not a valid protocol")
