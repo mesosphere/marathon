@@ -9,17 +9,17 @@ Features:
   - (Optional): real-time update from marathon events
 
 Usage:
-./bridge.py --listening http://192.168.0.1:4002 -m http://marathon1
-./bridge.py -m http://marathon1 -m http://marathon2:8080 -m http://marathon3:8080
+./servicerouter.py --listening http://192.168.0.1:4002 -m http://marathon1
+./servicerouter.py -m http://marathon1 -m http://marathon2:8080 -m http://marathon3:8080
 
 HA Usage:
-  TODO
+  TODO (Run on multiple hosts, send traffic to all)
 
 Configuration:
   Service configuration lives in marathon via environment variables.
-  The bridge just needs to know where to find marathon.
+  The servicerouter just needs to know where to find marathon.
   To run in listening mode you must also specify the address + port at
-  which the bridge can be reached.
+  which the servicerouter can be reached by marathon.
 
   Every service port in marathon can be configured independently.
 
