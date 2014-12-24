@@ -15,6 +15,7 @@ import com.fasterxml.jackson.core.JsonParseException
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
 import org.apache.log4j.Logger
+import play.api.libs.json.JsResultException
 
 @Provider
 class MarathonExceptionMapper extends ExceptionMapper[Exception] {
@@ -42,6 +43,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: ConflictingChangeException => 409 // Conflict
     case e: BadRequestException        => 400 // Bad Request
     case e: JsonParseException         => 400 // Bad Request
+    case e: JsResultException          => 400 // Bad Request
     case e: WebApplicationException    => e.getResponse.getStatus
     case _                             => 500 // Internal server error
   }
@@ -56,6 +58,8 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       )
     case e: JsonParseException =>
       Map("message" -> e.getOriginalMessage)
+    case e: JsResultException =>
+      Map("message" -> s"Invalid JSON: ${e.getMessage}")
     case e: WebApplicationException =>
       if (e.getResponse.getEntity != null) {
         Map("message" -> e.getResponse.getEntity)
