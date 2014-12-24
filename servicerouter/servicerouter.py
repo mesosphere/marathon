@@ -505,7 +505,7 @@ def setup_logging(syslog_socket):
     syslogHandler = SysLogHandler(args.syslog_socket)
     consoleHandler = logging.StreamHandler()
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        '%(name)s: %(message)s')
     syslogHandler.setFormatter(formatter)
     consoleHandler.setFormatter(formatter)
     # syslogHandler.setLevel(logging.ERROR)
