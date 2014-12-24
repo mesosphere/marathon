@@ -6,6 +6,7 @@ import com.google.common.collect.Lists
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ Protos, MarathonSpec }
 import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.health.HealthCheck
@@ -223,6 +224,20 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       "Health check port indices must address an element of the ports array or container port mappings."
     )
 
+    shouldNotViolate(
+      correct.copy(
+        container = Some(Container(
+          docker = Some(Docker(
+            network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+            portMappings = None
+          ))
+        )),
+        ports = Nil,
+        healthChecks = Set(HealthCheck(protocol = Protocol.COMMAND))
+      ),
+      "",
+      "Health check port indices must address an element of the ports array or container port mappings."
+    )
   }
 
   test("SerializationRoundtrip") {

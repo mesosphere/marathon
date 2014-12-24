@@ -11,6 +11,7 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
@@ -85,7 +86,7 @@ case class AppDefinition(
   def portIndicesAreValid(): Boolean = {
     val validPortIndices = 0 until hostPorts.size
     healthChecks.forall { hc =>
-      validPortIndices contains hc.portIndex
+      hc.protocol == Protocol.COMMAND || (validPortIndices contains hc.portIndex)
     }
   }
 
