@@ -4,6 +4,7 @@ import sbtassembly.Plugin._
 import AssemblyKeys._
 import sbtrelease.ReleasePlugin._
 import com.typesafe.sbt.SbtScalariform._
+import com.typesafe.sbteclipse.plugin.EclipsePlugin.{ EclipseKeys, EclipseCreateSrc }
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import ohnosequences.sbt.SbtS3Resolver.S3Resolver
 import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
@@ -69,7 +70,8 @@ object MarathonBuild extends Build {
     testScalaStyle := {
       org.scalastyle.sbt.PluginKeys.scalastyle.toTask("").value
     },
-    (test in Test) <<= (test in Test) dependsOn testScalaStyle
+    (test in Test) <<= (test in Test) dependsOn testScalaStyle,
+    EclipseKeys.createSrc := EclipseCreateSrc.Default + EclipseCreateSrc.Managed
   )
 
   lazy val asmSettings = assemblySettings ++ Seq(

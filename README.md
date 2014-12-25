@@ -108,6 +108,33 @@ If you want to inspect the contents of the Docker:
 
     docker run -i -t --entrypoint=/bin/bash marathon-tip -s
 
+### Running locally from sbt
+
+Mararthon can be run directly from Scala's sbt shell
+
+    sbt
+    > compile
+    > run --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
+
+### Using Eclipse
+
+In order to use the Eclipse Scala IDE (http://scala-ide.org), one has to run the
+sbteclipse `eclipse` command from the sbt shell first:
+
+    sbt
+    > compile
+    > test
+    > eclipse
+
+The `compile` and `test` steps are necessary once in order to build the 
+BuildInfo.scala file and the managed test source directory. These are used then 
+by the Eclipse project as managed files.
+
+After the `eclipse` step the marathon directory can be imported as an existing
+project into the Eclipse Scala IDE. The Marathon application can be run inside
+the IDE using the `mesosphere.marathon.Main` main class as entrypoint. The
+Scala IDE debugger works fine as well.
+
 ## Marathon Clients
 
 * [Ruby gem and command line client](https://rubygems.org/gems/marathon_client)
