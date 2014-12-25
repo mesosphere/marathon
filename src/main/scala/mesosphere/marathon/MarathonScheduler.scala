@@ -133,6 +133,8 @@ class MarathonScheduler @Inject() (
 
             taskTracker.created(qt.app.id, marathonTask)
             driver.launchTasks(Seq(offer.getId).asJava, taskInfos.asJava)
+
+            healthCheckManager.reconcileWith(qt.app)
         }
 
         // put unscheduled tasks back in the queue
