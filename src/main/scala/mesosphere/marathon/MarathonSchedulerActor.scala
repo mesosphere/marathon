@@ -339,12 +339,10 @@ class SchedulerActions(
     currentAppVersion(app.id).flatMap { appOption =>
       require(appOption.isEmpty, s"Already started app '${app.id}'")
 
-      val persistenceResult = appRepository.store(app).map { _ =>
+      appRepository.store(app).map { _ =>
         log.info(s"Starting app ${app.id}")
         scale(driver, app)
       }
-
-      persistenceResult.map { _ => healthCheckManager.reconcileWith(app) }
     }
   }
 
