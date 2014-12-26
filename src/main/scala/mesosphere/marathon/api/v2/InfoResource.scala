@@ -69,6 +69,7 @@ class InfoResource @Inject() (
       Map(
         "name" -> BuildInfo.name,
         "version" -> BuildInfo.version,
+        "elected" -> schedulerService.isLeader,
         "leader" -> schedulerService.getLeader,
         "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
         "marathon_config" -> marathonConfigValues,
