@@ -192,6 +192,41 @@ class MarathonHealthCheckManager @Inject() (
       Future.sequence(taskHealth)
     }
 
+  override def healthCounts(appId: PathId): Future[HealthCounts] =
+    withReadLock {
+      implicit val timeout: Timeout = Timeout(2, SECONDS)
+      val tasks = taskTracker.get(appId)
+
+      // aggregate health check results of each tasks to:
+      //
+      //   -1: at least one task unhealthy
+      //   0: at least one task unknown, none unhealthy
+      //   1: all tasks healthy
+      //
+      // by mapping each result to -1, 0 or 1 and taking the minimum.
+      val futureTasksHealth = Future.sequence(tasks.toSeq.map { task =>
+        for {
+          maybeHealthSet <- this.status(appId, task.getId)
+        } yield maybeHealthSet.toSeq.map {
+          case Some(health) => if (health.alive) 1 else -1
+          case None => 0
+        } match {
+          case Nil => 0 // no health check found => assume unknown
+          case list => list.min
+        }
+      })
+
+      // count healthy, unknown and unhealthy
+      futureTasksHealth.map { tasksHealth =>
+        val countMap = tasksHealth.groupBy(identity).mapValues(_.size)
+        HealthCounts(
+          countMap.get(1).getOrElse(0),
+          countMap.get(0).getOrElse(0),
+          countMap.get(-1).getOrElse(0)
+        )
+      }
+    }
+
   protected[this] def deactivate(healthCheck: ActiveHealthCheck): Unit =
     withWriteLock { system stop healthCheck.actor }
 
