@@ -130,7 +130,7 @@ class DeploymentActor(
           taskTracker,
           eventBus,
           app,
-          scaleTo - runningTasks.size,
+          scaleTo,
           app.healthChecks.nonEmpty,
           promise
         )

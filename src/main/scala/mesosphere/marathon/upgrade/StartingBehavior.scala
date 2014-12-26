@@ -16,6 +16,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
 
   def eventBus: EventStream
   def expectedSize: Int
+  def nrToStart: Int
   def withHealthChecks: Boolean
   def taskQueue: TaskQueue
   def driver: SchedulerDriver
@@ -81,10 +82,10 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   }
 
   def checkFinished(): Unit = {
-    if (withHealthChecks && healthyTasks.size == expectedSize) {
+    if (withHealthChecks && healthyTasks.size == nrToStart) {
       success()
     }
-    else if (runningTasks.size == expectedSize) {
+    else if (runningTasks.size == nrToStart) {
       success()
     }
   }
