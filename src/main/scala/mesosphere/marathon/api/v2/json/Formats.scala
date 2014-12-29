@@ -318,28 +318,30 @@ trait AppDefinitionFormats {
   implicit lazy val AppDefinitionReads: Reads[AppDefinition] = {
     import mesosphere.marathon.state.AppDefinition._
 
+    val executorPattern = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r
+
     (
       (__ \ "id").read[PathId] ~
       (__ \ "cmd").readNullable[String] ~
       (__ \ "args").readNullable[Seq[String]] ~
       (__ \ "user").readNullable[String] ~
-      (__ \ "env").readNullable[Map[String, String]].withDefault(Map.empty) ~
+      (__ \ "env").readNullable[Map[String, String]].withDefault(DefaultEnv) ~
       (__ \ "instances").readNullable[Integer](minValue(0)).withDefault(DefaultInstances) ~
       (__ \ "cpus").readNullable[JDouble].withDefault(DefaultCpus) ~
       (__ \ "mem").readNullable[JDouble].withDefault(DefaultMem) ~
       (__ \ "disk").readNullable[JDouble].withDefault(DefaultDisk) ~
-      (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)).withDefault("") ~
-      (__ \ "constraints").readNullable[Set[Constraint]].withDefault(Set.empty) ~
-      (__ \ "uris").readNullable[Seq[String]].withDefault(Nil) ~
-      (__ \ "storeUrls").readNullable[Seq[String]].withDefault(Nil) ~
+      (__ \ "executor").readNullable[String](Reads.pattern(executorPattern)).withDefault(DefaultExecutor) ~
+      (__ \ "constraints").readNullable[Set[Constraint]].withDefault(DefaultConstraints) ~
+      (__ \ "uris").readNullable[Seq[String]].withDefault(DefaultUris) ~
+      (__ \ "storeUrls").readNullable[Seq[String]].withDefault(DefaultStoreUrls) ~
       (__ \ "ports").readNullable[Seq[Integer]](uniquePorts).withDefault(DefaultPorts) ~
       (__ \ "requirePorts").readNullable[Boolean].withDefault(DefaultRequirePorts) ~
       (__ \ "backoffSeconds").readNullable[Long].withDefault(DefaultBackoff.toSeconds).asSeconds ~
       (__ \ "backoffFactor").readNullable[Double].withDefault(DefaultBackoffFactor) ~
       (__ \ "container").readNullable[Container] ~
-      (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(Set.empty) ~
-      (__ \ "dependencies").readNullable[Set[PathId]].withDefault(Set.empty) ~
-      (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(UpgradeStrategy.empty)
+      (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(DefaultHealthChecks) ~
+      (__ \ "dependencies").readNullable[Set[PathId]].withDefault(DefaultDependencies) ~
+      (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(DefaultUpgradeStrategy)
     )(AppDefinition(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { app =>
         // necessary because of case class limitations
         (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()).map { v =>

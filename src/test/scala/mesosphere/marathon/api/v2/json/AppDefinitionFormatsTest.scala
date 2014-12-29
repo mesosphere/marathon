@@ -8,7 +8,13 @@ import mesosphere.marathon.state.Timestamp
 import org.scalatest.Matchers
 import play.api.libs.json._
 
-class AppDefinitionFormatsTest extends MarathonSpec with AppDefinitionFormats with Matchers {
+class AppDefinitionFormatsTest
+    extends MarathonSpec
+    with AppDefinitionFormats
+    with HealthCheckFormats
+    with Matchers {
+
+  import Formats.PathIdFormat
 
   object Fixture {
     val a1 = AppDefinition(
@@ -38,23 +44,23 @@ class AppDefinitionFormatsTest extends MarathonSpec with AppDefinitionFormats wi
     // check default values
     r1 \ "args" should equal (JsNull)
     r1 \ "user" should equal (JsNull)
-    r1 \ "env" should equal (JsObject(Seq.empty))
+    r1 \ "env" should equal (JsObject(DefaultEnv.mapValues(JsString(_)).toSeq))
     r1 \ "instances" should equal (JsNumber(DefaultInstances))
     r1 \ "cpus" should equal (JsNumber(DefaultCpus))
     r1 \ "mem" should equal (JsNumber(DefaultMem))
     r1 \ "disk" should equal (JsNumber(DefaultDisk))
-    r1 \ "executor" should equal (JsString(""))
-    r1 \ "constraints" should equal (JsArray(Seq.empty))
-    r1 \ "uris" should equal (JsArray(Seq.empty))
-    r1 \ "storeUrls" should equal (JsArray(Seq.empty))
+    r1 \ "executor" should equal (JsString(DefaultExecutor))
+    r1 \ "constraints" should equal (Json.toJson(DefaultConstraints))
+    r1 \ "uris" should equal (Json.toJson(DefaultUris))
+    r1 \ "storeUrls" should equal (Json.toJson(DefaultStoreUrls))
     r1 \ "ports" should equal (JsArray(DefaultPorts.map { p => JsNumber(p.toInt) }))
     r1 \ "requirePorts" should equal (JsBoolean(DefaultRequirePorts))
     r1 \ "backoffSeconds" should equal (JsNumber(DefaultBackoff.toSeconds))
     r1 \ "backoffFactor" should equal (JsNumber(DefaultBackoffFactor))
     r1 \ "container" should equal (JsNull)
-    r1 \ "healthChecks" should equal (JsArray(Seq.empty))
-    r1 \ "dependencies" should equal (JsArray(Seq.empty))
-    r1 \ "upgradeStrategy" should equal (Json.toJson(UpgradeStrategy.empty))
+    r1 \ "healthChecks" should equal (Json.toJson(DefaultHealthChecks))
+    r1 \ "dependencies" should equal (Json.toJson(DefaultDependencies))
+    r1 \ "upgradeStrategy" should equal (Json.toJson(DefaultUpgradeStrategy))
   }
 
   test("FromJson") {
@@ -67,25 +73,25 @@ class AppDefinitionFormatsTest extends MarathonSpec with AppDefinitionFormats wi
     r1.cmd should equal (a1.cmd)
     r1.version should equal (Timestamp(1))
     // check default values
-    r1.args should equal (None)
-    r1.user should equal (None)
-    r1.env should equal (Map.empty)
+    r1.args should equal (DefaultArgs)
+    r1.user should equal (DefaultUser)
+    r1.env should equal (DefaultEnv)
     r1.instances should equal (DefaultInstances)
     r1.cpus should equal (DefaultCpus)
     r1.mem should equal (DefaultMem)
     r1.disk should equal (DefaultDisk)
-    r1.executor should equal ("")
-    r1.constraints should equal (Set.empty)
-    r1.uris should equal (Seq.empty)
-    r1.storeUrls should equal (Seq.empty)
+    r1.executor should equal (DefaultExecutor)
+    r1.constraints should equal (DefaultConstraints)
+    r1.uris should equal (DefaultUris)
+    r1.storeUrls should equal (DefaultStoreUrls)
     r1.ports should equal (DefaultPorts)
     r1.requirePorts should equal (DefaultRequirePorts)
     r1.backoff should equal (DefaultBackoff)
     r1.backoffFactor should equal (DefaultBackoffFactor)
-    r1.container should equal (None)
-    r1.healthChecks should equal (Set.empty)
-    r1.dependencies should equal (Set.empty)
-    r1.upgradeStrategy should equal (UpgradeStrategy.empty)
+    r1.container should equal (DefaultContainer)
+    r1.healthChecks should equal (DefaultHealthChecks)
+    r1.dependencies should equal (DefaultDependencies)
+    r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
   }
 
 }
