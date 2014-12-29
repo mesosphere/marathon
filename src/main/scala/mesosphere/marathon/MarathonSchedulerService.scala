@@ -273,8 +273,8 @@ class MarathonSchedulerService @Inject() (
     leader.set(true)
     runDriver(abdicateOption)
 
-    // Create health checks for any existing apps
-    listApps foreach healthCheckManager.reconcileWith
+    // Create health checks for any existing app and each running version of that
+    schedulerActor ! ReconcileHealthChecks
   }
 
   def abdicateLeadership(): Unit = {

@@ -8,7 +8,7 @@ import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ Timestamp, AppRepository }
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.util.Logging
@@ -22,6 +22,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
   var hcManager: MarathonHealthCheckManager = _
   var taskTracker: TaskTracker = _
+  var appRepository: AppRepository = _
 
   implicit var system: ActorSystem = _
 
@@ -40,7 +41,8 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     hcManager = new MarathonHealthCheckManager(
       system,
       mock[EventStream],
-      taskTracker
+      taskTracker,
+      appRepository
     )
   }
 

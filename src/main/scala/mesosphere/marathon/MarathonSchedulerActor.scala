@@ -419,7 +419,7 @@ class SchedulerActions(
     for {
       apps <- appRepository.apps()
       app <- apps
-    } healthCheckManager.reconcileWith(app)
+    } healthCheckManager.reconcileWith(app.id)
 
   private def newTask(app: AppDefinition,
                       offer: Offer): Option[(TaskInfo, Seq[Long])] = {
@@ -505,15 +505,14 @@ class SchedulerActions(
       case Some(currentVersion) =>
         val updatedApp = appUpdate(currentVersion)
 
-        healthCheckManager.reconcileWith(updatedApp)
         taskQueue.purge(id)
         taskQueue.rateLimiter.resetDelay(id)
 
         appRepository.store(updatedApp).map { _ =>
           update(driver, updatedApp, appUpdate)
+          healthCheckManager.reconcileWith(id)
           updatedApp
         }
-
       case _ => throw new UnknownAppException(id)
     }
   }
