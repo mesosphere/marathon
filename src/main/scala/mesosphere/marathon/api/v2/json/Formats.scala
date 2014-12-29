@@ -332,7 +332,7 @@ trait AppDefinitionFormats {
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(Set.empty) ~
       (__ \ "uris").readNullable[Seq[String]].withDefault(Nil) ~
       (__ \ "storeUrls").readNullable[Seq[String]].withDefault(Nil) ~
-      (__ \ "ports").readNullable[Seq[Integer]](uniquePorts).withDefault(Nil) ~
+      (__ \ "ports").readNullable[Seq[Integer]](uniquePorts).withDefault(DefaultPorts) ~
       (__ \ "requirePorts").readNullable[Boolean].withDefault(DefaultRequirePorts) ~
       (__ \ "backoffSeconds").readNullable[Long].withDefault(DefaultBackoff.toSeconds).asSeconds ~
       (__ \ "backoffFactor").readNullable[Double].withDefault(DefaultBackoffFactor) ~
