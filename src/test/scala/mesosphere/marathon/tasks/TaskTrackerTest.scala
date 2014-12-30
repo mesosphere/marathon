@@ -6,7 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.{ MarathonConf, MarathonSpec }
+import mesosphere.marathon.MarathonSpec
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos
