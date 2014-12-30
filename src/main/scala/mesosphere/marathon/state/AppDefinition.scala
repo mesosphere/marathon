@@ -25,15 +25,15 @@ import scala.concurrent.duration._
 @ValidAppDefinition
 case class AppDefinition(
 
-  id: PathId = PathId.empty,
+  id: PathId = AppDefinition.DefaultId,
 
-  cmd: Option[String] = None,
+  cmd: Option[String] = AppDefinition.DefaultCmd,
 
-  args: Option[Seq[String]] = None,
+  args: Option[Seq[String]] = AppDefinition.DefaultArgs,
 
-  user: Option[String] = None,
+  user: Option[String] = AppDefinition.DefaultUser,
 
-  env: Map[String, String] = Map.empty,
+  env: Map[String, String] = AppDefinition.DefaultEnv,
 
   @FieldMin(0) instances: JInt = AppDefinition.DefaultInstances,
 
@@ -43,13 +43,13 @@ case class AppDefinition(
 
   disk: JDouble = AppDefinition.DefaultDisk,
 
-  @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = "",
+  @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = AppDefinition.DefaultExecutor,
 
-  constraints: Set[Constraint] = Set.empty,
+  constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
-  uris: Seq[String] = Seq.empty,
+  uris: Seq[String] = AppDefinition.DefaultUris,
 
-  storeUrls: Seq[String] = Seq.empty,
+  storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
   @FieldPortsArray ports: Seq[JInt] = AppDefinition.DefaultPorts,
 
@@ -59,13 +59,13 @@ case class AppDefinition(
 
   backoffFactor: JDouble = AppDefinition.DefaultBackoffFactor,
 
-  container: Option[Container] = None,
+  container: Option[Container] = AppDefinition.DefaultContainer,
 
-  healthChecks: Set[HealthCheck] = Set.empty,
+  healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
 
-  dependencies: Set[PathId] = Set.empty,
+  dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
-  upgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty,
+  upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
 
   version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {
@@ -229,23 +229,51 @@ case class AppDefinition(
 }
 
 object AppDefinition {
-  val DefaultCpus = 1.0
 
-  val DefaultMem = 128.0
+  val RandomPortValue: Int = 0
 
-  val DefaultDisk = 0.0
+  // App defaults
+  val DefaultId: PathId = PathId.empty
 
-  val RandomPortValue = 0
+  val DefaultCmd: Option[String] = None
+
+  val DefaultArgs: Option[Seq[String]] = None
+
+  val DefaultUser: Option[String] = None
+
+  val DefaultEnv: Map[String, String] = Map.empty
+
+  val DefaultInstances: Int = 1
+
+  val DefaultCpus: Double = 1.0
+
+  val DefaultMem: Double = 128.0
+
+  val DefaultDisk: Double = 0.0
+
+  val DefaultExecutor: String = ""
+
+  val DefaultConstraints: Set[Constraint] = Set.empty
+
+  val DefaultUris: Seq[String] = Seq.empty
+
+  val DefaultStoreUrls: Seq[String] = Seq.empty
 
   val DefaultPorts: Seq[JInt] = Seq(RandomPortValue)
 
-  val DefaultRequirePorts = false
+  val DefaultRequirePorts: Boolean = false
 
-  val DefaultInstances = 1
-
-  val DefaultBackoff = 1.second
+  val DefaultBackoff: FiniteDuration = 1.second
 
   val DefaultBackoffFactor = 1.15
+
+  val DefaultContainer: Option[Container] = None
+
+  val DefaultHealthChecks: Set[HealthCheck] = Set.empty
+
+  val DefaultDependencies: Set[PathId] = Set.empty
+
+  val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
