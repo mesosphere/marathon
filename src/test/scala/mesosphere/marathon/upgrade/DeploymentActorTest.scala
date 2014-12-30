@@ -13,6 +13,7 @@ import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentActor.Finished
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
 import org.apache.mesos.Protos.Status
@@ -233,6 +234,47 @@ class DeploymentActorTest
       verify(driver).killTask(TaskID(task1_1.getId))
       verify(driver).killTask(TaskID(task1_2.getId))
       verify(queue, times(2)).add(appNew)
+    }
+    finally {
+      system.shutdown()
+    }
+  }
+
+  test("Restart suspended app") {
+    implicit val system = ActorSystem("TestSystem")
+    val managerProbe = TestProbe()
+    val receiverProbe = TestProbe()
+
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 0, version = Timestamp(0))
+    val origGroup = Group(PathId("/foo/bar"), Set(app))
+
+    val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
+    val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
+
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew, 0, 0)))), Timestamp.now())
+
+    when(tracker.get(app.id)).thenReturn(Set[MarathonTask]())
+    when(repo.store(appNew)).thenReturn(Future.successful(appNew))
+
+    try {
+      TestActorRef(
+        Props(
+          classOf[DeploymentActor],
+          managerProbe.ref,
+          receiverProbe.ref,
+          repo,
+          driver,
+          scheduler,
+          plan,
+          tracker,
+          queue,
+          storage,
+          hcManager,
+          system.eventStream
+        )
+      )
+
+      receiverProbe.expectMsg(Finished)
     }
     finally {
       system.shutdown()
