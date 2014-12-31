@@ -65,7 +65,7 @@ class MarathonHealthCheckManager @Inject() (
       val healthChecksForApp = listActive(appId, appVersion)
 
       if (healthChecksForApp.exists(_.healthCheck == healthCheck))
-        log.info(s"Not adding duplicate health check for app [$appId] and version [$appVersion]: [$healthCheck]")
+        log.debug(s"Not adding duplicate health check for app [$appId] and version [$appVersion]: [$healthCheck]")
 
       else {
         log.info(s"Adding health check for app [$appId] and version [$appVersion]: [$healthCheck]")
