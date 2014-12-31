@@ -160,19 +160,25 @@ class DeploymentActor(
 
   def restartApp(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int): Future[Unit] = {
     healthCheckManager.addAllFor(app) // ensure health check actors are in place before tasks are launched
-    val res = Promise[Unit]()
+    val res = if (app.instances == 0) {
+      Future.successful(())
+    }
+    else {
+      val promise = Promise[Unit]()
+      context.actorOf(
+        Props(
+          new TaskReplaceActor(
+            driver,
+            taskQueue,
+            taskTracker,
+            eventBus,
+            app,
+            promise)))
 
-    context.actorOf(
-      Props(
-        new TaskReplaceActor(
-          driver,
-          taskQueue,
-          taskTracker,
-          eventBus,
-          app,
-          res)))
+      promise.future.map(_ => ())
+    }
 
-    storeAndThen(app, res.future)
+    storeAndThen(app, res)
   }
 
   def resolveArtifacts(app: AppDefinition, urls: Map[URL, String]): Future[Unit] = {
