@@ -13,8 +13,13 @@ RUN apt-get install -y \
 RUN curl -SsL -O http://dl.bintray.com/sbt/debian/sbt-0.13.5.deb && \
     dpkg -i sbt-0.13.5.deb
 
-COPY . /marathon
 WORKDIR /marathon
+COPY ./project /marathon/project
+COPY ./version.sbt /marathon/version.sbt
+
+RUN sbt update
+
+COPY . /marathon
 
 RUN sbt assembly
 
