@@ -109,32 +109,35 @@ class MarathonHealthCheckManager @Inject() (
       }
     }
 
-  override def reconcileWith(appId: PathId): Unit =
-    for {
-      maybeApp <- appRepository.currentVersion(appId)
-      app <- maybeApp
-    } withWriteLock {
-      val tasks: Map[String, MarathonTask] = taskTracker.get(app.id).map(task => task.getVersion -> task).toMap
+  override def reconcileWith(appId: PathId): Future[Unit] =
+    appRepository.currentVersion(appId) flatMap {
+      case None => Future(())
+      case Some(app) => withWriteLock {
+        val versionTasksMap: Map[String, MarathonTask] =
+          taskTracker.get(app.id).map { task => task.getVersion -> task }.toMap
 
-      // remove health checks for which the app version is not current and no tasks remain
-      // since only current version tasks are launched.
-      appHealthChecks.foreach { mapping =>
-        val (AppVersion(id, version), ahcs) = mapping
-        if (id == app.id) {
-          val isCurrentVersion = version == app.version
-          lazy val hasTasks = tasks.contains(version.toString)
-          if (!isCurrentVersion && !hasTasks)
-            ahcs.foreach { ahc => remove(id, version, ahc.healthCheck) }
+        // remove health checks for which the app version is not current and no tasks remain
+        // since only current version tasks are launched.
+        appHealthChecks.foreach { mapping =>
+          val (AppVersion(id, version), ahcs) = mapping
+          if (id == app.id) {
+            val isCurrentVersion = version == app.version
+            lazy val hasTasks = versionTasksMap.contains(version.toString)
+            if (!isCurrentVersion && !hasTasks)
+              ahcs.foreach { ahc => remove(id, version, ahc.healthCheck) }
+          }
         }
-      }
 
-      // add missing health checks for the current
-      // reconcile all running versions of the current app
-      for {
-        version <- tasks.keys
-        maybeAppVersion <- appRepository.app(app.id, Timestamp(version))
-        appVersion <- maybeAppVersion
-      } addAllFor(appVersion)
+        // add missing health checks for the current
+        // reconcile all running versions of the current app
+        val res = versionTasksMap.keys map { version =>
+          appRepository.app(app.id, Timestamp(version)) map {
+            case None             =>
+            case Some(appVersion) => addAllFor(appVersion)
+          }
+        }
+        Future.sequence(res) map { _ => () }
+      }
     }
 
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
