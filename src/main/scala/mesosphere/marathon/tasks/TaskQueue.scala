@@ -68,16 +68,15 @@ class TaskQueue {
     queuedTask.count.addAndGet(count)
   }
 
-  // TODO: should only return the count for the same version
   /**
     * Number of tasks in the queue for the given app
     *
-    * @param app The app
+    * @param appId The app id
     * @return count
     */
-  def count(app: AppDefinition): Int = apps.values.foldLeft(0) {
-    case (count, task) if task.app.id == app.id => count + task.count.get()
-    case (count, _)                             => count
+  def count(appId: PathId): Int = apps.values.foldLeft(0) {
+    case (count, task) if task.app.id == appId => count + task.count.get()
+    case (count, _)                            => count
   }
 
   def purge(appId: PathId): Unit = {

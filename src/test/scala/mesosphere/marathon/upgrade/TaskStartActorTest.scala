@@ -52,9 +52,9 @@ class TaskStartActorTest
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app) == 5, 3.seconds)
+    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
 
-    for (i <- 0 until taskQueue.count(app))
+    for (i <- 0 until taskQueue.count(app.id))
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
@@ -113,9 +113,9 @@ class TaskStartActorTest
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app) == 5, 3.seconds)
+    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
 
-    for (i <- 0 until taskQueue.count(app))
+    for (i <- 0 until taskQueue.count(app.id))
       system.eventStream.publish(HealthStatusChanged(app.id, s"task_$i", app.version.toString, alive = true))
 
     Await.result(promise.future, 3.seconds) should be(())
@@ -206,17 +206,17 @@ class TaskStartActorTest
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app) == 1, 3.seconds)
+    awaitCond(taskQueue.count(app.id) == 1, 3.seconds)
 
     taskQueue.purge(app.id)
 
     system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", "", app.id, "", Nil, app.version.toString))
 
-    awaitCond(taskQueue.count(app) == 1, 3.seconds)
+    awaitCond(taskQueue.count(app.id) == 1, 3.seconds)
 
     verify(taskQueue, times(2)).add(app, 1)
 
-    for (i <- 0 until taskQueue.count(app))
+    for (i <- 0 until taskQueue.count(app.id))
       system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())

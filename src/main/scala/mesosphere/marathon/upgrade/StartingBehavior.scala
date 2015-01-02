@@ -73,7 +73,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
       taskQueue.add(app)
 
     case Sync =>
-      val actualSize = taskQueue.count(app) + taskTracker.count(app.id)
+      val actualSize = taskQueue.count(app.id) + taskTracker.count(app.id)
 
       if (actualSize < expectedSize) {
         taskQueue.add(app, expectedSize - actualSize)
