@@ -62,6 +62,41 @@ class TaskStartActorTest
     expectTerminated(ref)
   }
 
+  test("Start success with tasks in taskQueue") {
+    val driver = mock[SchedulerDriver]
+    val scheduler = mock[SchedulerActions]
+    val taskQueue = new TaskQueue
+    val registry = new MetricRegistry
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
+    val promise = Promise[Unit]()
+    val app = AppDefinition("myApp".toPath, instances = 5)
+
+    taskQueue.add(app)
+
+    val ref = TestActorRef(Props(
+      classOf[TaskStartActor],
+      driver,
+      scheduler,
+      taskQueue,
+      taskTracker,
+      system.eventStream,
+      app,
+      app.instances,
+      false,
+      promise))
+
+    watch(ref)
+
+    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
+
+    for (i <- 0 until taskQueue.count(app.id))
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+
+    Await.result(promise.future, 3.seconds) should be(())
+
+    expectTerminated(ref)
+  }
+
   test("Start success with no instances to start") {
     val driver = mock[SchedulerDriver]
     val scheduler = mock[SchedulerActions]
