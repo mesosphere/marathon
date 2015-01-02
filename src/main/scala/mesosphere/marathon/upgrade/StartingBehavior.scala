@@ -15,7 +15,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   import mesosphere.marathon.upgrade.StartingBehavior._
 
   def eventBus: EventStream
-  def expectedSize: Int
+  def expectedTasksOfVersion: Int
   def withHealthChecks: Boolean
   def taskQueue: TaskQueue
   def driver: SchedulerDriver
@@ -56,6 +56,10 @@ trait StartingBehavior { this: Actor with ActorLogging =>
       healthyTasks += taskId
       log.info(s"$taskId is now healthy")
       checkFinished()
+
+    case HealthStatusChanged(AppId, taskId, Version, false, _, _) if healthyTasks(taskId) =>
+      healthyTasks -= taskId
+      log.info(s"$taskId is now unhealthy")
   }
 
   final def checkForRunning: Receive = {
@@ -69,22 +73,24 @@ trait StartingBehavior { this: Actor with ActorLogging =>
     case MesosStatusUpdateEvent(_, taskId, "TASK_ERROR" | "TASK_FAILED" | "TASK_LOST" | "TASK_KILLED", _, app.`id`, _, _, Version, _, _) => // scalastyle:off line.size.limit
       log.warning(s"Failed to start $taskId for app ${app.id}. Rescheduling.")
       runningTasks -= taskId
+      healthyTasks -= taskId
       taskQueue.add(app)
 
     case Sync =>
-      val actualSize = taskQueue.count(app) + taskTracker.count(app.id)
+      // only count the tasks of this version
+      val actualSize = taskQueue.count(app) + taskTracker.get(app.id).filter(_.getVersion == Version).size
 
-      if (actualSize < expectedSize) {
-        for (_ <- 0 until (expectedSize - actualSize)) taskQueue.add(app)
+      if (actualSize < expectedTasksOfVersion) {
+        for (_ <- 0 until (expectedTasksOfVersion - actualSize)) taskQueue.add(app)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
   def checkFinished(): Unit = {
-    if (withHealthChecks && healthyTasks.size == expectedSize) {
+    if (withHealthChecks && healthyTasks.size == expectedTasksOfVersion) {
       success()
     }
-    else if (runningTasks.size == expectedSize) {
+    else if (runningTasks.size == expectedTasksOfVersion) {
       success()
     }
   }

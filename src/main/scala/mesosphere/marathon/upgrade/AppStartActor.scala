@@ -19,7 +19,7 @@ class AppStartActor(
     scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
-  val expectedSize = scaleTo
+  val expectedTasksOfVersion = scaleTo
 
   def withHealthChecks: Boolean = app.healthChecks.nonEmpty
 
