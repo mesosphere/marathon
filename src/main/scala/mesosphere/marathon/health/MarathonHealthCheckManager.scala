@@ -14,14 +14,16 @@ import org.apache.mesos.Protos.TaskStatus
 
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, AppRepository }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.util.ThreadPoolContext.context
 
 class MarathonHealthCheckManager @Inject() (
     system: ActorSystem,
     @Named(EventModule.busName) eventBus: EventStream,
-    taskTracker: TaskTracker) extends HealthCheckManager {
+    taskTracker: TaskTracker,
+    appRepository: AppRepository) extends HealthCheckManager {
 
   // composite key for partitioning the set of active health checks
   protected[this] case class AppVersion(id: PathId, version: Timestamp)
@@ -107,24 +109,35 @@ class MarathonHealthCheckManager @Inject() (
       }
     }
 
-  override def reconcileWith(app: AppDefinition): Unit =
-    withWriteLock {
-      // remove health checks for which the app version is not current and no tasks remain
-      // since only current version tasks are launched.
-      appHealthChecks.foreach { mapping =>
-        val (AppVersion(id, version), ahcs) = mapping
-        if (id == app.id) {
-          val isCurrentVersion = version == app.version
-          lazy val hasTasks = taskTracker.get(app.id).exists(_.getVersion == version.toString)
-          if (!isCurrentVersion && !hasTasks)
-            ahcs.foreach { ahc => remove(id, version, ahc.healthCheck) }
-        }
-      }
+  override def reconcileWith(appId: PathId): Future[Unit] =
+    appRepository.currentVersion(appId) flatMap {
+      case None => Future(())
+      case Some(app) => withWriteLock {
+        val versionTasksMap: Map[String, MarathonTask] =
+          taskTracker.get(app.id).map { task => task.getVersion -> task }.toMap
 
-      // add missing health checks for the app version
-      val existingHealthChecks: Set[HealthCheck] = listActive(app.id, app.version).map(_.healthCheck)
-      val toAdd = app.healthChecks -- existingHealthChecks
-      for (hc <- toAdd) add(app.id, app.version, hc)
+        // remove health checks for which the app version is not current and no tasks remain
+        // since only current version tasks are launched.
+        appHealthChecks.foreach { mapping =>
+          val (AppVersion(id, version), ahcs) = mapping
+          if (id == app.id) {
+            val isCurrentVersion = version == app.version
+            lazy val hasTasks = versionTasksMap.contains(version.toString)
+            if (!isCurrentVersion && !hasTasks)
+              ahcs.foreach { ahc => remove(id, version, ahc.healthCheck) }
+          }
+        }
+
+        // add missing health checks for the current
+        // reconcile all running versions of the current app
+        val res = versionTasksMap.keys map { version =>
+          appRepository.app(app.id, Timestamp(version)) map {
+            case None             =>
+            case Some(appVersion) => addAllFor(appVersion)
+          }
+        }
+        Future.sequence(res) map { _ => () }
+      }
     }
 
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =

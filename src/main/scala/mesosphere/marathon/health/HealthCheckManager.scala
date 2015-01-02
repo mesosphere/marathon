@@ -44,7 +44,7 @@ trait HealthCheckManager {
   /**
     * Reconciles active health checks with those defined by the supplied app.
     */
-  def reconcileWith(app: AppDefinition): Unit
+  def reconcileWith(appId: PathId): Future[Unit]
 
   /**
     * Notifies this health check manager of health information received
