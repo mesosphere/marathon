@@ -16,11 +16,10 @@ class TaskStartActor(
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
     val app: AppDefinition,
-    scaleTo: Int,
+    val scaleTo: Int,
     val withHealthChecks: Boolean,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
-  val expectedSize: Int = scaleTo
   val nrToStart: Int = scaleTo - taskTracker.count(app.id)
 
   override def initializeStart(): Unit = {

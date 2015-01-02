@@ -15,7 +15,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   import mesosphere.marathon.upgrade.StartingBehavior._
 
   def eventBus: EventStream
-  def expectedSize: Int
+  def scaleTo: Int
   def nrToStart: Int
   def withHealthChecks: Boolean
   def taskQueue: TaskQueue
@@ -74,9 +74,8 @@ trait StartingBehavior { this: Actor with ActorLogging =>
 
     case Sync =>
       val actualSize = taskQueue.count(app.id) + taskTracker.count(app.id)
-
-      if (actualSize < expectedSize) {
-        taskQueue.add(app, expectedSize - actualSize)
+      if (actualSize < scaleTo) {
+        taskQueue.add(app, scaleTo - actualSize)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
