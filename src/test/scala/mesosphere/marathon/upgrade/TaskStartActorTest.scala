@@ -12,7 +12,7 @@ import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.InMemoryState
-import org.mockito.Mockito.{ times, spy, verify }
+import org.mockito.Mockito.{ times, spy, verify, when }
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
 
@@ -295,6 +295,63 @@ class TaskStartActorTest
     for (i <- 0 until taskQueue.count(app.id))
       system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
+    Await.result(promise.future, 3.seconds) should be(())
+
+    expectTerminated(ref)
+  }
+
+  test("Start success with dying existing task, reschedules, but finishes early") {
+    val driver = mock[SchedulerDriver]
+    val scheduler = mock[SchedulerActions]
+    val taskQueue = new TaskQueue
+    val registry = new MetricRegistry
+    val taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], registry))
+    val promise = Promise[Unit]()
+    val app = AppDefinition("/myApp".toPath, instances = 5)
+
+    val taskId = TaskIdUtil.newTaskId(app.id)
+    val task = MarathonTask.newBuilder
+      .setId(taskId.getValue)
+      .setVersion(Timestamp(1024).toString)
+      .build
+    taskTracker.created(app.id, task)
+
+    val ref = TestActorRef(Props(
+      classOf[TaskStartActor],
+      driver,
+      scheduler,
+      taskQueue,
+      taskTracker,
+      system.eventStream,
+      app,
+      app.instances,
+      false,
+      promise))
+
+    watch(ref)
+
+    // wait for initial sync
+    awaitCond(taskQueue.count(app.id) == 4, 3.seconds)
+
+    // let existing task die
+    // doesn't work because it needs Zookeeper: taskTracker.terminated(app.id, taskStatus)
+    // we mock instead
+    when(taskTracker.count(app.id)).thenReturn(0)
+    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_ERROR", "", app.id, "", Nil, task.getVersion))
+
+    // sync will reschedule task
+    ref ! StartingBehavior.Sync
+    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
+
+    // launch 4 of the tasks
+    when(taskTracker.count(app.id)).thenReturn(4)
+    List(0, 1, 2, 3) foreach { i =>
+      taskQueue.poll
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+    }
+    assert(taskQueue.count(app.id) == 1)
+
+    // it finished early
     Await.result(promise.future, 3.seconds) should be(())
 
     expectTerminated(ref)
