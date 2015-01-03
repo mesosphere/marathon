@@ -36,7 +36,7 @@ class TaskStartActorTest
     val registry = new MetricRegistry
     val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
-    val app = AppDefinition("myApp".toPath, instances = 5)
+    val app = AppDefinition("/myApp".toPath, instances = 5)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -69,7 +69,7 @@ class TaskStartActorTest
     val registry = new MetricRegistry
     val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
-    val app = AppDefinition("myApp".toPath, instances = 5)
+    val app = AppDefinition("/myApp".toPath, instances = 5)
 
     taskQueue.add(app)
 
@@ -104,7 +104,7 @@ class TaskStartActorTest
     val registry = new MetricRegistry
     val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp".toPath, instances = 0)
+    val app = AppDefinition("/myApp".toPath, instances = 0)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -132,7 +132,7 @@ class TaskStartActorTest
     val registry = new MetricRegistry
     val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp".toPath, instances = 5)
+    val app = AppDefinition("/myApp".toPath, instances = 5)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -165,7 +165,7 @@ class TaskStartActorTest
     val registry = new MetricRegistry
     val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp".toPath, instances = 0)
+    val app = AppDefinition("/myApp".toPath, instances = 0)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -193,7 +193,7 @@ class TaskStartActorTest
     val registry = new MetricRegistry
     val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp".toPath, instances = 5)
+    val app = AppDefinition("/myApp".toPath, instances = 5)
 
     val ref = system.actorOf(Props(
       classOf[TaskStartActor],
@@ -225,7 +225,7 @@ class TaskStartActorTest
     val registry = new MetricRegistry
     val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
-    val app = AppDefinition("myApp".toPath, instances = 1)
+    val app = AppDefinition("/myApp".toPath, instances = 1)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
