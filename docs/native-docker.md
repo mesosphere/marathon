@@ -60,6 +60,7 @@ app definition JSON:
   "container": {
     "type": "DOCKER",
     "docker": {
+      "network": "HOST",
       "image": "group/image"
     },
     "volumes": [
@@ -80,11 +81,6 @@ app definition JSON:
 
 where `volumes` and `type` are optional (the default type is `DOCKER`).  More
 container types may be added later.
-
-  <div class="alert alert-info">
-    <strong>Note:</strong> Initially, Mesos supports only the host (`--net=host`) Docker
-    networking mode.
-  </div>
 
 For convenience, the mount point of the mesos sandbox is available in the
 environment as `$MESOS_SANDBOX`.  The `$HOME` environment variable is set
@@ -171,6 +167,8 @@ the `uris` field of your app.
 
 ### Advanced Usage
 
+#### Command vs Args
+
 As of version 0.7.0, Marathon supports an `args` field in the app JSON.  It is
 invalid to supply both `cmd` and `args` for the same app.  The behavior of `cmd`
 is as in previous releases (the value is wrapped by Mesos via
@@ -208,3 +206,37 @@ and execute `echo hello`:
     "instances": 1
 }
 ```
+
+#### Privileged Mode and Arbitrary Docker Options
+
+Starting with version 0.7.6, Marathon supports two new keys for docker
+containers: `privileged` and `parameters`.  The `privileged` flag allows users
+to run containers in privileged mode.  This flag is `false` by default.  The
+`parameters` object allows users to supply arbitrary command-line options
+for the `docker run` command executed by the Mesos containerizer.  Note that
+any parameters passed in this manner are not guaranteed to be supported in
+the future, as Mesos may not always interact with Docker via the CLI.
+
+```json
+{
+    "id": "privileged-job",
+    "container": {
+        "docker": {
+            "image": "mesosphere/inky"
+            "privileged": true,
+            "parameters": {
+                "hostname": "a.corp.org",
+                "volumes-from": "another-container",
+                "lxc-conf": "..."
+            }
+        },
+        "type": "DOCKER",
+        "volumes": []
+    },
+    "args": ["hello"],
+    "cpus": 0.2,
+    "mem": 32.0,
+    "instances": 1
+}
+```
+

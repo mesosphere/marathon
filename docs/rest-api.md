@@ -12,6 +12,7 @@ title: REST API
   * [GET /v2/apps/{appId}/versions/{version}](#get-/v2/apps/{appid}/versions/{version}): List the configuration of the application with id `appId` at version `version`.
   * [PUT /v2/apps/{appId}](#put-/v2/apps/{appid}): Change config of the app
     `appId`
+  * [POST /v2/apps/{appId}/restart](#post-/v2/apps/{appid}/restart): Rolling restart of all tasks of the given app
   * [DELETE /v2/apps/{appId}](#delete-/v2/apps/{appid}): Destroy app `appId`
   * [GET /v2/apps/{appId}/tasks](#get-/v2/apps/{appid}/tasks): List running tasks
     for app `appId`
@@ -24,7 +25,6 @@ title: REST API
   * [GET /v2/groups/{groupId}](#get-/v2/groups/{groupid}): List the group with the specified ID
   * [POST /v2/groups](#post-/v2/groups): Create and start a new groups
   * [PUT /v2/groups/{groupId}](#put-/v2/groups/{groupid}): Change parameters of a deployed application group
-  * [PUT /v2/groups/{groupId}/version/{version}](#put-/v2/groups/{groupid}/version/{version}): Rollback group to a previous version
   * [DELETE /v2/groups/{groupId}](#delete-/v2/groups/{groupid}): Destroy a group
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
@@ -36,14 +36,14 @@ title: REST API
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
   * [DELETE /v2/eventSubscriptions](#delete-/v2/eventsubscriptions) Unregister a callback URL from the event subscribers list
 * [Queue](#queue) <span class="label label-default">v0.7.0</span>
-  * [GET /v2/queue](#get-v2queue): List content of the staging queue.
+  * [GET /v2/queue](#get-/v2/queue): List content of the staging queue.
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
 * [Miscellaneous](#miscellaneous)
   * [GET /ping](#get-/ping)
   * [GET /logging](#get-/logging)
   * [GET /help](#get-/help)
-  * [GET /metrics](#get-/status)
+  * [GET /metrics](#get-/metrics)
 
 ### Apps
 
@@ -75,7 +75,12 @@ The full JSON format of an application resource is as follows:
                     "hostPort": 0,
                     "protocol": "udp"
                 }
-            ]
+            ],
+            "privileged": false,
+            "parameters": {
+                "a-docker-option": "xxx",
+                "b-docker-option": "yyy"
+            }
         },
         "volumes": [
             {
@@ -182,7 +187,12 @@ the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
 
 ##### container
 
-Additional data passed to the containerizer on application launch.  These consist of a type, zero or more volumes, and additional type-specific options.  Volumes and type are optional (the default type is DOCKER).  In order to make use of the docker containerizer, specify `--containerizers=docker,mesos` to the Mesos slave.
+Additional data passed to the containerizer on application launch.  These
+consist of a type, zero or more volumes, and additional type-specific options.
+Volumes and type are optional (the default type is DOCKER).  In order to make
+use of the docker containerizer, specify `--containerizers=docker,mesos` to
+the Mesos slave.  For a discussion of docker-specific options, see the
+[native docker document]({{site.baseurl}}/docs/native-docker.html).
 
 ##### dependencies
 
@@ -935,6 +945,60 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
+#### POST `/v2/apps/{appId}/restart`
+
+Initiates a rolling restart of all running tasks of the given app. This call respects the configured `minimumHealthCapacity`.
+
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>force</code></td>
+      <td><code>boolean</code></td>
+      <td>If the app is affected by a running deployment, then the update
+        operation will fail. The current deployment can be overridden by setting
+        the `force` query parameter.
+        Default: <code>false</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+##### Example
+
+**Request:**
+
+{% highlight http %}
+POST /v2/apps/my-app/restart HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Content-Length: 0
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438",
+    "version": "2014-08-26T07:37:50.462Z"
+}
+{% endhighlight %}
+
 #### DELETE `/v2/apps/{appId}`
 
 Destroy an application. All data about that application will be deleted.
@@ -1443,7 +1507,7 @@ During restart marathon keeps track, that the configured amount of minimal runni
 A deployment can run forever. This is the case, when the new application has a problem and does not become healthy.
 In this case, human interaction is needed with 2 possible choices:
 
-* Rollback to an existing older version (use the rollback endpoint)
+* Rollback to an existing older version (send an existing `version` in the body)
 * Update with a newer version of the group which does not have the problems of the old one.
 
 If there is an upgrade process already in progress, a new update will be rejected unless the force flag is set.
@@ -1544,51 +1608,21 @@ Transfer-Encoding: chunked
 }
 {% endhighlight %}
 
+### Example
 
-#### PUT `/v2/groups/{groupId}/version/{version}`
+Rollback a group.
 
-Rollback this group to a previous version.
-All changes to a group will create a new version.
-With this endpoint it is possible to an older version of this group.
-
-The rollback to a version is handled as normal update.
-All implications of an update will take place.
-
-Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a
-`group_change_success` and `group_change_failed` event with the given version.
-
-##### Parameters
-
-<table class="table table-bordered">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>force</code></td>
-      <td><code>boolean</code></td>
-      <td>If there is an upgrade process already in progress, this rollback will
-        be rejected unless the force flag is set. With the force flag given,
-        a running upgrade is terminated and a new one is started.
-        Default: <code>false</code>.</td>
-    </tr>
-  </tbody>
-</table>
-
-##### Example
+In case of an erroneous update, a group can be rolled back by sending just a version, that is known to work, to the update
+endpoint.
 
 **Request:**
 
 {% highlight http %}
-PUT /v2/groups/myproduct/version/2014-03-01T23:29:30.158?force=true HTTP/1.1
-Content-Length: 0
+PUT /v2/groups/product/service HTTP/1.1
+Content-Length: 123
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
+{ "version": "2014-08-27T15:34:48.163Z" }
 {% endhighlight %}
 
 **Response:**
@@ -1604,7 +1638,6 @@ Transfer-Encoding: chunked
     "version": "2014-08-28T16:45:41.063Z"
 }
 {% endhighlight %}
-
 
 #### DELETE `/v2/groups/{groupId}`
 
