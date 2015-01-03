@@ -4,9 +4,11 @@ import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.InMemoryState
@@ -88,6 +90,45 @@ class TaskStartActorTest
     watch(ref)
 
     awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
+
+    for (i <- 0 until taskQueue.count(app.id))
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+
+    Await.result(promise.future, 3.seconds) should be(())
+
+    expectTerminated(ref)
+  }
+
+  test("Start success with existing task") {
+    val driver = mock[SchedulerDriver]
+    val scheduler = mock[SchedulerActions]
+    val taskQueue = new TaskQueue
+    val registry = new MetricRegistry
+    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
+    val promise = Promise[Unit]()
+    val app = AppDefinition("/myApp".toPath, instances = 5)
+
+    val task = MarathonTask.newBuilder
+      .setId(TaskIdUtil.newTaskId(app.id).getValue)
+      .setVersion(Timestamp(1024).toString)
+      .build
+    taskTracker.created(app.id, task)
+
+    val ref = TestActorRef(Props(
+      classOf[TaskStartActor],
+      driver,
+      scheduler,
+      taskQueue,
+      taskTracker,
+      system.eventStream,
+      app,
+      app.instances,
+      false,
+      promise))
+
+    watch(ref)
+
+    awaitCond(taskQueue.count(app.id) == 4, 3.seconds)
 
     for (i <- 0 until taskQueue.count(app.id))
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
