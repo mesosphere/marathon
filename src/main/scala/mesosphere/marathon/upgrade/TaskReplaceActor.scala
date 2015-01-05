@@ -44,7 +44,7 @@ class TaskReplaceActor(
       driver.killTask(taskId)
     }
 
-    for (_ <- 0 until app.instances) taskQueue.add(app)
+    taskQueue.add(app, app.instances)
   }
 
   override def postStop(): Unit = {

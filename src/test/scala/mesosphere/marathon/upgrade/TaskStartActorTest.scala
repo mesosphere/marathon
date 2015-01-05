@@ -3,14 +3,14 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.InMemoryState
-import org.mockito.Mockito.{ spy, times, verify }
+import org.mockito.Mockito.{ times, spy, verify }
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
 
@@ -54,7 +54,7 @@ class TaskStartActorTest
 
     awaitCond(taskQueue.count(app) == 5, 3.seconds)
 
-    for ((task, i) <- taskQueue.removeAll().zipWithIndex)
+    for (i <- 0 until taskQueue.count(app))
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
@@ -115,8 +115,8 @@ class TaskStartActorTest
 
     awaitCond(taskQueue.count(app) == 5, 3.seconds)
 
-    for ((_, i) <- taskQueue.removeAll().zipWithIndex)
-      system.eventStream.publish(HealthStatusChanged(app.id, s"task_${i}", app.version.toString, true))
+    for (i <- 0 until taskQueue.count(app))
+      system.eventStream.publish(HealthStatusChanged(app.id, s"task_$i", app.version.toString, alive = true))
 
     Await.result(promise.future, 3.seconds) should be(())
 
@@ -208,14 +208,15 @@ class TaskStartActorTest
 
     awaitCond(taskQueue.count(app) == 1, 3.seconds)
 
-    for (task <- taskQueue.removeAll())
-      system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", "", app.id, "", Nil, app.version.toString))
+    taskQueue.purge(app.id)
+
+    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", "", app.id, "", Nil, app.version.toString))
 
     awaitCond(taskQueue.count(app) == 1, 3.seconds)
 
-    verify(taskQueue, times(2)).add(app)
+    verify(taskQueue, times(2)).add(app, 1)
 
-    for (task <- taskQueue.removeAll())
+    for (i <- 0 until taskQueue.count(app))
       system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())

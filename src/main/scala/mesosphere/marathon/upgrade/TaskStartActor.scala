@@ -23,7 +23,7 @@ class TaskStartActor(
   var running: Int = 0
 
   override def initializeStart(): Unit = {
-    for (_ <- 0 until nrToStart) taskQueue.add(app)
+    taskQueue.add(app, nrToStart)
   }
 
   override def postStop(): Unit = {

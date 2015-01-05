@@ -1,5 +1,7 @@
 package mesosphere.marathon
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.{ TestKit, TestProbe }
@@ -45,7 +47,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     repo = mock[AppRepository]
     hcManager = mock[HealthCheckManager]
     tracker = mock[TaskTracker]
-    queue = mock[TaskQueue]
+    queue = spy(new TaskQueue)
     frameworkIdUtil = mock[FrameworkIdUtil]
     config = defaultConfig()
     taskIdUtil = mock[TaskIdUtil]
@@ -81,17 +83,15 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       ports = Seq(8080),
       version = now
     )
-    val queuedTask = QueuedTask(app, Deadline.now)
+    val queuedTask = QueuedTask(app, new AtomicInteger(app.instances), Deadline.now)
     val list = Vector(queuedTask)
     val allApps = Vector(app)
+
+    queue.add(app)
 
     when(taskIdUtil.newTaskId("testOffers".toRootPath))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
     when(tracker.checkStagedTasks).thenReturn(Seq())
-    when(queue.poll()).thenReturn(Some(queuedTask))
-    when(queue.list).thenReturn(list)
-    when(queue.removeAll()).thenReturn(list)
-    when(queue.listApps).thenReturn(allApps)
     when(repo.currentAppVersions())
       .thenReturn(Future.successful(Map(app.id -> app.version)))
 
@@ -103,7 +103,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
 
     verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
     verify(tracker).created(same(app.id), marathonTaskCaptor.capture())
-    verify(queue).addAll(Seq.empty)
 
     assert(1 == offersCaptor.getValue.size())
     assert(offer.getId == offersCaptor.getValue.get(0))

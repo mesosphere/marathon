@@ -75,7 +75,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
       val actualSize = taskQueue.count(app) + taskTracker.count(app.id)
 
       if (actualSize < expectedSize) {
-        for (_ <- 0 until (expectedSize - actualSize)) taskQueue.add(app)
+        taskQueue.add(app, expectedSize - actualSize)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }

@@ -483,8 +483,7 @@ class SchedulerActions(
 
         if (toQueue > 0) {
           log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
-          for (i <- 0 until toQueue)
-            taskQueue.add(app)
+          taskQueue.add(app, toQueue)
         }
         else {
           log.info(s"Already queued $queuedCount tasks for ${app.id}. Not scaling.")

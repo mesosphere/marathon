@@ -144,7 +144,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       awaitAssert({
         verify(tracker).shutdown("nope".toPath)
-        verify(queue).add(app)
+        verify(queue).add(app, 1)
         verify(driver).killTask(TaskID("task_a"))
       }, 5.seconds, 10.millis)
     }
@@ -168,7 +168,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       schedulerActor ! ScaleApp("test-app".toPath)
 
       awaitAssert({
-        verify(queue).add(app)
+        verify(queue).add(app, 1)
       }, 5.seconds, 10.millis)
 
       expectMsg(5.seconds, AppScaled(app.id))
