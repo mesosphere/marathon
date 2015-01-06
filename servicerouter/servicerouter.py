@@ -75,7 +75,7 @@ HAPROXY_HEAD = '''global
 defaults
   log            global
   retries             3
-  maxconn            2s
+  maxconn            2000
   timeout connect    5s
   timeout client    50s
   timeout server    50s
