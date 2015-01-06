@@ -517,6 +517,13 @@ fieldset[disabled] .btn-info.active {
    padding: 0 2px;
 }
 
+.badge.task {
+  position: relative;
+  top: 0px;
+  left: 0px;
+  margin-right: 10px;
+}
+
 .progress {
   height: 10px;
   border-radius: 3px;

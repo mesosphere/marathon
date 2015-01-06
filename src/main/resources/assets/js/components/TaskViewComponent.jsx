@@ -11,8 +11,9 @@ define([
     displayName: "TaskViewComponent",
 
     propTypes: {
-      fetchState: React.PropTypes.number.isRequired,
       collection: React.PropTypes.object.isRequired,
+      appVersion: React.PropTypes.object.isRequired,
+      fetchState: React.PropTypes.number.isRequired,
       fetchTasks: React.PropTypes.func.isRequired,
       formatTaskHealthMessage: React.PropTypes.func.isRequired,
       hasHealth: React.PropTypes.bool,
@@ -157,6 +158,7 @@ define([
             itemsPerPage={itemsPerPage}
             selectedTasks={this.state.selectedTasks}
             tasks={this.props.collection}
+            appVersion={this.props.appVersion}
             toggleAllTasks={this.toggleAllTasks} />
         </div>
       );

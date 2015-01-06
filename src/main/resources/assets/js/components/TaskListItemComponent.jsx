@@ -51,7 +51,8 @@ define([
       isActive: React.PropTypes.bool.isRequired,
       onToggle: React.PropTypes.func.isRequired,
       onTaskDetailSelect: React.PropTypes.func.isRequired,
-      task: React.PropTypes.object.isRequired
+      task: React.PropTypes.object.isRequired,
+      appVersion: React.PropTypes.object.isRequired
     },
 
     handleClick: function(event) {
@@ -75,6 +76,9 @@ define([
       var className = (this.props.isActive) ? "active" : "";
       var task = this.props.task;
       var hasHealth = !!this.props.hasHealth;
+      var outdated = (this.props.appVersion.toISOString() && (task.get("version").toISOString() != this.props.appVersion.toISOString())) ?
+        <span className="badge task">out-of-date</span> :
+        null;
 
       var taskHealth = task.getHealth();
       var healthClassSet = React.addons.classSet({
@@ -117,6 +121,7 @@ define([
             </span>
           </td>
           <td className="text-right">
+            {outdated}
             <time dateTime={task.get("version").toISOString()} title={task.get("version").toISOString()}>
               {task.get("version").toLocaleString()}
             </time>
