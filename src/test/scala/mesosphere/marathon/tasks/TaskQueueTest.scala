@@ -1,6 +1,5 @@
 package mesosphere.marathon.tasks
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.state.AppDefinition
@@ -15,7 +14,6 @@ class TaskQueueTest extends MarathonSpec {
   var queue: TaskQueue = null
 
   before {
-    val metricRegistry = new MetricRegistry
     queue = new TaskQueue()
   }
 
@@ -43,8 +41,16 @@ class TaskQueueTest extends MarathonSpec {
     queue.add(app3)
 
     assert(queue.list.size == 3, "Queue should contain 3 elements.")
-    queue.retain { case QueuedTask(app, _, _) => app.id == app2.id }
+    queue.retain { case QueuedTask(app, _) => app.id == app2.id }
     assert(queue.list.size == 1, "Queue should contain 1 elements.")
+  }
+
+  test("poll") {
+    queue.add(app1, 3)
+
+    assert(queue.count(app1) == 3)
+    assert(queue.poll().map(_.app) == Some(app1))
+    assert(queue.count(app1) == 2)
   }
 
   test("pollMatching") {

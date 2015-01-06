@@ -1,7 +1,5 @@
 package mesosphere.marathon
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.{ TestKit, TestProbe }
@@ -13,7 +11,6 @@ import mesosphere.marathon.event.{ SchedulerRegisteredEvent, SchedulerReregister
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
-import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
 import org.apache.mesos.Protos._
@@ -26,7 +23,6 @@ import org.scalatest.BeforeAndAfterAll
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.concurrent.duration.Deadline
 
 class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with MarathonSpec with BeforeAndAfterAll {
 
@@ -76,16 +72,13 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     val driver = mock[SchedulerDriver]
     val offer = makeBasicOffer(cpus = 4, mem = 1024, disk = 4000, beginPort = 31000, endPort = 32000).build
     val offers = Lists.newArrayList(offer)
-    val now = Timestamp.now
+    val now = Timestamp.now()
     val app = AppDefinition(
       id = "testOffers".toRootPath,
       executor = "//cmd",
       ports = Seq(8080),
       version = now
     )
-    val queuedTask = QueuedTask(app, new AtomicInteger(app.instances), Deadline.now)
-    val list = Vector(queuedTask)
-    val allApps = Vector(app)
 
     queue.add(app)
 

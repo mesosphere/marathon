@@ -98,7 +98,7 @@ class MarathonScheduler @Inject() (
       Await.result(appRepo.currentAppVersions(), config.zkTimeoutDuration)
 
     taskQueue.retain {
-      case QueuedTask(app, _, _) =>
+      case QueuedTask(app, _) =>
         appVersions.get(app.id) contains app.version
     }
 
