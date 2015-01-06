@@ -27,6 +27,13 @@ define([
 
     componentWillMount: function() {
       this.props.fetchAppVersions();
+      this.props.app.on("error", this.handleAppUpdateError);
+      this.props.app.on("sync", this.handleAppUpdateSuccess);
+    },
+
+    componentWillUnmount: function() {
+      this.props.app.off("error", this.handleAppUpdateError);
+      this.props.app.off("sync", this.handleAppUpdateSuccess);
     },
 
     getResource: function() {
@@ -36,16 +43,46 @@ define([
     getInitialState: function() {
       return {
         currentPage: 0,
-        itemsPerPage: 8
+        itemsPerPage: 8,
+        hasChanged: false
       };
     },
 
-    handleRefresh: function() {
+    handleRefresh: function(event) {
       this.props.fetchAppVersions();
     },
 
     handlePageChange: function(pageNum) {
       this.setState({currentPage: pageNum});
+    },
+
+    handleSubmit: function(event) {
+      event.preventDefault();
+
+      if (!this.props.app.isValid()) {
+        this.forceUpdate();
+        return;
+      }
+
+      this.props.app.save();
+    },
+
+    handleAppUpdateError: function(appModel, response) {
+      this.setState({
+        serverError: JSON.parse(response.responseText)
+      });
+    },
+
+    handleAppUpdateSuccess: function() {
+      this.setState({
+        hasChanged: false
+      });
+    },
+
+    handleChange: function() {
+      this.setState({
+        hasChanged: true
+      });
     },
 
     render: function() {
@@ -109,20 +146,29 @@ define([
         </div> :
         null;
 
+      var saveButton = this.state.hasChanged ? (
+        <button className="btn btn-sm btn-info pull-right" onClick={this.handleSave} type="submit">
+          Save changes
+        </button>
+      ) : null;
+
       return (
-        <div>
+        <form method="post" role="form" onSubmit={this.handleSubmit}>
+          { this.state.serverError ? <p className="alert alert-warning">{this.state.serverError}</p> : null }
           <h5>
             Current Version
-            <button className="btn btn-sm btn-info pull-right" onClick={this.handleRefresh}>
+            <button className="btn btn-sm btn-info pull-right" onClick={this.handleRefresh} type="button">
               ↻ Refresh
             </button>
+            {saveButton}
           </h5>
           <AppVersionComponent
               app={this.props.app}
               appVersion={this.props.app.getCurrentVersion()}
-              currentVersion={true} />
+              currentVersion={true}
+              onChange={this.handleChange} />
             {versionTable}
-        </div>
+        </form>
       );
     }
   });
