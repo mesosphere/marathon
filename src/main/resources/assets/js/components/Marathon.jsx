@@ -236,8 +236,8 @@ define([
           deployment.destroy({
             error: function(data, response) {
               var msg = response.responseJSON && response.responseJSON.message || response.statusText;
-              component.setLoading(false);
               if(msg && response.status !== 202) {
+                component.setLoading(false);
                 alert("Error destroying app '" + deployment.id + "': " + msg);
               }
             },
