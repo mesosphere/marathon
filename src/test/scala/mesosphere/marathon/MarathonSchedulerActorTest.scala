@@ -102,6 +102,23 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     system.shutdown()
   }
 
+  test("RecoversDeploymentsAndReconcilesHealthChecksOnStart") {
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
+    when(repo.apps()).thenReturn(Future.successful(Seq(app)))
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! Start
+      awaitAssert({
+        verify(hcManager).reconcileWith(app.id)
+      }, 5.seconds, 10.millis)
+      verify(deploymentRepo, times(1)).all()
+    }
+    finally {
+      stopActor(schedulerActor)
+    }
+  }
+  
   test("ReconcileTasks") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
@@ -120,6 +137,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! ReconcileTasks
 
       expectMsg(5.seconds, TasksReconciled)
@@ -146,6 +164,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! ScaleApp("test-app".toPath)
 
       awaitAssert({
@@ -186,6 +205,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
       schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
 
@@ -222,6 +242,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -253,6 +274,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -279,6 +301,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! Deploy(plan)
 
       expectMsgType[DeploymentStarted]
@@ -324,6 +347,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     ))
 
     try {
+      schedulerActor ! Start
       schedulerActor ! Deploy(plan)
 
       // This indicates that the deployment is already running,
