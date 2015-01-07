@@ -40,6 +40,7 @@ define([
       var sortKey = this.props.collection.sortKey;
 
       var appNodes;
+      var fetchError;
       var tableClassName = "table table-fixed";
 
       var headerClassSet = React.addons.classSet({
@@ -47,18 +48,20 @@ define([
         "dropup": this.props.collection.sortReverse
       });
 
+      if(this.props.fetchState === States.STATE_ERROR) {
+        fetchError =
+          <tr>
+            <td className="text-center text-danger" colSpan="5">
+              Error fetching apps. Refresh to try again.
+            </td>
+          </tr>;
+      }
+
       if (this.props.fetchState === States.STATE_LOADING) {
         appNodes =
           <tr>
             <td className="text-center text-muted" colSpan="5">
               Loading apps...
-            </td>
-          </tr>;
-      } else if (this.props.fetchState === States.STATE_ERROR) {
-        appNodes =
-          <tr>
-            <td className="text-center text-danger" colSpan="5">
-              Error fetching apps. Refresh to try again.
             </td>
           </tr>;
       } else if (this.props.collection.length === 0) {
@@ -117,6 +120,7 @@ define([
             </tr>
           </thead>
           <tbody>
+            {fetchError}
             {appNodes}
           </tbody>
         </table>

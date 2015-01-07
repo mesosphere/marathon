@@ -42,6 +42,8 @@ define([
       var healthClassSet;
       var timeNodes;
       var timeFields;
+      var fetchError;
+
       if (!hasError) {
 
         healthClassSet = React.addons.classSet({
@@ -68,6 +70,10 @@ define([
               time={timeNode.time} />
           );
         });
+      } else {
+        fetchError = <p className="text-center text-danger">
+          Error fetching task details. Go to <a href="#" onClick={this.handleShowTaskList}>Task List</a> to see the full list.
+        </p>;
       }
 
       /* jshint trailing:false, quotmark:false, newcap:false */
@@ -80,11 +86,8 @@ define([
             <li className="active">{task.get("id")}</li>
           </ol>
           <h5>Task Details</h5>
+          {fetchError}
           {
-            hasError ?
-              <p className="text-center text-danger">
-                Error fetching task details. Go to <a href="#" onClick={this.handleShowTaskList}>Task List</a> to see the full list.
-              </p> :
               <div>
                 <dl className="dl-horizontal">
                   <dt>Host</dt>

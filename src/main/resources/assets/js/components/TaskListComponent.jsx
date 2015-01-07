@@ -54,6 +54,7 @@ define([
 
     render: function() {
       var taskNodes;
+      var fetchError;
       var tasksLength = this.props.tasks.length;
       var hasHealth = !!this.props.hasHealth;
 
@@ -61,6 +62,15 @@ define([
       // they are all selected and let the iteration below decide if that is
       // true.
       var allTasksSelected = tasksLength > 0;
+
+      if (this.props.fetchState === States.STATE_ERROR) {
+        fetchError =
+            <tr>
+              <td className="text-center text-danger" colSpan="7">
+                Error fetching tasks. Refresh the list to try again.
+              </td>
+            </tr>;
+      }
 
       if (this.props.fetchState === States.STATE_LOADING) {
         taskNodes =
@@ -71,16 +81,7 @@ define([
               </td>
             </tr>
           </tbody>;
-      } else if (this.props.fetchState === States.STATE_ERROR) {
-        taskNodes =
-          <tbody>
-            <tr>
-              <td className="text-center text-danger" colSpan="7">
-                Error fetching tasks. Refresh the list to try again.
-              </td>
-            </tr>
-          </tbody>;
-      } else if (tasksLength === 0) {
+      } else if (tasksLength === 0 && !fetchError) {
         taskNodes =
           <tbody>
             <tr>
@@ -97,6 +98,7 @@ define([
               currentPage={this.props.currentPage}
               itemsPerPage={this.props.itemsPerPage}
               element="tbody" >
+            {fetchError}
             {
               this.props.tasks.map(function(task) {
                 // Expicitly check for Boolean since the key might not exist in the
