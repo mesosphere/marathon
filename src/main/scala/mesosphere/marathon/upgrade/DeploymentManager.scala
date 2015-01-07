@@ -50,6 +50,15 @@ class DeploymentManager(
         case _ => origSender ! ConflictingDeploymentsCanceled(plan.id)
       }
 
+    case CancelAllDeployments(t) =>
+      val origSender = sender()
+      val res = runningDeployments.keys map { id =>
+        stopActor(runningDeployments(id).ref, t)
+      }
+      Future.sequence(res) onComplete { _ =>
+        origSender ! AllDeploymentsCanceled
+      }
+
     case CancelDeployment(id, t) =>
       val origSender = sender()
 
@@ -109,11 +118,13 @@ class DeploymentManager(
 object DeploymentManager {
   final case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
   final case class CancelDeployment(id: String, reason: Throwable)
+  final case class CancelAllDeployments(reason: Throwable)
   final case class CancelConflictingDeployments(plan: DeploymentPlan, reason: Throwable)
 
   final case class DeploymentStepInfo(plan: DeploymentPlan, step: DeploymentStep, nr: Int)
   final case class DeploymentFinished(id: String)
   final case class DeploymentCanceled(id: String)
+  final case class AllDeploymentsCanceled()
   final case class ConflictingDeploymentsCanceled(id: String)
 
   final case class DeploymentInfo(

@@ -256,7 +256,7 @@ class MarathonSchedulerService @Inject() (
   private def defeatLeadership(): Unit = {
     log.info("Defeat leadership")
 
-    schedulerActor ! Suspend
+    schedulerActor ! Suspend(LostLeadershipException("Leadership was defeated"))
 
     // Our leadership has been defeated. Thus, update leadership and stop the driver.
     // Note that abdication command will be ran upon driver shutdown.

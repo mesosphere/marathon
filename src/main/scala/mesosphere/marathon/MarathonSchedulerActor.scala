@@ -109,9 +109,10 @@ class MarathonSchedulerActor(
   }
 
   def started: Receive = {
-    case Suspend =>
+    case Suspend(t) =>
       log.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
+      deploymentManager ! CancelAllDeployments(t)
       context.become(suspended)
 
     case Start => // ignore
@@ -281,7 +282,7 @@ class MarathonSchedulerActor(
 
 object MarathonSchedulerActor {
   case object Start
-  case object Suspend
+  case class Suspend(reason: Throwable)
 
   case class RecoverDeployments(deployments: Seq[DeploymentPlan])
 
