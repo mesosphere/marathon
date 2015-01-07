@@ -131,6 +131,7 @@ If you want to inspect the contents of the Docker:
 * [bol.com](https://www.bol.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
 * [Daemon](http://www.daemon.com.au/)
+* [DHL Parcel](http://www.dhlparcel.nl)
 * [Disqus](https://www.disqus.com/)
 * [eBay](http://www.ebay.com/)
 * [The Factory](https://github.com/thefactory/)
