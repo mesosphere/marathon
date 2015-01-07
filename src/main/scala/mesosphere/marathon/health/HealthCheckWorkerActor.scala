@@ -119,9 +119,9 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       implicit val requestTimeout = Timeout(check.timeout)
       implicit def trustfulSslContext: SSLContext = {
         object BlindFaithX509TrustManager extends X509TrustManager {
-          def checkClientTrusted(chain: Array[X509Certificate], authType: String) = ()
-          def checkServerTrusted(chain: Array[X509Certificate], authType: String) = ()
-          def getAcceptedIssuers = Array[X509Certificate]()
+          def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
+          def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
+          def getAcceptedIssuers(): Array[X509Certificate] = Array[X509Certificate]()
         }
 
         val context = SSLContext.getInstance("Default")
