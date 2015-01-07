@@ -125,7 +125,9 @@ define([
             </span>
           </td>
           <td className="text-right">
-            <span title={task.get("version").toISOString()} className={versionClassSet}>{outdated ? "Out-of-date" : "Current"}</span>
+            <span
+              title={task.get("version").toISOString()}
+              className={versionClassSet}>{outdated ? "Out-of-date" : "Current"}</span>
           </td>
           <td className="text-right">{updatedAtNode}</td>
           {
