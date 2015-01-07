@@ -12,7 +12,7 @@ define([
 
     propTypes: {
       collection: React.PropTypes.object.isRequired,
-      appVersion: React.PropTypes.object.isRequired,
+      currentAppVersion: React.PropTypes.object.isRequired,
       fetchState: React.PropTypes.number.isRequired,
       fetchTasks: React.PropTypes.func.isRequired,
       formatTaskHealthMessage: React.PropTypes.func.isRequired,
@@ -158,7 +158,7 @@ define([
             itemsPerPage={itemsPerPage}
             selectedTasks={this.state.selectedTasks}
             tasks={this.props.collection}
-            appVersion={this.props.appVersion}
+            currentAppVersion={this.props.currentAppVersion}
             toggleAllTasks={this.toggleAllTasks} />
         </div>
       );

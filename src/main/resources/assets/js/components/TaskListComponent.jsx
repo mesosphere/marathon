@@ -22,7 +22,7 @@ define([
       hasHealth: React.PropTypes.bool,
       selectedTasks: React.PropTypes.object.isRequired,
       tasks: React.PropTypes.object.isRequired,
-      appVersion: React.PropTypes.object.isRequired
+      currentAppVersion: React.PropTypes.object.isRequired
     },
 
     getResource: function() {
@@ -114,7 +114,7 @@ define([
                       onTaskDetailSelect={this.props.onTaskDetailSelect}
                       hasHealth={hasHealth}
                       task={task}
-                      appVersion={this.props.appVersion} />
+                      currentAppVersion={this.props.currentAppVersion} />
                 );
               }, this)
             }
