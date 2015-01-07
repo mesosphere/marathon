@@ -32,6 +32,7 @@ message HealthCheckDefinition {
     HTTP = 0;
     TCP = 1;
     COMMAND = 2;
+    HTTPS = 3;
   }
   required Protocol protocol = 1;
   required uint32 portIndex = 2 [default = 0];
@@ -159,4 +160,3 @@ message TaskFailure {
   required string version = 6;
   required string timestamp = 7;
 }
-
