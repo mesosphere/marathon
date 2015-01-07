@@ -256,13 +256,11 @@ class MarathonSchedulerService @Inject() (
   private def defeatLeadership(): Unit = {
     log.info("Defeat leadership")
 
+    schedulerActor ! Suspend
+
     // Our leadership has been defeated. Thus, update leadership and stop the driver.
     // Note that abdication command will be ran upon driver shutdown.
     leader.set(false)
-
-    // Stop all health checks
-    healthCheckManager.removeAll()
-
     stopDriver()
   }
 
@@ -273,8 +271,7 @@ class MarathonSchedulerService @Inject() (
     leader.set(true)
     runDriver(abdicateOption)
 
-    // Create health checks for any existing app and each running version of that
-    schedulerActor ! ReconcileHealthChecks
+    schedulerActor ! Start
   }
 
   def abdicateLeadership(): Unit = {

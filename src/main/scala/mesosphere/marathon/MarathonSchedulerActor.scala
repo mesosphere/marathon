@@ -80,30 +80,42 @@ class MarathonSchedulerActor(
 
     historyActor = context.actorOf(
       Props(classOf[HistoryActor], eventBus, taskFailureRepository), "HistoryActor")
-
-    deploymentRepository.all() onComplete {
-      case Success(deployments) => self ! RecoveredDeployments(deployments)
-      case Failure(_)           => self ! RecoveredDeployments(Nil)
-    }
-
   }
 
-  def receive: Receive = recovering
+  def receive: Receive = suspended
 
-  def recovering: Receive = {
-    case RecoveredDeployments(deployments) =>
+  def suspended: Receive = {
+    case Start =>
+      log.info("Starting scheduler actor")
+      deploymentRepository.all() onComplete {
+        case Success(deployments) => self ! RecoverDeployments(deployments)
+        case Failure(_)           => self ! RecoverDeployments(Nil)
+      }
+      
+    case RecoverDeployments(deployments) =>
       deployments.foreach { plan =>
         log.info(s"Recovering deployment: $plan")
         deploy(Actor.noSender, Deploy(plan, force = false), plan, blocking = false)
       }
+
+      log.info("Scheduler actor ready")
       unstashAll()
-      context.become(ready)
+      context.become(started)
       self ! ReconcileHealthChecks
 
+    case Suspend => // ignore
+    
     case _ => stash()
   }
 
-  def ready: Receive = {
+  def started: Receive = {
+    case Suspend =>
+      log.info("Suspending scheduler actor")
+      healthCheckManager.removeAll()
+      context.become(suspended)
+
+    case Start => // ignore
+
     case ReconcileTasks =>
       scheduler.reconcileTasks(driver)
       sender ! ReconcileTasks.answer
@@ -268,7 +280,10 @@ class MarathonSchedulerActor(
 }
 
 object MarathonSchedulerActor {
-  case class RecoveredDeployments(deployments: Seq[DeploymentPlan])
+  case object Start
+  case object Suspend
+
+  case class RecoverDeployments(deployments: Seq[DeploymentPlan])
 
   sealed trait Command {
     def answer: Event
