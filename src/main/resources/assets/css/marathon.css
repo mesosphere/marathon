@@ -480,6 +480,10 @@ fieldset[disabled] .btn-info.active {
   margin-top: 14px;
 }
 
+.right-gap {
+  margin-right: 14px;
+}
+
 .table-fixed {
   table-layout: fixed;
 }
