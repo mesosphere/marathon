@@ -55,6 +55,10 @@ define([
       currentAppVersion: React.PropTypes.object.isRequired
     },
 
+    getInitialState: function() {
+      return {versionShowTimestamp: false};
+    },
+
     handleClick: function(event) {
       // If the click happens on the checkbox, let the checkbox's onchange event
       // handler handle it and skip handling the event here.
@@ -70,6 +74,10 @@ define([
     handleTaskDetailSelect: function(event) {
       event.preventDefault();
       this.props.onTaskDetailSelect(this.props.task);
+    },
+
+    handleVersionClick: function(event) {
+      this.setState({versionShowTimestamp: !this.state.versionShowTimestamp});
     },
 
     render: function() {
@@ -93,7 +101,8 @@ define([
 
       var versionClassSet = React.addons.classSet({
         "text-muted": !outdated,
-        "text-warning": outdated
+        "text-warning": outdated,
+        "clickable": true
       });
 
       var updatedAtNode;
@@ -127,7 +136,11 @@ define([
           <td className="text-right">
             <span
               title={task.get("version").toISOString()}
-              className={versionClassSet}>{outdated ? "Out-of-date" : "Current"}</span>
+              className={versionClassSet}
+              onClick={this.handleVersionClick}>{
+                this.state.versionShowTimestamp ?
+                  task.get("version").toISOString() :
+                  (outdated ? "Out-of-date" : "Current")}</span>
           </td>
           <td className="text-right">{updatedAtNode}</td>
           {
