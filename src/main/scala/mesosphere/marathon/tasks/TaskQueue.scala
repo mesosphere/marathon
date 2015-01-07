@@ -2,13 +2,12 @@ package mesosphere.marathon.tasks
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import mesosphere.marathon.state.{ Timestamp, AppDefinition, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.util.RateLimiter
 import org.apache.log4j.Logger
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.duration.Deadline
 import scala.collection.immutable.Seq
 
 object TaskQueue {
@@ -85,7 +84,10 @@ class TaskQueue {
     for {
       QueuedTask(app, _) <- apps.values
       if app.id == appId
-    } apps.remove(app.id -> app.version)
+    } {
+      apps.remove(app.id -> app.version)
+      rateLimiter.resetDelay(app)
+    }
   }
 
   /**

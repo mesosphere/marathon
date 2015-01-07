@@ -176,9 +176,13 @@ class MarathonScheduler @Inject() (
         }
 
       case TASK_RUNNING =>
-        taskQueue.rateLimiter.resetDelay(appId)
         taskTracker.running(appId, status).onComplete {
-          case Success(task) => postEvent(status, task)
+          case Success(task) =>
+            appRepo.app(PathId(task.getId), Timestamp(task.getVersion)).onSuccess {
+              case maybeApp => maybeApp.foreach(taskQueue.rateLimiter.resetDelay)
+            }
+            postEvent(status, task)
+
           case Failure(t) =>
             log.warn(s"Couldn't post event for ${status.getTaskId}", t)
             log.warn(s"Killing task ${status.getTaskId}")
