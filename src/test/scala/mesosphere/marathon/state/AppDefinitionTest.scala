@@ -223,6 +223,20 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       "Health check port indices must address an element of the ports array or container port mappings."
     )
 
+    shouldNotViolate(
+      correct.copy(
+        container = Some(Container(
+          docker = Some(Docker(
+            network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+            portMappings = None
+          ))
+        )),
+        ports = Nil,
+        healthChecks = Set(HealthCheck(protocol = Protos.HealthCheckDefinition.Protocol.COMMAND))
+      ),
+      "",
+      "Health check port indices must address an element of the ports array or container port mappings."
+    )
   }
 
   test("SerializationRoundtrip") {

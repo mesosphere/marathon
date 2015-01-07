@@ -85,7 +85,8 @@ case class AppDefinition(
   def portIndicesAreValid(): Boolean = {
     val validPortIndices = 0 until hostPorts.size
     healthChecks.forall { hc =>
-      validPortIndices contains hc.portIndex
+      hc.protocol == Protos.HealthCheckDefinition.Protocol.COMMAND ||
+        (validPortIndices contains hc.portIndex)
     }
   }
 
