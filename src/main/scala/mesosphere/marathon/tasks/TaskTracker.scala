@@ -71,25 +71,19 @@ class TaskTracker @Inject() (
 
   def running(appId: PathId, status: TaskStatus): Future[MarathonTask] = {
     val taskId = status.getTaskId.getValue
-    val task = get(appId).find(_.getId == taskId) match {
+    get(appId).find(_.getId == taskId) match {
       case Some(stagedTask) =>
-        stagedTask.toBuilder
+        val task = stagedTask.toBuilder
           .setStartedAt(System.currentTimeMillis)
           .setStatus(status)
           .build
-
+        getInternal(appId) += (task.getId -> task)
+        store(appId, task).map(_ => task)
       case _ =>
-        log.warn(s"No staged task for ID $taskId")
-        // We lost track of the host and port of this task, but still need to keep track of it
-        MarathonTask.newBuilder
-          .setId(taskId)
-          .setStagedAt(System.currentTimeMillis)
-          .setStartedAt(System.currentTimeMillis)
-          .setStatus(status)
-          .build
+        val msg = s"No staged task for ID $taskId, ignoring"
+        log.warn(msg)
+        Future.failed(new Exception(msg))
     }
-    getInternal(appId) += (task.getId -> task)
-    store(appId, task).map(_ => task)
   }
 
   def terminated(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = {
