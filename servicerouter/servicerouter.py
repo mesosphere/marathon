@@ -429,13 +429,15 @@ def get_apps(marathon):
           continue
 
         for i in xrange(len(task['servicePorts'])):
+            # Marathon 0.7.6 bug workaround
+            if len(task['host']) == 0:
+              logger.warning("Ignoring marathon task without host " + task['id'])
+              continue
+
             servicePort = task['servicePorts'][i]
             port = task['ports'][i] if len(task['ports']) else servicePort
             appId = task['appId']
 
-            if len(task['host']) == 0:
-              logger.warning("Ignoring marathon task without host " + task['id'])
-              continue
 
             if appId not in apps:
                 app_tmp = MarathonApp(marathon, appId)
