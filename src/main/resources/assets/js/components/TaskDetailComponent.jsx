@@ -42,8 +42,8 @@ define([
       var healthClassSet;
       var timeNodes;
       var timeFields;
-      if (!hasError) {
 
+      if (!hasError) {
         healthClassSet = React.addons.classSet({
           "text-unhealthy": taskHealth === Task.HEALTH.UNHEALTHY,
           "text-muted": taskHealth === Task.HEALTH.UNKNOWN
@@ -83,8 +83,12 @@ define([
           {
             hasError ?
               <p className="text-center text-danger">
-                Error fetching task details. Go to <a href="#" onClick={this.handleShowTaskList}>Task List</a> to see the full list.
+                Error fetching task details.
+                Go to <a href="#" onClick={this.handleShowTaskList}>Task List</a> to see the full list.
               </p> :
+              null
+          }
+          {
               <div>
                 <dl className="dl-horizontal">
                   <dt>Host</dt>

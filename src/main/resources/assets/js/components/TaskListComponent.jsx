@@ -56,6 +56,7 @@ define([
       var taskNodes;
       var tasksLength = this.props.tasks.length;
       var hasHealth = !!this.props.hasHealth;
+      var hasError = this.props.fetchState === States.STATE_ERROR;
 
       // If there are no tasks, they can't all be selected. Otherwise, assume
       // they are all selected and let the iteration below decide if that is
@@ -71,16 +72,7 @@ define([
               </td>
             </tr>
           </tbody>;
-      } else if (this.props.fetchState === States.STATE_ERROR) {
-        taskNodes =
-          <tbody>
-            <tr>
-              <td className="text-center text-danger" colSpan="7">
-                Error fetching tasks. Refresh the list to try again.
-              </td>
-            </tr>
-          </tbody>;
-      } else if (tasksLength === 0) {
+      } else if (tasksLength === 0 && !hasError) {
         taskNodes =
           <tbody>
             <tr>
@@ -97,6 +89,15 @@ define([
               currentPage={this.props.currentPage}
               itemsPerPage={this.props.itemsPerPage}
               element="tbody" >
+            {
+              hasError ?
+                <tr>
+                  <td className="text-center text-danger" colSpan="7">
+                    Error fetching tasks. Refresh the list to try again.
+                  </td>
+                </tr> :
+                null
+            }
             {
               this.props.tasks.map(function(task) {
                 // Expicitly check for Boolean since the key might not exist in the

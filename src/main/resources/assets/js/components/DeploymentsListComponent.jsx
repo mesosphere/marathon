@@ -50,13 +50,6 @@ define([
               Loading deployments...
             </td>
           </tr>;
-      } else if (this.props.fetchState === States.STATE_ERROR) {
-        deploymentNodes =
-          <tr>
-            <td className="text-center text-danger" colSpan="5">
-              Error fetching deployments. Refresh to try again.
-            </td>
-          </tr>;
       } else if (this.props.deployments.length === 0) {
         deploymentNodes =
           <tr>
@@ -112,6 +105,15 @@ define([
             </tr>
           </thead>
           <tbody>
+            {
+              (this.props.fetchState === States.STATE_ERROR) ?
+              <tr>
+                <td className="text-center text-danger" colSpan="5">
+                  Error fetching deployments. Refresh to try again.
+                </td>
+              </tr> :
+              null
+            }
             {deploymentNodes}
           </tbody>
         </table>
