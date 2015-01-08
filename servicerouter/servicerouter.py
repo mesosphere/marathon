@@ -24,6 +24,11 @@ Configuration:
   Every service port in marathon can be configured independently.
 
   Environment Variables:
+    HAPROXY_GROUP
+      Only servicerouter instances which are members of the given group will
+      point to the service. Service routers with the gorup '*' will collect all
+      groups.
+
     HAPROXY_{n}_VHOST
       HTTP Virtual Host proxy hostname to catch
       Ex: HAPROXY_0_VHOST = 'marathon.mesosphere.com'
@@ -183,6 +188,7 @@ class MarathonService(object):
         self.redirectHttpToHttps = False
         self.sslCert = None
         self.bindAddr = '*'
+        self.groups = frozenset()
 
     def add_backend(self, host, port):
         self.backends.add(MarathonBackend(host, port))
@@ -198,6 +204,7 @@ class MarathonApp(object):
 
     def __init__(self, marathon, appId):
         self.app = marathon.get_app(appId)
+        self.groups = frozenset()
         self.appId = appId
 
         # port -> MarathonService
@@ -262,15 +269,36 @@ class Marathon(object):
         return self.api_req('DELETE', ['eventSubscriptions'], params={'callbackUrl': callbackUrl})
 
 
-def config(apps):
+def has_group(groups, app_groups):
+    # All groups / wildcard match
+    if '*' in groups:
+        return True
+
+    # empty group only
+    if len(groups) == 0 and len(app_groups) == 0:
+        return True
+
+    # Contains matching groups
+    if (len(frozenset(app_groups) & groups)):
+        return True
+
+    return False
+
+
+def config(apps, groups):
     logger.info("generating config")
     config = HAPROXY_HEAD
+    groups = frozenset(groups)
 
     http_frontends = HAPROXY_HTTP_FRONTEND_HEAD
     frontends = str()
     backends = str()
 
     for app in sorted(apps, key=attrgetter('appId', 'servicePort')):
+        # App only applies if we have it's group
+        if not has_group(groups, app.groups):
+            continue
+
         logger.debug("configuring app %s", app.appId)
         backend = app.appId[1:].replace('/', '_') + '_' + str(app.servicePort)
 
@@ -402,11 +430,18 @@ def get_apps(marathon):
 
         for i in xrange(len(task['servicePorts'])):
             servicePort = task['servicePorts'][i]
-            port = task['ports'][i]
+            port = task['ports'][i] if len(task['ports']) else servicePort
             appId = task['appId']
 
+            if len(task['host']) == 0:
+              logger.warning("Ignoring marathon task without host " + task['id'])
+              continue
+
             if appId not in apps:
-                apps[appId] = MarathonApp(marathon, appId)
+                app_tmp = MarathonApp(marathon, appId)
+                if 'HAPROXY_GROUP' in app_tmp.app['env']:
+                    app_tmp.groups = app_tmp.app['env']['HAPROXY_GROUP'].split(',')
+                apps[appId] = app_tmp
 
             app = apps[appId]
             if servicePort not in app.services:
@@ -414,6 +449,7 @@ def get_apps(marathon):
                     appId, servicePort)
 
             service = app.services[servicePort]
+            service.groups = app.groups
 
             # Load environment variable configuration
             # TODO(cmaloney): Move to labels once those are supported
@@ -434,25 +470,26 @@ def get_apps(marathon):
     return apps_list
 
 
-def regenerate_config(apps, config_file):
-  compareWriteAndReloadConfig(config(apps), config_file)
+def regenerate_config(apps, config_file, groups):
+  compareWriteAndReloadConfig(config(apps, groups), config_file)
 
 
 class MarathonEventSubscriber(object):
 
-    def __init__(self, marathon, addr, config_file):
+    def __init__(self, marathon, addr, config_file, groups):
         marathon.add_subscriber(addr)
         self.__marathon = marathon
         # appId -> MarathonApp
         self.__apps = dict()
         self.__config_file = config_file
+        self.__groups = groups
 
         # Fetch the base data
         self.reset_from_tasks()
 
     def reset_from_tasks(self):
       self.__apps = get_apps(self.__marathon)
-      regenerate_config(self.__apps, self.__config_file)
+      regenerate_config(self.__apps, self.__config_file, self.__groups)
 
     def handle_event(self, event):
         if event['eventType'] == 'status_update_event':
@@ -478,11 +515,18 @@ def get_arg_parser():
                         help="Location of haproxy configuration",
                         default="/etc/haproxy/haproxy.cfg"
                         )
+    parser.add_argument("--group",
+                        help="Only generate config for apps which list the "
+                        "specified names. Defaults to apps without groups. "
+                        "Use '*' to match all groups",
+                        action="append",
+                        default=list())
+
     return parser
 
 
-def run_server(marathon, callback_url, config_file):
-    subscriber = MarathonEventSubscriber(marathon, callback_url, config_file)
+def run_server(marathon, callback_url, config_file, groups):
+    subscriber = MarathonEventSubscriber(marathon, callback_url, config_file, groups)
 
     # TODO(cmaloney): Switch to a sane http server
     # TODO(cmaloney): Good exception catching, etc
@@ -524,7 +568,7 @@ if __name__ == '__main__':
 
     # If in listening mode, spawn a webserver waiting for events. Otherwise just write the config
     if args.listening:
-      run_server(marathon, args.listening, args.haproxy_config)
+      run_server(marathon, args.listening, args.haproxy_config, args.group)
     else:
       # Generate base config
-      regenerate_config(get_apps(marathon), args.haproxy_config)
+      regenerate_config(get_apps(marathon), args.haproxy_config, args.group)
