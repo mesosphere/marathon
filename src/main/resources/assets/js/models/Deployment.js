@@ -31,6 +31,11 @@ define([
       return apps.join(", ");
     },
 
+    setForceStop: function(force) {
+      this.options.forceStop = force || false;
+      this.url = this.url() + (this.options.forceStop ? "?force=true" : "");
+    },
+
     initialize: function(options) {
       this.options = options;
     }

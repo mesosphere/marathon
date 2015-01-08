@@ -161,6 +161,10 @@ a,
   margin-right: 10px;
 }
 
+.list-inline > li:last-child {
+  margin-right: 0px;
+}
+
 .list-inline-subtext {
   color: #6f757D;
   display: inline-block;
@@ -478,10 +482,6 @@ fieldset[disabled] .btn-info.active {
 
 .header-btn {
   margin-top: 14px;
-}
-
-.right-gap {
-  margin-right: 14px;
 }
 
 .table-fixed {

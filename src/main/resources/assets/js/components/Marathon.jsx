@@ -222,27 +222,31 @@ define([
       }
     },
 
-    destroyDeployment: function(deployment, component, force) {
+    destroyDeployment: function(deployment, component) {
       component.setLoading(true);
 
-      var confirmMessage = !force ?
+      var forceStop = deployment.options.forceStop;
+      var confirmMessage = !forceStop ?
         "Destroy deployment of apps: '" + deployment.affectedAppsString() +
           "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version." :
         "Stop deployment of apps: '" + deployment.affectedAppsString() +
-          "'?\nThis will stop the deployment immediately and let it in the current state.";
+          "'?\nThis will stop the deployment immediately and leave it in the current state.";
 
       if (confirm(confirmMessage)) {
         setTimeout(function() {
           deployment.destroy({
             error: function(data, response) {
+              // Coming from async forceStop
+              if(response.status === 202) {
+                return;
+              }
+
               var msg = response.responseJSON && response.responseJSON.message || response.statusText;
-              if(msg && response.status !== 202) {
-                component.setLoading(false);
+              if(msg) {
                 alert("Error destroying app '" + deployment.id + "': " + msg);
               }
             },
-            url: deployment.url() + (force ? "?force=true" : ""),
-            wait: true
+            wait: !forceStop
           });
         }, 1000);
       } else {

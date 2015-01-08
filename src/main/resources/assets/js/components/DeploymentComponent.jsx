@@ -23,12 +23,12 @@ define([
       this.setState({loading: bool});
     },
 
-    handleDestroyDeployment: function () {
-      this.props.destroyDeployment(this.props.model, this);
-    },
-
-    handleStopDeployment: function () {
-      this.props.destroyDeployment(this.props.model, this, true);
+    handleDestroyDeployment: function(forceStop) {
+      return function() {
+        var model = this.props.model;
+        model.setForceStop(forceStop);
+        this.props.destroyDeployment(model, this);
+      }.bind(this);
     },
 
     render: function() {
@@ -75,18 +75,22 @@ define([
                     <span className="sr-only">Rolling back deployment</span>
                   </span>
                 </div> :
-                <div>
-                  <button
-                      onClick={this.handleStopDeployment}
-                      className="btn btn-xs btn-default right-gap">
-                    Stop deployment
-                  </button>
-                  <button
-                      onClick={this.handleDestroyDeployment}
-                      className="btn btn-xs btn-default">
-                    Rollback deployment
-                  </button>
-                </div>
+                <ul className="list-inline">
+                  <li>
+                    <button
+                        onClick={this.handleDestroyDeployment(true)}
+                        className="btn btn-xs btn-default">
+                      Stop deployment
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                        onClick={this.handleDestroyDeployment()}
+                        className="btn btn-xs btn-default">
+                      Rollback deployment
+                    </button>
+                  </li>
+                </ul>
             }
           </td>
         </tr>
