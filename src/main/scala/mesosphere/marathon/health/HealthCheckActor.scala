@@ -24,7 +24,7 @@ class HealthCheckActor(
 
   protected[this] var nextScheduledCheck: Option[Cancellable] = None
 
-  protected[this] var taskHealth = Map[String, Health]()
+  protected[this] var taskHealth = Map[String, Option[Health]]()
 
   override def preStart(): Unit = {
     log.info(
@@ -64,19 +64,51 @@ class HealthCheckActor(
     taskHealth = taskHealth.filterKeys(activeTaskIds)
   }
 
-  protected[this] def scheduleNextHealthCheck(): Unit =
-    if (healthCheck.protocol != Protocol.COMMAND) {
+  protected[this] def scheduleNextHealthCheck(): Unit = {
+    val interval = if (healthCheck.protocol == Protocol.COMMAND) {
+      // Mesos reports positive health checks only once. If this instance
+      // has taken over leadership after a COMMAND check task was started,
+      // it will never see the positive health check result. Hence, we
+      // fake it, assuming that a COMMAND health check is positive if no
+      // negative result is received.
       log.debug(
         "Scheduling next health check for app [{}] and healthCheck [{}]",
         appId,
         healthCheck
       )
-      nextScheduledCheck = Some(
-        context.system.scheduler.scheduleOnce(healthCheck.interval) {
-          self ! Tick
-        }
+      healthCheck.interval + healthCheck.timeout // wait longer than interval
+    } else {
+      log.debug(
+        "Scheduling next health check for app [{}] and healthCheck [{}]",
+        appId,
+        healthCheck
       )
+      healthCheck.interval
     }
+
+    nextScheduledCheck = Some(
+      context.system.scheduler.scheduleOnce(interval) {
+        self ! Tick
+      }
+    )
+  }
+
+  protected[this] def fakePositiveCommandChecks(): Unit = {
+    // fake positive health check result if task were seen during the previous tick
+    // already and now a second time, still None as health.
+    val activeTaskIds = taskTracker.get(appId).filter(_.getVersion == appVersion).map(_.getId)
+    val fakePositiveCandidates = taskHealth.filter(_._2 == None).keys.filter(activeTaskIds)
+    fakePositiveCandidates foreach { taskId => {
+      log.info(s"Fake COMMAND health check result for app ${appId} task ${taskId}")
+      self ! Healthy(taskId, appVersion)
+    }}
+
+    // write None health for new tasks for next tick
+    activeTaskIds foreach { taskId =>
+      if (!taskHealth.contains(taskId))
+        taskHealth += taskId -> None
+    }
+  }
 
   protected[this] def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
@@ -120,17 +152,23 @@ class HealthCheckActor(
   }
 
   def receive: Receive = {
-    case GetTaskHealth(taskId) => sender() ! taskHealth.get(taskId)
+    case GetTaskHealth(taskId) => sender() ! taskHealth.get(taskId).flatten
 
-    case Tick =>
-      purgeStatusOfDoneTasks()
-      dispatchJobs()
+    case Tick => {
+      if (healthCheck.protocol == Protocol.COMMAND) {
+        fakePositiveCommandChecks()
+        purgeStatusOfDoneTasks()
+      } else {
+        purgeStatusOfDoneTasks()
+        dispatchJobs()
+      }
       scheduleNextHealthCheck()
+    }
 
     case result: HealthResult if result.version == appVersion =>
       log.info("Received health result: [{}]", result)
       val taskId = result.taskId
-      val health = taskHealth.getOrElse(taskId, Health(taskId))
+      val health: Health = taskHealth.getOrElse(taskId, None).getOrElse(Health(taskId))
 
       val newHealth = result match {
         case Healthy(_, _, _) =>
@@ -153,7 +191,7 @@ class HealthCheckActor(
           }
       }
 
-      taskHealth += (taskId -> newHealth)
+      taskHealth += (taskId -> Some(newHealth))
 
       if (health.alive != newHealth.alive) {
         eventBus.publish(
