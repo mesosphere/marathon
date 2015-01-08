@@ -37,21 +37,11 @@ define([
       var sortKey = this.props.deployments.sortKey;
 
       var deploymentNodes;
-      var fetchError;
 
       var headerClassSet = React.addons.classSet({
         "clickable": true,
         "dropup": this.props.deployments.sortReverse
       });
-
-      if (this.props.fetchState === States.STATE_ERROR) {
-        fetchError =
-          <tr>
-            <td className="text-center text-danger" colSpan="5">
-              Error fetching deployments. Refresh to try again.
-            </td>
-          </tr>;
-      }
 
       if (this.props.fetchState === States.STATE_LOADING) {
         deploymentNodes =
@@ -115,7 +105,15 @@ define([
             </tr>
           </thead>
           <tbody>
-            {fetchError}
+            {
+              (this.props.fetchState === States.STATE_ERROR) ?
+              <tr>
+                <td className="text-center text-danger" colSpan="5">
+                  Error fetching deployments. Refresh to try again.
+                </td>
+              </tr> :
+              null
+            }
             {deploymentNodes}
           </tbody>
         </table>
