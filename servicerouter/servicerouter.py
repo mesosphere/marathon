@@ -504,8 +504,7 @@ def setup_logging(syslog_socket):
 
     syslogHandler = SysLogHandler(args.syslog_socket)
     consoleHandler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        '%(name)s: %(message)s')
+    formatter = logging.Formatter('%(name)s: %(message)s')
     syslogHandler.setFormatter(formatter)
     consoleHandler.setFormatter(formatter)
     # syslogHandler.setLevel(logging.ERROR)
