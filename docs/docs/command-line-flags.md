@@ -51,10 +51,10 @@ The following options can influence how Marathon works:
 * `--mesos_user` (Optional. Default: current user): Mesos user for
     this framework. _Note: Default is determined by
     [`SystemProperties.get("user.name")`](http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String])._
-* `--reconciliation_initial_delay` (Optional. Default: 30000 (30 seconds)): The
+* `--reconciliation_initial_delay` (Optional. Default: 15000 (15 seconds)): The
     delay, in milliseconds, before Marathon begins to periodically perform task
     reconciliation operations.
-* `--reconciliation_interval` (Optional. Default: 30000 (30 seconds)): The
+* `--reconciliation_interval` (Optional. Default: 300000 (5 minutes)): The
     period, in milliseconds, between task reconciliation operations.
 * `--task_launch_timeout` (Optional. Default: 60000 (60 seconds)): Time,
     in milliseconds, to wait for a task to enter the TASK_RUNNING state before
