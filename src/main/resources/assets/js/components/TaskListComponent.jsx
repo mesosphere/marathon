@@ -21,7 +21,8 @@ define([
       itemsPerPage: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
       selectedTasks: React.PropTypes.object.isRequired,
-      tasks: React.PropTypes.object.isRequired
+      tasks: React.PropTypes.object.isRequired,
+      currentAppVersion: React.PropTypes.object.isRequired
     },
 
     getResource: function() {
@@ -113,7 +114,8 @@ define([
                       onToggle={this.props.onTaskToggle}
                       onTaskDetailSelect={this.props.onTaskDetailSelect}
                       hasHealth={hasHealth}
-                      task={task} />
+                      task={task}
+                      currentAppVersion={this.props.currentAppVersion} />
                 );
               }, this)
             }

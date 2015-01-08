@@ -51,7 +51,8 @@ define([
       isActive: React.PropTypes.bool.isRequired,
       onToggle: React.PropTypes.func.isRequired,
       onTaskDetailSelect: React.PropTypes.func.isRequired,
-      task: React.PropTypes.object.isRequired
+      task: React.PropTypes.object.isRequired,
+      currentAppVersion: React.PropTypes.object.isRequired
     },
 
     handleClick: function(event) {
@@ -75,6 +76,9 @@ define([
       var className = (this.props.isActive) ? "active" : "";
       var task = this.props.task;
       var hasHealth = !!this.props.hasHealth;
+      var currentAppVersion = this.props.currentAppVersion;
+      var outdated = currentAppVersion &&
+        task.get("version") < currentAppVersion;
 
       var taskHealth = task.getHealth();
       var healthClassSet = React.addons.classSet({
@@ -86,6 +90,11 @@ define([
 
       var statusClassSet = React.addons.classSet({
         "text-warning": task.isStaged()
+      });
+
+      var versionClassSet = React.addons.classSet({
+        "text-muted": !outdated,
+        "text-warning": outdated
       });
 
       var updatedAtNode;
@@ -117,9 +126,11 @@ define([
             </span>
           </td>
           <td className="text-right">
-            <time dateTime={task.get("version").toISOString()} title={task.get("version").toISOString()}>
-              {task.get("version").toLocaleString()}
-            </time>
+            <span
+              title={task.get("version").toISOString()}
+              className={versionClassSet}>
+              {outdated ? "Out-of-date" : "Current"}
+            </span>
           </td>
           <td className="text-right">{updatedAtNode}</td>
           {
