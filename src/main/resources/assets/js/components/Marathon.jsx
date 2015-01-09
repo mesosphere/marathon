@@ -222,10 +222,10 @@ define([
       }
     },
 
-    destroyDeployment: function(deployment, component) {
+    destroyDeployment: function(deployment, options, component) {
       component.setLoading(true);
 
-      var forceStop = deployment.options.forceStop;
+      var forceStop = options.forceStop;
       var confirmMessage = !forceStop ?
         "Destroy deployment of apps: '" + deployment.affectedAppsString() +
           "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version." :
@@ -246,6 +246,7 @@ define([
                 alert("Error destroying app '" + deployment.id + "': " + msg);
               }
             },
+            forceStop: forceStop,
             wait: !forceStop
           });
         }, 1000);

@@ -31,9 +31,14 @@ define([
       return apps.join(", ");
     },
 
-    setForceStop: function(force) {
-      this.options.forceStop = force || false;
-      this.url = this.url() + (this.options.forceStop ? "?force=true" : "");
+    destroy: function(options) {
+      options || (options = {});
+
+      if (!options.url && options.forceStop) {
+        options.url = this.url() + "?force=true";
+      }
+
+      return Backbone.Model.prototype.destroy.call(this, options);
     },
 
     initialize: function(options) {

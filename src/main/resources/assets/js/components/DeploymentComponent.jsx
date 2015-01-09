@@ -25,9 +25,7 @@ define([
 
     handleDestroyDeployment: function(forceStop) {
       return function() {
-        var model = this.props.model;
-        model.setForceStop(forceStop);
-        this.props.destroyDeployment(model, this);
+        this.props.destroyDeployment(this.props.model, {forceStop: forceStop}, this);
       }.bind(this);
     },
 

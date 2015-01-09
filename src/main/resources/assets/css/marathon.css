@@ -157,14 +157,6 @@ a,
   border-color: #3d4045;
 }
 
-.list-inline > li {
-  margin-right: 10px;
-}
-
-.list-inline > li:last-child {
-  margin-right: 0px;
-}
-
 .list-inline-subtext {
   color: #6f757D;
   display: inline-block;
