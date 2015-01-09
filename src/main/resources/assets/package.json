@@ -1,19 +1,53 @@
 {
   "name": "marathon-assets",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Static assets for Mesosphere's Marathon.",
   "main": "js/main.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "keywords": [
     "marathon",
     "mesos"
   ],
-  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mesosphere/mandm/tree/master/frontend"
+  },
+  "dependencies": {
+    "backbone": "^1.1.2",
+    "jquery": "^2.1.3",
+    "react": "^0.12.2",
+    "react-tools": "^0.12.2",
+    "underscore": "^1.7.0"
+  },
   "devDependencies": {
-    "envify": "^1.2.1",
-    "requirejs": "^2.1.11",
-    "react-tools": "^0.11.1"
+    "broccoli": "^0.13.2",
+    "broccoli-asset-rev": "^2.0.0",
+    "broccoli-clean-css": "^0.3.0",
+    "broccoli-concat": "0.0.12",
+    "broccoli-env": "0.0.1",
+    "broccoli-export-tree": "^0.3.2",
+    "broccoli-jscs": "0.0.13",
+    "broccoli-jshint": "^0.5.3",
+    "broccoli-less": "^2.0.0",
+    "broccoli-merge-trees": "^0.2.1",
+    "broccoli-react": "^0.7.0",
+    "broccoli-replace": "^0.2.0",
+    "broccoli-static-compiler": "^0.1.4",
+    "broccoli-uglify-js": "^0.1.3",
+    "broccoli-webpack": "^0.1.1",
+    "chalk": "^0.5.1",
+    "cheerio": "^0.18.0",
+    "mocha": "^2.1.0",
+    "mocha-teamcity-reporter": "0.0.4",
+    "mousetrap": "^1.4.6",
+    "sinon": "^1.12.2"
+  },
+  "scripts": {
+    "clean": "rm -rf target tmp",
+    "build": "broccoli build target",
+    "serve": "broccoli serve",
+    "tar": "tar -czf mm-frontend-v0.1.1.tar.gz -C target .",
+    "test": "./node_modules/mocha/bin/mocha --ui exports --reporter spec --compilers jsx:test/compiler.js test/object-assign-polyfill.js test/**/*.test.*",
+    "test-teamcity": "./node_modules/mocha/bin/mocha --ui exports --reporter mocha-teamcity-reporter --compilers jsx:test/compiler.js test/object-assign-polyfill.js test/**/*.test.*",
+    "test-watch": "./node_modules/mocha/bin/mocha --ui exports --reporter spec --watch --compilers jsx:test/compiler.js test/object-assign-polyfill.js test/**/*.test.*"
   }
 }
