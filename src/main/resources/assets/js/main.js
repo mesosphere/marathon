@@ -3,12 +3,15 @@ require.config({
     extension: "jsx"
   },
   paths: {
+    "domReady": "libs/domReady",
     "Backbone": "libs/backbone-min",
     "jsx": "libs/jsx-0.0.2",
     "JSXTransformer": "libs/JSXTransformer-0.11.1.max",
     "jquery": "libs/jquery-2.0.3",
     "mousetrap": "libs/mousetrap-1.4.6",
-    "React": "libs/react-with-addons-0.11.1",
+    "React": "libs/react-with-addons-0.12.2",
+    "ReactRouter": "libs/react-router.min",
+    "react-router-shim": "libs/react-router-shim",
     "Underscore": "libs/underscore-min"
   },
   shim: {
@@ -18,16 +21,17 @@ require.config({
     },
     Underscore: {
       exports: "_"
+    },
+    ReactRouter: {
+      deps: ["react-router-shim"],
+      exports: "ReactRouter"
     }
   }
 });
 
 require([
-  "React",
   "jsx!components/Marathon"
-], function(React, Marathon) {
-  React.renderComponent(
-    Marathon(),
-    document.getElementById("marathon")
-  );
+], function(Marathon) {
+
+  Marathon();
 });

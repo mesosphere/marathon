@@ -3,6 +3,7 @@
 define([
   "mousetrap",
   "React",
+  "ReactRouter",
   "Underscore",
   "constants/States",
   "models/AppCollection",
@@ -15,12 +16,14 @@ define([
   "jsx!components/TabPaneComponent",
   "jsx!components/TogglableTabsComponent",
   "jsx!components/NavTabsComponent"
-], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
+], function(Mousetrap, React, Router, _, States, AppCollection, DeploymentCollection,
     AppListComponent, AboutModalComponent, AppModalComponent,
     DeploymentsListComponent, NewAppModalComponent, TabPaneComponent,
     TogglableTabsComponent, NavTabsComponent) {
 
   "use strict";
+
+  var { Route } = Router;
 
   var UPDATE_INTERVAL = 5000;
 
@@ -29,7 +32,7 @@ define([
     {id: "deployments", text: "Deployments"}
   ];
 
-  return React.createClass({
+  var Marathon = React.createClass({
     displayName: "Marathon",
 
     getInitialState: function() {
@@ -462,11 +465,22 @@ define([
                   fetchState={this.state.deploymentsFetchState} />
               </TabPaneComponent>
             </TogglableTabsComponent>
-
           </div>
           {modal}
         </div>
       );
     }
   });
+
+  return function() {
+    var routes = (
+      <Route handler={Marathon}>
+
+      </Route>
+    );
+
+    Router.run(routes, function (Handler) {
+      React.render(<Handler/>, document.getElementById('marathon'));
+    });
+  };
 });
