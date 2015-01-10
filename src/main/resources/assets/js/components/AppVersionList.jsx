@@ -1,129 +1,133 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "models/App",
-  "models/AppVersion",
-  "mixins/BackboneMixin",
-  "jsx!components/AppVersionComponent",
-  "jsx!components/AppVersionListItemComponent",
-  "jsx!components/PagedContentComponent",
-  "jsx!components/PagedNavComponent"
-], function(React, States, App, AppVersion, BackboneMixin, AppVersionComponent,
-    AppVersionListItemComponent, PagedContentComponent, PagedNavComponent) {
-  "use strict";
+var React = require("react/addons");
 
-  return React.createClass({
-    displayName: "AppVersionListComponent",
+var States = require("../constants/States");
 
-    mixins: [BackboneMixin],
+var AppVersion = require("../components/AppVersion");
+var AppVersionListItem = require("../components/AppVersionListItem");
+var PagedContent = require("../components/PagedContent");
+var PagedNav = require("../components/PagedNav");
 
-    propTypes: {
-      app: React.PropTypes.instanceOf(App).isRequired,
-      fetchAppVersions: React.PropTypes.func.isRequired,
-      onRollback: React.PropTypes.func
-    },
+var BackboneMixin = require("../mixins/BackboneMixin");
 
-    componentWillMount: function() {
-      this.props.fetchAppVersions();
-    },
+var App = require("../models/App");
 
-    getResource: function() {
-      return this.props.app.versions;
-    },
+module.exports = React.createClass({
+  displayName: "AppVersionList",
 
-    getInitialState: function() {
-      return {
-        currentPage: 0,
-        itemsPerPage: 8
-      };
-    },
+  mixins: [BackboneMixin],
 
-    handleRefresh: function() {
-      this.props.fetchAppVersions();
-    },
+  propTypes: {
+    app: React.PropTypes.instanceOf(App).isRequired,
+    fetchAppVersions: React.PropTypes.func.isRequired,
+    onRollback: React.PropTypes.func
+  },
 
-    handlePageChange: function(pageNum) {
-      this.setState({currentPage: pageNum});
-    },
+  componentWillMount: function () {
+    this.props.fetchAppVersions();
+  },
 
-    render: function() {
-      // take out current version, to be displayed seperately
-      var appVersions = this.props.app.versions.models.slice(1);
+  getResource: function () {
+    return this.props.app.versions;
+  },
 
-      var itemsPerPage = this.state.itemsPerPage;
-      var currentPage = this.state.currentPage;
+  getInitialState: function () {
+    return {
+      currentPage: 0,
+      itemsPerPage: 8
+    };
+  },
 
-      var tableContents;
+  handleRefresh: function () {
+    this.props.fetchAppVersions();
+  },
 
-      if (this.props.fetchState === States.STATE_LOADING) {
-        tableContents = <p className="text-muted text-center">Loading versions...</p>;
-      } else if (this.props.fetchState === States.STATE_SUCCESS) {
+  handlePageChange: function (pageNum) {
+    this.setState({currentPage: pageNum});
+  },
 
-        /* jshint trailing:false, quotmark:false, newcap:false */
-        tableContents =
-          <PagedContentComponent
-              currentPage={currentPage}
-              itemsPerPage={itemsPerPage}>
-            {
-              appVersions.map(function(v) {
-                return (
-                    <AppVersionListItemComponent
-                      app={this.props.app}
-                      appVersion={v}
-                      key={v.get("version")}
-                      onRollback={this.props.onRollback} />
-                );
-              }, this)
-            }
-          </PagedContentComponent>;
-      } else {
-        tableContents =
-          <p className="text-danger text-center">
-            Error fetching app versions
-          </p>;
-      }
+  render: function () {
+    // take out current version, to be displayed seperately
+    var appVersions = this.props.app.versions.models.slice(1);
 
-      // at least two pages
-      var pagedNav = appVersions.length > itemsPerPage ?
-        <PagedNavComponent
-          className="pull-right"
-          currentPage={currentPage}
-          onPageChange={this.handlePageChange}
-          itemsPerPage={itemsPerPage}
-          noItems={appVersions.length}
-          useArrows={true} /> :
-        null;
+    var itemsPerPage = this.state.itemsPerPage;
+    var currentPage = this.state.currentPage;
 
-      // at least one older version
-      var versionTable = appVersions.length > 0 ?
-        <div className="panel-group">
-          <div className="panel panel-header panel-inverse">
-            <div className="panel-heading">
-              Older versions
-              {pagedNav}
-            </div>
-          </div>
-          {tableContents}
-        </div> :
-        null;
+    var tableContents;
 
-      return (
-        <div>
-          <h5>
-            Current Version
-            <button className="btn btn-sm btn-info pull-right" onClick={this.handleRefresh}>
-              ↻ Refresh
-            </button>
-          </h5>
-          <AppVersionComponent
-              app={this.props.app}
-              appVersion={this.props.app.getCurrentVersion()}
-              currentVersion={true} />
-            {versionTable}
-        </div>
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    if (this.props.fetchState === States.STATE_LOADING) {
+      tableContents = (
+        <p className="text-muted text-center">
+          Loading versions...
+        </p>
       );
+    } else if (this.props.fetchState === States.STATE_SUCCESS) {
+
+      tableContents =
+        <PagedContent
+            currentPage={currentPage}
+            itemsPerPage={itemsPerPage}>
+          {
+            appVersions.map(function (v) {
+              return (
+                  <AppVersionListItem
+                    app={this.props.app}
+                    appVersion={v}
+                    key={v.get("version")}
+                    onRollback={this.props.onRollback} />
+              );
+            }, this)
+          }
+        </PagedContent>;
+    } else {
+      tableContents =
+        <p className="text-danger text-center">
+          Error fetching app versions
+        </p>;
     }
-  });
+
+    // at least two pages
+    var pagedNav = appVersions.length > itemsPerPage ?
+      <PagedNav
+        className="pull-right"
+        currentPage={currentPage}
+        onPageChange={this.handlePageChange}
+        itemsPerPage={itemsPerPage}
+        noItems={appVersions.length}
+        useArrows={true} /> :
+      null;
+
+    // at least one older version
+    var versionTable = appVersions.length > 0 ?
+      <div className="panel-group">
+        <div
+            className="panel panel-header panel-inverse">
+          <div className="panel-heading">
+            Older versions
+            {pagedNav}
+          </div>
+        </div>
+        {tableContents}
+      </div> :
+      null;
+
+    return (
+      <div>
+        <h5>
+          Current Version
+          <button className="btn btn-sm btn-info pull-right" onClick={this.handleRefresh}>
+            ↻ Refresh
+          </button>
+        </h5>
+        <AppVersion
+            app={this.props.app}
+            appVersion={this.props.app.getCurrentVersion()}
+            currentVersion={true} />
+          {versionTable}
+      </div>
+    );
+  }
 });

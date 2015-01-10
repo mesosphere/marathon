@@ -1,472 +1,473 @@
 /** @jsx React.DOM */
 
-define([
-  "mousetrap",
-  "React",
-  "Underscore",
-  "constants/States",
-  "models/AppCollection",
-  "models/DeploymentCollection",
-  "jsx!components/AppListComponent",
-  "jsx!components/modals/AboutModalComponent",
-  "jsx!components/AppModalComponent",
-  "jsx!components/DeploymentsListComponent",
-  "jsx!components/NewAppModalComponent",
-  "jsx!components/TabPaneComponent",
-  "jsx!components/TogglableTabsComponent",
-  "jsx!components/NavTabsComponent"
-], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
-    AppListComponent, AboutModalComponent, AppModalComponent,
-    DeploymentsListComponent, NewAppModalComponent, TabPaneComponent,
-    TogglableTabsComponent, NavTabsComponent) {
+var Mousetrap = require("mousetrap");
+var React = require("React");
 
-  "use strict";
+var AppList = require("../components/AppList");
+var AboutModal = require("../components/modals/AboutModal");
+var AppModal = require("../components/AppModal");
+var DeploymentList = require("../components/DeploymentList");
+var NavTabs = require("../components/NavTabs");
+var NewAppModal = require("../components/NewAppModal");
+var TabPane = require("../components/TabPane");
+var TogglableTabs = require("../components/TogglableTabs");
 
-  var UPDATE_INTERVAL = 5000;
+var States = require("../constants/States");
 
-  var tabs = [
-    {id: "apps", text: "Apps"},
-    {id: "deployments", text: "Deployments"}
-  ];
+var AppCollection = require("../models/AppCollection");
+var DeploymentCollection = require("../models/DeploymentCollection");
 
-  return React.createClass({
-    displayName: "Marathon",
+var UPDATE_INTERVAL = 5000;
 
-    getInitialState: function() {
-      return {
-        activeApp: null,
-        activeTask: null,
-        activeTabId: tabs[0].id,
-        appVersionsFetchState: States.STATE_LOADING,
-        collection: new AppCollection(),
-        deployments: new DeploymentCollection(),
-        deploymentsFetchState: States.STATE_LOADING,
-        fetchState: States.STATE_LOADING,
-        modalClass: null,
-        tasksFetchState: States.STATE_LOADING
-      };
-    },
+var tabs = [
+  {id: "apps", text: "Apps"},
+  {id: "deployments", text: "Deployments"}
+];
 
-    componentDidMount: function() {
-      // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
-      // input elements so the new app modal can be closed via "esc".
-      var mousetrapOriginalStopCallback = Mousetrap.stopCallback;
-      Mousetrap.stopCallback = function(e, element, combo) {
-        if (combo === "esc" || combo === "escape") { return false; }
-        return mousetrapOriginalStopCallback.apply(null, arguments);
-      };
+var Marathon = React.createClass({
+  displayName: "Marathon",
 
-      Mousetrap.bind("esc", function() {
-        if (this.refs.modal != null) {
-          this.refs.modal.destroy();
-        }
-      }.bind(this));
+  getInitialState: function () {
+    return {
+      activeApp: null,
+      activeTask: null,
+      activeTabId: tabs[0].id,
+      appVersionsFetchState: States.STATE_LOADING,
+      collection: new AppCollection(),
+      deployments: new DeploymentCollection(),
+      deploymentsFetchState: States.STATE_LOADING,
+      fetchState: States.STATE_LOADING,
+      modalClass: null,
+      tasksFetchState: States.STATE_LOADING
+    };
+  },
 
-      Mousetrap.bind("c", function() {
-        this.showNewAppModal();
-      }.bind(this), "keyup");
+  componentDidMount: function () {
+    // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
+    // input elements so the new app modal can be closed via "esc".
+    var mousetrapOriginalStopCallback = Mousetrap.stopCallback;
+    Mousetrap.stopCallback = function (e, element, combo) {
+      if (combo === "esc" || combo === "escape") { return false; }
+      return mousetrapOriginalStopCallback.apply(null, arguments);
+    };
 
-      Mousetrap.bind("g a", function() {
-        if(this.state.modalClass == null) {
-          this.onTabClick("apps");
-        }
-      }.bind(this));
-
-      Mousetrap.bind("g d", function() {
-        if(this.state.modalClass == null) {
-          this.onTabClick("deployments");
-        }
-      }.bind(this));
-
-      Mousetrap.bind("#", function() {
-        if (this.state.modalClass === AppModalComponent) {
-          this.destroyApp();
-        }
-      }.bind(this));
-
-      Mousetrap.bind("shift+,", function() {
-        this.showAboutModal();
-      }.bind(this));
-
-      this.setPollResource(this.fetchApps);
-    },
-
-    componentDidUpdate: function(prevProps, prevState) {
-      if (prevState.modalClass !== this.state.modalClass) {
-        // No `modalClass` means the modal went from open to closed. Start
-        // polling for apps in that case.
-        // If `modalClass` is AppModalComponent start polling for tasks for that
-        // app.
-        // Otherwise stop polling since the modal went from closed to open.
-        if (this.state.modalClass === null) {
-          this.setPollResource(this.fetchApps);
-        } else if (this.state.modalClass === AppModalComponent) {
-          this.setPollResource(this.fetchTasks);
-        } else {
-          this.stopPolling();
-        }
+    Mousetrap.bind("esc", function () {
+      if (this.refs.modal != null) {
+        this.refs.modal.destroy();
       }
-    },
+    }.bind(this));
 
-    componentWillUnmount: function() {
-      this.stopPolling();
-    },
+    Mousetrap.bind("c", function () {
+      this.showNewAppModal();
+    }.bind(this), "keyup");
 
-    fetchApps: function() {
-      this.state.collection.fetch({
-        error: function() {
-          this.setState({fetchState: States.STATE_ERROR});
+    Mousetrap.bind("g a", function () {
+      if (this.state.modalClass == null) {
+        this.onTabClick("apps");
+      }
+    }.bind(this));
+
+    Mousetrap.bind("g d", function () {
+      if (this.state.modalClass == null) {
+        this.onTabClick("deployments");
+      }
+    }.bind(this));
+
+    Mousetrap.bind("#", function () {
+      if (this.state.modalClass === AppModal) {
+        this.destroyApp();
+      }
+    }.bind(this));
+
+    Mousetrap.bind("shift+,", function () {
+      this.showAboutModal();
+    }.bind(this));
+
+    this.setPollResource(this.fetchApps);
+  },
+
+  componentDidUpdate: function (prevProps, prevState) {
+    if (prevState.modalClass !== this.state.modalClass) {
+      // No `modalClass` means the modal went from open to closed. Start
+      // polling for apps in that case.
+      // If `modalClass` is AppModal start polling for tasks for that
+      // app.
+      // Otherwise stop polling since the modal went from closed to open.
+      if (this.state.modalClass === null) {
+        this.setPollResource(this.fetchApps);
+      } else if (this.state.modalClass === AppModal) {
+        this.setPollResource(this.fetchTasks);
+      } else {
+        this.stopPolling();
+      }
+    }
+  },
+
+  componentWillUnmount: function () {
+    this.stopPolling();
+  },
+
+  fetchApps: function () {
+    this.state.collection.fetch({
+      error: function () {
+        this.setState({fetchState: States.STATE_ERROR});
+      }.bind(this),
+      reset: true,
+      success: function () {
+        this.fetchDeployments();
+        this.setState({fetchState: States.STATE_SUCCESS});
+      }.bind(this)
+    });
+  },
+
+  fetchAppVersions: function () {
+    if (this.state.activeApp != null) {
+      this.state.activeApp.versions.fetch({
+        error: function () {
+          this.setState({appVersionsFetchState: States.STATE_ERROR});
         }.bind(this),
-        reset: true,
-        success: function() {
+        success: function () {
+          this.setState({appVersionsFetchState: States.STATE_SUCCESS});
+        }.bind(this)
+      });
+    }
+  },
+
+  fetchDeployments: function () {
+    this.state.deployments.fetch({
+      error: function () {
+        this.setState({deploymentsFetchState: States.STATE_ERROR});
+      }.bind(this),
+      success: function (response) {
+        tabs[1].badge = response.models.length;
+        this.setState({deploymentsFetchState: States.STATE_SUCCESS});
+      }.bind(this)
+    });
+  },
+
+  fetchTasks: function () {
+    if (this.state.activeApp != null) {
+      this.state.activeApp.tasks.fetch({
+        error: function () {
+          this.setState({tasksFetchState: States.STATE_ERROR});
+        }.bind(this),
+        success: function (collection, response) {
           this.fetchDeployments();
-          this.setState({fetchState: States.STATE_SUCCESS});
+          // update changed attributes in app
+          this.state.activeApp.update(response.app);
+          this.setState({tasksFetchState: States.STATE_SUCCESS});
         }.bind(this)
       });
-    },
+    }
+  },
 
-    fetchAppVersions: function() {
-      if (this.state.activeApp != null) {
-        this.state.activeApp.versions.fetch({
-          error: function() {
-            this.setState({appVersionsFetchState: States.STATE_ERROR});
-          }.bind(this),
-          success: function() {
-            this.setState({appVersionsFetchState: States.STATE_SUCCESS});
-          }.bind(this)
-        });
-      }
-    },
+  handleAppCreate: function (appModel, options) {
+    this.state.collection.create(appModel, options);
+  },
 
-    fetchDeployments: function() {
-      this.state.deployments.fetch({
-        error: function() {
-          this.setState({deploymentsFetchState: States.STATE_ERROR});
+  handleModalDestroy: function () {
+    this.setState({
+      activeApp: null,
+      modalClass: null,
+      tasksFetchState: States.STATE_LOADING,
+      appVersionsFetchState: States.STATE_LOADING
+    });
+  },
+
+  handleShowTaskDetails: function (task, callback) {
+    this.setState({activeTask: task}, function () {
+      callback();
+    }.bind(this));
+  },
+
+  handleShowTaskList: function () {
+    this.setState({activeTask: null});
+  },
+
+  handleTasksKilled: function (options) {
+    var instances;
+    var app = this.state.activeApp;
+    var _options = options || {};
+    if (_options.scale) {
+      instances = app.get("instances");
+      app.set("instances", instances - 1);
+      this.setState({appVersionsFetchState: States.STATE_LOADING});
+      // refresh app versions
+      this.fetchAppVersions();
+    }
+  },
+
+  destroyApp: function () {
+    var app = this.state.activeApp;
+
+    if (confirm("Destroy app '" + app.id + "'?\nThis is irreversible.")) {
+      app.destroy({
+        error: function (data, response) {
+          var msg = response.responseJSON.message || response.statusText;
+          alert("Error destroying app '" + app.id + "': " + msg);
+        },
+        success: function () {
+          this.setState({
+            activeApp: null,
+            modalClass: null
+          });
         }.bind(this),
-        success: function(response) {
-          tabs[1].badge = response.models.length;
-          this.setState({deploymentsFetchState: States.STATE_SUCCESS});
-        }.bind(this)
+        wait: true
       });
-    },
+    }
+  },
 
-    fetchTasks: function() {
-      if (this.state.activeApp != null) {
-        this.state.activeApp.tasks.fetch({
-          error: function() {
-            this.setState({tasksFetchState: States.STATE_ERROR});
-          }.bind(this),
-          success: function(collection, response) {
-            this.fetchDeployments();
-            // update changed attributes in app
-            this.state.activeApp.update(response.app);
-            this.setState({tasksFetchState: States.STATE_SUCCESS});
-          }.bind(this)
-        });
-      }
-    },
+  destroyDeployment: function (deployment, component) {
+    component.setLoading(true);
+    if (confirm("Destroy deployment of apps: '" +
+        deployment.affectedAppsString() +
+        "'?\nDestroying this deployment will create and start a new " +
+        "deployment to revert the affected app to its previous version.")) {
 
-    handleAppCreate: function(appModel, options) {
-      this.state.collection.create(appModel, options);
-    },
-
-    handleModalDestroy: function() {
-      this.setState({
-        activeApp: null,
-        modalClass: null,
-        tasksFetchState: States.STATE_LOADING,
-        appVersionsFetchState: States.STATE_LOADING
-      });
-    },
-
-    handleShowTaskDetails: function(task, callback) {
-      this.setState({activeTask: task}, function() {
-        callback();
-      }.bind(this));
-    },
-
-    handleShowTaskList: function() {
-      this.setState({activeTask: null});
-    },
-
-    handleTasksKilled: function(options) {
-      var instances;
-      var app = this.state.activeApp;
-      var _options = options || {};
-      if (_options.scale) {
-        instances = app.get("instances");
-        app.set("instances", instances - 1);
-        this.setState({appVersionsFetchState: States.STATE_LOADING});
-        // refresh app versions
-        this.fetchAppVersions();
-      }
-    },
-
-    destroyApp: function() {
-      var app = this.state.activeApp;
-
-      if (confirm("Destroy app '" + app.id + "'?\nThis is irreversible.")) {
-        app.destroy({
-          error: function(data, response) {
+      setTimeout(function () {
+        deployment.destroy({
+          error: function (data, response) {
             var msg = response.responseJSON.message || response.statusText;
-            alert("Error destroying app '" + app.id + "': " + msg);
+            component.setLoading(false);
+            alert("Error destroying app '" + deployment.id + "': " + msg);
           },
-          success: function() {
-            this.setState({
-              activeApp: null,
-              modalClass: null
-            });
-          }.bind(this),
           wait: true
         });
-      }
-    },
+      }, 1000);
+    } else {
+      component.setLoading(false);
+    }
+  },
 
-    destroyDeployment: function(deployment, component) {
-      component.setLoading(true);
-      if (confirm("Destroy deployment of apps: '" + deployment.affectedAppsString() +
-          "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version.")) {
-
-        setTimeout(function() {
-          deployment.destroy({
-            error: function(data, response) {
-              var msg = response.responseJSON.message || response.statusText;
-              component.setLoading(false);
-              alert("Error destroying app '" + deployment.id + "': " + msg);
-            },
-            wait: true
-          });
-        }, 1000);
-      } else {
-        component.setLoading(false);
-      }
-    },
-
-    rollbackToAppVersion: function(version) {
-      if (this.state.activeApp != null) {
-        var app = this.state.activeApp;
-        app.setVersion(version);
-        app.save(
-          null,
-          {
-            error: function(data, response) {
-              var msg = response.responseJSON.message || response.statusText;
-              alert("Could not update to chosen version: " + msg);
-            },
-            success: function() {
-              // refresh app versions
-              this.fetchAppVersions();
-            }.bind(this)
-          });
-      }
-    },
-
-    scaleApp: function(instances) {
-      if (this.state.activeApp != null) {
-        var app = this.state.activeApp;
-        app.save(
-          {instances: instances},
-          {
-            error: function(data, response) {
-              var msg = response.responseJSON.message || response.statusText;
-              alert("Not scaling: " + msg);
-            },
-            success: function() {
-              // refresh app versions
-              this.fetchAppVersions();
-            }.bind(this)
-          }
-        );
-
-        if (app.validationError != null) {
-          // If the model is not valid, revert the changes to prevent the UI
-          // from showing an invalid state.
-          app.update(app.previousAttributes());
-          alert("Not scaling: " + app.validationError[0].message);
-        }
-      }
-    },
-
-    suspendApp: function() {
-      if (confirm("Suspend app by scaling to 0 instances?")) {
-        this.state.activeApp.suspend({
-          error: function(data, response) {
+  rollbackToAppVersion: function (version) {
+    if (this.state.activeApp != null) {
+      var app = this.state.activeApp;
+      app.setVersion(version);
+      app.save(
+        null,
+        {
+          error: function (data, response) {
             var msg = response.responseJSON.message || response.statusText;
-            alert("Could not suspend: " + msg);
+            alert("Could not update to chosen version: " + msg);
           },
-          success: function() {
+          success: function () {
             // refresh app versions
             this.fetchAppVersions();
           }.bind(this)
         });
+    }
+  },
+
+  scaleApp: function (instances) {
+    if (this.state.activeApp != null) {
+      var app = this.state.activeApp;
+      app.save(
+        {instances: instances},
+        {
+          error: function (data, response) {
+            var msg = response.responseJSON.message || response.statusText;
+            alert("Not scaling: " + msg);
+          },
+          success: function () {
+            // refresh app versions
+            this.fetchAppVersions();
+          }.bind(this)
+        }
+      );
+
+      if (app.validationError != null) {
+        // If the model is not valid, revert the changes to prevent the UI
+        // from showing an invalid state.
+        app.update(app.previousAttributes());
+        alert("Not scaling: " + app.validationError[0].message);
       }
-    },
+    }
+  },
 
-    poll: function() {
-      this._pollResource();
-    },
-
-    setPollResource: function(func) {
-      // Kill any poll that is in flight to ensure it doesn't fire after having changed
-      // the `_pollResource` function.
-      this.stopPolling();
-      this._pollResource = func;
-      this.startPolling();
-    },
-
-    startPolling: function() {
-      if (this._interval == null) {
-        this.poll();
-        this._interval = setInterval(this.poll, UPDATE_INTERVAL);
-      }
-    },
-
-    stopPolling: function() {
-      if (this._interval != null) {
-        clearInterval(this._interval);
-        this._interval = null;
-      }
-    },
-
-    showAboutModal: function(event) {
-      if (event != null) event.preventDefault();
-
-      if (this.state.modalClass !== null) {
-        return;
-      }
-
-      this.setState({
-        modalClass: AboutModalComponent
+  suspendApp: function () {
+    if (confirm("Suspend app by scaling to 0 instances?")) {
+      this.state.activeApp.suspend({
+        error: function (data, response) {
+          var msg = response.responseJSON.message || response.statusText;
+          alert("Could not suspend: " + msg);
+        },
+        success: function () {
+          // refresh app versions
+          this.fetchAppVersions();
+        }.bind(this)
       });
-    },
+    }
+  },
 
-    showAppModal: function(app) {
-      if (this.state.modalClass !== null) {
-        return;
-      }
+  poll: function () {
+    this._pollResource();
+  },
 
-      this.setState({
-        activeApp: app,
-        modalClass: AppModalComponent
-      });
-    },
+  setPollResource: function (func) {
+    // Kill any poll that is in flight to ensure it doesn't fire after having changed
+    // the `_pollResource` function.
+    this.stopPolling();
+    this._pollResource = func;
+    this.startPolling();
+  },
 
-    showNewAppModal: function(event) {
-      if (this.state.modalClass !== null) {
-        return;
-      }
+  startPolling: function () {
+    if (this._interval == null) {
+      this.poll();
+      this._interval = setInterval(this.poll, UPDATE_INTERVAL);
+    }
+  },
 
-      this.setState({
-        modalClass: NewAppModalComponent
-      });
-    },
+  stopPolling: function () {
+    if (this._interval != null) {
+      clearInterval(this._interval);
+      this._interval = null;
+    }
+  },
 
-    onTabClick: function(id) {
-      this.setState({
-        activeTabId: id
-      });
+  showAboutModal: function (event) {
+    if (event != null) {
+      event.preventDefault();
+    }
 
-      if (id === tabs[0].id) {
-        this.setPollResource(this.fetchApps);
-      } else if (id === tabs[1].id) {
-        this.setPollResource(this.fetchDeployments);
-      }
-    },
+    if (this.state.modalClass !== null) {
+      return;
+    }
 
-    render: function() {
-      var modal;
+    this.setState({
+      modalClass: AboutModal
+    });
+  },
 
-      /* jshint trailing:false, quotmark:false, newcap:false */
-      if (this.state.modalClass === AppModalComponent) {
-        modal = (
-          <AppModalComponent
-            activeTask={this.state.activeTask}
-            appVersionsFetchState={this.state.appVersionsFetchState}
-            destroyApp={this.destroyApp}
-            fetchTasks={this.fetchTasks}
-            fetchAppVersions={this.fetchAppVersions}
-            model={this.state.activeApp}
-            onDestroy={this.handleModalDestroy}
-            onShowTaskDetails={this.handleShowTaskDetails}
-            onShowTaskList={this.handleShowTaskList}
-            onTasksKilled={this.handleTasksKilled}
-            rollBackApp={this.rollbackToAppVersion}
-            scaleApp={this.scaleApp}
-            suspendApp={this.suspendApp}
-            tasksFetchState={this.state.tasksFetchState}
-            ref="modal" />
-        );
-      } else if (this.state.modalClass === NewAppModalComponent) {
-        modal = (
-          <NewAppModalComponent
-            model={this.state.activeApp}
-            onDestroy={this.handleModalDestroy}
-            onCreate={this.handleAppCreate}
-            ref="modal" />
-        );
-      } else if (this.state.modalClass === AboutModalComponent) {
-        modal = (
-          <AboutModalComponent
-            onDestroy={this.handleModalDestroy}
-            ref="modal" />
-        );
-      }
+  showAppModal: function (app) {
+    if (this.state.modalClass !== null) {
+      return;
+    }
 
-      return (
-        <div>
-          <nav className="navbar navbar-inverse navbar-static-top" role="navigation">
-           <div className="container-fluid">
-              <div className="navbar-header">
-                <a className="navbar-brand" href="/">
-                  <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
-                </a>
-              </div>
-              <NavTabsComponent
-                activeTabId={this.state.activeTabId}
-                className="navbar-nav nav-tabs-unbordered"
-                onTabClick={this.onTabClick}
-                tabs={tabs} />
-              <ul className="nav navbar-nav navbar-right">
-                <li>
-                  <a href="#/about" onClick={this.showAboutModal}>
-                    About
-                  </a>
-                </li>
-                <li>
-                  <a href="https://mesosphere.github.io/marathon/docs/" target="_blank">
-                    Docs ⇗
-                  </a>
-                </li>
-              </ul>
+    this.setState({
+      activeApp: app,
+      modalClass: AppModal
+    });
+  },
+
+  showNewAppModal: function () {
+    if (this.state.modalClass !== null) {
+      return;
+    }
+
+    this.setState({
+      modalClass: NewAppModal
+    });
+  },
+
+  onTabClick: function (id) {
+    this.setState({
+      activeTabId: id
+    });
+
+    if (id === tabs[0].id) {
+      this.setPollResource(this.fetchApps);
+    } else if (id === tabs[1].id) {
+      this.setPollResource(this.fetchDeployments);
+    }
+  },
+
+  render: function () {
+    var modal;
+
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    if (this.state.modalClass === AppModal) {
+      modal = (
+        <AppModal
+          activeTask={this.state.activeTask}
+          appVersionsFetchState={this.state.appVersionsFetchState}
+          destroyApp={this.destroyApp}
+          fetchTasks={this.fetchTasks}
+          fetchAppVersions={this.fetchAppVersions}
+          model={this.state.activeApp}
+          onDestroy={this.handleModalDestroy}
+          onShowTaskDetails={this.handleShowTaskDetails}
+          onShowTaskList={this.handleShowTaskList}
+          onTasksKilled={this.handleTasksKilled}
+          rollBackApp={this.rollbackToAppVersion}
+          scaleApp={this.scaleApp}
+          suspendApp={this.suspendApp}
+          tasksFetchState={this.state.tasksFetchState}
+          ref="modal" />
+      );
+    } else if (this.state.modalClass === NewAppModal) {
+      modal = (
+        <NewAppModal
+          model={this.state.activeApp}
+          onDestroy={this.handleModalDestroy}
+          onCreate={this.handleAppCreate}
+          ref="modal" />
+      );
+    } else if (this.state.modalClass === AboutModal) {
+      modal = (
+        <AboutModal
+          onDestroy={this.handleModalDestroy}
+          ref="modal" />
+      );
+    }
+
+    return (
+      <div>
+        <nav className="navbar navbar-inverse navbar-static-top" role="navigation">
+         <div className="container-fluid">
+            <div className="navbar-header">
+              <a className="navbar-brand" href="/">
+                <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
+              </a>
             </div>
-          </nav>
-          <div className="container-fluid">
-            <TogglableTabsComponent activeTabId={this.state.activeTabId} >
-              <TabPaneComponent id="apps">
-                <button type="button" className="btn btn-success navbar-btn"
-                    onClick={this.showNewAppModal} >
-                  + New App
-                </button>
-                <AppListComponent
+            <NavTabs
+              activeTabId={this.state.activeTabId}
+              className="navbar-nav nav-tabs-unbordered"
+              onTabClick={this.onTabClick}
+              tabs={tabs} />
+            <ul className="nav navbar-nav navbar-right">
+              <li>
+                <a href="#/about" onClick={this.showAboutModal}>
+                  About
+                </a>
+              </li>
+              <li>
+                <a href="https://mesosphere.github.io/marathon/docs/" target="_blank">
+                  Docs ⇗
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+        <div className="container-fluid">
+          <TogglableTabs activeTabId={this.state.activeTabId} >
+            <TabPane id="apps">
+              <button type="button" className="btn btn-success navbar-btn"
+                  onClick={this.showNewAppModal} >
+                + New App
+              </button>
+              <AppList
                   collection={this.state.collection}
                   onSelectApp={this.showAppModal}
                   fetchState={this.state.fetchState}
                   ref="appList" />
-              </TabPaneComponent>
-              <TabPaneComponent
-                  id="deployments"
-                  onActivate={this.props.fetchAppVersions} >
-                <DeploymentsListComponent
+            </TabPane>
+            <TabPane
+                id="deployments"
+                onActivate={this.props.fetchAppVersions} >
+              <DeploymentList
                   deployments={this.state.deployments}
                   destroyDeployment={this.destroyDeployment}
                   fetchState={this.state.deploymentsFetchState} />
-              </TabPaneComponent>
-            </TogglableTabsComponent>
+            </TabPane>
+          </TogglableTabs>
 
-          </div>
-          {modal}
         </div>
-      );
-    }
-  });
+        {modal}
+      </div>
+    );
+  }
 });
+
+module.exports = Marathon;

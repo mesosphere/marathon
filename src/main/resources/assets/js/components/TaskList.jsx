@@ -1,184 +1,180 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "mixins/BackboneMixin",
-  "jsx!components/TaskListItemComponent",
-  "jsx!components/PagedContentComponent"
-], function(React, States, BackboneMixin,
-    TaskListItemComponent, PagedContentComponent) {
-  "use strict";
+var React = require("react/addons");
 
-  return React.createClass({
-    displayName: "TaskListComponent",
+var TaskListItem = require("../components/TaskListItem");
+var PagedContent = require("../components/PagedContent");
 
-    mixins: [BackboneMixin],
+var States = require("../constants/States");
 
-    propTypes: {
-      currentPage: React.PropTypes.number.isRequired,
-      fetchState: React.PropTypes.number.isRequired,
-      itemsPerPage: React.PropTypes.number.isRequired,
-      hasHealth: React.PropTypes.bool,
-      selectedTasks: React.PropTypes.object.isRequired,
-      tasks: React.PropTypes.object.isRequired,
-      currentAppVersion: React.PropTypes.object.isRequired
-    },
+var BackboneMixin = require("../mixins/BackboneMixin");
 
-    getResource: function() {
-      return this.props.tasks;
-    },
+module.exports = React.createClass({
+  displayName: "TaskList",
 
-    getInitialState: function() {
-      return {
-        fetchState: States.STATE_LOADING
-      };
-    },
+  mixins: [BackboneMixin],
 
-    handleThToggleClick: function(event) {
-      // If the click happens on the checkbox, let the checkbox's onchange event
-      // handler handle it and skip handling the event here.
-      if (event.target.nodeName !== "INPUT") {
-        this.props.toggleAllTasks();
-      }
-    },
+  propTypes: {
+    currentPage: React.PropTypes.number.isRequired,
+    fetchState: React.PropTypes.number.isRequired,
+    itemsPerPage: React.PropTypes.number.isRequired,
+    hasHealth: React.PropTypes.bool,
+    selectedTasks: React.PropTypes.object.isRequired,
+    tasks: React.PropTypes.object.isRequired,
+    currentAppVersion: React.PropTypes.object.isRequired
+  },
 
-    sortCollectionBy: function(comparator) {
-      var collection = this.props.tasks;
-      comparator =
-        collection.sortKey === comparator && !collection.sortReverse ?
-        "-" + comparator :
-        comparator;
-      collection.setComparator(comparator);
-      collection.sort();
-    },
+  getResource: function () {
+    return this.props.tasks;
+  },
 
-    render: function() {
-      var taskNodes;
-      var tasksLength = this.props.tasks.length;
-      var hasHealth = !!this.props.hasHealth;
-      var hasError = this.props.fetchState === States.STATE_ERROR;
+  getInitialState: function () {
+    return {
+      fetchState: States.STATE_LOADING
+    };
+  },
 
-      // If there are no tasks, they can't all be selected. Otherwise, assume
-      // they are all selected and let the iteration below decide if that is
-      // true.
-      var allTasksSelected = tasksLength > 0;
+  handleThToggleClick: function (event) {
+    // If the click happens on the checkbox, let the checkbox's onchange event
+    // handler handle it and skip handling the event here.
+    if (event.target.nodeName !== "INPUT") {
+      this.props.toggleAllTasks();
+    }
+  },
 
-      if (this.props.fetchState === States.STATE_LOADING) {
-        taskNodes =
-          <tbody>
-            <tr>
-              <td className="text-center text-muted" colSpan="7">
-                Loading tasks...
-              </td>
-            </tr>
-          </tbody>;
-      } else if (tasksLength === 0 && !hasError) {
-        taskNodes =
-          <tbody>
-            <tr>
-              <td className="text-center" colSpan="7">
-                No tasks running.
-              </td>
-            </tr>
-          </tbody>;
-      } else {
+  sortCollectionBy: function (comparator) {
+    var collection = this.props.tasks;
+    comparator =
+      collection.sortKey === comparator && !collection.sortReverse ?
+      "-" + comparator :
+      comparator;
+    collection.setComparator(comparator);
+    collection.sort();
+  },
 
-        /* jshint trailing:false, quotmark:false, newcap:false */
-        taskNodes = (
-          <PagedContentComponent
-              currentPage={this.props.currentPage}
-              itemsPerPage={this.props.itemsPerPage}
-              element="tbody" >
-            {
-              hasError ?
-                <tr>
-                  <td className="text-center text-danger" colSpan="7">
-                    Error fetching tasks. Refresh the list to try again.
-                  </td>
-                </tr> :
-                null
-            }
-            {
-              this.props.tasks.map(function(task) {
-                // Expicitly check for Boolean since the key might not exist in the
-                // object.
-                var isActive = this.props.selectedTasks[task.id] === true;
-                if (!isActive) { allTasksSelected = false; }
+  render: function () {
+    var taskNodes;
+    var tasksLength = this.props.tasks.length;
+    var hasHealth = !!this.props.hasHealth;
+    var hasError = this.props.fetchState === States.STATE_ERROR;
 
-                return (
-                    <TaskListItemComponent
-                      isActive={isActive}
-                      key={task.id}
-                      taskHealthMessage={this.props.formatTaskHealthMessage(task)}
-                      onToggle={this.props.onTaskToggle}
-                      onTaskDetailSelect={this.props.onTaskDetailSelect}
-                      hasHealth={hasHealth}
-                      task={task}
-                      currentAppVersion={this.props.currentAppVersion} />
-                );
-              }, this)
-            }
-          </PagedContentComponent>
-        );
-      }
+    // If there are no tasks, they can't all be selected. Otherwise, assume
+    // they are all selected and let the iteration below decide if that is
+    // true.
+    var allTasksSelected = tasksLength > 0;
+    var sortKey = this.props.tasks.sortKey;
 
-      var sortKey = this.props.tasks.sortKey;
+    var headerClassSet = React.addons.classSet({
+        "clickable": true,
+        "dropup": this.props.tasks.sortReverse
+      });
 
-      var headerClassSet = React.addons.classSet({
-          "clickable": true,
-          "dropup": this.props.tasks.sortReverse
-        });
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    if (this.props.fetchState === States.STATE_LOADING) {
+      taskNodes =
+        <tbody>
+          <tr>
+            <td className="text-center text-muted" colSpan="7">
+              Loading tasks...
+            </td>
+          </tr>
+        </tbody>;
+    } else if (tasksLength === 0 && !hasError) {
+      taskNodes =
+        <tbody>
+          <tr>
+            <td className="text-center" colSpan="7">
+              No tasks running.
+            </td>
+          </tr>
+        </tbody>;
+    } else {
+      taskNodes = (
+        <PagedContent
+            currentPage={this.props.currentPage}
+            itemsPerPage={this.props.itemsPerPage}
+            element="tbody" >
+          {
+            hasError ?
+              <tr>
+                <td className="text-center text-danger" colSpan="7">
+                  Error fetching tasks. Refresh the list to try again.
+                </td>
+              </tr> :
+              null
+          }
+          {
+            this.props.tasks.map(function (task) {
+              // Expicitly check for Boolean since the key might not exist in the
+              // object.
+              var isActive = this.props.selectedTasks[task.id] === true;
+              if (!isActive) { allTasksSelected = false; }
 
-      /* jshint trailing:false, quotmark:false, newcap:false */
-      return (
-        <table className="table table-unstyled">
-          <thead>
-            <tr>
-              <th className={headerClassSet} width="1" onClick={this.handleThToggleClick}>
-                <input type="checkbox"
-                  checked={allTasksSelected}
-                  disabled={tasksLength === 0}
-                  onChange={this.props.toggleAllTasks} />
-              </th>
-              <th>
-                <span onClick={this.sortCollectionBy.bind(null, "id")}
-                      className={headerClassSet}>
-                  ID {(sortKey === "id") ? <span className="caret"></span> : null}
-                </span>
-              </th>
-              <th className="text-center">
-                <span onClick={this.sortCollectionBy.bind(null, "status")}
-                      className={headerClassSet}>
-                  Status {(sortKey === "status") ? <span className="caret"></span> : null}
-                </span>
-              </th>
-              <th className="text-right">
-                <span className={headerClassSet} onClick={this.sortCollectionBy.bind(null, "version")}>
-                  {(sortKey === "version") ? <span className="caret"></span> : null} Version
-                </span>
-              </th>
-              <th className="text-right">
-                <span onClick={this.sortCollectionBy.bind(null, "updatedAt")}
-                      className={headerClassSet}>
-                  {(sortKey === "updatedAt") ? <span className="caret"></span> : null} Updated
-                </span>
-              </th>
-              {
-                hasHealth ?
-                  <th className="text-center">
-                    <span onClick={this.sortCollectionBy.bind(null, "getHealth")}
-                          className={headerClassSet}>
-                      {(sortKey === "getHealth") ? <span className="caret"></span> : null} Health
-                    </span>
-                  </th> :
-                  null
-              }
-            </tr>
-          </thead>
-          {taskNodes}
-        </table>
+              return (
+                  <TaskListItem
+                    isActive={isActive}
+                    key={task.id}
+                    taskHealthMessage={this.props.formatTaskHealthMessage(task)}
+                    onToggle={this.props.onTaskToggle}
+                    onTaskDetailSelect={this.props.onTaskDetailSelect}
+                    hasHealth={hasHealth}
+                    task={task}
+                    currentAppVersion={this.props.currentAppVersion} />
+              );
+            }, this)
+          }
+        </PagedContent>
       );
     }
-  });
+
+    return (
+      <table className="table table-unstyled">
+        <thead>
+          <tr>
+            <th className={headerClassSet} width="1" onClick={this.handleThToggleClick}>
+              <input type="checkbox"
+                checked={allTasksSelected}
+                disabled={tasksLength === 0}
+                onChange={this.props.toggleAllTasks} />
+            </th>
+            <th>
+              <span onClick={this.sortCollectionBy.bind(null, "id")}
+                    className={headerClassSet}>
+                ID {(sortKey === "id") ? <span className="caret"></span> : null}
+              </span>
+            </th>
+            <th className="text-center">
+              <span onClick={this.sortCollectionBy.bind(null, "status")}
+                    className={headerClassSet}>
+                Status {(sortKey === "status") ? <span className="caret"></span> : null}
+              </span>
+            </th>
+            <th className="text-right">
+              <span className={headerClassSet} onClick={this.sortCollectionBy.bind(null, "version")}>
+                {(sortKey === "version") ? <span className="caret"></span> : null} Version
+              </span>
+            </th>
+            <th className="text-right">
+              <span onClick={this.sortCollectionBy.bind(null, "updatedAt")}
+                    className={headerClassSet}>
+                {(sortKey === "updatedAt") ? <span className="caret"></span> : null} Updated
+              </span>
+            </th>
+            {
+              hasHealth ?
+                <th className="text-center">
+                  <span onClick={this.sortCollectionBy.bind(null, "getHealth")}
+                        className={headerClassSet}>
+                    {(sortKey === "getHealth") ? <span className="caret"></span> : null} Health
+                  </span>
+                </th> :
+                null
+            }
+          </tr>
+        </thead>
+        {taskNodes}
+      </table>
+    );
+  }
 });
