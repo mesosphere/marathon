@@ -1,3 +1,5 @@
+"use strict";
+
 var Backbone = require("backbone");
 
 var Deployment = Backbone.Model.extend({

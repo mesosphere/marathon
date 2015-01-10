@@ -1,3 +1,5 @@
+"use strict";
+
 var AppVersion = require("../models/AppVersion");
 var SortableCollection = require("../models/SortableCollection");
 

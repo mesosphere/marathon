@@ -1,3 +1,5 @@
+"use strict";
+
 var Deployment = require("../models/Deployment");
 var SortableCollection = require("../models/SortableCollection");
 

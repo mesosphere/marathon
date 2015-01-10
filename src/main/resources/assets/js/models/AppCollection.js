@@ -1,3 +1,5 @@
+"use strict";
+
 var App = require("../models/App");
 var SortableCollection = require("../models/SortableCollection");
 
@@ -15,6 +17,7 @@ var AppCollection = SortableCollection.extend({
   },
 
   url: "/v2/apps"
+
 });
 
 module.exports = AppCollection;

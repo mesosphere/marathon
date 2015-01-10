@@ -1,3 +1,5 @@
+"use strict";
+
 var SortableCollection = require("../models/SortableCollection");
 
 var Task = require("../models/Task");

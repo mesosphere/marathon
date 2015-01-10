@@ -1,3 +1,5 @@
+"use strict";
+
 var Backbone = require("backbone");
 
 var Info = Backbone.Model.extend({

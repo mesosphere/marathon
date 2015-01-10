@@ -1,5 +1,7 @@
 /** @jsx React.DOM */
 
+"use strict";
+
 var React = require("react/addons");
 
 var TaskListItem = require("../components/TaskListItem");

@@ -1,5 +1,7 @@
 /** @jsx React.DOM */
 
+"use strict";
+
 var React = require("react/addons");
 
 var Modal = require("../../components/Modal");

@@ -1,5 +1,6 @@
-var _ = require("underscore");
+"use strict";
 
+var _ = require("underscore");
 var Backbone = require("backbone");
 
 var AppVersion = require("../models/AppVersion");

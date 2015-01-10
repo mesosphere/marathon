@@ -1,5 +1,7 @@
 /** @jsx React.DOM */
 
+"use strict";
+
 var Mousetrap = require("mousetrap");
 var React = require("react/addons");
 
