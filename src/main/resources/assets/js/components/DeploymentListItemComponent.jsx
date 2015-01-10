@@ -4,7 +4,8 @@
 
 var React = require("react/addons");
 
-var DeploymentListItemComponent = React.createClass({
+var DeploymentListItemComponent =
+    React.createClass({
   name: "DeploymentListItemComponent",
 
   propTypes: {
