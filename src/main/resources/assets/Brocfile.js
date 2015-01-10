@@ -18,7 +18,6 @@ var _ = require("underscore");
  * configuration
  */
 var dirs = {
-  distDir: "target",
   src: "",
   js: "js",
   jsDist: ".", // use . for root

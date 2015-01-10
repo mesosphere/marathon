@@ -42,7 +42,7 @@
     "sinon": "^1.12.2"
   },
   "scripts": {
-    "clean": "rm -rf target tmp",
+    "clean": "rm -rf dist tmp",
     "clean-modules": "rm -rf node_modules",
     "build": "broccoli build dist",
     "watch": "export BROCCOLI_ENV=\"development\" && broccoli-timepiece dist",
