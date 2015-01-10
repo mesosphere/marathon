@@ -289,7 +289,12 @@ var App = Backbone.Model.extend({
     }
 
     if (errors.length > 0) { return errors; }
+  },
+
+  url : function () {
+    return this.isNew() ? "v2/apps" : "v2/apps/" + this.id;
   }
+
 }, {
   VALID_EXECUTOR_PATTERN: VALID_EXECUTOR_PATTERN
 });
