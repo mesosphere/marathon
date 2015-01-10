@@ -43,9 +43,9 @@
   },
   "scripts": {
     "clean": "rm -rf target tmp",
+    "clean-modules": "rm -rf node_modules",
     "build": "broccoli build target",
-    "serve": "broccoli serve",
-    "tar": "tar -czf mm-frontend-v0.1.1.tar.gz -C target .",
+    "watch": "broccoli-timepiece target",
     "test": "./node_modules/mocha/bin/mocha --ui exports --reporter spec --compilers jsx:test/compiler.js test/object-assign-polyfill.js test/**/*.test.*",
     "test-teamcity": "./node_modules/mocha/bin/mocha --ui exports --reporter mocha-teamcity-reporter --compilers jsx:test/compiler.js test/object-assign-polyfill.js test/**/*.test.*",
     "test-watch": "./node_modules/mocha/bin/mocha --ui exports --reporter spec --watch --compilers jsx:test/compiler.js test/object-assign-polyfill.js test/**/*.test.*"

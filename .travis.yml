@@ -2,7 +2,8 @@ language: scala
 before_script:
   - export PROJECT_VERSION="`egrep -os -e '([0-9]\.)+[0-9](-\w+)?' version.sbt`" && echo Project Version is $PROJECT_VERSION
   - export ARTIFACT="marathon-$PROJECT_VERSION.tgz"
-  - pushd src/main/resources/assets/ && npm install && ./bin/build && popd
+  - export BROCCOLI_ENV="production"
+  - pushd src/main/resources/assets && npm run clean && npm run clean-modules && npm install && npm run build && popd
 jdk:
   - openjdk6
 scala:
