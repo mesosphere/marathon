@@ -168,7 +168,7 @@ function createJsTree() {
   });
 
   // compile react files
-  jsTree = filterReact(jsTree, {extensions: ["jsx"]});
+  jsTree = filterReact(jsTree);
 
   // replace @@ENV in js code with current BROCCOLI_ENV environment variable
   // {default: "development" | "production"}
