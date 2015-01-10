@@ -10,10 +10,10 @@ var SortableCollection = Backbone.Collection.extend({
     this.comparator = function (a, b) {
       // Assuming that the sortKey values
       // can be compared with '>' and '<'
-      var aVal = _.isfunction (a[this.sortKey]) ?
+      var aVal = _.isFunction (a[this.sortKey]) ?
         a[this.sortKey]() :
         a.get(this.sortKey);
-      var bVal = _.isfunction (b[this.sortKey]) ?
+      var bVal = _.isFunction (b[this.sortKey]) ?
         b[this.sortKey]() :
         b.get(this.sortKey);
       return this.sortReverse ?

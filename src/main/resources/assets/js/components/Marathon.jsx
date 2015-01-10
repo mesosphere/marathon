@@ -1,7 +1,7 @@
 /** @jsx React.DOM */
 
 var Mousetrap = require("mousetrap");
-var React = require("React");
+var React = require("react/addons");
 
 var AppList = require("../components/AppList");
 var AboutModal = require("../components/modals/AboutModal");

@@ -27,7 +27,7 @@ module.exports = React.createClass({
   },
 
   handleSubmit: function (event) {
-    if (_.isfunction (this.props.onRollback)) {
+    if (_.isFunction (this.props.onRollback)) {
       event.preventDefault();
       this.props.onRollback(this.props.appVersion, event);
     }
