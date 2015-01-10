@@ -14,6 +14,9 @@ var uglifyJavaScript = require("broccoli-uglify-js");
 var webpackify = require("broccoli-webpack");
 var _ = require("underscore");
 
+/*
+ * configuration
+ */
 var dirs = {
   distDir: "target",
   src: "",
@@ -29,6 +32,9 @@ var fileNames = {
   mainStyles: "main" // without extension
 };
 
+/*
+ * Task definitions
+ */
 var tasks = {
 
   jsHint: function (jsTree) {
@@ -151,6 +157,9 @@ var tasks = {
   // https://github.com/imagemin/imagemin
 };
 
+/*
+ * basic pre-processing before actual build
+ */
 function createJsTree() {
   // create tree for .js and .jsx
   var jsTree = pickFiles(dirs.js, {
@@ -178,6 +187,9 @@ function createJsTree() {
   });
 }
 
+/*
+ * Start the build
+ */
 var buildTree = _.compose(tasks.jsHint, createJsTree);
 
 // export BROCCOLI_ENV={default : "development" | "production"}
