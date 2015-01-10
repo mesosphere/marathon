@@ -32,9 +32,11 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[HealthStatusChanged])
 
     val minHealthy = (toKill.size.toDouble * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
-    val nrToKill = math.min(0, toKill.size - minHealthy)
+    val nrToKillImmediately = math.max(0, toKill.size - minHealthy)
+    log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} leave " +
+      s"${minHealthy} tasks running, killing ${nrToKillImmediately} tasks immediately")
 
-    for (_ <- 0 until nrToKill) {
+    for (_ <- 0 until nrToKillImmediately) {
       val taskId = Protos.TaskID.newBuilder
         .setValue(toKill.dequeue())
         .build()
