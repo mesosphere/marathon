@@ -1,10 +1,8 @@
 // dependencies
-var assetRev = require("broccoli-asset-rev");
 var chalk = require("chalk");
 var cleanCSS = require("broccoli-clean-css");
 var concatCSS = require("broccoli-concat");
 var env = require("broccoli-env").getEnv();
-var exportTree = require("broccoli-export-tree");
 var filterReact = require("broccoli-react");
 var jscs = require("broccoli-jscs");
 var jsHintTree = require("broccoli-jshint");
@@ -138,20 +136,6 @@ var tasks = {
     return cleanCSS(masterTree);
   },
 
-  index: function (masterTree) {
-    // create tree for index
-    var indexTree = pickFiles(dirs.src, {
-      srcDir: "/",
-      destDir: "",
-      files: ["*.html"],
-    });
-
-    return mergeTrees(
-      [masterTree, indexTree],
-      { overwrite: true }
-    );
-  },
-
   img: function (masterTree) {
     // create tree for image files
     var imgTree = pickFiles(dirs.img, {
@@ -163,21 +147,6 @@ var tasks = {
       [masterTree, imgTree],
       { overwrite: true }
     );
-  },
-
-  md5: function (masterTree) {
-    // add md5 checksums to filenames
-    return assetRev(masterTree, {
-      extensions: ["js", "css", "png", "jpg", "gif"],
-      replaceExtensions: ["html", "js", "css"]
-    });
-  },
-
-  export: function (masterTree) {
-    return exportTree(masterTree, {
-      destDir: dirs.distDir,
-      clobber: true
-    });
   }
   // https://github.com/imagemin/imagemin
 };
@@ -216,7 +185,6 @@ if (env === "development" || env === "production" ) {
   // add steps used in both development and production
   buildTree = _.compose(
     tasks.img,
-    tasks.index,
     tasks.css,
     tasks.webpack,
     buildTree
@@ -226,16 +194,10 @@ if (env === "development" || env === "production" ) {
 if (env === "production") {
   // add steps that are exclusively used in production
   buildTree = _.compose(
-    tasks.md5,
     tasks.minifyCSS,
     tasks.minifyJs,
     buildTree
   );
 }
-
-// buildTree = _.compose(
-//   tasks.export,
-//   buildTree
-// );
 
 module.exports = buildTree();
