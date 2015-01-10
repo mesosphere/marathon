@@ -154,7 +154,6 @@ var tasks = {
       { overwrite: true }
     );
   }
-  // https://github.com/imagemin/imagemin
 };
 
 /*
