@@ -60,9 +60,7 @@ var DeploymentList = React.createClass({
     } else if (this.props.deployments.length === 0) {
       deploymentNodes =
         <tr>
-          <td className="text-center text-muted" colSpan="5">
-            Loading deployments...
-          </td>
+          <td className="text-center" colSpan="5">No deployments in progress.</td>
         </tr>;
     } else {
       deploymentNodes = this.props.deployments.map(function (model) {
