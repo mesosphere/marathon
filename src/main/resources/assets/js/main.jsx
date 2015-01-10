@@ -1,4 +1,3 @@
-
 var React = require("react/addons");
 
 var Marathon = require("./components/Marathon");
