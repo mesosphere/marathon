@@ -4,7 +4,7 @@ var React = require("react/addons");
 
 var NavTabs = require("../components/NavTabs");
 
-module.exports = React.createClass({
+var TogglableTabs = React.createClass({
   name: "TogglableTabs",
 
   propTypes: {
@@ -45,3 +45,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = TogglableTabs;

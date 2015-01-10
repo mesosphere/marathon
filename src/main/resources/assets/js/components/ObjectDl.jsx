@@ -20,7 +20,7 @@ function prettyPrint(object) {
   }
 }
 
-module.exports = React.createClass({
+var ObjectDl = React.createClass({
   displayName: "ObjectDl",
   propTypes: {
     // Can be `null` or `undefined` since the data is likely fetched
@@ -55,3 +55,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = ObjectDl;

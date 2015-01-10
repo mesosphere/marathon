@@ -4,7 +4,7 @@ var React = require("react/addons");
 
 function noop() {}
 
-module.exports = React.createClass({
+var NavTabs = React.createClass({
   name: "NavTabs",
 
   propTypes: {
@@ -69,3 +69,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = NavTabs;

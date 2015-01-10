@@ -16,7 +16,7 @@ function ValidationError(attribute, message) {
   this.message = message;
 }
 
-module.exports = React.createClass({
+var NewAppModal = React.createClass({
   mixins: [BackboneMixin],
   propTypes: {
     onCreate: React.PropTypes.func,
@@ -277,3 +277,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = NewAppModal;

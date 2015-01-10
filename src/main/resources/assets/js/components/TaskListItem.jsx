@@ -47,7 +47,7 @@ function buildTaskAnchors(task) {
   return taskAnchors;
 }
 
-module.exports = React.createClass({
+var TaskListItem = React.createClass({
   displayName: "TaskListItem",
 
   propTypes: {
@@ -151,3 +151,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = TaskListItem;

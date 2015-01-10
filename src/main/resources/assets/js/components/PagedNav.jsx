@@ -2,7 +2,7 @@
 
 var React = require("react/addons");
 
-module.exports = React.createClass({
+var PagedNav = React.createClass({
   displayName: "PagedNav",
 
   propTypes: {
@@ -154,3 +154,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = PagedNav;

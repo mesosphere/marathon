@@ -2,7 +2,7 @@
 
 var React = require("react/addons");
 
-module.exports = React.createClass({
+var PagedContent = React.createClass({
   displayName: "PagedContent",
 
   propTypes: {
@@ -40,3 +40,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = PagedContent;

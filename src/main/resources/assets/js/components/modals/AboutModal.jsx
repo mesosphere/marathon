@@ -19,7 +19,7 @@ var UNSPECIFIED_NODE = React.createClass({
   }
 });
 
-module.exports = React.createClass({
+var AboutModal = React.createClass({
   mixins: [BackboneMixin],
 
   getInitialState: function () {
@@ -113,3 +113,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = AboutModal;

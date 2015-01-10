@@ -2,7 +2,7 @@
 
 var React = require("react/addons");
 
-module.exports = React.createClass({
+var FormGroup = React.createClass({
   propTypes: {
     errors: React.PropTypes.array,
     children: React.PropTypes.component.isRequired,
@@ -89,3 +89,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports =  FormGroup;

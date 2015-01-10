@@ -9,7 +9,7 @@ var States = require("../constants/States");
 
 var BackboneMixin = require("../mixins/BackboneMixin");
 
-module.exports = React.createClass({
+var TaskList = React.createClass({
   displayName: "TaskList",
 
   mixins: [BackboneMixin],
@@ -178,3 +178,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = TaskList;

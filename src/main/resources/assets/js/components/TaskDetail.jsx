@@ -11,7 +11,7 @@ var BackboneMixin = require("../mixins/BackboneMixin");
 
 var Task = require("../models/Task");
 
-module.exports = React.createClass({
+var TaskDetail = React.createClass({
   displayName: "TaskDetail",
 
   mixins: [BackboneMixin],
@@ -120,3 +120,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = TaskDetail;

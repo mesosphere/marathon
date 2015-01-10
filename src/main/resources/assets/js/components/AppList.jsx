@@ -5,7 +5,7 @@ var States = require("../constants/States");
 var AppListItem = require("../components/AppListItem");
 var BackboneMixin = require("../mixins/BackboneMixin");
 
-module.exports = React.createClass({
+var AppList = React.createClass({
   displayName: "AppList",
 
   mixins: [BackboneMixin],
@@ -121,3 +121,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = AppList;

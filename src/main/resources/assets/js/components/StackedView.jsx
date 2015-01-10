@@ -2,7 +2,7 @@
 
 var React = require("react/addons");
 
-module.exports = React.createClass({
+var StackedView = React.createClass({
   displayName: "StackedView",
   render: function () {
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
@@ -14,3 +14,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = StackedView;

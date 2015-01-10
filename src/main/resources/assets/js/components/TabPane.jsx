@@ -2,7 +2,7 @@
 
 var React = require("react/addons");
 
-module.exports = React.createClass({
+var TabPane = React.createClass({
   name: "TabPane",
 
   propTypes: {
@@ -38,3 +38,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = TabPane;

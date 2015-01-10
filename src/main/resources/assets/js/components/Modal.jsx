@@ -7,7 +7,7 @@ function modalSizeClassName(size) {
   return (size == null) ? "" : "modal-" + size;
 }
 
-module.exports = React.createClass({
+var Modal = React.createClass({
   displayName: "Modal",
   propTypes: {
     onDestroy: React.PropTypes.func,
@@ -81,3 +81,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = Modal;

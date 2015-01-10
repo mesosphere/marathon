@@ -14,7 +14,7 @@ var UNSPECIFIED_NODE = React.createClass({
   }
 });
 
-module.exports = React.createClass({
+var AppVersion = React.createClass({
   displayName: "AppVersion",
 
   propTypes: {
@@ -132,3 +132,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = AppVersion;

@@ -15,7 +15,7 @@ var tabs = [
   {id: "configuration", text: "Configuration"}
 ];
 
-module.exports = React.createClass({
+var AppModal = React.createClass({
   displayName: "AppModal",
 
   propTypes: {
@@ -204,3 +204,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = AppModal;

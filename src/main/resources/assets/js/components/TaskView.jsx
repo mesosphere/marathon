@@ -5,7 +5,7 @@ var React = require("react/addons");
 var PagedNav = require("../components/PagedNav");
 var TaskList = require("../components/TaskList");
 
-module.exports = React.createClass({
+var TaskView = React.createClass({
   displayName: "TaskView",
 
   propTypes: {
@@ -161,3 +161,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = TaskView;

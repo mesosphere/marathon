@@ -2,7 +2,7 @@
 
 var React = require("react/addons");
 
-module.exports = React.createClass({
+var AppListItem = React.createClass({
   onClick: function () {
     this.props.onClick(this.props.model);
   },
@@ -45,3 +45,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = AppListItem;

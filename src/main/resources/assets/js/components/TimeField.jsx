@@ -2,7 +2,7 @@
 
 var React = require("react/addons");
 
-module.exports = React.createClass({
+var TimeField = React.createClass({
   displayName: "TimeField",
   propTypes: {
     label: React.PropTypes.string.isRequired,
@@ -32,3 +32,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = TimeField;

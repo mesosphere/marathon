@@ -13,7 +13,7 @@ var BackboneMixin = require("../mixins/BackboneMixin");
 
 var App = require("../models/App");
 
-module.exports = React.createClass({
+var AppVersionList = React.createClass({
   displayName: "AppVersionList",
 
   mixins: [BackboneMixin],
@@ -131,3 +131,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = AppVersionList;

@@ -8,7 +8,7 @@ var States = require("../constants/States");
 
 var BackboneMixin = require("../mixins/BackboneMixin");
 
-module.exports = React.createClass({
+var DeploymentList = React.createClass({
   displayName: "DeploymentList",
 
   mixins: [BackboneMixin],
@@ -123,3 +123,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = DeploymentList;

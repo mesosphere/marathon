@@ -4,7 +4,7 @@ var React = require("react/addons");
 
 var TimeField = require("../components/TimeField");
 
-module.exports = React.createClass({
+var TaskHealth = React.createClass({
   displayName: "TaskHealth",
   propTypes: {
     task: React.PropTypes.object.isRequired
@@ -72,3 +72,5 @@ module.exports = React.createClass({
     );
   }
 });
+
+module.exports = TaskHealth;
