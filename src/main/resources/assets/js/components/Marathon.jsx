@@ -5,14 +5,14 @@
 var Mousetrap = require("mousetrap");
 var React = require("react/addons");
 
-var AppList = require("../components/AppList");
-var AboutModal = require("../components/modals/AboutModal");
-var AppModal = require("../components/AppModal");
-var DeploymentList = require("../components/DeploymentList");
-var NavTabs = require("../components/NavTabs");
-var NewAppModal = require("../components/NewAppModal");
-var TabPane = require("../components/TabPane");
-var TogglableTabs = require("../components/TogglableTabs");
+var AppListComponent = require("../components/AppListComponent");
+var AboutModalComponent = require("../components/modals/AboutModalComponent");
+var AppModalComponent = require("../components/AppModalComponent");
+var DeploymentListComponent = require("../components/DeploymentListComponent");
+var NavTabsComponent = require("../components/NavTabsComponent");
+var NewAppModalComponent = require("../components/NewAppModalComponent");
+var TabPaneComponent = require("../components/TabPaneComponent");
+var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 
 var States = require("../constants/States");
 
@@ -76,7 +76,7 @@ var Marathon = React.createClass({
     }.bind(this));
 
     Mousetrap.bind("#", function () {
-      if (this.state.modalClass === AppModal) {
+      if (this.state.modalClass === AppModalComponent) {
         this.destroyApp();
       }
     }.bind(this));
@@ -97,7 +97,7 @@ var Marathon = React.createClass({
       // Otherwise stop polling since the modal went from closed to open.
       if (this.state.modalClass === null) {
         this.setPollResource(this.fetchApps);
-      } else if (this.state.modalClass === AppModal) {
+      } else if (this.state.modalClass === AppModalComponent) {
         this.setPollResource(this.fetchTasks);
       } else {
         this.stopPolling();
@@ -337,7 +337,7 @@ var Marathon = React.createClass({
     }
 
     this.setState({
-      modalClass: AboutModal
+      modalClass: AboutModalComponent
     });
   },
 
@@ -348,7 +348,7 @@ var Marathon = React.createClass({
 
     this.setState({
       activeApp: app,
-      modalClass: AppModal
+      modalClass: AppModalComponent
     });
   },
 
@@ -358,7 +358,7 @@ var Marathon = React.createClass({
     }
 
     this.setState({
-      modalClass: NewAppModal
+      modalClass: NewAppModalComponent
     });
   },
 
@@ -379,9 +379,9 @@ var Marathon = React.createClass({
 
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     /* jshint trailing:false, quotmark:false, newcap:false */
-    if (this.state.modalClass === AppModal) {
+    if (this.state.modalClass === AppModalComponent) {
       modal = (
-        <AppModal
+        <AppModalComponent
           activeTask={this.state.activeTask}
           appVersionsFetchState={this.state.appVersionsFetchState}
           destroyApp={this.destroyApp}
@@ -398,17 +398,17 @@ var Marathon = React.createClass({
           tasksFetchState={this.state.tasksFetchState}
           ref="modal" />
       );
-    } else if (this.state.modalClass === NewAppModal) {
+    } else if (this.state.modalClass === NewAppModalComponent) {
       modal = (
-        <NewAppModal
+        <NewAppModalComponent
           model={this.state.activeApp}
           onDestroy={this.handleModalDestroy}
           onCreate={this.handleAppCreate}
           ref="modal" />
       );
-    } else if (this.state.modalClass === AboutModal) {
+    } else if (this.state.modalClass === AboutModalComponent) {
       modal = (
-        <AboutModal
+        <AboutModalComponent
           onDestroy={this.handleModalDestroy}
           ref="modal" />
       );
@@ -423,7 +423,7 @@ var Marathon = React.createClass({
                 <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
               </a>
             </div>
-            <NavTabs
+            <NavTabsComponent
               activeTabId={this.state.activeTabId}
               className="navbar-nav nav-tabs-unbordered"
               onTabClick={this.onTabClick}
@@ -443,27 +443,27 @@ var Marathon = React.createClass({
           </div>
         </nav>
         <div className="container-fluid">
-          <TogglableTabs activeTabId={this.state.activeTabId} >
-            <TabPane id="apps">
+          <TogglableTabsComponent activeTabId={this.state.activeTabId} >
+            <TabPaneComponent id="apps">
               <button type="button" className="btn btn-success navbar-btn"
                   onClick={this.showNewAppModal} >
                 + New App
               </button>
-              <AppList
+              <AppListComponent
                   collection={this.state.collection}
                   onSelectApp={this.showAppModal}
                   fetchState={this.state.fetchState}
                   ref="appList" />
-            </TabPane>
-            <TabPane
+            </TabPaneComponent>
+            <TabPaneComponent
                 id="deployments"
                 onActivate={this.props.fetchAppVersions} >
-              <DeploymentList
+              <DeploymentListComponent
                   deployments={this.state.deployments}
                   destroyDeployment={this.destroyDeployment}
                   fetchState={this.state.deploymentsFetchState} />
-            </TabPane>
-          </TogglableTabs>
+            </TabPaneComponent>
+          </TogglableTabsComponent>
 
         </div>
         {modal}

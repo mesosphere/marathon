@@ -6,8 +6,8 @@ var $ = require("jquery");
 var _ = require("underscore");
 var React = require("react/addons");
 
-var FormGroup = require("../components/FormGroup");
-var Modal = require("../components/Modal");
+var FormGroupComponent = require("../components/FormGroupComponent");
+var ModalComponent = require("../components/ModalComponent");
 
 var BackboneMixin = require("../mixins/BackboneMixin");
 
@@ -18,7 +18,8 @@ function ValidationError(attribute, message) {
   this.message = message;
 }
 
-var NewAppModal = React.createClass({
+var NewAppModalComponent =
+    React.createClass({
   mixins: [BackboneMixin],
   propTypes: {
     onCreate: React.PropTypes.func,
@@ -182,7 +183,7 @@ var NewAppModal = React.createClass({
     });
 
     return (
-      <Modal ref="modal" onDestroy={this.props.onDestroy}>
+      <ModalComponent ref="modal" onDestroy={this.props.onDestroy}>
         <form method="post" role="form" onSubmit={this.onSubmit}>
           <div className="modal-header">
             <button type="button" className="close"
@@ -190,51 +191,51 @@ var NewAppModal = React.createClass({
             <h3 className="modal-title">New Application</h3>
           </div>
           <div className="modal-body">
-            <FormGroup
+            <FormGroupComponent
                 attribute="id"
                 label="ID"
                 model={model}
                 errors={errors}>
               <input autoFocus required />
-            </FormGroup>
-            <FormGroup
+            </FormGroupComponent>
+            <FormGroupComponent
                 attribute="cpus"
                 label="CPUs"
                 model={model}
                 errors={errors}>
               <input min="0" step="any" type="number" required />
-            </FormGroup>
-            <FormGroup
+            </FormGroupComponent>
+            <FormGroupComponent
                 attribute="mem"
                 label="Memory (MB)"
                 model={model}
                 errors={errors}>
               <input min="0" step="any" type="number" required />
-            </FormGroup>
-            <FormGroup
+            </FormGroupComponent>
+            <FormGroupComponent
                 attribute="disk"
                 label="Disk Space (MB)"
                 model={model}
                 errors={errors}>
               <input min="0" step="any" type="number" required />
-            </FormGroup>
-            <FormGroup
+            </FormGroupComponent>
+            <FormGroupComponent
                 attribute="instances"
                 label="Instances"
                 model={model}
                 errors={errors}>
               <input min="1" step="1" type="number" required />
-            </FormGroup>
+            </FormGroupComponent>
             <hr />
             <h4>Optional Settings</h4>
-            <FormGroup
+            <FormGroupComponent
                 attribute="cmd"
                 label="Command"
                 model={model}
                 errors={errors}>
               <textarea style={{resize: "vertical"}} />
-            </FormGroup>
-            <FormGroup
+            </FormGroupComponent>
+            <FormGroupComponent
                 attribute="executor"
                 label="Executor"
                 model={model}
@@ -242,31 +243,31 @@ var NewAppModal = React.createClass({
               <input
                 pattern={App.VALID_EXECUTOR_PATTERN}
                 title="Executor must be the string '//cmd', a string containing only single slashes ('/'), or blank." />
-            </FormGroup>
-            <FormGroup
+            </FormGroupComponent>
+            <FormGroupComponent
                 attribute="ports"
                 help="Comma-separated list of numbers. 0's (zeros) assign random ports. (Default: one random port)"
                 label="Ports"
                 model={model}
                 errors={errors}>
               <input />
-            </FormGroup>
-            <FormGroup
+            </FormGroupComponent>
+            <FormGroupComponent
                 attribute="uris"
                 help="Comma-separated list of valid URIs."
                 label="URIs"
                 model={model}
                 errors={errors}>
               <input />
-            </FormGroup>
-            <FormGroup
+            </FormGroupComponent>
+            <FormGroupComponent
                 attribute="constraints"
                 help='Comma-separated list of valid constraints. Valid constraint format is "field:operator[:value]".'
                 label="Constraints"
                 model={model}
                 errors={errors}>
               <input />
-            </FormGroup>
+            </FormGroupComponent>
             <div>
               {errorBlock}
               <input type="submit" className="btn btn-success" value="+ Create" /> <button className="btn btn-default" type="button" onClick={this.destroy}>
@@ -275,9 +276,9 @@ var NewAppModal = React.createClass({
             </div>
           </div>
         </form>
-      </Modal>
+      </ModalComponent>
     );
   }
 });
 
-module.exports = NewAppModal;
+module.exports = NewAppModalComponent;

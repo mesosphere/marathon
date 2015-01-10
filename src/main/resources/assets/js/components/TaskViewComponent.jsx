@@ -4,11 +4,11 @@
 
 var React = require("react/addons");
 
-var PagedNav = require("../components/PagedNav");
-var TaskList = require("../components/TaskList");
+var PagedNavComponent = require("../components/PagedNavComponent");
+var TaskListComponent = require("../components/TaskListComponent");
 
-var TaskView = React.createClass({
-  displayName: "TaskView",
+var TaskViewComponent = React.createClass({
+  displayName: "TaskViewComponent",
 
   propTypes: {
     collection: React.PropTypes.object.isRequired,
@@ -104,7 +104,7 @@ var TaskView = React.createClass({
     /* jshint trailing:false, quotmark:false, newcap:false */
     // at least two pages
     var pagedNav = tasksLength > itemsPerPage ?
-      <PagedNav
+      <PagedNavComponent
         className="text-right"
         currentPage={currentPage}
         onPageChange={this.handlePageChange}
@@ -147,7 +147,7 @@ var TaskView = React.createClass({
             {pagedNav}
           </div>
         </div>
-        <TaskList
+        <TaskListComponent
           currentPage={currentPage}
           fetchState={this.props.fetchState}
           formatTaskHealthMessage={this.props.formatTaskHealthMessage}
@@ -164,4 +164,4 @@ var TaskView = React.createClass({
   }
 });
 
-module.exports = TaskView;
+module.exports = TaskViewComponent;

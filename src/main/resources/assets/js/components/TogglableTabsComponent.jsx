@@ -4,10 +4,10 @@
 
 var React = require("react/addons");
 
-var NavTabs = require("../components/NavTabs");
+var NavTabsComponent = require("../components/NavTabsComponent");
 
 var TogglableTabs = React.createClass({
-  name: "TogglableTabs",
+  name: "TogglableTabsComponent",
 
   propTypes: {
     activeTabId: React.PropTypes.string.isRequired,
@@ -28,7 +28,7 @@ var TogglableTabs = React.createClass({
       /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       nav = (
-        <NavTabs
+        <NavTabsComponent
           activeTabId={this.props.activeTabId}
           onTabClick={this.props.onTabClick}
           tabs={this.props.tabs} />

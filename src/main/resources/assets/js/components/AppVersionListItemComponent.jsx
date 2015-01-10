@@ -4,7 +4,7 @@
 
 var React = require("react/addons");
 
-var AppVersion = require("../components/AppVersion");
+var AppVersionComponent = require("../components/AppVersionComponent");
 
 var States = require("../constants/States");
 
@@ -14,7 +14,7 @@ var App = require("../models/App");
 var AppVersion = require("../models/AppVersion");
 
 var AppVersionListItem = React.createClass({
-  displayName: "AppVersionListItem",
+  displayName: "AppVersionListItemComponent",
 
   mixins: [BackboneMixin],
 
@@ -91,7 +91,7 @@ var AppVersionListItem = React.createClass({
     } else {
       versionNode =
       <div className="panel-body">
-        <AppVersion
+        <AppVersionComponent
           className="dl-unstyled"
           app={this.props.app}
           appVersion={this.props.appVersion}

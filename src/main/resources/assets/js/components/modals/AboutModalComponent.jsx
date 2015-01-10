@@ -4,8 +4,8 @@
 
 var React = require("react/addons");
 
-var Modal = require("../../components/Modal");
-var ObjectDl = require("../../components/ObjectDl");
+var ModalComponent = require("../../components/ModalComponent");
+var ObjectDlComponent = require("../../components/ObjectDlComponent");
 
 var BackboneMixin = require("../../mixins/BackboneMixin");
 
@@ -21,7 +21,7 @@ var UNSPECIFIED_NODE = React.createClass({
   }
 });
 
-var AboutModal = React.createClass({
+var AboutModalComponent = React.createClass({
   mixins: [BackboneMixin],
 
   getInitialState: function () {
@@ -51,7 +51,7 @@ var AboutModal = React.createClass({
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     /* jshint trailing:false, quotmark:false, newcap:false */
     return (
-      <Modal
+      <ModalComponent
           onDestroy={this.props.onDestroy}
           ref="modal"
           size="lg">
@@ -105,15 +105,15 @@ var AboutModal = React.createClass({
           <h5 title="marathon_config">
             Marathon Config
           </h5>
-          <ObjectDl object={marathonConfig} />
+          <ObjectDlComponent object={marathonConfig} />
           <h5 title="zookeeper_config">
             ZooKeeper Config
           </h5>
-          <ObjectDl object={zookeeperConfig} />
+          <ObjectDlComponent object={zookeeperConfig} />
         </div>
-      </Modal>
+      </ModalComponent>
     );
   }
 });
 
-module.exports = AboutModal;
+module.exports = AboutModalComponent;

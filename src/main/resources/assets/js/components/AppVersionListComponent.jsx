@@ -6,17 +6,18 @@ var React = require("react/addons");
 
 var States = require("../constants/States");
 
-var AppVersion = require("../components/AppVersion");
-var AppVersionListItem = require("../components/AppVersionListItem");
-var PagedContent = require("../components/PagedContent");
-var PagedNav = require("../components/PagedNav");
+var AppVersionComponent = require("../components/AppVersionComponent");
+var AppVersionListItemComponent =
+  require("../components/AppVersionListItemComponent");
+var PagedContentComponent = require("../components/PagedContentComponent");
+var PagedNavComponent = require("../components/PagedNavComponent");
 
 var BackboneMixin = require("../mixins/BackboneMixin");
 
 var App = require("../models/App");
 
 var AppVersionList = React.createClass({
-  displayName: "AppVersionList",
+  displayName: "AppVersionListComponent",
 
   mixins: [BackboneMixin],
 
@@ -69,13 +70,13 @@ var AppVersionList = React.createClass({
     } else if (this.props.fetchState === States.STATE_SUCCESS) {
 
       tableContents =
-        <PagedContent
+        <PagedContentComponent
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}>
           {
             appVersions.map(function (v) {
               return (
-                  <AppVersionListItem
+                  <AppVersionListItemComponent
                     app={this.props.app}
                     appVersion={v}
                     key={v.get("version")}
@@ -83,7 +84,7 @@ var AppVersionList = React.createClass({
               );
             }, this)
           }
-        </PagedContent>;
+        </PagedContentComponent>;
     } else {
       tableContents =
         <p className="text-danger text-center">
@@ -93,7 +94,7 @@ var AppVersionList = React.createClass({
 
     // at least two pages
     var pagedNav = appVersions.length > itemsPerPage ?
-      <PagedNav
+      <PagedNavComponent
         className="pull-right"
         currentPage={currentPage}
         onPageChange={this.handlePageChange}
@@ -124,7 +125,7 @@ var AppVersionList = React.createClass({
             ↻ Refresh
           </button>
         </h5>
-        <AppVersion
+        <AppVersionComponent
             app={this.props.app}
             appVersion={this.props.app.getCurrentVersion()}
             currentVersion={true} />

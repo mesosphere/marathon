@@ -4,15 +4,15 @@
 
 var React = require("react/addons");
 
-var TaskListItem = require("../components/TaskListItem");
-var PagedContent = require("../components/PagedContent");
+var TaskListItemComponent = require("../components/TaskListItemComponent");
+var PagedContentComponent = require("../components/PagedContentComponent");
 
 var States = require("../constants/States");
 
 var BackboneMixin = require("../mixins/BackboneMixin");
 
-var TaskList = React.createClass({
-  displayName: "TaskList",
+var TaskListComponent = React.createClass({
+  displayName: "TaskListComponent",
 
   mixins: [BackboneMixin],
 
@@ -93,10 +93,10 @@ var TaskList = React.createClass({
         </tbody>;
     } else {
       taskNodes = (
-        <PagedContent
+        <PagedContentComponent
             currentPage={this.props.currentPage}
             itemsPerPage={this.props.itemsPerPage}
-            element="tbody" >
+            tag="tbody" >
           {
             hasError ?
               <tr>
@@ -114,7 +114,7 @@ var TaskList = React.createClass({
               if (!isActive) { allTasksSelected = false; }
 
               return (
-                  <TaskListItem
+                  <TaskListItemComponent
                     isActive={isActive}
                     key={task.id}
                     taskHealthMessage={this.props.formatTaskHealthMessage(task)}
@@ -126,7 +126,7 @@ var TaskList = React.createClass({
               );
             }, this)
           }
-        </PagedContent>
+        </PagedContentComponent>
       );
     }
 
@@ -181,4 +181,4 @@ var TaskList = React.createClass({
   }
 });
 
-module.exports = TaskList;
+module.exports = TaskListComponent;

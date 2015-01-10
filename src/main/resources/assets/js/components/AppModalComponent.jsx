@@ -4,13 +4,13 @@
 
 var React = require("react/addons");
 
-var AppVersionList = require("../components/AppVersionList");
-var Modal = require("../components/Modal");
-var StackedView = require("../components/StackedView");
-var TabPane = require("../components/TabPane");
-var TaskDetail = require("../components/TaskDetail");
-var TaskView = require("../components/TaskView");
-var TogglableTabs = require("../components/TogglableTabs");
+var AppVersionListComponent = require("../components/AppVersionListComponent");
+var ModalComponent = require("../components/ModalComponent");
+var StackedViewComponent = require("../components/StackedViewComponent");
+var TabPaneComponent = require("../components/TabPaneComponent");
+var TaskDetailComponent = require("../components/TaskDetailComponent");
+var TaskViewComponent = require("../components/TaskViewComponent");
+var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 
 var tabs = [
   {id: "tasks", text: "Tasks"},
@@ -18,7 +18,7 @@ var tabs = [
 ];
 
 var AppModal = React.createClass({
-  displayName: "AppModal",
+  displayName: "AppModalComponent",
 
   propTypes: {
     activeTask: React.PropTypes.object,
@@ -140,7 +140,7 @@ var AppModal = React.createClass({
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     /* jshint trailing:false, quotmark:false, newcap:false */
     return (
-      <Modal ref="modal" onDestroy={this.props.onDestroy}
+      <ModalComponent ref="modal" onDestroy={this.props.onDestroy}
           size="lg">
         <div className="modal-header">
            <button type="button" className="close"
@@ -167,13 +167,13 @@ var AppModal = React.createClass({
             </button>
           </div>
         </div>
-        <TogglableTabs className="modal-body modal-body-no-top"
+        <TogglableTabsComponent className="modal-body modal-body-no-top"
             activeTabId={this.state.activeTabId}
             onTabClick={this.onTabClick}
             tabs={tabs} >
-          <TabPane id="tasks">
-            <StackedView activeViewIndex={this.state.activeViewIndex}>
-              <TaskView
+          <TabPaneComponent id="tasks">
+            <StackedViewComponent activeViewIndex={this.state.activeViewIndex}>
+              <TaskViewComponent
                   collection={model.tasks}
                   currentAppVersion={model.get('version')}
                   fetchState={this.props.tasksFetchState}
@@ -182,7 +182,7 @@ var AppModal = React.createClass({
                   hasHealth={hasHealth}
                   onTasksKilled={this.props.onTasksKilled}
                   onTaskDetailSelect={this.showTaskDetails} />
-              <TaskDetail
+              <TaskDetailComponent
                   fetchState={this.props.tasksFetchState}
                   taskHealthMessage={
                     model.formatTaskHealthMessage(this.props.activeTask)
@@ -190,19 +190,19 @@ var AppModal = React.createClass({
                   hasHealth={hasHealth}
                   onShowTaskList={this.showTaskList}
                   task={this.props.activeTask} />
-            </StackedView>
-          </TabPane>
-          <TabPane
+            </StackedViewComponent>
+          </TabPaneComponent>
+          <TabPaneComponent
             id="configuration"
             onActivate={this.props.fetchAppVersions} >
-            <AppVersionList
+            <AppVersionListComponent
               app={model}
               fetchAppVersions={this.props.fetchAppVersions}
               fetchState={this.props.appVersionsFetchState}
               onRollback={this.props.rollBackApp} />
-          </TabPane>
-        </TogglableTabs>
-      </Modal>
+          </TabPaneComponent>
+        </TogglableTabsComponent>
+      </ModalComponent>
     );
   }
 });

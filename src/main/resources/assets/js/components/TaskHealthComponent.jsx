@@ -4,9 +4,9 @@
 
 var React = require("react/addons");
 
-var TimeField = require("../components/TimeField");
+var TimeFieldComponent = require("../components/TimeFieldComponent");
 
-var TaskHealth = React.createClass({
+var TaskHealthComponent = React.createClass({
   displayName: "TaskHealth",
   propTypes: {
     task: React.PropTypes.object.isRequired
@@ -36,7 +36,7 @@ var TaskHealth = React.createClass({
             /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
             /* jshint trailing:false, quotmark:false, newcap:false */
             return (
-              <TimeField
+              <TimeFieldComponent
                 key={index}
                 label={timeNode.label}
                 time={timeNode.time} />
@@ -75,4 +75,4 @@ var TaskHealth = React.createClass({
   }
 });
 
-module.exports = TaskHealth;
+module.exports = TaskHealthComponent;

@@ -4,8 +4,8 @@
 
 var React = require("react/addons");
 
-var TimeField = require("../components/TimeField");
-var TaskHealth = require("../components/TaskHealth");
+var TimeFieldComponent = require("../components/TimeFieldComponent");
+var TaskHealthComponent = require("../components/TaskHealthComponent");
 
 var States = require("../constants/States");
 
@@ -14,7 +14,7 @@ var BackboneMixin = require("../mixins/BackboneMixin");
 var Task = require("../models/Task");
 
 var TaskDetail = React.createClass({
-  displayName: "TaskDetail",
+  displayName: "TaskDetailComponent",
 
   mixins: [BackboneMixin],
 
@@ -65,7 +65,7 @@ var TaskDetail = React.createClass({
         /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
         /* jshint trailing:false, quotmark:false, newcap:false */
         return (
-          <TimeField
+          <TimeFieldComponent
             key={index}
             label={timeNode.label}
             time={timeNode.time} />
@@ -113,7 +113,7 @@ var TaskDetail = React.createClass({
               </dl>
               {
                 hasHealth ?
-                  <TaskHealth task={task} /> :
+                  <TaskHealthComponent task={task} /> :
                   null
               }
             </div>

@@ -4,14 +4,15 @@
 
 var React = require("react/addons");
 
-var DeploymentListItem = require("../components/DeploymentListItem");
+var DeploymentListItemComponent =
+  require("../components/DeploymentListItemComponent");
 
 var States = require("../constants/States");
 
 var BackboneMixin = require("../mixins/BackboneMixin");
 
 var DeploymentList = React.createClass({
-  displayName: "DeploymentList",
+  displayName: "DeploymentListComponent",
 
   mixins: [BackboneMixin],
 
@@ -66,7 +67,7 @@ var DeploymentList = React.createClass({
     } else {
       deploymentNodes = this.props.deployments.map(function (model) {
         return (
-          <DeploymentListItem
+          <DeploymentListItemComponent
             key={model.id}
             destroyDeployment={this.props.destroyDeployment}
             model={model} />
