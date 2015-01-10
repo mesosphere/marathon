@@ -21,15 +21,19 @@ var dirs = {
   distDir: "target",
   src: "",
   js: "js",
-  styles: "styles",
-  stylesDist: "",
+  jsDist: ".", // use . for root
+  styles: "css",
+  stylesDist: ".", // use . for root
   img: "img",
   imgDist: "img"
 };
 
+// without extensions
 var fileNames = {
-  mainJs: "main", // without extension
-  mainStyles: "main" // without extension
+  mainJs: "main",
+  mainJsDist: "main",
+  mainStyles: "main",
+  mainStylesDist: "main"
 };
 
 /*
@@ -91,15 +95,7 @@ var tasks = {
     return webpackify(masterTree, {
       entry: "./" + fileNames.mainJs + ".js",
       output: {
-        filename: "app/application.js"
-      },
-      resolve: {
-        alias: {
-          constants: "js/constants",
-          components: "js/components",
-          mixins: "js/mixins",
-          models: "js/models"
-        }
+        filename: dirs.jsDist + "/" + fileNames.mainJsDist + ".js"
       }
     });
   },
@@ -114,7 +110,7 @@ var tasks = {
   css: function (masterTree) {
     // create tree for less
     var cssTree = pickFiles(dirs.styles, {
-      srcDir: "/",
+      srcDir: "./",
       files: ["**/main.less", "**/*.css"],
       destDir: dirs.stylesDist
     });
@@ -129,7 +125,7 @@ var tasks = {
         "!" + dirs.stylesDist + "/" + fileNames.mainStyles + ".css",
         dirs.stylesDist + "/" + fileNames.mainStyles + ".css"
       ],
-      outputFile: "/" + dirs.stylesDist + "/application.css",
+      outputFile: "/" + dirs.stylesDist + "/" + fileNames.mainStylesDist + ".css",
     });
 
     return mergeTrees(
@@ -145,7 +141,7 @@ var tasks = {
   img: function (masterTree) {
     // create tree for image files
     var imgTree = pickFiles(dirs.img, {
-      srcDir: "/",
+      srcDir: "./",
       destDir: dirs.imgDist,
     });
 
@@ -162,7 +158,7 @@ var tasks = {
 function createJsTree() {
   // create tree for .js and .jsx
   var jsTree = pickFiles(dirs.js, {
-    srcDir: "/",
+    srcDir: "./",
     destDir: "",
     files: [
       "**/*.jsx",
