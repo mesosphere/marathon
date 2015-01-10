@@ -23,8 +23,8 @@ module.exports = React.createClass({
     task: React.PropTypes.object.isRequired
   },
 
-  getResource: function () {
-    return this.props.task;
+  getBackboneModels: function () {
+    return [this.props.task];
   },
 
   handleShowTaskList: function (event) {

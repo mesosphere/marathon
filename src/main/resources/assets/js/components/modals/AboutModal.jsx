@@ -38,8 +38,8 @@ module.exports = React.createClass({
     this.refs.modal.destroy();
   },
 
-  getResource: function () {
-    return this.state.info;
+  getBackboneModels: function () {
+    return [this.state.info];
   },
 
   render: function () {

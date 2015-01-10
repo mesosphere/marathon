@@ -24,8 +24,8 @@ module.exports = React.createClass({
     currentAppVersion: React.PropTypes.object.isRequired
   },
 
-  getResource: function () {
-    return this.props.tasks;
+  getBackboneModels: function () {
+    return [this.props.tasks];
   },
 
   getInitialState: function () {

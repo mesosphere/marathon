@@ -43,8 +43,8 @@ module.exports = React.createClass({
     this.refs.modal.destroy();
   },
 
-  getResource: function () {
-    return this.state.model;
+  getBackboneModels: function () {
+    return [this.state.model];
   },
 
   clearValidation: function () {

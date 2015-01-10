@@ -15,8 +15,8 @@ module.exports = React.createClass({
     onSelectApp: React.PropTypes.func.isRequired
   },
 
-  getResource: function () {
-    return this.props.collection;
+  getBackboneModels: function () {
+    return [this.props.collection];
   },
 
   onClickApp: function (app) {

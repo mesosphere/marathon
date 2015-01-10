@@ -28,8 +28,8 @@ module.exports = React.createClass({
     }
   },
 
-  getResource: function () {
-    return this.props.appVersion;
+  getBackboneModels: function () {
+    return [this.props.appVersion];
   },
 
   getInitialState: function () {

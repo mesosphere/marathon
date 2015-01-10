@@ -19,8 +19,8 @@ module.exports = React.createClass({
     fetchState: React.PropTypes.number.isRequired
   },
 
-  getResource: function () {
-    return this.props.deployments;
+  getBackboneModels: function () {
+    return [this.props.deployments];
   },
 
   sortCollectionBy: function (comparator) {
