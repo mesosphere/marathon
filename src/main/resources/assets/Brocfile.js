@@ -1,3 +1,5 @@
+"use strict";
+
 // dependencies
 var chalk = require("chalk");
 var cleanCSS = require("broccoli-clean-css");
