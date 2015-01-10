@@ -4,8 +4,8 @@
 
 var React = require("react/addons");
 
-var DeploymentListItem = React.createClass({
-  name: "DeploymentListItem",
+var DeploymentListItemComponent = React.createClass({
+  name: "DeploymentListItemComponent",
 
   propTypes: {
     model: React.PropTypes.object.isRequired,
@@ -83,4 +83,4 @@ var DeploymentListItem = React.createClass({
   }
 });
 
-module.exports = DeploymentListItem;
+module.exports = DeploymentListItemComponent;
