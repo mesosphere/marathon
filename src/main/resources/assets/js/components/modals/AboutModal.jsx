@@ -69,10 +69,10 @@ var AboutModal = React.createClass({
                 width="160"
                 height="27"
                 alt="Marathon"
-                src="/app/img/marathon-logo.png" />
+                src="/img/marathon-logo.png" />
             <small
                 className="text-muted"
-                style={{"margin-left": "1em"}}>
+                style={{"marginLeft": "1em"}}>
               Version {this.state.info.get("version")}
             </small>
           </h3>
