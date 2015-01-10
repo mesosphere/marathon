@@ -26,6 +26,7 @@ class MarathonRestModule extends RestModule {
     bind(classOf[v2.QueueResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.GroupsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.InfoResource]).in(Scopes.SINGLETON)
+    bind(classOf[v2.LeaderResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.DeploymentsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.ArtifactsResource]).in(Scopes.SINGLETON)
 
