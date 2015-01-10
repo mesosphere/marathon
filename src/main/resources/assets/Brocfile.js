@@ -40,7 +40,7 @@ var tasks = {
   jsHint: function (jsTree) {
     // run jscs on compiled js
     var jscsTree = jscs(jsTree, {
-      disableTestGenerator: false,
+      disableTestGenerator: true,
       enabled: true,
       logError: function (message) {
         switch (env) {
