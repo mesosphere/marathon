@@ -47,14 +47,14 @@ var DeploymentListItemComponent = React.createClass({
         <td>
           <ul className="list-unstyled">
             {model.get("currentActions").map(function (action) {
-              return <li key={action.apps}>{action.apps}</li>;
+              return <li key={action.app}>{action.apps}</li>;
             })}
           </ul>
         </td>
         <td>
           <ul className="list-unstyled">
             {model.get("currentActions").map(function (action) {
-              return <li key={action.apps}>{action.action}</li>;
+              return <li key={action.app}>{action.action}</li>;
             })}
           </ul>
         </td>
