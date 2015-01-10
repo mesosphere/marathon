@@ -442,7 +442,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
         "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
         "upgradeStrategy": {
             "minimumHealthCapacity": 0.5,
-            "maximumUpgradeCapacity": 1.5
+            "maximumOverCapacity": 0.5
         },
         "version": "2014-03-01T23:29:30.158Z"
     }"""
