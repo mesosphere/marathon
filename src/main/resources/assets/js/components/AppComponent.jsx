@@ -4,7 +4,7 @@
 
 var React = require("react/addons");
 
-  var AppListItem = React.createClass({
+  var AppComponent = React.createClass({
     onClick: function () {
       this.props.onClick(this.props.model);
     },
@@ -48,4 +48,4 @@ var React = require("react/addons");
     }
   });
 
-module.exports = AppListItem;
+module.exports = AppComponent;
