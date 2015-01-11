@@ -46,7 +46,7 @@ var TogglableTabsComponent = require("../components/TogglableTabsComponent");
     },
 
     destroy: function () {
-      this.refs.modal.destroy();
+      this.refs.modalComponent.destroy();
     },
 
     handleDestroyApp: function () {

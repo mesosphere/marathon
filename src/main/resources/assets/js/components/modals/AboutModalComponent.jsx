@@ -37,7 +37,7 @@ var Info = require("../../models/Info");
     destroy: function () {
       // This will also call `this.props.onDestroy` since it is passed as the
       // callback for the modal's `onDestroy` prop.
-      this.refs.modal.destroy();
+      this.refs.modalComponent.destroy();
     },
 
     getBackboneModels: function () {
