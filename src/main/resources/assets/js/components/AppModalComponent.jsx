@@ -140,7 +140,7 @@ var TogglableTabsComponent = require("../components/TogglableTabsComponent");
       /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
-        <ModalComponent ref="modal" onDestroy={this.props.onDestroy}
+        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}
             size="lg">
           <div className="modal-header">
              <button type="button" className="close"

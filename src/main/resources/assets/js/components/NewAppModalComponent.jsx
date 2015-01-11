@@ -183,7 +183,7 @@ var App = require("../models/App");
       });
 
       return (
-        <ModalComponent ref="modal" onDestroy={this.props.onDestroy}>
+        <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
           <form method="post" role="form" onSubmit={this.onSubmit}>
             <div className="modal-header">
               <button type="button" className="close"

@@ -53,7 +53,7 @@ var Info = require("../../models/Info");
       return (
         <ModalComponent
             onDestroy={this.props.onDestroy}
-            ref="modal"
+            ref="modalComponent"
             size="lg">
           <div
               className="modal-header modal-header-blend">

@@ -396,7 +396,7 @@ var UPDATE_INTERVAL = 5000;
             scaleApp={this.scaleApp}
             suspendApp={this.suspendApp}
             tasksFetchState={this.state.tasksFetchState}
-            ref="modal" />
+            ref="modalComponent" />
         );
       } else if (this.state.modalClass === NewAppModalComponent) {
         modal = (
@@ -404,13 +404,13 @@ var UPDATE_INTERVAL = 5000;
             model={this.state.activeApp}
             onDestroy={this.handleModalDestroy}
             onCreate={this.handleAppCreate}
-            ref="modal" />
+            ref="modalComponent" />
         );
       } else if (this.state.modalClass === AboutModalComponent) {
         modal = (
           <AboutModalComponent
             onDestroy={this.handleModalDestroy}
-            ref="modal" />
+            ref="modalComponent" />
         );
       }
 
