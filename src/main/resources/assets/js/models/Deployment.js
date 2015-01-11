@@ -31,6 +31,16 @@ define([
       return apps.join(", ");
     },
 
+    destroy: function(options) {
+      options || (options = {});
+
+      if (!options.url && options.forceStop) {
+        options.url = this.url() + "?force=true";
+      }
+
+      return Backbone.Model.prototype.destroy.call(this, options);
+    },
+
     initialize: function(options) {
       this.options = options;
     }
