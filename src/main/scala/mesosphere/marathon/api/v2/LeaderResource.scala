@@ -14,6 +14,16 @@ class LeaderResource @Inject() (
     val config: MarathonConf with HttpConf)
     extends RestResource {
 
+  @GET
+  @Produces(Array(MediaType.APPLICATION_JSON))
+  def index(): Response = {
+    schedulerService.getLeader match {
+      case None => notFound(s"There is no leader")
+      case Some(leader) => 
+        ok(Map("leader" -> leader))
+    }
+  }
+
   @DELETE
   @Produces(Array(MediaType.APPLICATION_JSON))
   def delete(): Response = {

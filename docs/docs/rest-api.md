@@ -39,6 +39,7 @@ title: REST API
   * [GET /v2/queue](#get-/v2/queue): List content of the staging queue.
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
+  * [GET /v2/leader](#get-/v2/leader): Get the current leader
   * [DELETE /v2/leader](#delete-/v2/leader): Start a new leadership election
 * [Miscellaneous](#miscellaneous)
   * [GET /ping](#get-/ping)
@@ -2203,6 +2204,33 @@ Server: Jetty(8.y.z-SNAPSHOT)
         "zk_state": "/marathon",
         "zk_timeout": 10
     }
+}
+{% endhighlight %}
+
+#### GET `/v2/leader`
+
+Return the current leader or a 404 error if no leader exists.
+
+**Request:**
+
+{% highlight http %}
+GET /v2/leader HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 872
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
+{
+    "leader": "127.0.0.1:8080"
 }
 {% endhighlight %}
 
