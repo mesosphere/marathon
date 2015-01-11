@@ -22,13 +22,10 @@ easy editing, set the `assets_path` flag when running Marathon:
 
 4. Run development environment
 
-        export BROCCOLI_ENV="development"
         npm run watch
 5. Build the assets
 
-        export BROCCOLI_ENV="production"
-        npm run clean && npm install
-        npm run test && npm run build
+        npm run dist
 6. The distribution files will be written to `src/main/resources/assets/dist`.
    Check it in.
 
