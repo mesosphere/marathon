@@ -8,7 +8,7 @@ var React = require("react/addons");
 var AppListComponent = require("../components/AppListComponent");
 var AboutModalComponent = require("../components/modals/AboutModalComponent");
 var AppModalComponent = require("../components/AppModalComponent");
-var DeploymentListsComponent = require("../components/DeploymentListsComponent");
+var DeploymentsListComponent = require("../components/DeploymentsListComponent");
 var NavTabsComponent = require("../components/NavTabsComponent");
 var NewAppModalComponent = require("../components/NewAppModalComponent");
 var TabPaneComponent = require("../components/TabPaneComponent");
@@ -458,7 +458,7 @@ var UPDATE_INTERVAL = 5000;
               <TabPaneComponent
                   id="deployments"
                   onActivate={this.props.fetchAppVersions} >
-                <DeploymentListsComponent
+                <DeploymentsListComponent
                     deployments={this.state.deployments}
                     destroyDeployment={this.destroyDeployment}
                     fetchState={this.state.deploymentsFetchState} />
