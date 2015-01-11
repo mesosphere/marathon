@@ -91,7 +91,7 @@ class MarathonSchedulerActor(
         case Success(deployments) => self ! RecoverDeployments(deployments)
         case Failure(_)           => self ! RecoverDeployments(Nil)
       }
-      
+
     case RecoverDeployments(deployments) =>
       deployments.foreach { plan =>
         log.info(s"Recovering deployment: $plan")
@@ -104,8 +104,8 @@ class MarathonSchedulerActor(
       self ! ReconcileHealthChecks
 
     case Suspend => // ignore
-    
-    case _ => stash()
+
+    case _       => stash()
   }
 
   def started: Receive = {
