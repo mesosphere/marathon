@@ -6,7 +6,7 @@ var React = require("react/addons");
 
 var States = require("../constants/States");
 
-var AppListItemComponent = require("../components/AppListItemComponent");
+var AppComponent = require("../components/AppComponent");
 
 var BackboneMixin = require("../mixins/BackboneMixin");
 
@@ -65,7 +65,7 @@ var BackboneMixin = require("../mixins/BackboneMixin");
           </tr>;
       } else {
         appNodes = this.props.collection.map(function (model) {
-          return <AppListItemComponent key={model.id} model={model} onClick={this.onClickApp} />;
+          return <AppComponent key={model.id} model={model} onClick={this.onClickApp} />;
         }, this);
 
         // Give rows the selectable look when there are apps to click.
