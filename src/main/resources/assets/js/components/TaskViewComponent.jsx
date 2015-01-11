@@ -1,13 +1,13 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "jsx!components/PagedNavComponent",
-  "jsx!components/TaskListComponent"
-], function(React, PagedNavComponent, TaskListComponent) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+var PagedNavComponent = require("../components/PagedNavComponent");
+var TaskListComponent = require("../components/TaskListComponent");
+
+  var TaskViewComponent = React.createClass({
     displayName: "TaskViewComponent",
 
     propTypes: {
@@ -21,7 +21,7 @@ define([
       onTaskDetailSelect: React.PropTypes.func.isRequired
     },
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         selectedTasks: {},
         currentPage: 0,
@@ -29,19 +29,19 @@ define([
       };
     },
 
-    handlePageChange: function(pageNum) {
+    handlePageChange: function (pageNum) {
       this.setState({currentPage: pageNum});
     },
 
-    killSelectedTasks: function(options) {
+    killSelectedTasks: function (options) {
       var _options = options || {};
 
       var selectedTaskIds = Object.keys(this.state.selectedTasks);
-      var tasksToKill = this.props.collection.filter(function(task) {
+      var tasksToKill = this.props.collection.filter(function (task) {
         return selectedTaskIds.indexOf(task.id) >= 0;
       });
 
-      tasksToKill.forEach(function(task) {
+      tasksToKill.forEach(function (task) {
         task.destroy({
           scale: _options.scale,
           success: function () {
@@ -53,11 +53,11 @@ define([
       }, this);
     },
 
-    killSelectedTasksAndScale: function() {
+    killSelectedTasksAndScale: function () {
       this.killSelectedTasks({scale: true});
     },
 
-    toggleAllTasks: function() {
+    toggleAllTasks: function () {
       var newSelectedTasks = {};
       var modelTasks = this.props.collection;
 
@@ -67,13 +67,13 @@ define([
         modelTasks.length;
 
       if (!allTasksSelected) {
-        modelTasks.map(function(task) { newSelectedTasks[task.id] = true; });
+        modelTasks.map(function (task) { newSelectedTasks[task.id] = true; });
       }
 
       this.setState({selectedTasks: newSelectedTasks});
     },
 
-    onTaskToggle: function(task, value) {
+    onTaskToggle: function (task, value) {
       var selectedTasks = this.state.selectedTasks;
 
       // If `toggleTask` is used as a callback for an event handler, the second
@@ -92,7 +92,7 @@ define([
       this.setState({selectedTasks: selectedTasks});
     },
 
-    render: function() {
+    render: function () {
       var selectedTasksLength = Object.keys(this.state.selectedTasks).length;
       var buttons;
 
@@ -100,6 +100,7 @@ define([
       var itemsPerPage = this.state.itemsPerPage;
       var currentPage = this.state.currentPage;
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       // at least two pages
       var pagedNav = tasksLength > itemsPerPage ?
@@ -111,7 +112,6 @@ define([
           noItems={tasksLength}
           useArrows={true} /> :
         null;
-
 
       if (selectedTasksLength === 0) {
         buttons =
@@ -137,7 +137,6 @@ define([
           </div>;
       }
 
-      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
           <div className="row">
@@ -164,4 +163,5 @@ define([
       );
     }
   });
-});
+
+module.exports = TaskViewComponent;

@@ -1,20 +1,22 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "models/App",
-  "models/AppVersion",
-  "mixins/BackboneMixin",
-  "jsx!components/AppVersionComponent",
-  "jsx!components/AppVersionListItemComponent",
-  "jsx!components/PagedContentComponent",
-  "jsx!components/PagedNavComponent"
-], function(React, States, App, AppVersion, BackboneMixin, AppVersionComponent,
-    AppVersionListItemComponent, PagedContentComponent, PagedNavComponent) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+var States = require("../constants/States");
+
+var AppVersionComponent = require("../components/AppVersionComponent");
+var AppVersionListItemComponent =
+  require("../components/AppVersionListItemComponent");
+var PagedContentComponent = require("../components/PagedContentComponent");
+var PagedNavComponent = require("../components/PagedNavComponent");
+
+var BackboneMixin = require("../mixins/BackboneMixin");
+
+var App = require("../models/App");
+
+  var AppVersionList = React.createClass({
     displayName: "AppVersionListComponent",
 
     mixins: [BackboneMixin],
@@ -25,30 +27,30 @@ define([
       onRollback: React.PropTypes.func
     },
 
-    componentWillMount: function() {
+    componentWillMount: function () {
       this.props.fetchAppVersions();
     },
 
-    getResource: function() {
+    getResource: function () {
       return this.props.app.versions;
     },
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         currentPage: 0,
         itemsPerPage: 8
       };
     },
 
-    handleRefresh: function() {
+    handleRefresh: function () {
       this.props.fetchAppVersions();
     },
 
-    handlePageChange: function(pageNum) {
+    handlePageChange: function (pageNum) {
       this.setState({currentPage: pageNum});
     },
 
-    render: function() {
+    render: function () {
       // take out current version, to be displayed seperately
       var appVersions = this.props.app.versions.models.slice(1);
 
@@ -57,17 +59,22 @@ define([
 
       var tableContents;
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
       if (this.props.fetchState === States.STATE_LOADING) {
-        tableContents = <p className="text-muted text-center">Loading versions...</p>;
+        tableContents = (
+          <p className="text-muted text-center">
+            Loading versions...
+          </p>
+        );
       } else if (this.props.fetchState === States.STATE_SUCCESS) {
 
-        /* jshint trailing:false, quotmark:false, newcap:false */
         tableContents =
           <PagedContentComponent
               currentPage={currentPage}
               itemsPerPage={itemsPerPage}>
             {
-              appVersions.map(function(v) {
+              appVersions.map(function (v) {
                 return (
                     <AppVersionListItemComponent
                       app={this.props.app}
@@ -99,7 +106,8 @@ define([
       // at least one older version
       var versionTable = appVersions.length > 0 ?
         <div className="panel-group">
-          <div className="panel panel-header panel-inverse">
+          <div
+              className="panel panel-header panel-inverse">
             <div className="panel-heading">
               Older versions
               {pagedNav}
@@ -126,4 +134,5 @@ define([
       );
     }
   });
-});
+
+module.exports = AppVersionList;

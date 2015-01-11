@@ -1,22 +1,21 @@
-define([
-  "Backbone",
-  "Underscore"
-], function(Backbone, _) {
-  "use strict";
+"use strict";
+
+var _ = require("underscore");
+var Backbone = require("backbone");
 
   var DEFAULT_ATTR = "id";
   var SortableCollection = Backbone.Collection.extend({
-    setComparator: function(attribute) {
+    setComparator: function (attribute) {
       attribute = attribute || DEFAULT_ATTR;
       this.sortReverse = attribute.substr(0, 1) === "-";
       this.sortKey = this.sortReverse ? attribute.substr(1) : attribute;
-      this.comparator = function(a, b) {
+      this.comparator = function (a, b) {
         // Assuming that the sortKey values
         // can be compared with '>' and '<'
-        var aVal = _.isFunction(a[this.sortKey]) ?
+        var aVal = _.isFunction (a[this.sortKey]) ?
           a[this.sortKey]() :
           a.get(this.sortKey);
-        var bVal = _.isFunction(b[this.sortKey]) ?
+        var bVal = _.isFunction (b[this.sortKey]) ?
           b[this.sortKey]() :
           b.get(this.sortKey);
         return this.sortReverse ?
@@ -26,5 +25,4 @@ define([
     }
   });
 
-  return SortableCollection;
-});
+module.exports = SortableCollection;

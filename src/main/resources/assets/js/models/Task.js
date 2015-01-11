@@ -1,8 +1,7 @@
-define([
-  "Backbone",
-  "jquery"
-], function(Backbone, $) {
-  "use strict";
+"use strict";
+
+var $ = require("jquery");
+var Backbone = require("backbone");
 
   var STATUS_STAGED = "Staged";
   var STATUS_STARTED = "Started";
@@ -15,16 +14,16 @@ define([
   // Model attributes that are parseable as dates.
   var DATE_ATTRIBUTES = ["stagedAt", "startedAt", "version"];
 
-  return Backbone.Model.extend({
-    isStarted: function() {
+  var Task = Backbone.Model.extend({
+    isStarted: function () {
       return this.get("status") === STATUS_STARTED;
     },
 
-    isStaged: function() {
+    isStaged: function () {
       return this.get("status") === STATUS_STAGED;
     },
 
-    getHealth: function() {
+    getHealth: function () {
       var nullResult = true;
       var health = false;
       var healthCheckResults = this.get("healthCheckResults");
@@ -45,9 +44,9 @@ define([
       }
     },
 
-    parse: function(response) {
+    parse: function (response) {
       // Parse all known date attributes as real Date objects.
-      DATE_ATTRIBUTES.forEach(function(attr) {
+      DATE_ATTRIBUTES.forEach(function (attr) {
         var parsedAttr = Date.parse(response[attr]);
         if (!isNaN(parsedAttr)) { response[attr] = new Date(parsedAttr); }
       });
@@ -62,7 +61,7 @@ define([
       return response;
     },
 
-    sync: function(method, model, options) {
+    sync: function (method, model, options) {
       var _options = options || {};
       var upperCaseMethod = method.toUpperCase();
 
@@ -70,12 +69,14 @@ define([
         // The "/kill" endpoint expects certain POST values to be query
         // parameters. Construct the param string and append it to the normal
         // URL.
-        _options.url = this.collection.url() + "/tasks/" + model.id + "?" + $.param({
-          scale: _options.scale
-        });
+        _options.url = this.collection.url() + "/tasks/" + model.id + "?" +
+          $.param({
+            scale: _options.scale
+          });
       }
 
       return Backbone.sync.call(this, method, model, _options);
     }
   }, {HEALTH: HEALTH});
-});
+
+module.exports = Task;

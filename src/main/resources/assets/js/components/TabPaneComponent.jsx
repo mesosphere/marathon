@@ -1,11 +1,10 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+  var TabPaneComponent = React.createClass({
     name: "TabPaneComponent",
 
     propTypes: {
@@ -13,25 +12,26 @@ define([
       onActivate: React.PropTypes.func
     },
 
-    componentDidUpdate: function(prevProps, prevState) {
+    componentDidUpdate: function (prevProps) {
       if (!prevProps.isActive && this.props.isActive) {
         this.props.onActivate();
       }
     },
 
-    getDefaultProps: function() {
+    getDefaultProps: function () {
       return {
         isActive: false,
-        onActivate: function() {}
+        onActivate: function () {}
       };
     },
 
-    render: function() {
+    render: function () {
       var classSet = React.addons.classSet({
         "active": this.props.isActive,
         "tab-pane": true
       });
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div className={classSet}>
@@ -40,4 +40,5 @@ define([
       );
     }
   });
-});
+
+module.exports = TabPaneComponent;

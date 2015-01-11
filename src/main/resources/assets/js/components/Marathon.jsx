@@ -1,38 +1,35 @@
 /** @jsx React.DOM */
 
-define([
-  "mousetrap",
-  "React",
-  "Underscore",
-  "constants/States",
-  "models/AppCollection",
-  "models/DeploymentCollection",
-  "jsx!components/AppListComponent",
-  "jsx!components/modals/AboutModalComponent",
-  "jsx!components/AppModalComponent",
-  "jsx!components/DeploymentsListComponent",
-  "jsx!components/NewAppModalComponent",
-  "jsx!components/TabPaneComponent",
-  "jsx!components/TogglableTabsComponent",
-  "jsx!components/NavTabsComponent"
-], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
-    AppListComponent, AboutModalComponent, AppModalComponent,
-    DeploymentsListComponent, NewAppModalComponent, TabPaneComponent,
-    TogglableTabsComponent, NavTabsComponent) {
+"use strict";
 
-  "use strict";
+var Mousetrap = require("mousetrap");
+var React = require("react/addons");
 
-  var UPDATE_INTERVAL = 5000;
+var AppListComponent = require("../components/AppListComponent");
+var AboutModalComponent = require("../components/modals/AboutModalComponent");
+var AppModalComponent = require("../components/AppModalComponent");
+var DeploymentsListComponent = require("../components/DeploymentsListComponent");
+var NavTabsComponent = require("../components/NavTabsComponent");
+var NewAppModalComponent = require("../components/NewAppModalComponent");
+var TabPaneComponent = require("../components/TabPaneComponent");
+var TogglableTabsComponent = require("../components/TogglableTabsComponent");
+
+var States = require("../constants/States");
+
+var AppCollection = require("../models/AppCollection");
+var DeploymentCollection = require("../models/DeploymentCollection");
+
+var UPDATE_INTERVAL = 5000;
 
   var tabs = [
     {id: "apps", text: "Apps"},
     {id: "deployments", text: "Deployments"}
   ];
 
-  return React.createClass({
+  var Marathon = React.createClass({
     displayName: "Marathon",
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         activeApp: null,
         activeTask: null,
@@ -47,51 +44,51 @@ define([
       };
     },
 
-    componentDidMount: function() {
+    componentDidMount: function () {
       // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
       // input elements so the new app modal can be closed via "esc".
       var mousetrapOriginalStopCallback = Mousetrap.stopCallback;
-      Mousetrap.stopCallback = function(e, element, combo) {
+      Mousetrap.stopCallback = function (e, element, combo) {
         if (combo === "esc" || combo === "escape") { return false; }
         return mousetrapOriginalStopCallback.apply(null, arguments);
       };
 
-      Mousetrap.bind("esc", function() {
+      Mousetrap.bind("esc", function () {
         if (this.refs.modal != null) {
           this.refs.modal.destroy();
         }
       }.bind(this));
 
-      Mousetrap.bind("c", function() {
+      Mousetrap.bind("c", function () {
         this.showNewAppModal();
       }.bind(this), "keyup");
 
-      Mousetrap.bind("g a", function() {
-        if(this.state.modalClass == null) {
+      Mousetrap.bind("g a", function () {
+        if (this.state.modalClass == null) {
           this.onTabClick("apps");
         }
       }.bind(this));
 
-      Mousetrap.bind("g d", function() {
-        if(this.state.modalClass == null) {
+      Mousetrap.bind("g d", function () {
+        if (this.state.modalClass == null) {
           this.onTabClick("deployments");
         }
       }.bind(this));
 
-      Mousetrap.bind("#", function() {
+      Mousetrap.bind("#", function () {
         if (this.state.modalClass === AppModalComponent) {
           this.destroyApp();
         }
       }.bind(this));
 
-      Mousetrap.bind("shift+,", function() {
+      Mousetrap.bind("shift+,", function () {
         this.showAboutModal();
       }.bind(this));
 
       this.setPollResource(this.fetchApps);
     },
 
-    componentDidUpdate: function(prevProps, prevState) {
+    componentDidUpdate: function (prevProps, prevState) {
       if (prevState.modalClass !== this.state.modalClass) {
         // No `modalClass` means the modal went from open to closed. Start
         // polling for apps in that case.
@@ -108,55 +105,55 @@ define([
       }
     },
 
-    componentWillUnmount: function() {
+    componentWillUnmount: function () {
       this.stopPolling();
     },
 
-    fetchApps: function() {
+    fetchApps: function () {
       this.state.collection.fetch({
-        error: function() {
+        error: function () {
           this.setState({fetchState: States.STATE_ERROR});
         }.bind(this),
         reset: true,
-        success: function() {
+        success: function () {
           this.fetchDeployments();
           this.setState({fetchState: States.STATE_SUCCESS});
         }.bind(this)
       });
     },
 
-    fetchAppVersions: function() {
+    fetchAppVersions: function () {
       if (this.state.activeApp != null) {
         this.state.activeApp.versions.fetch({
-          error: function() {
+          error: function () {
             this.setState({appVersionsFetchState: States.STATE_ERROR});
           }.bind(this),
-          success: function() {
+          success: function () {
             this.setState({appVersionsFetchState: States.STATE_SUCCESS});
           }.bind(this)
         });
       }
     },
 
-    fetchDeployments: function() {
+    fetchDeployments: function () {
       this.state.deployments.fetch({
-        error: function() {
+        error: function () {
           this.setState({deploymentsFetchState: States.STATE_ERROR});
         }.bind(this),
-        success: function(response) {
+        success: function (response) {
           tabs[1].badge = response.models.length;
           this.setState({deploymentsFetchState: States.STATE_SUCCESS});
         }.bind(this)
       });
     },
 
-    fetchTasks: function() {
+    fetchTasks: function () {
       if (this.state.activeApp != null) {
         this.state.activeApp.tasks.fetch({
-          error: function() {
+          error: function () {
             this.setState({tasksFetchState: States.STATE_ERROR});
           }.bind(this),
-          success: function(collection, response) {
+          success: function (collection, response) {
             this.fetchDeployments();
             // update changed attributes in app
             this.state.activeApp.update(response.app);
@@ -166,11 +163,11 @@ define([
       }
     },
 
-    handleAppCreate: function(appModel, options) {
+    handleAppCreate: function (appModel, options) {
       this.state.collection.create(appModel, options);
     },
 
-    handleModalDestroy: function() {
+    handleModalDestroy: function () {
       this.setState({
         activeApp: null,
         modalClass: null,
@@ -179,17 +176,17 @@ define([
       });
     },
 
-    handleShowTaskDetails: function(task, callback) {
-      this.setState({activeTask: task}, function() {
+    handleShowTaskDetails: function (task, callback) {
+      this.setState({activeTask: task}, function () {
         callback();
       }.bind(this));
     },
 
-    handleShowTaskList: function() {
+    handleShowTaskList: function () {
       this.setState({activeTask: null});
     },
 
-    handleTasksKilled: function(options) {
+    handleTasksKilled: function (options) {
       var instances;
       var app = this.state.activeApp;
       var _options = options || {};
@@ -202,16 +199,16 @@ define([
       }
     },
 
-    destroyApp: function() {
+    destroyApp: function () {
       var app = this.state.activeApp;
 
       if (confirm("Destroy app '" + app.id + "'?\nThis is irreversible.")) {
         app.destroy({
-          error: function(data, response) {
+          error: function (data, response) {
             var msg = response.responseJSON.message || response.statusText;
             alert("Error destroying app '" + app.id + "': " + msg);
           },
-          success: function() {
+          success: function () {
             this.setState({
               activeApp: null,
               modalClass: null
@@ -222,14 +219,16 @@ define([
       }
     },
 
-    destroyDeployment: function(deployment, component) {
+    destroyDeployment: function (deployment, component) {
       component.setLoading(true);
-      if (confirm("Destroy deployment of apps: '" + deployment.affectedAppsString() +
-          "'?\nDestroying this deployment will create and start a new deployment to revert the affected app to its previous version.")) {
+      if (confirm("Destroy deployment of apps: '" +
+          deployment.affectedAppsString() +
+          "'?\nDestroying this deployment will create and start a new " +
+          "deployment to revert the affected app to its previous version.")) {
 
-        setTimeout(function() {
+        setTimeout(function () {
           deployment.destroy({
-            error: function(data, response) {
+            error: function (data, response) {
               var msg = response.responseJSON.message || response.statusText;
               component.setLoading(false);
               alert("Error destroying app '" + deployment.id + "': " + msg);
@@ -242,18 +241,18 @@ define([
       }
     },
 
-    rollbackToAppVersion: function(version) {
+    rollbackToAppVersion: function (version) {
       if (this.state.activeApp != null) {
         var app = this.state.activeApp;
         app.setVersion(version);
         app.save(
           null,
           {
-            error: function(data, response) {
+            error: function (data, response) {
               var msg = response.responseJSON.message || response.statusText;
               alert("Could not update to chosen version: " + msg);
             },
-            success: function() {
+            success: function () {
               // refresh app versions
               this.fetchAppVersions();
             }.bind(this)
@@ -261,17 +260,17 @@ define([
       }
     },
 
-    scaleApp: function(instances) {
+    scaleApp: function (instances) {
       if (this.state.activeApp != null) {
         var app = this.state.activeApp;
         app.save(
           {instances: instances},
           {
-            error: function(data, response) {
+            error: function (data, response) {
               var msg = response.responseJSON.message || response.statusText;
               alert("Not scaling: " + msg);
             },
-            success: function() {
+            success: function () {
               // refresh app versions
               this.fetchAppVersions();
             }.bind(this)
@@ -287,14 +286,14 @@ define([
       }
     },
 
-    suspendApp: function() {
+    suspendApp: function () {
       if (confirm("Suspend app by scaling to 0 instances?")) {
         this.state.activeApp.suspend({
-          error: function(data, response) {
+          error: function (data, response) {
             var msg = response.responseJSON.message || response.statusText;
             alert("Could not suspend: " + msg);
           },
-          success: function() {
+          success: function () {
             // refresh app versions
             this.fetchAppVersions();
           }.bind(this)
@@ -302,11 +301,11 @@ define([
       }
     },
 
-    poll: function() {
+    poll: function () {
       this._pollResource();
     },
 
-    setPollResource: function(func) {
+    setPollResource: function (func) {
       // Kill any poll that is in flight to ensure it doesn't fire after having changed
       // the `_pollResource` function.
       this.stopPolling();
@@ -314,22 +313,24 @@ define([
       this.startPolling();
     },
 
-    startPolling: function() {
+    startPolling: function () {
       if (this._interval == null) {
         this.poll();
         this._interval = setInterval(this.poll, UPDATE_INTERVAL);
       }
     },
 
-    stopPolling: function() {
+    stopPolling: function () {
       if (this._interval != null) {
         clearInterval(this._interval);
         this._interval = null;
       }
     },
 
-    showAboutModal: function(event) {
-      if (event != null) event.preventDefault();
+    showAboutModal: function (event) {
+      if (event != null) {
+        event.preventDefault();
+      }
 
       if (this.state.modalClass !== null) {
         return;
@@ -340,7 +341,7 @@ define([
       });
     },
 
-    showAppModal: function(app) {
+    showAppModal: function (app) {
       if (this.state.modalClass !== null) {
         return;
       }
@@ -351,7 +352,7 @@ define([
       });
     },
 
-    showNewAppModal: function(event) {
+    showNewAppModal: function () {
       if (this.state.modalClass !== null) {
         return;
       }
@@ -361,7 +362,7 @@ define([
       });
     },
 
-    onTabClick: function(id) {
+    onTabClick: function (id) {
       this.setState({
         activeTabId: id
       });
@@ -373,9 +374,10 @@ define([
       }
     },
 
-    render: function() {
+    render: function () {
       var modal;
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       if (this.state.modalClass === AppModalComponent) {
         modal = (
@@ -448,18 +450,18 @@ define([
                   + New App
                 </button>
                 <AppListComponent
-                  collection={this.state.collection}
-                  onSelectApp={this.showAppModal}
-                  fetchState={this.state.fetchState}
-                  ref="appList" />
+                    collection={this.state.collection}
+                    onSelectApp={this.showAppModal}
+                    fetchState={this.state.fetchState}
+                    ref="appList" />
               </TabPaneComponent>
               <TabPaneComponent
                   id="deployments"
                   onActivate={this.props.fetchAppVersions} >
                 <DeploymentsListComponent
-                  deployments={this.state.deployments}
-                  destroyDeployment={this.destroyDeployment}
-                  fetchState={this.state.deploymentsFetchState} />
+                    deployments={this.state.deployments}
+                    destroyDeployment={this.destroyDeployment}
+                    fetchState={this.state.deploymentsFetchState} />
               </TabPaneComponent>
             </TogglableTabsComponent>
 
@@ -469,4 +471,5 @@ define([
       );
     }
   });
-});
+
+module.exports = Marathon;

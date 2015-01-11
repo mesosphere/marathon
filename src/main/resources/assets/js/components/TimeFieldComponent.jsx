@@ -1,12 +1,11 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
-    displayName: "TimeFieldComponent",
+var React = require("react/addons");
+
+  var TimeField = React.createClass({
+    displayName: "TimeField",
     propTypes: {
       label: React.PropTypes.string.isRequired,
       time: React.PropTypes.oneOfType([
@@ -14,9 +13,10 @@ define([
         React.PropTypes.object
       ])
     },
-    render: function() {
+    render: function () {
       var time = this.props.time;
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
@@ -34,5 +34,5 @@ define([
       );
     }
   });
-});
 
+module.exports = TimeField;

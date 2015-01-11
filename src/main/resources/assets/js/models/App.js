@@ -1,12 +1,12 @@
-define([
-  "Backbone",
-  "Underscore",
-  "models/AppVersion",
-  "models/AppVersionCollection",
-  "models/Task",
-  "models/TaskCollection"
-], function(Backbone, _, AppVersion, AppVersionCollection, Task, TaskCollection) {
-  "use strict";
+"use strict";
+
+var _ = require("underscore");
+var Backbone = require("backbone");
+
+var AppVersion = require("../models/AppVersion");
+var AppVersionCollection = require("../models/AppVersionCollection");
+var Task = require("../models/Task");
+var TaskCollection = require("../models/TaskCollection");
 
   function ValidationError(attribute, message) {
     this.attribute = attribute;
@@ -16,7 +16,8 @@ define([
   var DEFAULT_HEALTH_MSG = "Unknown";
   var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
     "executor", "id", "instances", "mem", "disk", "ports", "uris"];
-  var UPDATEABLE_ATTRIBUTES = ["instances", "tasksRunning", "tasksStaged", "deployments"];
+  var UPDATEABLE_ATTRIBUTES = ["instances", "tasksRunning", "tasksStaged",
+    "deployments"];
 
   // Matches the command executor, like "//cmd", and custom executors starting
   // with or without a "/" but never two "//", like "/custom/exec". Double slash
@@ -55,8 +56,8 @@ define([
     return (_.indexOf(VALID_CONSTRAINTS, operator.toLowerCase()) !== -1);
   }
 
-  return Backbone.Model.extend({
-    defaults: function() {
+  var App = Backbone.Model.extend({
+    defaults: function () {
       return {
         cmd: null,
         constraints: [],
@@ -75,7 +76,7 @@ define([
       };
     },
 
-    initialize: function(options) {
+    initialize: function () {
       _.bindAll(this, "formatTaskHealthMessage");
       // If this model belongs to a collection when it is instantiated, it has
       // already been persisted to the server.
@@ -84,40 +85,40 @@ define([
       this.tasks = new TaskCollection(null, {appId: this.id});
       this.versions = new AppVersionCollection(null, {appId: this.id});
       this.on({
-        "change:id": function(model, value, options) {
+        "change:id": function (model, value) {
           // Inform AppVersionCollection and TaskCollection of new ID so it can
           // send requests to the new endpoint.
           this.tasks.options.appId = value;
           this.versions.options.appId = value;
         },
-        "sync": function(model, response, options) {
+        "sync": function () {
           this.persisted = true;
         }
       });
     },
 
-    isNew: function() {
+    isNew: function () {
       return !this.persisted;
     },
 
-    isDeploying: function() {
+    isDeploying: function () {
       return !_.isEmpty(this.get("deployments"));
     },
 
-    allInstancesBooted: function() {
+    allInstancesBooted: function () {
       return this.get("tasksRunning") === this.get("instances");
     },
 
-    formatTasksRunning: function() {
+    formatTasksRunning: function () {
       var tasksRunning = this.get("tasksRunning");
       return tasksRunning == null ? "-" : tasksRunning;
     },
 
-    formatTaskHealthMessage: function(task) {
+    formatTaskHealthMessage: function (task) {
       if (task) {
         var msg;
 
-        switch(task.getHealth()) {
+        switch (task.getHealth()) {
           case Task.HEALTH.HEALTHY:
             msg = "Healthy";
             break;
@@ -137,7 +138,7 @@ define([
       return null;
     },
 
-    parse: function(data) {
+    parse: function (data) {
       // When PUTing the response is a 204 (No content) and should not be
       // parsed.
       if (data != null) {
@@ -151,9 +152,9 @@ define([
     /* Updates only those attributes listed in `UPDATEABLE_ATTRIBUTES` to prevent
      * showing values that cannot be changed.
      */
-    update: function(attrs) {
+    update: function (attrs) {
 
-      var filteredAttributes = _.filter(UPDATEABLE_ATTRIBUTES, function(attr) {
+      var filteredAttributes = _.filter(UPDATEABLE_ATTRIBUTES, function (attr) {
         return attrs[attr] != null;
       });
 
@@ -167,8 +168,10 @@ define([
      * "version" value, which when sent prevents any other attributes from being
      * changed.
      */
-    save: function(attrs, options) {
+    save: function (attrs, options) {
+      /* jshint -W030 */
       options || (options = {});
+      /* jshint +W030 */
 
       var allAttrs;
       if (options.patch === true) {
@@ -178,7 +181,7 @@ define([
       }
 
       // Filter out null and undefined values
-      var filteredAttributes = _.filter(EDITABLE_ATTRIBUTES, function(attr) {
+      var filteredAttributes = _.filter(EDITABLE_ATTRIBUTES, function (attr) {
         return allAttrs[attr] != null;
       });
 
@@ -195,11 +198,11 @@ define([
         this, allowedAttrs, options);
     },
 
-    setVersion: function(version) {
+    setVersion: function (version) {
       this.set(_.pick(version.attributes, EDITABLE_ATTRIBUTES));
     },
 
-    getCurrentVersion: function() {
+    getCurrentVersion: function () {
       var version = new AppVersion();
       version.set(this.attributes);
 
@@ -216,11 +219,11 @@ define([
       return version;
     },
 
-    suspend: function(options) {
+    suspend: function (options) {
       this.save({instances: 0}, options);
     },
 
-    validate: function(attrs, options) {
+    validate: function (attrs) {
       var errors = [];
 
       if (_.isNaN(attrs.mem) || !_.isNumber(attrs.mem) || attrs.mem < 0) {
@@ -235,29 +238,40 @@ define([
 
       if (_.isNaN(attrs.disk) || !_.isNumber(attrs.disk) || attrs.disk < 0) {
         errors.push(
-          new ValidationError("disk", "Disk Space must be a non-negative Number"));
+          new ValidationError(
+            "disk",
+            "Disk Space must be a non-negative Number"
+            )
+        );
       }
 
-      if (_.isNaN(attrs.instances) || !_.isNumber(attrs.instances) ||
+      if (_.isNaN(attrs.instances) ||
+          !_.isNumber(attrs.instances) ||
           attrs.instances < 0) {
         errors.push(
-          new ValidationError("instances", "Instances must be a non-negative Number"));
+          new ValidationError(
+            "instances",
+            "Instances must be a non-negative Number"
+          )
+        );
       }
 
       if (!_.isString(attrs.id) || attrs.id.length < 1) {
         errors.push(new ValidationError("id", "ID must not be empty"));
       }
 
-      if (_.isString(attrs.executor) && !VALID_EXECUTOR_REGEX.test(attrs.executor)) {
+      if (_.isString(attrs.executor) &&
+          !VALID_EXECUTOR_REGEX.test(attrs.executor)) {
         errors.push(
           new ValidationError(
             "executor",
-            "Executor must be the string '//cmd', a string containing only single slashes ('/'), or blank."
+            "Executor must be the string '//cmd', a string containing only " +
+            "single slashes ('/'), or blank."
           )
         );
       }
 
-      if (!_.every(attrs.ports, function(p) { return _.isNumber(p); })) {
+      if (!_.every(attrs.ports, function (p) { return _.isNumber(p); })) {
         errors.push(
           new ValidationError("ports", "Ports must be a list of Numbers"));
       }
@@ -266,7 +280,7 @@ define([
         errors.push(
           new ValidationError("constraints",
             "Invalid constraints format or operator. Supported operators are " +
-            VALID_CONSTRAINTS.map(function(c) {
+            VALID_CONSTRAINTS.map(function (c) {
               return "`" + c + "`";
             }).join(", ") +
             ". See https://github.com/mesosphere/marathon/wiki/Constraints."
@@ -275,8 +289,14 @@ define([
       }
 
       if (errors.length > 0) { return errors; }
+    },
+
+    url : function () {
+      return this.isNew() ? "v2/apps" : "v2/apps/" + this.id;
     }
+
   }, {
     VALID_EXECUTOR_PATTERN: VALID_EXECUTOR_PATTERN
   });
-});
+
+module.exports = App;

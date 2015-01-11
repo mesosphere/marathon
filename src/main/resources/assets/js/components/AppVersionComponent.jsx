@@ -1,21 +1,22 @@
 /** @jsx React.DOM */
 
-define([
-  "Underscore",
-  "React",
-  "models/App",
-  "models/AppVersion"
-], function(_, React, App, AppVersion) {
-  "use strict";
+"use strict";
 
-  var UNSPECIFIED_NODE =
-    React.createClass({
-      render: function() {
-        return <dd className="text-muted">Unspecified</dd>;
-      }
-    });
+var _ = require("underscore");
+var React = require("react/addons");
 
-  return React.createClass({
+var App = require("../models/App");
+var AppVersion = require("../models/AppVersion");
+
+  var UNSPECIFIED_NODE = React.createClass({
+    render: function () {
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      return <dd className="text-muted">Unspecified</dd>;
+    }
+  });
+
+  var AppVersionComponent = React.createClass({
     displayName: "AppVersionComponent",
 
     propTypes: {
@@ -27,22 +28,24 @@ define([
       onRollback: React.PropTypes.func
     },
 
-    handleSubmit: function(event) {
-      if (_.isFunction(this.props.onRollback)) {
+    handleSubmit: function (event) {
+      if (_.isFunction (this.props.onRollback)) {
         event.preventDefault();
         this.props.onRollback(this.props.appVersion, event);
       }
     },
 
-    render: function() {
+    render: function () {
       var appVersion = this.props.appVersion;
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
       var cmdNode = (appVersion.get("cmd") == null) ?
         <UNSPECIFIED_NODE /> :
         <dd>{appVersion.get("cmd")}</dd>;
       var constraintsNode = (appVersion.get("constraints").length < 1) ?
         <UNSPECIFIED_NODE /> :
-        appVersion.get("constraints").map(function(c) {
+        appVersion.get("constraints").map(function (c) {
 
           // Only include constraint parts if they are not empty Strings. For
           // example, a hostname uniqueness constraint looks like:
@@ -53,7 +56,7 @@ define([
           // trailing colon.
           return (
             <dd key={c}>
-              {c.filter(function(s) { return s !== ""; }).join(":")}
+              {c.filter(function (s) { return s !== ""; }).join(":")}
             </dd>
           );
         });
@@ -64,7 +67,7 @@ define([
         <UNSPECIFIED_NODE /> :
 
         // Print environment variables as key value pairs like "key=value"
-        Object.keys(appVersion.get("env")).map(function(k) {
+        Object.keys(appVersion.get("env")).map(function (k) {
           return <dd key={k}>{k + "=" + appVersion.get("env")[k]}</dd>;
         });
       var executorNode = (appVersion.get("executor") === "") ?
@@ -73,7 +76,7 @@ define([
       var diskNode = (appVersion.get("disk") == null) ?
         <UNSPECIFIED_NODE /> :
         <dd>{appVersion.get("disk")}</dd>;
-      var portsNode = (appVersion.get("ports").length === 0 ) ?
+      var portsNode = (appVersion.get("ports").length === 0) ?
         <UNSPECIFIED_NODE /> :
         <dd>{appVersion.get("ports").join(",")}</dd>;
       var taskRateLimitNode = (appVersion.get("taskRateLimit") == null) ?
@@ -81,7 +84,7 @@ define([
         <dd>{appVersion.get("taskRateLimit")}</dd>;
       var urisNode = (appVersion.get("uris").length === 0) ?
         <UNSPECIFIED_NODE /> :
-        appVersion.get("uris").map(function(u) {
+        appVersion.get("uris").map(function (u) {
           return <dd key={u}>{u}</dd>;
         });
       return (
@@ -131,4 +134,5 @@ define([
       );
     }
   });
-});
+
+module.exports = AppVersionComponent;

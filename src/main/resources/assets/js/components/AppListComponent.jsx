@@ -1,14 +1,16 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "jsx!components/AppComponent",
-  "mixins/BackboneMixin"
-], function(React, States, AppComponent, BackboneMixin) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+var States = require("../constants/States");
+
+var AppComponent = require("../components/AppComponent");
+
+var BackboneMixin = require("../mixins/BackboneMixin");
+
+  var AppList = React.createClass({
     displayName: "AppListComponent",
 
     mixins: [BackboneMixin],
@@ -18,15 +20,15 @@ define([
       onSelectApp: React.PropTypes.func.isRequired
     },
 
-    getResource: function() {
+    getResource: function () {
       return this.props.collection;
     },
 
-    onClickApp: function(app) {
+    onClickApp: function (app) {
       this.props.onSelectApp(app);
     },
 
-    sortCollectionBy: function(comparator) {
+    sortCollectionBy: function (comparator) {
       var collection = this.props.collection;
       comparator =
         collection.sortKey === comparator && !collection.sortReverse ?
@@ -36,7 +38,7 @@ define([
       collection.sort();
     },
 
-    render: function() {
+    render: function () {
       var sortKey = this.props.collection.sortKey;
 
       var appNodes;
@@ -47,6 +49,8 @@ define([
         "dropup": this.props.collection.sortReverse
       });
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
       if (this.props.fetchState === States.STATE_LOADING) {
         appNodes =
           <tr>
@@ -60,9 +64,7 @@ define([
             <td className="text-center" colSpan="5">No running apps.</td>
           </tr>;
       } else {
-
-        /* jshint trailing:false, quotmark:false, newcap:false */
-        appNodes = this.props.collection.map(function(model) {
+        appNodes = this.props.collection.map(function (model) {
           return <AppComponent key={model.id} model={model} onClick={this.onClickApp} />;
         }, this);
 
@@ -70,7 +72,6 @@ define([
         tableClassName += " table-hover table-selectable";
       }
 
-      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <table className={tableClassName}>
           <colgroup>
@@ -125,4 +126,5 @@ define([
       );
     }
   });
-});
+
+module.exports = AppList;

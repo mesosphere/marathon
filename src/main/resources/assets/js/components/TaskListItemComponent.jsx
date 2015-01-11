@@ -1,10 +1,10 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "models/Task"
-], function(React, Task) {
-  "use strict";
+"use strict";
+
+var React = require("react/addons");
+
+var Task = require("../models/Task");
 
   function buildHref(host, port) {
     return "http://" + host + ":" + port;
@@ -15,12 +15,14 @@ define([
     var ports = task.get("ports");
     var portsLength = ports.length;
 
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    /* jshint trailing:false, quotmark:false, newcap:false */
     if (portsLength > 1) {
       // Linkify each port with the hostname. The port is the text of the
       // anchor, but the href contains the hostname and port, a full link.
       taskAnchors =
         <span className="text-muted">
-          {task.get("host")}:[{ports.map(function(p, index) {
+          {task.get("host")}:[{ports.map(function (p, index) {
             return (
               <span key={p}>
                 <a className="text-muted" href={buildHref(task.get("host"), p)}>{p}</a>
@@ -32,18 +34,22 @@ define([
     } else if (portsLength === 1) {
       // Linkify the hostname + port since there is only one port.
       taskAnchors =
-        <a className="text-muted" href={buildHref(task.get("host"), ports[0])}>
+        <a
+            className="text-muted"
+            href={buildHref(task.get("host"), ports[0])}>
           {task.get("host")}:{ports[0]}
         </a>;
     } else {
       // Ain't no ports; don't linkify.
-      taskAnchors = <span className="text-muted">{task.get("host")}</span>;
+      taskAnchors = (
+        <span className="text-muted">{task.get("host")}</span>
+      );
     }
 
     return taskAnchors;
   }
 
-  return React.createClass({
+  var TaskListItemComponent = React.createClass({
     displayName: "TaskListItemComponent",
 
     propTypes: {
@@ -55,7 +61,7 @@ define([
       currentAppVersion: React.PropTypes.object.isRequired
     },
 
-    handleClick: function(event) {
+    handleClick: function (event) {
       // If the click happens on the checkbox, let the checkbox's onchange event
       // handler handle it and skip handling the event here.
       if (event.target.nodeName !== "INPUT") {
@@ -63,16 +69,16 @@ define([
       }
     },
 
-    handleCheckboxClick: function(event) {
+    handleCheckboxClick: function (event) {
       this.props.onToggle(this.props.task, event.target.checked);
     },
 
-    handleTaskDetailSelect: function(event) {
+    handleTaskDetailSelect: function (event) {
       event.preventDefault();
       this.props.onTaskDetailSelect(this.props.task);
     },
 
-    render: function() {
+    render: function () {
       var className = (this.props.isActive) ? "active" : "";
       var task = this.props.task;
       var hasHealth = !!this.props.hasHealth;
@@ -98,21 +104,23 @@ define([
       });
 
       var updatedAtNode;
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
       if (task.get("updatedAt") != null) {
         updatedAtNode =
-          <time dateTime={task.get("updatedAt").toISOString()}
+          <time
+              dateTime={task.get("updatedAt").toISOString()}
               title={task.get("updatedAt").toISOString()}>
             {task.get("updatedAt").toLocaleString()}
           </time>;
       }
 
-      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <tr className={className}>
           <td width="1" className="clickable" onClick={this.handleClick}>
             <input type="checkbox"
-              checked={this.props.isActive}
-              onChange={this.handleCheckboxClick} />
+                checked={this.props.isActive}
+                onChange={this.handleCheckboxClick} />
           </td>
           <td>
               <a href="#"
@@ -144,6 +152,6 @@ define([
         </tr>
       );
     }
-
   });
-});
+
+module.exports = TaskListItemComponent;

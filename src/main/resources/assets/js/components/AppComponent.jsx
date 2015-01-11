@@ -1,16 +1,15 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
-    onClick: function() {
+var React = require("react/addons");
+
+  var AppComponent = React.createClass({
+    onClick: function () {
       this.props.onClick(this.props.model);
     },
 
-    render: function() {
+    render: function () {
       var model = this.props.model;
 
       var isDeploying = model.isDeploying();
@@ -23,6 +22,7 @@ define([
         "text-warning": isDeploying
       });
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         // Set `title` on cells that potentially overflow so hovering on the
@@ -47,4 +47,5 @@ define([
       );
     }
   });
-});
+
+module.exports = AppComponent;

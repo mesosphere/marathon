@@ -1,19 +1,19 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "mixins/BackboneMixin",
-  "constants/States",
-  "models/Task",
-  "jsx!components/Marathon",
-  "jsx!components/TimeFieldComponent",
-  "jsx!components/TaskHealthComponent"
-], function(React, BackboneMixin, States, Task, Marathon,
-  TimeFieldComponent, TaskHealthComponent) {
-  "use strict";
+"use strict";
 
+var React = require("react/addons");
 
-  return React.createClass({
+var TimeFieldComponent = require("../components/TimeFieldComponent");
+var TaskHealthComponent = require("../components/TaskHealthComponent");
+
+var States = require("../constants/States");
+
+var BackboneMixin = require("../mixins/BackboneMixin");
+
+var Task = require("../models/Task");
+
+  var TaskDetail = React.createClass({
     displayName: "TaskDetailComponent",
 
     mixins: [BackboneMixin],
@@ -25,7 +25,7 @@ define([
       task: React.PropTypes.object.isRequired
     },
 
-    getResource: function() {
+    getResource: function () {
       return this.props.task;
     },
 
@@ -34,10 +34,12 @@ define([
       this.props.onShowTaskList();
     },
 
-    render: function() {
+    render: function () {
       var task = this.props.task;
       var hasHealth = !!this.props.hasHealth;
-      var hasError = this.props.fetchState === States.STATE_ERROR || task.collection == null;
+      var hasError =
+          this.props.fetchState === States.STATE_ERROR ||
+          task.collection == null;
       var taskHealth = task.getHealth();
       var healthClassSet;
       var timeNodes;
@@ -58,8 +60,9 @@ define([
             time: task.get("startedAt")
           }
         ];
-        timeFields = timeNodes.map(function(timeNode, index) {
+        timeFields = timeNodes.map(function (timeNode, index) {
 
+          /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
           /* jshint trailing:false, quotmark:false, newcap:false */
           return (
             <TimeFieldComponent
@@ -70,6 +73,7 @@ define([
         });
       }
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
@@ -117,6 +121,6 @@ define([
         </div>
       );
     }
-
   });
-});
+
+module.exports = TaskDetail;

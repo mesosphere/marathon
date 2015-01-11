@@ -1,11 +1,10 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+  var PagedNavComponent = React.createClass({
     displayName: "PagedNavComponent",
 
     propTypes: {
@@ -21,7 +20,7 @@ define([
       usePages: React.PropTypes.bool
     },
 
-    getDefaultProps: function() {
+    getDefaultProps: function () {
       return {
         noVisiblePages: 6,
         itemsPerPage: 10,
@@ -31,7 +30,7 @@ define([
       };
     },
 
-    handlePageChange: function(pageNum) {
+    handlePageChange: function (pageNum) {
       var noPages = Math.ceil(this.props.noItems / this.props.itemsPerPage);
       if (pageNum >= 0 &&
           pageNum < noPages &&
@@ -42,13 +41,13 @@ define([
       }
     },
 
-    render: function() {
+    render: function () {
       var noItems = this.props.noItems;
       var itemsPerPage = this.props.itemsPerPage;
 
       var currentPage = this.props.currentPage;
       var pageNumber = 0;
-      var pagesOnEachSide = Math.floor(this.props.noVisiblePages/2);
+      var pagesOnEachSide = Math.floor(this.props.noVisiblePages / 2);
       var noPages = Math.ceil(noItems / this.props.itemsPerPage);
 
       var pageLBound = Math.max(0, currentPage - pagesOnEachSide);
@@ -67,8 +66,16 @@ define([
           if (i % itemsPerPage === 0) {
             // only draw those within the bounds
             if (pageNumber >= pageLBound && pageNumber <= pageUBound) {
+              /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks,
+                  maximumLineLength */
+              /* jshint trailing:false, quotmark:false, newcap:false */
               pagination.push(
-                <li className={pageNumber === currentPage ? "success disabled" : ""}
+                <li
+                    className={
+                      pageNumber === currentPage ?
+                      "success disabled" :
+                      ""
+                    }
                     key={pageNumber + 1}>
                   <a href="#"
                     onClick={this.handlePageChange.bind(this, pageNumber)}>
@@ -81,12 +88,6 @@ define([
           }
         }
       }
-      var itemsLBound = currentPage * itemsPerPage;
-      var itemsUBound = Math.min(currentPage * itemsPerPage + itemsPerPage, noItems);
-      var itemNumbers =
-        this.props.useItemNumbers ?
-          <span className="item-numbers">{itemsLBound + 1}-{itemsUBound} of {noItems}</span> :
-          null;
 
       var leftArrowsClassSet = React.addons.classSet({
         "disabled": currentPage === 0
@@ -94,6 +95,18 @@ define([
       var rightArrowsClassSet = React.addons.classSet({
         "disabled": currentPage === noPages - 1
       });
+
+      var itemsLBound = currentPage * itemsPerPage;
+      var itemsUBound =
+        Math.min(currentPage * itemsPerPage + itemsPerPage, noItems);
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      var itemNumbers =
+        this.props.useItemNumbers ?
+          <span className="item-numbers">
+            {itemsLBound + 1}-{itemsUBound} of {noItems}
+          </span> :
+          null;
 
       var leftArrow =
         this.props.useArrows ?
@@ -122,8 +135,7 @@ define([
       var rightEndArrow =
         this.props.useEndArrows ?
           <li className={rightArrowsClassSet}>
-            <a href="#"
-              onClick={this.handlePageChange.bind(this, noPages - 1)}>
+            <a href="#" onClick={this.handlePageChange.bind(this, noPages - 1)}>
               »
             </a>
           </li> :
@@ -143,4 +155,5 @@ define([
       );
     }
   });
-});
+
+module.exports = PagedNavComponent;

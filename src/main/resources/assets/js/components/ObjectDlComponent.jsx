@@ -1,29 +1,28 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+"use strict";
+
+var React = require("react/addons");
 
   function formatKey(key) {
-    return key.split("_").map(function(piece) {
+    return key.split("_").map(function (piece) {
       return piece.charAt(0).toUpperCase() + piece.slice(1);
     }).join(" ");
   }
 
   function prettyPrint(object) {
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    /* jshint trailing:false, quotmark:false, newcap:false */
     if (typeof object === "object" && !!object) {
-      /* jshint trailing:false, quotmark:false, newcap:false */
       return <code>{JSON.stringify(object, null, " ")}</code>;
     } else if (typeof object === "boolean") {
-      /* jshint trailing:false, quotmark:false, newcap:false */
       return <code>{object.toString()}</code>;
     } else {
       return object.toString();
     }
   }
 
-  return React.createClass({
+  var ObjectDlComponent = React.createClass({
     displayName: "ObjectDlComponent",
     propTypes: {
       // Can be `null` or `undefined` since the data is likely fetched
@@ -31,12 +30,13 @@ define([
       object: React.PropTypes.object
     },
 
-    render: function() {
+    render: function () {
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       var dlNodes;
       if (this.props.object != null) {
         dlNodes = [];
-        Object.keys(this.props.object).sort().forEach(function(key) {
+        Object.keys(this.props.object).sort().forEach(function (key) {
           dlNodes.push(
             <dt key={key} title={key}>{formatKey(key)}</dt>
           );
@@ -57,4 +57,5 @@ define([
       );
     }
   });
-});
+
+module.exports = ObjectDlComponent;

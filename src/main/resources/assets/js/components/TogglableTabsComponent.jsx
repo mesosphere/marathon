@@ -1,12 +1,12 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "jsx!components/NavTabsComponent"
-], function(React, NavTabsComponent) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+var NavTabsComponent = require("../components/NavTabsComponent");
+
+  var TogglableTabs = React.createClass({
     name: "TogglableTabsComponent",
 
     propTypes: {
@@ -16,8 +16,8 @@ define([
       tabs: React.PropTypes.array
     },
 
-    render: function() {
-      var childNodes = React.Children.map(this.props.children, function(child) {
+    render: function () {
+      var childNodes = React.Children.map(this.props.children, function (child) {
         return React.addons.cloneWithProps(child, {
           isActive: (child.props.id === this.props.activeTabId)
         });
@@ -25,6 +25,7 @@ define([
 
       var nav;
       if (this.props.onTabClick != null && this.props.tabs != null) {
+        /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
         /* jshint trailing:false, quotmark:false, newcap:false */
         nav = (
           <NavTabsComponent
@@ -34,6 +35,7 @@ define([
         );
       }
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div className={this.props.className}>
@@ -45,4 +47,5 @@ define([
       );
     }
   });
-});
+
+module.exports = TogglableTabs;

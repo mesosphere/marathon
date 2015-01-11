@@ -1,11 +1,11 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+  var DeploymentComponent =
+      React.createClass({
     name: "DeploymentComponent",
 
     propTypes: {
@@ -13,13 +13,13 @@ define([
       destroyDeployment: React.PropTypes.func.isRequired
     },
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         loading: false
       };
     },
 
-    setLoading: function(bool) {
+    setLoading: function (bool) {
       this.setState({loading: bool});
     },
 
@@ -27,7 +27,7 @@ define([
       this.props.destroyDeployment(this.props.model, this);
     },
 
-    render: function() {
+    render: function () {
       var model = this.props.model;
 
       var isDeployingClassSet = React.addons.classSet({
@@ -36,6 +36,7 @@ define([
 
       var progressStep = Math.max(0, model.get("currentStep") - 1);
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         // Set `title` on cells that potentially overflow so hovering on the
@@ -46,15 +47,15 @@ define([
           </td>
           <td>
             <ul className="list-unstyled">
-              {model.get("currentActions").map(function(action) {
-                return <li key={action.apps}>{action.apps}</li>;
+              {model.get("currentActions").map(function (action) {
+                return <li key={action.app}>{action.apps}</li>;
               })}
             </ul>
           </td>
           <td>
             <ul className="list-unstyled">
-              {model.get("currentActions").map(function(action) {
-                return <li key={action.apps}>{action.action}</li>;
+              {model.get("currentActions").map(function (action) {
+                return <li key={action.app}>{action.action}</li>;
               })}
             </ul>
           </td>
@@ -82,4 +83,5 @@ define([
       );
     }
   });
-});
+
+module.exports = DeploymentComponent;

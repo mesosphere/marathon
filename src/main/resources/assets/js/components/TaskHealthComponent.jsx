@@ -1,17 +1,17 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "jsx!components/TimeFieldComponent"
-], function(React, TimeFieldComponent) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+var TimeFieldComponent = require("../components/TimeFieldComponent");
+
+  var TaskHealthComponent = React.createClass({
     displayName: "TaskHealthComponent",
     propTypes: {
       task: React.PropTypes.object.isRequired
     },
-    render: function() {
+    render: function () {
       var task = this.props.task;
       var healthCheckResults = task.get("healthCheckResults");
       var healthNodeList;
@@ -31,8 +31,9 @@ define([
                 time: cResult.lastFailure
               }
             ];
-            var timeFields = timeNodes.map(function(timeNode, index) {
+            var timeFields = timeNodes.map(function (timeNode, index) {
 
+              /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
               /* jshint trailing:false, quotmark:false, newcap:false */
               return (
                 <TimeFieldComponent
@@ -44,7 +45,9 @@ define([
             return (
               <div key={index}>
                 <hr key={"hr-" + index} />
-                <h5>Health Check Result {index+1}</h5>
+                <h5>
+                  Health Check Result {index + 1}
+                </h5>
                 <dl className="dl-horizontal">
                   {timeFields}
                   <dt>Consecutive failures</dt>
@@ -61,6 +64,8 @@ define([
           }
         });
       }
+
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div className={this.props.className}>
@@ -69,5 +74,5 @@ define([
       );
     }
   });
-});
 
+module.exports = TaskHealthComponent;

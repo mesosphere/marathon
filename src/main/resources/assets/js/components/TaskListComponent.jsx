@@ -1,16 +1,17 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "mixins/BackboneMixin",
-  "jsx!components/TaskListItemComponent",
-  "jsx!components/PagedContentComponent"
-], function(React, States, BackboneMixin,
-    TaskListItemComponent, PagedContentComponent) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+var TaskListItemComponent = require("../components/TaskListItemComponent");
+var PagedContentComponent = require("../components/PagedContentComponent");
+
+var States = require("../constants/States");
+
+var BackboneMixin = require("../mixins/BackboneMixin");
+
+  var TaskListComponent = React.createClass({
     displayName: "TaskListComponent",
 
     mixins: [BackboneMixin],
@@ -25,17 +26,17 @@ define([
       currentAppVersion: React.PropTypes.object.isRequired
     },
 
-    getResource: function() {
+    getResource: function () {
       return this.props.tasks;
     },
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         fetchState: States.STATE_LOADING
       };
     },
 
-    handleThToggleClick: function(event) {
+    handleThToggleClick: function (event) {
       // If the click happens on the checkbox, let the checkbox's onchange event
       // handler handle it and skip handling the event here.
       if (event.target.nodeName !== "INPUT") {
@@ -43,7 +44,7 @@ define([
       }
     },
 
-    sortCollectionBy: function(comparator) {
+    sortCollectionBy: function (comparator) {
       var collection = this.props.tasks;
       comparator =
         collection.sortKey === comparator && !collection.sortReverse ?
@@ -53,7 +54,7 @@ define([
       collection.sort();
     },
 
-    render: function() {
+    render: function () {
       var taskNodes;
       var tasksLength = this.props.tasks.length;
       var hasHealth = !!this.props.hasHealth;
@@ -63,7 +64,15 @@ define([
       // they are all selected and let the iteration below decide if that is
       // true.
       var allTasksSelected = tasksLength > 0;
+      var sortKey = this.props.tasks.sortKey;
 
+      var headerClassSet = React.addons.classSet({
+          "clickable": true,
+          "dropup": this.props.tasks.sortReverse
+        });
+
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
       if (this.props.fetchState === States.STATE_LOADING) {
         taskNodes =
           <tbody>
@@ -83,13 +92,11 @@ define([
             </tr>
           </tbody>;
       } else {
-
-        /* jshint trailing:false, quotmark:false, newcap:false */
         taskNodes = (
           <PagedContentComponent
               currentPage={this.props.currentPage}
               itemsPerPage={this.props.itemsPerPage}
-              element="tbody" >
+              tag="tbody" >
             {
               hasError ?
                 <tr>
@@ -100,7 +107,7 @@ define([
                 null
             }
             {
-              this.props.tasks.map(function(task) {
+              this.props.tasks.map(function (task) {
                 // Expicitly check for Boolean since the key might not exist in the
                 // object.
                 var isActive = this.props.selectedTasks[task.id] === true;
@@ -123,14 +130,6 @@ define([
         );
       }
 
-      var sortKey = this.props.tasks.sortKey;
-
-      var headerClassSet = React.addons.classSet({
-          "clickable": true,
-          "dropup": this.props.tasks.sortReverse
-        });
-
-      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <table className="table table-unstyled">
           <thead>
@@ -181,4 +180,5 @@ define([
       );
     }
   });
-});
+
+module.exports = TaskListComponent;

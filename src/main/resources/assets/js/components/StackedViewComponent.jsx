@@ -1,13 +1,13 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
-    displayName: "StackedViewComponent",
-    render: function() {
+var React = require("react/addons");
+
+  var StackedView = React.createClass({
+    displayName: "StackedView",
+    render: function () {
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
@@ -16,4 +16,5 @@ define([
       );
     }
   });
-});
+
+module.exports = StackedView;

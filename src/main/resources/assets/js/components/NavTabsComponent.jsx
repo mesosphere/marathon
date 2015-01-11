@@ -1,13 +1,12 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+"use strict";
+
+var React = require("react/addons");
 
   function noop() {}
 
-  return React.createClass({
+  var NavTabsComponent = React.createClass({
     name: "NavTabsComponent",
 
     propTypes: {
@@ -17,22 +16,22 @@ define([
       tabs: React.PropTypes.array.isRequired
     },
 
-    getDefaultProps: function() {
+    getDefaultProps: function () {
       return {
         onTabClick: noop,
         className: ""
       };
     },
 
-    onTabClick: function(id, event) {
+    onTabClick: function (id, event) {
       event.preventDefault();
       this.props.onTabClick(id);
     },
 
-    render: function() {
+    render: function () {
       var activeTabId = this.props.activeTabId;
 
-      var tabs = this.props.tabs.map(function(tab) {
+      var tabs = this.props.tabs.map(function (tab) {
         var tabClassSet = React.addons.classSet({
           "active": tab.id === activeTabId
         });
@@ -42,6 +41,7 @@ define([
           null;
 
         return (
+          /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
           /* jshint trailing:false, quotmark:false, newcap:false */
           <li className={tabClassSet} key={tab.id}>
             <a href={"#" + tab.id} onClick={this.onTabClick.bind(this, tab.id)}>
@@ -52,6 +52,7 @@ define([
         );
       }, this);
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <ul className={this.props.className + " nav navbar navbar-static-top nav-tabs"}>
@@ -60,4 +61,5 @@ define([
       );
     }
   });
-});
+
+module.exports = NavTabsComponent;

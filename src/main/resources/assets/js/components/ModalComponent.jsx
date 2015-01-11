@@ -1,44 +1,43 @@
 /** @jsx React.DOM */
 
-define([
-  "jquery",
-  "React"
-], function($, React) {
-  "use strict";
+"use strict";
+
+var $ = require("jquery");
+var React = require("react/addons");
 
   function modalSizeClassName(size) {
     return (size == null) ? "" : "modal-" + size;
   }
 
-  return React.createClass({
+  var Modal = React.createClass({
     displayName: "ModalComponent",
     propTypes: {
       onDestroy: React.PropTypes.func,
       size: React.PropTypes.string
     },
 
-    componentDidMount: function() {
+    componentDidMount: function () {
       this.timeout = setTimeout(this.transitionIn, 10);
     },
 
-    destroy: function() {
+    destroy: function () {
       this.props.onDestroy();
     },
 
-    getDefaultProps: function() {
+    getDefaultProps: function () {
       return {
         onDestroy: $.noop,
         size: null
       };
     },
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         isIn: false
       };
     },
 
-    onClick: function(event) {
+    onClick: function (event) {
       var $target = $(event.target);
 
       if ($target.hasClass("modal") || $target.hasClass("modal-dialog")) {
@@ -46,11 +45,11 @@ define([
       }
     },
 
-    transitionIn: function() {
+    transitionIn: function () {
       this.setState({isIn: true});
     },
 
-    render: function() {
+    render: function () {
       var modalDialogClassName =
         "modal-dialog " + modalSizeClassName(this.props.size);
 
@@ -64,6 +63,7 @@ define([
         "in": this.state.isIn
       });
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div>
@@ -83,4 +83,5 @@ define([
       );
     }
   });
-});
+
+module.exports = Modal;

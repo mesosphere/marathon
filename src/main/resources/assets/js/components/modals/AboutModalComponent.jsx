@@ -1,48 +1,54 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "models/Info",
-  "mixins/BackboneMixin",
-  "jsx!components/ModalComponent",
-  "jsx!components/ObjectDlComponent"
-], function(React, Info, BackboneMixin, ModalComponent, ObjectDlComponent) {
-  "use strict";
+"use strict";
 
-  /* jshint trailing:false, quotmark:false, newcap:false */
+var React = require("react/addons");
+
+var ModalComponent = require("../../components/ModalComponent");
+var ObjectDlComponent = require("../../components/ObjectDlComponent");
+
+var BackboneMixin = require("../../mixins/BackboneMixin");
+
+var Info = require("../../models/Info");
+
   var UNSPECIFIED_NODE = React.createClass({
-    render: function() {
-      return <span className="text-muted">Unspecified</span>;
+    render: function () {
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      return (
+        <span className="text-muted">Unspecified</span>
+      );
     }
   });
 
-  return React.createClass({
+  var AboutModalComponent = React.createClass({
     mixins: [BackboneMixin],
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         info: new Info()
       };
     },
 
-    componentDidMount: function() {
+    componentDidMount: function () {
       this.state.info.fetch();
     },
 
-    destroy: function() {
+    destroy: function () {
       // This will also call `this.props.onDestroy` since it is passed as the
       // callback for the modal's `onDestroy` prop.
       this.refs.modalComponent.destroy();
     },
 
-    getResource: function() {
+    getResource: function () {
       return this.state.info;
     },
 
-    render: function() {
+    render: function () {
       var marathonConfig = this.state.info.get("marathon_config");
       var zookeeperConfig = this.state.info.get("zookeeper_config");
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <ModalComponent
@@ -83,4 +89,5 @@ define([
       );
     }
   });
-});
+
+module.exports = AboutModalComponent;

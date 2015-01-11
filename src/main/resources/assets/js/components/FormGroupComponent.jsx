@@ -1,22 +1,21 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+  var FormGroup = React.createClass({
     propTypes: {
       errors: React.PropTypes.array,
       children: React.PropTypes.component.isRequired,
       model: React.PropTypes.object.isRequired
     },
 
-    onInputChange: function(event) {
+    onInputChange: function (event) {
       this.props.model.set(event.target.name, event.target.value);
     },
 
-    render: function() {
+    render: function () {
       var errorBlock, helpBlock;
 
       var errors = [];
@@ -26,7 +25,7 @@ define([
 
       // Find any errors matching this attribute.
       if (this.props.model.validationError != null) {
-        errors = this.props.model.validationError.filter(function(e) {
+        errors = this.props.model.validationError.filter(function (e) {
           return (e.attribute === attribute);
         });
       }
@@ -34,7 +33,7 @@ define([
       // Also check for passed in errors
       if (this.props.errors != null) {
         errors = errors.concat(
-          this.props.errors.filter(function(e) {
+          this.props.errors.filter(function (e) {
             return (e.attribute === attribute);
           })
         );
@@ -42,13 +41,25 @@ define([
 
       if (errors.length > 0) {
         className += " has-error";
-        errorBlock = errors.map(function(error, i) {
-          return <div key={i} className="help-block"><strong>{error.message}</strong></div>;
+        errorBlock = errors.map(function (error, i) {
+          /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+          /* jshint trailing:false, quotmark:false, newcap:false */
+          return (
+            <div key={i} className="help-block">
+              <strong>{error.message}</strong>
+            </div>
+          );
         });
       }
 
       if (this.props.help != null) {
-        helpBlock = <div className="help-block">{this.props.help}</div>;
+        /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+        /* jshint trailing:false, quotmark:false, newcap:false */
+        helpBlock = (
+          <div className="help-block">
+            {this.props.help}
+          </div>
+        );
       }
 
       // Assume there is a single child of either <input> or <textarea>, and add
@@ -63,6 +74,8 @@ define([
           value: this.props.model.get(attribute)
         }
       );
+
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <div className={className}>
@@ -78,4 +91,5 @@ define([
       );
     }
   });
-});
+
+module.exports =  FormGroup;

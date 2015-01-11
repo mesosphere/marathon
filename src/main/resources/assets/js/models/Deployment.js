@@ -1,11 +1,9 @@
-define([
-  "Backbone",
-  "Underscore"
-], function(Backbone, _) {
-  "use strict";
+"use strict";
 
-  return Backbone.Model.extend({
-    defaults: function() {
+var Backbone = require("backbone");
+
+  var Deployment = Backbone.Model.extend({
+    defaults: function () {
       return {
         currentStep: 0,
         currentActions: [],
@@ -15,25 +13,25 @@ define([
       };
     },
 
-    currentActionsString: function() {
+    currentActionsString: function () {
       var actions = this.get("currentActions");
-      var actionNames = actions.map(function(action) {
+      var actionNames = actions.map(function (action) {
         return action.action;
       });
       return actionNames.join(", ");
     },
 
-    affectedAppsString: function() {
+    affectedAppsString: function () {
       var actions = this.get("currentActions");
-      var apps = actions.map(function(action) {
+      var apps = actions.map(function (action) {
         return action.app;
       });
       return apps.join(", ");
     },
 
-    initialize: function(options) {
+    initialize: function (options) {
       this.options = options;
     }
   });
-});
 
+module.exports = Deployment;

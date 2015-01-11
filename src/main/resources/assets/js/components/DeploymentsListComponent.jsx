@@ -1,14 +1,16 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "jsx!components/DeploymentComponent",
-  "mixins/BackboneMixin"
-], function(React, States, DeploymentComponent, BackboneMixin) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+var DeploymentComponent = require("../components/DeploymentComponent");
+
+var States = require("../constants/States");
+
+var BackboneMixin = require("../mixins/BackboneMixin");
+
+  var DeploymentList = React.createClass({
     displayName: "DeploymentListComponent",
 
     mixins: [BackboneMixin],
@@ -19,11 +21,11 @@ define([
       fetchState: React.PropTypes.number.isRequired
     },
 
-    getResource: function() {
+    getResource: function () {
       return this.props.deployments;
     },
 
-    sortCollectionBy: function(comparator) {
+    sortCollectionBy: function (comparator) {
       var deployments = this.props.deployments;
       comparator =
         deployments.sortKey === comparator && !deployments.sortReverse ?
@@ -33,7 +35,7 @@ define([
       deployments.sort();
     },
 
-    render: function() {
+    render: function () {
       var sortKey = this.props.deployments.sortKey;
 
       var deploymentNodes;
@@ -43,10 +45,14 @@ define([
         "dropup": this.props.deployments.sortReverse
       });
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
       if (this.props.fetchState === States.STATE_LOADING) {
         deploymentNodes =
           <tr>
-            <td className="text-center text-muted" colSpan="5">
+            <td
+                className="text-center text-muted"
+                colSpan="5">
               Loading deployments...
             </td>
           </tr>;
@@ -56,9 +62,7 @@ define([
             <td className="text-center" colSpan="5">No deployments in progress.</td>
           </tr>;
       } else {
-
-        /* jshint trailing:false, quotmark:false, newcap:false */
-        deploymentNodes = this.props.deployments.map(function(model) {
+        deploymentNodes = this.props.deployments.map(function (model) {
           return (
             <DeploymentComponent
               key={model.id}
@@ -68,7 +72,6 @@ define([
         }, this);
       }
 
-      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <table className="table table-fixed">
           <colgroup>
@@ -120,4 +123,5 @@ define([
       );
     }
   });
-});
+
+module.exports = DeploymentList;

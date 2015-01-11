@@ -1,26 +1,23 @@
 /** @jsx React.DOM */
 
-define([
-  "Underscore",
-  "React",
-  "jsx!components/AppVersionListComponent",
-  "jsx!components/ModalComponent",
-  "jsx!components/StackedViewComponent",
-  "jsx!components/TabPaneComponent",
-  "jsx!components/TaskDetailComponent",
-  "jsx!components/TaskViewComponent",
-  "jsx!components/TogglableTabsComponent"
-], function(_, React, AppVersionListComponent, ModalComponent,
-    StackedViewComponent, TabPaneComponent, TaskDetailComponent,
-    TaskViewComponent, TogglableTabsComponent) {
-  "use strict";
+"use strict";
+
+var React = require("react/addons");
+
+var AppVersionListComponent = require("../components/AppVersionListComponent");
+var ModalComponent = require("../components/ModalComponent");
+var StackedViewComponent = require("../components/StackedViewComponent");
+var TabPaneComponent = require("../components/TabPaneComponent");
+var TaskDetailComponent = require("../components/TaskDetailComponent");
+var TaskViewComponent = require("../components/TaskViewComponent");
+var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 
   var tabs = [
     {id: "tasks", text: "Tasks"},
     {id: "configuration", text: "Configuration"}
   ];
 
-  return React.createClass({
+  var AppModal = React.createClass({
     displayName: "AppModalComponent",
 
     propTypes: {
@@ -40,7 +37,7 @@ define([
       tasksFetchState: React.PropTypes.number.isRequired
     },
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         activeViewIndex: 0,
         activeTabId: tabs[0].id,
@@ -48,22 +45,22 @@ define([
       };
     },
 
-    destroy: function() {
+    destroy: function () {
       this.refs.modalComponent.destroy();
     },
 
-    handleDestroyApp: function() {
+    handleDestroyApp: function () {
       this.props.destroyApp();
       this.destroy();
     },
 
-    onTabClick: function(id) {
+    onTabClick: function (id) {
       this.setState({
         activeTabId: id
       });
     },
 
-    toggleAllTasks: function() {
+    toggleAllTasks: function () {
       var newSelectedTasks = {};
       var modelTasks = this.props.model.tasks;
 
@@ -73,7 +70,7 @@ define([
         modelTasks.length;
 
       if (!allTasksSelected) {
-        modelTasks.forEach(function(task) {
+        modelTasks.forEach(function (task) {
           newSelectedTasks[task.id] = true;
         });
       }
@@ -81,7 +78,7 @@ define([
       this.setState({selectedTasks: newSelectedTasks});
     },
 
-    toggleTask: function(task, value) {
+    toggleTask: function (task, value) {
       var selectedTasks = this.state.selectedTasks;
 
       // If `toggleTask` is used as a callback for an event handler, the second
@@ -100,22 +97,22 @@ define([
       this.setState({selectedTasks: selectedTasks});
     },
 
-    showTaskDetails: function(task) {
-      this.props.onShowTaskDetails(task, function() {
+    showTaskDetails: function (task) {
+      this.props.onShowTaskDetails(task, function () {
         this.setState({
           activeViewIndex: 1
         });
       }.bind(this));
     },
 
-    showTaskList: function() {
+    showTaskList: function () {
       this.props.onShowTaskList();
       this.setState({
         activeViewIndex: 0
       });
     },
 
-    scaleApp: function() {
+    scaleApp: function () {
       var model = this.props.model;
       var instancesString = prompt("Scale to how many instances?",
         model.get("instances"));
@@ -128,7 +125,7 @@ define([
       }
     },
 
-    render: function() {
+    render: function () {
       var model = this.props.model;
 
       var isDeploying = model.isDeploying();
@@ -140,10 +137,11 @@ define([
       var hasHealth = model.get("healthChecks") != null &&
         model.get("healthChecks").length > 0;
 
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}
-          size="lg">
+            size="lg">
           <div className="modal-header">
              <button type="button" className="close"
                 aria-hidden="true" onClick={this.props.onDestroy}>&times;</button>
@@ -174,23 +172,24 @@ define([
               onTabClick={this.onTabClick}
               tabs={tabs} >
             <TabPaneComponent id="tasks">
-              <StackedViewComponent
-                activeViewIndex={this.state.activeViewIndex}>
+              <StackedViewComponent activeViewIndex={this.state.activeViewIndex}>
                 <TaskViewComponent
-                  collection={model.tasks}
-                  currentAppVersion={model.get('version')}
-                  fetchState={this.props.tasksFetchState}
-                  fetchTasks={this.props.fetchTasks}
-                  formatTaskHealthMessage={model.formatTaskHealthMessage}
-                  hasHealth={hasHealth}
-                  onTasksKilled={this.props.onTasksKilled}
-                  onTaskDetailSelect={this.showTaskDetails} />
+                    collection={model.tasks}
+                    currentAppVersion={model.get('version')}
+                    fetchState={this.props.tasksFetchState}
+                    fetchTasks={this.props.fetchTasks}
+                    formatTaskHealthMessage={model.formatTaskHealthMessage}
+                    hasHealth={hasHealth}
+                    onTasksKilled={this.props.onTasksKilled}
+                    onTaskDetailSelect={this.showTaskDetails} />
                 <TaskDetailComponent
-                  fetchState={this.props.tasksFetchState}
-                  taskHealthMessage={model.formatTaskHealthMessage(this.props.activeTask)}
-                  hasHealth={hasHealth}
-                  onShowTaskList={this.showTaskList}
-                  task={this.props.activeTask} />
+                    fetchState={this.props.tasksFetchState}
+                    taskHealthMessage={
+                      model.formatTaskHealthMessage(this.props.activeTask)
+                    }
+                    hasHealth={hasHealth}
+                    onShowTaskList={this.showTaskList}
+                    task={this.props.activeTask} />
               </StackedViewComponent>
             </TabPaneComponent>
             <TabPaneComponent
@@ -207,4 +206,5 @@ define([
       );
     }
   });
-});
+
+module.exports = AppModal;

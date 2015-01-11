@@ -1,16 +1,19 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "models/App",
-  "models/AppVersion",
-  "mixins/BackboneMixin",
-  "jsx!components/AppVersionComponent"
-], function(React, States, App, AppVersion, BackboneMixin, AppVersionComponent) {
-  "use strict";
+"use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+var AppVersionComponent = require("../components/AppVersionComponent");
+
+var States = require("../constants/States");
+
+var BackboneMixin = require("../mixins/BackboneMixin");
+
+var App = require("../models/App");
+var AppVersion = require("../models/AppVersion");
+
+  var AppVersionListItem = React.createClass({
     displayName: "AppVersionListItemComponent",
 
     mixins: [BackboneMixin],
@@ -21,35 +24,35 @@ define([
       onRollback: React.PropTypes.func
     },
 
-    componentDidMount: function() {
+    componentDidMount: function () {
       if (this.state.open) {
         this.getVersionDetails();
       }
     },
 
-    getResource: function() {
+    getResource: function () {
       return this.props.appVersion;
     },
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         open: false,
         fetchState: States.STATE_LOADING
       };
     },
 
-    getVersionDetails: function() {
+    getVersionDetails: function () {
       this.props.appVersion.fetch({
-        error: function() {
+        error: function () {
           this.setState({fetchState: States.STATE_ERROR});
         }.bind(this),
-        success: function() {
+        success: function () {
           this.setState({fetchState: States.STATE_SUCCESS});
         }.bind(this)
       });
     },
 
-    handleDetailsClick: function(event) {
+    handleDetailsClick: function (event) {
       if (event.target.type === "radio") {
         // handled by other functions
         return;
@@ -61,13 +64,16 @@ define([
       this.setState({open: !this.state.open});
     },
 
-    render: function() {
+    render: function () {
       var caretClassSet = React.addons.classSet({
         "clickable text-right col-xs-2": true,
         "dropup": this.state.open
       });
       var versionDate = new Date(this.props.appVersion.get("version"));
       var versionNode;
+
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
       if (this.state.fetchState === States.STATE_LOADING) {
         versionNode =
           <div className="panel-body">
@@ -83,8 +89,6 @@ define([
             </p>
           </div>;
       } else {
-
-        /* jshint trailing:false, quotmark:false, newcap:false */
         versionNode =
         <div className="panel-body">
           <AppVersionComponent
@@ -116,4 +120,5 @@ define([
       );
     }
   });
-});
+
+module.exports = AppVersionListItem;

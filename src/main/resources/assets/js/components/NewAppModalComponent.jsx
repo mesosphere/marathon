@@ -1,63 +1,65 @@
 /** @jsx React.DOM */
 
-define([
-  "jquery",
-  "Underscore",
-  "React",
-  "mixins/BackboneMixin",
-  "models/App",
-  "jsx!components/FormGroupComponent",
-  "jsx!components/ModalComponent"
-], function($, _, React, BackboneMixin, App, FormGroupComponent,
-      ModalComponent) {
-  "use strict";
+"use strict";
+
+var $ = require("jquery");
+var _ = require("underscore");
+var React = require("react/addons");
+
+var FormGroupComponent = require("../components/FormGroupComponent");
+var ModalComponent = require("../components/ModalComponent");
+
+var BackboneMixin = require("../mixins/BackboneMixin");
+
+var App = require("../models/App");
 
   function ValidationError(attribute, message) {
     this.attribute = attribute;
     this.message = message;
   }
 
-  return React.createClass({
+  var NewAppModalComponent =
+      React.createClass({
     mixins: [BackboneMixin],
     propTypes: {
       onCreate: React.PropTypes.func,
       onDestroy: React.PropTypes.func
     },
 
-    getDefaultProps: function() {
+    getDefaultProps: function () {
       return {
         onCreate: $.noop,
         onDestroy: $.noop
       };
     },
 
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         model: new App(),
         errors: []
       };
     },
 
-    destroy: function() {
+    destroy: function () {
       // This will also call `this.props.onDestroy` since it is passed as the
       // callback for the modal's `onDestroy` prop.
       this.refs.modalComponent.destroy();
     },
 
-    getResource: function() {
+    getResource: function () {
       return this.state.model;
     },
 
-    clearValidation: function() {
+    clearValidation: function () {
       this.setState({errors: []});
     },
 
-    validateResponse: function(response) {
+    validateResponse: function (response) {
       var errors;
 
       if (response.status === 422 && response.responseJSON != null &&
           _.isArray(response.responseJSON.errors)) {
-        errors = response.responseJSON.errors.map(function(e) {
+        errors = response.responseJSON.errors.map(function (e) {
           return new ValidationError(
             // Errors that affect multiple attributes provide a blank string. In
             // that case, count it as a "general" error.
@@ -78,7 +80,7 @@ define([
       this.setState({errors: errors});
     },
 
-    onSubmit: function(event) {
+    onSubmit: function (event) {
       event.preventDefault();
 
       var attrArray = $(event.target).serializeArray();
@@ -86,7 +88,9 @@ define([
 
       for (var i = 0; i < attrArray.length; i++) {
         var val = attrArray[i];
-        if (val.value !== "") modelAttrs[val.name] = val.value;
+        if (val.value !== "") {
+          modelAttrs[val.name] = val.value;
+        }
       }
 
       // URIs should be an Array of Strings.
@@ -99,8 +103,8 @@ define([
       // Constraints should be an Array of Strings.
       if ("constraints" in modelAttrs) {
         var constraintsArray = modelAttrs.constraints.split(",");
-        modelAttrs.constraints = constraintsArray.map(function(constraint) {
-          return constraint.split(":").map(function(value) {
+        modelAttrs.constraints = constraintsArray.map(function (constraint) {
+          return constraint.split(":").map(function (value) {
             return value.trim();
           });
         });
@@ -109,7 +113,7 @@ define([
       // Ports should always be an Array.
       if ("ports" in modelAttrs) {
         var portStrings = modelAttrs.ports.split(",");
-        modelAttrs.ports = _.map(portStrings, function(p) {
+        modelAttrs.ports = _.map(portStrings, function (p) {
           var port = parseInt(p, 10);
           return _.isNaN(port) ? p : port;
         });
@@ -118,9 +122,15 @@ define([
       }
 
       // mem, cpus, and instances are all Numbers and should be parsed as such.
-      if ("mem" in modelAttrs) modelAttrs.mem = parseFloat(modelAttrs.mem);
-      if ("cpus" in modelAttrs) modelAttrs.cpus = parseFloat(modelAttrs.cpus);
-      if ("disk" in modelAttrs) modelAttrs.disk = parseFloat(modelAttrs.disk);
+      if ("mem" in modelAttrs) {
+        modelAttrs.mem = parseFloat(modelAttrs.mem);
+      }
+      if ("cpus" in modelAttrs) {
+        modelAttrs.cpus = parseFloat(modelAttrs.cpus);
+      }
+      if ("disk" in modelAttrs) {
+        modelAttrs.disk = parseFloat(modelAttrs.disk);
+      }
       if ("instances" in modelAttrs) {
         modelAttrs.instances = parseInt(modelAttrs.instances, 10);
       }
@@ -131,14 +141,14 @@ define([
         this.props.onCreate(
           this.state.model,
           {
-            error: function(model, response) {
+            error: function (model, response) {
               this.validateResponse(response);
               if (response.status < 300) {
                 this.clearValidation();
                 this.destroy();
               }
             }.bind(this),
-            success: function() {
+            success: function () {
               this.clearValidation();
               this.destroy();
             }.bind(this),
@@ -151,19 +161,24 @@ define([
       }
     },
 
-    render: function() {
+    render: function () {
       var model = this.state.model;
       var errors = this.state.errors;
 
-      var generalErrors = errors.filter(function(e) {
+      var generalErrors = errors.filter(function (e) {
           return (e.attribute === "general");
         });
 
-      var errorBlock = generalErrors.map(function(error, i) {
-        return <p key={i} className="text-danger"><strong>{error.message}</strong></p>;
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      var errorBlock = generalErrors.map(function (error, i) {
+        return (
+          <p key={i} className="text-danger">
+            <strong>{error.message}</strong>
+          </p>
+        );
       });
 
-      /* jshint trailing:false, quotmark:false, newcap:false */
       return (
         <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
           <form method="post" role="form" onSubmit={this.onSubmit}>
@@ -262,4 +277,5 @@ define([
       );
     }
   });
-});
+
+module.exports = NewAppModalComponent;
