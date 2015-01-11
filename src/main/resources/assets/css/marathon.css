@@ -157,6 +157,16 @@ a,
   border-color: #3d4045;
 }
 
+.table > tbody > tr > td > .list-inline,
+.table > thead > tr > th > .list-inline {
+  margin-bottom: 0;
+}
+
+.table > tbody > tr > td > .list-inline > li:last-child,
+.table > thead > tr > th > .list-inline > li:last-child {
+  padding-right: 0;
+}
+
 .list-inline-subtext {
   color: #6f757D;
   display: inline-block;
