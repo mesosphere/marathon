@@ -1,0 +1,10 @@
+{
+  "name": "marathon-assets",
+  "dependencies": {
+    "backbone": "v1.0.0",
+    "react": "0.11.1",
+    "jquery": "2.0.3",
+    "mousetrap": "1.4.6",
+    "underscore": "1.5.1"
+  }
+}

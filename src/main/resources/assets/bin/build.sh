@@ -17,6 +17,9 @@ rm -rf $DIST_DIR
 # Copy all non-JSX files to build directory, they need no compilation
 rsync -a --exclude=*.jsx $SRC_DIR/** $BUILD_DIR
 
+# Install all bower vendor files
+npmexec bower i
+
 # Compile all JSX files to the build directory
 npmexec jsx -x jsx $SRC_DIR $BUILD_DIR
 
