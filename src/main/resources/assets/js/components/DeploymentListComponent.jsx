@@ -4,8 +4,7 @@
 
 var React = require("react/addons");
 
-var DeploymentListItemComponent =
-  require("../components/DeploymentListItemComponent");
+var DeploymentComponent = require("../components/DeploymentComponent");
 
 var States = require("../constants/States");
 
@@ -65,7 +64,7 @@ var BackboneMixin = require("../mixins/BackboneMixin");
       } else {
         deploymentNodes = this.props.deployments.map(function (model) {
           return (
-            <DeploymentListItemComponent
+            <DeploymentComponent
               key={model.id}
               destroyDeployment={this.props.destroyDeployment}
               model={model} />
