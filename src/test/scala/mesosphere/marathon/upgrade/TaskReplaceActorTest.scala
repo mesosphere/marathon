@@ -17,6 +17,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
+import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
@@ -25,6 +26,7 @@ class TaskReplaceActorTest
     extends TestKit(ActorSystem("System"))
     with FunSuiteLike
     with Matchers
+    with Eventually
     with BeforeAndAfterAll
     with MockitoSugar {
 
@@ -107,20 +109,21 @@ class TaskReplaceActorTest
   test("Replace with minimum running tasks") {
     val app = AppDefinition(
       id = "myApp".toPath,
-      instances = 2,
+      instances = 3,
       healthChecks = Set(HealthCheck()),
-      upgradeStrategy = UpgradeStrategy(1.0)
+      upgradeStrategy = UpgradeStrategy(0.5)
     )
 
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
     val queue = mock[TaskQueue]
     val tracker = mock[TaskTracker]
 
-    var oldTaskCount = 2
+    var oldTaskCount = 3
 
-    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
+    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       override def answer(invocation: InvocationOnMock): Status = {
         oldTaskCount -= 1
@@ -141,17 +144,30 @@ class TaskReplaceActorTest
 
     watch(ref)
 
+    // all new tasks are queued directly
+    eventually { verify(queue, times(3)).add(_) }
+
+    // ceiling(minimumHealthCapacity * 3) = 2 are left running
+    assert(oldTaskCount == 2)
+
+    // first new task becomes healthy and another old task is killed
     ref ! HealthStatusChanged(app.id, s"task_0", app.version.toString, alive = true)
+    eventually { oldTaskCount should be(1) }
 
-    oldTaskCount should be(1)
-
+    // second new task becomes healthy and the last old task is killed
     ref ! HealthStatusChanged(app.id, s"task_1", app.version.toString, alive = true)
+    eventually { oldTaskCount should be(0) }
 
+    // third new task becomes healthy
+    ref ! HealthStatusChanged(app.id, s"task_2", app.version.toString, alive = true)
     oldTaskCount should be(0)
 
     Await.result(promise.future, 5.seconds)
+
+    // all old tasks are killed
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+    verify(driver).killTask(TaskID.newBuilder().setValue(taskC.getId).build())
 
     expectTerminated(ref)
   }
