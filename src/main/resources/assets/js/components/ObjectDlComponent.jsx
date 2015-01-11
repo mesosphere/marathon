@@ -4,58 +4,58 @@
 
 var React = require("react/addons");
 
-function formatKey(key) {
-  return key.split("_").map(function (piece) {
-    return piece.charAt(0).toUpperCase() + piece.slice(1);
-  }).join(" ");
-}
-
-function prettyPrint(object) {
-  /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-  /* jshint trailing:false, quotmark:false, newcap:false */
-  if (typeof object === "object" && !!object) {
-    return <code>{JSON.stringify(object, null, " ")}</code>;
-  } else if (typeof object === "boolean") {
-    return <code>{object.toString()}</code>;
-  } else {
-    return object.toString();
+  function formatKey(key) {
+    return key.split("_").map(function (piece) {
+      return piece.charAt(0).toUpperCase() + piece.slice(1);
+    }).join(" ");
   }
-}
 
-var ObjectDl = React.createClass({
-  displayName: "ObjectDl",
-  propTypes: {
-    // Can be `null` or `undefined` since the data is likely fetched
-    // asynchronously.
-    object: React.PropTypes.object
-  },
-
-  render: function () {
+  function prettyPrint(object) {
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     /* jshint trailing:false, quotmark:false, newcap:false */
-    var dlNodes;
-    if (this.props.object != null) {
-      dlNodes = [];
-      Object.keys(this.props.object).sort().forEach(function (key) {
-        dlNodes.push(
-          <dt key={key} title={key}>{formatKey(key)}</dt>
-        );
-        dlNodes.push(
-          <dd key={key + "_val"}>
-            {this.props.object[key] == null ?
-              <span className="text-muted">Unspecified</span> :
-              prettyPrint(this.props.object[key])}
-          </dd>
-        );
-      }, this);
+    if (typeof object === "object" && !!object) {
+      return <code>{JSON.stringify(object, null, " ")}</code>;
+    } else if (typeof object === "boolean") {
+      return <code>{object.toString()}</code>;
+    } else {
+      return object.toString();
     }
-
-    return (
-      <dl className="dl-horizontal dl-horizontal-lg">
-        {dlNodes}
-      </dl>
-    );
   }
-});
+
+  var ObjectDl = React.createClass({
+    displayName: "ObjectDl",
+    propTypes: {
+      // Can be `null` or `undefined` since the data is likely fetched
+      // asynchronously.
+      object: React.PropTypes.object
+    },
+
+    render: function () {
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      var dlNodes;
+      if (this.props.object != null) {
+        dlNodes = [];
+        Object.keys(this.props.object).sort().forEach(function (key) {
+          dlNodes.push(
+            <dt key={key} title={key}>{formatKey(key)}</dt>
+          );
+          dlNodes.push(
+            <dd key={key + "_val"}>
+              {this.props.object[key] == null ?
+                <span className="text-muted">Unspecified</span> :
+                prettyPrint(this.props.object[key])}
+            </dd>
+          );
+        }, this);
+      }
+
+      return (
+        <dl className="dl-horizontal dl-horizontal-lg">
+          {dlNodes}
+        </dl>
+      );
+    }
+  });
 
 module.exports = ObjectDl;

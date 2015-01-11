@@ -7,161 +7,161 @@ var React = require("react/addons");
 var PagedNavComponent = require("../components/PagedNavComponent");
 var TaskListComponent = require("../components/TaskListComponent");
 
-var TaskViewComponent = React.createClass({
-  displayName: "TaskViewComponent",
+  var TaskViewComponent = React.createClass({
+    displayName: "TaskViewComponent",
 
-  propTypes: {
-    collection: React.PropTypes.object.isRequired,
-    currentAppVersion: React.PropTypes.object.isRequired,
-    fetchState: React.PropTypes.number.isRequired,
-    fetchTasks: React.PropTypes.func.isRequired,
-    formatTaskHealthMessage: React.PropTypes.func.isRequired,
-    hasHealth: React.PropTypes.bool,
-    onTasksKilled: React.PropTypes.func.isRequired,
-    onTaskDetailSelect: React.PropTypes.func.isRequired
-  },
+    propTypes: {
+      collection: React.PropTypes.object.isRequired,
+      currentAppVersion: React.PropTypes.object.isRequired,
+      fetchState: React.PropTypes.number.isRequired,
+      fetchTasks: React.PropTypes.func.isRequired,
+      formatTaskHealthMessage: React.PropTypes.func.isRequired,
+      hasHealth: React.PropTypes.bool,
+      onTasksKilled: React.PropTypes.func.isRequired,
+      onTaskDetailSelect: React.PropTypes.func.isRequired
+    },
 
-  getInitialState: function () {
-    return {
-      selectedTasks: {},
-      currentPage: 0,
-      itemsPerPage: 8
-    };
-  },
+    getInitialState: function () {
+      return {
+        selectedTasks: {},
+        currentPage: 0,
+        itemsPerPage: 8
+      };
+    },
 
-  handlePageChange: function (pageNum) {
-    this.setState({currentPage: pageNum});
-  },
+    handlePageChange: function (pageNum) {
+      this.setState({currentPage: pageNum});
+    },
 
-  killSelectedTasks: function (options) {
-    var _options = options || {};
+    killSelectedTasks: function (options) {
+      var _options = options || {};
 
-    var selectedTaskIds = Object.keys(this.state.selectedTasks);
-    var tasksToKill = this.props.collection.filter(function (task) {
-      return selectedTaskIds.indexOf(task.id) >= 0;
-    });
-
-    tasksToKill.forEach(function (task) {
-      task.destroy({
-        scale: _options.scale,
-        success: function () {
-          this.props.onTasksKilled(_options);
-          delete this.state.selectedTasks[task.id];
-        }.bind(this),
-        wait: true
+      var selectedTaskIds = Object.keys(this.state.selectedTasks);
+      var tasksToKill = this.props.collection.filter(function (task) {
+        return selectedTaskIds.indexOf(task.id) >= 0;
       });
-    }, this);
-  },
 
-  killSelectedTasksAndScale: function () {
-    this.killSelectedTasks({scale: true});
-  },
+      tasksToKill.forEach(function (task) {
+        task.destroy({
+          scale: _options.scale,
+          success: function () {
+            this.props.onTasksKilled(_options);
+            delete this.state.selectedTasks[task.id];
+          }.bind(this),
+          wait: true
+        });
+      }, this);
+    },
 
-  toggleAllTasks: function () {
-    var newSelectedTasks = {};
-    var modelTasks = this.props.collection;
+    killSelectedTasksAndScale: function () {
+      this.killSelectedTasks({scale: true});
+    },
 
-    // Note: not an **exact** check for all tasks being selected but a good
-    // enough proxy.
-    var allTasksSelected = Object.keys(this.state.selectedTasks).length ===
-      modelTasks.length;
+    toggleAllTasks: function () {
+      var newSelectedTasks = {};
+      var modelTasks = this.props.collection;
 
-    if (!allTasksSelected) {
-      modelTasks.map(function (task) { newSelectedTasks[task.id] = true; });
-    }
+      // Note: not an **exact** check for all tasks being selected but a good
+      // enough proxy.
+      var allTasksSelected = Object.keys(this.state.selectedTasks).length ===
+        modelTasks.length;
 
-    this.setState({selectedTasks: newSelectedTasks});
-  },
+      if (!allTasksSelected) {
+        modelTasks.map(function (task) { newSelectedTasks[task.id] = true; });
+      }
 
-  onTaskToggle: function (task, value) {
-    var selectedTasks = this.state.selectedTasks;
+      this.setState({selectedTasks: newSelectedTasks});
+    },
 
-    // If `toggleTask` is used as a callback for an event handler, the second
-    // parameter will be an event object. Use it to set the value only if it
-    // is a Boolean.
-    var localValue = (typeof value === Boolean) ?
-      value :
-      !selectedTasks[task.id];
+    onTaskToggle: function (task, value) {
+      var selectedTasks = this.state.selectedTasks;
 
-    if (localValue === true) {
-      selectedTasks[task.id] = true;
-    } else {
-      delete selectedTasks[task.id];
-    }
+      // If `toggleTask` is used as a callback for an event handler, the second
+      // parameter will be an event object. Use it to set the value only if it
+      // is a Boolean.
+      var localValue = (typeof value === Boolean) ?
+        value :
+        !selectedTasks[task.id];
 
-    this.setState({selectedTasks: selectedTasks});
-  },
+      if (localValue === true) {
+        selectedTasks[task.id] = true;
+      } else {
+        delete selectedTasks[task.id];
+      }
 
-  render: function () {
-    var selectedTasksLength = Object.keys(this.state.selectedTasks).length;
-    var buttons;
+      this.setState({selectedTasks: selectedTasks});
+    },
 
-    var tasksLength = this.props.collection.length;
-    var itemsPerPage = this.state.itemsPerPage;
-    var currentPage = this.state.currentPage;
+    render: function () {
+      var selectedTasksLength = Object.keys(this.state.selectedTasks).length;
+      var buttons;
 
-    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    /* jshint trailing:false, quotmark:false, newcap:false */
-    // at least two pages
-    var pagedNav = tasksLength > itemsPerPage ?
-      <PagedNavComponent
-        className="text-right"
-        currentPage={currentPage}
-        onPageChange={this.handlePageChange}
-        itemsPerPage={itemsPerPage}
-        noItems={tasksLength}
-        useArrows={true} /> :
-      null;
+      var tasksLength = this.props.collection.length;
+      var itemsPerPage = this.state.itemsPerPage;
+      var currentPage = this.state.currentPage;
 
-    if (selectedTasksLength === 0) {
-      buttons =
-        <button className="btn btn-sm btn-info" onClick={this.props.fetchTasks}>
-          ↻ Refresh
-        </button>;
-    } else {
-      // Killing two tasks in quick succession raises an exception. Disable
-      // "Kill & Scale" if more than one task is selected to prevent the
-      // exception from happening.
-      //
-      // TODO(ssorallen): Remove once
-      //   https://github.com/mesosphere/marathon/issues/108 is addressed.
-      buttons =
-        <div className="btn-group">
-          <button className="btn btn-sm btn-info" onClick={this.killSelectedTasks}>
-            Kill
-          </button>
-          <button className="btn btn-sm btn-info" disabled={selectedTasksLength > 1}
-              onClick={this.killSelectedTasksAndScale}>
-            Kill &amp; Scale
-          </button>
-        </div>;
-    }
-
-    return (
-      <div>
-        <div className="row">
-          <div className="col-sm-6">
-            {buttons}
-          </div>
-          <div className="col-sm-6">
-            {pagedNav}
-          </div>
-        </div>
-        <TaskListComponent
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      // at least two pages
+      var pagedNav = tasksLength > itemsPerPage ?
+        <PagedNavComponent
+          className="text-right"
           currentPage={currentPage}
-          fetchState={this.props.fetchState}
-          formatTaskHealthMessage={this.props.formatTaskHealthMessage}
-          hasHealth={this.props.hasHealth}
-          onTaskToggle={this.onTaskToggle}
-          onTaskDetailSelect={this.props.onTaskDetailSelect}
+          onPageChange={this.handlePageChange}
           itemsPerPage={itemsPerPage}
-          selectedTasks={this.state.selectedTasks}
-          tasks={this.props.collection}
-          currentAppVersion={this.props.currentAppVersion}
-          toggleAllTasks={this.toggleAllTasks} />
-      </div>
-    );
-  }
-});
+          noItems={tasksLength}
+          useArrows={true} /> :
+        null;
+
+      if (selectedTasksLength === 0) {
+        buttons =
+          <button className="btn btn-sm btn-info" onClick={this.props.fetchTasks}>
+            ↻ Refresh
+          </button>;
+      } else {
+        // Killing two tasks in quick succession raises an exception. Disable
+        // "Kill & Scale" if more than one task is selected to prevent the
+        // exception from happening.
+        //
+        // TODO(ssorallen): Remove once
+        //   https://github.com/mesosphere/marathon/issues/108 is addressed.
+        buttons =
+          <div className="btn-group">
+            <button className="btn btn-sm btn-info" onClick={this.killSelectedTasks}>
+              Kill
+            </button>
+            <button className="btn btn-sm btn-info" disabled={selectedTasksLength > 1}
+                onClick={this.killSelectedTasksAndScale}>
+              Kill &amp; Scale
+            </button>
+          </div>;
+      }
+
+      return (
+        <div>
+          <div className="row">
+            <div className="col-sm-6">
+              {buttons}
+            </div>
+            <div className="col-sm-6">
+              {pagedNav}
+            </div>
+          </div>
+          <TaskListComponent
+            currentPage={currentPage}
+            fetchState={this.props.fetchState}
+            formatTaskHealthMessage={this.props.formatTaskHealthMessage}
+            hasHealth={this.props.hasHealth}
+            onTaskToggle={this.onTaskToggle}
+            onTaskDetailSelect={this.props.onTaskDetailSelect}
+            itemsPerPage={itemsPerPage}
+            selectedTasks={this.state.selectedTasks}
+            tasks={this.props.collection}
+            currentAppVersion={this.props.currentAppVersion}
+            toggleAllTasks={this.toggleAllTasks} />
+        </div>
+      );
+    }
+  });
 
 module.exports = TaskViewComponent;
