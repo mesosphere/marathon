@@ -10,7 +10,7 @@ var React = require("react/addons");
   }
 
   var Modal = React.createClass({
-    displayName: "Modal",
+    displayName: "ModalComponent",
     propTypes: {
       onDestroy: React.PropTypes.func,
       size: React.PropTypes.string
