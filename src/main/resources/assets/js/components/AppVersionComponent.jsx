@@ -16,8 +16,8 @@ var AppVersion = require("../models/AppVersion");
     }
   });
 
-  var AppVersion = React.createClass({
-    displayName: "AppVersion",
+  var AppVersionComponent = React.createClass({
+    displayName: "AppVersionComponent",
 
     propTypes: {
       app: React.PropTypes.instanceOf(App).isRequired,
@@ -135,4 +135,4 @@ var AppVersion = require("../models/AppVersion");
     }
   });
 
-module.exports = AppVersion;
+module.exports = AppVersionComponent;

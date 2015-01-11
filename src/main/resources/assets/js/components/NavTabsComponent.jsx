@@ -6,8 +6,8 @@ var React = require("react/addons");
 
   function noop() {}
 
-  var NavTabs = React.createClass({
-    name: "NavTabs",
+  var NavTabsComponent = React.createClass({
+    name: "NavTabsComponent",
 
     propTypes: {
       activeTabId: React.PropTypes.string.isRequired,
@@ -52,24 +52,14 @@ var React = require("react/addons");
         );
       }, this);
 
-      var classes = {
-        "nav navbar navbar-static-top nav-tabs": true
-      };
-
-      if (this.props.className != null) {
-        classes[this.props.className] = true;
-      }
-
-      var navTabsClassSet = React.addons.classSet(classes);
-
       /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       /* jshint trailing:false, quotmark:false, newcap:false */
       return (
-        <ul className={navTabsClassSet}>
+        <ul className={this.props.className + " nav navbar navbar-static-top nav-tabs"}>
           {tabs}
         </ul>
       );
     }
   });
 
-module.exports = NavTabs;
+module.exports = NavTabsComponent;

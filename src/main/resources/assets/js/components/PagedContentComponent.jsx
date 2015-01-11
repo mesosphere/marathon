@@ -4,8 +4,8 @@
 
 var React = require("react/addons");
 
-  var PagedContent = React.createClass({
-    displayName: "PagedContent",
+  var PagedContentComponent = React.createClass({
+    displayName: "PagedContentComponent",
 
     propTypes: {
       className: React.PropTypes.string,
@@ -44,4 +44,4 @@ var React = require("react/addons");
     }
   });
 
-module.exports = PagedContent;
+module.exports = PagedContentComponent;

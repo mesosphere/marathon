@@ -49,8 +49,8 @@ var Task = require("../models/Task");
     return taskAnchors;
   }
 
-  var TaskListItem = React.createClass({
-    displayName: "TaskListItem",
+  var TaskListItemComponent = React.createClass({
+    displayName: "TaskListItemComponent",
 
     propTypes: {
       hasHealth: React.PropTypes.bool,
@@ -154,4 +154,4 @@ var Task = require("../models/Task");
     }
   });
 
-module.exports = TaskListItem;
+module.exports = TaskListItemComponent;

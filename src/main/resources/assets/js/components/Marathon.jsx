@@ -8,7 +8,7 @@ var React = require("react/addons");
 var AppListComponent = require("../components/AppListComponent");
 var AboutModalComponent = require("../components/modals/AboutModalComponent");
 var AppModalComponent = require("../components/AppModalComponent");
-var DeploymentListComponent = require("../components/DeploymentListComponent");
+var DeploymentListsComponent = require("../components/DeploymentListsComponent");
 var NavTabsComponent = require("../components/NavTabsComponent");
 var NewAppModalComponent = require("../components/NewAppModalComponent");
 var TabPaneComponent = require("../components/TabPaneComponent");
@@ -92,7 +92,7 @@ var UPDATE_INTERVAL = 5000;
       if (prevState.modalClass !== this.state.modalClass) {
         // No `modalClass` means the modal went from open to closed. Start
         // polling for apps in that case.
-        // If `modalClass` is AppModal start polling for tasks for that
+        // If `modalClass` is AppModalComponent start polling for tasks for that
         // app.
         // Otherwise stop polling since the modal went from closed to open.
         if (this.state.modalClass === null) {
@@ -458,7 +458,7 @@ var UPDATE_INTERVAL = 5000;
               <TabPaneComponent
                   id="deployments"
                   onActivate={this.props.fetchAppVersions} >
-                <DeploymentListComponent
+                <DeploymentListsComponent
                     deployments={this.state.deployments}
                     destroyDeployment={this.destroyDeployment}
                     fetchState={this.state.deploymentsFetchState} />

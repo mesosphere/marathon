@@ -7,7 +7,7 @@ var React = require("react/addons");
 var TimeFieldComponent = require("../components/TimeFieldComponent");
 
   var TaskHealthComponent = React.createClass({
-    displayName: "TaskHealth",
+    displayName: "TaskHealthComponent",
     propTypes: {
       task: React.PropTypes.object.isRequired
     },

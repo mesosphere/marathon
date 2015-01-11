@@ -4,8 +4,8 @@
 
 var React = require("react/addons");
 
-  var TabPane = React.createClass({
-    name: "TabPane",
+  var TabPaneComponent = React.createClass({
+    name: "TabPaneComponent",
 
     propTypes: {
       isActive: React.PropTypes.bool,
@@ -41,4 +41,4 @@ var React = require("react/addons");
     }
   });
 
-module.exports = TabPane;
+module.exports = TabPaneComponent;

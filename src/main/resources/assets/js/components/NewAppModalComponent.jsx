@@ -73,10 +73,7 @@ var App = require("../models/App");
         ];
       } else {
         errors = [
-          new ValidationError(
-            "general",
-            "App creation unsuccessful. Check your connection and try again."
-          )
+          new ValidationError("general", "App creation unsuccessful. Check your connection and try again.")
         ];
       }
 

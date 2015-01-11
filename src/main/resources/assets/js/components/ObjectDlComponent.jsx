@@ -22,8 +22,8 @@ var React = require("react/addons");
     }
   }
 
-  var ObjectDl = React.createClass({
-    displayName: "ObjectDl",
+  var ObjectDlComponent = React.createClass({
+    displayName: "ObjectDlComponent",
     propTypes: {
       // Can be `null` or `undefined` since the data is likely fetched
       // asynchronously.
@@ -58,4 +58,4 @@ var React = require("react/addons");
     }
   });
 
-module.exports = ObjectDl;
+module.exports = ObjectDlComponent;

@@ -4,8 +4,8 @@
 
 var React = require("react/addons");
 
-  var PagedNav = React.createClass({
-    displayName: "PagedNav",
+  var PagedNavComponent = React.createClass({
+    displayName: "PagedNavComponent",
 
     propTypes: {
       className: React.PropTypes.string,
@@ -144,8 +144,7 @@ var React = require("react/addons");
       return (
         <div className={this.props.className}>
           {itemNumbers}
-          <ul
-              className="pagination pagination-sm pagination-unstyled">
+          <ul className="pagination pagination-sm pagination-unstyled">
             {leftEndArrow}
             {leftArrow}
             {pagination}
@@ -157,4 +156,4 @@ var React = require("react/addons");
     }
   });
 
-module.exports = PagedNav;
+module.exports = PagedNavComponent;
