@@ -30,8 +30,8 @@ var AppVersion = require("../models/AppVersion");
       }
     },
 
-    getBackboneModels: function () {
-      return [this.props.appVersion];
+    getResource: function () {
+      return this.props.appVersion;
     },
 
     getInitialState: function () {

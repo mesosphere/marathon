@@ -46,8 +46,8 @@ var App = require("../models/App");
       this.refs.modalComponent.destroy();
     },
 
-    getBackboneModels: function () {
-      return [this.state.model];
+    getResource: function () {
+      return this.state.model;
     },
 
     clearValidation: function () {

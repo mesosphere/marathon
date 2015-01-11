@@ -21,8 +21,8 @@ var BackboneMixin = require("../mixins/BackboneMixin");
       fetchState: React.PropTypes.number.isRequired
     },
 
-    getBackboneModels: function () {
-      return [this.props.deployments];
+    getResource: function () {
+      return this.props.deployments;
     },
 
     sortCollectionBy: function (comparator) {

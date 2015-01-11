@@ -25,8 +25,8 @@ var Task = require("../models/Task");
       task: React.PropTypes.object.isRequired
     },
 
-    getBackboneModels: function () {
-      return [this.props.task];
+    getResource: function () {
+      return this.props.task;
     },
 
     handleShowTaskList: function (event) {

@@ -20,8 +20,8 @@ var BackboneMixin = require("../mixins/BackboneMixin");
       onSelectApp: React.PropTypes.func.isRequired
     },
 
-    getBackboneModels: function () {
-      return [this.props.collection];
+    getResource: function () {
+      return this.props.collection;
     },
 
     onClickApp: function (app) {

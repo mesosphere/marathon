@@ -31,8 +31,8 @@ var App = require("../models/App");
       this.props.fetchAppVersions();
     },
 
-    getBackboneModels: function () {
-      return [this.props.app.versions];
+    getResource: function () {
+      return this.props.app.versions;
     },
 
     getInitialState: function () {

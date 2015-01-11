@@ -40,8 +40,8 @@ var Info = require("../../models/Info");
       this.refs.modalComponent.destroy();
     },
 
-    getBackboneModels: function () {
-      return [this.state.info];
+    getResource: function () {
+      return this.state.info;
     },
 
     render: function () {

@@ -26,8 +26,8 @@ var BackboneMixin = require("../mixins/BackboneMixin");
       currentAppVersion: React.PropTypes.object.isRequired
     },
 
-    getBackboneModels: function () {
-      return [this.props.tasks];
+    getResource: function () {
+      return this.props.tasks;
     },
 
     getInitialState: function () {
