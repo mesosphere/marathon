@@ -19,7 +19,7 @@ easy editing, set the `assets_path` flag when running Marathon:
         npm install
 4. Build the assets
 
-        ./bin/build
+        npm run build
 5. The main JS file will be written to `src/main/resources/assets/js/dist/main.js`.
    Check it in.
 
