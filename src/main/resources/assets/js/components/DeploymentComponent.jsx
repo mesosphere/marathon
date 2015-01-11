@@ -23,10 +23,8 @@ define([
       this.setState({loading: bool});
     },
 
-    getDestroyDeploymentHandler: function(forceStop) {
-      return function() {
-        this.props.destroyDeployment(this.props.model, {forceStop: forceStop}, this);
-      }.bind(this);
+    handleDestroyDeployment: function(forceStop) {
+      this.props.destroyDeployment(this.props.model, {forceStop: forceStop}, this);
     },
 
     render: function() {
@@ -76,14 +74,14 @@ define([
                 <ul className="list-inline">
                   <li>
                     <button
-                        onClick={this.getDestroyDeploymentHandler(true)}
+                        onClick={this.handleDestroyDeployment.bind(this, true)}
                         className="btn btn-xs btn-default">
                       Stop deployment
                     </button>
                   </li>
                   <li>
                     <button
-                        onClick={this.getDestroyDeploymentHandler()}
+                        onClick={this.handleDestroyDeployment.bind(this, false)}
                         className="btn btn-xs btn-default">
                       Rollback deployment
                     </button>
