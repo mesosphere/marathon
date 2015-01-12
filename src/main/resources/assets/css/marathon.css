@@ -123,6 +123,10 @@ a,
   background-color: #323539;
 }
 
+.page-header {
+  margin: 0;
+}
+
 .has-error .help-block,
 .has-error .control-label,
 .has-error .radio,

@@ -9,14 +9,14 @@ define([
   "models/DeploymentCollection",
   "jsx!components/AppListComponent",
   "jsx!components/modals/AboutModalComponent",
-  "jsx!components/AppModalComponent",
+  "jsx!components/AppPageComponent",
   "jsx!components/DeploymentsListComponent",
   "jsx!components/NewAppModalComponent",
   "jsx!components/TabPaneComponent",
   "jsx!components/TogglableTabsComponent",
   "jsx!components/NavTabsComponent"
 ], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
-    AppListComponent, AboutModalComponent, AppModalComponent,
+    AppListComponent, AboutModalComponent, AppPageComponent,
     DeploymentsListComponent, NewAppModalComponent, TabPaneComponent,
     TogglableTabsComponent, NavTabsComponent) {
 
@@ -43,6 +43,7 @@ define([
         deploymentsFetchState: States.STATE_LOADING,
         fetchState: States.STATE_LOADING,
         modalClass: null,
+        pageClass: null,
         tasksFetchState: States.STATE_LOADING
       };
     },
@@ -100,7 +101,13 @@ define([
         // Otherwise stop polling since the modal went from closed to open.
         if (this.state.modalClass === null) {
           this.setPollResource(this.fetchApps);
-        } else if (this.state.modalClass === AppModalComponent) {
+        } else {
+          this.stopPolling();
+        }
+      }
+
+      if (prevState.pageClass !== this.state.pageClass) {
+        if (this.state.pageClass === AppPageComponent) {
           this.setPollResource(this.fetchTasks);
         } else {
           this.stopPolling();
@@ -174,6 +181,15 @@ define([
       this.setState({
         activeApp: null,
         modalClass: null,
+        tasksFetchState: States.STATE_LOADING,
+        appVersionsFetchState: States.STATE_LOADING
+      });
+    },
+
+    handlePageDestroy: function() {
+      this.setState({
+        activeApp: null,
+        pageClass: null,
         tasksFetchState: States.STATE_LOADING,
         appVersionsFetchState: States.STATE_LOADING
       });
@@ -353,14 +369,14 @@ define([
       });
     },
 
-    showAppModal: function(app) {
-      if (this.state.modalClass !== null) {
+    showAppPage: function(app) {
+      if (this.state.pageClass !== null) {
         return;
       }
 
       this.setState({
         activeApp: app,
-        modalClass: AppModalComponent
+        pageClass: AppPageComponent
       });
     },
 
@@ -379,6 +395,10 @@ define([
         activeTabId: id
       });
 
+      if(this.state.pageClass !== null) {
+        this.handlePageDestroy();
+      }
+
       if (id === tabs[0].id) {
         this.setPollResource(this.fetchApps);
       } else if (id === tabs[1].id) {
@@ -387,29 +407,12 @@ define([
     },
 
     render: function() {
-      var modal;
+      var modal,
+          page,
+          applist;
 
       /* jshint trailing:false, quotmark:false, newcap:false */
-      if (this.state.modalClass === AppModalComponent) {
-        modal = (
-          <AppModalComponent
-            activeTask={this.state.activeTask}
-            appVersionsFetchState={this.state.appVersionsFetchState}
-            destroyApp={this.destroyApp}
-            fetchTasks={this.fetchTasks}
-            fetchAppVersions={this.fetchAppVersions}
-            model={this.state.activeApp}
-            onDestroy={this.handleModalDestroy}
-            onShowTaskDetails={this.handleShowTaskDetails}
-            onShowTaskList={this.handleShowTaskList}
-            onTasksKilled={this.handleTasksKilled}
-            rollBackApp={this.rollbackToAppVersion}
-            scaleApp={this.scaleApp}
-            suspendApp={this.suspendApp}
-            tasksFetchState={this.state.tasksFetchState}
-            ref="modal" />
-        );
-      } else if (this.state.modalClass === NewAppModalComponent) {
+      if (this.state.modalClass === NewAppModalComponent) {
         modal = (
           <NewAppModalComponent
             model={this.state.activeApp}
@@ -422,6 +425,45 @@ define([
           <AboutModalComponent
             onDestroy={this.handleModalDestroy}
             ref="modal" />
+        );
+      }
+
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      if(this.state.pageClass === AppPageComponent) {
+        page = (
+          <AppPageComponent
+            activeTask={this.state.activeTask}
+            appVersionsFetchState={this.state.appVersionsFetchState}
+            destroyApp={this.destroyApp}
+            fetchTasks={this.fetchTasks}
+            fetchAppVersions={this.fetchAppVersions}
+            model={this.state.activeApp}
+            onDestroy={this.handlePageDestroy}
+            onShowTaskDetails={this.handleShowTaskDetails}
+            onShowTaskList={this.handleShowTaskList}
+            onTasksKilled={this.handleTasksKilled}
+            rollBackApp={this.rollbackToAppVersion}
+            scaleApp={this.scaleApp}
+            suspendApp={this.suspendApp}
+            tasksFetchState={this.state.tasksFetchState}
+            ref="page" />
+        );
+      }
+
+    /* jshint trailing:false, quotmark:false, newcap:false */
+      if(!this.state.pageClass) {
+        applist = (
+          <div>
+            <button type="button" className="btn btn-success navbar-btn"
+                onClick={this.showNewAppModal} >
+              + New App
+            </button>
+            <AppListComponent
+              collection={this.state.collection}
+              onSelectApp={this.showAppPage}
+              fetchState={this.state.fetchState}
+              ref="appList" />
+          </div>
         );
       }
 
@@ -456,15 +498,8 @@ define([
           <div className="container-fluid">
             <TogglableTabsComponent activeTabId={this.state.activeTabId} >
               <TabPaneComponent id="apps">
-                <button type="button" className="btn btn-success navbar-btn"
-                    onClick={this.showNewAppModal} >
-                  + New App
-                </button>
-                <AppListComponent
-                  collection={this.state.collection}
-                  onSelectApp={this.showAppModal}
-                  fetchState={this.state.fetchState}
-                  ref="appList" />
+                  {applist}
+                  {page}
               </TabPaneComponent>
               <TabPaneComponent
                   id="deployments"
