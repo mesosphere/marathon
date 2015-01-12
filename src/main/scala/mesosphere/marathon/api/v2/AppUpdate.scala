@@ -67,10 +67,10 @@ case class AppUpdate(
 
     version: Option[Timestamp] = None) {
 
-  require(version.isEmpty || onlyVersionSet, "The 'version' field may not be combined with other fields.")
+  require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
-  private def onlyVersionSet: Boolean = productIterator forall {
-    case x @ Some(_) => x == version
+  protected[api] def onlyVersionOrIdSet: Boolean = productIterator forall {
+    case x @ Some(_) => x == version || x == id
     case _           => true
   }
 
