@@ -54,7 +54,7 @@ define([
               aria-hidden="true" onClick={this.destroy}>&times;</button>
             <h3 className="modal-title">
               <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
-              <small className="text-muted" style={{"margin-left": "1em"}}>
+              <small className="text-muted" style={{"marginLeft": "1em"}}>
                 Version {this.state.info.get("version")}
               </small>
             </h3>

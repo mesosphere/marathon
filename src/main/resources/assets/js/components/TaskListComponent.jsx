@@ -89,7 +89,7 @@ define([
           <PagedContentComponent
               currentPage={this.props.currentPage}
               itemsPerPage={this.props.itemsPerPage}
-              element="tbody" >
+              tag="tbody" >
             {
               hasError ?
                 <tr>
