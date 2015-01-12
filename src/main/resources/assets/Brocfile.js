@@ -47,6 +47,10 @@ var tasks = {
     var jscsTree = jscs(jsTree, {
       disableTestGenerator: true,
       enabled: true,
+      logError: function (message) {
+        // use pretty colors
+        console.log(chalk.red(message) + "\n");
+      },
       jshintrcPath: dirs.js + "/.jscsrc"
     });
 
