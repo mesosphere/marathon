@@ -12,7 +12,6 @@ define([
     propTypes: {
       activeTabId: React.PropTypes.string.isRequired,
       className: React.PropTypes.string,
-      onTabClick: React.PropTypes.func,
       tabs: React.PropTypes.array
     },
 
@@ -24,12 +23,11 @@ define([
       }, this);
 
       var nav;
-      if (this.props.onTabClick != null && this.props.tabs != null) {
+      if (this.props.tabs != null) {
         /* jshint trailing:false, quotmark:false, newcap:false */
         nav = (
           <NavTabsComponent
             activeTabId={this.props.activeTabId}
-            onTabClick={this.props.onTabClick}
             tabs={this.props.tabs} />
         );
       }

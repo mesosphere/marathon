@@ -13,20 +13,13 @@ define([
     propTypes: {
       activeTabId: React.PropTypes.string.isRequired,
       className: React.PropTypes.string,
-      onTabClick: React.PropTypes.func.isRequired,
       tabs: React.PropTypes.array.isRequired
     },
 
     getDefaultProps: function() {
       return {
-        onTabClick: noop,
         className: ""
       };
-    },
-
-    onTabClick: function(id, event) {
-      event.preventDefault();
-      this.props.onTabClick(id);
     },
 
     render: function() {
@@ -44,7 +37,7 @@ define([
         return (
           /* jshint trailing:false, quotmark:false, newcap:false */
           <li className={tabClassSet} key={tab.id}>
-            <a href={"#" + tab.id} onClick={this.onTabClick.bind(this, tab.id)}>
+            <a href={"#" + tab.id}>
               {tab.text}
             </a>
             {badge}

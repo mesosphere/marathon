@@ -6,13 +6,13 @@ require.config({
     "domReady": "libs/domReady",
     "Backbone": "libs/backbone-min",
     "jsx": "libs/jsx-0.0.2",
-    "JSXTransformer": "libs/JSXTransformer-0.11.1.max",
+    "JSXTransformer": "libs/JSXTransformer-0.12.2.max",
     "jquery": "libs/jquery-2.0.3",
     "mousetrap": "libs/mousetrap-1.4.6",
-    "React": "libs/react-with-addons-0.12.2",
-    "ReactRouter": "libs/react-router.min",
-    "react-router-shim": "libs/react-router-shim",
-    "Underscore": "libs/underscore-min"
+    "React": "libs/react-with-addons-0.12.2.max",
+    "Router": "models/Router",
+    "Underscore": "libs/underscore-min",
+    "underscore.string": "libs/underscore.string.min"
   },
   shim: {
     Backbone: {
@@ -22,16 +22,23 @@ require.config({
     Underscore: {
       exports: "_"
     },
-    ReactRouter: {
-      deps: ["react-router-shim"],
-      exports: "ReactRouter"
+    "underscore.string": {
+      deps: ["Underscore"]
     }
   }
 });
 
 require([
+  "Backbone",
+  "React",
+  "Router",
   "jsx!components/Marathon"
-], function(Marathon) {
+], function(Backbone, React, Router, Marathon) {
 
-  Marathon();
+  React.render(
+    Marathon({router: new Router()}),
+    document.getElementById("marathon")
+  );
+
+  Backbone.history.start();
 });

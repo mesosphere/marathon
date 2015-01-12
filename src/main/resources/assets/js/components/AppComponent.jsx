@@ -7,7 +7,7 @@ define([
 
   return React.createClass({
     onClick: function() {
-      this.props.onClick(this.props.model);
+      window.location.hash = 'app' + this.props.model.get("id");
     },
 
     render: function() {

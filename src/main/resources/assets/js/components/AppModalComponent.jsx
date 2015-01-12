@@ -15,9 +15,9 @@ define([
     TaskViewComponent, TogglableTabsComponent) {
   "use strict";
 
-  var tabs = [
-    {id: "tasks", text: "Tasks"},
-    {id: "configuration", text: "Configuration"}
+  var tabsTemplate: [
+      {id: "app:appid", text: "Tasks"},
+      {id: "app:appid/configuration", text: "Configuration"}
   ];
 
   return React.createClass({
@@ -37,15 +37,42 @@ define([
       rollBackApp: React.PropTypes.func.isRequired,
       scaleApp: React.PropTypes.func.isRequired,
       suspendApp: React.PropTypes.func.isRequired,
-      tasksFetchState: React.PropTypes.number.isRequired
+      tasksFetchState: React.PropTypes.number.isRequired,
+      router: React.PropTypes.object.isRequired
     },
 
     getInitialState: function() {
+      var appid = this.props.model.get('id');
+
+      this.tabs = [];
+
+      _.each(this.tabsTemplate, function(tab) {
+        this.tabs.push({
+          id: tab.id.replace(":appid", appid),
+          text: tab.text
+        });
+      }.bind(this));
+
       return {
         activeViewIndex: 0,
-        activeTabId: tabs[0].id,
+        activeTabId: this.tabs[0].id,
         selectedTasks: {}
       };
+    },
+
+    componentDidMount: function() {
+      this.setState({
+        activeTabId: this.props.router.current()
+      });
+
+      this.props.router.on("route", function (route, params) {
+        if(route === "app" && params) {
+          var tabname = "app/" + params[0] + ((params[1]) ? "/" + params[1] : "");
+          this.setState({
+            activeTabId: tabname
+          });
+        }
+      }.bind(this));
     },
 
     destroy: function() {
@@ -55,12 +82,6 @@ define([
     handleDestroyApp: function() {
       this.props.destroyApp();
       this.destroy();
-    },
-
-    onTabClick: function(id) {
-      this.setState({
-        activeTabId: id
-      });
     },
 
     toggleAllTasks: function() {
@@ -171,9 +192,8 @@ define([
           </div>
           <TogglableTabsComponent className="modal-body modal-body-no-top"
               activeTabId={this.state.activeTabId}
-              onTabClick={this.onTabClick}
-              tabs={tabs} >
-            <TabPaneComponent id="tasks">
+              tabs={this.tabs} >
+            <TabPaneComponent id={"app"+model.get("id")}>
               <StackedViewComponent
                 activeViewIndex={this.state.activeViewIndex}>
                 <TaskViewComponent
@@ -194,7 +214,7 @@ define([
               </StackedViewComponent>
             </TabPaneComponent>
             <TabPaneComponent
-              id="configuration"
+              id={"app"+model.get("id")+"/configuration"}
               onActivate={this.props.fetchAppVersions} >
               <AppVersionListComponent
                 app={model}

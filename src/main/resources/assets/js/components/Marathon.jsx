@@ -1,10 +1,11 @@
 /** @jsx React.DOM */
 
 define([
+  "Backbone",
   "mousetrap",
   "React",
-  "ReactRouter",
   "Underscore",
+  "underscore.string",
   "constants/States",
   "models/AppCollection",
   "models/DeploymentCollection",
@@ -16,14 +17,12 @@ define([
   "jsx!components/TabPaneComponent",
   "jsx!components/TogglableTabsComponent",
   "jsx!components/NavTabsComponent"
-], function(Mousetrap, React, Router, _, States, AppCollection, DeploymentCollection,
+], function(Backbone, Mousetrap, React, _, _str, States, AppCollection, DeploymentCollection,
     AppListComponent, AboutModalComponent, AppModalComponent,
     DeploymentsListComponent, NewAppModalComponent, TabPaneComponent,
     TogglableTabsComponent, NavTabsComponent) {
 
   "use strict";
-
-  var { Route } = Router;
 
   var UPDATE_INTERVAL = 5000;
 
@@ -32,8 +31,12 @@ define([
     {id: "deployments", text: "Deployments"}
   ];
 
-  var Marathon = React.createClass({
+  return React.createClass({
     displayName: "Marathon",
+
+    propTypes: {
+      router: React.PropTypes.object.isRequired
+    },
 
     getInitialState: function() {
       return {
@@ -46,11 +49,61 @@ define([
         deploymentsFetchState: States.STATE_LOADING,
         fetchState: States.STATE_LOADING,
         modalClass: null,
+        route: null,
         tasksFetchState: States.STATE_LOADING
       };
     },
 
     componentDidMount: function() {
+      var router = this.props.router;
+
+      // set route in state for all pages
+      router.on("route", function (route, params) {
+        console.log("ROUTE", route, params);
+
+        var routeName = _.str.capitalize(route);
+
+        function callRoute(routeFunc) {
+          if(this.state.fetchState === States.STATE_LOADING) {
+            setTimeout(callRoute.bind(this, routeFunc), 300);
+          } else {
+            routeFunc();
+          }
+        };
+
+        var destroyModal = function() {
+          if(this.state.modalClass) {
+            this.modalDestroy();
+          }
+        }.bind(this);
+
+        if(route === "about" || route === "app") {
+          callRoute.call(this, this["route" + routeName].bind(this, params));
+        } else if(route === "apps") {
+          destroyModal();
+          this.onTabClick("apps");
+        } else if(route === "deployments") {
+          destroyModal();
+          this.onTabClick("deployments");
+        } else {
+          destroyModal();
+          this.setState({
+            route: {
+              name: route,
+              params: params
+            }
+          });
+        }
+
+      }.bind(this));
+
+      // set state for specific page
+      router.on("route:objects", function (objectId) {
+        if (objectId != null) {
+          this.setState({ selectedObject: new ObjectModel({ uuid: objectId }) });
+        }
+      }.bind(this));
+
       // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
       // input elements so the new app modal can be closed via "esc".
       var mousetrapOriginalStopCallback = Mousetrap.stopCallback;
@@ -88,7 +141,7 @@ define([
       }.bind(this));
 
       Mousetrap.bind("shift+,", function() {
-        this.showAboutModal();
+        this.routeAbout();
       }.bind(this));
 
       this.setPollResource(this.fetchApps);
@@ -174,6 +227,13 @@ define([
     },
 
     handleModalDestroy: function() {
+      if(Backbone.history.history.length > 1) {
+        Backbone.history.history.back();
+        return;
+      }
+    },
+
+    modalDestroy: function() {
       this.setState({
         activeApp: null,
         modalClass: null,
@@ -344,6 +404,7 @@ define([
       }
     },
 
+    /*
     showAboutModal: function(event) {
       if (event != null) event.preventDefault();
 
@@ -355,9 +416,27 @@ define([
         modalClass: AboutModalComponent
       });
     },
+    */
 
-    showAppModal: function(app) {
+    routeAbout: function () {
       if (this.state.modalClass !== null) {
+        return;
+      }
+
+      this.setState({
+        modalClass: AboutModalComponent
+      });
+    },
+
+    routeApp: function(params) {
+      if (this.state.modalClass !== null) {
+        return;
+      }
+
+      var app = this.state.collection.get("/"+params[0]);
+
+      if(!app) {
+        window.location.hash = "#";
         return;
       }
 
@@ -391,6 +470,17 @@ define([
 
     render: function() {
       var modal;
+      var component;
+      var route = this.state.route;
+
+/*
+      if (route != null) {
+        // call route function
+        var routeName = _.str.capitalize(route.name);
+        // call component function dynamically based on route name
+        component = this["route" + routeName].apply(this, route.params);
+      }
+*/
 
       /* jshint trailing:false, quotmark:false, newcap:false */
       if (this.state.modalClass === AppModalComponent) {
@@ -410,6 +500,7 @@ define([
             scaleApp={this.scaleApp}
             suspendApp={this.suspendApp}
             tasksFetchState={this.state.tasksFetchState}
+            router={this.props.router}
             ref="modal" />
         );
       } else if (this.state.modalClass === NewAppModalComponent) {
@@ -421,8 +512,8 @@ define([
             ref="modal" />
         );
       } else if (this.state.modalClass === AboutModalComponent) {
-        modal = (
-          <AboutModalComponent
+          modal = (
+            <AboutModalComponent
             onDestroy={this.handleModalDestroy}
             ref="modal" />
         );
@@ -440,11 +531,10 @@ define([
               <NavTabsComponent
                 activeTabId={this.state.activeTabId}
                 className="navbar-nav nav-tabs-unbordered"
-                onTabClick={this.onTabClick}
                 tabs={tabs} />
               <ul className="nav navbar-nav navbar-right">
                 <li>
-                  <a href="#/about" onClick={this.showAboutModal}>
+                  <a href="#about">
                     About
                   </a>
                 </li>
@@ -465,7 +555,6 @@ define([
                 </button>
                 <AppListComponent
                   collection={this.state.collection}
-                  onSelectApp={this.showAppModal}
                   fetchState={this.state.fetchState}
                   ref="appList" />
               </TabPaneComponent>
@@ -480,20 +569,9 @@ define([
             </TogglableTabsComponent>
           </div>
           {modal}
+          {component}
         </div>
       );
     }
   });
-
-  return function() {
-    var routes = (
-      <Route handler={Marathon}>
-
-      </Route>
-    );
-
-    Router.run(routes, function (Handler) {
-      React.render(<Handler/>, document.getElementById('marathon'));
-    });
-  };
 });

@@ -14,16 +14,11 @@ define([
     mixins: [BackboneMixin],
 
     propTypes: {
-      collection: React.PropTypes.object.isRequired,
-      onSelectApp: React.PropTypes.func.isRequired
+      collection: React.PropTypes.object.isRequired
     },
 
     getResource: function() {
       return this.props.collection;
-    },
-
-    onClickApp: function(app) {
-      this.props.onSelectApp(app);
     },
 
     sortCollectionBy: function(comparator) {
