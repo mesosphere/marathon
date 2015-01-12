@@ -118,7 +118,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       stopActor(schedulerActor)
     }
   }
-  
+
   test("ReconcileTasks") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
