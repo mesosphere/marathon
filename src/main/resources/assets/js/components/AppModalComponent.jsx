@@ -128,6 +128,11 @@ define([
       }
     },
 
+    saveAppVersion: function() {
+      // this.props.model.set('cmd', )
+      // this.props.model.save();
+    },
+
     render: function() {
       var model = this.props.model;
 
@@ -199,6 +204,7 @@ define([
               <AppVersionListComponent
                 app={model}
                 fetchAppVersions={this.props.fetchAppVersions}
+                saveAppVersion={this.saveAppVersion}
                 fetchState={this.props.appVersionsFetchState}
                 onRollback={this.props.rollBackApp} />
             </TabPaneComponent>

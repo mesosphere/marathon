@@ -578,6 +578,11 @@ fieldset[disabled] .btn-info.active {
   background: transparent;
 }
 
+.dl-horizontal input {
+  color: #000;
+  margin-left: 18px;
+}
+
 @media (min-width: 768px) {
   .dl-horizontal-lg dt {
     width: 190px;

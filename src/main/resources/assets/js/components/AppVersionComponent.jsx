@@ -24,6 +24,7 @@ define([
         React.PropTypes.instanceOf(App).isRequired,
         React.PropTypes.instanceOf(AppVersion).isRequired
       ]),
+      editApp: React.PropTypes.bool,
       onRollback: React.PropTypes.func
     },
 
@@ -39,7 +40,10 @@ define([
 
       var cmdNode = (appVersion.get("cmd") == null) ?
         <UNSPECIFIED_NODE /> :
-        <dd>{appVersion.get("cmd")}</dd>;
+        (this.props.editApp) ?
+          <input type="text" ref="cmd" name="cmd" defaultValue={appVersion.get("cmd")} editable="true" /> :
+          <dd>{appVersion.get("cmd")}</dd>;
+
       var constraintsNode = (appVersion.get("constraints").length < 1) ?
         <UNSPECIFIED_NODE /> :
         appVersion.get("constraints").map(function(c) {
@@ -114,19 +118,6 @@ define([
             <dt>Version</dt>
             <dd>{appVersion.id}</dd>
           </dl>
-          {
-            this.props.currentVersion ?
-              null :
-              <div className="text-right">
-                <form action={this.props.app.url()} method="post" onSubmit={this.handleSubmit}>
-                    <input type="hidden" name="_method" value="put" />
-                    <input type="hidden" name="version" value={appVersion.get("version")} />
-                    <button type="submit" className="btn btn-sm btn-default">
-                      Apply these settings
-                    </button>
-                </form>
-              </div>
-          }
         </div>
       );
     }

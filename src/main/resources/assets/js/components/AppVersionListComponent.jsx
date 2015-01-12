@@ -22,6 +22,7 @@ define([
     propTypes: {
       app: React.PropTypes.instanceOf(App).isRequired,
       fetchAppVersions: React.PropTypes.func.isRequired,
+      saveAppVersion: React.PropTypes.func.isRequired,
       onRollback: React.PropTypes.func
     },
 
@@ -44,6 +45,20 @@ define([
       this.props.fetchAppVersions();
     },
 
+    handleEdit: function() {
+      this.state.editApp = true;
+      this.props.fetchAppVersions();
+    },
+
+    handleCancel: function() {
+      this.state.editApp = null;
+      this.props.fetchAppVersions();
+    },
+
+    handleSave: function() {
+      this.props.saveAppVersion();
+    },
+
     handlePageChange: function(pageNum) {
       this.setState({currentPage: pageNum});
     },
@@ -55,7 +70,8 @@ define([
       var itemsPerPage = this.state.itemsPerPage;
       var currentPage = this.state.currentPage;
 
-      var tableContents;
+      var tableContents,
+          buttons;
 
       if (this.props.fetchState === States.STATE_LOADING) {
         tableContents = <p className="text-muted text-center">Loading versions...</p>;
@@ -109,18 +125,40 @@ define([
         </div> :
         null;
 
-      return (
-        <div>
+      if(this.state.editApp) {
+        buttons = (
+          <h5>
+            Edit Version
+            <button className="btn btn-sm btn-info pull-right" onClick={this.handleSave}>
+              Save
+            </button>
+            <button className="btn btn-sm btn-info pull-right" onClick={this.handleCancel}>
+              Cancel
+            </button>
+          </h5>
+        );
+      } else {
+        buttons = (
           <h5>
             Current Version
             <button className="btn btn-sm btn-info pull-right" onClick={this.handleRefresh}>
               ↻ Refresh
             </button>
+            <button className="btn btn-sm btn-info pull-right" onClick={this.handleEdit}>
+              Edit
+            </button>
           </h5>
+        );
+      }
+
+      return (
+        <div>
+          {buttons}
           <AppVersionComponent
               app={this.props.app}
               appVersion={this.props.app.getCurrentVersion()}
-              currentVersion={true} />
+              currentVersion={true}
+              editApp={this.state.editApp} />
             {versionTable}
         </div>
       );
