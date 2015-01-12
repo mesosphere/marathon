@@ -1,20 +1,16 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "models/App",
-  "models/AppVersion",
-  "mixins/BackboneMixin",
-  "jsx!components/AppVersionComponent",
-  "jsx!components/AppVersionListItemComponent",
-  "jsx!components/PagedContentComponent",
-  "jsx!components/PagedNavComponent"
-], function(React, States, App, AppVersion, BackboneMixin, AppVersionComponent,
-    AppVersionListItemComponent, PagedContentComponent, PagedNavComponent) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react");
+var States = require("../constants/States");
+var App = require("../models/App");
+var BackboneMixin = require("../mixins/BackboneMixin");
+var AppVersionComponent = require("../components/AppVersionComponent");
+var AppVersionListItemComponent = require("../components/AppVersionListItemComponent");
+var PagedContentComponent = require("../components/PagedContentComponent");
+var PagedNavComponent = require("../components/PagedNavComponent");
+
+module.exports = React.createClass({
     displayName: "AppVersionListComponent",
 
     mixins: [BackboneMixin],
@@ -126,4 +122,3 @@ define([
       );
     }
   });
-});

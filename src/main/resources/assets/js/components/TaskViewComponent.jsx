@@ -1,13 +1,11 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "jsx!components/PagedNavComponent",
-  "jsx!components/TaskListComponent"
-], function(React, PagedNavComponent, TaskListComponent) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react");
+var PagedNavComponent = require("../components/PagedNavComponent");
+var TaskListComponent = require("../components/TaskListComponent");
+
+module.exports = React.createClass({
     displayName: "TaskViewComponent",
 
     propTypes: {
@@ -164,4 +162,3 @@ define([
       );
     }
   });
-});

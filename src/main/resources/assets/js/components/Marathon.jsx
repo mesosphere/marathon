@@ -1,26 +1,20 @@
 /** @jsx React.DOM */
 
-define([
-  "mousetrap",
-  "React",
-  "Underscore",
-  "constants/States",
-  "models/AppCollection",
-  "models/DeploymentCollection",
-  "jsx!components/AppListComponent",
-  "jsx!components/modals/AboutModalComponent",
-  "jsx!components/AppModalComponent",
-  "jsx!components/DeploymentsListComponent",
-  "jsx!components/NewAppModalComponent",
-  "jsx!components/TabPaneComponent",
-  "jsx!components/TogglableTabsComponent",
-  "jsx!components/NavTabsComponent"
-], function(Mousetrap, React, _, States, AppCollection, DeploymentCollection,
-    AppListComponent, AboutModalComponent, AppModalComponent,
-    DeploymentsListComponent, NewAppModalComponent, TabPaneComponent,
-    TogglableTabsComponent, NavTabsComponent) {
 
-  "use strict";
+var Mousetrap = require("mousetrap");
+var React = require("react");
+var States = require("../constants/States");
+var AppCollection = require("../models/AppCollection");
+var DeploymentCollection = require("../models/DeploymentCollection");
+var AppListComponent = require("../components/AppListComponent");
+var AboutModalComponent = require("../components/modals/AboutModalComponent");
+var AppModalComponent = require("../components/AppModalComponent");
+var DeploymentsListComponent = require("../components/DeploymentsListComponent");
+var NewAppModalComponent = require("../components/NewAppModalComponent");
+var TabPaneComponent = require("../components/TabPaneComponent");
+var TogglableTabsComponent = require("../components/TogglableTabsComponent");
+var NavTabsComponent = require("../components/NavTabsComponent");
+
 
   var UPDATE_INTERVAL = 5000;
 
@@ -29,7 +23,7 @@ define([
     {id: "deployments", text: "Deployments"}
   ];
 
-  return React.createClass({
+module.exports = React.createClass({
     displayName: "Marathon",
 
     getInitialState: function() {
@@ -482,4 +476,3 @@ define([
       );
     }
   });
-});

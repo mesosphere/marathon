@@ -1,10 +1,8 @@
- define([
-  "models/App",
-  "models/SortableCollection"
-], function(App, SortableCollection) {
-  "use strict";
 
-  return SortableCollection.extend({
+var App = require("../models/App");
+var SortableCollection = require("../models/SortableCollection");
+
+module.exports = SortableCollection.extend({
     model: App,
 
     initialize: function(models, options) {
@@ -19,4 +17,3 @@
 
     url: "/v2/apps"
   });
-});

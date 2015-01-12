@@ -1,12 +1,10 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "jsx!components/TimeFieldComponent"
-], function(React, TimeFieldComponent) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react");
+var TimeFieldComponent = require("../components/TimeFieldComponent");
+
+module.exports = React.createClass({
     displayName: "TaskHealthComponent",
     propTypes: {
       task: React.PropTypes.object.isRequired
@@ -69,5 +67,4 @@ define([
       );
     }
   });
-});
 

@@ -1,10 +1,8 @@
-define([
-  "models/SortableCollection",
-  "models/Task"
-], function(SortableCollection, Task) {
-  "use strict";
 
-  return SortableCollection.extend({
+var SortableCollection = require("../models/SortableCollection");
+var Task = require("../models/Task");
+
+module.exports = SortableCollection.extend({
     model: Task,
 
     initialize: function(models, options) {
@@ -21,4 +19,3 @@ define([
       return "/v2/apps/" + this.options.appId;
     }
   });
-});

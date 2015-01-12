@@ -1,13 +1,11 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+
+var React = require("react");
 
   function noop() {}
 
-  return React.createClass({
+module.exports = React.createClass({
     name: "NavTabsComponent",
 
     propTypes: {
@@ -60,4 +58,3 @@ define([
       );
     }
   });
-});

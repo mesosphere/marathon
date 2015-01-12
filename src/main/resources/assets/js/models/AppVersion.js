@@ -1,7 +1,5 @@
-define([
-  "Backbone"
-], function(Backbone) {
-  "use strict";
+
+var Backbone = require("backbone");
 
   var AppVersion = Backbone.Model.extend({
     idAttribute: "version",
@@ -19,5 +17,4 @@ define([
     }
   });
 
-  return AppVersion;
-});
+module.exports = AppVersion;

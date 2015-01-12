@@ -1,11 +1,8 @@
-define([
-  "Backbone"
-], function(Backbone) {
-  "use strict";
 
-  return Backbone.Model.extend({
+var Backbone = require("backbone");
+
+module.exports = Backbone.Model.extend({
     url: function() {
       return "/v2/info";
     }
   });
-});

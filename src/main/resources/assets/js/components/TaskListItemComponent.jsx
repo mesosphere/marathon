@@ -1,10 +1,8 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "models/Task"
-], function(React, Task) {
-  "use strict";
+
+var React = require("react");
+var Task = require("../models/Task");
 
   function buildHref(host, port) {
     return "http://" + host + ":" + port;
@@ -43,7 +41,7 @@ define([
     return taskAnchors;
   }
 
-  return React.createClass({
+module.exports = React.createClass({
     displayName: "TaskListItemComponent",
 
     propTypes: {
@@ -146,4 +144,3 @@ define([
     }
 
   });
-});

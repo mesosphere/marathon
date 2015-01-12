@@ -1,11 +1,9 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react");
+
+module.exports = React.createClass({
     displayName: "PagedContentComponent",
 
     propTypes: {
@@ -44,4 +42,3 @@ define([
       );
     }
   });
-});

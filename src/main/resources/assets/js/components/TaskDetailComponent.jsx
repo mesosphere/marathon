@@ -1,19 +1,15 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "mixins/BackboneMixin",
-  "constants/States",
-  "models/Task",
-  "jsx!components/Marathon",
-  "jsx!components/TimeFieldComponent",
-  "jsx!components/TaskHealthComponent"
-], function(React, BackboneMixin, States, Task, Marathon,
-  TimeFieldComponent, TaskHealthComponent) {
-  "use strict";
+
+var React = require("react");
+var BackboneMixin = require("../mixins/BackboneMixin");
+var States = require("../constants/States");
+var Task = require("../models/Task");
+var TimeFieldComponent = require("../components/TimeFieldComponent");
+var TaskHealthComponent = require("../components/TaskHealthComponent");
 
 
-  return React.createClass({
+module.exports = React.createClass({
     displayName: "TaskDetailComponent",
 
     mixins: [BackboneMixin],
@@ -119,4 +115,3 @@ define([
     }
 
   });
-});

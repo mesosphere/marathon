@@ -1,11 +1,9 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react");
+
+module.exports = React.createClass({
     displayName: "StackedViewComponent",
     render: function() {
       /* jshint trailing:false, quotmark:false, newcap:false */
@@ -16,4 +14,3 @@ define([
       );
     }
   });
-});

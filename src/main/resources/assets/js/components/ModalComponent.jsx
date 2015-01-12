@@ -1,16 +1,14 @@
 /** @jsx React.DOM */
 
-define([
-  "jquery",
-  "React"
-], function($, React) {
-  "use strict";
+
+var $ = require("jquery");
+var React = require("react");
 
   function modalSizeClassName(size) {
     return (size == null) ? "" : "modal-" + size;
   }
 
-  return React.createClass({
+module.exports = React.createClass({
     displayName: "ModalComponent",
     propTypes: {
       onDestroy: React.PropTypes.func,
@@ -83,4 +81,3 @@ define([
       );
     }
   });
-});

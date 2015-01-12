@@ -1,26 +1,21 @@
 /** @jsx React.DOM */
 
-define([
-  "Underscore",
-  "React",
-  "jsx!components/AppVersionListComponent",
-  "jsx!components/ModalComponent",
-  "jsx!components/StackedViewComponent",
-  "jsx!components/TabPaneComponent",
-  "jsx!components/TaskDetailComponent",
-  "jsx!components/TaskViewComponent",
-  "jsx!components/TogglableTabsComponent"
-], function(_, React, AppVersionListComponent, ModalComponent,
-    StackedViewComponent, TabPaneComponent, TaskDetailComponent,
-    TaskViewComponent, TogglableTabsComponent) {
-  "use strict";
+
+var React = require("react");
+var AppVersionListComponent = require("../components/AppVersionListComponent");
+var ModalComponent = require("../components/ModalComponent");
+var StackedViewComponent = require("../components/StackedViewComponent");
+var TabPaneComponent = require("../components/TabPaneComponent");
+var TaskDetailComponent = require("../components/TaskDetailComponent");
+var TaskViewComponent = require("../components/TaskViewComponent");
+var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 
   var tabs = [
     {id: "tasks", text: "Tasks"},
     {id: "configuration", text: "Configuration"}
   ];
 
-  return React.createClass({
+module.exports = React.createClass({
     displayName: "AppModalComponent",
 
     propTypes: {
@@ -207,4 +202,3 @@ define([
       );
     }
   });
-});

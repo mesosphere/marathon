@@ -1,14 +1,12 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "jsx!components/AppComponent",
-  "mixins/BackboneMixin"
-], function(React, States, AppComponent, BackboneMixin) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react");
+var States = require("../constants/States");
+var AppComponent = require("../components/AppComponent");
+var BackboneMixin = require("../mixins/BackboneMixin");
+
+module.exports = React.createClass({
     displayName: "AppListComponent",
 
     mixins: [BackboneMixin],
@@ -125,4 +123,3 @@ define([
       );
     }
   });
-});

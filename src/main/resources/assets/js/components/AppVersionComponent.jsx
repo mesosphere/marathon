@@ -1,12 +1,10 @@
 /** @jsx React.DOM */
 
-define([
-  "Underscore",
-  "React",
-  "models/App",
-  "models/AppVersion"
-], function(_, React, App, AppVersion) {
-  "use strict";
+
+var _ = require("underscore");
+var React = require("react");
+var App = require("../models/App");
+var AppVersion = require("../models/AppVersion");
 
   var UNSPECIFIED_NODE =
     React.createClass({
@@ -15,7 +13,7 @@ define([
       }
     });
 
-  return React.createClass({
+module.exports = React.createClass({
     displayName: "AppVersionComponent",
 
     propTypes: {
@@ -131,4 +129,3 @@ define([
       );
     }
   });
-});

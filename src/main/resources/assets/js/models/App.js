@@ -1,12 +1,10 @@
-define([
-  "Backbone",
-  "Underscore",
-  "models/AppVersion",
-  "models/AppVersionCollection",
-  "models/Task",
-  "models/TaskCollection"
-], function(Backbone, _, AppVersion, AppVersionCollection, Task, TaskCollection) {
-  "use strict";
+
+var Backbone = require("backbone");
+var _ = require("underscore");
+var AppVersion = require("../models/AppVersion");
+var AppVersionCollection = require("../models/AppVersionCollection");
+var Task = require("../models/Task");
+var TaskCollection = require("../models/TaskCollection");
 
   function ValidationError(attribute, message) {
     this.attribute = attribute;
@@ -55,7 +53,7 @@ define([
     return (_.indexOf(VALID_CONSTRAINTS, operator.toLowerCase()) !== -1);
   }
 
-  return Backbone.Model.extend({
+module.exports = Backbone.Model.extend({
     defaults: function() {
       return {
         cmd: null,
@@ -283,4 +281,3 @@ define([
   }, {
     VALID_EXECUTOR_PATTERN: VALID_EXECUTOR_PATTERN
   });
-});

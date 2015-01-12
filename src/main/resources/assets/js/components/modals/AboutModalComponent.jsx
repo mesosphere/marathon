@@ -1,13 +1,11 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "models/Info",
-  "mixins/BackboneMixin",
-  "jsx!components/ModalComponent",
-  "jsx!components/ObjectDlComponent"
-], function(React, Info, BackboneMixin, ModalComponent, ObjectDlComponent) {
-  "use strict";
+
+var React = require("react");
+var Info = require("../../models/Info");
+var BackboneMixin = require("../../mixins/BackboneMixin");
+var ModalComponent = require("../components/../ModalComponent");
+var ObjectDlComponent = require("../components/../ObjectDlComponent");
 
   /* jshint trailing:false, quotmark:false, newcap:false */
   var UNSPECIFIED_NODE = React.createClass({
@@ -16,7 +14,7 @@ define([
     }
   });
 
-  return React.createClass({
+module.exports = React.createClass({
     mixins: [BackboneMixin],
 
     getInitialState: function() {
@@ -83,4 +81,3 @@ define([
       );
     }
   });
-});
