@@ -95,7 +95,7 @@ class MarathonSchedulerActor(
     case RecoverDeployments(deployments) =>
       deployments.foreach { plan =>
         log.info(s"Recovering deployment: $plan")
-        deploy(Actor.noSender, Deploy(plan, force = false), plan, blocking = false)
+        deploy(context.system.deadLetters, Deploy(plan, force = false), plan, blocking = false)
       }
 
       log.info("Scheduler actor ready")
@@ -129,7 +129,7 @@ class MarathonSchedulerActor(
       performAsyncWithLockFor(appId, origSender, cmd, blocking = false) {
         val res = scheduler.scale(driver, appId)
 
-        if (origSender != Actor.noSender)
+        if (origSender != context.system.deadLetters)
           res.sendAnswer(origSender, cmd)
         else
           res
@@ -189,17 +189,16 @@ class MarathonSchedulerActor(
 
     def performWithLock(lockFn: Set[Semaphore] => Set[Semaphore]): Future[Unit] = {
       val locks = appIds.map(appLocks.get) // needed locks for all applications
-      Future(blocking(lockFn(locks))).flatMap { acquired => // acquired locks, fetched in a future
-        if (acquired.size == locks.size) {
-          log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
-          f.andThen {
-            case _ =>
-              log.debug(s"Releasing locks for $appIds")
-              acquired.foreach(_.release())
-          }.map { _ => () }
-        }
-        else lockNotAvailable(acquired)
+      val acquired = lockFn(locks)
+      if (acquired.size == locks.size) {
+        log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
+        f.andThen {
+          case _ =>
+            log.debug(s"Releasing locks for $appIds")
+            acquired.foreach(_.release())
+        }.map { _ => () }
       }
+      else lockNotAvailable(acquired)
     }
 
     def lockNotAvailable(acquiredLocks: Set[Semaphore]): Future[Unit] = Future {
@@ -223,7 +222,14 @@ class MarathonSchedulerActor(
 
     def acquireBlocking(locks: Set[Semaphore]): Set[Semaphore] = locks.map{ s => s.acquire(); s }
     def acquireIfPossible(locks: Set[Semaphore]): Set[Semaphore] = locks.takeWhile(_.tryAcquire())
-    performWithLock(if (isBlocking) acquireBlocking else acquireIfPossible)
+
+    if (isBlocking) {
+      // TODO: there is still a race condition in this line, we should try to find a better solution for this
+      Future(performWithLock(acquireBlocking)).flatMap(identity)
+    }
+    else {
+      performWithLock(acquireIfPossible)
+    }
   }
 
   /**

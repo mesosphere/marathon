@@ -218,7 +218,9 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       val Some(taskFailureEvent) = TaskFailure.FromMesosStatusUpdateEvent(statusUpdateEvent)
 
-      verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent)
+      awaitAssert {
+        verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent)
+      }
 
       verify(repo, times(3)).store(app.copy(instances = 0))
     }
@@ -333,6 +335,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(deploymentRepo.expunge(any())).thenReturn(Future.successful(Seq(true)))
 
     when(deploymentRepo.all()).thenReturn(Future.successful(Seq(plan)))
+    when(deploymentRepo.store(plan)).thenReturn(Future.successful(plan))
 
     val schedulerActor = system.actorOf(Props(
       classOf[MarathonSchedulerActor],
