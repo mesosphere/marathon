@@ -3,13 +3,12 @@ require.config({
     extension: "jsx"
   },
   paths: {
-    "domReady": "libs/domReady",
     "Backbone": "libs/backbone-min",
     "jsx": "libs/jsx-0.0.2",
     "JSXTransformer": "libs/JSXTransformer-0.12.2.max",
     "jquery": "libs/jquery-2.0.3",
     "mousetrap": "libs/mousetrap-1.4.6",
-    "React": "libs/react-with-addons-0.12.2.max",
+    "React": "libs/react-with-addons-0.12.2",
     "Router": "models/Router",
     "Underscore": "libs/underscore-min",
     "underscore.string": "libs/underscore.string.min"

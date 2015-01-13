@@ -12,15 +12,21 @@ define([
       "apps": "apps",
       "deployments": "deployments",
       "app/:appid(/:view)": "app",
-      "task(/:taskid)": "task",
+      "newapp": "newapp",
       "about": "about"
     },
 
     apps: noop,
     app: noop,
+    newapp: noop,
     deployments: noop,
     task: noop,
     about: noop,
+
+    lastRoute: {
+      route: null,
+      params: null
+    },
 
     current: function() { return Backbone.history.fragment; }
   });

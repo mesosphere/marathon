@@ -60,26 +60,28 @@ define([
       };
     },
 
-    componentDidMount: function() {
-      this.setState({
-        activeTabId: this.props.router.current()
-      });
-
-      this.props.router.on("route", function (route, params) {
-        if(route === "app" && params) {
-          console.log("ATI", this.state.activeTabId);
-          var tabname = "app/" + params[0] + ((params[1]) ? "/" + params[1] : "");
+    componentWillMount: function() {
+      this.props.router.on("route:app", function (appid, tab) {
+        if(appid) {
           this.setState({
-            activeTabId: tabname
+            activeTabId: "app/" + appid + (tab ? "/" + tab : "")
           });
-          console.log("ATI 2", this.state.activeTabId);
         }
       }.bind(this));
     },
 
+    componentDidMount: function() {
+      this.setState({
+        activeTabId: this.props.router.current()
+      });
+    },
+
+    componentWillUnmount: function() {
+      this.props.router.off("route:app");
+    },
+
     destroy: function() {
       this.refs.modalComponent.destroy();
-      console.log("Destroy");
     },
 
     handleDestroyApp: function() {
