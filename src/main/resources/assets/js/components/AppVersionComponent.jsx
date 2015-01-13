@@ -4,16 +4,10 @@ define([
   "Underscore",
   "React",
   "models/App",
-  "models/AppVersion"
-], function(_, React, App, AppVersion) {
+  "models/AppVersion",
+  "jsx!components/EditableValueLabelComponent"
+], function(_, React, App, AppVersion, EditableValueLabelComponent) {
   "use strict";
-
-  var UNSPECIFIED_NODE =
-    React.createClass({
-      render: function() {
-        return <dd className="text-muted">Unspecified</dd>;
-      }
-    });
 
   return React.createClass({
     displayName: "AppVersionComponent",
@@ -27,6 +21,12 @@ define([
       onRollback: React.PropTypes.func
     },
 
+    getInitialState: function() {
+      return {
+        errors: []
+      };
+    },
+
     handleSubmit: function(event) {
       if (_.isFunction(this.props.onRollback)) {
         event.preventDefault();
@@ -34,85 +34,154 @@ define([
       }
     },
 
+    componentWillMount: function() {
+      this.props.app.on("invalid", this.handleInvalid);
+    },
+
+    componentWillUnmount: function() {
+      this.props.app.off("invalid", this.handleInvalid);
+    },
+
+    handleInvalid: function() {
+      this.setState({
+        errors: this.props.app.validationError
+      });
+    },
+
     render: function() {
-      var appVersion = this.props.appVersion;
+      var fields = [
+        {
+          attribute: "cmd",
+          label: "Command",
+          type: "textarea"
+        },
+        {
+          attribute: "constraints",
+          label: "Constraints",
+          type: "text",
 
-      var cmdNode = (appVersion.get("cmd") == null) ?
-        <UNSPECIFIED_NODE /> :
-        <dd>{appVersion.get("cmd")}</dd>;
-      var constraintsNode = (appVersion.get("constraints").length < 1) ?
-        <UNSPECIFIED_NODE /> :
-        appVersion.get("constraints").map(function(c) {
+          // turns out, this whole converter idea was no good at all. there
+          // are a few annoying effects because of this implementation. instead
+          // of preparing the data of the model on every change / render through
+          // this method, it should have been implemented as in the
+          // NewAppModalComponent or maybe even in the model itself but this is
+          // clearly not working
+          converter: {
+            forModel: function(value) {
+              return value;
+            },
+            forRender: function(value) {
+              return value;
+            }
+          }
+        },
+        {
+          attribute: "container",
+          label: "Container",
+          type: "text"
+        },
+        {
+          attribute: "env",
+          label: "Environment",
+          type: "textarea",
+          converter: {
+            forModel: function(value) {
+              return value.split(",").reduce(function(envVariables, envValue) {
+                var split = envValue.split("=");
 
-          // Only include constraint parts if they are not empty Strings. For
-          // example, a hostname uniqueness constraint looks like:
-          //
-          //     ["hostname", "UNIQUE", ""]
-          //
-          // it should print "hostname:UNIQUE" instead of "hostname:UNIQUE:", no
-          // trailing colon.
-          return (
-            <dd key={c}>
-              {c.filter(function(s) { return s !== ""; }).join(":")}
-            </dd>
-          );
-        });
-      var containerNode = (appVersion.get("container") == null) ?
-        <UNSPECIFIED_NODE /> :
-        <dd>{JSON.stringify(appVersion.get("container"))}</dd>;
-      var envNode = (Object.keys(appVersion.get("env")).length === 0) ?
-        <UNSPECIFIED_NODE /> :
+                envVariables[split[0]] = split[1] || "";
+                return envVariables;
+              }, {});
+            },
+            forRender: function(envVariables) {
+              if (typeof envVariables === "string") return envVariables;
 
-        // Print environment variables as key value pairs like "key=value"
-        Object.keys(appVersion.get("env")).map(function(k) {
-          return <dd key={k}>{k + "=" + appVersion.get("env")[k]}</dd>;
-        });
-      var executorNode = (appVersion.get("executor") === "") ?
-        <UNSPECIFIED_NODE /> :
-        <dd>{appVersion.get("executor")}</dd>;
-      var diskNode = (appVersion.get("disk") == null) ?
-        <UNSPECIFIED_NODE /> :
-        <dd>{appVersion.get("disk")}</dd>;
-      var portsNode = (appVersion.get("ports").length === 0 ) ?
-        <UNSPECIFIED_NODE /> :
-        <dd>{appVersion.get("ports").join(",")}</dd>;
-      var taskRateLimitNode = (appVersion.get("taskRateLimit") == null) ?
-        <UNSPECIFIED_NODE /> :
-        <dd>{appVersion.get("taskRateLimit")}</dd>;
-      var urisNode = (appVersion.get("uris").length === 0) ?
-        <UNSPECIFIED_NODE /> :
-        appVersion.get("uris").map(function(u) {
-          return <dd key={u}>{u}</dd>;
-        });
+              return Object.keys(envVariables).map(function(envVariable) {
+                return envVariable + "=" + envVariables[envVariable];
+              }).join(",");
+            }
+          }
+        },
+        {
+          attribute: "executor",
+          label: "Executor",
+          type: "text"
+        },
+        {
+          attribute: "instances",
+          label: "Instances",
+          type: "number"
+        },
+        {
+          attribute: "disk",
+          label: "Disk Space (MB)",
+          type: "number"
+        },
+        {
+          attribute: "memory",
+          label: "Memory (MB)",
+          type: "number"
+        },
+        {
+          attribute: "ports",
+          label: "Ports",
+          type: "text",
+          converter: {
+            forModel: function(value) {
+              return value.split(",").map(function (port) {
+                var number = parseInt(port, 10);
+                if (isNaN(number)) return "";
+                return number;
+              });
+            },
+            forRender: function(value) {
+              return value.join(", ");
+            }
+          }
+        },
+        {
+          attribute: "taskRateLimit",
+          label: "Task Rate Limit",
+          type: "number"
+        },
+        {
+          attribute: "uris",
+          label: "URIs",
+          type: "text",
+          converter: {
+            forModel: function(value) {
+              return value;
+            },
+            forRender: function(value) {
+              return value;
+            }
+          }
+        }
+      ];
+
+      var controls = fields.map(function(field) {
+        var input;
+        switch (field.type) {
+          case "text":     input = <input type="text" />; break;
+          case "textarea": input = <textarea />; break;
+          case "number":   input = <input type="number" />; break;
+        }
+
+        return (
+          <EditableValueLabelComponent onChange={this.props.onChange} model={this.props.app} attribute={field.attribute} label={field.label} key={field.attribute} converter={field.converter} error={this.state.errors.filter(function (error) { return error.attribute === field.attribute; }).pop()}>
+            {input}
+          </EditableValueLabelComponent>
+        );
+      }.bind(this));
+
       return (
         <div>
           <dl className={"dl-horizontal " + this.props.className}>
-            <dt>Command</dt>
-            {cmdNode}
-            <dt>Constraints</dt>
-            {constraintsNode}
-            <dt>Container</dt>
-            {containerNode}
-            <dt>CPUs</dt>
-            <dd>{appVersion.get("cpus")}</dd>
-            <dt>Environment</dt>
-            {envNode}
-            <dt>Executor</dt>
-            {executorNode}
-            <dt>Instances</dt>
-            <dd>{appVersion.get("instances")}</dd>
-            <dt>Memory (MB)</dt>
-            <dd>{appVersion.get("mem")}</dd>
-            <dt>Disk Space (MB)</dt>
-            <dd>{diskNode}</dd>
-            <dt>Ports</dt>
-            {portsNode}
-            <dt>Task Rate Limit</dt>
-            {taskRateLimitNode}
-            <dt>URIs</dt>
-            {urisNode}
+
+            {controls}
+
             <dt>Version</dt>
-            <dd>{appVersion.id}</dd>
+            <dd>{this.props.appVersion.id}</dd>
           </dl>
           {
             this.props.currentVersion ?
@@ -120,7 +189,7 @@ define([
               <div className="text-right">
                 <form action={this.props.app.url()} method="post" onSubmit={this.handleSubmit}>
                     <input type="hidden" name="_method" value="put" />
-                    <input type="hidden" name="version" value={appVersion.get("version")} />
+                    <input type="hidden" name="version" value={this.props.appVersion.get("version")} />
                     <button type="submit" className="btn btn-sm btn-default">
                       Apply these settings
                     </button>
