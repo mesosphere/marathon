@@ -15,7 +15,7 @@ define([
     TaskViewComponent, TogglableTabsComponent) {
   "use strict";
 
-  var tabsTemplate: [
+  var tabsTemplate = [
       {id: "app:appid", text: "Tasks"},
       {id: "app:appid/configuration", text: "Configuration"}
   ];
@@ -46,7 +46,7 @@ define([
 
       this.tabs = [];
 
-      _.each(this.tabsTemplate, function(tab) {
+      _.each(tabsTemplate, function(tab) {
         this.tabs.push({
           id: tab.id.replace(":appid", appid),
           text: tab.text
@@ -67,16 +67,19 @@ define([
 
       this.props.router.on("route", function (route, params) {
         if(route === "app" && params) {
+          console.log("ATI", this.state.activeTabId);
           var tabname = "app/" + params[0] + ((params[1]) ? "/" + params[1] : "");
           this.setState({
             activeTabId: tabname
           });
+          console.log("ATI 2", this.state.activeTabId);
         }
       }.bind(this));
     },
 
     destroy: function() {
       this.refs.modalComponent.destroy();
+      console.log("Destroy");
     },
 
     handleDestroyApp: function() {

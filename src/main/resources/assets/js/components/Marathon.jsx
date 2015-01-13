@@ -227,13 +227,11 @@ define([
     },
 
     handleModalDestroy: function() {
-      if(Backbone.history.history.length > 1) {
-        Backbone.history.history.back();
-        return;
-      }
+      Backbone.history.navigate("#"+this.state.activeTabId, { trigger:true });
     },
 
     modalDestroy: function() {
+      console.log("Will destroy", this.state.modalClass, this.refs);
       this.setState({
         activeApp: null,
         modalClass: null,
@@ -404,20 +402,6 @@ define([
       }
     },
 
-    /*
-    showAboutModal: function(event) {
-      if (event != null) event.preventDefault();
-
-      if (this.state.modalClass !== null) {
-        return;
-      }
-
-      this.setState({
-        modalClass: AboutModalComponent
-      });
-    },
-    */
-
     routeAbout: function () {
       if (this.state.modalClass !== null) {
         return;
@@ -472,6 +456,8 @@ define([
       var modal;
       var component;
       var route = this.state.route;
+
+      console.log("LOG: ", this.state.activeApp, this.state.activeTask, this.state.modalClass, this.state.activeTabId);
 
 /*
       if (route != null) {
