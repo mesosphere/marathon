@@ -39,6 +39,8 @@ title: REST API
   * [GET /v2/queue](#get-/v2/queue): List content of the staging queue.
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
+  * [GET /v2/leader](#get-/v2/leader): Get the current leader
+  * [DELETE /v2/leader](#delete-/v2/leader): Causes the current leader to abdicate, triggering a new election
 * [Miscellaneous](#miscellaneous)
   * [GET /ping](#get-/ping)
   * [GET /logging](#get-/logging)
@@ -2242,6 +2244,64 @@ Server: Jetty(8.y.z-SNAPSHOT)
         "zk_state": "/marathon",
         "zk_timeout": 10
     }
+}
+{% endhighlight %}
+
+#### GET `/v2/leader`
+
+Returns the current leader.
+If no leader exists, Marathon will respond with a 404 error.
+
+**Request:**
+
+{% highlight http %}
+GET /v2/leader HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 872
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
+{
+    "leader": "127.0.0.1:8080"
+}
+{% endhighlight %}
+
+#### DELETE `/v2/leader`
+
+<span class="label label-default">v0.7.7</span>
+
+Causes the current leader to abdicate, triggering a new election.
+If no leader exists, Marathon will respond with a 404 error.
+
+**Request:**
+
+{% highlight http %}
+DELETE /v2/leader HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 872
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
+{
+    "message": "Leadership abdicted"
 }
 {% endhighlight %}
 
