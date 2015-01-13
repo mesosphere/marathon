@@ -40,7 +40,7 @@ title: REST API
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
   * [GET /v2/leader](#get-/v2/leader): Get the current leader
-  * [DELETE /v2/leader](#delete-/v2/leader): Start a new leadership election
+  * [DELETE /v2/leader](#delete-/v2/leader): Causes the current leader to abdicate, triggering a new election
 * [Miscellaneous](#miscellaneous)
   * [GET /ping](#get-/ping)
   * [GET /logging](#get-/logging)
@@ -2209,7 +2209,8 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 #### GET `/v2/leader`
 
-Return the current leader or a 404 error if no leader exists.
+Returns the current leader.
+If no leader exists, Marathon will respond with a 404 error.
 
 **Request:**
 
@@ -2238,7 +2239,8 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 <span class="label label-default">v0.7.7</span>
 
-Abdictate the current leadership and start a new leadership election.
+Causes the current leader to abdicate, triggering a new election.
+If no leader exists, Marathon will respond with a 404 error.
 
 **Request:**
 

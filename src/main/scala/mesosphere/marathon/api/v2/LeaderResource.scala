@@ -18,7 +18,7 @@ class LeaderResource @Inject() (
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(): Response = {
     schedulerService.getLeader match {
-      case None => notFound(s"There is no leader")
+      case None => notFound("There is no leader")
       case Some(leader) => 
         ok(Map("leader" -> leader))
     }
@@ -28,7 +28,7 @@ class LeaderResource @Inject() (
   @Produces(Array(MediaType.APPLICATION_JSON))
   def delete(): Response = {
     schedulerService.isLeader match {
-      case false => notFound(s"Marathon instance '${config.hostname}' is not a leader")
+      case false => notFound("There is no leader")
       case true => 
         schedulerService.abdicateLeadership()
         ok(Map("message" -> "Leadership abdicted"))
