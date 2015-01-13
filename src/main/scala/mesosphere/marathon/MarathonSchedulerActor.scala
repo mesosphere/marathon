@@ -246,8 +246,6 @@ class MarathonSchedulerActor(
     val ids = plan.affectedApplicationIds
 
     performAsyncWithLockFor(ids, origSender, cmd, isBlocking = blocking) {
-      ids.foreach(taskQueue.rateLimiter.resetDelay)
-
       val res = deploy(driver, plan)
       if (origSender != Actor.noSender) origSender ! cmd.answer
       res
@@ -379,7 +377,7 @@ class SchedulerActions(
       }
       taskQueue.purge(app.id)
       taskTracker.shutdown(app.id)
-      taskQueue.rateLimiter.resetDelay(app.id)
+      taskQueue.rateLimiter.resetDelay(app)
       // TODO after all tasks have been killed we should remove the app from taskTracker
 
       eventBus.publish(AppTerminatedEvent(app.id))
@@ -483,8 +481,7 @@ class SchedulerActions(
 
         if (toQueue > 0) {
           log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
-          for (i <- 0 until toQueue)
-            taskQueue.add(app)
+          taskQueue.add(app, toQueue)
         }
         else {
           log.info(s"Already queued $queuedCount tasks for ${app.id}. Not scaling.")
@@ -522,7 +519,6 @@ class SchedulerActions(
         val updatedApp = appUpdate(currentVersion)
 
         taskQueue.purge(id)
-        taskQueue.rateLimiter.resetDelay(id)
 
         appRepository.store(updatedApp).map { _ =>
           update(driver, updatedApp, appUpdate)

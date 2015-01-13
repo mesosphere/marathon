@@ -11,7 +11,6 @@ import mesosphere.marathon.event.{ SchedulerRegisteredEvent, SchedulerReregister
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
-import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
 import org.apache.mesos.Protos._
@@ -24,7 +23,6 @@ import org.scalatest.BeforeAndAfterAll
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.concurrent.duration.Deadline
 
 class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with MarathonSpec with BeforeAndAfterAll {
 
@@ -45,7 +43,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     repo = mock[AppRepository]
     hcManager = mock[HealthCheckManager]
     tracker = mock[TaskTracker]
-    queue = mock[TaskQueue]
+    queue = spy(new TaskQueue)
     frameworkIdUtil = mock[FrameworkIdUtil]
     config = defaultConfig()
     taskIdUtil = mock[TaskIdUtil]
@@ -74,24 +72,19 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     val driver = mock[SchedulerDriver]
     val offer = makeBasicOffer(cpus = 4, mem = 1024, disk = 4000, beginPort = 31000, endPort = 32000).build
     val offers = Lists.newArrayList(offer)
-    val now = Timestamp.now
+    val now = Timestamp.now()
     val app = AppDefinition(
       id = "testOffers".toRootPath,
       executor = "//cmd",
       ports = Seq(8080),
       version = now
     )
-    val queuedTask = QueuedTask(app, Deadline.now)
-    val list = Vector(queuedTask)
-    val allApps = Vector(app)
+
+    queue.add(app)
 
     when(taskIdUtil.newTaskId("testOffers".toRootPath))
       .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
     when(tracker.checkStagedTasks).thenReturn(Seq())
-    when(queue.poll()).thenReturn(Some(queuedTask))
-    when(queue.list).thenReturn(list)
-    when(queue.removeAll()).thenReturn(list)
-    when(queue.listApps).thenReturn(allApps)
     when(repo.currentAppVersions())
       .thenReturn(Future.successful(Map(app.id -> app.version)))
 
@@ -103,7 +96,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
 
     verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
     verify(tracker).created(same(app.id), marathonTaskCaptor.capture())
-    verify(queue).addAll(Seq.empty)
 
     assert(1 == offersCaptor.getValue.size())
     assert(offer.getId == offersCaptor.getValue.get(0))

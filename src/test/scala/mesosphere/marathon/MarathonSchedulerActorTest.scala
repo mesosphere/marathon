@@ -24,7 +24,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{ Seq, Set }
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -144,7 +144,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       awaitAssert({
         verify(tracker).shutdown("nope".toPath)
-        verify(queue).add(app)
+        verify(queue).add(app, 1)
         verify(driver).killTask(TaskID("task_a"))
       }, 5.seconds, 10.millis)
     }
@@ -168,7 +168,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       schedulerActor ! ScaleApp("test-app".toPath)
 
       awaitAssert({
-        verify(queue).add(app)
+        verify(queue).add(app, 1)
       }, 5.seconds, 10.millis)
 
       expectMsg(5.seconds, AppScaled(app.id))
@@ -260,6 +260,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   test("Deployment resets rate limiter for affected apps") {
     val probe = TestProbe()
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
     val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
@@ -267,6 +268,9 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
+
+    when(tracker.get(app.id)).thenReturn(Set(taskA))
+    when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
 
     system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 

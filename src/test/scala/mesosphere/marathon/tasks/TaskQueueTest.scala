@@ -1,14 +1,10 @@
 package mesosphere.marathon.tasks
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
-
-import scala.collection.immutable.Seq
-import scala.concurrent.duration.Deadline
 
 class TaskQueueTest extends MarathonSpec {
   val app1 = AppDefinition(id = "app1".toPath, constraints = Set.empty)
@@ -18,7 +14,6 @@ class TaskQueueTest extends MarathonSpec {
   var queue: TaskQueue = null
 
   before {
-    val metricRegistry = new MetricRegistry
     queue = new TaskQueue()
   }
 
@@ -50,29 +45,41 @@ class TaskQueueTest extends MarathonSpec {
     assert(queue.list.size == 1, "Queue should contain 1 elements.")
   }
 
-  test("RemoveAll") {
+  test("poll") {
+    queue.add(app1, 3)
+
+    assert(queue.count(app1) == 3)
+    assert(queue.poll().map(_.app) == Some(app1))
+    assert(queue.count(app1) == 2)
+  }
+
+  test("pollMatching") {
     queue.add(app1)
     queue.add(app2)
     queue.add(app3)
 
-    val res = queue.removeAll().map(_.app)
-
-    assert(Vector(app2, app3, app1) == res, s"Should return all elements in correct order.")
-    assert(queue.queue.isEmpty, "TaskQueue should be empty.")
+    assert(Some(app1) == queue.pollMatching {
+      case x if x.id == "app1".toPath => Some(x)
+      case _                          => None
+    })
   }
 
-  test("AddAll") {
-    val queue = new TaskQueue
+  test("pollMatching Priority") {
+    queue.add(app1)
+    queue.add(app2)
+    queue.add(app3)
 
-    queue.addAll(Seq(
-      QueuedTask(app1, Deadline.now),
-      QueuedTask(app2, Deadline.now),
-      QueuedTask(app3, Deadline.now)
-    ))
+    assert(Some(app2) == queue.pollMatching(Some(_)))
+  }
 
-    assert(queue.list.size == 3, "Queue should contain 3 elements.")
-    assert(queue.count(app1) == 1, s"Queue should contain $app1.")
-    assert(queue.count(app2) == 1, s"Queue should contain $app2.")
-    assert(queue.count(app3) == 1, s"Queue should contain $app3.")
+  test("pollMatching no match") {
+    queue.add(app1)
+    queue.add(app2)
+    queue.add(app3)
+
+    assert(None == queue.pollMatching {
+      case x if x.id == "DOES_NOT_EXIST".toPath => Some(x)
+      case _                                    => None
+    })
   }
 }

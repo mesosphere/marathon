@@ -145,7 +145,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     // all new tasks are queued directly
-    eventually { verify(queue, times(3)).add(_) }
+    eventually { app: AppDefinition => verify(queue, times(3)).add(app) }
 
     // ceiling(minimumHealthCapacity * 3) = 2 are left running
     assert(oldTaskCount == 2)
