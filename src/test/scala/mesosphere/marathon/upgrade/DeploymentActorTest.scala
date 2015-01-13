@@ -197,7 +197,7 @@ class DeploymentActorTest
 
     val taskIDs = Iterator.from(3)
 
-    when(queue.count(appNew)).thenAnswer(new Answer[Int] {
+    when(queue.count(appNew.id)).thenAnswer(new Answer[Int] {
       override def answer(p1: InvocationOnMock): Int = appNew.instances
     })
 

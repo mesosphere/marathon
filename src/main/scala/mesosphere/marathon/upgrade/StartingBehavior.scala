@@ -15,7 +15,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   import mesosphere.marathon.upgrade.StartingBehavior._
 
   def eventBus: EventStream
-  def expectedSize: Int
+  def scaleTo: Int
   def nrToStart: Int
   def withHealthChecks: Boolean
   def taskQueue: TaskQueue
@@ -25,8 +25,8 @@ trait StartingBehavior { this: Actor with ActorLogging =>
 
   val app: AppDefinition
   val Version = app.version.toString
-  var healthyTasks = Set.empty[String]
-  var runningTasks = Set.empty[String]
+  var atLeastOnceHealthyTasks = Set.empty[String]
+  var startedRunningTasks = Set.empty[String]
   val AppId = app.id
 
   def initializeStart(): Unit
@@ -53,15 +53,15 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   }
 
   final def checkForHealthy: Receive = {
-    case HealthStatusChanged(AppId, taskId, Version, true, _, _) if !healthyTasks(taskId) =>
-      healthyTasks += taskId
+    case HealthStatusChanged(AppId, taskId, Version, true, _, _) if !atLeastOnceHealthyTasks(taskId) =>
+      atLeastOnceHealthyTasks += taskId
       log.info(s"$taskId is now healthy")
       checkFinished()
   }
 
   final def checkForRunning: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", _, app.`id`, _, _, Version, _, _) if !runningTasks(taskId) =>
-      runningTasks += taskId
+    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", _, app.`id`, _, _, Version, _, _) if !startedRunningTasks(taskId) => // scalastyle:off line.size.limit
+      startedRunningTasks += taskId
       log.info(s"Started $taskId")
       checkFinished()
   }
@@ -69,23 +69,22 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   def commonBehavior: Receive = {
     case MesosStatusUpdateEvent(_, taskId, "TASK_ERROR" | "TASK_FAILED" | "TASK_LOST" | "TASK_KILLED", _, app.`id`, _, _, Version, _, _) => // scalastyle:off line.size.limit
       log.warning(s"Failed to start $taskId for app ${app.id}. Rescheduling.")
-      runningTasks -= taskId
+      startedRunningTasks -= taskId
       taskQueue.add(app)
 
     case Sync =>
-      val actualSize = taskQueue.count(app) + taskTracker.count(app.id)
-
-      if (actualSize < expectedSize) {
-        taskQueue.add(app, expectedSize - actualSize)
+      val actualSize = taskQueue.count(app.id) + taskTracker.count(app.id)
+      if (actualSize < scaleTo) {
+        taskQueue.add(app, scaleTo - actualSize)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
   def checkFinished(): Unit = {
-    if (withHealthChecks && healthyTasks.size == nrToStart) {
+    if (withHealthChecks && atLeastOnceHealthyTasks.size == nrToStart) {
       success()
     }
-    else if (runningTasks.size == nrToStart) {
+    else if (startedRunningTasks.size == nrToStart) {
       success()
     }
   }

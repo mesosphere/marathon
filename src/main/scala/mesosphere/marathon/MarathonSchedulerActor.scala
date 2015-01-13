@@ -476,7 +476,7 @@ class SchedulerActions(
       if (targetCount > currentCount) {
         log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
 
-        val queuedCount = taskQueue.count(app)
+        val queuedCount = taskQueue.count(app.id)
         val toQueue = targetCount - (currentCount + queuedCount)
 
         if (toQueue > 0) {

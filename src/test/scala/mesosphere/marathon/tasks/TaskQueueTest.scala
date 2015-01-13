@@ -48,9 +48,9 @@ class TaskQueueTest extends MarathonSpec {
   test("poll") {
     queue.add(app1, 3)
 
-    assert(queue.count(app1) == 3)
+    assert(queue.count(app1.id) == 3)
     assert(queue.poll().map(_.app) == Some(app1))
-    assert(queue.count(app1) == 2)
+    assert(queue.count(app1.id) == 2)
   }
 
   test("pollMatching") {

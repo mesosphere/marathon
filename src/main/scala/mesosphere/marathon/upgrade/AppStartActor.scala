@@ -16,10 +16,9 @@ class AppStartActor(
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
     val app: AppDefinition,
-    scaleTo: Int,
+    val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
-  val expectedSize: Int = scaleTo
   val nrToStart: Int = scaleTo
 
   def withHealthChecks: Boolean = app.healthChecks.nonEmpty
