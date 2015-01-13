@@ -1,5 +1,5 @@
 # Note that the prefix affects the init scripts as well.
-PREFIX := usr/local
+PREFIX := usr
 
 # Command to extract from X.X.X-rcX the version (X.X.X) and tag (rcX)
 EXTRACT_VER := perl -n -e\

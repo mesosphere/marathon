@@ -20,7 +20,7 @@ PID=/var/run/marathon.pid
 start() {
   start-stop-daemon --start --background --quiet \
                     --pidfile "$PID" --make-pidfile \
-                    --exec /usr/local/bin/marathon
+                    --exec /usr/bin/marathon
 }
 
 stop() {
