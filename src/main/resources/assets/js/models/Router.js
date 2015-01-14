@@ -9,15 +9,13 @@ define([
 
     routes: {
       "": "apps",
-      "apps": "apps",
+      "apps(/:appid)(/:view)": "apps",
       "deployments": "deployments",
-      "app/:appid(/:view)": "app",
       "newapp": "newapp",
       "about": "about"
     },
 
     apps: noop,
-    app: noop,
     newapp: noop,
     deployments: noop,
     task: noop,
@@ -28,6 +26,6 @@ define([
       params: null
     },
 
-    current: function() { return Backbone.history.fragment; }
+    currentHash: function () { return Backbone.history.fragment; }
   });
 });

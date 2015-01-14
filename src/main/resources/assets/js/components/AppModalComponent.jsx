@@ -16,8 +16,8 @@ define([
   "use strict";
 
   var tabsTemplate = [
-      {id: "app:appid", text: "Tasks"},
-      {id: "app:appid/configuration", text: "Configuration"}
+      {id: "apps:appid", text: "Tasks"},
+      {id: "apps:appid/configuration", text: "Configuration"}
   ];
 
   return React.createClass({
@@ -42,42 +42,40 @@ define([
     },
 
     getInitialState: function() {
-      var appid = this.props.model.get('id');
+      var appid = this.props.model.get("id");
+      var activeTabId;
 
-      this.tabs = [];
-
-      _.each(tabsTemplate, function(tab) {
-        this.tabs.push({
-          id: tab.id.replace(":appid", appid),
+      this.tabs = _.reduce(tabsTemplate, function(current, tab) {
+        var id = tab.id.replace(":appid", appid);
+        if (activeTabId == null) {
+           activeTabId = id;
+        }
+        current.push({
+          id: id,
           text: tab.text
         });
-      }.bind(this));
+        return current;
+      },[]);
 
       return {
         activeViewIndex: 0,
-        activeTabId: this.tabs[0].id,
+        activeTabId: activeTabId,
         selectedTasks: {}
       };
     },
 
-    componentWillMount: function() {
-      this.props.router.on("route:app", function (appid, tab) {
-        if(appid) {
+    componentDidMount: function() {
+      this.props.router.on("route:apps", function (appid, view) {
+        if(appid && this.isMounted()) {
           this.setState({
-            activeTabId: "app/" + appid + (tab ? "/" + tab : "")
+            activeTabId: "apps/" + appid + (view ? "/" + view : "")
           });
         }
       }.bind(this));
-    },
 
-    componentDidMount: function() {
       this.setState({
-        activeTabId: this.props.router.current()
+        activeTabId: this.props.router.currentHash()
       });
-    },
-
-    componentWillUnmount: function() {
-      this.props.router.off("route:app");
     },
 
     destroy: function() {
@@ -198,7 +196,7 @@ define([
           <TogglableTabsComponent className="modal-body modal-body-no-top"
               activeTabId={this.state.activeTabId}
               tabs={this.tabs} >
-            <TabPaneComponent id={"app"+model.get("id")}>
+            <TabPaneComponent id={"apps" + model.get("id")}>
               <StackedViewComponent
                 activeViewIndex={this.state.activeViewIndex}>
                 <TaskViewComponent
@@ -219,7 +217,7 @@ define([
               </StackedViewComponent>
             </TabPaneComponent>
             <TabPaneComponent
-              id={"app"+model.get("id")+"/configuration"}
+              id={"apps" + model.get("id") + "/configuration"}
               onActivate={this.props.fetchAppVersions} >
               <AppVersionListComponent
                 app={model}

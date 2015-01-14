@@ -6,8 +6,12 @@ define([
   "use strict";
 
   return React.createClass({
+    propTypes: {
+      router: React.PropTypes.object.isRequired
+    },
+
     onClick: function() {
-      window.location.hash = 'app' + this.props.model.get("id");
+      this.props.router.navigate("#apps" + this.props.model.get("id"), {trigger: true});
     },
 
     render: function() {
