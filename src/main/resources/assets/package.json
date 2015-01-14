@@ -37,9 +37,9 @@
     "chalk": "^0.5.1"
   },
   "scripts": {
-    "clean": "rm -rf dist tmp",
     "build": "broccoli build dist",
-    "watch": "export BROCCOLI_ENV=\"development\" && broccoli-timepiece dist",
-    "dist": "export BROCCOLI_ENV=\"production\" && npm run clean && npm run build"
+    "clean": "rm -rf dist tmp",
+    "dist": "export BROCCOLI_ENV=\"production\" && npm run clean && npm run build",
+    "watch": "export BROCCOLI_ENV=\"development\" && broccoli-timepiece dist"
   }
 }
