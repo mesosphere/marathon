@@ -1,7 +1,7 @@
 /** @jsx React.DOM */
 
 
-var React = require("react");
+var React = require("react/addons");
 var NavTabsComponent = require("../components/NavTabsComponent");
 
 module.exports = React.createClass({

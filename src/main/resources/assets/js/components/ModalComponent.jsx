@@ -2,7 +2,7 @@
 
 
 var $ = require("jquery");
-var React = require("react");
+var React = require("react/addons");
 
   function modalSizeClassName(size) {
     return (size == null) ? "" : "modal-" + size;

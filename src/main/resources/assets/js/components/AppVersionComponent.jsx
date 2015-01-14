@@ -2,7 +2,7 @@
 
 
 var _ = require("underscore");
-var React = require("react");
+var React = require("react/addons");
 var App = require("../models/App");
 var AppVersion = require("../models/AppVersion");
 

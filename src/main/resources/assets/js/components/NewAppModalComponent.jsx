@@ -3,7 +3,7 @@
 
 var $ = require("jquery");
 var _ = require("underscore");
-var React = require("react");
+var React = require("react/addons");
 var BackboneMixin = require("../mixins/BackboneMixin");
 var App = require("../models/App");
 var FormGroupComponent = require("../components/FormGroupComponent");

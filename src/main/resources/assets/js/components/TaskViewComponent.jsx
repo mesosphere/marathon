@@ -1,7 +1,7 @@
 /** @jsx React.DOM */
 
 
-var React = require("react");
+var React = require("react/addons");
 var PagedNavComponent = require("../components/PagedNavComponent");
 var TaskListComponent = require("../components/TaskListComponent");
 

@@ -1,7 +1,7 @@
 /** @jsx React.DOM */
 
 
-var React = require("react");
+var React = require("react/addons");
 var AppVersionListComponent = require("../components/AppVersionListComponent");
 var ModalComponent = require("../components/ModalComponent");
 var StackedViewComponent = require("../components/StackedViewComponent");

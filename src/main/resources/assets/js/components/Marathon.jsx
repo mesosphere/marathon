@@ -2,7 +2,7 @@
 
 
 var Mousetrap = require("mousetrap");
-var React = require("react");
+var React = require("react/addons");
 var States = require("../constants/States");
 var AppCollection = require("../models/AppCollection");
 var DeploymentCollection = require("../models/DeploymentCollection");

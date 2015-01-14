@@ -1,7 +1,7 @@
 /** @jsx React.DOM */
 
 
-var React = require("react");
+var React = require("react/addons");
 var States = require("../constants/States");
 var App = require("../models/App");
 var AppVersion = require("../models/AppVersion");

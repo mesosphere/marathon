@@ -1,7 +1,7 @@
 /** @jsx React.DOM */
 
 
-var React = require("react");
+var React = require("react/addons");
 var States = require("../constants/States");
 var BackboneMixin = require("../mixins/BackboneMixin");
 var TaskListItemComponent = require("../components/TaskListItemComponent");

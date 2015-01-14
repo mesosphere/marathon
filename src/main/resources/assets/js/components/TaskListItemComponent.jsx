@@ -1,7 +1,7 @@
 /** @jsx React.DOM */
 
 
-var React = require("react");
+var React = require("react/addons");
 var Task = require("../models/Task");
 
   function buildHref(host, port) {
