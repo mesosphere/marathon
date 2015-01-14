@@ -35,12 +35,19 @@
     "broccoli-static-compiler": "^0.1.4",
     "broccoli-uglify-js": "^0.1.3",
     "broccoli-webpack": "^0.1.1",
-    "chalk": "^0.5.1"
+    "chalk": "^0.5.1",
+    "cheerio": "^0.18.0",
+    "mocha": "^2.1.0",
+    "mocha-teamcity-reporter": "0.0.4",
+    "mousetrap": "^1.4.6",
+    "sinon": "^1.12.2"
   },
   "scripts": {
     "build": "broccoli build dist",
     "clean": "rm -rf dist tmp",
-    "dist": "export BROCCOLI_ENV=\"production\" && npm run clean && npm run build",
+    "dist": "export BROCCOLI_ENV=\"production\" && npm run clean && npm run test && npm run build",
+    "test": "mocha --ui exports --reporter spec --compilers jsx:test/compiler.js test/object-assign-polyfill.js test/**/*.test.*",
+    "test-watch": "mocha --ui exports --reporter spec --watch --compilers jsx:test/compiler.js test/object-assign-polyfill.js test/**/*.test.*",
     "watch": "export BROCCOLI_ENV=\"development\" && broccoli-timepiece dist"
   }
 }
