@@ -303,7 +303,7 @@ trait AppDefinitionFormats {
       (__ \ "maximumOverCapacity").readNullable[JDouble].withDefault(DefaultUpgradeStrategy.maximumOverCapacity)
     )(UpgradeStrategy(_, _))
   }
-  
+
   implicit lazy val ConstraintFormat: Format[Constraint] = Format(
     Reads.of[Seq[String]].map { seq =>
       val builder = Constraint

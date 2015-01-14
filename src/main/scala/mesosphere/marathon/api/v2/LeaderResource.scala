@@ -10,8 +10,8 @@ import mesosphere.marathon.{ MarathonSchedulerService, MarathonConf }
 
 @Path("v2/leader")
 class LeaderResource @Inject() (
-    schedulerService: MarathonSchedulerService,
-    val config: MarathonConf with HttpConf)
+  schedulerService: MarathonSchedulerService,
+  val config: MarathonConf with HttpConf)
     extends RestResource {
 
   @GET
@@ -19,7 +19,7 @@ class LeaderResource @Inject() (
   def index(): Response = {
     schedulerService.getLeader match {
       case None => notFound("There is no leader")
-      case Some(leader) => 
+      case Some(leader) =>
         ok(Map("leader" -> leader))
     }
   }
@@ -29,7 +29,7 @@ class LeaderResource @Inject() (
   def delete(): Response = {
     schedulerService.isLeader match {
       case false => notFound("There is no leader")
-      case true => 
+      case true =>
         schedulerService.abdicateLeadership()
         ok(Map("message" -> "Leadership abdicted"))
     }
