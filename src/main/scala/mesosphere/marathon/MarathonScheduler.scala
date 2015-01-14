@@ -178,7 +178,7 @@ class MarathonScheduler @Inject() (
       case TASK_RUNNING =>
         taskTracker.running(appId, status).onComplete {
           case Success(task) =>
-            appRepo.app(PathId(task.getId), Timestamp(task.getVersion)).onSuccess {
+            appRepo.app(appId, Timestamp(task.getVersion)).onSuccess {
               case maybeApp => maybeApp.foreach(taskQueue.rateLimiter.resetDelay)
             }
             postEvent(status, task)
