@@ -9,3 +9,4 @@ node_modules
 .settings
 .Rproj.user
 start.sh
+**/libs/vendor/**

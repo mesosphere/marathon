@@ -3,13 +3,13 @@ require.config({
     extension: "jsx"
   },
   paths: {
-    "Backbone": "libs/backbone-min",
+    "Backbone": "libs/vendor/backbone/backbone-min",
     "jsx": "libs/jsx-0.0.2",
-    "JSXTransformer": "libs/JSXTransformer-0.11.1.max",
-    "jquery": "libs/jquery-2.0.3",
-    "mousetrap": "libs/mousetrap-1.4.6",
-    "React": "libs/react-with-addons-0.11.1",
-    "Underscore": "libs/underscore-min"
+    "JSXTransformer": "libs/vendor/react/JSXTransformer",
+    "jquery": "libs/vendor/jquery/jquery",
+    "mousetrap": "libs/vendor/mousetrap/mousetrap",
+    "React": "libs/vendor/react/react-with-addons",
+    "Underscore": "libs/vendor/underscore/underscore"
   },
   shim: {
     Backbone: {
