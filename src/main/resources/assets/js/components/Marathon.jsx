@@ -1,7 +1,6 @@
 /** @jsx React.DOM */
 
 define([
-  "Backbone",
   "mousetrap",
   "React",
   "Underscore",
@@ -17,7 +16,7 @@ define([
   "jsx!components/TabPaneComponent",
   "jsx!components/TogglableTabsComponent",
   "jsx!components/NavTabsComponent"
-], function(Backbone, Mousetrap, React, _, _str, States, AppCollection, DeploymentCollection,
+], function(Mousetrap, React, _, _str, States, AppCollection, DeploymentCollection,
     AppListComponent, AboutModalComponent, AppModalComponent,
     DeploymentsListComponent, NewAppModalComponent, TabPaneComponent,
     TogglableTabsComponent, NavTabsComponent) {
