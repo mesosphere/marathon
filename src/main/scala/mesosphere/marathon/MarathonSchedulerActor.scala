@@ -103,9 +103,9 @@ class MarathonSchedulerActor(
       context.become(started)
       self ! ReconcileHealthChecks
 
-    case Suspend => // ignore
+    case Suspend(_) => // ignore
 
-    case _       => stash()
+    case _          => stash()
   }
 
   def started: Receive = {
