@@ -1,14 +1,12 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "jsx!components/DeploymentComponent",
-  "mixins/BackboneMixin"
-], function(React, States, DeploymentComponent, BackboneMixin) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+var States = require("../constants/States");
+var DeploymentComponent = require("../components/DeploymentComponent");
+var BackboneMixin = require("../mixins/BackboneMixin");
+
+module.exports = React.createClass({
     displayName: "DeploymentListComponent",
 
     mixins: [BackboneMixin],
@@ -120,4 +118,3 @@ define([
       );
     }
   });
-});

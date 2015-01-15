@@ -1,11 +1,9 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+module.exports = React.createClass({
     name: "DeploymentComponent",
 
     propTypes: {
@@ -93,4 +91,3 @@ define([
       );
     }
   });
-});

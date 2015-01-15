@@ -1,8 +1,6 @@
-define([
-  "Backbone",
-  "Underscore"
-], function(Backbone, _) {
-  "use strict";
+
+var Backbone = require("backbone");
+var _ = require("underscore");
 
   var DEFAULT_ATTR = "id";
   var SortableCollection = Backbone.Collection.extend({
@@ -26,5 +24,4 @@ define([
     }
   });
 
-  return SortableCollection;
-});
+module.exports = SortableCollection;

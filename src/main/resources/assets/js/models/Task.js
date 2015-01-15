@@ -1,8 +1,6 @@
-define([
-  "Backbone",
-  "jquery"
-], function(Backbone, $) {
-  "use strict";
+
+var Backbone = require("backbone");
+var $ = require("jquery");
 
   var STATUS_STAGED = "Staged";
   var STATUS_STARTED = "Started";
@@ -15,7 +13,7 @@ define([
   // Model attributes that are parseable as dates.
   var DATE_ATTRIBUTES = ["stagedAt", "startedAt", "version"];
 
-  return Backbone.Model.extend({
+module.exports = Backbone.Model.extend({
     isStarted: function() {
       return this.get("status") === STATUS_STARTED;
     },
@@ -78,4 +76,3 @@ define([
       return Backbone.sync.call(this, method, model, _options);
     }
   }, {HEALTH: HEALTH});
-});

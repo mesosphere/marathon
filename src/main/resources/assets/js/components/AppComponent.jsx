@@ -1,11 +1,9 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+module.exports = React.createClass({
     onClick: function() {
       this.props.onClick(this.props.model);
     },
@@ -47,4 +45,3 @@ define([
       );
     }
   });
-});

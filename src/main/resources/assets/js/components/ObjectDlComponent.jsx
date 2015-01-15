@@ -1,9 +1,7 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+
+var React = require("react/addons");
 
   function formatKey(key) {
     return key.split("_").map(function(piece) {
@@ -23,7 +21,7 @@ define([
     }
   }
 
-  return React.createClass({
+module.exports = React.createClass({
     displayName: "ObjectDlComponent",
     propTypes: {
       // Can be `null` or `undefined` since the data is likely fetched
@@ -57,4 +55,3 @@ define([
       );
     }
   });
-});

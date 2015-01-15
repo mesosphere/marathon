@@ -1,12 +1,10 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "jsx!components/NavTabsComponent"
-], function(React, NavTabsComponent) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+var NavTabsComponent = require("../components/NavTabsComponent");
+
+module.exports = React.createClass({
     name: "TogglableTabsComponent",
 
     propTypes: {
@@ -45,4 +43,3 @@ define([
       );
     }
   });
-});

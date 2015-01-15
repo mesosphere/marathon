@@ -1,8 +1,8 @@
-define([
-  "models/AppVersion",
-  "models/SortableCollection"
-], function(AppVersion, SortableCollection) {
-  return SortableCollection.extend({
+
+var AppVersion = require("../models/AppVersion");
+var SortableCollection = require("../models/SortableCollection");
+
+module.exports = SortableCollection.extend({
     model: AppVersion,
 
     initialize: function(models, options) {
@@ -23,4 +23,3 @@ define([
       return "/v2/apps/" + this.options.appId + "/versions";
     }
   });
-});

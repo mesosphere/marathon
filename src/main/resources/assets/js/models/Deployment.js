@@ -1,10 +1,7 @@
-define([
-  "Backbone",
-  "Underscore"
-], function(Backbone, _) {
-  "use strict";
 
-  return Backbone.Model.extend({
+var Backbone = require("backbone");
+
+module.exports = Backbone.Model.extend({
     defaults: function() {
       return {
         currentStep: 0,
@@ -45,5 +42,4 @@ define([
       this.options = options;
     }
   });
-});
 
