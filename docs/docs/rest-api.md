@@ -79,10 +79,10 @@ The full JSON format of an application resource is as follows:
                 }
             ],
             "privileged": false,
-            "parameters": {
-                "a-docker-option": "xxx",
-                "b-docker-option": "yyy"
-            }
+            "parameters": [
+                { "key": "a-docker-option", "value": "xxx" },
+                { "key": "b-docker-option", "value": "yyy" }
+            ]
         },
         "volumes": [
             {
