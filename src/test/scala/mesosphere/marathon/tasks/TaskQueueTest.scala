@@ -82,4 +82,22 @@ class TaskQueueTest extends MarathonSpec {
       case _                                    => None
     })
   }
+
+  test("Don't try to match apps with a count of 0") {
+    queue.add(app1, 1)
+    queue.poll()
+    assert(queue.count(app1.id) == 0)
+    var counter = 0
+
+    val matching = queue.pollMatching {
+      case x if x.id == app1.id =>
+        counter += 1
+        Some(x)
+
+      case _ => None
+    }
+
+    assert(matching.isEmpty)
+    assert(counter == 0)
+  }
 }
