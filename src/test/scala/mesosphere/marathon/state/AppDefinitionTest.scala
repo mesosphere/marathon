@@ -45,6 +45,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     assert(256 == getScalarResourceValue(proto1, "mem"), 1e-6)
     assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
     assert(!proto1.hasContainer)
+    assert(1.0 == proto1.getUpgradeStrategy.getMinimumHealthCapacity)
+    assert(1.0 == proto1.getUpgradeStrategy.getMaximumOverCapacity)
 
     val app2 = AppDefinition(
       id = "play".toPath,
@@ -57,7 +59,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       mem = 256,
       instances = 5,
       ports = Seq(8080, 8081),
-      executor = "//cmd"
+      executor = "//cmd",
+      upgradeStrategy = UpgradeStrategy(0.7, 0.4)
     )
 
     val proto2 = app2.toProto
@@ -71,6 +74,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     assert(4 == getScalarResourceValue(proto2, "cpus"), 1e-6)
     assert(256 == getScalarResourceValue(proto2, "mem"), 1e-6)
     assert(proto2.hasContainer)
+    assert(0.7 == proto2.getUpgradeStrategy.getMinimumHealthCapacity)
+    assert(0.4 == proto2.getUpgradeStrategy.getMaximumOverCapacity)
   }
 
   test("MergeFromProto") {
@@ -204,6 +209,30 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       correct.copy(cmd = None, args = Some(Seq("a", "b", "c"))),
       "",
       "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
+    )
+
+    shouldViolate(
+      correct.copy(upgradeStrategy=UpgradeStrategy(1.2)),
+      "upgradeStrategy.minimumHealthCapacity",
+      "is greater than 1"
+    )
+
+    shouldViolate(
+      correct.copy(upgradeStrategy=UpgradeStrategy(0.5, 1.2)),
+      "upgradeStrategy.maximumOverCapacity",
+      "is greater than 1"
+    )
+
+    shouldViolate(
+      correct.copy(upgradeStrategy=UpgradeStrategy(-1.2)),
+      "upgradeStrategy.minimumHealthCapacity",
+      "is less than 0"
+    )
+
+    shouldViolate(
+      correct.copy(upgradeStrategy=UpgradeStrategy(0.5, -1.2)),
+      "upgradeStrategy.maximumOverCapacity",
+      "is less than 0"
     )
 
     shouldNotViolate(
