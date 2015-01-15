@@ -14042,13 +14042,13 @@ public final class Protos {
      */
     double getMinimumHealthCapacity();
 
-    // required double maximumOverCapacity = 2 [default = 1];
+    // optional double maximumOverCapacity = 2 [default = 1];
     /**
-     * <code>required double maximumOverCapacity = 2 [default = 1];</code>
+     * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
      */
     boolean hasMaximumOverCapacity();
     /**
-     * <code>required double maximumOverCapacity = 2 [default = 1];</code>
+     * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
      */
     double getMaximumOverCapacity();
   }
@@ -14169,17 +14169,17 @@ public final class Protos {
       return minimumHealthCapacity_;
     }
 
-    // required double maximumOverCapacity = 2 [default = 1];
+    // optional double maximumOverCapacity = 2 [default = 1];
     public static final int MAXIMUMOVERCAPACITY_FIELD_NUMBER = 2;
     private double maximumOverCapacity_;
     /**
-     * <code>required double maximumOverCapacity = 2 [default = 1];</code>
+     * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
      */
     public boolean hasMaximumOverCapacity() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required double maximumOverCapacity = 2 [default = 1];</code>
+     * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
      */
     public double getMaximumOverCapacity() {
       return maximumOverCapacity_;
@@ -14195,10 +14195,6 @@ public final class Protos {
       if (isInitialized != -1) return isInitialized == 1;
 
       if (!hasMinimumHealthCapacity()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMaximumOverCapacity()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -14419,10 +14415,6 @@ public final class Protos {
           
           return false;
         }
-        if (!hasMaximumOverCapacity()) {
-          
-          return false;
-        }
         return true;
       }
 
@@ -14478,22 +14470,22 @@ public final class Protos {
         return this;
       }
 
-      // required double maximumOverCapacity = 2 [default = 1];
+      // optional double maximumOverCapacity = 2 [default = 1];
       private double maximumOverCapacity_ = 1D;
       /**
-       * <code>required double maximumOverCapacity = 2 [default = 1];</code>
+       * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
        */
       public boolean hasMaximumOverCapacity() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required double maximumOverCapacity = 2 [default = 1];</code>
+       * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
        */
       public double getMaximumOverCapacity() {
         return maximumOverCapacity_;
       }
       /**
-       * <code>required double maximumOverCapacity = 2 [default = 1];</code>
+       * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
        */
       public Builder setMaximumOverCapacity(double value) {
         bitField0_ |= 0x00000002;
@@ -14502,7 +14494,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>required double maximumOverCapacity = 2 [default = 1];</code>
+       * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
        */
       public Builder clearMaximumOverCapacity() {
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -18724,7 +18716,7 @@ public final class Protos {
       "geVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022" +
       "\r\n\005patch\030\003 \002(\r\"Z\n\031UpgradeStrategyDefinit" +
       "ion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023ma" +
-      "ximumOverCapacity\030\002 \002(\001:\0011\"\260\001\n\017GroupDefi" +
+      "ximumOverCapacity\030\002 \001(\001:\0011\"\260\001\n\017GroupDefi" +
       "nition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004a",
       "pps\030\003 \003(\0132&.mesosphere.marathon.ServiceD" +
       "efinition\0224\n\006groups\030\004 \003(\0132$.mesosphere.m" +
