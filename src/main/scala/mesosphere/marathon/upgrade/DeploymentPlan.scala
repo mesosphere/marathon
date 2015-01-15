@@ -170,7 +170,7 @@ object DeploymentPlan extends Logging {
             actions += ScaleApplication(newApp, newApp.instances)
 
           // Update existing app.
-          case Some(oldApp) if oldApp != newApp =>
+          case Some(oldApp) if oldApp.isUpgrade(newApp) =>
             actions += RestartApplication(newApp)
 
           // Other cases require no action.
