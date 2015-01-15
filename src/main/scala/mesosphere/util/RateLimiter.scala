@@ -31,7 +31,7 @@ class RateLimiter {
       )
     }
 
-    log.info(s"Task launch delay for [${app.id}] is now [${newDelay.current}] seconds")
+    log.info(s"Task launch delay for [${app.id}] is now [${newDelay.current}]")
 
     taskLaunchDelays += ((app.id, app.version) -> newDelay)
   }
