@@ -327,20 +327,4 @@ class MarathonSchedulerService @Inject() (
       reconciliationInitialDelay.toMillis + reconciliationInterval.toMillis
     )
   }
-
-  private def newAppPort(app: AppDefinition): Integer = {
-    // TODO this is pretty expensive, find a better way
-    val assignedPorts = listApps().flatMap(_.ports).toSet
-    val portSum = config.localPortMax() - config.localPortMin()
-
-    // prevent infinite loop if all ports are taken
-    if (assignedPorts.size >= portSum)
-      throw new PortRangeExhaustedException(config.localPortMin(), config.localPortMax())
-
-    var port = 0
-    do {
-      port = config.localPortMin() + Random.nextInt(portSum)
-    } while (assignedPorts.contains(port))
-    port
-  }
 }
