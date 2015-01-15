@@ -47,9 +47,26 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
           image = "group/image",
           network = Some(mesos.ContainerInfo.DockerInfo.Network.NONE),
           privileged = true,
-          parameters = Map(
-            "abc" -> "123",
-            "def" -> "456"
+          parameters = Seq(
+            Parameter("abc", "123"),
+            Parameter("def", "456")
+          )
+        )
+      )
+    )
+
+    lazy val container4 = Container(
+      `type` = mesos.ContainerInfo.Type.DOCKER,
+      volumes = Nil,
+      docker = Some(
+        Container.Docker(
+          image = "group/image",
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.NONE),
+          privileged = true,
+          parameters = Seq(
+            Parameter("abc", "123"),
+            Parameter("def", "456"),
+            Parameter("def", "789")
           )
         )
       )
@@ -77,8 +94,8 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
     assert("group/image" == proto3.getDocker.getImage)
     assert(f.container3.docker.get.network == Some(proto3.getDocker.getNetwork))
     assert(f.container3.docker.get.privileged == proto3.getDocker.getPrivileged)
-    assert(f.container3.docker.get.parameters.keys.toSeq == proto3.getDocker.getParametersList.asScala.map(_.getKey))
-    assert(f.container3.docker.get.parameters.values.toSeq == proto3.getDocker.getParametersList.asScala.map(_.getValue))
+    assert(f.container3.docker.get.parameters.map(_.key) == proto3.getDocker.getParametersList.asScala.map(_.getKey))
+    assert(f.container3.docker.get.parameters.map(_.value) == proto3.getDocker.getParametersList.asScala.map(_.getValue))
   }
 
   test("ConstructFromProto") {
@@ -187,16 +204,38 @@ class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
           "image": "group/image",
           "network": "NONE",
           "privileged": true,
-          "parameters": {
-            "abc": "123",
-            "def": "456"
-          }
+          "parameters": [
+            { "key": "abc", "value": "123" },
+            { "key": "def", "value": "456" }
+          ]
         }
       }
       """
 
     val readResult6 = mapper.readValue(json6, classOf[Container])
     assert(readResult6 == f.container3)
+
+    // Multiple values for a given key.
+    val json7 =
+      """
+      {
+        "type": "DOCKER",
+        "docker": {
+          "image": "group/image",
+          "network": "NONE",
+          "privileged": true,
+          "parameters": [
+            { "key": "abc", "value": "123" },
+            { "key": "def", "value": "456" },
+            { "key": "def", "value": "789" }
+          ]
+        }
+      }
+      """
+
+    val readResult7 = mapper.readValue(json7, classOf[Container])
+    assert(readResult7 == f.container4)
+
   }
 
 }
