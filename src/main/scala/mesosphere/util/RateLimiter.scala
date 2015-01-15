@@ -12,7 +12,7 @@ class RateLimiter {
   private val log = Logger.getLogger(getClass.getName)
 
   protected case class Delay(
-    current: FiniteDuration,
+    current: Deadline,
     future: Iterator[FiniteDuration])
 
   protected[this] val maxLaunchDelay = 1.hour
@@ -20,18 +20,18 @@ class RateLimiter {
   protected[this] var taskLaunchDelays = Map[(PathId, Timestamp), Delay]()
 
   def getDelay(app: AppDefinition): Deadline =
-    taskLaunchDelays.get(app.id -> app.version).map(_.current.fromNow) getOrElse Deadline.now
+    taskLaunchDelays.get(app.id -> app.version).map(_.current) getOrElse Deadline.now
 
   def addDelay(app: AppDefinition): Unit = {
     val newDelay = taskLaunchDelays.get(app.id -> app.version) match {
-      case Some(Delay(current, future)) => Delay(future.next(), future)
+      case Some(Delay(current, future)) => Delay(future.next().fromNow, future)
       case None => Delay(
-        app.backoff,
+        app.backoff.fromNow,
         durations(app.backoff, app.backoffFactor)
       )
     }
 
-    log.info(s"Task launch delay for [${app.id}] is now [${newDelay.current.toSeconds}] seconds")
+    log.info(s"Task launch delay for [${app.id}] is now [${newDelay.current}]")
 
     taskLaunchDelays += ((app.id, app.version) -> newDelay)
   }

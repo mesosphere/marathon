@@ -212,25 +212,25 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     )
 
     shouldViolate(
-      correct.copy(upgradeStrategy=UpgradeStrategy(1.2)),
+      correct.copy(upgradeStrategy = UpgradeStrategy(1.2)),
       "upgradeStrategy.minimumHealthCapacity",
       "is greater than 1"
     )
 
     shouldViolate(
-      correct.copy(upgradeStrategy=UpgradeStrategy(0.5, 1.2)),
+      correct.copy(upgradeStrategy = UpgradeStrategy(0.5, 1.2)),
       "upgradeStrategy.maximumOverCapacity",
       "is greater than 1"
     )
 
     shouldViolate(
-      correct.copy(upgradeStrategy=UpgradeStrategy(-1.2)),
+      correct.copy(upgradeStrategy = UpgradeStrategy(-1.2)),
       "upgradeStrategy.minimumHealthCapacity",
       "is less than 0"
     )
 
     shouldViolate(
-      correct.copy(upgradeStrategy=UpgradeStrategy(0.5, -1.2)),
+      correct.copy(upgradeStrategy = UpgradeStrategy(0.5, -1.2)),
       "upgradeStrategy.maximumOverCapacity",
       "is less than 0"
     )
