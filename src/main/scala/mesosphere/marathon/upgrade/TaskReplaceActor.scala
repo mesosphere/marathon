@@ -40,7 +40,7 @@ class TaskReplaceActor(
     if (nrToKillImmediately == 0 && maxCapacity == app.instances)
       maxCapacity += 1
 
-    log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} leave " +
+    log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} of ${app.id.toString} leave " +
       s"${minHealthy} tasks running, maximum capacity ${maxCapacity}, killing ${nrToKillImmediately} tasks immediately")
 
     for (_ <- 0 until nrToKillImmediately) {
@@ -84,12 +84,12 @@ class TaskReplaceActor(
 
   def commonBehavior: PartialFunction[Any, Unit] = {
     case MesosStatusUpdateEvent(slaveId, taskId, ErrorState(_), _, `appId`, _, _, `version`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
-      val msg = s"Task $taskId failed on slave $slaveId"
-      log.error(msg)
+      log.error(s"New task $taskId failed on slave $slaveId during app ${app.id.toString} restart")
       healthy -= taskId
       taskQueue.add(app)
 
     case MesosStatusUpdateEvent(slaveId, taskId, ErrorState(_), _, `appId`, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+      log.error(s"Old task $taskId failed on slave $slaveId during app ${app.id.toString} restart")
       oldTaskIds -= taskId
       conciliateNewTasks()
 
@@ -101,6 +101,7 @@ class TaskReplaceActor(
     val tasksNotStartedYet = math.max(0, app.instances - newTasksStarted)
     val tasksToStartNow = math.min(tasksNotStartedYet, leftCapacity)
     if (tasksToStartNow > 0) {
+      log.info(s"Reconciliating tasks during app ${app.id.toString} restart: queuing ${tasksToStartNow} new tasks")
       taskQueue.add(app, tasksToStartNow)
       newTasksStarted += tasksToStartNow
     }
