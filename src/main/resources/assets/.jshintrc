@@ -58,7 +58,5 @@
   "worker"        : false,
   "wsh"           : false,
   "yui"           : false,
-  "globals"       : {
-      "define"    : true
-  }
+  "node"   : true
 }

@@ -1,11 +1,8 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
+var React = require("react/addons");
 
-  return React.createClass({
+module.exports = React.createClass({
     propTypes: {
       router: React.PropTypes.object.isRequired
     },
@@ -51,4 +48,3 @@ define([
       );
     }
   });
-});

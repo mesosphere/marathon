@@ -1,12 +1,8 @@
-define([
-  "Backbone"
-], function(Backbone) {
-  "use strict";
+var Backbone = require("backbone");
 
-  var noop = function () {};
+var noop = function () {};
 
-  return Backbone.Router.extend({
-
+module.exports = Backbone.Router.extend({
     routes: {
       "": "apps",
       "apps(/:appid)(/:view)": "apps",
@@ -28,4 +24,4 @@ define([
 
     currentHash: function () { return Backbone.history.fragment; }
   });
-});
+

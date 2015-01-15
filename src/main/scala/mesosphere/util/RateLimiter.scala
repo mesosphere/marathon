@@ -1,6 +1,6 @@
 package mesosphere.util
 
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{ Timestamp, AppDefinition, PathId }
 
 import scala.concurrent.duration._
 import scala.util.Try
@@ -17,14 +17,14 @@ class RateLimiter {
 
   protected[this] val maxLaunchDelay = 1.hour
 
-  protected[this] var taskLaunchDelays = Map[PathId, Delay]()
+  protected[this] var taskLaunchDelays = Map[(PathId, Timestamp), Delay]()
 
   def getDelay(app: AppDefinition): Deadline =
-    taskLaunchDelays.get(app.id).map(_.current.fromNow) getOrElse Deadline.now
+    taskLaunchDelays.get(app.id -> app.version).map(_.current.fromNow) getOrElse Deadline.now
 
   def addDelay(app: AppDefinition): Unit = {
-    val newDelay = taskLaunchDelays.get(app.id) match {
-      case Some(Delay(current, future)) => Delay(future.next, future)
+    val newDelay = taskLaunchDelays.get(app.id -> app.version) match {
+      case Some(Delay(current, future)) => Delay(future.next(), future)
       case None => Delay(
         app.backoff,
         durations(app.backoff, app.backoffFactor)
@@ -33,13 +33,13 @@ class RateLimiter {
 
     log.info(s"Task launch delay for [${app.id}] is now [${newDelay.current.toSeconds}] seconds")
 
-    taskLaunchDelays = taskLaunchDelays + (app.id -> newDelay)
+    taskLaunchDelays += ((app.id, app.version) -> newDelay)
   }
 
-  def resetDelay(appId: PathId): Unit = {
-    if (taskLaunchDelays contains appId)
-      log.info(s"Task launch delay for [${appId}] reset to zero")
-    taskLaunchDelays = taskLaunchDelays - appId
+  def resetDelay(app: AppDefinition): Unit = {
+    if (taskLaunchDelays contains (app.id -> app.version))
+      log.info(s"Task launch delay for [${app.id} - ${app.version}}] reset to zero")
+    taskLaunchDelays = taskLaunchDelays - (app.id -> app.version)
   }
 
   /**

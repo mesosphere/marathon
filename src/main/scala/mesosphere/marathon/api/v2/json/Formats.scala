@@ -115,6 +115,11 @@ trait Formats
 
   implicit lazy val CommandFormat: Format[Command] = Json.format[Command]
 
+  implicit lazy val ParameterFormat: Format[Parameter] = (
+    (__ \ "key").format[String] ~
+    (__ \ "value").format[String]
+  )(Parameter(_, _), unlift(Parameter.unapply))
+
   /*
  * Helpers
  */
@@ -164,7 +169,7 @@ trait ContainerFormats {
     (__ \ "network").formatNullable[Network] ~
     (__ \ "portMappings").formatNullable[Seq[Docker.PortMapping]] ~
     (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
-    (__ \ "parameters").formatNullable[Map[String, String]].withDefault(Map.empty)
+    (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty)
   )(Docker(_, _, _, _, _), unlift(Docker.unapply))
 
   implicit val ModeFormat: Format[mesos.Volume.Mode] =
@@ -295,7 +300,14 @@ trait AppDefinitionFormats {
 
   implicit lazy val IdentifiableWrites = Json.writes[Identifiable]
 
-  implicit lazy val UpgradeStrategyFormat: Format[UpgradeStrategy] = Json.format[UpgradeStrategy]
+  implicit lazy val UpgradeStrategyWrites = Json.writes[UpgradeStrategy]
+  implicit lazy val UpgradeStrategyReads: Reads[UpgradeStrategy] = {
+    import mesosphere.marathon.state.AppDefinition._
+    (
+      (__ \ "minimumHealthCapacity").readNullable[JDouble].withDefault(DefaultUpgradeStrategy.minimumHealthCapacity) ~
+      (__ \ "maximumOverCapacity").readNullable[JDouble].withDefault(DefaultUpgradeStrategy.maximumOverCapacity)
+    )(UpgradeStrategy(_, _))
+  }
 
   implicit lazy val ConstraintFormat: Format[Constraint] = Format(
     Reads.of[Seq[String]].map { seq =>

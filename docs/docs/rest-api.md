@@ -39,6 +39,8 @@ title: REST API
   * [GET /v2/queue](#get-/v2/queue): List content of the staging queue.
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
+  * [GET /v2/leader](#get-/v2/leader): Get the current leader
+  * [DELETE /v2/leader](#delete-/v2/leader): Causes the current leader to abdicate, triggering a new election
 * [Miscellaneous](#miscellaneous)
   * [GET /ping](#get-/ping)
   * [GET /logging](#get-/logging)
@@ -77,10 +79,10 @@ The full JSON format of an application resource is as follows:
                 }
             ],
             "privileged": false,
-            "parameters": {
-                "a-docker-option": "xxx",
-                "b-docker-option": "yyy"
-            }
+            "parameters": [
+                { "key": "a-docker-option", "value": "xxx" },
+                { "key": "b-docker-option", "value": "yyy" }
+            ]
         },
         "volumes": [
             {
@@ -147,7 +149,8 @@ The full JSON format of an application resource is as follows:
     ],
     "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
     "upgradeStrategy": {
-        "minimumHealthCapacity": 0.5
+        "minimumHealthCapacity": 0.5,
+        "maximumOverCapacity": 0.2
     },
     "version": "2014-03-01T23:29:30.158Z"
 }
@@ -258,13 +261,49 @@ values. Each port value is exposed to the instance via environment variables
 via the task resource.
 
 ##### upgradeStrategy
+
 During an upgrade all instances of an application get replaced by a new version.
-The `minimumHealthCapacity` defines the minimum number of healthy nodes, that do not sacrifice overall application purpose.
-It is a number between `0` and `1` which is multiplied with the instance count.
-The default `minimumHealthCapacity` is `1`, which means no old instance can be stopped, before all new instances are deployed.
-A value of `0.5` means that an upgrade can be deployed side by side, by taking half of the instances down in the first step,
-deploy half of the new version and then take the other half down and deploy the rest.
-A value of `0` means take all instances down immediately and replace with the new application.
+The upgradeStrategy controls how Marathon stops old versions and launches
+new versions. It consists of two values:
+
+* `minimumHealthCapacity` (Optional. Default: 1.0) - a number between `0`and `1`
+that is multiplied with the instance count. This is the minimum number of healthy
+nodes that do not sacrifice overall application purpose. Marathon will make sure,
+during the upgrade process, that at any point of time this number of healthy
+instances are up.
+* `maximumOverCapacity` (Optional. Default: 1.0) - a number between `0` and
+`1` which is multiplied with the instance count. This is the maximum number of
+additional instances launched at any point of time during the upgrade process.
+
+The default `minimumHealthCapacity` is `1`, which means no old instance can be
+stopped before another healthy new version is deployed.
+A value of `0.5` means that during an upgrade half of the old version instances
+are stopped first to make space for the new version.
+A value of `0` means take all instances down immediately and replace with the
+new application.
+
+The default `maximumOverCapacity` is `1`, which means that all old and new
+instances can co-exist during the upgrade process.
+A value of `0.1` means that during the upgrade process 10% more capacity than
+usual may be used for old and new instances.
+A value of `0.0` means that even during the upgrade process no more capacity may
+be used for the new instances than usual. Only when an old version is stopped,
+a new instance can be deployed.
+
+If `minimumHealthCapacity` is `1` and `maximumOverCapacity` is `0`, at least
+one additional new instance is launched in the beginning of the upgrade process.
+When it is healthy, one of the old instances is stopped. After it is stopped,
+another new instance is started, and so on.
+
+A combination of `minimumHealthCapacity` equal to `0.9` and
+`maximumOverCapacity` equal to `0` results in a rolling update, replacing
+10% of the instances at a time, keeping at least 90% of the app online at any
+point of time during the upgrade.
+
+A combination of `minimumHealthCapacity` equal to `1.0` and
+`maximumOverCapacity` equal to `0.1` results in a rolling update, replacing
+10% of the instances at a time and keeping at least 100% of the app online at
+any point of time during the upgrade with 10% of additional capacity.
 
 ##### Example
 
@@ -313,7 +352,8 @@ User-Agent: HTTPie/0.8.0
         0
     ],
     "upgradeStrategy": {
-        "minimumHealthCapacity": 0.5
+        "minimumHealthCapacity": 0.5,
+        "minimumOverCapacity": 0.5
     }
 }
 {% endhighlight json %}
@@ -372,7 +412,8 @@ Transfer-Encoding: chunked
     "requirePorts": false,
     "storeUrls": [],
     "upgradeStrategy": {
-        "minimumHealthCapacity": 0.5
+        "minimumHealthCapacity": 0.5,
+        "minimumOverCapacity": 0.5
     },
     "uris": [],
     "user": null,
@@ -2120,7 +2161,8 @@ Transfer-Encoding: chunked
                 "requirePorts": false,
                 "storeUrls": [],
                 "upgradeStrategy": {
-                    "minimumHealthCapacity": 1.0
+                    "minimumHealthCapacity": 1.0,
+                    "maximumOverCapacity": 1.0
                 },
                 "uris": [
                     "http://downloads.mesosphere.com/misc/toggle.tgz"
@@ -2202,6 +2244,64 @@ Server: Jetty(8.y.z-SNAPSHOT)
         "zk_state": "/marathon",
         "zk_timeout": 10
     }
+}
+{% endhighlight %}
+
+#### GET `/v2/leader`
+
+Returns the current leader.
+If no leader exists, Marathon will respond with a 404 error.
+
+**Request:**
+
+{% highlight http %}
+GET /v2/leader HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 872
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
+{
+    "leader": "127.0.0.1:8080"
+}
+{% endhighlight %}
+
+#### DELETE `/v2/leader`
+
+<span class="label label-default">v0.7.7</span>
+
+Causes the current leader to abdicate, triggering a new election.
+If no leader exists, Marathon will respond with a 404 error.
+
+**Request:**
+
+{% highlight http %}
+DELETE /v2/leader HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 872
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
+{
+    "message": "Leadership abdicted"
 }
 {% endhighlight %}
 

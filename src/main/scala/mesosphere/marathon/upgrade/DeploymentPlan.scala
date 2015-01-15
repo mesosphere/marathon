@@ -25,7 +25,7 @@ final case class ScaleApplication(app: AppDefinition, scaleTo: Int) extends Depl
 final case class StopApplication(app: AppDefinition) extends DeploymentAction
 
 // application is there but should be replaced
-final case class RestartApplication(app: AppDefinition, scaleOldTo: Int, scaleNewTo: Int) extends DeploymentAction
+final case class RestartApplication(app: AppDefinition) extends DeploymentAction
 
 // resolve and store artifacts for given app
 final case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends DeploymentAction
@@ -54,11 +54,11 @@ final case class DeploymentPlan(
   override def toString: String = {
     def appString(app: AppDefinition): String = s"App(${app.id}, ${app.cmd}))"
     def actionString(a: DeploymentAction): String = a match {
-      case StartApplication(app, scale)      => s"Start(${appString(app)}, $scale)"
-      case StopApplication(app)              => s"Stop(${appString(app)})"
-      case ScaleApplication(app, scale)      => s"Scale(${appString(app)}, $scale)"
-      case RestartApplication(app, from, to) => s"Restart(${appString(app)}, $from, $to)"
-      case ResolveArtifacts(app, urls)       => s"Resolve(${appString(app)}, $urls})"
+      case StartApplication(app, scale) => s"Start(${appString(app)}, $scale)"
+      case StopApplication(app)         => s"Stop(${appString(app)})"
+      case ScaleApplication(app, scale) => s"Scale(${appString(app)}, $scale)"
+      case RestartApplication(app)      => s"Restart(${appString(app)})"
+      case ResolveArtifacts(app, urls)  => s"Resolve(${appString(app)}, $urls})"
     }
     val stepString = steps.map("Step(" + _.actions.map(actionString) + ")").mkString("(", ", ", ")")
     s"DeploymentPlan($version, $stepString)"
@@ -171,12 +171,7 @@ object DeploymentPlan extends Logging {
 
           // Update existing app.
           case Some(oldApp) if oldApp != newApp =>
-            val factor: Double = newApp.upgradeStrategy.minimumHealthCapacity
-            val minimum: Int = math.min(
-              oldApp.instances * factor,
-              newApp.instances * factor
-            ).ceil.toInt
-            actions += RestartApplication(newApp, minimum, newApp.instances)
+            actions += RestartApplication(newApp)
 
           // Other cases require no action.
           case _ => ()

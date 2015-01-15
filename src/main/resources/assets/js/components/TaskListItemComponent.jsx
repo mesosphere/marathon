@@ -1,49 +1,47 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "models/Task"
-], function(React, Task) {
-  "use strict";
 
-  function buildHref(host, port) {
-    return "http://" + host + ":" + port;
+var React = require("react/addons");
+var Task = require("../models/Task");
+
+function buildHref(host, port) {
+  return "http://" + host + ":" + port;
+}
+
+function buildTaskAnchors(task) {
+  var taskAnchors;
+  var ports = task.get("ports");
+  var portsLength = ports.length;
+
+  if (portsLength > 1) {
+    // Linkify each port with the hostname. The port is the text of the
+    // anchor, but the href contains the hostname and port, a full link.
+    taskAnchors =
+      <span className="text-muted">
+        {task.get("host")}:[{ports.map(function(p, index) {
+          return (
+            <span key={p}>
+              <a className="text-muted" href={buildHref(task.get("host"), p)}>{p}</a>
+              {index < portsLength - 1 ? ", " : ""}
+            </span>
+          );
+        })}]
+      </span>;
+  } else if (portsLength === 1) {
+    // Linkify the hostname + port since there is only one port.
+    taskAnchors =
+      <a className="text-muted" href={buildHref(task.get("host"), ports[0])}>
+        {task.get("host")}:{ports[0]}
+      </a>;
+  } else {
+    // Ain't no ports; don't linkify.
+    taskAnchors = <span className="text-muted">{task.get("host")}</span>;
   }
 
-  function buildTaskAnchors(task) {
-    var taskAnchors;
-    var ports = task.get("ports");
-    var portsLength = ports.length;
+  return taskAnchors;
+}
 
-    if (portsLength > 1) {
-      // Linkify each port with the hostname. The port is the text of the
-      // anchor, but the href contains the hostname and port, a full link.
-      taskAnchors =
-        <span className="text-muted">
-          {task.get("host")}:[{ports.map(function(p, index) {
-            return (
-              <span key={p}>
-                <a className="text-muted" href={buildHref(task.get("host"), p)}>{p}</a>
-                {index < portsLength - 1 ? ", " : ""}
-              </span>
-            );
-          })}]
-        </span>;
-    } else if (portsLength === 1) {
-      // Linkify the hostname + port since there is only one port.
-      taskAnchors =
-        <a className="text-muted" href={buildHref(task.get("host"), ports[0])}>
-          {task.get("host")}:{ports[0]}
-        </a>;
-    } else {
-      // Ain't no ports; don't linkify.
-      taskAnchors = <span className="text-muted">{task.get("host")}</span>;
-    }
-
-    return taskAnchors;
-  }
-
-  return React.createClass({
+module.exports = React.createClass({
     displayName: "TaskListItemComponent",
 
     propTypes: {
@@ -146,4 +144,3 @@ define([
     }
 
   });
-});

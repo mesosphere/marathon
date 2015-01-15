@@ -1,23 +1,20 @@
 /** @jsx React.DOM */
 
-define([
-  "jquery",
-  "Underscore",
-  "React",
-  "mixins/BackboneMixin",
-  "models/App",
-  "jsx!components/FormGroupComponent",
-  "jsx!components/ModalComponent"
-], function($, _, React, BackboneMixin, App, FormGroupComponent,
-      ModalComponent) {
-  "use strict";
+
+var $ = require("jquery");
+var _ = require("underscore");
+var React = require("react/addons");
+var BackboneMixin = require("../mixins/BackboneMixin");
+var App = require("../models/App");
+var FormGroupComponent = require("../components/FormGroupComponent");
+var ModalComponent = require("../components/ModalComponent");
 
   function ValidationError(attribute, message) {
     this.attribute = attribute;
     this.message = message;
   }
 
-  return React.createClass({
+module.exports = React.createClass({
     mixins: [BackboneMixin],
     propTypes: {
       onCreate: React.PropTypes.func,
@@ -262,4 +259,3 @@ define([
       );
     }
   });
-});

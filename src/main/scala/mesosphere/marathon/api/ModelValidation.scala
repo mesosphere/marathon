@@ -166,7 +166,7 @@ trait ModelValidation extends BeanValidation {
         app,
         app.upgradeStrategy,
         "upgradeStrategy",
-        (b: AppUpdate, p: UpgradeStrategy, i: String) => healthErrors(b, p, i)
+        (b: AppUpdate, p: UpgradeStrategy, i: String) => upgradeStrategyErrors(b, p, i)
       ),
       defined(
         app,
@@ -187,7 +187,7 @@ trait ModelValidation extends BeanValidation {
     validate(app,
       idErrors(app, parent, app.id, path + "id"),
       checkPath(app, parent, app.id, path + "id"),
-      healthErrors(app, app.upgradeStrategy, path + "upgradeStrategy"),
+      upgradeStrategyErrors(app, app.upgradeStrategy, path + "upgradeStrategy"),
       dependencyErrors(app, parent, app.dependencies, path + "dependencies"),
       urlsCanBeResolved(app, app.storeUrls, path + "storeUrls")
     )
@@ -242,7 +242,7 @@ trait ModelValidation extends BeanValidation {
     path: String): Iterable[ConstraintViolation[T]] =
     set.zipWithIndex.flatMap{ case (id, pos) => idErrors(t, base, id, s"$path[$pos]") }
 
-  def healthErrors[T: ClassTag](
+  def upgradeStrategyErrors[T: ClassTag](
     t: T,
     upgradeStrategy: UpgradeStrategy,
     path: String): Iterable[ConstraintViolation[T]] = {
@@ -250,5 +250,9 @@ trait ModelValidation extends BeanValidation {
     else if (upgradeStrategy.minimumHealthCapacity > 1) Some("is greater than 1")
     else None
   }.map { violation(t, upgradeStrategy, path + ".minimumHealthCapacity", _) }
-
+    .orElse({
+      if (upgradeStrategy.maximumOverCapacity < 0) Some("is less than 0")
+      else if (upgradeStrategy.maximumOverCapacity > 1) Some("is greater than 1")
+      else None
+    }.map { violation(t, upgradeStrategy, path + ".maximumOverCapacity", _) })
 }

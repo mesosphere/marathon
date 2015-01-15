@@ -1,10 +1,8 @@
-define([
-  "models/Deployment",
-  "models/SortableCollection"
-], function(Deployment, SortableCollection) {
-  "use strict";
 
-  return SortableCollection.extend({
+var Deployment = require("../models/Deployment");
+var SortableCollection = require("../models/SortableCollection");
+
+module.exports = SortableCollection.extend({
     model: Deployment,
 
     initialize: function(models, options) {
@@ -17,4 +15,3 @@ define([
       return "/v2/deployments";
     }
   });
-});

@@ -1,11 +1,9 @@
 /** @jsx React.DOM */
 
-define([
-  "React"
-], function(React) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+
+module.exports = React.createClass({
     name: "DeploymentComponent",
 
     propTypes: {
@@ -47,14 +45,14 @@ define([
           <td>
             <ul className="list-unstyled">
               {model.get("currentActions").map(function(action) {
-                return <li key={action.apps}>{action.apps}</li>;
+                return <li key={action.app}>{action.app}</li>;
               })}
             </ul>
           </td>
           <td>
             <ul className="list-unstyled">
               {model.get("currentActions").map(function(action) {
-                return <li key={action.apps}>{action.action}</li>;
+                return <li key={action.app}>{action.action}</li>;
               })}
             </ul>
           </td>
@@ -93,4 +91,3 @@ define([
       );
     }
   });
-});

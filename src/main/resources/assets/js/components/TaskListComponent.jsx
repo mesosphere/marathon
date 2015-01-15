@@ -1,16 +1,13 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "mixins/BackboneMixin",
-  "jsx!components/TaskListItemComponent",
-  "jsx!components/PagedContentComponent"
-], function(React, States, BackboneMixin,
-    TaskListItemComponent, PagedContentComponent) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+var States = require("../constants/States");
+var BackboneMixin = require("../mixins/BackboneMixin");
+var TaskListItemComponent = require("../components/TaskListItemComponent");
+var PagedContentComponent = require("../components/PagedContentComponent");
+
+module.exports = React.createClass({
     displayName: "TaskListComponent",
 
     mixins: [BackboneMixin],
@@ -89,7 +86,7 @@ define([
           <PagedContentComponent
               currentPage={this.props.currentPage}
               itemsPerPage={this.props.itemsPerPage}
-              element="tbody" >
+              tag="tbody" >
             {
               hasError ?
                 <tr>
@@ -181,4 +178,3 @@ define([
       );
     }
   });
-});

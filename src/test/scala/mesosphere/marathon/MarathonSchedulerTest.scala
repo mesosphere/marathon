@@ -7,11 +7,10 @@ import com.codahale.metrics.MetricRegistry
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
+import mesosphere.marathon.event.{ MesosStatusUpdateEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
-import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.mesos.util.FrameworkIdUtil
 import org.apache.mesos.Protos._
@@ -24,7 +23,6 @@ import org.scalatest.BeforeAndAfterAll
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.concurrent.duration.Deadline
 
 class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with MarathonSpec with BeforeAndAfterAll {
 
@@ -45,10 +43,10 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     repo = mock[AppRepository]
     hcManager = mock[HealthCheckManager]
     tracker = mock[TaskTracker]
-    queue = mock[TaskQueue]
+    queue = spy(new TaskQueue)
     frameworkIdUtil = mock[FrameworkIdUtil]
     config = defaultConfig()
-    taskIdUtil = mock[TaskIdUtil]
+    taskIdUtil = TaskIdUtil
     probe = TestProbe()
     eventBus = system.eventStream
     scheduler = new MarathonScheduler(
@@ -74,24 +72,17 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     val driver = mock[SchedulerDriver]
     val offer = makeBasicOffer(cpus = 4, mem = 1024, disk = 4000, beginPort = 31000, endPort = 32000).build
     val offers = Lists.newArrayList(offer)
-    val now = Timestamp.now
+    val now = Timestamp.now()
     val app = AppDefinition(
       id = "testOffers".toRootPath,
       executor = "//cmd",
       ports = Seq(8080),
       version = now
     )
-    val queuedTask = QueuedTask(app, Deadline.now)
-    val list = Vector(queuedTask)
-    val allApps = Vector(app)
 
-    when(taskIdUtil.newTaskId("testOffers".toRootPath))
-      .thenReturn(TaskID.newBuilder.setValue("testOffers_0-1234").build)
+    queue.add(app)
+
     when(tracker.checkStagedTasks).thenReturn(Seq())
-    when(queue.poll()).thenReturn(Some(queuedTask))
-    when(queue.list).thenReturn(list)
-    when(queue.removeAll()).thenReturn(list)
-    when(queue.listApps).thenReturn(allApps)
     when(repo.currentAppVersions())
       .thenReturn(Future.successful(Map(app.id -> app.version)))
 
@@ -103,7 +94,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
 
     verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
     verify(tracker).created(same(app.id), marathonTaskCaptor.capture())
-    verify(queue).addAll(Seq.empty)
 
     assert(1 == offersCaptor.getValue.size())
     assert(offer.getId == offersCaptor.getValue.get(0))
@@ -169,6 +159,33 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     finally {
       eventBus.unsubscribe(probe.ref)
     }
+  }
+
+  // regression test for bug described here: https://github.com/mesosphere/marathon/issues/995
+  test("Does correctly extract app id from task id") {
+    val app = AppDefinition(id = "/test/app".toRootPath)
+    val taskId = "test_app.18462545-4ba2-12c5-65ba-37654cd26b63"
+    val taskVersion = Timestamp.now().toString
+    val driver = mock[SchedulerDriver]
+    val status = TaskStatus.newBuilder
+      .setTaskId(TaskID.newBuilder.setValue(taskId))
+      .setState(TaskState.TASK_RUNNING)
+      .build()
+
+    val task = Protos.MarathonTask.newBuilder.setId(taskId).setVersion(taskVersion).build()
+    for (_ <- 0 until 20) queue.rateLimiter.addDelay(app)
+
+    when(tracker.fetchTask(app.id, taskId)).thenReturn(None)
+    when(tracker.running(app.id, status)).thenReturn(Future.successful(task))
+    when(repo.app(app.id, Timestamp(taskVersion))).thenReturn(Future.successful(Some(app)))
+
+    eventBus.subscribe(probe.ref, classOf[MesosStatusUpdateEvent])
+
+    scheduler.statusUpdate(driver, status)
+
+    probe.expectMsgType[MesosStatusUpdateEvent]
+
+    awaitAssert(queue.rateLimiter.getDelay(app).isOverdue())
   }
 
   // Currently does not work because of the injection used in MarathonScheduler.callbacks

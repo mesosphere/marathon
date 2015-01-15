@@ -1,16 +1,14 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "constants/States",
-  "models/App",
-  "models/AppVersion",
-  "mixins/BackboneMixin",
-  "jsx!components/AppVersionComponent"
-], function(React, States, App, AppVersion, BackboneMixin, AppVersionComponent) {
-  "use strict";
 
-  return React.createClass({
+var React = require("react/addons");
+var States = require("../constants/States");
+var App = require("../models/App");
+var AppVersion = require("../models/AppVersion");
+var BackboneMixin = require("../mixins/BackboneMixin");
+var AppVersionComponent = require("../components/AppVersionComponent");
+
+module.exports = React.createClass({
     displayName: "AppVersionListItemComponent",
 
     mixins: [BackboneMixin],
@@ -116,4 +114,3 @@ define([
       );
     }
   });
-});

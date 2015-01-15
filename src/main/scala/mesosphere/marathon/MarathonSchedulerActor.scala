@@ -91,11 +91,11 @@ class MarathonSchedulerActor(
         case Success(deployments) => self ! RecoverDeployments(deployments)
         case Failure(_)           => self ! RecoverDeployments(Nil)
       }
-      
+
     case RecoverDeployments(deployments) =>
       deployments.foreach { plan =>
         log.info(s"Recovering deployment: $plan")
-        deploy(Actor.noSender, Deploy(plan, force = false), plan, blocking = false)
+        deploy(context.system.deadLetters, Deploy(plan, force = false), plan, blocking = false)
       }
 
       log.info("Scheduler actor ready")
@@ -103,9 +103,9 @@ class MarathonSchedulerActor(
       context.become(started)
       self ! ReconcileHealthChecks
 
-    case Suspend => // ignore
-    
-    case _ => stash()
+    case Suspend(_) => // ignore
+
+    case _          => stash()
   }
 
   def started: Receive = {
@@ -129,7 +129,7 @@ class MarathonSchedulerActor(
       performAsyncWithLockFor(appId, origSender, cmd, blocking = false) {
         val res = scheduler.scale(driver, appId)
 
-        if (origSender != Actor.noSender)
+        if (origSender != context.system.deadLetters)
           res.sendAnswer(origSender, cmd)
         else
           res
@@ -189,17 +189,16 @@ class MarathonSchedulerActor(
 
     def performWithLock(lockFn: Set[Semaphore] => Set[Semaphore]): Future[Unit] = {
       val locks = appIds.map(appLocks.get) // needed locks for all applications
-      Future(blocking(lockFn(locks))).flatMap { acquired => // acquired locks, fetched in a future
-        if (acquired.size == locks.size) {
-          log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
-          f.andThen {
-            case _ =>
-              log.debug(s"Releasing locks for $appIds")
-              acquired.foreach(_.release())
-          }.map { _ => () }
-        }
-        else lockNotAvailable(acquired)
+      val acquired = lockFn(locks)
+      if (acquired.size == locks.size) {
+        log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
+        f.andThen {
+          case _ =>
+            log.debug(s"Releasing locks for $appIds")
+            acquired.foreach(_.release())
+        }.map { _ => () }
       }
+      else lockNotAvailable(acquired)
     }
 
     def lockNotAvailable(acquiredLocks: Set[Semaphore]): Future[Unit] = Future {
@@ -223,7 +222,14 @@ class MarathonSchedulerActor(
 
     def acquireBlocking(locks: Set[Semaphore]): Set[Semaphore] = locks.map{ s => s.acquire(); s }
     def acquireIfPossible(locks: Set[Semaphore]): Set[Semaphore] = locks.takeWhile(_.tryAcquire())
-    performWithLock(if (isBlocking) acquireBlocking else acquireIfPossible)
+
+    if (isBlocking) {
+      // TODO: there is still a race condition in this line, we should try to find a better solution for this
+      Future(performWithLock(acquireBlocking)).flatMap(identity)
+    }
+    else {
+      performWithLock(acquireIfPossible)
+    }
   }
 
   /**
@@ -246,8 +252,6 @@ class MarathonSchedulerActor(
     val ids = plan.affectedApplicationIds
 
     performAsyncWithLockFor(ids, origSender, cmd, isBlocking = blocking) {
-      ids.foreach(taskQueue.rateLimiter.resetDelay)
-
       val res = deploy(driver, plan)
       if (origSender != Actor.noSender) origSender ! cmd.answer
       res
@@ -379,7 +383,7 @@ class SchedulerActions(
       }
       taskQueue.purge(app.id)
       taskTracker.shutdown(app.id)
-      taskQueue.rateLimiter.resetDelay(app.id)
+      taskQueue.rateLimiter.resetDelay(app)
       // TODO after all tasks have been killed we should remove the app from taskTracker
 
       eventBus.publish(AppTerminatedEvent(app.id))
@@ -478,13 +482,12 @@ class SchedulerActions(
       if (targetCount > currentCount) {
         log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
 
-        val queuedCount = taskQueue.count(app)
+        val queuedCount = taskQueue.count(app.id)
         val toQueue = targetCount - (currentCount + queuedCount)
 
         if (toQueue > 0) {
           log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
-          for (i <- 0 until toQueue)
-            taskQueue.add(app)
+          taskQueue.add(app, toQueue)
         }
         else {
           log.info(s"Already queued $queuedCount tasks for ${app.id}. Not scaling.")
@@ -522,7 +525,6 @@ class SchedulerActions(
         val updatedApp = appUpdate(currentVersion)
 
         taskQueue.purge(id)
-        taskQueue.rateLimiter.resetDelay(id)
 
         appRepository.store(updatedApp).map { _ =>
           update(driver, updatedApp, appUpdate)

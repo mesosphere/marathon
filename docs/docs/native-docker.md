@@ -224,11 +224,11 @@ the future, as Mesos may not always interact with Docker via the CLI.
         "docker": {
             "image": "mesosphere/inky"
             "privileged": true,
-            "parameters": {
-                "hostname": "a.corp.org",
-                "volumes-from": "another-container",
-                "lxc-conf": "..."
-            }
+            "parameters": [
+                { "key": "hostname", "value": "a.corp.org" },
+                { "key": "volumes-from", "value": "another-container" },
+                { "key": "lxc-conf", "value": "..." }
+            ]
         },
         "type": "DOCKER",
         "volumes": []

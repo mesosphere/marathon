@@ -1,13 +1,11 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "models/Info",
-  "mixins/BackboneMixin",
-  "jsx!components/ModalComponent",
-  "jsx!components/ObjectDlComponent"
-], function(React, Info, BackboneMixin, ModalComponent, ObjectDlComponent) {
-  "use strict";
+
+var React = require("react/addons");
+var Info = require("../../models/Info");
+var BackboneMixin = require("../../mixins/BackboneMixin");
+var ModalComponent = require("../components/../ModalComponent");
+var ObjectDlComponent = require("../components/../ObjectDlComponent");
 
   /* jshint trailing:false, quotmark:false, newcap:false */
   var UNSPECIFIED_NODE = React.createClass({
@@ -16,7 +14,7 @@ define([
     }
   });
 
-  return React.createClass({
+module.exports = React.createClass({
     mixins: [BackboneMixin],
 
     getInitialState: function() {
@@ -54,7 +52,7 @@ define([
               aria-hidden="true" onClick={this.destroy}>&times;</button>
             <h3 className="modal-title">
               <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
-              <small className="text-muted" style={{"margin-left": "1em"}}>
+              <small className="text-muted" style={{"marginLeft": "1em"}}>
                 Version {this.state.info.get("version")}
               </small>
             </h3>
@@ -83,4 +81,3 @@ define([
       );
     }
   });
-});

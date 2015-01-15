@@ -9876,7 +9876,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -9888,7 +9888,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -9899,7 +9899,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -9910,7 +9910,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -9922,7 +9922,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -10913,7 +10913,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -10926,7 +10926,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -10940,7 +10940,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -10953,7 +10953,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -10966,7 +10966,7 @@ public final class Protos {
        *
        * <pre>
        * Allowing arbitrary parameters to be passed to docker CLI.
-       * Note that anything passed to this field is not guranteed
+       * Note that anything passed to this field is not guaranteed
        * to be supported moving forward, as we might move away from
        * the docker CLI.
        * </pre>
@@ -11772,7 +11772,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11789,7 +11789,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11806,7 +11806,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11823,7 +11823,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11847,7 +11847,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11868,7 +11868,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11891,7 +11891,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11915,7 +11915,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11936,7 +11936,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11957,7 +11957,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11978,7 +11978,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -11998,7 +11998,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -12018,7 +12018,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -12032,7 +12032,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -12049,7 +12049,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -12067,7 +12067,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -12081,7 +12081,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -12096,7 +12096,7 @@ public final class Protos {
          *
          * <pre>
          * Allowing arbitrary parameters to be passed to docker CLI.
-         * Note that anything passed to this field is not guranteed
+         * Note that anything passed to this field is not guaranteed
          * to be supported moving forward, as we might move away from
          * the docker CLI.
          * </pre>
@@ -14041,6 +14041,16 @@ public final class Protos {
      * <code>required double minimumHealthCapacity = 1;</code>
      */
     double getMinimumHealthCapacity();
+
+    // optional double maximumOverCapacity = 2 [default = 1];
+    /**
+     * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
+     */
+    boolean hasMaximumOverCapacity();
+    /**
+     * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
+     */
+    double getMaximumOverCapacity();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.UpgradeStrategyDefinition}
@@ -14096,6 +14106,11 @@ public final class Protos {
             case 9: {
               bitField0_ |= 0x00000001;
               minimumHealthCapacity_ = input.readDouble();
+              break;
+            }
+            case 17: {
+              bitField0_ |= 0x00000002;
+              maximumOverCapacity_ = input.readDouble();
               break;
             }
           }
@@ -14154,8 +14169,25 @@ public final class Protos {
       return minimumHealthCapacity_;
     }
 
+    // optional double maximumOverCapacity = 2 [default = 1];
+    public static final int MAXIMUMOVERCAPACITY_FIELD_NUMBER = 2;
+    private double maximumOverCapacity_;
+    /**
+     * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
+     */
+    public boolean hasMaximumOverCapacity() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
+     */
+    public double getMaximumOverCapacity() {
+      return maximumOverCapacity_;
+    }
+
     private void initFields() {
       minimumHealthCapacity_ = 0D;
+      maximumOverCapacity_ = 1D;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -14176,6 +14208,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeDouble(1, minimumHealthCapacity_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeDouble(2, maximumOverCapacity_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -14188,6 +14223,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeDoubleSize(1, minimumHealthCapacity_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeDoubleSize(2, maximumOverCapacity_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -14307,6 +14346,8 @@ public final class Protos {
         super.clear();
         minimumHealthCapacity_ = 0D;
         bitField0_ = (bitField0_ & ~0x00000001);
+        maximumOverCapacity_ = 1D;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -14339,6 +14380,10 @@ public final class Protos {
           to_bitField0_ |= 0x00000001;
         }
         result.minimumHealthCapacity_ = minimumHealthCapacity_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.maximumOverCapacity_ = maximumOverCapacity_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -14357,6 +14402,9 @@ public final class Protos {
         if (other == mesosphere.marathon.Protos.UpgradeStrategyDefinition.getDefaultInstance()) return this;
         if (other.hasMinimumHealthCapacity()) {
           setMinimumHealthCapacity(other.getMinimumHealthCapacity());
+        }
+        if (other.hasMaximumOverCapacity()) {
+          setMaximumOverCapacity(other.getMaximumOverCapacity());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -14418,6 +14466,39 @@ public final class Protos {
       public Builder clearMinimumHealthCapacity() {
         bitField0_ = (bitField0_ & ~0x00000001);
         minimumHealthCapacity_ = 0D;
+        onChanged();
+        return this;
+      }
+
+      // optional double maximumOverCapacity = 2 [default = 1];
+      private double maximumOverCapacity_ = 1D;
+      /**
+       * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
+       */
+      public boolean hasMaximumOverCapacity() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
+       */
+      public double getMaximumOverCapacity() {
+        return maximumOverCapacity_;
+      }
+      /**
+       * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
+       */
+      public Builder setMaximumOverCapacity(double value) {
+        bitField0_ |= 0x00000002;
+        maximumOverCapacity_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
+       */
+      public Builder clearMaximumOverCapacity() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        maximumOverCapacity_ = 1D;
         onChanged();
         return this;
       }
@@ -18633,22 +18714,23 @@ public final class Protos {
       "\001(\t\022\027\n\014service_port\030d \001(\r:\0010\")\n\020EventSub" +
       "scribers\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016Stora" +
       "geVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022" +
-      "\r\n\005patch\030\003 \002(\r\":\n\031UpgradeStrategyDefinit" +
-      "ion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\"\260\001\n\017G" +
-      "roupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 " +
-      "\002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere.marathon.",
-      "ServiceDefinition\0224\n\006groups\030\004 \003(\0132$.meso" +
-      "sphere.marathon.GroupDefinition\022\024\n\014depen" +
-      "dencies\030\005 \003(\t\"\245\001\n\030DeploymentPlanDefiniti" +
-      "on\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010origi" +
-      "nal\030\004 \002(\0132$.mesosphere.marathon.GroupDef" +
-      "inition\0224\n\006target\030\005 \002(\0132$.mesosphere.mar" +
-      "athon.GroupDefinition\"\245\001\n\013TaskFailure\022\016\n" +
-      "\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.T" +
-      "askID\022\037\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021" +
-      "\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007ver",
-      "sion\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\tB\035\n\023mesosph" +
-      "ere.marathonB\006Protos"
+      "\r\n\005patch\030\003 \002(\r\"Z\n\031UpgradeStrategyDefinit" +
+      "ion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023ma" +
+      "ximumOverCapacity\030\002 \001(\001:\0011\"\260\001\n\017GroupDefi" +
+      "nition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004a",
+      "pps\030\003 \003(\0132&.mesosphere.marathon.ServiceD" +
+      "efinition\0224\n\006groups\030\004 \003(\0132$.mesosphere.m" +
+      "arathon.GroupDefinition\022\024\n\014dependencies\030" +
+      "\005 \003(\t\"\245\001\n\030DeploymentPlanDefinition\022\n\n\002id" +
+      "\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010original\030\004 \002(" +
+      "\0132$.mesosphere.marathon.GroupDefinition\022" +
+      "4\n\006target\030\005 \002(\0132$.mesosphere.marathon.Gr" +
+      "oupDefinition\"\245\001\n\013TaskFailure\022\016\n\006app_id\030" +
+      "\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n" +
+      "\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007messag",
+      "e\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002" +
+      "(\t\022\021\n\ttimestamp\030\007 \002(\tB\035\n\023mesosphere.mara" +
+      "thonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -18726,7 +18808,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_UpgradeStrategyDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_UpgradeStrategyDefinition_descriptor,
-              new java.lang.String[] { "MinimumHealthCapacity", });
+              new java.lang.String[] { "MinimumHealthCapacity", "MaximumOverCapacity", });
           internal_static_mesosphere_marathon_GroupDefinition_descriptor =
             getDescriptor().getMessageTypes().get(10);
           internal_static_mesosphere_marathon_GroupDefinition_fieldAccessorTable = new

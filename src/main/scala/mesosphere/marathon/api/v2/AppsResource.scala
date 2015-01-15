@@ -217,7 +217,7 @@ class AppsResource @Inject() (
               UUID.randomUUID().toString,
               group,
               newGroup,
-              DeploymentStep(RestartApplication(newApp, 0, newApp.instances) :: Nil) :: Nil,
+              DeploymentStep(RestartApplication(newApp) :: Nil) :: Nil,
               Timestamp.now())
             val res = service.deploy(plan)
             result(res)
