@@ -161,7 +161,6 @@ class DeploymentActor(
   }
 
   def restartApp(app: AppDefinition): Future[Unit] = {
-    healthCheckManager.addAllFor(app) // ensure health check actors are in place before tasks are launched
     val res = if (app.instances == 0) {
       Future.successful(())
     }
