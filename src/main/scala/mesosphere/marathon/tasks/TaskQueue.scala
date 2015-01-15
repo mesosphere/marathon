@@ -62,6 +62,7 @@ class TaskQueue {
   def add(app: AppDefinition): Unit = add(app, 1)
 
   def add(app: AppDefinition, count: Int): Unit = {
+    require(count > 0, "count has to be positive")
     val queuedTask = apps.getOrElseUpdate(
       (app.id, app.version),
       QueuedTask(app, new AtomicInteger(0)))
@@ -104,11 +105,11 @@ class TaskQueue {
     def findMatching(xs: List[QueuedTask]): Option[B] = xs match {
       case Nil => None
       case head :: tail => head match {
-        case QueuedTask(app, _) if rateLimiter.getDelay(app).hasTimeLeft() =>
+        case QueuedTask(app, count) if rateLimiter.getDelay(app).hasTimeLeft() =>
           log.info(s"Delaying ${app.id} due to backoff. Time left: ${rateLimiter.getDelay(app).timeLeft}.")
           findMatching(tail)
 
-        case QueuedTask(app, count) =>
+        case QueuedTask(app, count) if count.get() > 0 =>
           val res = f(app)
           if (res.isDefined && count.decrementIfPositive()) {
             res
@@ -116,6 +117,8 @@ class TaskQueue {
           else {
             findMatching(tail)
           }
+
+        case _ => findMatching(tail)
       }
     }
 
