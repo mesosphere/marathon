@@ -179,7 +179,7 @@ class DeploymentActorTest
 
     when(tracker.get(app.id)).thenReturn(Set(task1_1, task1_2))
 
-    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew, 0, 2)))), Timestamp.now())
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
     when(driver.killTask(TaskID(task1_1.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -251,7 +251,7 @@ class DeploymentActorTest
     val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
-    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew, 0, 0)))), Timestamp.now())
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
     when(tracker.get(app.id)).thenReturn(Set[MarathonTask]())
     when(repo.store(appNew)).thenReturn(Future.successful(appNew))

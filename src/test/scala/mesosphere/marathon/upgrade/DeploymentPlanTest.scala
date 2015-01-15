@@ -152,8 +152,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     Then("the deployment steps are correct")
     plan.steps should have size 2
-    plan.steps(0).actions.toSet should equal (Set(RestartApplication(mongo._2, 3, 8)))
-    plan.steps(1).actions.toSet should equal (Set(RestartApplication(service._2, 3, 10)))
+    plan.steps(0).actions.toSet should equal (Set(RestartApplication(mongo._2)))
+    plan.steps(1).actions.toSet should equal (Set(RestartApplication(service._2)))
   }
 
   test("when updating a group without dependencies, a random order of updates is used") {
@@ -185,8 +185,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     Then("the deployment steps are correct")
     plan.steps should have size 2
-    plan.steps(0).actions.toSet should equal (Set(RestartApplication(mongo._2, 3, 8)))
-    plan.steps(1).actions.toSet should equal (Set(RestartApplication(service._2, 3, 10)))
+    plan.steps(0).actions.toSet should equal (Set(RestartApplication(mongo._2)))
+    plan.steps(1).actions.toSet should equal (Set(RestartApplication(service._2)))
   }
 
   test("when updating a group with dependent and independent applications, the correct order is computed") {
@@ -233,9 +233,9 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     plan.steps(0).actions.toSet should equal (Set(StopApplication(toStop)))
     plan.steps(1).actions.toSet should equal (Set(StartApplication(toStart, 0)))
-    plan.steps(2).actions.toSet should equal (Set(RestartApplication(mongo._2, 3, 8)))
-    plan.steps(3).actions.toSet should equal (Set(RestartApplication(independent._2, 1, 3)))
-    plan.steps(4).actions.toSet should equal (Set(RestartApplication(service._2, 3, 10)))
+    plan.steps(2).actions.toSet should equal (Set(RestartApplication(mongo._2)))
+    plan.steps(3).actions.toSet should equal (Set(RestartApplication(independent._2)))
+    plan.steps(4).actions.toSet should equal (Set(RestartApplication(service._2)))
     plan.steps(5).actions.toSet should equal (Set(ScaleApplication(toStart, 2)))
   }
 
