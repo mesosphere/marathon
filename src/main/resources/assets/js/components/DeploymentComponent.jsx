@@ -74,14 +74,14 @@ module.exports = React.createClass({
                     <button
                         onClick={this.handleDestroyDeployment.bind(this, true)}
                         className="btn btn-xs btn-default">
-                      Stop deployment
+                      Stop
                     </button>
                   </li>
                   <li>
                     <button
                         onClick={this.handleDestroyDeployment.bind(this, false)}
                         className="btn btn-xs btn-default">
-                      Rollback deployment
+                      Rollback
                     </button>
                   </li>
                 </ul>
