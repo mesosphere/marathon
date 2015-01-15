@@ -16,8 +16,8 @@ define([
   "use strict";
 
   var tabsTemplate = [
-      {id: "apps:appid", text: "Tasks"},
-      {id: "apps:appid/configuration", text: "Configuration"}
+    {id: "apps:appid", text: "Tasks"},
+    {id: "apps:appid/configuration", text: "Configuration"}
   ];
 
   return React.createClass({
