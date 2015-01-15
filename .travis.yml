@@ -4,7 +4,9 @@ node_js:
 before_script:
   - export PROJECT_VERSION="`egrep -os -e '([0-9]\.)+[0-9](-\w+)?' version.sbt`" && echo Project Version is $PROJECT_VERSION
   - export ARTIFACT="marathon-$PROJECT_VERSION.tgz"
-  - pushd src/main/resources/assets && npm install -g broccoli-cli && npm install && npm run dist && popd
+  - npm install -g npm@1.4.10
+  - npm install -g broccoli-cli
+  - pushd src/main/resources/assets && npm install && npm run dist && popd
 jdk:
   - openjdk6
 scala:
