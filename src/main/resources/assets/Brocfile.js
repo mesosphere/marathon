@@ -47,13 +47,19 @@ var tasks = {
       enabled: true,
       logError: function (message) {
         // use pretty colors
-        console.log(chalk.red(message) + "\n");
+        // console.log(chalk.red(message) + "\n");
       },
       jshintrcPath: dirs.js + "/.jscsrc"
     });
 
     // run jshint on compiled js
-    var hintTree = jsHintTree(jsTree , {jshintrcPath: dirs.js + "/.jshintrc"});
+    var hintTree = jsHintTree(jsTree , {
+      logError: function (message) {
+        // use pretty colors in test and development mode
+        // this._errors.push(chalk.red(message) + "\n");
+      },
+      jshintrcPath: dirs.js + "/.jshintrc"
+    });
 
     // hack to strip test files from jshint tree
     hintTree = pickFiles(hintTree, {
