@@ -46,8 +46,14 @@ var tasks = {
       disableTestGenerator: true,
       enabled: true,
       logError: function (message) {
-        // use pretty colors
-        // console.log(chalk.red(message) + "\n");
+        switch (env) {
+          case "production":
+            // TODO(mlunoe) disabled for production
+          default:
+            // use pretty colors in test and development mode
+            console.log(chalk.red(message) + "\n");
+            break;
+        }
       },
       jshintrcPath: dirs.js + "/.jscsrc"
     });
@@ -55,8 +61,14 @@ var tasks = {
     // run jshint on compiled js
     var hintTree = jsHintTree(jsTree , {
       logError: function (message) {
-        // use pretty colors in test and development mode
-        // this._errors.push(chalk.red(message) + "\n");
+        switch (env) {
+          case "production":
+            // TODO(mlunoe) disabled for production
+          default:
+            // use pretty colors in test and development mode
+            this._errors.push(chalk.red(message) + "\n");
+            break;
+        }
       },
       jshintrcPath: dirs.js + "/.jshintrc"
     });
