@@ -3,7 +3,6 @@
 var Mousetrap = require("mousetrap");
 var React = require("react/addons");
 var _ = require("underscore");
-_.str = require("underscore.string");
 var States = require("../constants/States");
 var AppCollection = require("../models/AppCollection");
 var DeploymentCollection = require("../models/DeploymentCollection");
@@ -477,7 +476,7 @@ module.exports = React.createClass({
       var route = this.state.route;
 
       if(route) {
-        var routeName = _.str.capitalize(route.name);
+        var routeName = route.name.charAt(0).toUpperCase() + route.name.slice(1);
         modal = this["route" + routeName].apply(this, route.params);
       }
 
