@@ -14,7 +14,7 @@ var DEFAULT_HEALTH_MSG = "Unknown";
 var EDITABLE_ATTRIBUTES = ["cmd", "constraints", "container", "cpus", "env",
   "executor", "id", "instances", "mem", "disk", "ports", "uris"];
 var UPDATEABLE_ATTRIBUTES = ["instances", "tasksRunning", "tasksStaged",
-  "deployments"];
+  "tasksHealthy", "tasksUnhealthy", "deployments"];
 
 // Matches the command executor, like "//cmd", and custom executors starting
 // with or without a "/" but never two "//", like "/custom/exec". Double slash

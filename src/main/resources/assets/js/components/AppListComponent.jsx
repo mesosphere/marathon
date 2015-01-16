@@ -49,14 +49,14 @@ var AppListComponent = React.createClass({
     if (this.props.fetchState === States.STATE_LOADING) {
       appNodes =
         <tr>
-          <td className="text-center text-muted" colSpan="5">
+          <td className="text-center text-muted" colSpan="6">
             Loading apps...
           </td>
         </tr>;
     } else if (this.props.collection.length === 0) {
       appNodes =
         <tr>
-          <td className="text-center" colSpan="5">No running apps.</td>
+          <td className="text-center" colSpan="6">No running apps.</td>
         </tr>;
     } else {
       appNodes = this.props.collection.map(function (model) {
@@ -71,10 +71,11 @@ var AppListComponent = React.createClass({
       <table className={tableClassName}>
         <colgroup>
           <col style={{width: "28%"}} />
-          <col style={{width: "18%"}} />
-          <col style={{width: "18%"}} />
-          <col style={{width: "18%"}} />
-          <col style={{width: "18%"}} />
+          <col style={{width: "14%"}} />
+          <col style={{width: "14%"}} />
+          <col style={{width: "14%"}} />
+          <col style={{width: "14%"}} />
+          <col style={{width: "16%"}} />
         </colgroup>
         <thead>
           <tr>
@@ -99,6 +100,11 @@ var AppListComponent = React.createClass({
               </span>
             </th>
             <th className="text-right">
+              <span className={headerClassSet}>
+                Health
+              </span>
+            </th>
+            <th className="text-right">
               <span onClick={this.sortCollectionBy.bind(null, "isDeploying")} className={headerClassSet}>
                 {sortKey === "isDeploying" ? <span className="caret"></span> : null} Status
               </span>
@@ -109,7 +115,7 @@ var AppListComponent = React.createClass({
           {
             (this.props.fetchState === States.STATE_ERROR) ?
               <tr>
-                <td className="text-center text-danger" colSpan="5">
+                <td className="text-center text-danger" colSpan="6">
                   Error fetching apps. Refresh to try again.
                 </td>
               </tr> :

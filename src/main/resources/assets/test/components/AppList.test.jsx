@@ -52,7 +52,7 @@ module.exports = {
 
       $("body").append(appList);
 
-      assert.equal( $(".table tr td").eq(5).text(), "/docker-app" );
+      assert.equal( $(".table tr td").eq(6).text(), "/docker-app" );
     }
   }
 };

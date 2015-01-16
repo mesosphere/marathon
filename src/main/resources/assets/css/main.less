@@ -570,6 +570,43 @@ fieldset[disabled] .btn-info.active {
   background-color: #8e929b;
 }
 
+.health-bar-column {
+  vertical-align: middle;
+}
+
+.health-bar-column .health-bar {
+  width: 140px;
+  display: inline-block;
+  height: 8px;
+  margin-bottom: 2px;
+  background-color: #2a2c31;
+  border-radius: 4px;
+}
+
+.health-bar-over-capacity {
+  background-color: #4ca0ff; // blue
+}
+
+.health-bar-unhealthy {
+  background-color: #ff7d64; // red
+}
+
+.health-bar-staged {
+  background-color: #fff57a; // yellow
+}
+
+.health-bar-healthy {
+  background-color: #29f6a0; // green
+}
+
+.health-bar-running {
+  background-color: #8e929b; // light-grey
+}
+
+.health-bar-unscheduled {
+  background-color: #2a2c31; // dark-grey
+}
+
 .clickable {
   cursor: pointer;
 }
