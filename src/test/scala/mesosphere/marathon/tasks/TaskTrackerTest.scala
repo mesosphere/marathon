@@ -155,6 +155,12 @@ class TaskTrackerTest extends MarathonSpec {
     stateShouldContainKey(state, sampleTaskKey)
     taskTracker.get(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
+    // TASK STILL RUNNING
+    val res = taskTracker.running(TEST_APP_NAME, runningTaskStatus)
+    ScalaFutures.whenReady(res.failed) { e =>
+      assert(e.getMessage == s"Task for ID $TEST_TASK_ID already running, ignoring")
+    }
+
     // TASK TERMINATED
     val finishedTaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_FINISHED)
 
