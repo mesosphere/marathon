@@ -1,9 +1,9 @@
 
-var Backbone = require("backbone");
+var Collection = require("../models/Collection");
 var _ = require("underscore");
 
   var DEFAULT_ATTR = "id";
-  var SortableCollection = Backbone.Collection.extend({
+  var SortableCollection = Collection.extend({
     setComparator: function(attribute) {
       attribute = attribute || DEFAULT_ATTR;
       this.sortReverse = attribute.substr(0, 1) === "-";

@@ -31,6 +31,7 @@ module.exports = React.createClass({
 
     getInitialState: function() {
       return {
+        activeAppId: null,
         activeApp: null,
         activeTask: null,
         activeTabId: tabs[0].id,
@@ -66,21 +67,15 @@ module.exports = React.createClass({
 
       router.on("route:apps", function(appid, view) {
         if(appid) {
-          (function setActiveApp() {
-            var state = this.state;
-            var activeApp = state.activeApp;
+          if(this.state.activeAppId !== appid) {
+            this.modalDestroy();
+          }
 
-            if(!state.collection.length && state.fetchState === States.STATE_LOADING) {
-              setTimeout(setActiveApp.bind(this), 300);
-            } else if(!activeApp || activeApp.get("id") !== "/" + appid) {
-              this.modalDestroy();
-              this.setState({
-                activeApp: state.collection.get("/" + appid),
-                modalClass: AppModalComponent
-              });
-            }
-
-          }).bind(this)();
+          this.setState({
+            activeAppId: appid,
+            activeApp: this.state.collection.get("/" + appid),
+            modalClass: AppModalComponent
+          });
         } else {
           this.activateTab("apps");
         }
@@ -173,14 +168,22 @@ module.exports = React.createClass({
     },
 
     fetchApps: function() {
-      this.state.collection.fetch({
+      var state = this.state;
+
+      state.collection.fetch({
         error: function() {
           this.setState({fetchState: States.STATE_ERROR});
         }.bind(this),
         reset: true,
         success: function() {
           this.fetchDeployments();
-          this.setState({fetchState: States.STATE_SUCCESS});
+          var activeApp = (state.state.activeAppId) ?
+            state.collection.get("/" + state.activeAppId) :
+            null;
+          this.setState({
+            fetchState: States.STATE_SUCCESS,
+            activeApp: activeApp
+          });
         }.bind(this)
       });
     },
@@ -242,6 +245,7 @@ module.exports = React.createClass({
       }
 
       this.setState({
+        activeAppId: null,
         activeApp: null,
         modalClass: null,
         tasksFetchState: States.STATE_LOADING,
@@ -390,11 +394,13 @@ module.exports = React.createClass({
     },
 
     setPollResource: function(func) {
-      // Kill any poll that is in flight to ensure it doesn't fire after having changed
-      // the `_pollResource` function.
-      this.stopPolling();
-      this._pollResource = func;
-      this.startPolling();
+      if(this._pollResource !== func) {
+        // Kill any poll that is in flight to ensure it doesn't fire after having changed
+        // the `_pollResource` function.
+        this.stopPolling();
+        this._pollResource = func;
+        this.startPolling();
+      }
     },
 
     startPolling: function() {
