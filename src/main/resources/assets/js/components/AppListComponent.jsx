@@ -13,15 +13,11 @@ module.exports = React.createClass({
 
     propTypes: {
       collection: React.PropTypes.object.isRequired,
-      onSelectApp: React.PropTypes.func.isRequired
+      router: React.PropTypes.object.isRequired
     },
 
     getResource: function() {
       return this.props.collection;
-    },
-
-    onClickApp: function(app) {
-      this.props.onSelectApp(app);
     },
 
     sortCollectionBy: function(comparator) {
@@ -61,7 +57,10 @@ module.exports = React.createClass({
 
         /* jshint trailing:false, quotmark:false, newcap:false */
         appNodes = this.props.collection.map(function(model) {
-          return <AppComponent key={model.id} model={model} onClick={this.onClickApp} />;
+          return <AppComponent
+                    key={model.id}
+                    model={model}
+                    router={this.props.router} />;
         }, this);
 
         // Give rows the selectable look when there are apps to click.

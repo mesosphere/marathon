@@ -1,8 +1,8 @@
 /** @jsx React.DOM */
 
-
 var Mousetrap = require("mousetrap");
 var React = require("react/addons");
+var _ = require("underscore");
 var States = require("../constants/States");
 var AppCollection = require("../models/AppCollection");
 var DeploymentCollection = require("../models/DeploymentCollection");
@@ -15,19 +15,23 @@ var TabPaneComponent = require("../components/TabPaneComponent");
 var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 var NavTabsComponent = require("../components/NavTabsComponent");
 
+var UPDATE_INTERVAL = 5000;
 
-  var UPDATE_INTERVAL = 5000;
-
-  var tabs = [
-    {id: "apps", text: "Apps"},
-    {id: "deployments", text: "Deployments"}
-  ];
+var tabs = [
+  {id: "apps", text: "Apps"},
+  {id: "deployments", text: "Deployments"}
+];
 
 module.exports = React.createClass({
     displayName: "Marathon",
 
+    propTypes: {
+      router: React.PropTypes.object.isRequired
+    },
+
     getInitialState: function() {
       return {
+        activeAppId: null,
         activeApp: null,
         activeTask: null,
         activeTabId: tabs[0].id,
@@ -37,11 +41,57 @@ module.exports = React.createClass({
         deploymentsFetchState: States.STATE_LOADING,
         fetchState: States.STATE_LOADING,
         modalClass: null,
+        route: null,
         tasksFetchState: States.STATE_LOADING
       };
     },
 
     componentDidMount: function() {
+      var router = this.props.router;
+
+      router.on("route", function (route, params) {
+        this.setState({
+          route: {
+            name: route,
+            params: params
+          }
+        });
+      }.bind(this));
+
+      router.on("route:about", function() {
+        this.modalDestroy();
+        this.setState({
+          modalClass: AboutModalComponent
+        });
+      }.bind(this));
+
+      router.on("route:apps", function(appid, view) {
+        if(appid) {
+          if(this.state.activeAppId !== appid) {
+            this.modalDestroy();
+          }
+
+          this.setState({
+            activeAppId: appid,
+            activeApp: this.state.collection.get("/" + appid),
+            modalClass: AppModalComponent
+          });
+        } else {
+          this.activateTab("apps");
+        }
+      }.bind(this));
+
+      router.on("route:deployments", function() {
+        this.activateTab("deployments");
+      }.bind(this));
+
+      router.on("route:newapp", function() {
+        this.modalDestroy();
+        this.setState({
+          modalClass: NewAppModalComponent
+        });
+      }.bind(this));
+
       // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
       // input elements so the new app modal can be closed via "esc".
       var mousetrapOriginalStopCallback = Mousetrap.stopCallback;
@@ -52,23 +102,23 @@ module.exports = React.createClass({
 
       Mousetrap.bind("esc", function() {
         if (this.refs.modal != null) {
-          this.refs.modal.destroy();
+          this.modalDestroy();
         }
       }.bind(this));
 
       Mousetrap.bind("c", function() {
-        this.showNewAppModal();
+        router.navigate("#newapp", {trigger: true});
       }.bind(this), "keyup");
 
       Mousetrap.bind("g a", function() {
         if(this.state.modalClass == null) {
-          this.onTabClick("apps");
+          router.navigate("#apps", {trigger: true});
         }
       }.bind(this));
 
       Mousetrap.bind("g d", function() {
         if(this.state.modalClass == null) {
-          this.onTabClick("deployments");
+          router.navigate("#deployments", {trigger: true});
         }
       }.bind(this));
 
@@ -79,7 +129,7 @@ module.exports = React.createClass({
       }.bind(this));
 
       Mousetrap.bind("shift+,", function() {
-        this.showAboutModal();
+        router.navigate("#about", {trigger: true});
       }.bind(this));
 
       this.setPollResource(this.fetchApps);
@@ -100,6 +150,17 @@ module.exports = React.createClass({
           this.stopPolling();
         }
       }
+
+      var route = this.state.route;
+      var router = this.props.router;
+
+      if(route) {
+        router.lastRoute = _.extend(router.lastRoute, {
+          route: route.route,
+          params: route.params,
+          hash: router.currentHash()
+        });
+      }
     },
 
     componentWillUnmount: function() {
@@ -107,14 +168,22 @@ module.exports = React.createClass({
     },
 
     fetchApps: function() {
-      this.state.collection.fetch({
+      var state = this.state;
+
+      state.collection.fetch({
         error: function() {
           this.setState({fetchState: States.STATE_ERROR});
         }.bind(this),
         reset: true,
         success: function() {
           this.fetchDeployments();
-          this.setState({fetchState: States.STATE_SUCCESS});
+          var activeApp = (state.state.activeAppId) ?
+            state.collection.get("/" + state.activeAppId) :
+            null;
+          this.setState({
+            fetchState: States.STATE_SUCCESS,
+            activeApp: activeApp
+          });
         }.bind(this)
       });
     },
@@ -164,8 +233,19 @@ module.exports = React.createClass({
       this.state.collection.create(appModel, options);
     },
 
-    handleModalDestroy: function() {
+    modalDestroy: function() {
+      if(!this.state.modalClass) {
+        return;
+      }
+
+      var router = this.props.router;
+
+      if(router.lastRoute.hash === router.currentHash()) {
+        router.navigate("#"+this.state.activeTabId, { trigger: true });
+      }
+
       this.setState({
+        activeAppId: null,
         activeApp: null,
         modalClass: null,
         tasksFetchState: States.STATE_LOADING,
@@ -314,11 +394,13 @@ module.exports = React.createClass({
     },
 
     setPollResource: function(func) {
-      // Kill any poll that is in flight to ensure it doesn't fire after having changed
-      // the `_pollResource` function.
-      this.stopPolling();
-      this._pollResource = func;
-      this.startPolling();
+      if(this._pollResource !== func) {
+        // Kill any poll that is in flight to ensure it doesn't fire after having changed
+        // the `_pollResource` function.
+        this.stopPolling();
+        this._pollResource = func;
+        this.startPolling();
+      }
     },
 
     startPolling: function() {
@@ -335,40 +417,7 @@ module.exports = React.createClass({
       }
     },
 
-    showAboutModal: function(event) {
-      if (event != null) event.preventDefault();
-
-      if (this.state.modalClass !== null) {
-        return;
-      }
-
-      this.setState({
-        modalClass: AboutModalComponent
-      });
-    },
-
-    showAppModal: function(app) {
-      if (this.state.modalClass !== null) {
-        return;
-      }
-
-      this.setState({
-        activeApp: app,
-        modalClass: AppModalComponent
-      });
-    },
-
-    showNewAppModal: function(event) {
-      if (this.state.modalClass !== null) {
-        return;
-      }
-
-      this.setState({
-        modalClass: NewAppModalComponent
-      });
-    },
-
-    onTabClick: function(id) {
+    activateTab: function(id) {
       this.setState({
         activeTabId: id
       });
@@ -380,43 +429,61 @@ module.exports = React.createClass({
       }
     },
 
+    routeAbout: function () {
+      return (
+        <AboutModalComponent
+          onDestroy={this.modalDestroy}
+          ref="modal" />
+      );
+    },
+
+    routeApps: function(appid, view) {
+      if(!appid || !this.state.activeApp) {
+        return null;
+      }
+
+      return (
+        <AppModalComponent
+          activeTask={this.state.activeTask}
+          appVersionsFetchState={this.state.appVersionsFetchState}
+          destroyApp={this.destroyApp}
+          fetchTasks={this.fetchTasks}
+          fetchAppVersions={this.fetchAppVersions}
+          model={this.state.activeApp}
+          onDestroy={this.modalDestroy}
+          onShowTaskDetails={this.handleShowTaskDetails}
+          onShowTaskList={this.handleShowTaskList}
+          onTasksKilled={this.handleTasksKilled}
+          rollBackApp={this.rollbackToAppVersion}
+          scaleApp={this.scaleApp}
+          suspendApp={this.suspendApp}
+          tasksFetchState={this.state.tasksFetchState}
+          router={this.props.router}
+          ref="modal" />
+      );
+    },
+
+    routeDeployments: function() {
+      return null;
+    },
+
+    routeNewapp: function() {
+      return (
+        <NewAppModalComponent
+          model={this.state.activeApp}
+          onDestroy={this.modalDestroy}
+          onCreate={this.handleAppCreate}
+          ref="modal" />
+      );
+    },
+
     render: function() {
       var modal;
+      var route = this.state.route;
 
-      /* jshint trailing:false, quotmark:false, newcap:false */
-      if (this.state.modalClass === AppModalComponent) {
-        modal = (
-          <AppModalComponent
-            activeTask={this.state.activeTask}
-            appVersionsFetchState={this.state.appVersionsFetchState}
-            destroyApp={this.destroyApp}
-            fetchTasks={this.fetchTasks}
-            fetchAppVersions={this.fetchAppVersions}
-            model={this.state.activeApp}
-            onDestroy={this.handleModalDestroy}
-            onShowTaskDetails={this.handleShowTaskDetails}
-            onShowTaskList={this.handleShowTaskList}
-            onTasksKilled={this.handleTasksKilled}
-            rollBackApp={this.rollbackToAppVersion}
-            scaleApp={this.scaleApp}
-            suspendApp={this.suspendApp}
-            tasksFetchState={this.state.tasksFetchState}
-            ref="modal" />
-        );
-      } else if (this.state.modalClass === NewAppModalComponent) {
-        modal = (
-          <NewAppModalComponent
-            model={this.state.activeApp}
-            onDestroy={this.handleModalDestroy}
-            onCreate={this.handleAppCreate}
-            ref="modal" />
-        );
-      } else if (this.state.modalClass === AboutModalComponent) {
-        modal = (
-          <AboutModalComponent
-            onDestroy={this.handleModalDestroy}
-            ref="modal" />
-        );
+      if(route) {
+        var routeName = route.name.charAt(0).toUpperCase() + route.name.slice(1);
+        modal = this["route" + routeName].apply(this, route.params);
       }
 
       return (
@@ -431,11 +498,10 @@ module.exports = React.createClass({
               <NavTabsComponent
                 activeTabId={this.state.activeTabId}
                 className="navbar-nav nav-tabs-unbordered"
-                onTabClick={this.onTabClick}
                 tabs={tabs} />
               <ul className="nav navbar-nav navbar-right">
                 <li>
-                  <a href="#/about" onClick={this.showAboutModal}>
+                  <a href="#about">
                     About
                   </a>
                 </li>
@@ -450,14 +516,13 @@ module.exports = React.createClass({
           <div className="container-fluid">
             <TogglableTabsComponent activeTabId={this.state.activeTabId} >
               <TabPaneComponent id="apps">
-                <button type="button" className="btn btn-success navbar-btn"
-                    onClick={this.showNewAppModal} >
+                <a href="#newapp" className="btn btn-success navbar-btn" >
                   + New App
-                </button>
+                </a>
                 <AppListComponent
                   collection={this.state.collection}
-                  onSelectApp={this.showAppModal}
                   fetchState={this.state.fetchState}
+                  router={this.props.router}
                   ref="appList" />
               </TabPaneComponent>
               <TabPaneComponent
@@ -469,7 +534,6 @@ module.exports = React.createClass({
                   fetchState={this.state.deploymentsFetchState} />
               </TabPaneComponent>
             </TogglableTabsComponent>
-
           </div>
           {modal}
         </div>
