@@ -24,7 +24,23 @@ class TaskStartActorTest
     with FunSuiteLike
     with Matchers
     with MockitoSugar
+    with BeforeAndAfter
     with BeforeAndAfterAll {
+
+  var driver: SchedulerDriver = _
+  var scheduler: SchedulerActions = _
+  var taskQueue: TaskQueue = _
+  var taskTracker: TaskTracker = _
+  var registry: MetricRegistry = _
+
+  before {
+    driver = mock[SchedulerDriver]
+    scheduler = mock[SchedulerActions]
+    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new MetricRegistry)
+    taskQueue = spy(new TaskQueue)
+    registry = new MetricRegistry
+    taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], registry))
+  }
 
   override protected def afterAll(): Unit = {
     super.afterAll()
@@ -32,13 +48,8 @@ class TaskStartActorTest
   }
 
   test("Start success") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
-    val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
+    val promise = Promise[Unit]()
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -65,13 +76,8 @@ class TaskStartActorTest
   }
 
   test("Start success with tasks in taskQueue") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
-    val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
+    val promise = Promise[Unit]()
 
     taskQueue.add(app)
 
@@ -100,13 +106,8 @@ class TaskStartActorTest
   }
 
   test("Start success with existing task") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
-    val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
+    val promise = Promise[Unit]()
 
     val task = MarathonTask.newBuilder
       .setId(TaskIdUtil.newTaskId(app.id).getValue)
@@ -139,13 +140,8 @@ class TaskStartActorTest
   }
 
   test("Start success with no instances to start") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
-    val promise = Promise[Boolean]()
     val app = AppDefinition("/myApp".toPath, instances = 0)
+    val promise = Promise[Boolean]()
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -167,13 +163,8 @@ class TaskStartActorTest
   }
 
   test("Start with health checks") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
-    val promise = Promise[Boolean]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
+    val promise = Promise[Boolean]()
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -200,13 +191,8 @@ class TaskStartActorTest
   }
 
   test("Start with health checks with no instances to start") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
-    val promise = Promise[Boolean]()
     val app = AppDefinition("/myApp".toPath, instances = 0)
+    val promise = Promise[Boolean]()
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -228,13 +214,8 @@ class TaskStartActorTest
   }
 
   test("Cancelled") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
-    val promise = Promise[Boolean]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
+    val promise = Promise[Boolean]()
 
     val ref = system.actorOf(Props(
       classOf[TaskStartActor],
@@ -260,13 +241,8 @@ class TaskStartActorTest
   }
 
   test("Task fails to start") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = spy(new TaskQueue)
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
-    val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 1)
+    val promise = Promise[Unit]()
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -301,13 +277,8 @@ class TaskStartActorTest
   }
 
   test("Start success with dying existing task, reschedules, but finishes early") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], registry))
-    val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
+    val promise = Promise[Unit]()
 
     val taskId = TaskIdUtil.newTaskId(app.id)
     val task = MarathonTask.newBuilder
