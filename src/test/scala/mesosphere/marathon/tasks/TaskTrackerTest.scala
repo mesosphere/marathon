@@ -6,6 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.PathId.StringPathId
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.MarathonSpec
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
@@ -154,6 +155,11 @@ class TaskTrackerTest extends MarathonSpec {
     shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTaskKey)
     taskTracker.get(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
+
+    // TASK SCALED
+    val nowVersion = Timestamp.now().toString
+    taskTracker.scaled(TEST_APP_NAME, TEST_TASK_ID, nowVersion)
+    assert(taskTracker.get(TEST_APP_NAME).find(_.getId == TEST_TASK_ID).get.getVersion == nowVersion)
 
     // TASK TERMINATED
     val finishedTaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_FINISHED)

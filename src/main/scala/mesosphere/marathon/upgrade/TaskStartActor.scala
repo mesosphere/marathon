@@ -2,14 +2,15 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
 import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
 import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 
-import scala.concurrent.Promise
+import scala.concurrent.{ Future, Promise }
 
 class TaskStartActor(
+    val appRepository: AppRepository,
     val driver: SchedulerDriver,
     val scheduler: SchedulerActions,
     val taskQueue: TaskQueue,
@@ -36,9 +37,21 @@ class TaskStartActor(
   }
 
   override def success(): Unit = {
-    log.info(s"Successfully started $nrToStart instances of ${app.id}")
-    promise.success(())
-    context.stop(self)
+    // update old tasks which only differ in version and instances
+    import context.dispatcher
+    val oldTasks = taskTracker.get(app.id).filter(_.getVersion != app.version.toString)
+    val scaledOldTasks = oldTasks.map { oldTask =>
+      appRepository.app(app.id, Timestamp(oldTask.getVersion)) collect {
+        case Some(scaledOldApp) if scaledOldApp.copy(version=app.version, instances=app.instances) == app =>
+          taskTracker.scaled(app.id, oldTask.getId, app.version.toString)
+      }
+    }
+
+    Future.sequence(scaledOldTasks) map { _ =>
+      log.info(s"Successfully started $nrToStart instances of ${app.id}")
+      promise.success(())
+      context.stop(self)
+    }
   }
 
 }

@@ -5,19 +5,19 @@ import akka.testkit.{ TestActorRef, TestKit }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ AppRepository, Timestamp, AppDefinition }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
-import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
+import mesosphere.marathon.{ MarathonTestHelper, MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
+import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.InMemoryState
 import org.mockito.Mockito.{ times, spy, verify, when }
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
+import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.{ Await, Future, Promise }
 
 class TaskStartActorTest
     extends TestKit(ActorSystem("System"))
@@ -25,21 +25,32 @@ class TaskStartActorTest
     with Matchers
     with MockitoSugar
     with BeforeAndAfter
-    with BeforeAndAfterAll {
+    with BeforeAndAfterAll
+    with MarathonTestHelper {
 
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
   var taskQueue: TaskQueue = _
   var taskTracker: TaskTracker = _
   var registry: MetricRegistry = _
+  var repo: AppRepository = _
 
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
-    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new MetricRegistry)
     taskQueue = spy(new TaskQueue)
     registry = new MetricRegistry
-    taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], registry))
+    taskTracker = spy(new TaskTracker(new InMemoryState, defaultConfig(), registry))
+    repo = mock[AppRepository]
+  }
+
+  def makeTaskStatus(id: String, state: TaskState = TaskState.TASK_RUNNING) = {
+    TaskStatus.newBuilder
+      .setTaskId(TaskID.newBuilder
+      .setValue(id)
+      )
+      .setState(state)
+      .build
   }
 
   override protected def afterAll(): Unit = {
@@ -53,6 +64,7 @@ class TaskStartActorTest
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      repo,
       driver,
       scheduler,
       taskQueue,
@@ -83,6 +95,7 @@ class TaskStartActorTest
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      repo,
       driver,
       scheduler,
       taskQueue,
@@ -113,10 +126,17 @@ class TaskStartActorTest
       .setId(TaskIdUtil.newTaskId(app.id).getValue)
       .setVersion(Timestamp(1024).toString)
       .build
+
     taskTracker.created(app.id, task)
+    taskTracker.running(app.id, makeTaskStatus(task.getId, TaskState.TASK_RUNNING))
+
+    import system.dispatcher
+    val taskApp = app.copy(version=Timestamp(1024), instances=1)
+    when(repo.app(app.id, Timestamp(1024))).thenReturn(Future(Some(taskApp)))
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      repo,
       driver,
       scheduler,
       taskQueue,
@@ -136,6 +156,9 @@ class TaskStartActorTest
 
     Await.result(promise.future, 3.seconds) should be(())
 
+    val newTaskVersion = taskTracker.get(app.id).find(_.getId == task.getId).get.getVersion
+    assert(newTaskVersion == app.version.toString, "Old task's version was updated")
+
     expectTerminated(ref)
   }
 
@@ -145,6 +168,7 @@ class TaskStartActorTest
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      repo,
       driver,
       scheduler,
       taskQueue,
@@ -168,6 +192,7 @@ class TaskStartActorTest
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      repo,
       driver,
       scheduler,
       taskQueue,
@@ -196,6 +221,7 @@ class TaskStartActorTest
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      repo,
       driver,
       scheduler,
       taskQueue,
@@ -219,6 +245,7 @@ class TaskStartActorTest
 
     val ref = system.actorOf(Props(
       classOf[TaskStartActor],
+      repo,
       driver,
       scheduler,
       taskQueue,
@@ -246,6 +273,7 @@ class TaskStartActorTest
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      repo,
       driver,
       scheduler,
       taskQueue,
@@ -285,10 +313,17 @@ class TaskStartActorTest
       .setId(taskId.getValue)
       .setVersion(Timestamp(1024).toString)
       .build
+
     taskTracker.created(app.id, task)
+    taskTracker.running(app.id, makeTaskStatus(task.getId, TaskState.TASK_RUNNING))
+
+    import system.dispatcher
+    val taskApp = app.copy(version=Timestamp(1024), instances=1)
+    when(repo.app(app.id, Timestamp(1024))).thenReturn(Future(Some(taskApp)))
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
+      repo,
       driver,
       scheduler,
       taskQueue,

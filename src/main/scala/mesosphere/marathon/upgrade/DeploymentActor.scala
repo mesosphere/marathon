@@ -126,6 +126,7 @@ class DeploymentActor(
       context.actorOf(
         Props(
           classOf[TaskStartActor],
+          appRepository,
           driver,
           scheduler,
           taskQueue,

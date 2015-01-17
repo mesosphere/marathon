@@ -86,6 +86,23 @@ class TaskTracker @Inject() (
     }
   }
 
+  def scaled(appId: PathId, taskId: String, newVersion: String): Future[MarathonTask] = {
+    getInternal(appId).get(taskId) match {
+      case Some(task) =>
+        log.info(s"Updating scaled app $appId task $taskId to version $newVersion")
+        val updatedTask = task.toBuilder
+          .setVersion(newVersion)
+          .build
+        getInternal(appId) += (updatedTask.getId -> updatedTask)
+        store(appId, updatedTask).map(_ => updatedTask)
+
+      case _ =>
+        val msg = s"No task for ID $taskId, ignoring"
+        log.warn(msg)
+        Future.failed(new Exception(msg))
+    }
+  }
+
   def terminated(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = {
     val appTasks = getInternal(appId)
     val app = apps(appId)
