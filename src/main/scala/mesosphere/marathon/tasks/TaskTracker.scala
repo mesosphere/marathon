@@ -72,13 +72,19 @@ class TaskTracker @Inject() (
   def running(appId: PathId, status: TaskStatus): Future[MarathonTask] = {
     val taskId = status.getTaskId.getValue
     get(appId).find(_.getId == taskId) match {
-      case Some(stagedTask) =>
-        val task = stagedTask.toBuilder
+      case Some(oldTask) if !oldTask.hasStartedAt => // staged
+        val task = oldTask.toBuilder
           .setStartedAt(System.currentTimeMillis)
           .setStatus(status)
           .build
         getInternal(appId) += (task.getId -> task)
         store(appId, task).map(_ => task)
+
+      case Some(oldTask) => // running
+        val msg = s"Task for ID $taskId already running, ignoring"
+        log.warn(msg)
+        Future.failed(new Exception(msg))
+
       case _ =>
         val msg = s"No staged task for ID $taskId, ignoring"
         log.warn(msg)

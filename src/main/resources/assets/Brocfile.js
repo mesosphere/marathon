@@ -46,14 +46,34 @@ var tasks = {
       disableTestGenerator: true,
       enabled: true,
       logError: function (message) {
-        // use pretty colors
-        console.log(chalk.red(message) + "\n");
+        switch (env) {
+          case "production":
+            // TODO(mlunoe) disabled for production
+            break;
+          default:
+            // use pretty colors in test and development mode
+            console.log(chalk.red(message) + "\n");
+            break;
+        }
       },
       jshintrcPath: dirs.js + "/.jscsrc"
     });
 
     // run jshint on compiled js
-    var hintTree = jsHintTree(jsTree , {jshintrcPath: dirs.js + "/.jshintrc"});
+    var hintTree = jsHintTree(jsTree , {
+      logError: function (message) {
+        switch (env) {
+          case "production":
+            // TODO(mlunoe) disabled for production
+            break;
+          default:
+            // use pretty colors in test and development mode
+            this._errors.push(chalk.red(message) + "\n");
+            break;
+        }
+      },
+      jshintrcPath: dirs.js + "/.jshintrc"
+    });
 
     // hack to strip test files from jshint tree
     hintTree = pickFiles(hintTree, {

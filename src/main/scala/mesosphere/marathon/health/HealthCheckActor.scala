@@ -81,7 +81,7 @@ class HealthCheckActor(
   protected[this] def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
     taskTracker.get(appId).foreach { task =>
-      if (task.getVersion() == appVersion) {
+      if (task.getVersion() == appVersion && task.hasStartedAt) {
         log.debug("Dispatching health check job for task [{}]", task.getId)
         val worker: ActorRef = context.actorOf(Props[HealthCheckWorkerActor])
         worker ! HealthCheckJob(task, healthCheck)

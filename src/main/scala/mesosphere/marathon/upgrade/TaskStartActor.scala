@@ -23,7 +23,8 @@ class TaskStartActor(
   val nrToStart: Int = scaleTo - taskQueue.count(app.id) - taskTracker.count(app.id)
 
   override def initializeStart(): Unit = {
-    taskQueue.add(app, nrToStart)
+    if (nrToStart > 0)
+      taskQueue.add(app, nrToStart)
   }
 
   override def postStop(): Unit = {

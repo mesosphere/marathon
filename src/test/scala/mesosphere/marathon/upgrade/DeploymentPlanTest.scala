@@ -268,4 +268,15 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     plan.steps should not be empty
   }
+
+  // regression test for #1007
+  test("Don't restart apps that have not changed") {
+    val app = AppDefinition(id = "/test".toPath, cmd = Some("sleep 5"), version = Timestamp(0))
+    val appNew = app.copy(version = Timestamp.now())
+
+    val from = Group("/".toPath, apps = Set(app))
+    val to = from.copy(apps = Set(appNew))
+
+    DeploymentPlan(from, to) should be (empty)
+  }
 }

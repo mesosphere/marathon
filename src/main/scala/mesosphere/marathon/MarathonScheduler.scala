@@ -151,7 +151,8 @@ class MarathonScheduler @Inject() (
     val appId = taskIdUtil.appId(status.getTaskId)
 
     // forward health changes to the health check manager
-    for (marathonTask <- taskTracker.fetchTask(appId, status.getTaskId.getValue))
+    val maybeTask = taskTracker.fetchTask(appId, status.getTaskId.getValue)
+    for (marathonTask <- maybeTask)
       healthCheckManager.update(status, Timestamp(marathonTask.getVersion))
 
     import org.apache.mesos.Protos.TaskState._
@@ -175,7 +176,7 @@ class MarathonScheduler @Inject() (
           schedulerActor ! ScaleApp(appId)
         }
 
-      case TASK_RUNNING =>
+      case TASK_RUNNING if !maybeTask.exists(_.hasStartedAt) => // staged, not running
         taskTracker.running(appId, status).onComplete {
           case Success(task) =>
             appRepo.app(appId, Timestamp(task.getVersion)).onSuccess {
