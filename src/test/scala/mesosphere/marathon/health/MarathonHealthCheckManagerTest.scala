@@ -113,6 +113,72 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(health3.lastSuccess > health3.lastFailure)
   }
 
+  test("healthCounts") {
+    val appId = "test".toRootPath
+    val version = Timestamp(1024)
+
+    def makeRunningTask() = {
+      val taskId = TaskIdUtil.newTaskId(appId)
+
+      val taskStatus = mesos.TaskStatus.newBuilder
+        .setTaskId(taskId)
+        .setState(mesos.TaskState.TASK_RUNNING)
+        .build
+
+      val marathonTask = MarathonTask.newBuilder
+        .setId(taskId.getValue)
+        .setVersion(version.toString)
+        .build
+
+      taskTracker.created(appId, marathonTask)
+      taskTracker.running(appId, taskStatus)
+
+      taskId
+    }
+
+    def updateTaskHealth(taskId: mesos.TaskID, healthy: Boolean): Unit = {
+      val taskStatus = mesos.TaskStatus.newBuilder
+        .setTaskId(taskId)
+        .setState(mesos.TaskState.TASK_RUNNING)
+        .setHealthy(healthy)
+        .build
+
+      EventFilter.info(start = "Received health result: [", occurrences = 1).intercept {
+        hcManager.update(taskStatus.toBuilder.setHealthy(healthy).build, version)
+      }
+    }
+
+    val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
+    hcManager.add(appId, version, healthCheck)
+
+    val task1 = makeRunningTask()
+    val task2 = makeRunningTask()
+    val task3 = makeRunningTask()
+
+    var healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
+    assert(healthCounts == HealthCounts(0, 3, 0))
+
+    updateTaskHealth(task1, healthy=true)
+
+    healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
+    assert(healthCounts == HealthCounts(1, 2, 0))
+
+    updateTaskHealth(task2, healthy=true)
+
+    healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
+    assert(healthCounts == HealthCounts(2, 1, 0))
+
+    updateTaskHealth(task3, healthy=false)
+
+    healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
+    assert(healthCounts == HealthCounts(2, 0, 1))
+
+    updateTaskHealth(task1, healthy=false)
+
+    healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
+    assert(healthCounts == HealthCounts(1, 0, 2))
+  }
+
   test("reconcileWith") {
     val appId = "test".toRootPath
     def taskStatus(task: MarathonTask, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
