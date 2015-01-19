@@ -15,7 +15,7 @@ module.exports = React.createClass({
     mixins: [backboneMixin],
 
     propTypes: {
-      fetchState: React.PropTypes.number.isRequired,
+      tasksFetchState: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
       onShowTaskList: React.PropTypes.func.isRequired,
       task: React.PropTypes.object.isRequired
@@ -33,7 +33,7 @@ module.exports = React.createClass({
     render: function() {
       var task = this.props.task;
       var hasHealth = !!this.props.hasHealth;
-      var hasError = this.props.fetchState === States.STATE_ERROR || task.collection == null;
+      var hasError = this.props.tasksFetchState === States.STATE_ERROR || task.collection == null;
       var taskHealth = task.getHealth();
       var healthClassSet;
       var timeNodes;

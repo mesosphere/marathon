@@ -34,7 +34,6 @@ module.exports = React.createClass({
       return {
         activeAppId: null,
         activeApp: null,
-        activeTask: null,
         activeTabId: tabs[0].id,
         appVersionsFetchState: States.STATE_LOADING,
         collection: new AppCollection(),
@@ -234,16 +233,6 @@ module.exports = React.createClass({
       });
     },
 
-    handleShowTaskDetails: function(task, callback) {
-      this.setState({activeTask: task}, function() {
-        callback();
-      }.bind(this));
-    },
-
-    handleShowTaskList: function() {
-      this.setState({activeTask: null});
-    },
-
     handleTasksKilled: function(options) {
       var instances;
       var app = this.state.activeApp;
@@ -397,14 +386,11 @@ module.exports = React.createClass({
 
       return (
         <AppModalComponent
-          activeTask={this.state.activeTask}
           appVersionsFetchState={this.state.appVersionsFetchState}
           destroyApp={this.destroyApp}
           fetchAppVersions={this.fetchAppVersions}
           model={this.state.activeApp}
           onDestroy={this.modalDestroy}
-          onShowTaskDetails={this.handleShowTaskDetails}
-          onShowTaskList={this.handleShowTaskList}
           onTasksKilled={this.handleTasksKilled}
           rollBackApp={this.rollbackToAppVersion}
           scaleApp={this.scaleApp}

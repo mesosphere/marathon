@@ -3,6 +3,7 @@
 
 var React = require("react/addons");
 var _ = require("underscore");
+var States = require("../constants/States");
 var AppVersionListComponent = require("../components/AppVersionListComponent");
 var ModalComponent = require("../components/ModalComponent");
 var StackedViewComponent = require("../components/StackedViewComponent");
@@ -10,6 +11,7 @@ var TabPaneComponent = require("../components/TabPaneComponent");
 var TaskDetailComponent = require("../components/TaskDetailComponent");
 var TaskViewComponent = require("../components/TaskViewComponent");
 var TogglableTabsComponent = require("../components/TogglableTabsComponent");
+var pollResourceMixin = require("../mixins/pollResourceMixin");
 
   var tabsTemplate = [
     {id: "apps:appid", text: "Tasks"},
@@ -19,15 +21,14 @@ var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 module.exports = React.createClass({
     displayName: "AppModalComponent",
 
+    mixins: [pollResourceMixin],
+
     propTypes: {
-      activeTask: React.PropTypes.object,
       appVersionsFetchState: React.PropTypes.number.isRequired,
       model: React.PropTypes.object.isRequired,
       destroyApp: React.PropTypes.func.isRequired,
       fetchAppVersions: React.PropTypes.func.isRequired,
       onDestroy: React.PropTypes.func.isRequired,
-      onShowTaskDetails: React.PropTypes.func.isRequired,
-      onShowTaskList: React.PropTypes.func.isRequired,
       onTasksKilled: React.PropTypes.func.isRequired,
       rollBackApp: React.PropTypes.func.isRequired,
       scaleApp: React.PropTypes.func.isRequired,
@@ -54,7 +55,9 @@ module.exports = React.createClass({
       return {
         activeViewIndex: 0,
         activeTabId: activeTabId,
-        selectedTasks: {}
+        selectedTasks: {},
+        activeTask: null,
+        tasksFetchState: States.STATE_LOADING
       };
     },
 
@@ -70,10 +73,31 @@ module.exports = React.createClass({
       this.setState({
         activeTabId: this.props.router.currentHash()
       });
+
+      this.setPollResource(this.fetchTasks);
+    },
+
+    componentWillUnmount: function() {
+      this.stopPolling();
     },
 
     destroy: function() {
       this.refs.modalComponent.destroy();
+    },
+
+    fetchTasks: function() {
+      var app = this.props.model;
+
+      app.tasks.fetch({
+        error: function() {
+          this.setState({tasksFetchState: States.STATE_ERROR});
+        }.bind(this),
+        success: function(collection, response) {
+          // update changed attributes in app
+          app.update(response.app);
+          this.setState({tasksFetchState: States.STATE_SUCCESS});
+        }.bind(this)
+      });
     },
 
     handleDestroyApp: function() {
@@ -119,16 +143,15 @@ module.exports = React.createClass({
     },
 
     showTaskDetails: function(task) {
-      this.props.onShowTaskDetails(task, function() {
-        this.setState({
-          activeViewIndex: 1
-        });
-      }.bind(this));
+      this.setState({
+        activeTask: task,
+        activeViewIndex: 1
+      });
     },
 
     showTaskList: function() {
-      this.props.onShowTaskList();
       this.setState({
+        activeTask: null,
         activeViewIndex: 0
       });
     },
@@ -194,18 +217,20 @@ module.exports = React.createClass({
               <StackedViewComponent
                 activeViewIndex={this.state.activeViewIndex}>
                 <TaskViewComponent
-                  app={model}
+                  tasks={model.tasks}
+                  fetchTasks={this.fetchTasks}
+                  tasksFetchState={this.state.tasksFetchState}
                   currentAppVersion={model.get('version')}
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   hasHealth={hasHealth}
                   onTasksKilled={this.props.onTasksKilled}
                   onTaskDetailSelect={this.showTaskDetails} />
                 <TaskDetailComponent
-                  fetchState={this.props.tasksFetchState}
-                  taskHealthMessage={model.formatTaskHealthMessage(this.props.activeTask)}
+                  tasksFetchState={this.state.tasksFetchState}
+                  taskHealthMessage={model.formatTaskHealthMessage(this.state.activeTask)}
                   hasHealth={hasHealth}
                   onShowTaskList={this.showTaskList}
-                  task={this.props.activeTask} />
+                  task={this.state.activeTask} />
               </StackedViewComponent>
             </TabPaneComponent>
             <TabPaneComponent

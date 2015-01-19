@@ -2,18 +2,16 @@
 
 
 var React = require("react/addons");
-var States = require("../constants/States");
 var PagedNavComponent = require("../components/PagedNavComponent");
 var TaskListComponent = require("../components/TaskListComponent");
-var pollResourceMixin = require("../mixins/pollResourceMixin");
 
 module.exports = React.createClass({
     displayName: "TaskViewComponent",
 
-    mixins: [pollResourceMixin],
-
     propTypes: {
-      app: React.PropTypes.object.isRequired,
+      tasks: React.PropTypes.object.isRequired,
+      fetchTasks: React.PropTypes.func.isRequired,
+      tasksFetchState: React.PropTypes.number.isRequired,
       currentAppVersion: React.PropTypes.object.isRequired,
       formatTaskHealthMessage: React.PropTypes.func.isRequired,
       hasHealth: React.PropTypes.bool,
@@ -25,43 +23,19 @@ module.exports = React.createClass({
       return {
         selectedTasks: {},
         currentPage: 0,
-        itemsPerPage: 8,
-        tasksFetchState: States.STATE_LOADING
+        itemsPerPage: 8
       };
-    },
-
-    componentDidMount: function() {
-      this.setPollResource(this.fetchTasks);
-    },
-
-    componentWillUnmount: function() {
-      this.stopPolling();
     },
 
     handlePageChange: function(pageNum) {
       this.setState({currentPage: pageNum});
     },
 
-    fetchTasks: function() {
-      var app = this.props.app;
-
-      app.tasks.fetch({
-        error: function() {
-          this.setState({tasksFetchState: States.STATE_ERROR});
-        }.bind(this),
-        success: function(collection, response) {
-          // update changed attributes in app
-          app.update(response.app);
-          this.setState({tasksFetchState: States.STATE_SUCCESS});
-        }.bind(this)
-      });
-    },
-
     killSelectedTasks: function(options) {
       var _options = options || {};
 
       var selectedTaskIds = Object.keys(this.state.selectedTasks);
-      var tasksToKill = this.props.app.tasks.filter(function(task) {
+      var tasksToKill = this.props.tasks.filter(function(task) {
         return selectedTaskIds.indexOf(task.id) >= 0;
       });
 
@@ -83,7 +57,7 @@ module.exports = React.createClass({
 
     toggleAllTasks: function() {
       var newSelectedTasks = {};
-      var modelTasks = this.props.app.tasks;
+      var modelTasks = this.props.tasks;
 
       // Note: not an **exact** check for all tasks being selected but a good
       // enough proxy.
@@ -120,7 +94,7 @@ module.exports = React.createClass({
       var selectedTasksLength = Object.keys(this.state.selectedTasks).length;
       var buttons;
 
-      var tasksLength = this.props.app.tasks.length;
+      var tasksLength = this.props.tasks.length;
       var itemsPerPage = this.state.itemsPerPage;
       var currentPage = this.state.currentPage;
 
@@ -139,7 +113,7 @@ module.exports = React.createClass({
 
       if (selectedTasksLength === 0) {
         buttons =
-          <button className="btn btn-sm btn-info" onClick={this.fetchTasks}>
+          <button className="btn btn-sm btn-info" onClick={this.props.fetchTasks}>
             ↻ Refresh
           </button>;
       } else {
@@ -174,15 +148,14 @@ module.exports = React.createClass({
           </div>
           <TaskListComponent
             currentPage={currentPage}
-            fetchTasks={this.fetchTasks}
-            tasksFetchState={this.state.tasksFetchState}
+            tasksFetchState={this.props.tasksFetchState}
             formatTaskHealthMessage={this.props.formatTaskHealthMessage}
             hasHealth={this.props.hasHealth}
             onTaskToggle={this.onTaskToggle}
             onTaskDetailSelect={this.props.onTaskDetailSelect}
             itemsPerPage={itemsPerPage}
             selectedTasks={this.state.selectedTasks}
-            tasks={this.props.app.tasks}
+            tasks={this.props.tasks}
             currentAppVersion={this.props.currentAppVersion}
             toggleAllTasks={this.toggleAllTasks} />
         </div>

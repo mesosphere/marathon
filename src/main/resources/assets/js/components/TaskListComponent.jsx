@@ -3,28 +3,20 @@
 
 var React = require("react/addons");
 var States = require("../constants/States");
-var backboneMixin = require("../mixins/backboneMixin");
 var TaskListItemComponent = require("../components/TaskListItemComponent");
 var PagedContentComponent = require("../components/PagedContentComponent");
 
 module.exports = React.createClass({
     displayName: "TaskListComponent",
 
-    mixins: [backboneMixin],
-
     propTypes: {
       currentPage: React.PropTypes.number.isRequired,
-      fetchTasks: React.PropTypes.func.isRequired,
       tasksFetchState: React.PropTypes.number.isRequired,
       itemsPerPage: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
       selectedTasks: React.PropTypes.object.isRequired,
       tasks: React.PropTypes.object.isRequired,
       currentAppVersion: React.PropTypes.object.isRequired
-    },
-
-    getResource: function() {
-      return this.props.tasks;
     },
 
     handleThToggleClick: function(event) {
