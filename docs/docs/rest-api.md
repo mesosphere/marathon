@@ -144,6 +144,8 @@ The full JSON format of an application resource is as follows:
     "backoffFactor": 1.15,
     "maxLaunchDelaySeconds": 3600,
     "tasksRunning": 3,
+    "tasksHealthy": 3,
+    "tasksUnhealthy": 0,
     "tasksStaged": 0,
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -545,6 +547,8 @@ Transfer-Encoding: chunked
             "requirePorts": false,
             "storeUrls": [],
             "tasksRunning": 2,
+            "tasksHealthy": 2,
+            "tasksUnhealthy": 0,
             "tasksStaged": 0,
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
@@ -632,6 +636,8 @@ Transfer-Encoding: chunked
                 }
             ],
             "tasksRunning": 0,
+            "tasksHealthy": 0,
+            "tasksUnhealthy": 0,
             "tasksStaged": 1,
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
@@ -757,6 +763,8 @@ Transfer-Encoding: chunked
             }
         ],
         "tasksRunning": 2,
+        "tasksHealthy": 2,
+        "tasksUnhealthy": 0,
         "tasksStaged": 0,
         "upgradeStrategy": {
             "minimumHealthCapacity": 1.0
