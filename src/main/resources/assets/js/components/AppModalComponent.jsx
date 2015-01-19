@@ -1,5 +1,6 @@
 /** @jsx React.DOM */
 
+var Mousetrap = require("mousetrap");
 var React = require("react/addons");
 var _ = require("underscore");
 var States = require("../constants/States");
@@ -30,8 +31,6 @@ var AppModalComponent = React.createClass({
     onDestroy: React.PropTypes.func.isRequired,
     onTasksKilled: React.PropTypes.func.isRequired,
     rollBackApp: React.PropTypes.func.isRequired,
-    scaleApp: React.PropTypes.func.isRequired,
-    suspendApp: React.PropTypes.func.isRequired,
     router: React.PropTypes.object.isRequired
   },
 
@@ -74,14 +73,14 @@ var AppModalComponent = React.createClass({
     });
 
     this.setPollResource(this.fetchTasks);
+
+    Mousetrap.bind("#", function() {
+      this.destroyApp();
+    }.bind(this));
   },
 
   componentWillUnmount: function() {
     this.stopPolling();
-  },
-
-  destroy: function() {
-    this.refs.modalComponent.destroy();
   },
 
   fetchTasks: function() {
@@ -97,11 +96,6 @@ var AppModalComponent = React.createClass({
         this.setState({tasksFetchState: States.STATE_SUCCESS});
       }.bind(this)
     });
-  },
-
-  handleDestroyApp: function() {
-    this.props.destroyApp();
-    this.destroy();
   },
 
   toggleAllTasks: function () {
@@ -164,10 +158,62 @@ var AppModalComponent = React.createClass({
     // Clicking "Cancel" in a prompt returns either null or an empty String.
     // perform the action only if a value is submitted.
     if (instancesString != null && instancesString !== "") {
-      var instances = parseInt(instancesString, 10);
-      this.props.scaleApp(instances);
+      model.save(
+        {instances: parseInt(instancesString, 10)},
+        {
+          error: function (data, response) {
+            var msg = response.responseJSON.message || response.statusText;
+            alert("Not scaling: " + msg);
+          },
+          success: function () {
+            // refresh app versions
+            this.props.fetchAppVersions();
+          }.bind(this)
+      });
+
+      if (model.validationError != null) {
+        // If the model is not valid, revert the changes to prevent the UI
+        // from showing an invalid state.
+        model.update(model.previousAttributes());
+        alert("Not scaling: " + model.validationError[0].message);
+      }
     }
-   },
+  },
+
+  suspendApp: function () {
+    var model = this.props.model;
+
+    if (confirm("Suspend app by scaling to 0 instances?")) {
+      model.suspend({
+        error: function (data, response) {
+          var msg = response.responseJSON.message || response.statusText;
+          alert("Could not suspend: " + msg);
+        },
+        success: function () {
+          // refresh app versions
+          this.props.fetchAppVersions();
+        }.bind(this)
+      });
+    }
+  },
+
+  destroyApp: function() {
+    var model = this.props.model;
+
+    if (confirm("Destroy app '" + model.id + "'?\nThis is irreversible.")) {
+      model.destroy({
+        error: function (data, response) {
+          var msg = response.responseJSON.message || response.statusText;
+          alert("Error destroying app '" + model.id + "': " + msg);
+        },
+        success: function () {
+          this.props.destroyApp();
+          this.refs.modalComponent.destroy();
+        }.bind(this),
+        wait: true
+      });
+    }
+  },
 
   render: function() {
     var model = this.props.model;
@@ -198,14 +244,14 @@ var AppModalComponent = React.createClass({
           </ul>
           <div className="header-btn">
             <button className="btn btn-sm btn-default"
-                onClick={this.props.suspendApp}
+                onClick={this.suspendApp}
                 disabled={model.get("instances") < 1}>
               Suspend
             </button>
             <button className="btn btn-sm btn-default" onClick={this.scaleApp}>
               Scale
             </button>
-            <button className="btn btn-sm btn-danger pull-right" onClick={this.handleDestroyApp}>
+            <button className="btn btn-sm btn-danger pull-right" onClick={this.destroyApp}>
               Destroy App
             </button>
           </div>

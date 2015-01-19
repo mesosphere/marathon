@@ -122,12 +122,6 @@ var Marathon = React.createClass({
       }
     }.bind(this));
 
-    Mousetrap.bind("#", function() {
-      if (this.state.modalClass === AppModalComponent) {
-        this.destroyApp();
-      }
-    }.bind(this));
-
     Mousetrap.bind("shift+,", function() {
       router.navigate("#about", {trigger: true});
     }.bind(this));
@@ -248,23 +242,10 @@ var Marathon = React.createClass({
   },
 
   destroyApp: function () {
-    var app = this.state.activeApp;
-
-    if (confirm("Destroy app '" + app.id + "'?\nThis is irreversible.")) {
-      app.destroy({
-        error: function (data, response) {
-          var msg = response.responseJSON.message || response.statusText;
-          alert("Error destroying app '" + app.id + "': " + msg);
-        },
-        success: function () {
-          this.setState({
-            activeApp: null,
-            modalClass: null
-          });
-        }.bind(this),
-        wait: true
-      });
-    }
+    this.setState({
+      activeApp: null,
+      modalClass: null
+    });
   },
 
   destroyDeployment: function (deployment, options, component) {
@@ -323,46 +304,6 @@ var Marathon = React.createClass({
     }
   },
 
-  scaleApp: function (instances) {
-    if (this.state.activeApp != null) {
-      var app = this.state.activeApp;
-      app.save(
-        {instances: instances},
-        {
-          error: function (data, response) {
-            var msg = response.responseJSON.message || response.statusText;
-            alert("Not scaling: " + msg);
-          },
-          success: function () {
-            // refresh app versions
-            this.fetchAppVersions();
-          }.bind(this)
-      });
-
-      if (app.validationError != null) {
-        // If the model is not valid, revert the changes to prevent the UI
-        // from showing an invalid state.
-        app.update(app.previousAttributes());
-        alert("Not scaling: " + app.validationError[0].message);
-      }
-    }
-  },
-
-  suspendApp: function () {
-    if (confirm("Suspend app by scaling to 0 instances?")) {
-      this.state.activeApp.suspend({
-        error: function (data, response) {
-          var msg = response.responseJSON.message || response.statusText;
-          alert("Could not suspend: " + msg);
-        },
-        success: function () {
-          // refresh app versions
-          this.fetchAppVersions();
-        }.bind(this)
-      });
-    }
-  },
-
   activateTab: function(id) {
     this.setState({
       activeTabId: id
@@ -397,8 +338,6 @@ var Marathon = React.createClass({
         onDestroy={this.modalDestroy}
         onTasksKilled={this.handleTasksKilled}
         rollBackApp={this.rollbackToAppVersion}
-        scaleApp={this.scaleApp}
-        suspendApp={this.suspendApp}
         router={this.props.router}
         ref="modal" />
     );
