@@ -89,10 +89,11 @@ class MarathonSchedulerServiceTest extends TestKit(ActorSystem("System")) with M
       migration,
       schedulerActor
     ) {
-      override val reconciliationTimer: Timer = timer
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
       override def newDriver() = mock[SchedulerDriver]
     }
+
+    schedulerService.reconciliationTimer = timer
 
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
@@ -118,13 +119,15 @@ class MarathonSchedulerServiceTest extends TestKit(ActorSystem("System")) with M
       migration,
       schedulerActor
     ) {
-      override val reconciliationTimer: Timer = timer
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
       override def newDriver() = mock[SchedulerDriver]
     }
 
+    schedulerService.reconciliationTimer = timer
+
     schedulerService.onDefeated()
 
     verify(timer).cancel()
+    assert(schedulerService.reconciliationTimer != timer, "timer should be replaced after leadership defeat")
   }
 }

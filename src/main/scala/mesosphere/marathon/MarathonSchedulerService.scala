@@ -59,7 +59,7 @@ class MarathonSchedulerService @Inject() (
   val reconciliationInterval =
     Duration(config.reconciliationInterval(), MILLISECONDS)
 
-  val reconciliationTimer = new Timer("reconciliationTimer")
+  private[mesosphere] var reconciliationTimer = new Timer("reconciliationTimer")
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -258,6 +258,7 @@ class MarathonSchedulerService @Inject() (
     schedulerActor ! Suspend(LostLeadershipException("Leadership was defeated"))
 
     reconciliationTimer.cancel()
+    reconciliationTimer = new Timer("reconciliationTimer")
 
     // Our leadership has been defeated. Thus, update leadership and stop the driver.
     // Note that abdication command will be ran upon driver shutdown.
