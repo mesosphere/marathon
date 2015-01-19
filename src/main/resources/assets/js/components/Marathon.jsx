@@ -14,8 +14,7 @@ var NewAppModalComponent = require("../components/NewAppModalComponent");
 var TabPaneComponent = require("../components/TabPaneComponent");
 var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 var NavTabsComponent = require("../components/NavTabsComponent");
-
-var UPDATE_INTERVAL = 5000;
+var pollResourceMixin = require("../mixins/pollResourceMixin");
 
 var tabs = [
   {id: "apps", text: "Apps"},
@@ -24,6 +23,8 @@ var tabs = [
 
 module.exports = React.createClass({
     displayName: "Marathon",
+
+    mixins: [pollResourceMixin],
 
     propTypes: {
       router: React.PropTypes.object.isRequired
@@ -41,8 +42,7 @@ module.exports = React.createClass({
         deploymentsFetchState: States.STATE_LOADING,
         fetchState: States.STATE_LOADING,
         modalClass: null,
-        route: null,
-        tasksFetchState: States.STATE_LOADING
+        route: null
       };
     },
 
@@ -144,10 +144,8 @@ module.exports = React.createClass({
         // Otherwise stop polling since the modal went from closed to open.
         if (this.state.modalClass === null) {
           this.setPollResource(this.fetchApps);
-        } else if (this.state.modalClass === AppModalComponent) {
-          this.setPollResource(this.fetchTasks);
         } else {
-          this.stopPolling();
+          this.setPollResource(this.fetchDeployments);
         }
       }
 
@@ -168,18 +166,18 @@ module.exports = React.createClass({
     },
 
     fetchApps: function() {
-      var state = this.state;
-
-      state.collection.fetch({
+      this.state.collection.fetch({
         error: function() {
           this.setState({fetchState: States.STATE_ERROR});
         }.bind(this),
-        reset: true,
         success: function() {
-          this.fetchDeployments();
-          var activeApp = (state.state.activeAppId) ?
+          var state = this.state;
+          var activeApp = (state.activeAppId) ?
             state.collection.get("/" + state.activeAppId) :
             null;
+
+          this.fetchDeployments();
+
           this.setState({
             fetchState: States.STATE_SUCCESS,
             activeApp: activeApp
@@ -213,22 +211,6 @@ module.exports = React.createClass({
       });
     },
 
-    fetchTasks: function() {
-      if (this.state.activeApp != null) {
-        this.state.activeApp.tasks.fetch({
-          error: function() {
-            this.setState({tasksFetchState: States.STATE_ERROR});
-          }.bind(this),
-          success: function(collection, response) {
-            this.fetchDeployments();
-            // update changed attributes in app
-            this.state.activeApp.update(response.app);
-            this.setState({tasksFetchState: States.STATE_SUCCESS});
-          }.bind(this)
-        });
-      }
-    },
-
     handleAppCreate: function(appModel, options) {
       this.state.collection.create(appModel, options);
     },
@@ -248,7 +230,6 @@ module.exports = React.createClass({
         activeAppId: null,
         activeApp: null,
         modalClass: null,
-        tasksFetchState: States.STATE_LOADING,
         appVersionsFetchState: States.STATE_LOADING
       });
     },
@@ -389,34 +370,6 @@ module.exports = React.createClass({
       }
     },
 
-    poll: function() {
-      this._pollResource();
-    },
-
-    setPollResource: function(func) {
-      if(this._pollResource !== func) {
-        // Kill any poll that is in flight to ensure it doesn't fire after having changed
-        // the `_pollResource` function.
-        this.stopPolling();
-        this._pollResource = func;
-        this.startPolling();
-      }
-    },
-
-    startPolling: function() {
-      if (this._interval == null) {
-        this.poll();
-        this._interval = setInterval(this.poll, UPDATE_INTERVAL);
-      }
-    },
-
-    stopPolling: function() {
-      if (this._interval != null) {
-        clearInterval(this._interval);
-        this._interval = null;
-      }
-    },
-
     activateTab: function(id) {
       this.setState({
         activeTabId: id
@@ -447,7 +400,6 @@ module.exports = React.createClass({
           activeTask={this.state.activeTask}
           appVersionsFetchState={this.state.appVersionsFetchState}
           destroyApp={this.destroyApp}
-          fetchTasks={this.fetchTasks}
           fetchAppVersions={this.fetchAppVersions}
           model={this.state.activeApp}
           onDestroy={this.modalDestroy}
@@ -457,7 +409,6 @@ module.exports = React.createClass({
           rollBackApp={this.rollbackToAppVersion}
           scaleApp={this.scaleApp}
           suspendApp={this.suspendApp}
-          tasksFetchState={this.state.tasksFetchState}
           router={this.props.router}
           ref="modal" />
       );

@@ -4,7 +4,7 @@
 var $ = require("jquery");
 var _ = require("underscore");
 var React = require("react/addons");
-var BackboneMixin = require("../mixins/BackboneMixin");
+var backboneMixin = require("../mixins/backboneMixin");
 var App = require("../models/App");
 var FormGroupComponent = require("../components/FormGroupComponent");
 var ModalComponent = require("../components/ModalComponent");
@@ -15,7 +15,7 @@ var ModalComponent = require("../components/ModalComponent");
   }
 
 module.exports = React.createClass({
-    mixins: [BackboneMixin],
+    mixins: [backboneMixin],
     propTypes: {
       onCreate: React.PropTypes.func,
       onDestroy: React.PropTypes.func

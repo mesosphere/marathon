@@ -5,13 +5,13 @@ var React = require("react/addons");
 var States = require("../constants/States");
 var App = require("../models/App");
 var AppVersion = require("../models/AppVersion");
-var BackboneMixin = require("../mixins/BackboneMixin");
+var backboneMixin = require("../mixins/backboneMixin");
 var AppVersionComponent = require("../components/AppVersionComponent");
 
 module.exports = React.createClass({
     displayName: "AppVersionListItemComponent",
 
-    mixins: [BackboneMixin],
+    mixins: [backboneMixin],
 
     propTypes: {
       app: React.PropTypes.instanceOf(App).isRequired,

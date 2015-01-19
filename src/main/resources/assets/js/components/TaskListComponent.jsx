@@ -3,19 +3,19 @@
 
 var React = require("react/addons");
 var States = require("../constants/States");
-var BackboneMixin = require("../mixins/BackboneMixin");
+var backboneMixin = require("../mixins/backboneMixin");
 var TaskListItemComponent = require("../components/TaskListItemComponent");
 var PagedContentComponent = require("../components/PagedContentComponent");
 
 module.exports = React.createClass({
     displayName: "TaskListComponent",
 
-    mixins: [BackboneMixin],
+    mixins: [backboneMixin],
 
     propTypes: {
       currentPage: React.PropTypes.number.isRequired,
       fetchTasks: React.PropTypes.func.isRequired,
-      fetchState: React.PropTypes.number.isRequired,
+      tasksFetchState: React.PropTypes.number.isRequired,
       itemsPerPage: React.PropTypes.number.isRequired,
       hasHealth: React.PropTypes.bool,
       selectedTasks: React.PropTypes.object.isRequired,
@@ -25,10 +25,6 @@ module.exports = React.createClass({
 
     getResource: function() {
       return this.props.tasks;
-    },
-
-    componentDidMount: function() {
-      this.props.fetchTasks();
     },
 
     handleThToggleClick: function(event) {
@@ -53,14 +49,14 @@ module.exports = React.createClass({
       var taskNodes;
       var tasksLength = this.props.tasks.length;
       var hasHealth = !!this.props.hasHealth;
-      var hasError = this.props.fetchState === States.STATE_ERROR;
+      var hasError = this.props.tasksFetchState === States.STATE_ERROR;
 
       // If there are no tasks, they can't all be selected. Otherwise, assume
       // they are all selected and let the iteration below decide if that is
       // true.
       var allTasksSelected = tasksLength > 0;
 
-      if (this.props.fetchState === States.STATE_LOADING) {
+      if (this.props.tasksFetchState === States.STATE_LOADING) {
         taskNodes =
           <tbody>
             <tr>

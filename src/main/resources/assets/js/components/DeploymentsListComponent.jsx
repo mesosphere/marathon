@@ -4,12 +4,12 @@
 var React = require("react/addons");
 var States = require("../constants/States");
 var DeploymentComponent = require("../components/DeploymentComponent");
-var BackboneMixin = require("../mixins/BackboneMixin");
+var backboneMixin = require("../mixins/backboneMixin");
 
 module.exports = React.createClass({
     displayName: "DeploymentListComponent",
 
-    mixins: [BackboneMixin],
+    mixins: [backboneMixin],
 
     propTypes: {
       deployments: React.PropTypes.object.isRequired,

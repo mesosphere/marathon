@@ -2,7 +2,7 @@
 
 
 var React = require("react/addons");
-var BackboneMixin = require("../mixins/BackboneMixin");
+var backboneMixin = require("../mixins/backboneMixin");
 var States = require("../constants/States");
 var Task = require("../models/Task");
 var TimeFieldComponent = require("../components/TimeFieldComponent");
@@ -12,7 +12,7 @@ var TaskHealthComponent = require("../components/TaskHealthComponent");
 module.exports = React.createClass({
     displayName: "TaskDetailComponent",
 
-    mixins: [BackboneMixin],
+    mixins: [backboneMixin],
 
     propTypes: {
       fetchState: React.PropTypes.number.isRequired,

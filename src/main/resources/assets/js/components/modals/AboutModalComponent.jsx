@@ -3,7 +3,7 @@
 
 var React = require("react/addons");
 var Info = require("../../models/Info");
-var BackboneMixin = require("../../mixins/BackboneMixin");
+var backboneMixin = require("../../mixins/backboneMixin");
 var ModalComponent = require("../components/../ModalComponent");
 var ObjectDlComponent = require("../components/../ObjectDlComponent");
 
@@ -15,7 +15,7 @@ var ObjectDlComponent = require("../components/../ObjectDlComponent");
   });
 
 module.exports = React.createClass({
-    mixins: [BackboneMixin],
+    mixins: [backboneMixin],
 
     getInitialState: function() {
       return {

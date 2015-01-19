@@ -4,7 +4,7 @@
 var React = require("react/addons");
 var States = require("../constants/States");
 var App = require("../models/App");
-var BackboneMixin = require("../mixins/BackboneMixin");
+var backboneMixin = require("../mixins/backboneMixin");
 var AppVersionComponent = require("../components/AppVersionComponent");
 var AppVersionListItemComponent = require("../components/AppVersionListItemComponent");
 var PagedContentComponent = require("../components/PagedContentComponent");
@@ -13,7 +13,7 @@ var PagedNavComponent = require("../components/PagedNavComponent");
 module.exports = React.createClass({
     displayName: "AppVersionListComponent",
 
-    mixins: [BackboneMixin],
+    mixins: [backboneMixin],
 
     propTypes: {
       app: React.PropTypes.instanceOf(App).isRequired,

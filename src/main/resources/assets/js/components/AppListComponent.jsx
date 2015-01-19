@@ -4,12 +4,12 @@
 var React = require("react/addons");
 var States = require("../constants/States");
 var AppComponent = require("../components/AppComponent");
-var BackboneMixin = require("../mixins/BackboneMixin");
+var backboneMixin = require("../mixins/backboneMixin");
 
 module.exports = React.createClass({
     displayName: "AppListComponent",
 
-    mixins: [BackboneMixin],
+    mixins: [backboneMixin],
 
     propTypes: {
       collection: React.PropTypes.object.isRequired,

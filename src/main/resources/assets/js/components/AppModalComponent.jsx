@@ -24,7 +24,6 @@ module.exports = React.createClass({
       appVersionsFetchState: React.PropTypes.number.isRequired,
       model: React.PropTypes.object.isRequired,
       destroyApp: React.PropTypes.func.isRequired,
-      fetchTasks: React.PropTypes.func.isRequired,
       fetchAppVersions: React.PropTypes.func.isRequired,
       onDestroy: React.PropTypes.func.isRequired,
       onShowTaskDetails: React.PropTypes.func.isRequired,
@@ -33,7 +32,6 @@ module.exports = React.createClass({
       rollBackApp: React.PropTypes.func.isRequired,
       scaleApp: React.PropTypes.func.isRequired,
       suspendApp: React.PropTypes.func.isRequired,
-      tasksFetchState: React.PropTypes.number.isRequired,
       router: React.PropTypes.object.isRequired
     },
 
@@ -196,10 +194,8 @@ module.exports = React.createClass({
               <StackedViewComponent
                 activeViewIndex={this.state.activeViewIndex}>
                 <TaskViewComponent
-                  collection={model.tasks}
+                  app={model}
                   currentAppVersion={model.get('version')}
-                  fetchState={this.props.tasksFetchState}
-                  fetchTasks={this.props.fetchTasks}
                   formatTaskHealthMessage={model.formatTaskHealthMessage}
                   hasHealth={hasHealth}
                   onTasksKilled={this.props.onTasksKilled}
