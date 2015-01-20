@@ -20,7 +20,105 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
+object AppDefinitionTest {
+  val FullAppJson = """
+    |{
+    |  "id": "/product/service/my-app",
+    |  "cmd": "env && sleep 300",
+    |  "args": ["/bin/sh", "-c", "env && sleep 300"],
+    |  "container": {
+    |      "type": "DOCKER",
+    |      "docker": {
+    |          "image": "group/image",
+    |          "network": "BRIDGE",
+    |          "portMappings": [
+    |              {
+    |                  "containerPort": 8080,
+    |                  "hostPort": 0,
+    |                  "servicePort": 9000,
+    |                  "protocol": "tcp"
+    |              },
+    |              {
+    |                  "containerPort": 161,
+    |                  "hostPort": 0,
+    |                  "protocol": "udp"
+    |              }
+    |          ]
+    |      },
+    |      "volumes": [
+    |          {
+    |              "containerPath": "/etc/a",
+    |              "hostPath": "/var/data/a",
+    |              "mode": "RO"
+    |          },
+    |          {
+    |              "containerPath": "/etc/b",
+    |              "hostPath": "/var/data/b",
+    |              "mode": "RW"
+    |          }
+    |      ]
+    |  },
+    |  "cpus": 1.5,
+    |  "mem": 256.0,
+    |  "deployments": [
+    |      {
+    |          "id": "5cd987cd-85ae-4e70-8df7-f1438367d9cb"
+    |      }
+    |  ],
+    |  "env": {
+    |      "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
+    |  },
+    |  "executor": "",
+    |  "constraints": [
+    |      ["attribute", "GROUP_BY", "value"]
+    |  ],
+    |  "healthChecks": [
+    |      {
+    |          "protocol": "HTTP",
+    |          "path": "/health",
+    |          "gracePeriodSeconds": 3,
+    |          "intervalSeconds": 10,
+    |          "portIndex": 0,
+    |          "timeoutSeconds": 10,
+    |          "maxConsecutiveFailures": 3
+    |      },
+    |      {
+    |          "protocol": "TCP",
+    |          "gracePeriodSeconds": 3,
+    |          "intervalSeconds": 5,
+    |          "portIndex": 1,
+    |          "timeoutSeconds": 5,
+    |          "maxConsecutiveFailures": 3
+    |      },
+    |      {
+    |          "protocol": "COMMAND",
+    |          "command": { "value": "curl -f -X GET http://$HOST:$PORT0/health" },
+    |          "maxConsecutiveFailures": 3
+    |      }
+    |  ],
+    |  "instances": 3,
+    |  "ports": [
+    |      8080,
+    |      9000
+    |  ],
+    |  "backoffSeconds": 1,
+    |  "backoffFactor": 1.15,
+    |  "tasksRunning": 3,
+    |  "tasksStaged": 0,
+    |  "uris": [
+    |      "https://raw.github.com/mesosphere/marathon/master/README.md"
+    |  ],
+    |  "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
+    |  "upgradeStrategy": {
+    |      "minimumHealthCapacity": 0.5,
+    |      "maximumOverCapacity": 0.5
+    |  },
+    |  "version": "2014-03-01T23:29:30.158Z"
+    |}""".stripMargin
+}
+
 class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation {
+  import AppDefinitionTest._
 
   test("ToProto") {
     val app1 = AppDefinition(
@@ -382,100 +480,6 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
   }
 
   test("jackson and play-json parsing has the same result") {
-    val fullAppJson = """{
-        "id": "/product/service/my-app",
-        "cmd": "env && sleep 300",
-        "args": ["/bin/sh", "-c", "env && sleep 300"],
-        "container": {
-            "type": "DOCKER",
-            "docker": {
-                "image": "group/image",
-                "network": "BRIDGE",
-                "portMappings": [
-                    {
-                        "containerPort": 8080,
-                        "hostPort": 0,
-                        "servicePort": 9000,
-                        "protocol": "tcp"
-                    },
-                    {
-                        "containerPort": 161,
-                        "hostPort": 0,
-                        "protocol": "udp"
-                    }
-                ]
-            },
-            "volumes": [
-                {
-                    "containerPath": "/etc/a",
-                    "hostPath": "/var/data/a",
-                    "mode": "RO"
-                },
-                {
-                    "containerPath": "/etc/b",
-                    "hostPath": "/var/data/b",
-                    "mode": "RW"
-                }
-            ]
-        },
-        "cpus": 1.5,
-        "mem": 256.0,
-        "deployments": [
-            {
-                "id": "5cd987cd-85ae-4e70-8df7-f1438367d9cb"
-            }
-        ],
-        "env": {
-            "LD_LIBRARY_PATH": "/usr/local/lib/myLib"
-        },
-        "executor": "",
-        "constraints": [
-            ["attribute", "GROUP_BY", "value"]
-        ],
-        "healthChecks": [
-            {
-                "protocol": "HTTP",
-                "path": "/health",
-                "gracePeriodSeconds": 3,
-                "intervalSeconds": 10,
-                "portIndex": 0,
-                "timeoutSeconds": 10,
-                "maxConsecutiveFailures": 3
-            },
-            {
-                "protocol": "TCP",
-                "gracePeriodSeconds": 3,
-                "intervalSeconds": 5,
-                "portIndex": 1,
-                "timeoutSeconds": 5,
-                "maxConsecutiveFailures": 3
-            },
-            {
-                "protocol": "COMMAND",
-                "command": { "value": "curl -f -X GET http://$HOST:$PORT0/health" },
-                "maxConsecutiveFailures": 3
-            }
-        ],
-        "instances": 3,
-        "ports": [
-            8080,
-            9000
-        ],
-        "backoffSeconds": 1,
-        "backoffFactor": 1.15,
-        "tasksRunning": 3,
-        "tasksStaged": 0,
-        "uris": [
-            "https://raw.github.com/mesosphere/marathon/master/README.md"
-        ],
-        "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
-        "upgradeStrategy": {
-            "minimumHealthCapacity": 0.5,
-            "maximumOverCapacity": 0.5
-        },
-        "version": "2014-03-01T23:29:30.158Z"
-    }"""
-
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.jackson.CaseClassModule
@@ -487,7 +491,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     mapper.registerModule(new MarathonModule)
     mapper.registerModule(CaseClassModule)
 
-    assert(mapper.readValue(fullAppJson, classOf[AppDefinition]) == Json.parse(fullAppJson).as[AppDefinition])
+    assert(mapper.readValue(FullAppJson, classOf[AppDefinition]) == Json.parse(FullAppJson).as[AppDefinition])
   }
 
   test("AppDefinition.WithTaskCountsAndDeploymentsWrites output of play-json matches jackson") {
@@ -593,6 +597,15 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     val playRes = Json.parse(Json.toJson(enrichedApp).toString())
     val jacksonRes = Json.parse(mapper.writeValueAsString(enrichedApp))
     assert(playRes == jacksonRes)
+  }
+
+  // regression test for #1044
+  test("toProto should not change the object") {
+    import mesosphere.marathon.api.v2.json.Formats._
+
+    val app = Json.parse(FullAppJson).as[AppDefinition]
+
+    app.isUpgrade(AppDefinition.fromProto(app.toProto)) should be (false)
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
