@@ -136,7 +136,7 @@ trait ModelValidation extends BeanValidation {
     child: PathId,
     path: String): Iterable[ConstraintViolation[T]] = {
     val isParent = child.canonicalPath(parent).parent == parent
-    if (!isParent)
+    if (parent != PathId.empty && !isParent)
       List(violation(t, child, path, s"identifier $child is not child of $parent. Hint: use relative paths."))
     else Nil
   }
