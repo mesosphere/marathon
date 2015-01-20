@@ -164,7 +164,7 @@ env_keys = {
     'HAPROXY_{0}_BIND_ADDR': bindAddr
 }
 
-logger = logging.getLogger('haproxycfggenerator')
+logger = logging.getLogger('servicerouter')
 
 
 class MarathonBackend(object):
