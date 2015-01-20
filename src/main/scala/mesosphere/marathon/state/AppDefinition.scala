@@ -136,10 +136,7 @@ case class AppDefinition(
         Some(proto.getCmd.getValue)
       else None
 
-    val argsOption =
-      if (commandOption.isEmpty)
-        Some(proto.getCmd.getArgumentsList.asScala.to[Seq])
-      else None
+    val argsOption = Some(proto.getCmd.getArgumentsList.asScala.to[Seq]).filter(_.nonEmpty)
 
     val containerOption =
       if (proto.hasContainer)
