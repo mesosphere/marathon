@@ -5,7 +5,7 @@ import java.util.concurrent.Semaphore
 import akka.actor._
 import akka.event.EventStream
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.apache.mesos.Protos.TaskInfo
+import org.apache.mesos.Protos.{ TaskState, TaskID, TaskStatus, TaskInfo }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
@@ -407,6 +407,11 @@ class SchedulerActions(
         val knownTaskStatuses = appIds.flatMap { appId =>
           taskTracker.get(appId).collect {
             case task if task.hasStatus => task.getStatus
+            case task => // staged tasks, which have no status yet
+              TaskStatus.newBuilder
+                .setState(TaskState.TASK_STAGING)
+                .setTaskId(TaskID.newBuilder.setValue(task.getId))
+                .build()
           }
         }
 

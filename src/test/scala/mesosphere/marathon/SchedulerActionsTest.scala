@@ -53,20 +53,29 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
     queue.rateLimiter.getDelay(app).hasTimeLeft should be(false)
   }
 
-  test("Task reconciliation sends known tasks and empty list") {
+  test("Task reconciliation sends known running and staged tasks and empty list") {
     val queue = new TaskQueue
     val repo = mock[AppRepository]
     val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
 
-    val status = TaskStatus.newBuilder
+    val runningStatus = TaskStatus.newBuilder
       .setTaskId(TaskID.newBuilder.setValue("task_1"))
       .setState(TaskState.TASK_RUNNING)
       .build()
 
-    val task = MarathonTask.newBuilder
+    val runningTask = MarathonTask.newBuilder
       .setId("task_1")
-      .setStatus(status)
+      .setStatus(runningStatus)
+      .build()
+
+    val stagedTask = MarathonTask.newBuilder
+      .setId("task_2")
+      .build()
+
+    val stagedStatus = TaskStatus.newBuilder
+      .setTaskId(TaskID.newBuilder.setValue(stagedTask.getId))
+      .setState(TaskState.TASK_STAGING)
       .build()
 
     val scheduler = new SchedulerActions(
@@ -83,13 +92,13 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
 
     val app = AppDefinition(id = PathId("/myapp"))
 
-    when(taskTracker.get(app.id)).thenReturn(Set(task))
+    when(taskTracker.get(app.id)).thenReturn(Set(runningTask, stagedTask))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(taskTracker.list).thenReturn(Map(app.id -> TaskTracker.App(app.id, Set(task), shutdown = false)))
+    when(taskTracker.list).thenReturn(Map(app.id -> TaskTracker.App(app.id, Set(runningTask, stagedTask), shutdown = false)))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
-    verify(driver).reconcileTasks(Set(status).asJava)
+    verify(driver).reconcileTasks(Set(runningStatus, stagedStatus).asJava)
     verify(driver).reconcileTasks(java.util.Arrays.asList())
   }
 
