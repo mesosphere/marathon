@@ -248,11 +248,12 @@ object MarathonModule {
       healthChecks: Option[Set[HealthCheck]] = None,
       dependencies: Option[Set[PathId]] = None,
       upgradeStrategy: Option[UpgradeStrategy] = None,
+      labels: Option[Map[String, String]] = None,
       version: Option[Timestamp] = None) {
     def build(): AppUpdate = AppUpdate(
       id, cmd, args, user, env, instances, cpus, mem, disk, executor, constraints,
       uris, storeUrls, ports, requirePorts, backoff, backoffFactor, container, healthChecks,
-      dependencies, upgradeStrategy, version
+      dependencies, upgradeStrategy, labels, version
     )
   }
 

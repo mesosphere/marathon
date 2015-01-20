@@ -63,6 +63,7 @@ message ServiceDefinition {
   repeated string storeUrls = 17;
   optional bool require_ports = 18 [default = false];
   optional ExtendedContainerInfo container = 19;
+  repeated mesos.Parameter labels = 20;
 }
 
 message MarathonTask {

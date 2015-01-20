@@ -16,7 +16,7 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-import org.apache.mesos.Protos.TaskState
+import org.apache.mesos.{ Protos => mesos }
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -68,6 +68,8 @@ case class AppDefinition(
 
   upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
 
+  labels: Map[String, String] = AppDefinition.DefaultLabels,
+
   version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {
 
@@ -95,6 +97,13 @@ case class AppDefinition(
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
+    val appLabels = labels.map {
+      case (key, value) =>
+        mesos.Parameter.newBuilder
+          .setKey(key)
+          .setValue(value)
+          .build
+    }
 
     val builder = Protos.ServiceDefinition.newBuilder
       .setId(id.toString)
@@ -114,6 +123,7 @@ case class AppDefinition(
       .setUpgradeStrategy(upgradeStrategy.toProto)
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
+      .addAllLabels(appLabels.asJava)
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
@@ -170,6 +180,7 @@ case class AppDefinition(
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
       healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
+      labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
       version = Timestamp(proto.getVersion),
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
@@ -276,6 +287,8 @@ object AppDefinition {
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
+  val DefaultLabels: Map[String, String] = Map.empty
+
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
@@ -288,7 +301,7 @@ object AppDefinition {
         app.mem, app.disk, app.executor, app.constraints, app.uris,
         app.storeUrls, app.ports, app.requirePorts, app.backoff,
         app.backoffFactor, app.container, app.healthChecks, app.dependencies,
-        app.upgradeStrategy, app.version) {
+        app.upgradeStrategy, app.labels, app.version) {
 
     /**
       * Snapshot of the number of staged (but not running) tasks
@@ -305,7 +318,7 @@ object AppDefinition {
     @JsonProperty
     val tasksRunning: Int = appTasks.count { eTask =>
       eTask.task.hasStatus &&
-        eTask.task.getStatus.getState == TaskState.TASK_RUNNING
+        eTask.task.getStatus.getState == mesos.TaskState.TASK_RUNNING
     }
 
     /**

@@ -106,7 +106,12 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       mem = 256,
       instances = 5,
       ports = Seq(8080, 8081),
-      executor = "//cmd"
+      executor = "//cmd",
+      labels = Map(
+        "one" -> "aaa",
+        "two" -> "bbb",
+        "three" -> "ccc"
+      )
     )
     val result1 = AppDefinition().mergeFromProto(app1.toProto)
     assert(result1 == app1)
@@ -457,6 +462,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
             }
         ],
         "instances": 3,
+        "labels": {
+          "one": "aaa",
+          "two": "bbb",
+          "three": "ccc"
+        },
         "ports": [
             8080,
             9000
