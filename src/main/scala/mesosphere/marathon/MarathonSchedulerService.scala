@@ -27,7 +27,7 @@ import org.apache.log4j.Logger
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.{ MILLISECONDS, _ }
 import scala.concurrent.{ TimeoutException, Await, Future, Promise }
-import scala.util.{ Failure, Random, Success }
+import scala.util.{ Failure, Success }
 
 /**
   * Wrapper class for the scheduler
@@ -59,7 +59,7 @@ class MarathonSchedulerService @Inject() (
   val reconciliationInterval =
     Duration(config.reconciliationInterval(), MILLISECONDS)
 
-  val reconciliationTimer = new Timer("reconciliationTimer")
+  private[mesosphere] var reconciliationTimer = newTimer()
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -74,9 +74,12 @@ class MarathonSchedulerService @Inject() (
   // This is a little ugly as we are using a mutable variable. But drivers can't
   // be reused (i.e. once stopped they can't be started again. Thus,
   // we have to allocate a new driver before each run or after each stop.
-  var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
+  var driver = newDriver()
 
   implicit val timeout: Timeout = 5.seconds
+
+  protected def newDriver() = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
+  protected def newTimer() = new Timer("reconciliationTimer")
 
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
     log.info(s"Deploy plan:$plan with force:$force")
@@ -143,9 +146,6 @@ class MarathonSchedulerService @Inject() (
     // leadership election then we will wait to be elected. If we aren't (i.e.
     // no HA) then we take over leadership run the driver immediately.
     offerLeadership()
-
-    // Start the timer that handles reconciliation
-    schedulePeriodicOperations()
 
     // Block on the latch which will be countdown only when shutdown has been
     // triggered. This is to prevent run()
@@ -219,10 +219,10 @@ class MarathonSchedulerService @Inject() (
     // We need to allocate a new driver as drivers can't be reused. Once they
     // are in the stopped state they cannot be restarted. See the Mesos C++
     // source code for the MesosScheduleDriver.
-    driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
+    driver = newDriver()
   }
 
-  def isLeader(): Boolean = leader.get()
+  def isLeader: Boolean = leader.get()
 
   def getLeader: Option[String] = {
     candidate.flatMap { c =>
@@ -258,6 +258,9 @@ class MarathonSchedulerService @Inject() (
 
     schedulerActor ! Suspend(LostLeadershipException("Leadership was defeated"))
 
+    reconciliationTimer.cancel()
+    reconciliationTimer = newTimer()
+
     // Our leadership has been defeated. Thus, update leadership and stop the driver.
     // Note that abdication command will be ran upon driver shutdown.
     leader.set(false)
@@ -272,6 +275,9 @@ class MarathonSchedulerService @Inject() (
     runDriver(abdicateOption)
 
     schedulerActor ! Start
+
+    // Start the timer that handles reconciliation
+    schedulePeriodicOperations()
   }
 
   def abdicateLeadership(): Unit = {
@@ -321,7 +327,9 @@ class MarathonSchedulerService @Inject() (
     reconciliationTimer.schedule(
       new TimerTask {
         def run() {
-          taskTracker.expungeOrphanedTasks()
+          if (isLeader) {
+            taskTracker.expungeOrphanedTasks()
+          }
         }
       },
       reconciliationInitialDelay.toMillis + reconciliationInterval.toMillis
