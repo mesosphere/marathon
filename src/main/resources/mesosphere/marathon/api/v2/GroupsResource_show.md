@@ -36,7 +36,6 @@ Transfer-Encoding: chunked
       "constraints": [],
       "uris": [],
       "ports": [19970],
-      "taskRateLimit": 1.0,
       "container": null,
       "healthChecks": [ ],
       "version": "2014-05-16T14:39:12.058Z"

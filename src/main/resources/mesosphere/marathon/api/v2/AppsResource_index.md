@@ -111,7 +111,6 @@ Transfer-Encoding: chunked
                 15092, 
                 14566
             ], 
-            "taskRateLimit": 1.0, 
             "tasksRunning": 1, 
             "tasksStaged": 0, 
             "uris": [
