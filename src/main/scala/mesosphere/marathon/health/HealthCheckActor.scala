@@ -170,6 +170,7 @@ class HealthCheckActor(
 }
 
 object HealthCheckActor {
+  // self-sent every healthCheck.intervalSeconds
   case object Tick
   case class GetTaskHealth(taskId: String)
 }
