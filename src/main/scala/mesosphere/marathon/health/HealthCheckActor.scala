@@ -6,7 +6,7 @@ import mesosphere.marathon.MarathonSchedulerDriver
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event._
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.protos.TaskID
 
@@ -18,13 +18,14 @@ class HealthCheckActor(
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
-  import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
+  import mesosphere.marathon.health.HealthCheckActor.{ GetTaskHealth, _ }
   import mesosphere.marathon.health.HealthCheckWorker.HealthCheckJob
   import mesosphere.mesos.protos.Implicits._
 
-  protected[this] var nextScheduledCheck: Option[Cancellable] = None
+  var nextScheduledCheck: Option[Cancellable] = None
+  var taskHealth = Map[String, Health]()
 
-  protected[this] var taskHealth = Map[String, Health]()
+  val workerProps = Props[HealthCheckWorkerActor]
 
   override def preStart(): Unit = {
     log.info(
@@ -51,10 +52,7 @@ class HealthCheckActor(
     )
   }
 
-  // self-sent every healthCheck.intervalSeconds
-  protected[this] case object Tick
-
-  protected[this] def purgeStatusOfDoneTasks(): Unit = {
+  def purgeStatusOfDoneTasks(): Unit = {
     log.debug(
       "Purging health status of done tasks for app [{}] and healthCheck [{}]",
       appId,
@@ -64,7 +62,7 @@ class HealthCheckActor(
     taskHealth = taskHealth.filterKeys(activeTaskIds)
   }
 
-  protected[this] def scheduleNextHealthCheck(): Unit =
+  def scheduleNextHealthCheck(): Unit =
     if (healthCheck.protocol != Protocol.COMMAND) {
       log.debug(
         "Scheduling next health check for app [{}] and healthCheck [{}]",
@@ -78,19 +76,19 @@ class HealthCheckActor(
       )
     }
 
-  protected[this] def dispatchJobs(): Unit = {
+  def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
     taskTracker.get(appId).foreach { task =>
       if (task.getVersion() == appVersion && task.hasStartedAt) {
         log.debug("Dispatching health check job for task [{}]", task.getId)
-        val worker: ActorRef = context.actorOf(Props[HealthCheckWorkerActor])
+        val worker: ActorRef = context.actorOf(workerProps)
         worker ! HealthCheckJob(task, healthCheck)
       }
     }
   }
 
-  protected[this] def checkConsecutiveFailures(task: MarathonTask,
-                                               health: Health): Unit = {
+  def checkConsecutiveFailures(task: MarathonTask,
+                               health: Health): Unit = {
     val consecutiveFailures = health.consecutiveFailures
     val maxFailures = healthCheck.maxConsecutiveFailures
 
@@ -110,8 +108,8 @@ class HealthCheckActor(
     }
   }
 
-  protected[this] def ignoreFailures(task: MarathonTask,
-                                     health: Health): Boolean = {
+  def ignoreFailures(task: MarathonTask,
+                     health: Health): Boolean = {
     // Ignore failures during the grace period, until the task becomes green
     // for the first time.  Also ignore failures while the task is staging.
     !task.hasStartedAt ||
@@ -172,5 +170,7 @@ class HealthCheckActor(
 }
 
 object HealthCheckActor {
+  // self-sent every healthCheck.intervalSeconds
+  case object Tick
   case class GetTaskHealth(taskId: String)
 }
