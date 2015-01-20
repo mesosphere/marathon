@@ -15,7 +15,7 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.{ any, eq => mockEq }
 import org.mockito.Mockito
-import org.mockito.Mockito.{ verify, when }
+import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopOption
 import org.scalatest.BeforeAndAfterAll
 
@@ -129,5 +129,39 @@ class MarathonSchedulerServiceTest extends TestKit(ActorSystem("System")) with M
 
     verify(timer).cancel()
     assert(schedulerService.reconciliationTimer != timer, "timer should be replaced after leadership defeat")
+  }
+
+  test("Re-enable timer when re-elected") {
+    val timer = mock[Timer]
+
+    when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
+
+    val schedulerService = new MarathonSchedulerService(
+      healthCheckManager,
+      candidate,
+      config,
+      frameworkIdUtil,
+      leader,
+      appRepository,
+      taskTracker,
+      scheduler,
+      system,
+      migration,
+      schedulerActor
+    ) {
+      override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
+      override def newDriver() = mock[SchedulerDriver]
+      override def newTimer() = timer
+    }
+
+    schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
+
+    schedulerService.onDefeated()
+
+    schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
+
+    verify(timer, times(2)).schedule(any[TimerTask](), mockEq(ReconciliationDelay), mockEq(ReconciliationInterval))
+    verify(timer, times(2)).schedule(any(), mockEq(ReconciliationDelay + ReconciliationInterval))
+    verify(timer).cancel()
   }
 }
