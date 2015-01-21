@@ -158,22 +158,22 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     var healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(0, 3, 0))
 
-    updateTaskHealth(task1, healthy=true)
+    updateTaskHealth(task1, healthy = true)
 
     healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(1, 2, 0))
 
-    updateTaskHealth(task2, healthy=true)
+    updateTaskHealth(task2, healthy = true)
 
     healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(2, 1, 0))
 
-    updateTaskHealth(task3, healthy=false)
+    updateTaskHealth(task3, healthy = false)
 
     healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(2, 0, 1))
 
-    updateTaskHealth(task1, healthy=false)
+    updateTaskHealth(task1, healthy = false)
 
     healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(1, 0, 2))

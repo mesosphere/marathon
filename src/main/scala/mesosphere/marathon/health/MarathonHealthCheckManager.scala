@@ -209,9 +209,9 @@ class MarathonHealthCheckManager @Inject() (
           maybeHealthSet <- this.status(appId, task.getId)
         } yield maybeHealthSet.toSeq.map {
           case Some(health) => if (health.alive) 1 else -1
-          case None => 0
+          case None         => 0
         } match {
-          case Nil => 0 // no health check found => assume unknown
+          case Nil  => 0 // no health check found => assume unknown
           case list => list.min
         }
       })

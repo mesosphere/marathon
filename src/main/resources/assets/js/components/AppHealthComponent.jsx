@@ -16,10 +16,10 @@ var AppHealthComponent = React.createClass({
     );
 
     var healthData = [
-      {quantity: model.get("tasksHealthy"), className: "health-bar-healthy"},
-      {quantity: model.get("tasksUnhealthy"), className: "health-bar-unhealthy"}, /* jscs:disable maximumLineLength */
-      {quantity: tasksWithUnknownHealth, className: "health-bar-running"},
-      {quantity: model.get("tasksStaged"), className: "health-bar-staged"}
+      {quantity: model.get("tasksHealthy"), name: "healthy"},
+      {quantity: model.get("tasksUnhealthy"), name: "unhealthy"},
+      {quantity: tasksWithUnknownHealth, name: "running"},
+      {quantity: model.get("tasksStaged"), name: "staged"}
     ];
 
     // cut off after `instances` many tasks...
@@ -31,20 +31,16 @@ var AppHealthComponent = React.createClass({
     }
 
     // ... show everything above that in blue
-    healthData.push({
-      quantity: Math.max(0, tasksSum - model.get("instances")),
-      className: "health-bar-over-capacity"
-    });
+    var overCapacity = Math.max(0, tasksSum - model.get("instances"));
+
+    healthData.push({quantity: overCapacity, name: "over-capacity"});
 
     // add unscheduled task, or show black if completely suspended
-    var unscheduledTasks = Math.max(0, model.get("instances") - tasksSum);
-
     var isSuspended = model.get("instances") === 0 && tasksSum === 0;
+    var unscheduled = Math.max(0, (model.get("instances") - tasksSum));
+    var unscheduledOrSuspended = isSuspended ? 1 : unscheduled;
 
-    healthData.push({
-      quantity: isSuspended ? 1 : unscheduledTasks,
-      className: "health-bar-unscheduled"
-    });
+    healthData.push({quantity: unscheduledOrSuspended, name: "unscheduled"});
 
     return healthData;
   },
@@ -59,7 +55,7 @@ var AppHealthComponent = React.createClass({
     var normalizedHealthData = healthData.map(function (d) {
       return {
         width: (d.quantity * 100 / dataSum) + "%",
-        className: ("progress-bar " + (d.className || "")).trim()
+        className: "progress-bar health-bar-" + d.name
       };
     });
 

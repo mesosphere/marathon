@@ -61,6 +61,5 @@ trait HealthCheckManager {
     * Returns the health status counter for the supplied app.
     */
   def healthCounts(
-    appId: PathId
-  ): Future[HealthCounts]
+    appId: PathId): Future[HealthCounts]
 }
