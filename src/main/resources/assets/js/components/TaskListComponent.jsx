@@ -13,6 +13,7 @@ var TaskListComponent = React.createClass({
 
   propTypes: {
     currentPage: React.PropTypes.number.isRequired,
+    fetchTasks: React.PropTypes.func.isRequired,
     fetchState: React.PropTypes.number.isRequired,
     itemsPerPage: React.PropTypes.number.isRequired,
     hasHealth: React.PropTypes.bool,
@@ -25,10 +26,8 @@ var TaskListComponent = React.createClass({
     return this.props.tasks;
   },
 
-  getInitialState: function () {
-    return {
-      fetchState: States.STATE_LOADING
-    };
+  componentDidMount: function () {
+    this.props.fetchTasks();
   },
 
   handleThToggleClick: function (event) {

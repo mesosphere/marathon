@@ -146,6 +146,7 @@ var TaskViewComponent = React.createClass({
         </div>
         <TaskListComponent
           currentPage={currentPage}
+          fetchTasks={this.props.fetchTasks}
           fetchState={this.props.fetchState}
           formatTaskHealthMessage={this.props.formatTaskHealthMessage}
           hasHealth={this.props.hasHealth}

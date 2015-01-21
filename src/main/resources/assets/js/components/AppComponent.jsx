@@ -3,8 +3,15 @@
 var React = require("react/addons");
 
 var AppComponent = React.createClass({
+  propTypes: {
+    router: React.PropTypes.object.isRequired
+  },
+
   onClick: function () {
-    this.props.onClick(this.props.model);
+    this.props.router.navigate(
+      "#apps" + this.props.model.get("id"),
+      {trigger: true}
+    );
   },
 
   render: function () {

@@ -2,28 +2,19 @@
 
 var React = require("react/addons");
 
-function noop() {}
-
 var NavTabsComponent = React.createClass({
   name: "NavTabsComponent",
 
   propTypes: {
     activeTabId: React.PropTypes.string.isRequired,
     className: React.PropTypes.string,
-    onTabClick: React.PropTypes.func.isRequired,
     tabs: React.PropTypes.array.isRequired
   },
 
   getDefaultProps: function () {
     return {
-      onTabClick: noop,
       className: ""
     };
-  },
-
-  onTabClick: function (id, event) {
-    event.preventDefault();
-    this.props.onTabClick(id);
   },
 
   render: function () {
@@ -42,7 +33,7 @@ var NavTabsComponent = React.createClass({
 
       return (
         <li className={tabClassSet} key={tab.id}>
-          <a href={"#" + tab.id} onClick={this.onTabClick.bind(this, tab.id)}>
+          <a href={"#" + tab.id}>
             {tab.text}
           </a>
           {badge}

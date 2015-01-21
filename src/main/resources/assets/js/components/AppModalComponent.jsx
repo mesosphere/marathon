@@ -1,6 +1,7 @@
 /** @jsx React.DOM */
 
 var React = require("react/addons");
+var _ = require("underscore");
 var AppVersionListComponent = require("../components/AppVersionListComponent");
 var ModalComponent = require("../components/ModalComponent");
 var StackedViewComponent = require("../components/StackedViewComponent");
@@ -9,9 +10,9 @@ var TaskDetailComponent = require("../components/TaskDetailComponent");
 var TaskViewComponent = require("../components/TaskViewComponent");
 var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 
-var tabs = [
-  {id: "tasks", text: "Tasks"},
-  {id: "configuration", text: "Configuration"}
+var tabsTemplate = [
+  {id: "apps:appid", text: "Tasks"},
+  {id: "apps:appid/configuration", text: "Configuration"}
 ];
 
 var AppModalComponent = React.createClass({
@@ -31,15 +32,45 @@ var AppModalComponent = React.createClass({
     rollBackApp: React.PropTypes.func.isRequired,
     scaleApp: React.PropTypes.func.isRequired,
     suspendApp: React.PropTypes.func.isRequired,
-    tasksFetchState: React.PropTypes.number.isRequired
+    tasksFetchState: React.PropTypes.number.isRequired,
+    router: React.PropTypes.object.isRequired
   },
 
   getInitialState: function () {
+    var appid = this.props.model.get("id");
+    var activeTabId;
+
+    this.tabs = _.reduce(tabsTemplate, function (current, tab) {
+      var id = tab.id.replace(":appid", appid);
+      if (activeTabId == null) {
+        activeTabId = id;
+      }
+      current.push({
+        id: id,
+        text: tab.text
+      });
+      return current;
+    }, []);
+
     return {
       activeViewIndex: 0,
-      activeTabId: tabs[0].id,
+      activeTabId: activeTabId,
       selectedTasks: {}
     };
+  },
+
+  componentDidMount: function () {
+    this.props.router.on("route:apps", function (appid, view) {
+      if (appid && this.isMounted()) {
+        this.setState({
+          activeTabId: "apps/" + appid + (view ? "/" + view : "")
+        });
+      }
+    }.bind(this));
+
+    this.setState({
+      activeTabId: this.props.router.currentHash()
+    });
   },
 
   destroy: function () {
@@ -49,12 +80,6 @@ var AppModalComponent = React.createClass({
   handleDestroyApp: function () {
     this.props.destroyApp();
     this.destroy();
-  },
-
-  onTabClick: function (id) {
-    this.setState({
-      activeTabId: id
-    });
   },
 
   toggleAllTasks: function () {
@@ -167,8 +192,8 @@ var AppModalComponent = React.createClass({
         <TogglableTabsComponent className="modal-body modal-body-no-top"
             activeTabId={this.state.activeTabId}
             onTabClick={this.onTabClick}
-            tabs={tabs} >
-          <TabPaneComponent id="tasks">
+            tabs={this.tabs} >
+          <TabPaneComponent id={"apps" + model.get("id")}>
             <StackedViewComponent
               activeViewIndex={this.state.activeViewIndex}>
               <TaskViewComponent
@@ -189,7 +214,7 @@ var AppModalComponent = React.createClass({
             </StackedViewComponent>
           </TabPaneComponent>
           <TabPaneComponent
-            id="configuration"
+            id={"apps" + model.get("id") + "/configuration"}
             onActivate={this.props.fetchAppVersions} >
             <AppVersionListComponent
               app={model}
