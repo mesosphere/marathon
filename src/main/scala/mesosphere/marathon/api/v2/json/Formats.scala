@@ -355,9 +355,22 @@ trait AppDefinitionFormats {
       (__ \ "dependencies").readNullable[Set[PathId]].withDefault(DefaultDependencies) ~
       (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(DefaultUpgradeStrategy)
     )(AppDefinition(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { app =>
-        // necessary because of case class limitations
-        (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()).map { v =>
-          app.copy(version = v)
+        // necessary because of case class limitations (good for another 21 fields)
+        case class ExtraFields(
+          labels: Map[String, String],
+          version: Timestamp)
+
+        val extraReads: Reads[ExtraFields] =
+          (
+            (__ \ "labels").readNullable[Map[String, String]].withDefault(DefaultLabels) ~
+            (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now())
+          )(ExtraFields(_, _))
+
+        extraReads.map { extraFields =>
+          app.copy(
+            labels = extraFields.labels,
+            version = extraFields.version
+          )
         }
       }
   }
@@ -391,6 +404,7 @@ trait AppDefinitionFormats {
           "healthChecks" -> app.healthChecks,
           "dependencies" -> app.dependencies,
           "upgradeStrategy" -> app.upgradeStrategy,
+          "labels" -> app.labels,
           "version" -> app.version
         )
       }
@@ -401,7 +415,7 @@ trait AppDefinitionFormats {
     }
   }
 
-  implicit lazy val AppUpdateFormat: Reads[AppUpdate] = {
+  implicit lazy val AppUpdateReads: Reads[AppUpdate] = {
 
     (
       (__ \ "id").readNullable[PathId] ~
@@ -425,11 +439,25 @@ trait AppDefinitionFormats {
       (__ \ "healthChecks").readNullable[Set[HealthCheck]] ~
       (__ \ "dependencies").readNullable[Set[PathId]] ~
       (__ \ "upgradeStrategy").readNullable[UpgradeStrategy]
-    )(AppUpdate(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { app =>
-        // necessary because of case class limitations
-        (__ \ "version").readNullable[Timestamp].map { v =>
-          app.copy(version = v)
+    )(AppUpdate(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { update =>
+        // necessary because of case class limitations (good for another 21 fields)
+        case class ExtraFields(
+          labels: Option[Map[String, String]],
+          version: Option[Timestamp])
+
+        val extraReads: Reads[ExtraFields] =
+          (
+            (__ \ "labels").readNullable[Map[String, String]] ~
+            (__ \ "version").readNullable[Timestamp]
+          )(ExtraFields(_, _))
+
+        extraReads.map { extraFields =>
+          update.copy(
+            labels = extraFields.labels,
+            version = extraFields.version
+          )
         }
+
       }
   }
 }

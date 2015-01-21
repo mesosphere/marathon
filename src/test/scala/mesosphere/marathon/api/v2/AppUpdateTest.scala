@@ -80,7 +80,14 @@ class AppUpdateTest extends MarathonSpec {
       ),
       healthChecks = Some(Set[HealthCheck]()),
       dependencies = Some(Set[PathId]()),
-      upgradeStrategy = Some(UpgradeStrategy.empty)
+      upgradeStrategy = Some(UpgradeStrategy.empty),
+      labels = Some(
+        Map(
+          "one" -> "aaa",
+          "two" -> "bbb",
+          "three" -> "ccc"
+        )
+      )
     )
     val json1 = mapper.writeValueAsString(update1)
     val readResult1 = mapper.readValue(json1, classOf[AppUpdate])

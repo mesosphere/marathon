@@ -65,6 +65,8 @@ case class AppUpdate(
 
     upgradeStrategy: Option[UpgradeStrategy] = None,
 
+    labels: Option[Map[String, String]] = None,
+
     version: Option[Timestamp] = None) {
 
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
@@ -100,6 +102,7 @@ case class AppUpdate(
     healthChecks.getOrElse(app.healthChecks),
     dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy.getOrElse(app.upgradeStrategy),
+    labels.getOrElse(app.labels),
     version.getOrElse(Timestamp.now())
   )
 
