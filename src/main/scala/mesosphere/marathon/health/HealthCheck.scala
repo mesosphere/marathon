@@ -111,8 +111,9 @@ object HealthCheck {
   val DefaultProtocol = Protocol.HTTP
   val DefaultPortIndex = 0
   val DefaultCommand = None
-  val DefaultGracePeriod = 15.seconds
-  val DefaultInterval = 10.seconds
+  // Dockers can take a long time to download, so default to a fairly long wait.
+  val DefaultGracePeriod = 5.minutes
+  val DefaultInterval = 1.minute
   val DefaultTimeout = 20.seconds
   val DefaultMaxConsecutiveFailures = 3
 }

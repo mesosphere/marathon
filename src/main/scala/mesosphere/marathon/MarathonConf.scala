@@ -77,7 +77,7 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
 
   lazy val frameworkName = opt[String]("framework_name",
     descr = "Framework name to register with Mesos.",
-    default = Some(s"marathon-${BuildInfo.version}"))
+    default = Some("marathon"))
 
   lazy val artifactStore = opt[String]("artifact_store",
     descr = "URL to the artifact store. " +
