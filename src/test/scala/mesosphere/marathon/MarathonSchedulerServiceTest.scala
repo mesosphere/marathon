@@ -12,12 +12,17 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppRepository, Migration }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.BackToTheFuture.Timeout
 import org.apache.mesos.SchedulerDriver
+import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.state.InMemoryState
 import org.mockito.Matchers.{ any, eq => mockEq }
 import org.mockito.Mockito
 import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopOption
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{ Matchers, BeforeAndAfterAll }
+
+import scala.concurrent.duration._
 
 object MarathonSchedulerServiceTest {
   import Mockito.mock
@@ -30,6 +35,7 @@ object MarathonSchedulerServiceTest {
 
     when(config.reconciliationInitialDelay).thenReturn(scallopOption(Some(ReconciliationDelay)))
     when(config.reconciliationInterval).thenReturn(scallopOption(Some(ReconciliationInterval)))
+    when(config.zkFutureTimeout).thenReturn(Timeout(1.second))
 
     config
   }
@@ -42,8 +48,13 @@ object MarathonSchedulerServiceTest {
   }
 }
 
-class MarathonSchedulerServiceTest extends TestKit(ActorSystem("System")) with MarathonSpec with BeforeAndAfterAll {
+class MarathonSchedulerServiceTest
+    extends TestKit(ActorSystem("System"))
+    with MarathonSpec
+    with BeforeAndAfterAll
+    with Matchers {
   import MarathonSchedulerServiceTest._
+  import system.dispatcher
 
   var probe: TestProbe = _
   var healthCheckManager: HealthCheckManager = _
@@ -163,5 +174,37 @@ class MarathonSchedulerServiceTest extends TestKit(ActorSystem("System")) with M
     verify(timer, times(2)).schedule(any[TimerTask](), mockEq(ReconciliationDelay), mockEq(ReconciliationInterval))
     verify(timer, times(2)).schedule(any(), mockEq(ReconciliationDelay + ReconciliationInterval))
     verify(timer).cancel()
+  }
+
+  test("Always fetch current framework ID") {
+    val frameworkId = mesos.FrameworkID.newBuilder.setValue("myId").build()
+    val timer = mock[Timer]
+
+    frameworkIdUtil = new FrameworkIdUtil(new InMemoryState)
+
+    val schedulerService = new MarathonSchedulerService(
+      healthCheckManager,
+      candidate,
+      config,
+      frameworkIdUtil,
+      leader,
+      appRepository,
+      taskTracker,
+      scheduler,
+      system,
+      migration,
+      schedulerActor
+    ) {
+      override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
+      override def newDriver() = mock[SchedulerDriver]
+      override def newTimer() = timer
+    }
+
+    schedulerService.frameworkId should be(None)
+
+    implicit lazy val timeout = Timeout(1.second)
+    frameworkIdUtil.store(frameworkId)
+
+    awaitAssert(schedulerService.frameworkId should be(Some(frameworkId)))
   }
 }

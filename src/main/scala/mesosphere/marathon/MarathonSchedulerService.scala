@@ -23,6 +23,7 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
 import org.apache.log4j.Logger
+import org.apache.mesos.Protos.FrameworkID
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.{ MILLISECONDS, _ }
@@ -63,12 +64,17 @@ class MarathonSchedulerService @Inject() (
 
   val log = Logger.getLogger(getClass.getName)
 
-  val frameworkId = frameworkIdUtil.fetch
-  frameworkId match {
-    case Some(id) =>
-      log.info(s"Setting framework ID to ${id.getValue}")
-    case None =>
-      log.info("No previous framework ID found")
+  def frameworkId: Option[FrameworkID] = {
+    val fid = frameworkIdUtil.fetch
+
+    fid match {
+      case Some(id) =>
+        log.info(s"Setting framework ID to ${id.getValue}")
+      case None =>
+        log.info("No previous framework ID found")
+    }
+
+    fid
   }
 
   // This is a little ugly as we are using a mutable variable. But drivers can't
