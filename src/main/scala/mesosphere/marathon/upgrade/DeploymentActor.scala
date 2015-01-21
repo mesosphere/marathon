@@ -133,7 +133,6 @@ class DeploymentActor(
           eventBus,
           app,
           scaleTo,
-          app.healthChecks.nonEmpty,
           promise
         )
       )

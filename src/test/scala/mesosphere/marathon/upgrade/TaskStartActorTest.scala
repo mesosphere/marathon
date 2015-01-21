@@ -5,6 +5,7 @@ import akka.testkit.{ TestActorRef, TestKit }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
@@ -49,7 +50,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -84,7 +84,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -123,7 +122,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -156,7 +154,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -173,7 +170,11 @@ class TaskStartActorTest
     val registry = new MetricRegistry
     val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("/myApp".toPath, instances = 5)
+    val app = AppDefinition(
+      "/myApp".toPath,
+      instances = 5,
+      healthChecks = Set(HealthCheck())
+    )
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -184,7 +185,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      true,
       promise))
 
     watch(ref)
@@ -206,7 +206,11 @@ class TaskStartActorTest
     val registry = new MetricRegistry
     val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("/myApp".toPath, instances = 0)
+    val app = AppDefinition(
+      "/myApp".toPath,
+      instances = 0,
+      healthChecks = Set(HealthCheck())
+    )
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -217,7 +221,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      true,
       promise))
 
     watch(ref)
@@ -245,7 +248,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -277,7 +279,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -325,7 +326,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
