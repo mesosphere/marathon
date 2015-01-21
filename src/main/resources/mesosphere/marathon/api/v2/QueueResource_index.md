@@ -48,7 +48,6 @@ Transfer-Encoding: chunked
          "ports":[  
             16401
          ],
-         "taskRateLimit":1.0,
          "container":null,
          "healthChecks":[  
 

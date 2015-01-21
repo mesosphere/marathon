@@ -77,9 +77,12 @@ var AppVersionComponent = React.createClass({
     var portsNode = (appVersion.get("ports").length === 0) ?
       <UNSPECIFIED_NODE /> :
       <dd>{appVersion.get("ports").join(",")}</dd>;
-    var taskRateLimitNode = (appVersion.get("taskRateLimit") == null) ?
+    var backoffFactorNode = (appVersion.get("backoffFactor") == null) ?
       <UNSPECIFIED_NODE /> :
-      <dd>{appVersion.get("taskRateLimit")}</dd>;
+      <dd>{appVersion.get("backoffFactor")}</dd>;
+    var backoffSecondsNode = (appVersion.get("backoffSeconds") == null) ?
+      <UNSPECIFIED_NODE /> :
+      <dd>{appVersion.get("backoffSeconds")}</dd>;
     var urisNode = (appVersion.get("uris").length === 0) ?
       <UNSPECIFIED_NODE /> :
       appVersion.get("uris").map(function (u) {
@@ -108,8 +111,10 @@ var AppVersionComponent = React.createClass({
           <dd>{diskNode}</dd>
           <dt>Ports</dt>
           {portsNode}
-          <dt>Task Rate Limit</dt>
-          {taskRateLimitNode}
+          <dt>Backoff Factor</dt>
+          {backoffFactorNode}
+          <dt>Backoff Seconds</dt>
+          {backoffSecondsNode}
           <dt>URIs</dt>
           {urisNode}
           <dt>Version</dt>
