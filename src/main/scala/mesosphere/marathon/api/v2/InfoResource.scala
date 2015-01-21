@@ -27,7 +27,6 @@ class InfoResource @Inject() (
     "hostname" -> conf.hostname.get,
     "webui_url" -> conf.webuiUrl.get,
     "mesos_role" -> conf.mesosRole.get,
-    "task_launch_timeout" -> conf.taskLaunchTimeout.get,
     "reconciliation_initial_delay" -> conf.reconciliationInitialDelay.get,
     "reconciliation_interval" -> conf.reconciliationInterval.get,
     "marathon_store_timeout" -> conf.marathonStoreTimeout.get,
