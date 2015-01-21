@@ -245,11 +245,18 @@ class MarathonSchedulerService @Inject() (
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
     log.info("Elected (Leader Interface)")
 
-    //execute tasks, only the leader is allowed to
-    migration.migrate()
+    try {
+      //execute tasks, only the leader is allowed to
+      migration.migrate()
 
-    // We have been elected. Thus, elect leadership with the abdication command.
-    electLeadership(Some(abdicateCmd))
+      // We have been elected. Thus, elect leadership with the abdication command.
+      electLeadership(Some(abdicateCmd))
+    }
+    catch {
+      case e: Exception =>
+        log.error(s"Failed to take over leadership: $e")
+        abdicateLeadership()
+    }
   }
   //End Leader interface
 
