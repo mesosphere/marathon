@@ -67,7 +67,7 @@ var Marathon = React.createClass({
     }.bind(this));
 
     router.on("route:apps", function (appid) {
-      if (appid) {
+      if (appid != null) {
         if (this.state.activeAppId !== appid) {
           this.modalDestroy();
         }
@@ -133,23 +133,13 @@ var Marathon = React.createClass({
       router.navigate("#about", {trigger: true});
     }.bind(this));
 
-    this.setPollResource(this.fetchApps);
+    this.updatePolling();
   },
 
   componentDidUpdate: function (prevProps, prevState) {
-    if (prevState.modalClass !== this.state.modalClass) {
-      // No `modalClass` means the modal went from open to closed. Start
-      // polling for apps in that case.
-      // If `modalClass` is AppModalComponent start polling for tasks for that
-      // app.
-      // Otherwise stop polling since the modal went from closed to open.
-      if (this.state.modalClass === null) {
-        this.setPollResource(this.fetchApps);
-      } else if (this.state.modalClass === AppModalComponent) {
-        this.setPollResource(this.fetchTasks);
-      } else {
-        this.stopPolling();
-      }
+    /* jshint eqeqeq: false */
+    if (prevState.activeApp != this.state.activeApp) {
+      this.updatePolling();
     }
 
     var route = this.state.route;
@@ -176,7 +166,7 @@ var Marathon = React.createClass({
       success: function () {
         var state = this.state;
         this.fetchDeployments();
-        var activeApp = (state.activeAppId) ?
+        var activeApp = state.activeAppId ?
           state.collection.get("/" + state.activeAppId) :
           null;
         this.setState({
@@ -240,7 +230,7 @@ var Marathon = React.createClass({
     var router = this.props.router;
 
     if (router.lastRoute.hash === router.currentHash()) {
-      router.navigate("#" + this.state.activeTabId, { trigger: true });
+      router.navigate("#" + this.state.activeTabId, {trigger: true});
     }
 
     this.setState({
@@ -418,19 +408,27 @@ var Marathon = React.createClass({
     }
   },
 
-  activateTab: function (id) {
-    this.setState({
-      activeTabId: id
-    });
+  updatePolling: function () {
+    var id = this.state.activeTabId;
 
-    if (id === tabs[0].id) {
+    if (this.state.activeApp) {
+      this.setPollResource(this.fetchTasks);
+    } else if (id === tabs[0].id) {
       this.setPollResource(this.fetchApps);
     } else if (id === tabs[1].id) {
       this.setPollResource(this.fetchDeployments);
     }
   },
 
+  activateTab: function (id) {
+    this.setState({
+      activeTabId: id
+    });
+  },
+
   routeAbout: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <AboutModalComponent
         onDestroy={this.modalDestroy}
@@ -438,9 +436,9 @@ var Marathon = React.createClass({
     );
   },
 
-  routeApps: function (appid) {
-    var activeApp = this.state.activeApp;
-    if (appid && activeApp) {
+  routeApps: function () {
+    var activeApp = this.state.collection.get("/" + this.state.activeAppId);
+    if (activeApp) {
       return (
         <AppModalComponent
           activeTask={this.state.activeTask}
@@ -466,7 +464,6 @@ var Marathon = React.createClass({
   routeNewapp: function () {
     return (
       <NewAppModalComponent
-        model={this.state.activeApp}
         onDestroy={this.modalDestroy}
         onCreate={this.handleAppCreate}
         ref="modal" />

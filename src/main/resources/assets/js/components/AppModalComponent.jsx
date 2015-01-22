@@ -40,7 +40,7 @@ var AppModalComponent = React.createClass({
     var appid = this.props.model.get("id");
     var activeTabId;
 
-    this.tabs = _.reduce(tabsTemplate, function (current, tab) {
+    var tabs = _.reduce(tabsTemplate, function (current, tab) {
       var id = tab.id.replace(":appid", appid);
       if (activeTabId == null) {
         activeTabId = id;
@@ -49,13 +49,15 @@ var AppModalComponent = React.createClass({
         id: id,
         text: tab.text
       });
+
       return current;
     }, []);
 
     return {
       activeViewIndex: 0,
       activeTabId: activeTabId,
-      selectedTasks: {}
+      selectedTasks: {},
+      tabs: tabs
     };
   },
 
@@ -192,7 +194,7 @@ var AppModalComponent = React.createClass({
         <TogglableTabsComponent className="modal-body modal-body-no-top"
             activeTabId={this.state.activeTabId}
             onTabClick={this.onTabClick}
-            tabs={this.tabs} >
+            tabs={this.state.tabs} >
           <TabPaneComponent id={"apps" + model.get("id")}>
             <StackedViewComponent
               activeViewIndex={this.state.activeViewIndex}>

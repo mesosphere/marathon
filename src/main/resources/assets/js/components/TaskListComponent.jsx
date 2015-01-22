@@ -26,10 +26,6 @@ var TaskListComponent = React.createClass({
     return this.props.tasks;
   },
 
-  componentDidMount: function () {
-    this.props.fetchTasks();
-  },
-
   handleThToggleClick: function (event) {
     // If the click happens on the checkbox, let the checkbox's onchange event
     // handler handle it and skip handling the event here.
