@@ -240,7 +240,7 @@ var Marathon = React.createClass({
     var router = this.props.router;
 
     if (router.lastRoute.hash === router.currentHash()) {
-      router.navigate("#" + this.state.activeTabId, { trigger: true });
+      router.navigate("#" + this.state.activeTabId, {trigger: true});
     }
 
     this.setState({
@@ -431,6 +431,8 @@ var Marathon = React.createClass({
   },
 
   routeAbout: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <AboutModalComponent
         onDestroy={this.modalDestroy}
@@ -438,9 +440,9 @@ var Marathon = React.createClass({
     );
   },
 
-  routeApps: function (appid) {
-    var activeApp = this.state.activeApp;
-    if (appid && activeApp) {
+  routeApps: function () {
+    var activeApp = this.state.collection.get("/" + this.state.activeAppId);
+    if (activeApp) {
       return (
         <AppModalComponent
           activeTask={this.state.activeTask}
@@ -466,7 +468,7 @@ var Marathon = React.createClass({
   routeNewapp: function () {
     return (
       <NewAppModalComponent
-        model={this.state.activeApp}
+        model={this.state.collection.get("/" + this.state.activeAppId)}
         onDestroy={this.modalDestroy}
         onCreate={this.handleAppCreate}
         ref="modal" />
