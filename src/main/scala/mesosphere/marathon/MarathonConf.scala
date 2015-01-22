@@ -52,9 +52,10 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     default = None)
 
   lazy val taskLaunchTimeout = opt[Long]("task_launch_timeout",
-    descr = "Time, in milliseconds, to wait for a task to enter " +
-      "the TASK_RUNNING state before killing it",
-    default = Some(60000L)) // 60 seconds
+    descr = "(deprecated) Time, in milliseconds, to wait for a task to enter " +
+      "the TASK_RUNNING state before killing it. NOTE: this is a temporary " +
+      "fix for MESOS-1922. This option will be removed in a later release.",
+    default = Some(300000L)) // 300 seconds (5 minutes)
 
   lazy val reconciliationInitialDelay = opt[Long]("reconciliation_initial_delay",
     descr = "This is the length of time, in milliseconds, before Marathon " +
