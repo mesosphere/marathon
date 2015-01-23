@@ -25,6 +25,7 @@ var AppModalComponent = React.createClass({
     destroyApp: React.PropTypes.func.isRequired,
     fetchTasks: React.PropTypes.func.isRequired,
     fetchAppVersions: React.PropTypes.func.isRequired,
+    handleSetAppView: React.PropTypes.func.isRequired,
     onDestroy: React.PropTypes.func.isRequired,
     onShowTaskDetails: React.PropTypes.func.isRequired,
     onShowTaskList: React.PropTypes.func.isRequired,
@@ -62,7 +63,7 @@ var AppModalComponent = React.createClass({
   },
 
   componentDidMount: function () {
-    this.props.router.on("route:apps", function (appid, view) {
+    this.props.handleSetAppView (function (appid, view) {
       if (appid && this.isMounted()) {
         this.setState({
           activeTabId: "apps/" + appid + (view ? "/" + view : "")

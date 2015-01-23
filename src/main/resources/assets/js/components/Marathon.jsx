@@ -34,6 +34,7 @@ var Marathon = React.createClass({
     return {
       activeAppId: null,
       activeApp: null,
+      activeAppView: null,
       activeTask: null,
       activeTabId: tabs[0].id,
       appVersionsFetchState: States.STATE_LOADING,
@@ -43,6 +44,7 @@ var Marathon = React.createClass({
       fetchState: States.STATE_LOADING,
       modalClass: null,
       route: null,
+      setAppView: function () {},
       tasksFetchState: States.STATE_LOADING
     };
   },
@@ -66,7 +68,7 @@ var Marathon = React.createClass({
       });
     }.bind(this));
 
-    router.on("route:apps", function (appid) {
+    router.on("route:apps", function (appid, view) {
       if (appid != null) {
         if (this.state.activeAppId !== appid) {
           this.modalDestroy();
@@ -74,8 +76,11 @@ var Marathon = React.createClass({
 
         this.setState({
           activeAppId: appid,
+          // activeApp could be undefined here, if this route is triggered on
+          // page load, because the collection is not ready.
           activeApp: this.state.collection.get("/" + appid),
-          modalClass: AppModalComponent
+          modalClass: AppModalComponent,
+          activeAppView: view
         });
       } else {
         this.activateTab("apps");
@@ -140,6 +145,10 @@ var Marathon = React.createClass({
     /* jshint eqeqeq: false */
     if (prevState.activeApp != this.state.activeApp) {
       this.updatePolling();
+    }
+
+    if (this.state.activeAppId) {
+      this.state.setAppView(this.state.activeAppId, this.state.activeAppView);
     }
 
     var route = this.state.route;
@@ -216,6 +225,12 @@ var Marathon = React.createClass({
         }.bind(this)
       });
     }
+  },
+
+  handleSetAppView: function (setAppView) {
+    this.setState({
+      setAppView: setAppView
+    });
   },
 
   handleAppCreate: function (appModel, options) {
@@ -446,6 +461,7 @@ var Marathon = React.createClass({
           destroyApp={this.destroyApp}
           fetchTasks={this.fetchTasks}
           fetchAppVersions={this.fetchAppVersions}
+          handleSetAppView={this.handleSetAppView}
           model={activeApp}
           onDestroy={this.modalDestroy}
           onShowTaskDetails={this.handleShowTaskDetails}
