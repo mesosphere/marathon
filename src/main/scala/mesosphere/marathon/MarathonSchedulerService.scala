@@ -6,7 +6,7 @@ import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
-import akka.pattern.ask
+import akka.pattern.{ after, ask }
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.twitter.common.base.ExceptionalCommand
@@ -250,18 +250,32 @@ class MarathonSchedulerService @Inject() (
 
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
     log.info("Elected (Leader Interface)")
-
+    var migrationComplete = false
     try {
       //execute tasks, only the leader is allowed to
       migration.migrate()
+      migrationComplete = true
 
       // We have been elected. Thus, elect leadership with the abdication command.
       electLeadership(Some(abdicateCmd))
+
+      // We successfully took over leadership. Time to reset backoff
+      resetOfferLeadershipBackOff
     }
     catch {
-      case e: Exception =>
+      case e: scala.Exception =>
         log.error(s"Failed to take over leadership: $e")
+
+        increaseOfferLeadershipBackOff()
+
         abdicateLeadership()
+
+        if (!migrationComplete) {
+          // here the driver is not running yet and therefore it cannot execute
+          // the abdication command and offer the leadership. So we do it here
+          abdicateCmd.execute()
+          offerLeadership()
+        }
     }
   }
   //End Leader interface
@@ -300,23 +314,39 @@ class MarathonSchedulerService @Inject() (
     defeatLeadership()
   }
 
-  private def offerLeadership(): Unit = {
-    log.info("Offering leadership")
+  var offerLeadershipBackOff = 0.5.seconds
+  val maximumOfferLeadershipBackOff = 16.seconds
 
-    candidate.synchronized {
-      candidate match {
-        case Some(c) =>
-          // In this case we care using Zookeeper for leadership candidacy.
-          // Thus, offer our leadership.
-          log.info("Using HA and therefore offering leadership")
-          c.offerLeadership(this)
-        case _ =>
-          // In this case we aren't using Zookeeper for leadership election.
-          // Thus, we simply elect ourselves as leader.
-          log.info("Not using HA and therefore electing as leader by default")
-          electLeadership(None)
-      }
+  private def increaseOfferLeadershipBackOff() {
+    if (offerLeadershipBackOff <= maximumOfferLeadershipBackOff) {
+      offerLeadershipBackOff *= 2
+      log.info(s"Increasing offerLeadership backoff to $offerLeadershipBackOff")
     }
+  }
+
+  private def resetOfferLeadershipBackOff() {
+    log.info("Reset offerLeadership backoff")
+    offerLeadershipBackOff = 0.5.seconds
+  }
+
+  private def offerLeadership(): Unit = {
+    log.info(s"Will offer leadership after $offerLeadershipBackOff backoff")
+    after(offerLeadershipBackOff, system.scheduler)(Future {
+      candidate.synchronized {
+        candidate match {
+          case Some(c) =>
+            // In this case we care using Zookeeper for leadership candidacy.
+            // Thus, offer our leadership.
+            log.info("Using HA and therefore offering leadership")
+            c.offerLeadership(this)
+          case _ =>
+            // In this case we aren't using Zookeeper for leadership election.
+            // Thus, we simply elect ourselves as leader.
+            log.info("Not using HA and therefore electing as leader by default")
+            electLeadership(None)
+        }
+      }
+    })
   }
 
   private def schedulePeriodicOperations(): Unit = {
