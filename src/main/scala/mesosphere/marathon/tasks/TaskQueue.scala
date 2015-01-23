@@ -3,7 +3,7 @@ package mesosphere.marathon.tasks
 import java.util.concurrent.atomic.AtomicInteger
 
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.util.RateLimiter
+import mesosphere.util._
 import org.apache.log4j.Logger
 
 import scala.annotation.tailrec
@@ -106,7 +106,8 @@ class TaskQueue {
       case Nil => None
       case head :: tail => head match {
         case QueuedTask(app, count) if rateLimiter.getDelay(app).hasTimeLeft() =>
-          log.info(s"Delaying ${app.id} due to backoff. Time left: ${rateLimiter.getDelay(app).timeLeft}.")
+          log.info(
+            s"Delaying ${app.id} due to backoff. Time left: ${rateLimiter.getDelay(app).timeLeft.toHumanReadable}.")
           findMatching(tail)
 
         case QueuedTask(app, count) if count.get() > 0 =>
