@@ -99,8 +99,18 @@ frontend marathon_http_in
   mode http
 '''
 
+# TODO(lloesche): make certificate path dynamic and allow multiple certs
+HAPROXY_HTTPS_FRONTEND_HEAD = '''
+frontend marathon_https_in
+  bind *:443 ssl crt /etc/ssl/mesosphere.com.pem
+  mode http
+'''
+
 HAPROXY_HTTP_FRONTEND_ACL = '''  acl host_{cleanedUpHostname} hdr(host) -i {hostname}
   use_backend {backend} if host_{cleanedUpHostname}
+'''
+
+HAPROXY_HTTPS_FRONTEND_ACL = '''  use_backend {backend} if {{ ssl_fc_sni {hostname} }}
 '''
 
 HAPROXY_FRONTEND_HEAD = '''
@@ -291,6 +301,7 @@ def config(apps, groups):
     groups = frozenset(groups)
 
     http_frontends = HAPROXY_HTTP_FRONTEND_HEAD
+    https_frontends = HAPROXY_HTTPS_FRONTEND_HEAD
     frontends = str()
     backends = str()
 
@@ -334,6 +345,10 @@ def config(apps, groups):
                 hostname=app.hostname,
                 backend=backend
             )
+            https_frontends += HAPROXY_HTTPS_FRONTEND_ACL.format(
+                hostname=app.hostname,
+                backend=backend
+            )
             backends += HAPROXY_BACKEND_HTTP_OPTIONS
 
         if app.sticky:
@@ -356,6 +371,7 @@ def config(apps, groups):
             )
 
     config += http_frontends
+    config += https_frontends
     config += frontends
     config += backends
 
