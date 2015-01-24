@@ -9,7 +9,6 @@ var TaskViewComponent = React.createClass({
 
   propTypes: {
     collection: React.PropTypes.object.isRequired,
-    currentAppVersion: React.PropTypes.object.isRequired,
     fetchState: React.PropTypes.number.isRequired,
     fetchTasks: React.PropTypes.func.isRequired,
     formatTaskHealthMessage: React.PropTypes.func.isRequired,
@@ -154,7 +153,6 @@ var TaskViewComponent = React.createClass({
           itemsPerPage={itemsPerPage}
           selectedTasks={this.state.selectedTasks}
           tasks={this.props.collection}
-          currentAppVersion={this.props.currentAppVersion}
           toggleAllTasks={this.toggleAllTasks} />
       </div>
     );

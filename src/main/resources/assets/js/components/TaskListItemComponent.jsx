@@ -1,6 +1,7 @@
 /** @jsx React.DOM */
 
 var React = require("react/addons");
+var Moment = require("moment");
 var Task = require("../models/Task");
 
 function buildHref(host, port) {
@@ -50,8 +51,7 @@ var TaskListItemComponent = React.createClass({
     isActive: React.PropTypes.bool.isRequired,
     onToggle: React.PropTypes.func.isRequired,
     onTaskDetailSelect: React.PropTypes.func.isRequired,
-    task: React.PropTypes.object.isRequired,
-    currentAppVersion: React.PropTypes.object.isRequired
+    task: React.PropTypes.object.isRequired
   },
 
   handleClick: function (event) {
@@ -75,9 +75,7 @@ var TaskListItemComponent = React.createClass({
     var className = (this.props.isActive) ? "active" : "";
     var task = this.props.task;
     var hasHealth = !!this.props.hasHealth;
-    var currentAppVersion = this.props.currentAppVersion;
-    var outdated = currentAppVersion &&
-      task.get("version") < currentAppVersion;
+    var version = task.get("version").toISOString();
 
     var taskHealth = task.getHealth();
     var healthClassSet = React.addons.classSet({
@@ -89,11 +87,6 @@ var TaskListItemComponent = React.createClass({
 
     var statusClassSet = React.addons.classSet({
       "text-warning": task.isStaged()
-    });
-
-    var versionClassSet = React.addons.classSet({
-      "text-muted": !outdated,
-      "text-warning": outdated
     });
 
     /* jshint trailing:false, quotmark:false, newcap:false */
@@ -127,9 +120,8 @@ var TaskListItemComponent = React.createClass({
         </td>
         <td className="text-right">
           <span
-            title={task.get("version").toISOString()}
-            className={versionClassSet}>
-            {outdated ? "Out-of-date" : "Current"}
+            title={version}>
+            {new Moment(version).fromNow()}
           </span>
         </td>
         <td className="text-right">{updatedAtNode}</td>

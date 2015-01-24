@@ -173,7 +173,6 @@ var AppModalComponent = React.createClass({
               activeViewIndex={this.state.activeViewIndex}>
               <TaskViewComponent
                 collection={model.tasks}
-                currentAppVersion={model.get('version')}
                 fetchState={this.props.tasksFetchState}
                 fetchTasks={this.props.fetchTasks}
                 formatTaskHealthMessage={model.formatTaskHealthMessage}

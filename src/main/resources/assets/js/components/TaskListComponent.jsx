@@ -18,7 +18,6 @@ var TaskListComponent = React.createClass({
     hasHealth: React.PropTypes.bool,
     selectedTasks: React.PropTypes.object.isRequired,
     tasks: React.PropTypes.object.isRequired,
-    currentAppVersion: React.PropTypes.object.isRequired
   },
 
   getResource: function () {
@@ -110,8 +109,7 @@ var TaskListComponent = React.createClass({
                     onToggle={this.props.onTaskToggle}
                     onTaskDetailSelect={this.props.onTaskDetailSelect}
                     hasHealth={hasHealth}
-                    task={task}
-                    currentAppVersion={this.props.currentAppVersion} />
+                    task={task} />
               );
             }, this)
           }
