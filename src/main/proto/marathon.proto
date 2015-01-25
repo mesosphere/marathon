@@ -64,6 +64,7 @@ message ServiceDefinition {
   optional bool require_ports = 18 [default = false];
   optional ExtendedContainerInfo container = 19;
   repeated mesos.Parameter labels = 20;
+  optional int64 maxLaunchDelay = 21 [default = 3600000]; // stored as Millis
 }
 
 message MarathonTask {

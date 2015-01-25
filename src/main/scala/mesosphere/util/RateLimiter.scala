@@ -15,8 +15,6 @@ class RateLimiter {
     current: Deadline,
     future: Iterator[FiniteDuration])
 
-  protected[this] val maxLaunchDelay = 1.hour
-
   protected[this] var taskLaunchDelays = Map[(PathId, Timestamp), Delay]()
 
   def getDelay(app: AppDefinition): Deadline =
@@ -27,7 +25,7 @@ class RateLimiter {
       case Some(Delay(current, future)) => Delay(future.next().fromNow, future)
       case None => Delay(
         app.backoff.fromNow,
-        durations(app.backoff, app.backoffFactor)
+        durations(app.backoff, app.backoffFactor, app.maxLaunchDelay)
       )
     }
 
@@ -54,7 +52,7 @@ class RateLimiter {
   protected[util] def durations(
     initial: FiniteDuration,
     factor: Double,
-    limit: FiniteDuration = maxLaunchDelay): Iterator[FiniteDuration] =
+    limit: FiniteDuration): Iterator[FiniteDuration] =
     Iterator.iterate(initial) { interval =>
       Try {
         val millis: Long = (interval.toMillis * factor).toLong

@@ -244,6 +244,7 @@ object MarathonModule {
       requirePorts: Option[Boolean] = None,
       @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
       backoffFactor: Option[JDouble] = None,
+      @FieldJsonProperty("maxLaunchDelaySeconds") maxLaunchDelay: Option[FiniteDuration] = None,
       container: Option[Container] = None,
       healthChecks: Option[Set[HealthCheck]] = None,
       dependencies: Option[Set[PathId]] = None,
@@ -252,8 +253,8 @@ object MarathonModule {
       version: Option[Timestamp] = None) {
     def build(): AppUpdate = AppUpdate(
       id, cmd, args, user, env, instances, cpus, mem, disk, executor, constraints,
-      uris, storeUrls, ports, requirePorts, backoff, backoffFactor, container, healthChecks,
-      dependencies, upgradeStrategy, labels, version
+      uris, storeUrls, ports, requirePorts, backoff, backoffFactor, maxLaunchDelay,
+      container, healthChecks, dependencies, upgradeStrategy, labels, version
     )
   }
 

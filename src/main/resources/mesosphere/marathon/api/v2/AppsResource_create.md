@@ -66,6 +66,7 @@ The full JSON format of an application resource is as follows:
     ],
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
+    "maxLaunchDelaySeconds": 3600,
     "tasksRunning": 3, 
     "tasksStaged": 0, 
     "uris": [
@@ -211,13 +212,13 @@ values. Each port value is exposed to the instance via environment variables
 `$PORT0`, `$PORT1`, etc. Ports assigned to running instances are also available
 via the task resource.
 
-##### `backoffSeconds` and `backoffFactor`
+##### `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`
 
-Configure exponential backoff behavior when launching potentially sick apps.
+Configures exponential backoff behavior when launching potentially sick apps.
 This prevents sandboxes associated with consecutively failing tasks from
 filling up the hard disk on Mesos slaves. The backoff period is multiplied by
-the factor for each consecutive failure.  This applies also to tasks that are
-killed due to failing too many health checks.
+the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
+This applies also to tasks that are killed due to failing too many health checks.
 
 ### Example
 

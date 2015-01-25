@@ -60,6 +60,8 @@ case class AppDefinition(
 
   backoffFactor: JDouble = AppDefinition.DefaultBackoffFactor,
 
+  @FieldJsonProperty("maxLaunchDelaySeconds") maxLaunchDelay: FiniteDuration = AppDefinition.DefaultMaxLaunchDelay,
+
   container: Option[Container] = AppDefinition.DefaultContainer,
 
   healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
@@ -113,6 +115,7 @@ case class AppDefinition(
       .setRequirePorts(requirePorts)
       .setBackoff(backoff.toMillis)
       .setBackoffFactor(backoffFactor)
+      .setMaxLaunchDelay(maxLaunchDelay.toMillis)
       .setExecutor(executor)
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
@@ -171,6 +174,7 @@ case class AppDefinition(
       requirePorts = proto.getRequirePorts,
       backoff = proto.getBackoff.milliseconds,
       backoffFactor = proto.getBackoffFactor,
+      maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds,
       constraints = proto.getConstraintsList.asScala.toSet,
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
@@ -279,6 +283,8 @@ object AppDefinition {
 
   val DefaultBackoffFactor = 1.15
 
+  val DefaultMaxLaunchDelay: FiniteDuration = 1.hour
+
   val DefaultContainer: Option[Container] = None
 
   val DefaultHealthChecks: Set[HealthCheck] = Set.empty
@@ -300,8 +306,9 @@ object AppDefinition {
         app.id, app.cmd, app.args, app.user, app.env, app.instances, app.cpus,
         app.mem, app.disk, app.executor, app.constraints, app.uris,
         app.storeUrls, app.ports, app.requirePorts, app.backoff,
-        app.backoffFactor, app.container, app.healthChecks, app.dependencies,
-        app.upgradeStrategy, app.labels, app.version) {
+        app.backoffFactor, app.maxLaunchDelay, app.container,
+        app.healthChecks, app.dependencies, app.upgradeStrategy,
+        app.labels, app.version) {
 
     /**
       * Snapshot of the number of staged (but not running) tasks
