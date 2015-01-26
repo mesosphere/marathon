@@ -131,6 +131,13 @@ class ConstraintsTest extends MarathonSpec {
 
     assert(!clusterRackNotMet, "Should not meet cluster constraint.")
 
+    val clusterNoAttributeNotMet = Constraints.meetsConstraint(
+      freshRack,
+      makeOffer("foohost", Set()),
+      clusterByRackId)
+
+    assert(!clusterNoAttributeNotMet, "Should not meet cluster constraint.")
+
     val uniqueFreshRackMet = Constraints.meetsConstraint(
       freshRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
@@ -151,6 +158,13 @@ class ConstraintsTest extends MarathonSpec {
       uniqueRackId)
 
     assert(!uniqueRackNotMet, "Should not meet unique constraint for rack.")
+
+    val uniqueNoAttributeNotMet = Constraints.meetsConstraint(
+      freshRack,
+      makeOffer("foohost", Set()),
+      uniqueRackId)
+
+    assert(!uniqueNoAttributeNotMet, "Should not meet unique constraint.")
   }
 
   test("AttributesLikeByConstraints") {
@@ -170,6 +184,12 @@ class ConstraintsTest extends MarathonSpec {
       makeOffer("foohost", Set(TextAttribute("jdk", "7"))), // slave attributes
       jdk7Constraint)
     assert(likeVersionMet, "Should meet like-version constraints.")
+
+    val likeNoAttributeNotMet = Constraints.meetsConstraint(
+      freshRack, // list of tasks register in the cluster
+      makeOffer("foohost", Set()), // no slave attribute
+      jdk7Constraint)
+    assert(!likeNoAttributeNotMet, "Should not meet like-no-attribute constraints.")
   }
 
   test("AttributesUnlikeByConstraints") {
@@ -189,6 +209,12 @@ class ConstraintsTest extends MarathonSpec {
       makeOffer("foohost", Set(TextAttribute("jdk", "7"))), // slave attributes
       jdk7Constraint)
     assert(!unlikeVersionNotMet, "Should not meet unlike-version constraints.")
+
+    val unlikeNoAttributeMet = Constraints.meetsConstraint(
+      freshRack, // list of tasks register in the cluster
+      makeOffer("foohost", Set()), // no slave attribute
+      jdk7Constraint)
+    assert(unlikeNoAttributeMet, "Should meet unlike-no-attribute constraints.")
   }
 
   test("RackGroupedByConstraints") {
@@ -242,6 +268,12 @@ class ConstraintsTest extends MarathonSpec {
       group2ByRack)
 
     assert(!groupByRackNotMet, "Should not meet group-by-rack constraint.")
+
+    val groupByNoAttributeNotMet = Constraints.meetsConstraint(
+      sameRack,
+      makeOffer("foohost", Set()),
+      group2ByRack)
+    assert(!groupByNoAttributeNotMet, "Should not meet group-by-no-attribute constraints.")
   }
 
   test("RackGroupedByConstraints2") {
