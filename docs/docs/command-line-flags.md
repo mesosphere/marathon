@@ -27,13 +27,17 @@ The following options can influence how Marathon works:
     Examples: `"hdfs://localhost:54310/path/to/store"`,
     `"file:///var/log/store"`. For details, see the
     [artifact store]({{ site.baseurl }}/docs/artifact-store.html) docs.
-* `--checkpoint` (Optional. Default: false): Enable checkpointing of tasks.
+* `--checkpoint` (Optional. Default: true): Enable checkpointing of tasks.
     Requires checkpointing enabled on slaves. Allows tasks to continue running
-    during mesos-slave restarts and upgrades.
+    during mesos-slave restarts and Marathon scheduler failover.  See the
+    description of `--failover_timeout`.
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
-    failover_timeout for Mesos in seconds.
+    failover_timeout for Mesos in seconds.  If a new Marathon instance has
+    not re-registered with Mesos this long after a failover, Mesos will shut
+    down all running tasks started by Marathon.  Requires checkpointing to be
+    enabled.
 * `--framework_name` (Optional. Default: marathon-VERSION): The framework name
     to register with Mesos.
 * `--ha` (Optional. Default: true): Runs Marathon in HA mode with leader election.
