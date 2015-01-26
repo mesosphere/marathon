@@ -60,9 +60,10 @@ The following options can influence how Marathon works:
     reconciliation operations.
 * `--reconciliation_interval` (Optional. Default: 300000 (5 minutes)): The
     period, in milliseconds, between task reconciliation operations.
-* `--task_launch_timeout` (Optional. Default: 60000 (60 seconds)): Time,
-    in milliseconds, to wait for a task to enter the TASK_RUNNING state before
-    killing it.
+* `--task_launch_timeout` **DEPRECATED** (Optional. Default: 300000 (5 minutes)):
+    Time, in milliseconds, to wait for a task to enter the TASK_RUNNING state
+    before killing it. _Note: This is a temporary fix for MESOS-1922.
+    This option will be removed in a later release._
 * `--event_subscriber` (Optional. Default: None): Event subscriber module to
     enable. Currently the only valid value is `http_callback`.
 * `--http_endpoints` (Optional. Default: None): Pre-configured http callback
