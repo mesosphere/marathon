@@ -106,6 +106,43 @@ class TaskReplaceActorTest
     expectTerminated(ref)
   }
 
+  test("Replace and scale down from more than new minCapacity") {
+    val app = AppDefinition(id = "myApp".toPath, instances = 2, upgradeStrategy = UpgradeStrategy(1.0))
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
+    val queue = mock[TaskQueue]
+    val tracker = mock[TaskTracker]
+
+    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskC))
+
+    val promise = Promise[Unit]()
+
+    val ref = TestActorRef(
+      new TaskReplaceActor(
+        driver,
+        queue,
+        tracker,
+        system.eventStream,
+        app,
+        promise))
+
+    watch(ref)
+
+    eventually { verify(driver, times(2)).killTask(_) }
+    eventually { app: AppDefinition => verify(queue, times(2)).add(app) }
+
+    ref ! MesosStatusUpdateEvent("", "task_1", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString)
+    ref ! MesosStatusUpdateEvent("", "task_2", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString)
+
+    Await.result(promise.future, 5.seconds)
+
+    eventually { verify(driver, times(3)).killTask(_) }
+
+    expectTerminated(ref)
+  }
+
   test("Replace with minimum running tasks") {
     val app = AppDefinition(
       id = "myApp".toPath,
