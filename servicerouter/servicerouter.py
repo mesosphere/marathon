@@ -57,90 +57,184 @@ TODO:
   More reliable way to ping, restart haproxy (Install the right reloader)
 """
 
+from logging.handlers import SysLogHandler
+from operator import attrgetter
+from shutil import move
+from tempfile import mkstemp
+from textwrap import dedent
+from wsgiref.simple_server import make_server
 import argparse
 import json
 import logging
-from logging.handlers import SysLogHandler
-from operator import attrgetter
 import os.path
-import requests
 import re
-from shutil import move
+import requests
 import subprocess
 import sys
-from tempfile import mkstemp
-from wsgiref.simple_server import make_server
 
-HAPROXY_HEAD = '''global
-  daemon
-  log 127.0.0.1 local0
-  log 127.0.0.1 local1 notice
-  maxconn 4096
 
-defaults
-  log            global
-  retries             3
-  maxconn            2000
-  timeout connect    5s
-  timeout client    50s
-  timeout server    50s
+class ConfigTemplater(object):
+    HAPROXY_HEAD = dedent('''\
+    global
+      daemon
+      log 127.0.0.1 local0
+      log 127.0.0.1 local1 notice
+      maxconn 4096
 
-listen stats
-  bind 127.0.0.1:9090
-  balance
-  mode http
-  stats enable
-  stats auth admin:admin
+    defaults
+      log               global
+      retries           3
+      maxconn           2000
+      timeout connect   5s
+      timeout client    50s
+      timeout server    50s
+
+    listen stats
+      bind 127.0.0.1:9090
+      balance
+      mode http
+      stats enable
+      stats auth admin:admin
+    ''')
+
+    HAPROXY_HTTP_FRONTEND_HEAD = dedent('''
+    frontend marathon_http_in
+      bind *:80
+      mode http
+    ''')
+
+    # TODO(lloesche): make certificate path dynamic and allow multiple certs
+    HAPROXY_HTTPS_FRONTEND_HEAD = dedent('''
+    frontend marathon_https_in
+      bind *:443 ssl crt /etc/ssl/mesosphere.com.pem
+      mode http
+    ''')
+
+    HAPROXY_FRONTEND_HEAD = dedent('''
+    frontend {backend}
+      bind {bindAddr}:{servicePort}{sslCertOptions}
+      mode {mode}
+    ''')
+
+    HAPROXY_BACKEND_HEAD = dedent('''
+    backend {backend}
+      balance roundrobin
+      mode {mode}
+    ''')
+
+    HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS = '''\
+  redirect scheme https if !{ ssl_fc }
 '''
 
-HAPROXY_HTTP_FRONTEND_HEAD = '''
-frontend marathon_http_in
-  bind *:80
-  mode http
-'''
-
-# TODO(lloesche): make certificate path dynamic and allow multiple certs
-HAPROXY_HTTPS_FRONTEND_HEAD = '''
-frontend marathon_https_in
-  bind *:443 ssl crt /etc/ssl/mesosphere.com.pem
-  mode http
-'''
-
-HAPROXY_HTTP_FRONTEND_ACL = '''  acl host_{cleanedUpHostname} hdr(host) -i {hostname}
+    HAPROXY_HTTP_FRONTEND_ACL = '''\
+  acl host_{cleanedUpHostname} hdr(host) -i {hostname}
   use_backend {backend} if host_{cleanedUpHostname}
 '''
 
-HAPROXY_HTTPS_FRONTEND_ACL = '''  use_backend {backend} if {{ ssl_fc_sni {hostname} }}
+    HAPROXY_HTTPS_FRONTEND_ACL = '''\
+  use_backend {backend} if {{ ssl_fc_sni {hostname} }}
 '''
 
-HAPROXY_FRONTEND_HEAD = '''
-frontend {backend}
-  bind {bindAddr}:{servicePort}{sslCertOptions}
-  mode {mode}
-'''
-
-HAPROXY_FRONTEND_BACKEND_GLUE = '''  use_backend {backend}
-'''
-
-HAPROXY_BACKEND_HEAD = '''
-backend {backend}
-  balance roundrobin
-  mode {mode}
-'''
-
-HAPROXY_BACKEND_HTTP_OPTIONS = '''  option forwardfor
+    HAPROXY_BACKEND_HTTP_OPTIONS = '''\
+  option forwardfor
   http-request set-header X-Forwarded-Port %[dst_port]
   http-request add-header X-Forwarded-Proto https if { ssl_fc }
 '''
 
-HAPROXY_BACKEND_STICKY_OPTIONS = '''  cookie mesosphere_server_id insert indirect nocache
+    HAPROXY_BACKEND_STICKY_OPTIONS = '''\
+  cookie mesosphere_server_id insert indirect nocache
 '''
 
-HAPROXY_BACKEND_SERVER_OPTIONS = '''  server {serverName} {host}:{port}{cookieOptions}
+    HAPROXY_BACKEND_SERVER_OPTIONS = '''\
+  server {serverName} {host}:{port}{cookieOptions}
 '''
 
-HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS = '''  redirect scheme https if !{ ssl_fc }
+    HAPROXY_FRONTEND_BACKEND_GLUE = '''\
+  use_backend {backend}
 '''
+
+    def __init__(self, directory='templates'):
+       self.__template_dicrectory = directory
+       self.__load_templates()
+
+    def __load_templates(self):
+       '''Loads template files if they exist, othwerwise it sets defaults'''
+       variables = [
+          'HAPROXY_HEAD',
+          'HAPROXY_HTTP_FRONTEND_HEAD',
+          'HAPROXY_HTTPS_FRONTEND_HEAD',
+          'HAPROXY_FRONTEND_HEAD',
+          'HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS',
+          'HAPROXY_BACKEND_HEAD',
+          'HAPROXY_HTTP_FRONTEND_ACL',
+          'HAPROXY_HTTPS_FRONTEND_ACL',
+          'HAPROXY_BACKEND_HTTP_OPTIONS',
+          'HAPROXY_BACKEND_STICKY_OPTIONS',
+          'HAPROXY_BACKEND_SERVER_OPTIONS',
+          'HAPROXY_FRONTEND_BACKEND_GLUE',
+       ]
+
+       for variable in variables:
+          try:
+             filename = os.path.join(self.__template_dicrectory, variable)
+             with open(filename) as f:
+                logger.info('overriding %s from %s', variable, filename)
+                setattr(self, variable, f.read())
+          except IOError:
+             logger.debug("setting default value for %s", variable)
+             try:
+                setattr(self, variable, getattr(self.__class__, variable))
+             except AttributeError:
+                logger.exception('default not found, aborting.')
+                raise
+
+    @property
+    def haproxy_head(self):
+       return self.HAPROXY_HEAD
+
+    @property
+    def haproxy_http_frontend_head(self):
+       return self.HAPROXY_HTTP_FRONTEND_HEAD
+
+    @property
+    def haproxy_https_frontend_head(self):
+       return self.HAPROXY_HTTPS_FRONTEND_HEAD
+
+    @property
+    def haproxy_frontend_head(self):
+       return self.HAPROXY_FRONTEND_HEAD
+
+    @property
+    def haproxy_backend_redirect_http_to_https(self):
+       return self.HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS
+
+    @property
+    def haproxy_backend_head(self):
+       return self.HAPROXY_BACKEND_HEAD
+
+    @property
+    def haproxy_http_frontend_acl(self):
+       return self.HAPROXY_HTTP_FRONTEND_ACL
+
+    @property
+    def haproxy_https_frontend_acl(self):
+       return self.HAPROXY_HTTPS_FRONTEND_ACL
+
+    @property
+    def haproxy_backend_http_options(self):
+       return self.HAPROXY_BACKEND_HTTP_OPTIONS
+
+    @property
+    def haproxy_backend_sticky_options(self):
+       return self.HAPROXY_BACKEND_STICKY_OPTIONS
+
+    @property
+    def haproxy_backend_server_options(self):
+       return self.HAPROXY_BACKEND_SERVER_OPTIONS
+
+    @property
+    def haproxy_frontend_backend_glue(self):
+       return self.HAPROXY_FRONTEND_BACKEND_GLUE
 
 
 def string_to_bool(s):
@@ -297,11 +391,12 @@ def has_group(groups, app_groups):
 
 def config(apps, groups):
     logger.info("generating config")
-    config = HAPROXY_HEAD
+    templater = ConfigTemplater()
+    config = templater.haproxy_head
     groups = frozenset(groups)
 
-    http_frontends = HAPROXY_HTTP_FRONTEND_HEAD
-    https_frontends = HAPROXY_HTTPS_FRONTEND_HEAD
+    http_frontends = templater.haproxy_http_frontend_head
+    https_frontends = templater.haproxy_https_frontend_head
     frontends = str()
     backends = str()
 
@@ -315,7 +410,9 @@ def config(apps, groups):
 
         logger.debug("frontend at %s:%d with backend %s",
                      app.bindAddr, app.servicePort, backend)
-        frontends += HAPROXY_FRONTEND_HEAD.format(
+
+        frontend_head = templater.haproxy_frontend_head
+        frontends += frontend_head.format(
             bindAddr=app.bindAddr,
             backend=backend,
             servicePort=app.servicePort,
@@ -325,44 +422,51 @@ def config(apps, groups):
 
         if app.redirectHttpToHttps:
             logger.debug("rule to redirect http to https traffic")
-            frontends += HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS
+            frontends += templater.haproxy_backend_redirect_http_to_https
 
-        backends += HAPROXY_BACKEND_HEAD.format(
+        backend_head = templater.haproxy_backend_head
+        backends += backend_head.format(
             backend=backend,
             mode='http' if app.hostname else 'tcp'
         )
 
         # if a hostname is set we add the app to the vhost section
         # of our haproxy config
-        # TODO(lukas): Check if the hostname is already defined by another
+        # TODO(lloesche): Check if the hostname is already defined by another
         # service
         if app.hostname:
             logger.debug(
                 "adding virtual host for app with hostname %s", app.hostname)
             cleanedUpHostname = re.sub(r'[^a-zA-Z0-9\-]', '_', app.hostname)
-            http_frontends += HAPROXY_HTTP_FRONTEND_ACL.format(
+
+            http_frontend_acl = templater.haproxy_http_frontend_acl
+            http_frontends += http_frontend_acl.format(
                 cleanedUpHostname=cleanedUpHostname,
                 hostname=app.hostname,
                 backend=backend
             )
-            https_frontends += HAPROXY_HTTPS_FRONTEND_ACL.format(
-                hostname=app.hostname,
-                backend=backend
+            https_frontend_acl = templater.haproxy_https_frontend_acl
+            https_frontends += https_frontend_acl.format(
+               hostname=app.hostname,
+               backend=backend
             )
-            backends += HAPROXY_BACKEND_HTTP_OPTIONS
+            backends += templater.haproxy_backend_http_options
 
         if app.sticky:
             logger.debug("turning on sticky sessions")
-            backends += HAPROXY_BACKEND_STICKY_OPTIONS
+            backends += templater.haproxy_backend_sticky_options
 
-        frontends += HAPROXY_FRONTEND_BACKEND_GLUE.format(backend=backend)
+        frontend_backend_glue = templater.haproxy_frontend_backend_glue
+        frontends += frontend_backend_glue.format(backend=backend)
 
         for backendServer in sorted(app.backends, key=attrgetter('host', 'port')):
             logger.debug(
                 "backend server at %s:%d", backendServer.host, backendServer.port)
             serverName = re.sub(
                 r'[^a-zA-Z0-9\-]', '_', backendServer.host + '_' + str(backendServer.port))
-            backends += HAPROXY_BACKEND_SERVER_OPTIONS.format(
+
+            backend_server_options = templater.haproxy_backend_server_options
+            backends += backend_server_options.format(
                 host=backendServer.host,
                 port=backendServer.port,
                 serverName=serverName,
