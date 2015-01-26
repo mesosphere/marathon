@@ -449,11 +449,15 @@ var Marathon = React.createClass({
         onDestroy={this.modalDestroy}
         ref="modal" />
     );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   },
 
   routeApps: function () {
     var activeApp = this.state.collection.get("/" + this.state.activeAppId);
     if (activeApp) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       return (
         <AppModalComponent
           activeTask={this.state.activeTask}
@@ -474,16 +478,22 @@ var Marathon = React.createClass({
           router={this.props.router}
           ref="modal" />
       );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     }
   },
 
   routeNewapp: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <NewAppModalComponent
         onDestroy={this.modalDestroy}
         onCreate={this.handleAppCreate}
         ref="modal" />
     );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   },
 
   render: function () {
@@ -499,6 +509,8 @@ var Marathon = React.createClass({
       }
     }
 
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <div>
         <nav className="navbar navbar-inverse navbar-static-top" role="navigation">
@@ -551,6 +563,8 @@ var Marathon = React.createClass({
         {modal}
       </div>
     );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   }
 });
 
