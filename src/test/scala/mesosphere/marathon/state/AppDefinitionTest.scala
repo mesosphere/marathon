@@ -336,6 +336,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       requirePorts = true,
       backoff = 5.seconds,
       backoffFactor = 1.5,
+      maxLaunchDelay = 3.minutes,
       container = Some(
         Container(docker = Some(Container.Docker("group/image")))
       ),
@@ -473,6 +474,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
         ],
         "backoffSeconds": 1,
         "backoffFactor": 1.15,
+        "maxLaunchDelaySeconds": 300,
         "tasksRunning": 3,
         "tasksStaged": 0,
         "uris": [

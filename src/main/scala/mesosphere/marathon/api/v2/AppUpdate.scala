@@ -57,6 +57,8 @@ case class AppUpdate(
 
     backoffFactor: Option[JDouble] = None,
 
+    @FieldJsonProperty("maxLaunchDelaySeconds") maxLaunchDelay: Option[FiniteDuration] = None,
+
     container: Option[Container] = None,
 
     healthChecks: Option[Set[HealthCheck]] = None,
@@ -98,6 +100,7 @@ case class AppUpdate(
     requirePorts.getOrElse(app.requirePorts),
     backoff.getOrElse(app.backoff),
     backoffFactor.getOrElse(app.backoffFactor),
+    maxLaunchDelay.getOrElse(app.maxLaunchDelay),
     container.filterNot(_ == Container.Empty).orElse(app.container),
     healthChecks.getOrElse(app.healthChecks),
     dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),

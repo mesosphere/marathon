@@ -71,6 +71,7 @@ class AppUpdateTest extends MarathonSpec {
       ports = Some(Seq(0, 0)),
       backoff = Some(2.seconds),
       backoffFactor = Some(1.2),
+      maxLaunchDelay = Some(1.minutes),
       container = Some(
         Container(
           `type` = mesos.ContainerInfo.Type.DOCKER,

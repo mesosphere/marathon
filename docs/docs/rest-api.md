@@ -142,6 +142,7 @@ The full JSON format of an application resource is as follows:
     ],
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
+    "maxLaunchDelaySeconds": 3600,
     "tasksRunning": 3,
     "tasksStaged": 0,
     "uris": [
@@ -170,13 +171,13 @@ The allowable format is represented by the following regular expression
 
 An array of strings that represents an alternative mode of specifying the command to run. This was motivated by safe usage of containerizer features like a custom Docker ENTRYPOINT. This args field may be used in place of cmd even when using the default command executor. This change mirrors API and semantics changes in the Mesos CommandInfo protobuf message starting with version `0.20.0`.  Either `cmd` or `args` must be supplied. It is invalid to supply both `cmd` and `args` in the same app.
 
-##### backoffSeconds, backoffFactor
+##### `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`
 
 Configures exponential backoff behavior when launching potentially sick apps.
 This prevents sandboxes associated with consecutively failing tasks from
 filling up the hard disk on Mesos slaves. The backoff period is multiplied by
-the factor for each consecutive failure.  This applies also to tasks that are
-killed due to failing too many health checks.
+the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
+This applies also to tasks that are killed due to failing too many health checks.
 
 ##### cmd
 
@@ -227,7 +228,7 @@ An HTTP health check is considered passing if (1) its HTTP response code is betw
 If a task fails more than `maxConseutiveFailures`
 health checks consecutively, that task is killed causing Marathon to start
 more instances. These restarts are modulated like any other failing app
-by `backoffSeconds` and `backoffFactor`.
+by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
 
 ###### HEALTH CHECK OPTIONS
 
@@ -372,6 +373,7 @@ Transfer-Encoding: chunked
     "args": null,
     "backoffFactor": 1.15,
     "backoffSeconds": 1,
+    "maxLaunchDelaySeconds": 3600,
     "cmd": "env && python3 -m http.server $PORT0",
     "constraints": [
         [
@@ -491,6 +493,7 @@ Transfer-Encoding: chunked
             "args": null,
             "backoffFactor": 1.15,
             "backoffSeconds": 1,
+            "maxLaunchDelaySeconds": 3600,
             "cmd": "python3 -m http.server 8080",
             "constraints": [],
             "container": {
@@ -568,6 +571,7 @@ Transfer-Encoding: chunked
             "args": null,
             "backoffFactor": 1.15,
             "backoffSeconds": 1,
+            "maxLaunchDelaySeconds": 3600,
             "cmd": "while sleep 10; do date -u +%T; done",
             "constraints": [],
             "container": {
@@ -669,6 +673,7 @@ Transfer-Encoding: chunked
         "args": null,
         "backoffFactor": 1.15,
         "backoffSeconds": 1,
+        "maxLaunchDelaySeconds": 3600,
         "cmd": "python toggle.py $PORT0",
         "constraints": [],
         "container": null,
@@ -1298,6 +1303,7 @@ Transfer-Encoding: chunked
                     "args": null,
                     "backoffFactor": 1.15,
                     "backoffSeconds": 1,
+                    "maxLaunchDelaySeconds": 3600,
                     "cmd": "sleep 30",
                     "constraints": [],
                     "container": null,
@@ -1362,6 +1368,7 @@ Transfer-Encoding: chunked
             "args": null,
             "backoffFactor": 1.15,
             "backoffSeconds": 1,
+            "maxLaunchDelaySeconds": 3600,
             "cmd": "sleep 30",
             "constraints": [],
             "container": null,
@@ -2145,6 +2152,7 @@ Transfer-Encoding: chunked
                 "args": null,
                 "backoffFactor": 1.15,
                 "backoffSeconds": 1,
+                "maxLaunchDelaySeconds": 3600,
                 "cmd": "python toggle.py $PORT0",
                 "constraints": [],
                 "container": null,

@@ -17,6 +17,7 @@ var AppCollectionMockData = {
     "requirePorts": false,
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
+    "maxLaunchDelaySeconds": 3600,
     "container": null,
     "healthChecks": [],
     "dependencies": [],
@@ -45,6 +46,7 @@ var AppCollectionMockData = {
     "requirePorts": false,
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
+    "maxLaunchDelaySeconds": 3600,
     "container": {
       "type": "DOCKER",
       "volumes": [{
@@ -89,6 +91,7 @@ var AppCollectionMockData = {
     "requirePorts": false,
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
+    "maxLaunchDelaySeconds": 3600,
     "container": null,
     "healthChecks": [{
       "path": "/",
@@ -125,6 +128,7 @@ var AppCollectionMockData = {
     "requirePorts": false,
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
+    "maxLaunchDelaySeconds": 3600,
     "container": {
       "type": "DOCKER",
       "volumes": [{

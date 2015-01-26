@@ -83,6 +83,9 @@ var AppVersionComponent = React.createClass({
     var backoffSecondsNode = (appVersion.get("backoffSeconds") == null) ?
       <UNSPECIFIED_NODE /> :
       <dd>{appVersion.get("backoffSeconds")}</dd>;
+    var maxLaunchDelaySecondsNode = (appVersion.get("maxLaunchDelaySeconds") == null) ?
+      <UNSPECIFIED_NODE /> :
+      <dd>{appVersion.get("maxLaunchDelaySeconds")}</dd>;
     var urisNode = (appVersion.get("uris").length === 0) ?
       <UNSPECIFIED_NODE /> :
       appVersion.get("uris").map(function (u) {
@@ -115,6 +118,8 @@ var AppVersionComponent = React.createClass({
           {backoffFactorNode}
           <dt>Backoff Seconds</dt>
           {backoffSecondsNode}
+          <dt>Max Launch Delay Seconds</dt>
+          {maxLaunchDelaySecondsNode}
           <dt>URIs</dt>
           {urisNode}
           <dt>Version</dt>
