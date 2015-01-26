@@ -159,17 +159,17 @@ class ConstraintsTest extends MarathonSpec {
     val freshRack = Set(task1_rack1, task2_rack1)
     val jdk7Constraint = makeConstraint("jdk", Constraint.Operator.LIKE, "7")
 
-    val clusterNotMet = Constraints.meetsConstraint(
+    val likeVersionNotMet = Constraints.meetsConstraint(
       freshRack, // list of tasks register in the cluster
       makeOffer("foohost", Set(TextAttribute("jdk", "6"))), // slave attributes
       jdk7Constraint)
-    assert(!clusterNotMet, "Should not meet cluster constraints.")
+    assert(!likeVersionNotMet, "Should not meet like-version constraints.")
 
-    val clusterMet = Constraints.meetsConstraint(
+    val likeVersionMet = Constraints.meetsConstraint(
       freshRack, // list of tasks register in the cluster
       makeOffer("foohost", Set(TextAttribute("jdk", "7"))), // slave attributes
       jdk7Constraint)
-    assert(clusterMet, "Should meet cluster constraints.")
+    assert(likeVersionMet, "Should meet like-version constraints.")
   }
 
   test("AttributesUnlikeByConstraints") {
@@ -178,17 +178,17 @@ class ConstraintsTest extends MarathonSpec {
     val freshRack = Set(task1_rack1, task2_rack1)
     val jdk7Constraint = makeConstraint("jdk", Constraint.Operator.UNLIKE, "7")
 
-    val clusterMet = Constraints.meetsConstraint(
+    val unlikeVersionMet = Constraints.meetsConstraint(
       freshRack, // list of tasks register in the cluster
       makeOffer("foohost", Set(TextAttribute("jdk", "6"))), // slave attributes
       jdk7Constraint)
-    assert(clusterMet, "Should meet cluster constraints.")
+    assert(unlikeVersionMet, "Should meet unlike-version constraints.")
 
-    val clusterNotMet = Constraints.meetsConstraint(
+    val unlikeVersionNotMet = Constraints.meetsConstraint(
       freshRack, // list of tasks register in the cluster
       makeOffer("foohost", Set(TextAttribute("jdk", "7"))), // slave attributes
       jdk7Constraint)
-    assert(!clusterNotMet, "Should not meet cluster constraints.")
+    assert(!unlikeVersionNotMet, "Should not meet unlike-version constraints.")
   }
 
   test("RackGroupedByConstraints") {
@@ -199,76 +199,49 @@ class ConstraintsTest extends MarathonSpec {
     val task5_rack3 = makeSampleTask("task5", Map("rackid" -> "rack-3"))
 
     var sameRack = Set[MarathonTask]()
-    var uniqueRack = Set[MarathonTask]()
 
     val group2ByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "2")
-    val rackIdUnique = makeConstraint("rackid", Constraint.Operator.UNIQUE, "")
 
-    val clusterFreshRackMet = Constraints.meetsConstraint(
+    val groupByFreshRackMet = Constraints.meetsConstraint(
       sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
-    assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
+    assert(groupByFreshRackMet, "Should be able to schedule in fresh rack.")
 
     sameRack ++= Set(task1_rack1)
 
-    val clusterRackMet = Constraints.meetsConstraint(
+    val groupByRackMet = Constraints.meetsConstraint(
       sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
-    assert(!clusterRackMet, "Should not meet clustered-in-rack constraints.")
+    assert(!groupByRackMet, "Should not meet group-by-rack constraints.")
 
-    val clusterRackMet2 = Constraints.meetsConstraint(
+    val groupByRackMet2 = Constraints.meetsConstraint(
       sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
       group2ByRack)
 
-    assert(clusterRackMet2, "Should meet cluster constraint.")
+    assert(groupByRackMet2, "Should meet group-by-rack constraint.")
 
     sameRack ++= Set(task3_rack2)
 
-    val clusterRackMet3 = Constraints.meetsConstraint(
+    val groupByRackMet3 = Constraints.meetsConstraint(
       sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
-    assert(clusterRackMet3, "Should meet clustered-in-rack constraints.")
+    assert(groupByRackMet3, "Should meet group-by-rack constraints.")
 
     sameRack ++= Set(task2_rack1)
 
-    val clusterRackNotMet = Constraints.meetsConstraint(
+    val groupByRackNotMet = Constraints.meetsConstraint(
       sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
-    assert(!clusterRackNotMet, "Should not meet cluster constraint.")
-
-    val uniqueFreshRackMet = Constraints.meetsConstraint(
-      uniqueRack,
-      makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-      rackIdUnique)
-
-    assert(uniqueFreshRackMet, "Should meet unique constraint for fresh rack.")
-
-    uniqueRack ++= Set(task4_rack1)
-
-    val uniqueRackMet = Constraints.meetsConstraint(
-      uniqueRack,
-      makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-3"))),
-      rackIdUnique)
-
-    assert(uniqueRackMet, "Should meet unique constraint for rack.")
-
-    uniqueRack ++= Set(task5_rack3)
-
-    val uniqueRackNotMet = Constraints.meetsConstraint(
-      uniqueRack,
-      makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-      rackIdUnique)
-
-    assert(!uniqueRackNotMet, "Should not meet unique constraint for rack.")
+    assert(!groupByRackNotMet, "Should not meet group-by-rack constraint.")
   }
 
   test("RackGroupedByConstraints2") {
@@ -337,75 +310,75 @@ class ConstraintsTest extends MarathonSpec {
 
     val groupByHost = makeConstraint("hostname", Constraint.Operator.GROUP_BY, "2")
 
-    val clusterFreshHostMet = Constraints.meetsConstraint(
+    val groupByFreshHostMet = Constraints.meetsConstraint(
       groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
-    assert(clusterFreshHostMet, "Should be able to schedule in fresh host.")
+    assert(groupByFreshHostMet, "Should be able to schedule in fresh host.")
 
     groupHost ++= Set(task1_host1)
 
-    val clusterHostMet = Constraints.meetsConstraint(
+    val groupByHostMet = Constraints.meetsConstraint(
       groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
-    assert(!clusterHostMet, "Should not meet group-by-host constraint.")
+    assert(!groupByHostMet, "Should not meet group-by-host constraint.")
 
-    val clusterHostMet2 = Constraints.meetsConstraint(
+    val groupByHostMet2 = Constraints.meetsConstraint(
       groupHost,
       makeOffer("host2", attributes),
       groupByHost)
 
-    assert(clusterHostMet2, "Should meet group-by-host constraint.")
+    assert(groupByHostMet2, "Should meet group-by-host constraint.")
 
     groupHost ++= Set(task3_host2)
 
-    val clusterHostMet3 = Constraints.meetsConstraint(
+    val groupByHostMet3 = Constraints.meetsConstraint(
       groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
-    assert(clusterHostMet3, "Should meet group-by-host constraint.")
+    assert(groupByHostMet3, "Should meet group-by-host constraint.")
 
     groupHost ++= Set(task2_host1)
 
-    val clusterHostNotMet = Constraints.meetsConstraint(
+    val groupByHostNotMet = Constraints.meetsConstraint(
       groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
-    assert(!clusterHostNotMet, "Should not meet group-by-host constraint.")
+    assert(!groupByHostNotMet, "Should not meet group-by-host constraint.")
 
-    val clusterHostMet4 = Constraints.meetsConstraint(
+    val groupByHostMet4 = Constraints.meetsConstraint(
       groupHost,
       makeOffer("host3", attributes),
       groupByHost)
 
-    assert(clusterHostMet4, "Should meet group-by-host constraint.")
+    assert(groupByHostMet4, "Should meet group-by-host constraint.")
 
     groupHost ++= Set(task4_host3)
 
-    val clusterHostNotMet2 = Constraints.meetsConstraint(
+    val groupByHostNotMet2 = Constraints.meetsConstraint(
       groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
-    assert(!clusterHostNotMet2, "Should not meet group-by-host constraint.")
+    assert(!groupByHostNotMet2, "Should not meet group-by-host constraint.")
 
-    val clusterHostMet5 = Constraints.meetsConstraint(
+    val groupByHostMet5 = Constraints.meetsConstraint(
       groupHost,
       makeOffer("host3", attributes),
       groupByHost)
 
-    assert(clusterHostMet5, "Should meet group-by-host constraint.")
+    assert(groupByHostMet5, "Should meet group-by-host constraint.")
 
-    val clusterHostMet6 = Constraints.meetsConstraint(
+    val groupByHostMet6 = Constraints.meetsConstraint(
       groupHost,
       makeOffer("host2", attributes),
       groupByHost)
 
-    assert(clusterHostMet6, "Should meet group-by-host constraint.")
+    assert(groupByHostMet6, "Should meet group-by-host constraint.")
   }
 }
