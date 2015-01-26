@@ -280,6 +280,8 @@ class MarathonBackend(object):
     def __hash__(self):
         return hash((self.host, self.port))
 
+    def __repr__(self):
+        return "MarathonBackend(%r, %r)" % (self.host, self.port)
 
 class MarathonService(object):
 
@@ -303,6 +305,8 @@ class MarathonService(object):
     def __eq__(self, other):
         return self.servicePort == other.servicePort
 
+    def __repr__(self):
+        return "MarathonService(%r, %r)" % (self.appId, self.servicePort)
 
 class MarathonApp(object):
 
