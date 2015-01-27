@@ -48,13 +48,17 @@ var AppHealthComponent = React.createClass({
   render: function () {
     var healthData = this.getHealthData();
 
-    // normalize quantities to add up to 100%
+    // normalize quantities to add up to 100%. Cut off digits at
+    // third decimal to work around rounding error leading to more than 100%.
     var dataSum = healthData.reduce(function (a, x) {
       return a + x.quantity;
     }, 0);
+
+    var roundWorkaround = function (x) { return Math.floor(x * 1000) / 1000; };
+
     var normalizedHealthData = healthData.map(function (d) {
       return {
-        width: (d.quantity * 100 / dataSum) + "%",
+        width: roundWorkaround(d.quantity * 100 / dataSum) + "%",
         className: "progress-bar health-bar-" + d.name
       };
     });
