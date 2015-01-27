@@ -27,7 +27,7 @@ var Task = Backbone.Model.extend({
     var healthCheckResults = this.get("healthCheckResults");
     if (healthCheckResults != null) {
       health = healthCheckResults.every(function (hcr) {
-        if (hcr) {
+        if (hcr.firstSuccess) {
           nullResult = false;
           return hcr.alive;
         } else { // might be null

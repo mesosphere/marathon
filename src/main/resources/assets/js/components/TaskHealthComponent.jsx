@@ -49,9 +49,9 @@ var TaskHealthComponent = React.createClass({
                   <dd className="text-muted">None</dd> :
                   <dd>{cResult.consecutiveFailures}</dd>}
                 <dt>Alive</dt>
-                {cResult.alive == null ?
-                  <dd>No</dd> :
-                  <dd>Yes</dd>}
+                {cResult.alive ?
+                  <dd>Yes</dd> :
+                  <dd>No</dd>}
               </dl>
             </div>
           );
