@@ -31,6 +31,22 @@ easy editing, set the `assets_path` flag when running Marathon:
 
         git add dist/main.js dist/main.css img/*
 
+#### Adding npm package dependencies to package.json
+
+If you want to add a new npm package to 'node_modules':
+
+1. Edit the dependencies section in package.json and add your new package.
+
+2. Install the new package
+
+	npm install [your package]
+
+3. Create a synced npm-shrinkwrap.json
+
+	npm shrinkwrap
+
+4. Commit to repository
+
 #### Development Setup (Sublime Text)
 
 1. Add the following to your Sublime Text User Settings:
