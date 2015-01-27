@@ -28,6 +28,7 @@ import org.apache.mesos.Protos.FrameworkID
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.{ MILLISECONDS, _ }
 import scala.concurrent.{ TimeoutException, Await, Future, Promise }
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 /**
@@ -263,7 +264,7 @@ class MarathonSchedulerService @Inject() (
       resetOfferLeadershipBackOff
     }
     catch {
-      case e: scala.Exception =>
+      case NonFatal(e) => // catch Scala and Java exceptions
         log.error(s"Failed to take over leadership: $e")
 
         increaseOfferLeadershipBackOff()
