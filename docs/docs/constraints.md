@@ -19,6 +19,8 @@ Constraints can be set via the REST API or the [Marathon gem](https://rubygems.o
 
 If the field name is none of the above, it will be treated as a Mesos slave attribute. Mesos slave attribute is a way to tag a slave node, see `mesos-slave --help` to learn how to set the attributes.
 
+If the specified attribute is not defined on the slave, then most operators will refuse to run tasks on this slave. In fact, only the `UNLIKE` operator will (and always will) accept this offer for now, while other operators will always refuse it.
+
 Attribute field supports all operators of Marathon.
 
 ## Operators
