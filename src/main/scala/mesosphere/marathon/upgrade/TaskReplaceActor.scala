@@ -33,7 +33,7 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[HealthStatusChanged])
 
-    val minHealthy = (toKill.size.toDouble * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
+    val minHealthy = (app.instances * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
     val nrToKillImmediately = math.max(0, toKill.size - minHealthy)
 
     // make sure at least one task can be started to get the ball rolling
