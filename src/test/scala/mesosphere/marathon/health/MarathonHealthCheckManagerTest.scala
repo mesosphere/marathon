@@ -91,14 +91,14 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     hcManager.add(appId, version, healthCheck)
 
     val status1 = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
-    assert(status1 == Seq(None))
+    assert(status1 == Seq(Health(taskId.getValue)))
 
     // send unhealthy task status
     EventFilter.info(start = "Received health result: [", occurrences = 1).intercept {
       hcManager.update(taskStatus.toBuilder.setHealthy(false).build, version)
     }
 
-    val Seq(Some(health2)) = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
+    val Seq(health2) = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
     assert(health2.lastFailure.isDefined)
     assert(health2.lastSuccess.isEmpty)
 
@@ -107,7 +107,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
       hcManager.update(taskStatus.toBuilder.setHealthy(true).build, version)
     }
 
-    val Seq(Some(health3)) = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
+    val Seq(health3) = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
     assert(health3.lastFailure.isDefined)
     assert(health3.lastSuccess.isDefined)
     assert(health3.lastSuccess > health3.lastFailure)

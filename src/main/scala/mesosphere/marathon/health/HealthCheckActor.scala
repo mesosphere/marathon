@@ -118,7 +118,7 @@ class HealthCheckActor(
   }
 
   def receive: Receive = {
-    case GetTaskHealth(taskId) => sender() ! taskHealth.get(taskId)
+    case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
 
     case Tick =>
       purgeStatusOfDoneTasks()
