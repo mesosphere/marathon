@@ -3,7 +3,9 @@ jdk:
   - openjdk6
 scala:
   - 2.11.5
-script: sbt doc test
+script: sbt clean coverage doc test
+after_success:
+  - sbt coverageReport coveralls
 notifications:
   slack:
     secure: apUObVUa/OhaTEvoYw3oM1ZTTT0LtYolofJYqnWiBOusc6qgMlK2rfk5kod7vDn33cSKwGhFcyVrrFCn2qxuvYUWCpK4Yo6Hj7KIjoqMi9yHLHXAAWIfAFNMlCdaUGjlHLWn757rBkbuQUDVH8HmB6Vc3J3sybTbiFmMDP1cEVo=
