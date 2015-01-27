@@ -29,7 +29,7 @@ class RateLimiter {
       )
     }
 
-    val timeLeft = newDelay.current.timeLeft.toCoarsest
+    val timeLeft = newDelay.current.timeLeft.toHumanReadable
     log.info(s"Task launch delay for [${app.id}] is now [$timeLeft]")
 
     taskLaunchDelays += ((app.id, app.version) -> newDelay)
