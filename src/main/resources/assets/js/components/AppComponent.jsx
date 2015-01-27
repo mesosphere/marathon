@@ -9,7 +9,7 @@ var AppComponent = React.createClass({
 
   onClick: function () {
     this.props.router.navigate(
-      "#apps" + this.props.model.get("id"),
+      "apps/" + encodeURIComponent(this.props.model.get("id")),
       {trigger: true}
     );
   },

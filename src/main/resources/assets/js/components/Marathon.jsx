@@ -1,8 +1,8 @@
 /** @jsx React.DOM */
 
+var _ = require("underscore");
 var Mousetrap = require("mousetrap");
 var React = require("react/addons");
-var _ = require("underscore");
 var States = require("../constants/States");
 var AppCollection = require("../models/AppCollection");
 var DeploymentCollection = require("../models/DeploymentCollection");
@@ -44,7 +44,7 @@ var Marathon = React.createClass({
       fetchState: States.STATE_LOADING,
       modalClass: null,
       route: null,
-      setAppView: function () {},
+      setAppView: _.noop,
       tasksFetchState: States.STATE_LOADING
     };
   },
@@ -52,51 +52,13 @@ var Marathon = React.createClass({
   componentDidMount: function () {
     var router = this.props.router;
 
-    router.on("route", function (route, params) {
-      this.setState({
-        route: {
-          name: route,
-          params: params
-        }
-      });
-    }.bind(this));
-
-    router.on("route:about", function () {
-      this.modalDestroy();
-      this.setState({
-        modalClass: AboutModalComponent
-      });
-    }.bind(this));
-
-    router.on("route:apps", function (appid, view) {
-      if (appid != null) {
-        if (this.state.activeAppId !== appid) {
-          this.modalDestroy();
-        }
-
-        this.setState({
-          activeAppId: appid,
-          // activeApp could be undefined here, if this route is triggered on
-          // page load, because the collection is not ready.
-          activeApp: this.state.collection.get("/" + appid),
-          modalClass: AppModalComponent,
-          activeAppView: view
-        });
-      } else {
-        this.activateTab("apps");
-      }
-    }.bind(this));
-
-    router.on("route:deployments", function () {
-      this.activateTab("deployments");
-    }.bind(this));
-
-    router.on("route:newapp", function () {
-      this.modalDestroy();
-      this.setState({
-        modalClass: NewAppModalComponent
-      });
-    }.bind(this));
+    router.on("route", this.setRoute);
+    router.on("route:about", this.setRouteAbout);
+    router.on("route:apps", this.setRouteApps);
+    router.on("route:deployments",
+      _.bind(this.activateTab, this, "deployments")
+    );
+    router.on("route:newapp", this.setRouteNewapp);
 
     // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
     // input elements so the new app modal can be closed via "esc".
@@ -113,18 +75,18 @@ var Marathon = React.createClass({
     }.bind(this));
 
     Mousetrap.bind("c", function () {
-      router.navigate("#newapp", {trigger: true});
+      router.navigate("newapp", {trigger: true});
     }.bind(this), "keyup");
 
     Mousetrap.bind("g a", function () {
       if (this.state.modalClass == null) {
-        router.navigate("#apps", {trigger: true});
+        router.navigate("apps", {trigger: true});
       }
     }.bind(this));
 
     Mousetrap.bind("g d", function () {
       if (this.state.modalClass == null) {
-        router.navigate("#deployments", {trigger: true});
+        router.navigate("deployments", {trigger: true});
       }
     }.bind(this));
 
@@ -135,7 +97,7 @@ var Marathon = React.createClass({
     }.bind(this));
 
     Mousetrap.bind("shift+,", function () {
-      router.navigate("#about", {trigger: true});
+      router.navigate("about", {trigger: true});
     }.bind(this));
 
     this.updatePolling();
@@ -167,6 +129,48 @@ var Marathon = React.createClass({
     this.stopPolling();
   },
 
+  setRoute: function (route, params) {
+    this.setState({
+      route: {
+        name: route,
+        params: params
+      }
+    });
+  },
+
+  setRouteAbout: function () {
+    this.modalDestroy();
+    this.setState({
+      modalClass: AboutModalComponent
+    });
+  },
+
+  setRouteApps: function (appid, view) {
+    if (appid != null) {
+      if (this.state.activeAppId !== appid) {
+        this.modalDestroy();
+      }
+
+      this.setState({
+        activeAppId: appid,
+        // activeApp could be undefined here, if this route is triggered on
+        // page load, because the collection is not ready.
+        activeApp: this.state.collection.get(appid),
+        modalClass: AppModalComponent,
+        activeAppView: view
+      });
+    } else {
+      this.activateTab("apps");
+    }
+  },
+
+  setRouteNewapp: function () {
+    this.modalDestroy();
+    this.setState({
+      modalClass: NewAppModalComponent
+    });
+  },
+
   fetchApps: function () {
     this.state.collection.fetch({
       error: function () {
@@ -176,8 +180,9 @@ var Marathon = React.createClass({
         var state = this.state;
         this.fetchDeployments();
         var activeApp = state.activeAppId ?
-          state.collection.get("/" + state.activeAppId) :
+          state.collection.get(state.activeAppId) :
           null;
+
         this.setState({
           fetchState: States.STATE_SUCCESS,
           activeApp: activeApp
@@ -245,7 +250,7 @@ var Marathon = React.createClass({
     var router = this.props.router;
 
     if (router.lastRoute.hash === router.currentHash()) {
-      router.navigate("#" + this.state.activeTabId, {trigger: true});
+      router.navigate(this.state.activeTabId, {trigger: true});
     }
 
     this.setState({
@@ -454,33 +459,35 @@ var Marathon = React.createClass({
   },
 
   routeApps: function () {
-    var activeApp = this.state.collection.get("/" + this.state.activeAppId);
-    if (activeApp) {
-      /* jshint trailing:false, quotmark:false, newcap:false */
-      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-      return (
-        <AppModalComponent
-          activeTask={this.state.activeTask}
-          appVersionsFetchState={this.state.appVersionsFetchState}
-          destroyApp={this.destroyApp}
-          fetchTasks={this.fetchTasks}
-          fetchAppVersions={this.fetchAppVersions}
-          handleSetAppView={this.handleSetAppView}
-          model={activeApp}
-          onDestroy={this.modalDestroy}
-          onShowTaskDetails={this.handleShowTaskDetails}
-          onShowTaskList={this.handleShowTaskList}
-          onTasksKilled={this.handleTasksKilled}
-          rollBackApp={this.rollbackToAppVersion}
-          scaleApp={this.scaleApp}
-          suspendApp={this.suspendApp}
-          tasksFetchState={this.state.tasksFetchState}
-          router={this.props.router}
-          ref="modal" />
-      );
-      /* jshint trailing:true, quotmark:true, newcap:true */
-      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    var activeApp = this.state.collection.get(this.state.activeAppId);
+    if (!activeApp) {
+      return;
     }
+
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    return (
+      <AppModalComponent
+        activeTask={this.state.activeTask}
+        appVersionsFetchState={this.state.appVersionsFetchState}
+        destroyApp={this.destroyApp}
+        fetchTasks={this.fetchTasks}
+        fetchAppVersions={this.fetchAppVersions}
+        handleSetAppView={this.handleSetAppView}
+        model={activeApp}
+        onDestroy={this.modalDestroy}
+        onShowTaskDetails={this.handleShowTaskDetails}
+        onShowTaskList={this.handleShowTaskList}
+        onTasksKilled={this.handleTasksKilled}
+        rollBackApp={this.rollbackToAppVersion}
+        scaleApp={this.scaleApp}
+        suspendApp={this.suspendApp}
+        tasksFetchState={this.state.tasksFetchState}
+        router={this.props.router}
+        ref="modal" />
+    );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   },
 
   routeNewapp: function () {

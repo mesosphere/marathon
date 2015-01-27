@@ -11,8 +11,8 @@ var TaskViewComponent = require("../components/TaskViewComponent");
 var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 
 var tabsTemplate = [
-  {id: "apps:appid", text: "Tasks"},
-  {id: "apps:appid/configuration", text: "Configuration"}
+  {id: "apps/:appid", text: "Tasks"},
+  {id: "apps/:appid/configuration", text: "Configuration"}
 ];
 
 var AppModalComponent = React.createClass({
@@ -42,7 +42,7 @@ var AppModalComponent = React.createClass({
     var activeTabId;
 
     var tabs = _.reduce(tabsTemplate, function (current, tab) {
-      var id = tab.id.replace(":appid", appid);
+      var id = tab.id.replace(":appid", encodeURIComponent(appid));
       if (activeTabId == null) {
         activeTabId = id;
       }
@@ -63,10 +63,10 @@ var AppModalComponent = React.createClass({
   },
 
   componentDidMount: function () {
-    this.props.handleSetAppView (function (appid, view) {
-      if (appid && this.isMounted()) {
+    this.props.handleSetAppView(function (appid, view) {
+      if (appid) {
         this.setState({
-          activeTabId: "apps/" + appid + (view ? "/" + view : "")
+          activeTabId: "apps/" + encodeURIComponent(appid) + (view ? "/" + view : "")
         });
       }
     }.bind(this));
@@ -74,6 +74,10 @@ var AppModalComponent = React.createClass({
     this.setState({
       activeTabId: this.props.router.currentHash()
     });
+  },
+
+  componentWillUnmount: function () {
+    this.props.handleSetAppView(_.noop);
   },
 
   destroy: function () {
@@ -196,7 +200,7 @@ var AppModalComponent = React.createClass({
             activeTabId={this.state.activeTabId}
             onTabClick={this.onTabClick}
             tabs={this.state.tabs} >
-          <TabPaneComponent id={"apps" + model.get("id")}>
+          <TabPaneComponent id={"apps/" + encodeURIComponent(model.get("id"))}>
             <StackedViewComponent
               activeViewIndex={this.state.activeViewIndex}>
               <TaskViewComponent
@@ -217,7 +221,7 @@ var AppModalComponent = React.createClass({
             </StackedViewComponent>
           </TabPaneComponent>
           <TabPaneComponent
-            id={"apps" + model.get("id") + "/configuration"}
+            id={"apps/" + encodeURIComponent(model.get("id")) + "/configuration"}
             onActivate={this.props.fetchAppVersions} >
             <AppVersionListComponent
               app={model}
