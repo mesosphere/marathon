@@ -53,7 +53,7 @@ class AppsResource @Inject() (
       case EmbedTasks =>
         apps.map { app =>
           val enrichedApp = app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
-          WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
+          WithTasksAndDeploymentsWrites.writes(enrichedApp)
         }
 
       case EmbedTasksAndFailures =>
