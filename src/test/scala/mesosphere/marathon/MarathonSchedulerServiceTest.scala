@@ -8,6 +8,7 @@ import akka.testkit.{ TestKit, TestProbe }
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.{ Group, Candidate }
 import com.twitter.common.zookeeper.Group.JoinException
+import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppRepository, Migration }
 import mesosphere.marathon.tasks.TaskTracker
@@ -19,6 +20,8 @@ import org.apache.mesos.state.InMemoryState
 import org.mockito.Matchers.{ any, eq => mockEq }
 import org.mockito.Mockito
 import org.mockito.Mockito.{ times, verify, when }
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
 import org.rogach.scallop.ScallopOption
 import org.scalatest.{ Matchers, BeforeAndAfterAll }
 
@@ -206,5 +209,43 @@ class MarathonSchedulerServiceTest
     frameworkIdUtil.store(frameworkId)
 
     awaitAssert(schedulerService.frameworkId should be(Some(frameworkId)))
+  }
+
+  test("Abdicate leadership when migration fails and reoffer leadership") {
+    val timer = mock[Timer]
+
+    when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
+    candidate = Some(mock[Candidate])
+
+    val schedulerService = new MarathonSchedulerService(
+      healthCheckManager,
+      candidate,
+      config,
+      frameworkIdUtil,
+      leader,
+      appRepository,
+      taskTracker,
+      scheduler,
+      system,
+      migration,
+      schedulerActor
+    ) {
+      override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
+      override def newDriver() = mock[SchedulerDriver]
+    }
+
+    // use an Answer object here because Mockito's thenThrow does only
+    // allow to throw RuntimeExceptions
+    when(migration.migrate()).thenAnswer(new Answer[StorageVersion] {
+      override def answer(invocation: InvocationOnMock): StorageVersion = {
+        import java.util.concurrent.TimeoutException
+        throw new TimeoutException("Failed to wait for future within timeout")
+      }
+    })
+
+    schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
+
+    awaitAssert { verify(candidate.get).offerLeadership(schedulerService) }
+    assert(schedulerService.isLeader == false)
   }
 }
