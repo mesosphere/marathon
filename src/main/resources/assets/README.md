@@ -46,9 +46,9 @@ If you want to add a new npm package to 'node_modules':
         npm install [your package] --save-dev
     will add it to devDependencies.
 
-2. Create a synced npm-shrinkwrap.json
+2. Create a synced npm-shrinkwrap.json with devDependencies included
 
-        npm shrinkwrap
+        npm shrinkwrap --dev
 
 3. Commit to repository
 
