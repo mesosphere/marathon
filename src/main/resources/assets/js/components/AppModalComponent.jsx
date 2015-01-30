@@ -156,6 +156,9 @@ var AppModalComponent = React.createClass({
             </li>
           </ul>
           <div className="header-btn">
+            <button className="btn btn-sm btn-default" onClick={this.handleRestartApp}>
+              Restart
+            </button>
             <button className="btn btn-sm btn-default"
                 onClick={this.props.suspendApp}
                 disabled={model.get("instances") < 1}>
@@ -166,9 +169,6 @@ var AppModalComponent = React.createClass({
             </button>
             <button className="btn btn-sm btn-danger pull-right" onClick={this.handleDestroyApp}>
               Destroy App
-            </button>
-            <button className="btn btn-sm btn-default pull-right" onClick={this.handleRestartApp}>
-              Restart App
             </button>
           </div>
         </div>
