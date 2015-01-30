@@ -28,6 +28,7 @@ var AppModalComponent = React.createClass({
     onShowTaskDetails: React.PropTypes.func.isRequired,
     onShowTaskList: React.PropTypes.func.isRequired,
     onTasksKilled: React.PropTypes.func.isRequired,
+    restartApp: React.PropTypes.func.isRequired,
     rollBackApp: React.PropTypes.func.isRequired,
     scaleApp: React.PropTypes.func.isRequired,
     suspendApp: React.PropTypes.func.isRequired,
@@ -49,6 +50,10 @@ var AppModalComponent = React.createClass({
   handleDestroyApp: function () {
     this.props.destroyApp();
     this.destroy();
+  },
+
+  handleRestartApp: function () {
+    this.props.restartApp();
   },
 
   onTabClick: function (id) {
@@ -157,6 +162,9 @@ var AppModalComponent = React.createClass({
             </button>
             <button className="btn btn-sm btn-danger pull-right" onClick={this.handleDestroyApp}>
               Destroy App
+            </button>
+            <button className="btn btn-sm btn-default pull-right" onClick={this.handleRestartApp}>
+              Restart App
             </button>
           </div>
         </div>
