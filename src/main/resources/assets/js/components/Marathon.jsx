@@ -229,7 +229,6 @@ var Marathon = React.createClass({
     }
   },
 
-
   destroyDeployment: function (deployment, options, component) {
     component.setLoading(true);
 
