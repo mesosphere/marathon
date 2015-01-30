@@ -14,6 +14,7 @@ easy editing, set the `assets_path` flag when running Marathon:
 2. Change to the assets directory
 
         cd src/main/resources/assets
+
 3. Install dev dependencies
 
         npm install
@@ -23,13 +24,33 @@ easy editing, set the `assets_path` flag when running Marathon:
 4. Run development environment
 
         npm run watch
+
 5. Build the assets
 
         npm run dist
+
 6. The distribution files will be written to `src/main/resources/assets/dist`.
    Check it in.
 
         git add dist/main.js dist/main.css img/*
+
+#### Adding npm package dependencies to package.json
+
+If you want to add a new npm package to 'node_modules':
+
+1. Install the new package
+
+        npm install [your package] --save
+    will install and save to dependencies in package.json and
+
+        npm install [your package] --save-dev
+    will add it to devDependencies.
+
+2. Create a synced npm-shrinkwrap.json with devDependencies included
+
+        npm shrinkwrap --dev
+
+3. Commit to repository
 
 #### Development Setup (Sublime Text)
 
