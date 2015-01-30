@@ -28,8 +28,11 @@ var NavTabsComponent = React.createClass({
 
   render: function () {
     var activeTabId = this.props.activeTabId;
+    var tabsLeft = [];
+    var tabsRight = [];
+    var tabs = [];
 
-    var tabs = this.props.tabs.map(function (tab) {
+    this.props.tabs.map(function (tab) {
       var tabClassSet = React.addons.classSet({
         "active": tab.id === activeTabId
       });
@@ -40,7 +43,7 @@ var NavTabsComponent = React.createClass({
         <span className="badge">{tab.badge}</span> :
         null;
 
-      return (
+      var tabelement = (
         <li className={tabClassSet} key={tab.id}>
           <a href={"#" + tab.id} onClick={this.onTabClick.bind(this, tab.id)}>
             {tab.text}
@@ -48,12 +51,34 @@ var NavTabsComponent = React.createClass({
           {badge}
         </li>
       );
+
+      if (!tab.alignRight) {
+        tabsLeft.push(tabelement);
+      } else {
+        tabsRight.push(tabelement);
+      }
     }, this);
 
+    if (tabsLeft.length) {
+      tabs.push((
+        <ul className={this.props.className + " nav navbar navbar-static-top nav-tabs"} key="tabsLeft">
+          {tabsLeft}
+        </ul>
+      ));
+    }
+
+    if (tabsRight.length) {
+      tabs.push((
+        <ul className={this.props.className + " nav navbar navbar-static-top nav-tabs navbar-right"} key="tabsRight">
+          {tabsRight}
+        </ul>
+      ));
+    }
+
     return (
-      <ul className={this.props.className + " nav navbar navbar-static-top nav-tabs"}>
+      <div>
         {tabs}
-      </ul>
+      </div>
     );
   }
 });
