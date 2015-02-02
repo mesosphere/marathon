@@ -6,15 +6,15 @@ var React = require("react/addons");
 var BackboneMixin = require("../mixins/BackboneMixin");
 var App = require("../models/App");
 var FormGroupComponent = require("../components/FormGroupComponent");
-var ModalComponent = require("../components/ModalComponent");
+var PageComponent = require("../components/PageComponent");
 
 function ValidationError(attribute, message) {
   this.attribute = attribute;
   this.message = message;
 }
 
-var NewAppModalComponent = React.createClass({
-  displayName: "NewAppModalComponent",
+var NewAppPageComponent = React.createClass({
+  displayName: "NewAppPageComponent",
   mixins: [BackboneMixin],
   propTypes: {
     onCreate: React.PropTypes.func,
@@ -37,8 +37,8 @@ var NewAppModalComponent = React.createClass({
 
   destroy: function () {
     // This will also call `this.props.onDestroy` since it is passed as the
-    // callback for the modal's `onDestroy` prop.
-    this.refs.modalComponent.destroy();
+    // callback for the page's `onDestroy` prop.
+    this.refs.pageComponent.destroy();
   },
 
   getResource: function () {
@@ -174,14 +174,14 @@ var NewAppModalComponent = React.createClass({
     });
 
     return (
-      <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
+      <PageComponent ref="pageComponent" onDestroy={this.props.onDestroy}>
         <form method="post" role="form" onSubmit={this.onSubmit}>
-          <div className="modal-header">
+          <div className="page-header">
             <button type="button" className="close"
-              aria-hidden="true" onClick={this.destroy}>&times;</button>
-            <h3 className="modal-title">New Application</h3>
+              aria-hidden="true" onClick={this.destroy}>&larr;</button>
+            <h3 className="page-title">New Application</h3>
           </div>
-          <div className="modal-body">
+          <div className="page-body">
             <FormGroupComponent
                 attribute="id"
                 label="ID"
@@ -267,9 +267,9 @@ var NewAppModalComponent = React.createClass({
             </div>
           </div>
         </form>
-      </ModalComponent>
+      </PageComponent>
     );
   }
 });
 
-module.exports = NewAppModalComponent;
+module.exports = NewAppPageComponent;

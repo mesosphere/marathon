@@ -6,11 +6,11 @@ var States = require("../constants/States");
 var AppCollection = require("../models/AppCollection");
 var DeploymentCollection = require("../models/DeploymentCollection");
 var AppListComponent = require("../components/AppListComponent");
-var AboutModalComponent = require("../components/modals/AboutModalComponent");
-var AppModalComponent = require("../components/AppModalComponent");
+var AboutPageComponent = require("../components/AboutPageComponent");
+var AppPageComponent = require("../components/AppPageComponent");
 var DeploymentsListComponent =
   require("../components/DeploymentsListComponent");
-var NewAppModalComponent = require("../components/NewAppModalComponent");
+var NewAppPageComponent = require("../components/NewAppPageComponent");
 var TabPaneComponent = require("../components/TabPaneComponent");
 var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 var NavTabsComponent = require("../components/NavTabsComponent");
@@ -19,7 +19,8 @@ var UPDATE_INTERVAL = 5000;
 
 var tabs = [
   {id: "apps", text: "Apps"},
-  {id: "deployments", text: "Deployments"}
+  {id: "deployments", text: "Deployments"},
+  {id: "about", text: "About", alignRight: true}
 ];
 
 var Marathon = React.createClass({
@@ -35,14 +36,14 @@ var Marathon = React.createClass({
       deployments: new DeploymentCollection(),
       deploymentsFetchState: States.STATE_LOADING,
       fetchState: States.STATE_LOADING,
-      modalClass: null,
+      pageClass: null,
       tasksFetchState: States.STATE_LOADING
     };
   },
 
   componentDidMount: function () {
     // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
-    // input elements so the new app modal can be closed via "esc".
+    // input elements so the new app page can be closed via "esc".
     var mousetrapOriginalStopCallback = Mousetrap.stopCallback;
     Mousetrap.stopCallback = function (e, element, combo) {
       if (combo === "esc" || combo === "escape") { return false; }
@@ -50,50 +51,46 @@ var Marathon = React.createClass({
     };
 
     Mousetrap.bind("esc", function () {
-      if (this.refs.modal != null) {
-        this.refs.modal.destroy();
+      if (this.refs.page != null) {
+        this.refs.page.destroy();
       }
     }.bind(this));
 
     Mousetrap.bind("c", function () {
-      this.showNewAppModal();
+      this.showNewAppPage();
     }.bind(this), "keyup");
 
     Mousetrap.bind("g a", function () {
-      if (this.state.modalClass == null) {
-        this.onTabClick("apps");
-      }
+      this.onTabClick("apps");
     }.bind(this));
 
     Mousetrap.bind("g d", function () {
-      if (this.state.modalClass == null) {
-        this.onTabClick("deployments");
-      }
+      this.onTabClick("deployments");
     }.bind(this));
 
     Mousetrap.bind("#", function () {
-      if (this.state.modalClass === AppModalComponent) {
+      if (this.state.pageClass === AppPageComponent) {
         this.destroyApp();
       }
     }.bind(this));
 
     Mousetrap.bind("shift+,", function () {
-      this.showAboutModal();
+      this.onTabClick("about");
     }.bind(this));
 
     this.setPollResource(this.fetchApps);
   },
 
   componentDidUpdate: function (prevProps, prevState) {
-    if (prevState.modalClass !== this.state.modalClass) {
-      // No `modalClass` means the modal went from open to closed. Start
+    if (prevState.pageClass !== this.state.pageClass) {
+      // No `pageClass` means the page went from open to closed. Start
       // polling for apps in that case.
-      // If `modalClass` is AppModalComponent start polling for tasks for that
+      // If `pageClass` is AppPageComponent start polling for tasks for that
       // app.
-      // Otherwise stop polling since the modal went from closed to open.
-      if (this.state.modalClass === null) {
+      // Otherwise stop polling since the page went from closed to open.
+      if (this.state.pageClass === null) {
         this.setPollResource(this.fetchApps);
-      } else if (this.state.modalClass === AppModalComponent) {
+      } else if (this.state.pageClass === AppPageComponent) {
         this.setPollResource(this.fetchTasks);
       } else {
         this.stopPolling();
@@ -163,10 +160,10 @@ var Marathon = React.createClass({
     this.state.collection.create(appModel, options);
   },
 
-  handleModalDestroy: function () {
+  handlePageDestroy: function () {
     this.setState({
       activeApp: null,
-      modalClass: null,
+      pageClass: null,
       tasksFetchState: States.STATE_LOADING,
       appVersionsFetchState: States.STATE_LOADING
     });
@@ -207,7 +204,7 @@ var Marathon = React.createClass({
         success: function () {
           this.setState({
             activeApp: null,
-            modalClass: null
+            pageClass: null
           });
         }.bind(this),
         wait: true
@@ -338,44 +335,24 @@ var Marathon = React.createClass({
     }
   },
 
-  showAboutModal: function (event) {
-    if (event != null) {
-      event.preventDefault();
-    }
-
-    if (this.state.modalClass !== null) {
-      return;
-    }
-
-    this.setState({
-      modalClass: AboutModalComponent
-    });
-  },
-
-  showAppModal: function (app) {
-    if (this.state.modalClass !== null) {
-      return;
-    }
-
+  showAppPage: function (app) {
     this.setState({
       activeApp: app,
-      modalClass: AppModalComponent
+      pageClass: AppPageComponent
     });
   },
 
-  showNewAppModal: function () {
-    if (this.state.modalClass !== null) {
-      return;
-    }
-
+  showNewAppPage: function () {
     this.setState({
-      modalClass: NewAppModalComponent
+      pageClass: NewAppPageComponent
     });
   },
 
   onTabClick: function (id) {
     this.setState({
-      activeTabId: id
+      activeTabId: id,
+      pageClass: null,
+      activeApp: null
     });
 
     if (id === tabs[0].id) {
@@ -386,20 +363,20 @@ var Marathon = React.createClass({
   },
 
   render: function () {
-    var modal;
+    var page;
 
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    if (this.state.modalClass === AppModalComponent) {
-      modal = (
-        <AppModalComponent
+    if (this.state.pageClass === AppPageComponent) {
+      page = (
+        <AppPageComponent
           activeTask={this.state.activeTask}
           appVersionsFetchState={this.state.appVersionsFetchState}
           destroyApp={this.destroyApp}
           fetchTasks={this.fetchTasks}
           fetchAppVersions={this.fetchAppVersions}
           model={this.state.activeApp}
-          onDestroy={this.handleModalDestroy}
+          onDestroy={this.handlePageDestroy}
           onShowTaskDetails={this.handleShowTaskDetails}
           onShowTaskList={this.handleShowTaskList}
           onTasksKilled={this.handleTasksKilled}
@@ -407,21 +384,43 @@ var Marathon = React.createClass({
           scaleApp={this.scaleApp}
           suspendApp={this.suspendApp}
           tasksFetchState={this.state.tasksFetchState}
-          ref="modal" />
+          ref="page" />
       );
-    } else if (this.state.modalClass === NewAppModalComponent) {
-      modal = (
-        <NewAppModalComponent
+    } else if (this.state.pageClass === NewAppPageComponent) {
+      page = (
+        <NewAppPageComponent
           model={this.state.activeApp}
-          onDestroy={this.handleModalDestroy}
+          onDestroy={this.handlePageDestroy}
           onCreate={this.handleAppCreate}
-          ref="modal" />
+          ref="page" />
       );
-    } else if (this.state.modalClass === AboutModalComponent) {
-      modal = (
-        <AboutModalComponent
-          onDestroy={this.handleModalDestroy}
-          ref="modal" />
+    } else {
+      page = (
+        <TogglableTabsComponent activeTabId={this.state.activeTabId} className="toggleabletabs-container">
+          <TabPaneComponent id="apps">
+            <button type="button" className="btn btn-success navbar-btn"
+                onClick={this.showNewAppPage} >
+              + New App
+            </button>
+            <AppListComponent
+              collection={this.state.collection}
+              onSelectApp={this.showAppPage}
+              fetchState={this.state.fetchState}
+              ref="appList" />
+          </TabPaneComponent>
+          <TabPaneComponent
+              id="deployments"
+              onActivate={this.props.fetchAppVersions} >
+            <DeploymentsListComponent
+              deployments={this.state.deployments}
+              destroyDeployment={this.destroyDeployment}
+              fetchState={this.state.deploymentsFetchState} />
+          </TabPaneComponent>
+          <TabPaneComponent
+              id="about">
+            <AboutPageComponent />
+          </TabPaneComponent>
+        </TogglableTabsComponent>
       );
     }
 
@@ -434,49 +433,21 @@ var Marathon = React.createClass({
                 <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
               </a>
             </div>
-            <NavTabsComponent
-              activeTabId={this.state.activeTabId}
-              className="navbar-nav nav-tabs-unbordered"
-              onTabClick={this.onTabClick}
-              tabs={tabs} />
             <ul className="nav navbar-nav navbar-right">
-              <li>
-                <a href="#/about" onClick={this.showAboutModal}>
-                  About
-                </a>
-              </li>
               <li>
                 <a href="https://mesosphere.github.io/marathon/docs/" target="_blank">
                   Docs ⇗
                 </a>
               </li>
             </ul>
+            <NavTabsComponent
+              activeTabId={this.state.activeTabId}
+              className="navbar-nav nav-tabs-unbordered"
+              onTabClick={this.onTabClick}
+              tabs={tabs} />
           </div>
         </nav>
-        <div className="container-fluid">
-          <TogglableTabsComponent activeTabId={this.state.activeTabId} >
-            <TabPaneComponent id="apps">
-              <button type="button" className="btn btn-success navbar-btn"
-                  onClick={this.showNewAppModal} >
-                + New App
-              </button>
-              <AppListComponent
-                collection={this.state.collection}
-                onSelectApp={this.showAppModal}
-                fetchState={this.state.fetchState}
-                ref="appList" />
-            </TabPaneComponent>
-            <TabPaneComponent
-                id="deployments"
-                onActivate={this.props.fetchAppVersions} >
-              <DeploymentsListComponent
-                deployments={this.state.deployments}
-                destroyDeployment={this.destroyDeployment}
-                fetchState={this.state.deploymentsFetchState} />
-            </TabPaneComponent>
-          </TogglableTabsComponent>
-        </div>
-        {modal}
+        {page}
       </div>
     );
   }

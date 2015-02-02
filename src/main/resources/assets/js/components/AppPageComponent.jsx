@@ -2,7 +2,7 @@
 
 var React = require("react/addons");
 var AppVersionListComponent = require("../components/AppVersionListComponent");
-var ModalComponent = require("../components/ModalComponent");
+var PageComponent = require("../components/PageComponent");
 var StackedViewComponent = require("../components/StackedViewComponent");
 var TabPaneComponent = require("../components/TabPaneComponent");
 var TaskDetailComponent = require("../components/TaskDetailComponent");
@@ -14,8 +14,8 @@ var tabs = [
   {id: "configuration", text: "Configuration"}
 ];
 
-var AppModalComponent = React.createClass({
-  displayName: "AppModalComponent",
+var AppPageComponent = React.createClass({
+  displayName: "AppPageComponent",
 
   propTypes: {
     activeTask: React.PropTypes.object,
@@ -43,7 +43,7 @@ var AppModalComponent = React.createClass({
   },
 
   destroy: function () {
-    this.refs.modalComponent.destroy();
+    this.refs.pageComponent.destroy();
   },
 
   handleDestroyApp: function () {
@@ -137,12 +137,12 @@ var AppModalComponent = React.createClass({
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
-      <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}
+      <PageComponent ref="pageComponent" onDestroy={this.props.onDestroy}
         size="lg">
-        <div className="modal-header">
+        <div className="page-header">
            <button type="button" className="close"
-              aria-hidden="true" onClick={this.props.onDestroy}>&times;</button>
-          <span className="h3 modal-title">{model.get("id")}</span>
+              aria-hidden="true" onClick={this.props.onDestroy}>&larr;</button>
+          <span className="h3 page-title">{model.get("id")}</span>
           <ul className="list-inline list-inline-subtext">
             <li>
                 <span className={statusClassSet}>
@@ -164,7 +164,7 @@ var AppModalComponent = React.createClass({
             </button>
           </div>
         </div>
-        <TogglableTabsComponent className="modal-body modal-body-no-top"
+        <TogglableTabsComponent className="page-body page-body-no-top"
             activeTabId={this.state.activeTabId}
             onTabClick={this.onTabClick}
             tabs={tabs} >
@@ -197,9 +197,9 @@ var AppModalComponent = React.createClass({
               onRollback={this.props.rollBackApp} />
           </TabPaneComponent>
         </TogglableTabsComponent>
-      </ModalComponent>
+      </PageComponent>
     );
   }
 });
 
-module.exports = AppModalComponent;
+module.exports = AppPageComponent;
