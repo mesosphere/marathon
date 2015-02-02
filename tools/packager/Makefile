@@ -70,14 +70,14 @@ help:
 fedora20: toor/fedora20/usr/lib/systemd/system/marathon.service
 fedora20: toor/fedora20/$(PREFIX)/bin/marathon
 	fpm -C toor/fedora20 --config-files usr/lib/systemd/system/marathon.service \
-		--iteration $(PKG_REL).fedora20 \
+		--iteration $(PKG_REL).fc20 \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: fedora21
 fedora21: toor/fedora21/usr/lib/systemd/system/marathon.service
 fedora21: toor/fedora21/$(PREFIX)/bin/marathon
 	fpm -C toor/fedora21 --config-files usr/lib/systemd/system/marathon.service \
-		--iteration $(PKG_REL).fedora21 \
+		--iteration $(PKG_REL).fc21 \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: el6
