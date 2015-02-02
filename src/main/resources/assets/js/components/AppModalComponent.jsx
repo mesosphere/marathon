@@ -134,6 +134,14 @@ var AppModalComponent = React.createClass({
     var hasHealth = model.get("healthChecks") != null &&
       model.get("healthChecks").length > 0;
 
+    var status = "Running";
+    if (isDeploying) {
+      status = "Deploying";
+    } else if (model.get("instances") === 0 &&
+        model.formatTasksRunning() === 0) {
+      status = "Suspended";
+    }
+
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
@@ -145,9 +153,7 @@ var AppModalComponent = React.createClass({
           <span className="h3 modal-title">{model.get("id")}</span>
           <ul className="list-inline list-inline-subtext">
             <li>
-                <span className={statusClassSet}>
-                  {isDeploying ? "Deploying" : "Running" }
-                </span>
+              <span className={statusClassSet}>{status}</span>
             </li>
           </ul>
           <div className="header-btn">

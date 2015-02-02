@@ -20,6 +20,14 @@ var AppComponent = React.createClass({
       "text-warning": isDeploying
     });
 
+    var status = "Running";
+    if (isDeploying) {
+      status = "Deploying";
+    } else if (model.get("instances") === 0 &&
+        model.formatTasksRunning() === 0) {
+      status = "Suspended";
+    }
+
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
@@ -37,9 +45,7 @@ var AppComponent = React.createClass({
           </span> / {model.get("instances")}
         </td>
         <td className="text-right">
-          <span className={statusClassSet}>
-            {isDeploying ? "Deploying" : "Running" }
-          </span>
+          <span className={statusClassSet}>{status}</span>
         </td>
       </tr>
     );
