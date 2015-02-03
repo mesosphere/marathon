@@ -32,6 +32,16 @@ FPM_OPTS_RPM := -t rpm \
 	-d coreutils -d 'java >= 1.6'
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
+.PHONY: help
+help:
+	@echo "Please choose one of the following targets:"
+	@echo "  all, deb, rpm, fedora, osx, or el"
+	@echo "For release builds:"
+	@echo "  make PKG_REL=1.0 deb"
+	@echo "To override package release version:"
+	@echo "  make PKG_REL=0.2.20141228050159 rpm"
+	@exit 0
+
 .PHONY: all
 all: deb rpm
 
@@ -55,16 +65,6 @@ debian: debian-wheezy
 
 .PHONY: debian-wheezy
 debian-wheezy: debian-wheezy-75 debian-wheezy-77
-
-.PHONY: help
-help:
-	@echo "Please choose one of the following targets:"
-	@echo "  all, deb, rpm, fedora, osx, or el"
-	@echo "For release builds:"
-	@echo "  make PKG_REL=1.0 deb"
-	@echo "To override package release version:"
-	@echo "  make PKG_REL=0.2.20141228050159 rpm"
-	@exit 0
 
 .PHONY: fedora20
 fedora20: toor/fedora20/usr/lib/systemd/system/marathon.service
