@@ -4,7 +4,7 @@ import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef, TestKit }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, Timestamp }
+import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, TaskOffersDeclinedRepository, Timestamp }
 import org.apache.mesos.Protos.TaskState
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
@@ -22,11 +22,13 @@ class HistoryActorTest
 
   var historyActor: ActorRef = _
   var failureRepo: TaskFailureRepository = _
+  var declinedRepo: TaskOffersDeclinedRepository = _
 
   before {
     failureRepo = mock[TaskFailureRepository]
+    declinedRepo = mock[TaskOffersDeclinedRepository]
     historyActor = TestActorRef(Props(
-      new HistoryActor(system.eventStream, failureRepo)
+      new HistoryActor(system.eventStream, failureRepo, declinedRepo)
     ))
   }
 

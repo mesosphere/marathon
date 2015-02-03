@@ -107,11 +107,22 @@ class MarathonScheduler @Inject() (
         log.debug("Received offer %s".format(offer))
 
         val matchingTask = taskQueue.pollMatching { app =>
-          newTask(app, offer).map(app -> _)
+          val result: TaskBuilder.BuildResult = newTask(app, offer)
+          result match {
+            case declined: TaskBuilder.BuildDeclined => {
+              eventBus.publish(TaskOfferDeclinedEvent(app.id, declined.reason.getBytes))
+              None
+            }
+            case success: TaskBuilder.BuildSuccess => Some((app, success))
+          }
         }
 
-        matchingTask.foreach {
-          case (app, (taskInfo, ports)) =>
+        matchingTask match {
+          case None => {
+            log.debug("Offer doesn't match request. Declining.")
+            driver.declineOffer(offer.getId)
+          }
+          case Some((app, TaskBuilder.BuildSuccess(taskInfo, ports))) =>
             val marathonTask = MarathonTasks.makeTask(
               taskInfo.getTaskId.getValue, offer.getHostname, ports,
               offer.getAttributesList.asScala, app.version)
@@ -123,11 +134,6 @@ class MarathonScheduler @Inject() (
 
           // here it is assumed that the health checks for the current
           // version are already running.
-        }
-
-        if (matchingTask.isEmpty) {
-          log.debug("Offer doesn't match request. Declining.")
-          driver.declineOffer(offer.getId)
         }
       }
       catch {
@@ -276,7 +282,7 @@ class MarathonScheduler @Inject() (
 
   private def newTask(
     app: AppDefinition,
-    offer: Offer): Option[(TaskInfo, Seq[Long])] = {
+    offer: Offer): TaskBuilder.BuildResult = {
     new TaskBuilder(app, taskIdUtil.newTaskId, taskTracker, config, mapper).buildIfMatches(offer)
   }
 }

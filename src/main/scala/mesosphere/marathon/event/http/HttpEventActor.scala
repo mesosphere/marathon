@@ -54,6 +54,7 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
   }
 
   def eventToJson(event: MarathonEvent): JsValue = event match {
+    case event: TaskOfferDeclinedEvent     => Json.toJson(event)
     case event: AppTerminatedEvent         => Json.toJson(event)
     case event: ApiPostEvent               => Json.toJson(event)
     case event: Subscribe                  => Json.toJson(event)

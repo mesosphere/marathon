@@ -29,7 +29,7 @@ class TaskBuilderTest extends MarathonSpec {
       .addResources(ScalarResource("disk", 2000))
       .build
 
-    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: TaskBuilder.BuildResult = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -42,9 +42,10 @@ class TaskBuilderTest extends MarathonSpec {
       )
     )
 
-    assert(task.isDefined)
+    assert(task.isInstanceOf[TaskBuilder.BuildSuccess])
 
-    val (taskInfo, taskPorts) = task.get
+    val success = task.asInstanceOf[TaskBuilder.BuildSuccess]
+    val (taskInfo, taskPorts) = (success.info, success.ports)
     val range = taskInfo.getResourcesList.asScala
       .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRange(0))
@@ -92,7 +93,7 @@ class TaskBuilderTest extends MarathonSpec {
       .addResources(ScalarResource("disk", 2000))
       .build
 
-    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: TaskBuilder.BuildResult = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -105,9 +106,10 @@ class TaskBuilderTest extends MarathonSpec {
       )
     )
 
-    assert(task.isDefined)
+    assert(task.isInstanceOf[TaskBuilder.BuildSuccess])
 
-    val (taskInfo, taskPorts) = task.get
+    val success = task.asInstanceOf[TaskBuilder.BuildSuccess]
+    val (taskInfo, taskPorts) = (success.info, success.ports)
     val range = taskInfo.getResourcesList.asScala
       .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRange(0))
@@ -136,7 +138,7 @@ class TaskBuilderTest extends MarathonSpec {
       .addResources(ScalarResource("disk", 2000))
       .build
 
-    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: TaskBuilder.BuildResult = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -149,9 +151,10 @@ class TaskBuilderTest extends MarathonSpec {
       )
     )
 
-    assert(task.isDefined)
+    assert(task.isInstanceOf[TaskBuilder.BuildSuccess])
 
-    val (taskInfo, taskPorts) = task.get
+    val success = task.asInstanceOf[TaskBuilder.BuildSuccess]
+    val (taskInfo, taskPorts) = (success.info, success.ports)
     assert(taskInfo.hasExecutor)
     assert(!taskInfo.hasCommand)
 
@@ -169,7 +172,7 @@ class TaskBuilderTest extends MarathonSpec {
       .addResources(ScalarResource("disk", 2000))
       .build
 
-    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: TaskBuilder.BuildResult = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -182,9 +185,10 @@ class TaskBuilderTest extends MarathonSpec {
       )
     )
 
-    assert(task.isDefined)
+    assert(task.isInstanceOf[TaskBuilder.BuildSuccess])
 
-    val (taskInfo, taskPorts) = task.get
+    val success = task.asInstanceOf[TaskBuilder.BuildSuccess]
+    val (taskInfo, taskPorts) = (success.info, success.ports)
     val cmd = taskInfo.getExecutor.getCommand
 
     assert(!taskInfo.hasCommand)
@@ -202,7 +206,7 @@ class TaskBuilderTest extends MarathonSpec {
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: TaskBuilder.BuildResult = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -214,9 +218,10 @@ class TaskBuilderTest extends MarathonSpec {
       )
     )
 
-    assert(task.isDefined)
+    assert(task.isInstanceOf[TaskBuilder.BuildSuccess])
 
-    val (taskInfo, taskPorts) = task.get
+    val success = task.asInstanceOf[TaskBuilder.BuildSuccess]
+    val (taskInfo, taskPorts) = (success.info, success.ports)
     val range = taskInfo.getResourcesList.asScala
       .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRange(0))
@@ -243,7 +248,7 @@ class TaskBuilderTest extends MarathonSpec {
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: TaskBuilder.BuildResult = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -255,9 +260,10 @@ class TaskBuilderTest extends MarathonSpec {
       )
     )
 
-    assert(task.isDefined)
+    assert(task.isInstanceOf[TaskBuilder.BuildSuccess])
 
-    val (taskInfo, taskPorts) = task.get
+    val success = task.asInstanceOf[TaskBuilder.BuildSuccess]
+    val (taskInfo, taskPorts) = (success.info, success.ports)
     val range = taskInfo.getResourcesList.asScala
       .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRange(0))
@@ -301,7 +307,7 @@ class TaskBuilderTest extends MarathonSpec {
 
     val task = builder.buildIfMatches(offer)
 
-    assert(task.isDefined)
+    assert(task.isInstanceOf[TaskBuilder.BuildSuccess])
     // TODO test for resources etc.
   }
 
@@ -326,20 +332,22 @@ class TaskBuilderTest extends MarathonSpec {
       s => TaskID(s.toString), taskTracker, defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer)
-      assert(tupleOption.isDefined, message)
+      val task = builder.buildIfMatches(offer)
+      assert(task.isInstanceOf[TaskBuilder.BuildSuccess], message)
+
+      val success = task.asInstanceOf[TaskBuilder.BuildSuccess]
       val marathonTask = MarathonTasks.makeTask(
-        tupleOption.get._1.getTaskId.getValue,
+        success.info.getTaskId.getValue,
         offer.getHostname,
-        tupleOption.get._2,
+        success.ports,
         offer.getAttributesList.asScala.toList,
         Timestamp.now)
       runningTasks += marathonTask
     }
 
     def shouldNotBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer)
-      assert(tupleOption.isEmpty, message)
+      val task = builder.buildIfMatches(offer)
+      assert(task.isInstanceOf[TaskBuilder.BuildDeclined], message)
     }
 
     val offerRack1HostA = makeBasicOffer()
@@ -387,19 +395,22 @@ class TaskBuilderTest extends MarathonSpec {
       s => TaskID(s.toString), taskTracker, defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer)
-      assert(tupleOption.isDefined, message)
+      val task = builder.buildIfMatches(offer)
+      assert(task.isInstanceOf[TaskBuilder.BuildSuccess], message)
+
+      val success = task.asInstanceOf[TaskBuilder.BuildSuccess]
       val marathonTask = MarathonTasks.makeTask(
-        tupleOption.get._1.getTaskId.getValue,
+        success.info.getTaskId.getValue,
         offer.getHostname,
-        tupleOption.get._2,
-        offer.getAttributesList.asScala.toList, Timestamp.now)
+        success.ports,
+        offer.getAttributesList.asScala.toList,
+        Timestamp.now)
       runningTasks += marathonTask
     }
 
     def shouldNotBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer)
-      assert(tupleOption.isEmpty, message)
+      val task = builder.buildIfMatches(offer)
+      assert(task.isInstanceOf[TaskBuilder.BuildDeclined], message)
     }
 
     val offerHostA = makeBasicOffer()

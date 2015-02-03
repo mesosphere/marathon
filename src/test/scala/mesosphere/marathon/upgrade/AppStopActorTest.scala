@@ -4,7 +4,7 @@ import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestProbe, TestActorRef, TestKit }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event.{ HistoryActor, AppTerminatedEvent, MesosStatusUpdateEvent }
-import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, AppDefinition, PathId }
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions, TaskUpgradeCanceledException }
@@ -27,12 +27,14 @@ class AppStopActorTest
   var scheduler: SchedulerActions = _
   var taskTracker: TaskTracker = _
   var taskFailureRepository: TaskFailureRepository = _
+  var declinedRepository: TaskOffersDeclinedRepository = _
 
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
     taskTracker = mock[TaskTracker]
     taskFailureRepository = mock[TaskFailureRepository]
+    declinedRepository = mock[TaskOffersDeclinedRepository]
   }
 
   test("Stop App") {
@@ -59,7 +61,8 @@ class AppStopActorTest
       Props(
         new HistoryActor(
           system.eventStream,
-          taskFailureRepository
+          taskFailureRepository,
+          declinedRepository
         )
       )
     )

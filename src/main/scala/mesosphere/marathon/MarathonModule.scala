@@ -94,6 +94,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
     taskFailureRepository: TaskFailureRepository,
+    taskOffersDeclinedRepository: TaskOffersDeclinedRepository,
     config: MarathonConf): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
@@ -113,6 +114,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         storage,
         eventBus,
         taskFailureRepository,
+        taskOffersDeclinedRepository,
         config).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }
@@ -159,6 +161,15 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       ),
       conf.zooKeeperMaxVersions.get
     )
+  }
+
+  @Provides
+  @Singleton
+  def provideTaskOffersDeclinedRepository(
+    state: State,
+    conf: MarathonConf,
+    registry: MetricRegistry): TaskOffersDeclinedRepository = {
+    new TaskOffersDeclinedRepository()
   }
 
   @Provides
