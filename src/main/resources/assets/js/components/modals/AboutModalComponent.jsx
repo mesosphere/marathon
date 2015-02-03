@@ -6,14 +6,6 @@ var BackboneMixin = require("../../mixins/BackboneMixin");
 var ModalComponent = require("../components/../ModalComponent");
 var ObjectDlComponent = require("../components/../ObjectDlComponent");
 
-/* jshint trailing:false, quotmark:false, newcap:false */
-/* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-var UNSPECIFIED_NODE = React.createClass({
-  render: function () {
-    return <span className="text-muted">Unspecified</span>;
-  }
-});
-
 var AboutModalComponent = React.createClass({
   mixins: [BackboneMixin],
 
@@ -37,9 +29,19 @@ var AboutModalComponent = React.createClass({
     return this.state.info;
   },
 
+  getInfo: function (attr, showUnspecifiedText) {
+    var infoValue = this.state.info.get(attr);
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    if (!infoValue && showUnspecifiedText) {
+      return <span className="text-muted">Unspecified</span>;
+    }
+    return infoValue;
+  },
+
   render: function () {
-    var marathonConfig = this.state.info.get("marathon_config");
-    var zookeeperConfig = this.state.info.get("zookeeper_config");
+    var marathonConfig = this.getInfo("marathon_config");
+    var zookeeperConfig = this.getInfo("zookeeper_config");
 
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
@@ -54,7 +56,7 @@ var AboutModalComponent = React.createClass({
           <h3 className="modal-title">
             <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
             <small className="text-muted" style={{"marginLeft": "1em"}}>
-              Version {this.state.info.get("version")}
+              Version {this.getInfo("version")}
             </small>
           </h3>
         </div>
@@ -62,15 +64,15 @@ var AboutModalComponent = React.createClass({
           <dl className="dl-horizontal dl-horizontal-lg">
             <dt title="framework_id">Framework Id</dt>
             <dd>
-              {this.state.info.get("framework_id") || <UNSPECIFIED_NODE />}
+              {this.getInfo("framework_id", true)}
             </dd>
             <dt title="leader">Leader</dt>
             <dd>
-              {this.state.info.get("leader") || <UNSPECIFIED_NODE />}
+              {this.getInfo("leader", true)}
             </dd>
             <dt title="name">Name</dt>
             <dd>
-              {this.state.info.get("name") || <UNSPECIFIED_NODE />}
+              {this.getInfo("name", true)}
             </dd>
           </dl>
           <h5 title="marathon_config">Marathon Config</h5>
