@@ -216,6 +216,17 @@ var App = Backbone.Model.extend({
     return version;
   },
 
+  getStatus: function () {
+    var status = "Running";
+    if (this.isDeploying()) {
+      status = "Deploying";
+    } else if (this.get("instances") === 0 && this.formatTasksRunning() === 0) {
+      status = "Suspended";
+    }
+
+    return status;
+  },
+
   suspend: function (options) {
     this.save({instances: 0}, options);
   },
