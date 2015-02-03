@@ -125,10 +125,8 @@ var AppModalComponent = React.createClass({
   render: function () {
     var model = this.props.model;
 
-    var isDeploying = model.isDeploying();
-
     var statusClassSet = React.addons.classSet({
-      "text-warning": isDeploying
+      "text-warning": model.isDeploying()
     });
 
     var hasHealth = model.get("healthChecks") != null &&
@@ -145,9 +143,7 @@ var AppModalComponent = React.createClass({
           <span className="h3 modal-title">{model.get("id")}</span>
           <ul className="list-inline list-inline-subtext">
             <li>
-                <span className={statusClassSet}>
-                  {isDeploying ? "Deploying" : "Running" }
-                </span>
+              <span className={statusClassSet}>{model.getStatus()}</span>
             </li>
           </ul>
           <div className="header-btn">

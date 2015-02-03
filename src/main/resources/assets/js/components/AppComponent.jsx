@@ -10,14 +10,12 @@ var AppComponent = React.createClass({
   render: function () {
     var model = this.props.model;
 
-    var isDeploying = model.isDeploying();
-
     var runningTasksClassSet = React.addons.classSet({
       "text-warning": !model.allInstancesBooted()
     });
 
     var statusClassSet = React.addons.classSet({
-      "text-warning": isDeploying
+      "text-warning": model.isDeploying()
     });
 
     /* jshint trailing:false, quotmark:false, newcap:false */
@@ -37,9 +35,7 @@ var AppComponent = React.createClass({
           </span> / {model.get("instances")}
         </td>
         <td className="text-right">
-          <span className={statusClassSet}>
-            {isDeploying ? "Deploying" : "Running" }
-          </span>
+          <span className={statusClassSet}>{model.getStatus()}</span>
         </td>
       </tr>
     );
