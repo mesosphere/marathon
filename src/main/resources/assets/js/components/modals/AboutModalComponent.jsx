@@ -29,19 +29,16 @@ var AboutModalComponent = React.createClass({
     return this.state.info;
   },
 
-  getInfo: function (attr, showUnspecifiedText) {
-    var infoValue = this.state.info.get(attr);
+  getInfo: function (attr) {
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    if (!infoValue && showUnspecifiedText) {
-      return <span className="text-muted">Unspecified</span>;
-    }
-    return infoValue;
+    return this.state.info.get(attr) ||
+      <span className="text-muted">Unspecified</span>;
   },
 
   render: function () {
-    var marathonConfig = this.getInfo("marathon_config");
-    var zookeeperConfig = this.getInfo("zookeeper_config");
+    var marathonConfig = this.state.info.get("marathon_config");
+    var zookeeperConfig = this.state.info.get("zookeeper_config");
 
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
@@ -64,15 +61,15 @@ var AboutModalComponent = React.createClass({
           <dl className="dl-horizontal dl-horizontal-lg">
             <dt title="framework_id">Framework Id</dt>
             <dd>
-              {this.getInfo("framework_id", true)}
+              {this.getInfo("framework_id")}
             </dd>
             <dt title="leader">Leader</dt>
             <dd>
-              {this.getInfo("leader", true)}
+              {this.getInfo("leader")}
             </dd>
             <dt title="name">Name</dt>
             <dd>
-              {this.getInfo("name", true)}
+              {this.getInfo("name")}
             </dd>
           </dl>
           <h5 title="marathon_config">Marathon Config</h5>
