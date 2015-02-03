@@ -63,6 +63,18 @@ var AppHealthComponent = React.createClass({
       };
     });
 
+    // set health-bar-inner class for bars in the stack which have a
+    // non-zero-width left neightbar
+    var allZeroWidthBefore = true;
+    for (var i = 0; i < normalizedHealthData.length; i++) {
+      if (normalizedHealthData[i].width !== "0%") {
+        if (!allZeroWidthBefore) {
+          normalizedHealthData[i].className += " health-bar-inner";
+        }
+        allZeroWidthBefore = false;
+      }
+    }
+
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
