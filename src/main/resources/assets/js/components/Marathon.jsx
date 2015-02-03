@@ -7,7 +7,7 @@ var AppCollection = require("../models/AppCollection");
 var DeploymentCollection = require("../models/DeploymentCollection");
 var AppListComponent = require("../components/AppListComponent");
 var AboutModalComponent = require("../components/modals/AboutModalComponent");
-var AppModalComponent = require("../components/AppModalComponent");
+var AppPageComponent = require("../components/AppPageComponent");
 var DeploymentsListComponent =
   require("../components/DeploymentsListComponent");
 var NewAppModalComponent = require("../components/NewAppModalComponent");
@@ -36,6 +36,7 @@ var Marathon = React.createClass({
       deploymentsFetchState: States.STATE_LOADING,
       fetchState: States.STATE_LOADING,
       modalClass: null,
+      pageClass: null,
       tasksFetchState: States.STATE_LOADING
     };
   },
@@ -72,7 +73,7 @@ var Marathon = React.createClass({
     }.bind(this));
 
     Mousetrap.bind("#", function () {
-      if (this.state.modalClass === AppModalComponent) {
+      if (this.state.pageClass === AppPageComponent) {
         this.destroyApp();
       }
     }.bind(this));
@@ -85,15 +86,10 @@ var Marathon = React.createClass({
   },
 
   componentDidUpdate: function (prevProps, prevState) {
-    if (prevState.modalClass !== this.state.modalClass) {
-      // No `modalClass` means the modal went from open to closed. Start
-      // polling for apps in that case.
-      // If `modalClass` is AppModalComponent start polling for tasks for that
-      // app.
-      // Otherwise stop polling since the modal went from closed to open.
-      if (this.state.modalClass === null) {
+    if (prevState.pageClass !== this.state.pageClass) {
+      if (this.state.pageClass === null) {
         this.setPollResource(this.fetchApps);
-      } else if (this.state.modalClass === AppModalComponent) {
+      } else if (this.state.pageClass === AppPageComponent) {
         this.setPollResource(this.fetchTasks);
       } else {
         this.stopPolling();
@@ -165,8 +161,14 @@ var Marathon = React.createClass({
 
   handleModalDestroy: function () {
     this.setState({
+      modalClass: null
+    });
+  },
+
+  handlePageDestroy: function () {
+    this.setState({
       activeApp: null,
-      modalClass: null,
+      pageClass: null,
       tasksFetchState: States.STATE_LOADING,
       appVersionsFetchState: States.STATE_LOADING
     });
@@ -352,14 +354,10 @@ var Marathon = React.createClass({
     });
   },
 
-  showAppModal: function (app) {
-    if (this.state.modalClass !== null) {
-      return;
-    }
-
+  showAppPage: function (app) {
     this.setState({
       activeApp: app,
-      modalClass: AppModalComponent
+      pageClass: AppPageComponent
     });
   },
 
@@ -375,7 +373,9 @@ var Marathon = React.createClass({
 
   onTabClick: function (id) {
     this.setState({
-      activeTabId: id
+      activeTabId: id,
+      pageClass: null,
+      activeApp: null
     });
 
     if (id === tabs[0].id) {
@@ -385,46 +385,105 @@ var Marathon = React.createClass({
     }
   },
 
+  getAppPage: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    return (
+      <AppPageComponent
+        activeTask={this.state.activeTask}
+        appVersionsFetchState={this.state.appVersionsFetchState}
+        destroyApp={this.destroyApp}
+        fetchTasks={this.fetchTasks}
+        fetchAppVersions={this.fetchAppVersions}
+        model={this.state.activeApp}
+        onDestroy={this.handlePageDestroy}
+        onShowTaskDetails={this.handleShowTaskDetails}
+        onShowTaskList={this.handleShowTaskList}
+        onTasksKilled={this.handleTasksKilled}
+        rollBackApp={this.rollbackToAppVersion}
+        scaleApp={this.scaleApp}
+        suspendApp={this.suspendApp}
+        tasksFetchState={this.state.tasksFetchState}
+        ref="page" />
+    );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+  },
+
+  getTabPanes: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    return (
+      <TogglableTabsComponent activeTabId={this.state.activeTabId} className="toggleabletabs-container">
+        <TabPaneComponent id="apps">
+          <button type="button" className="btn btn-success navbar-btn"
+              onClick={this.showNewAppModal} >
+            + New App
+          </button>
+          <AppListComponent
+            collection={this.state.collection}
+            onSelectApp={this.showAppPage}
+            fetchState={this.state.fetchState}
+            ref="appList" />
+        </TabPaneComponent>
+        <TabPaneComponent
+            id="deployments"
+            onActivate={this.props.fetchAppVersions} >
+          <DeploymentsListComponent
+            deployments={this.state.deployments}
+            destroyDeployment={this.destroyDeployment}
+            fetchState={this.state.deploymentsFetchState} />
+        </TabPaneComponent>
+      </TogglableTabsComponent>
+    );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+  },
+
+  getNewAppModal: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    return (
+      <NewAppModalComponent
+        model={this.state.activeApp}
+        onDestroy={this.handleModalDestroy}
+        onCreate={this.handleAppCreate}
+        ref="modal" />
+    );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+  },
+
+  getAboutModal: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    return (
+      <AboutModalComponent
+        onDestroy={this.handleModalDestroy}
+        ref="modal" />
+    );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+  },
+
   render: function () {
     var modal;
+    var page;
+
+    if (this.state.pageClass === AppPageComponent) {
+      page = this.getAppPage();
+    } else {
+      page = this.getTabPanes();
+    }
+
+    if (this.state.modalClass === NewAppModalComponent) {
+      modal = this.getNewAppModal();
+    } else if (this.state.modalClass === AboutModalComponent) {
+      modal = this.getAboutModal();
+    }
 
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    if (this.state.modalClass === AppModalComponent) {
-      modal = (
-        <AppModalComponent
-          activeTask={this.state.activeTask}
-          appVersionsFetchState={this.state.appVersionsFetchState}
-          destroyApp={this.destroyApp}
-          fetchTasks={this.fetchTasks}
-          fetchAppVersions={this.fetchAppVersions}
-          model={this.state.activeApp}
-          onDestroy={this.handleModalDestroy}
-          onShowTaskDetails={this.handleShowTaskDetails}
-          onShowTaskList={this.handleShowTaskList}
-          onTasksKilled={this.handleTasksKilled}
-          rollBackApp={this.rollbackToAppVersion}
-          scaleApp={this.scaleApp}
-          suspendApp={this.suspendApp}
-          tasksFetchState={this.state.tasksFetchState}
-          ref="modal" />
-      );
-    } else if (this.state.modalClass === NewAppModalComponent) {
-      modal = (
-        <NewAppModalComponent
-          model={this.state.activeApp}
-          onDestroy={this.handleModalDestroy}
-          onCreate={this.handleAppCreate}
-          ref="modal" />
-      );
-    } else if (this.state.modalClass === AboutModalComponent) {
-      modal = (
-        <AboutModalComponent
-          onDestroy={this.handleModalDestroy}
-          ref="modal" />
-      );
-    }
-
     return (
       <div>
         <nav className="navbar navbar-inverse navbar-static-top" role="navigation">
@@ -453,32 +512,12 @@ var Marathon = React.createClass({
             </ul>
           </div>
         </nav>
-        <div className="container-fluid">
-          <TogglableTabsComponent activeTabId={this.state.activeTabId} >
-            <TabPaneComponent id="apps">
-              <button type="button" className="btn btn-success navbar-btn"
-                  onClick={this.showNewAppModal} >
-                + New App
-              </button>
-              <AppListComponent
-                collection={this.state.collection}
-                onSelectApp={this.showAppModal}
-                fetchState={this.state.fetchState}
-                ref="appList" />
-            </TabPaneComponent>
-            <TabPaneComponent
-                id="deployments"
-                onActivate={this.props.fetchAppVersions} >
-              <DeploymentsListComponent
-                deployments={this.state.deployments}
-                destroyDeployment={this.destroyDeployment}
-                fetchState={this.state.deploymentsFetchState} />
-            </TabPaneComponent>
-          </TogglableTabsComponent>
-        </div>
+        {page}
         {modal}
       </div>
     );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   }
 });
 
