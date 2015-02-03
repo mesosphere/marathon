@@ -52,13 +52,15 @@ git submodule update
   ```
 (To commit this, `cd` back to the root directory and `git add marathon`. This will update the submodule pointer to that commit.)
 
-* Call the make target appropriate to your platform.
+* Call the make target appropriate to your platform. Find additional targets in the Makefile.
 
 ```bash
 make all                                ## Build all packages
-make deb                                ## For Debian/Ubuntu
-make rpm                                ## For EL6 packages
-make centos7                            ## For EL7 packages
+make deb                                ## For all Debian/Ubuntu DEB packages
+make rpm                                ## For all EL/Fedora RPM packages
+make el                                 ## For all Enterprise Linux (EL) packages
+make fedora                             ## For all Fedora (FC) packages
+make debian                             ## For all Debian packages
+make ubuntu                             ## For all Ubuntu packages
 make osx                                ## For Apple Macintosh
 ```
-

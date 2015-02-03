@@ -32,48 +32,130 @@ FPM_OPTS_RPM := -t rpm \
 	-d coreutils -d 'java >= 1.6'
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
-.PHONY: all
-all: deb rpm centos7
-
 .PHONY: help
 help:
 	@echo "Please choose one of the following targets:"
-	@echo "  all, deb, rpm, fedora, osx, or centos7"
+	@echo "  all, deb, rpm, fedora, osx, or el"
 	@echo "For release builds:"
 	@echo "  make PKG_REL=1.0 deb"
 	@echo "To override package release version:"
 	@echo "  make PKG_REL=0.2.20141228050159 rpm"
 	@exit 0
 
-.PHONY: rpm
-rpm: toor/rpm/etc/init/marathon.conf
-rpm: toor/rpm/$(PREFIX)/bin/marathon
-	fpm -C toor/rpm --config-files etc/ --iteration $(PKG_REL) \
-		$(FPM_OPTS_RPM) $(FPM_OPTS) .
-
-.PHONY: fedora
-fedora: toor/fedora/usr/lib/systemd/system/marathon.service
-fedora: toor/fedora/$(PREFIX)/bin/marathon
-	fpm -C toor/fedora --config-files usr/lib/systemd/system/marathon.service \
-		--iteration $(PKG_REL) \
-		$(FPM_OPTS_RPM) $(FPM_OPTS) .
-
-.PHONY: centos7
-centos7: toor/centos7/usr/lib/systemd/system/marathon.service
-centos7: toor/centos7/$(PREFIX)/bin/marathon
-centos7: marathon.centos7.postinst
-	fpm -C toor/centos7 --config-files usr/lib/systemd/system/marathon.service \
-		--iteration $(PKG_REL).centos7 \
-		--after-install marathon.centos7.postinst \
-		$(FPM_OPTS_RPM) $(FPM_OPTS) .
+.PHONY: all
+all: deb rpm
 
 .PHONY: deb
-deb: toor/deb/etc/init/marathon.conf
-deb: toor/deb/etc/init.d/marathon
-deb: toor/deb/$(PREFIX)/bin/marathon
-deb: marathon.postinst
-deb: marathon.postrm
-	fpm -C toor/deb --config-files etc/ --iteration $(PKG_REL) \
+deb: ubuntu debian
+
+.PHONY: rpm
+rpm: el fedora
+
+.PHONY: el
+el: el6 el7
+
+.PHONY: fedora
+fedora: fedora20 fedora21
+
+.PHONY: ubuntu
+ubuntu: ubuntu-precise ubuntu-quantal ubuntu-raring ubuntu-saucy ubuntu-trusty ubuntu-utopic
+
+.PHONY: debian
+debian: debian-wheezy
+
+.PHONY: debian-wheezy
+debian-wheezy: debian-wheezy-77
+
+.PHONY: fedora20
+fedora20: toor/fedora20/usr/lib/systemd/system/marathon.service
+fedora20: toor/fedora20/$(PREFIX)/bin/marathon
+	fpm -C toor/fedora20 --config-files usr/lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).fc20 \
+		$(FPM_OPTS_RPM) $(FPM_OPTS) .
+
+.PHONY: fedora21
+fedora21: toor/fedora21/usr/lib/systemd/system/marathon.service
+fedora21: toor/fedora21/$(PREFIX)/bin/marathon
+	fpm -C toor/fedora21 --config-files usr/lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).fc21 \
+		$(FPM_OPTS_RPM) $(FPM_OPTS) .
+
+.PHONY: el6
+el6: toor/el6/etc/init/marathon.conf
+el6: toor/el6/$(PREFIX)/bin/marathon
+	fpm -C toor/el6 --config-files etc/ --iteration $(PKG_REL).el6 \
+		$(FPM_OPTS_RPM) $(FPM_OPTS) .
+
+.PHONY: el7
+el7: toor/el7/usr/lib/systemd/system/marathon.service
+el7: toor/el7/$(PREFIX)/bin/marathon
+el7: marathon.el7.postinst
+	fpm -C toor/el7 --config-files usr/lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).el7 \
+		--after-install marathon.el7.postinst \
+		$(FPM_OPTS_RPM) $(FPM_OPTS) .
+
+.PHONY: ubuntu-precise
+ubuntu-precise: toor/ubuntu-precise/etc/init/marathon.conf
+ubuntu-precise: toor/ubuntu-precise/etc/init.d/marathon
+ubuntu-precise: toor/ubuntu-precise/$(PREFIX)/bin/marathon
+ubuntu-precise: marathon.postinst
+ubuntu-precise: marathon.postrm
+	fpm -C toor/ubuntu-precise --config-files etc/ --iteration $(PKG_REL).ubuntu1204 \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
+.PHONY: ubuntu-quantal
+ubuntu-quantal: toor/ubuntu-quantal/etc/init/marathon.conf
+ubuntu-quantal: toor/ubuntu-quantal/etc/init.d/marathon
+ubuntu-quantal: toor/ubuntu-quantal/$(PREFIX)/bin/marathon
+ubuntu-quantal: marathon.postinst
+ubuntu-quantal: marathon.postrm
+	fpm -C toor/ubuntu-quantal --config-files etc/ --iteration $(PKG_REL).ubuntu1210 \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
+.PHONY: ubuntu-raring
+ubuntu-raring: toor/ubuntu-raring/etc/init/marathon.conf
+ubuntu-raring: toor/ubuntu-raring/etc/init.d/marathon
+ubuntu-raring: toor/ubuntu-raring/$(PREFIX)/bin/marathon
+ubuntu-raring: marathon.postinst
+ubuntu-raring: marathon.postrm
+	fpm -C toor/ubuntu-raring --config-files etc/ --iteration $(PKG_REL).ubuntu1304 \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
+.PHONY: ubuntu-saucy
+ubuntu-saucy: toor/ubuntu-saucy/etc/init/marathon.conf
+ubuntu-saucy: toor/ubuntu-saucy/etc/init.d/marathon
+ubuntu-saucy: toor/ubuntu-saucy/$(PREFIX)/bin/marathon
+ubuntu-saucy: marathon.postinst
+ubuntu-saucy: marathon.postrm
+	fpm -C toor/ubuntu-saucy --config-files etc/ --iteration $(PKG_REL).ubuntu1310 \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
+.PHONY: ubuntu-trusty
+ubuntu-trusty: toor/ubuntu-trusty/etc/init/marathon.conf
+ubuntu-trusty: toor/ubuntu-trusty/etc/init.d/marathon
+ubuntu-trusty: toor/ubuntu-trusty/$(PREFIX)/bin/marathon
+ubuntu-trusty: marathon.postinst
+ubuntu-trusty: marathon.postrm
+	fpm -C toor/ubuntu-trusty --config-files etc/ --iteration $(PKG_REL).ubuntu1404 \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
+.PHONY: ubuntu-utopic
+ubuntu-utopic: toor/ubuntu-utopic/etc/init/marathon.conf
+ubuntu-utopic: toor/ubuntu-utopic/etc/init.d/marathon
+ubuntu-utopic: toor/ubuntu-utopic/$(PREFIX)/bin/marathon
+ubuntu-utopic: marathon.postinst
+ubuntu-utopic: marathon.postrm
+	fpm -C toor/ubuntu-utopic --config-files etc/ --iteration $(PKG_REL).ubuntu1410 \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
+.PHONY: debian-wheezy-77
+debian-wheezy-77: toor/debian-wheezy-77/etc/init/marathon.conf
+debian-wheezy-77: toor/debian-wheezy-77/etc/init.d/marathon
+debian-wheezy-77: toor/debian-wheezy-77/$(PREFIX)/bin/marathon
+debian-wheezy-77: marathon.postinst
+debian-wheezy-77: marathon.postrm
+	fpm -C toor/debian-wheezy-77 --config-files etc/ --iteration $(PKG_REL).debian77 \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: osx
