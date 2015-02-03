@@ -231,7 +231,7 @@ trait DeploymentFormats {
 
 trait EventFormats {
   import Formats._
-
+  implicit lazy val TaskOfferDeclinedEventWrites: Writes[TaskOfferDeclinedEvent] = Json.writes[TaskOfferDeclinedEvent]
   implicit lazy val AppTerminatedEventWrites: Writes[AppTerminatedEvent] = Json.writes[AppTerminatedEvent]
   implicit lazy val ApiPostEventWrites: Writes[ApiPostEvent] = Json.writes[ApiPostEvent]
   implicit lazy val SubscribeWrites: Writes[Subscribe] = Json.writes[Subscribe]

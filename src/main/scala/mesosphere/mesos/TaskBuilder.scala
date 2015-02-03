@@ -31,7 +31,7 @@ class TaskBuilder(app: AppDefinition,
 
   val log = Logger.getLogger(getClass.getName)
 
-  def buildIfMatches(offer: Offer): Option[(TaskInfo, Seq[Long])] = {
+  def buildIfMatches(offer: Offer): TaskBuilder.BuildResult = {
     var cpuRole = ""
     var memRole = ""
     var diskRole = ""
@@ -44,11 +44,10 @@ class TaskBuilder(app: AppDefinition,
         diskRole = disk
         portsResource = ranges
       case _ =>
-        log.info(
-          s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, " +
-            s"disk=${app.disk}, ports=${app.hostPorts}) : " + offer
-        )
-        return None
+        val reason = s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, " +
+          s"disk=${app.disk}, ports=${app.hostPorts}) : " + offer
+        log.info(reason)
+        return TaskBuilder.BuildDeclined(reason)
     }
 
     val executor: Executor = if (app.executor == "") {
@@ -143,7 +142,7 @@ class TaskBuilder(app: AppDefinition,
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
 
-    Some(builder.build -> ports)
+    TaskBuilder.BuildSuccess(builder.build, ports)
   }
 
   private def offerMatches(offer: Offer): Option[(String, String, String, RangesResource)] = {
@@ -202,6 +201,10 @@ class TaskBuilder(app: AppDefinition,
 }
 
 object TaskBuilder {
+
+  sealed trait BuildResult
+  case class BuildDeclined(reason: String) extends BuildResult
+  case class BuildSuccess(info: TaskInfo, ports: Seq[Long]) extends BuildResult
 
   def commandInfo(app: AppDefinition, taskId: Option[TaskID], host: Option[String], ports: Seq[Long]): CommandInfo = {
     val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
