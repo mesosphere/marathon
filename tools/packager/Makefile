@@ -64,7 +64,7 @@ ubuntu: ubuntu-precise ubuntu-quantal ubuntu-raring ubuntu-saucy ubuntu-trusty u
 debian: debian-wheezy
 
 .PHONY: debian-wheezy
-debian-wheezy: debian-wheezy-75 debian-wheezy-77
+debian-wheezy: debian-wheezy-77
 
 .PHONY: fedora20
 fedora20: toor/fedora20/usr/lib/systemd/system/marathon.service
@@ -147,15 +147,6 @@ ubuntu-utopic: toor/ubuntu-utopic/$(PREFIX)/bin/marathon
 ubuntu-utopic: marathon.postinst
 ubuntu-utopic: marathon.postrm
 	fpm -C toor/ubuntu-utopic --config-files etc/ --iteration $(PKG_REL).ubuntu1410 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
-
-.PHONY: debian-wheezy-75
-debian-wheezy-75: toor/debian-wheezy-75/etc/init/marathon.conf
-debian-wheezy-75: toor/debian-wheezy-75/etc/init.d/marathon
-debian-wheezy-75: toor/debian-wheezy-75/$(PREFIX)/bin/marathon
-debian-wheezy-75: marathon.postinst
-debian-wheezy-75: marathon.postrm
-	fpm -C toor/debian-wheezy-75 --config-files etc/ --iteration $(PKG_REL).debian75 \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: debian-wheezy-77
