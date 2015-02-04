@@ -121,24 +121,6 @@ object MarathonBuild extends Build {
       .setPreference(SpacesWithinPatternBinders, true)
       .setPreference(FormatXml, true)
     )
-
-  //////////////////////////////////////////////////////////////////////////////
-  // BUILD TASKS
-  //////////////////////////////////////////////////////////////////////////////
-
-  sys.env.get("TEAMCITY_VERSION") match {
-    case None => // no-op
-    case Some(teamcityVersion) =>
-      // add some info into the teamcity build context so that they can be used
-      // by later steps
-      reportParameter("SCALA_VERSION", projectScalaVersion)
-      reportParameter("PROJECT_VERSION", projectVersion)
-  }
-
-  def reportParameter(key: String, value: String): Unit = {
-    println(s"##teamcity[setParameter name='env.SBT_$key' value='$value']")
-    println(s"##teamcity[setParameter name='system.sbt.$key' value='$value']")
-  }
 }
 
 object Dependencies {
