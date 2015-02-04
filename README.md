@@ -139,6 +139,7 @@ If you want to inspect the contents of the Docker:
 * [Guidewire](http://www.guidewire.com/)
 * [Groupon](http://www.groupon.com/)
 * [iQIYI](http://www.iqiyi.com/)
+* [Measurence](http://www.measurence.com/)
 * [OpenTable](http://www.opentable.com/)
 * [PayPal](https://www.paypal.com)
 * [Qubit](http://www.qubitproducts.com/)
