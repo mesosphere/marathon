@@ -298,22 +298,51 @@ class GroupDeployIntegrationTest
     When("The group gets updated, where frontend2 is not healthy")
     val (groupV2, dbV2, serviceV2, frontendV2) = create("v2")
     frontendV2.state = false
+    dbV2.state = false
+    serviceV2.state = false
+
     val upgrade = marathon.updateGroup(PathId.empty, groupV2)
-    //it is the last in the dependency chain
-    waitForHealthCheck(frontendV2)
+    waitForHealthCheck(dbV2)
 
     Then("The correct order is maintained")
-    ping should have size 6
+    ping should have size 4
     ping(key(dbV1)) should be < ping(key(serviceV1))
     ping(key(serviceV1)) should be < ping(key(frontendV1))
-    ping(key(dbV2)) should be < ping(key(serviceV2))
-    ping(key(serviceV2)) should be < ping(key(frontendV2))
-    validFor("all v1 apps are available as well as db v2 and service v2", 15.seconds) {
+    validFor("all v1 apps are available as well as db v2", 15.seconds) {
       dbV1.pingSince(2.seconds) &&
         serviceV1.pingSince(2.seconds) &&
         frontendV1.pingSince(2.seconds) &&
+        dbV2.pingSince(2.seconds)
+    }
+
+    When("The v2 db becomes healthy")
+    dbV2.state = true
+
+    waitForHealthCheck(serviceV2)
+    Then("The correct order is maintained")
+    ping should have size 5
+    ping(key(serviceV1)) should be < ping(key(frontendV1))
+    ping(key(dbV2)) should be < ping(key(serviceV2))
+    validFor("service and frontend v1 are available as well as db and service v2", 15.seconds) {
+      serviceV1.pingSince(2.seconds) &&
+        frontendV1.pingSince(2.seconds) &&
         dbV2.pingSince(2.seconds) &&
         serviceV2.pingSince(2.seconds)
+    }
+
+    When("The v2 service becomes healthy")
+    serviceV2.state = true
+
+    waitForHealthCheck(frontendV2)
+    Then("The correct order is maintained")
+    ping should have size 6
+    ping(key(dbV2)) should be < ping(key(serviceV2))
+    ping(key(serviceV2)) should be < ping(key(frontendV2))
+    validFor("frontend v1 is available as well as all v2", 15.seconds) {
+      frontendV1.pingSince(2.seconds) &&
+        dbV2.pingSince(2.seconds) &&
+        serviceV2.pingSince(2.seconds) &&
+        frontendV2.pingSince(2.seconds)
     }
 
     When("The v2 frontend becomes healthy")
