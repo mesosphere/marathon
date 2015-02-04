@@ -5,7 +5,6 @@ before_script:
   - npm install -g npm@2.0.2
   - npm cache clear
   - npm install -g broccoli-cli
-  - pushd src/main/resources/assets && npm install && npm run dist && popd
 jdk:
   - openjdk6
 scala:
@@ -17,7 +16,7 @@ env:
     # IAM User: MarathonRelease
     - secure: Ujj0GCEtGTs5jJneR41XFKgI9i9FXzkka6EsmI7BPOcJUfdp7NhGtxPsmMdheQZA725HQf5ES8ve6CzKuJbCdJ4IJx6HKJp1xgLDdGshcYW8kUha+sYeh9/vpagaZoNYJ9ArpdEHP7yJbKmga79pyoPAp3NbkY5QG8onaJCphZw=
     - secure: MKUdKA6AbtETQvYkebXWbA+1zsQqG81d9bNuBlOc1vOt+whMAjEGdgZ/aqokXWJzNMFlaBdSeDfhS48+ibYUh2mW2N7XRwwTotVUcEAXdkoYYlfxfkTeHO2anadQVr/VYvLhDGSG+UCyEgTea1BmsqR2jutw/IIn2zS+mKALKt8=
-script: sbt assembly
+script: pushd src/main/resources/assets && npm install && npm run dist && popd && sbt assembly
 after_success:
   # Pin to Faraday 0.8.9 due to:
   # https://github.com/travis-ci/travis-artifacts/issues/23
