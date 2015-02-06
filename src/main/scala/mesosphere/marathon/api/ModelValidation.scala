@@ -3,6 +3,7 @@ package mesosphere.marathon.api
 import java.lang.{ Double => JDouble }
 import java.net.{ HttpURLConnection, URL }
 import javax.validation.ConstraintViolation
+import mesosphere.marathon.MarathonSchedulerService
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
 
@@ -147,7 +148,7 @@ trait ModelValidation extends BeanValidation {
     parent: PathId = PathId.empty): Iterable[ConstraintViolation[AppDefinition]] =
     apps.zipWithIndex.flatMap {
       case (app, pos) =>
-        checkApp(app, parent, s"$path[$pos].")
+        checkAppConstraints(app, parent, s"$path[$pos].")
     }
 
   def checkUpdate(
@@ -183,7 +184,8 @@ trait ModelValidation extends BeanValidation {
     )
   }
 
-  def checkApp(app: AppDefinition, parent: PathId, path: String = ""): Iterable[ConstraintViolation[AppDefinition]] =
+  def checkAppConstraints(app: AppDefinition, parent: PathId,
+                          path: String = ""): Iterable[ConstraintViolation[AppDefinition]] =
     validate(app,
       idErrors(app, parent, app.id, path + "id"),
       checkPath(app, parent, app.id, path + "id"),
@@ -255,4 +257,44 @@ trait ModelValidation extends BeanValidation {
       else if (upgradeStrategy.maximumOverCapacity > 1) Some("is greater than 1")
       else None
     }.map { violation(t, upgradeStrategy, path + ".maximumOverCapacity", _) })
+
+  /**
+    * Returns a non-empty list of validation messages if the given app definition
+    * will conflict with existing apps.
+    */
+  def checkAppConflicts(app: AppDefinition, baseId: PathId, service: MarathonSchedulerService): Seq[String] = {
+    val validations = List.newBuilder[String]
+    for { servicePorts <- app.containerServicePorts() } {
+      validations ++= checkServicePortConflicts(baseId, servicePorts, service)
+    }
+
+    validations.result()
+  }
+
+  /**
+    * Returns a non-empty list of validations messages if the given app definition has service ports
+    * that will conflict with service ports in other applications.
+    *
+    * Does not compare the app definition's service ports with the same deployed app's service ports, as app updates
+    * may simply restate the existing service ports.
+    */
+  private def checkServicePortConflicts(baseId: PathId, appServicePorts: Seq[Int],
+                                service: MarathonSchedulerService): Seq[String] = {
+
+    val apps = service.listApps().filterNot(_.id == baseId)
+    val appIdToPortMappings = apps.flatMap(a => a.portMappings().map(pm => a.id -> pm))
+
+    // Create a list of app ids to non-zero (random assignment) service ports
+    val appToServicePorts = appIdToPortMappings.map{
+      case (id, mappings) =>
+        id -> mappings.map(_.servicePort).filterNot(_ == 0)
+    }
+
+    for {
+      newPort <- appServicePorts
+      (id, servicePorts) <- appToServicePorts
+      if servicePorts contains newPort
+    } yield s"Requested service port $newPort conflicts with a service port in app $id"
+  }
+
 }
