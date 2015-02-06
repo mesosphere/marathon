@@ -25,7 +25,7 @@ module.exports = React.createClass({
       var begin = this.props.currentPage * this.props.itemsPerPage;
       var end = begin + this.props.itemsPerPage;
       var pageNodes = React.Children.map(children, function (child, i) {
-        if (child != null && i >= begin && i < end) {
+        if (child != null && i > begin && i <= end) {
           return React.addons.cloneWithProps(child, {key: i});
         }
       });
