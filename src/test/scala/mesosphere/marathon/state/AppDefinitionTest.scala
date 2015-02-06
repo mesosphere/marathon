@@ -125,7 +125,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
     def shouldViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = checkApp(app, PathId.empty)
+      val violations = checkAppConstraints(app, PathId.empty)
       assert(
         violations.exists { v =>
           v.getPropertyPath.toString == path && v.getMessageTemplate.toString == template
@@ -135,7 +135,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     }
 
     def shouldNotViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = checkApp(app, PathId.empty)
+      val violations = checkAppConstraints(app, PathId.empty)
       assert(
         !violations.exists { v =>
           v.getPropertyPath.toString == path && v.getMessageTemplate == template
