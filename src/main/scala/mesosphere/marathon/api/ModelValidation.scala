@@ -263,12 +263,9 @@ trait ModelValidation extends BeanValidation {
     * will conflict with existing apps.
     */
   def checkAppConflicts(app: AppDefinition, baseId: PathId, service: MarathonSchedulerService): Seq[String] = {
-    val validations = List.newBuilder[String]
-    for { servicePorts <- app.containerServicePorts() } {
-      validations ++= checkServicePortConflicts(baseId, servicePorts, service)
+    app.containerServicePorts().toSeq.flatMap { servicePorts =>
+      checkServicePortConflicts(baseId, servicePorts, service)
     }
-
-    validations.result()
   }
 
   /**
@@ -278,23 +275,16 @@ trait ModelValidation extends BeanValidation {
     * Does not compare the app definition's service ports with the same deployed app's service ports, as app updates
     * may simply restate the existing service ports.
     */
-  private def checkServicePortConflicts(baseId: PathId, appServicePorts: Seq[Int],
-                                service: MarathonSchedulerService): Seq[String] = {
-
-    val apps = service.listApps().filterNot(_.id == baseId)
-    val appIdToPortMappings = apps.flatMap(a => a.portMappings().map(pm => a.id -> pm))
-
-    // Create a list of app ids to non-zero (random assignment) service ports
-    val appToServicePorts = appIdToPortMappings.map{
-      case (id, mappings) =>
-        id -> mappings.map(_.servicePort).filterNot(_ == 0)
-    }
+  private def checkServicePortConflicts(baseId: PathId, requestedServicePorts: Seq[Int],
+                                        service: MarathonSchedulerService): Seq[String] = {
 
     for {
-      newPort <- appServicePorts
-      (id, servicePorts) <- appToServicePorts
-      if servicePorts contains newPort
-    } yield s"Requested service port $newPort conflicts with a service port in app $id"
+      existingApp <- service.listApps().toList
+      if existingApp.id != baseId // in case of an update, do not compare the app against itself
+      existingServicePort <- existingApp.portMappings().toList.flatten.map(_.servicePort)
+      if existingServicePort != 0 // ignore zero ports, which will be chosen at random
+      if requestedServicePorts contains existingServicePort
+    } yield s"Requested service port $existingServicePort conflicts with a service port in app ${existingApp.id}"
   }
 
 }
