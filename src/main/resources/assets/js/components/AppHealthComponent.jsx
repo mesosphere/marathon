@@ -2,6 +2,10 @@
 
 var React = require("react/addons");
 
+function roundWorkaround(x) {
+  return Math.floor(x * 1000) / 1000;
+}
+
 var AppHealthComponent = React.createClass({
   displayName: "AppHealthComponent",
 
@@ -45,7 +49,7 @@ var AppHealthComponent = React.createClass({
     return healthData;
   },
 
-  render: function () {
+  getHealthBar: function () {
     var healthData = this.getHealthData();
 
     // normalize quantities to add up to 100%. Cut off digits at
@@ -54,34 +58,39 @@ var AppHealthComponent = React.createClass({
       return a + x.quantity;
     }, 0);
 
-    var roundWorkaround = function (x) { return Math.floor(x * 1000) / 1000; };
-
-    var normalizedHealthData = healthData.map(function (d) {
-      return {
-        width: roundWorkaround(d.quantity * 100 / dataSum) + "%",
-        className: "progress-bar health-bar-" + d.name
-      };
-    });
-
-    // set health-bar-inner class for bars in the stack which have a
-    // non-zero-width left neightbar
     var allZeroWidthBefore = true;
-    for (var i = 0; i < normalizedHealthData.length; i++) {
-      if (normalizedHealthData[i].width !== "0%") {
-        if (!allZeroWidthBefore) {
-          normalizedHealthData[i].className += " health-bar-inner";
-        }
+    return healthData.map(function (d, i) {
+      var width = roundWorkaround(d.quantity * 100 / dataSum);
+      var classSet = {
+        // set health-bar-inner class for bars in the stack which have a
+        // non-zero-width left neightbar
+        "health-bar-inner": width !== 0 && !allZeroWidthBefore,
+        "progress-bar": true
+      };
+      // add health bar name
+      classSet["health-bar-" + d.name] = true;
+
+      if (width !== 0) {
         allZeroWidthBefore = false;
       }
-    }
 
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <div
+          className={React.addons.classSet(classSet)}
+          style={{width: width + "%"}}
+          key={i} />
+      );
+    });
+  },
+
+  render: function () {
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <div className="progress health-bar">
-        {normalizedHealthData.map(function (d, i) {
-          return <div className={d.className} style={{width: d.width}} key={i} />;
-        })}
+        {this.getHealthBar()}
       </div>
     );
   }
