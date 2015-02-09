@@ -9,7 +9,7 @@ import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
 import org.apache.mesos.{ Protos => mesos }
@@ -516,8 +516,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       .build()
 
     val appGroup = Group(PathId("/foo"), Set(app))
-
-    val enrichedApp = app.withTaskCountsAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), Seq(DeploymentPlan(Group.empty, appGroup)))
+    val enrichedApp = app.withTaskCountsAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
 
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -550,7 +549,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
 
     val appGroup = Group(PathId("/foo"), Set(app))
 
-    val enrichedApp = app.withTasksAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), Seq(DeploymentPlan(Group.empty, appGroup)))
+    val enrichedApp = app.withTasksAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
 
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -589,7 +588,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       mesos.TaskState.TASK_FAILED
     )
 
-    val enrichedApp = app.withTasksAndDeploymentsAndFailures(Seq(EnrichedTask(app.id, task, Nil, Nil)), Seq(DeploymentPlan(Group.empty, appGroup)), Some(failure))
+    val enrichedApp = app.withTasksAndDeploymentsAndFailures(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)), Some(failure))
 
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule

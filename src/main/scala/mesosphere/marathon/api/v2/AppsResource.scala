@@ -12,7 +12,7 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.{ ModelValidation, RestResource }
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.health.{ HealthCheckManager, HealthCounts }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
@@ -52,8 +52,12 @@ class AppsResource @Inject() (
     val mapped = embed match {
       case EmbedTasks =>
         apps.map { app =>
-          val enrichedApp = app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
-          WithTasksAndDeploymentsWrites.writes(enrichedApp)
+          val enrichedApp = app.withTasksAndDeployments(
+            enrichedTasks(app),
+            healthCounts(app),
+            runningDeployments
+          )
+          WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
         }
 
       case EmbedTasksAndFailures =>
@@ -61,6 +65,7 @@ class AppsResource @Inject() (
           WithTasksAndDeploymentsAndFailuresWrites.writes(
             app.withTasksAndDeploymentsAndFailures(
               enrichedTasks(app),
+              healthCounts(app),
               runningDeployments,
               taskFailureRepository.current(app.id)
             )
@@ -69,7 +74,11 @@ class AppsResource @Inject() (
 
       case _ =>
         apps.map { app =>
-          val enrichedApp = app.withTaskCountsAndDeployments(enrichedTasks(app), runningDeployments)
+          val enrichedApp = app.withTaskCountsAndDeployments(
+            enrichedTasks(app),
+            healthCounts(app),
+            runningDeployments
+          )
           WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
         }
     }
@@ -104,6 +113,7 @@ class AppsResource @Inject() (
       val withTasks = apps.map { app =>
         val enrichedApp = app.withTasksAndDeploymentsAndFailures(
           enrichedTasks(app),
+          healthCounts(app),
           runningDeployments,
           taskFailureRepository.current(app.id)
         )
@@ -116,6 +126,7 @@ class AppsResource @Inject() (
       case Some(app) =>
         val mapped = app.withTasksAndDeploymentsAndFailures(
           enrichedTasks(app),
+          healthCounts(app),
           runningDeployments,
           taskFailureRepository.current(app.id)
         )
@@ -237,6 +248,8 @@ class AppsResource @Inject() (
       EnrichedTask(app.id, task, hcResults)
     }.to[Seq]
 
+  private def healthCounts(app: AppDefinition): HealthCounts = result(healthCheckManager.healthCounts(app.id))
+
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
@@ -267,6 +280,8 @@ object AppsResource {
     appJson ++ Json.obj(
       "tasksStaged" -> app.tasksStaged,
       "tasksRunning" -> app.tasksRunning,
+      "tasksHealthy" -> app.tasksHealthy,
+      "tasksUnhealthy" -> app.tasksUnhealthy,
       "deployments" -> app.deployments
     )
   }

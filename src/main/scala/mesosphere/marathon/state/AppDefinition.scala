@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.Protos
@@ -221,21 +221,24 @@ case class AppDefinition(
   }
 
   def withTaskCountsAndDeployments(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTaskCountsAndDeployments = {
-    new AppDefinition.WithTaskCountsAndDeployments(appTasks, runningDeployments, this)
+    new AppDefinition.WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, this)
   }
 
   def withTasksAndDeployments(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTasksAndDeployments =
-    new AppDefinition.WithTasksAndDeployments(appTasks, runningDeployments, this)
+    new AppDefinition.WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, this)
 
   def withTasksAndDeploymentsAndFailures(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     taskFailure: Option[TaskFailure]): AppDefinition.WithTasksAndDeploymentsAndTaskFailures =
-    new AppDefinition.WithTasksAndDeploymentsAndTaskFailures(appTasks, runningDeployments, taskFailure, this)
+    new AppDefinition.WithTasksAndDeploymentsAndTaskFailures(
+      appTasks, healthCounts,
+      runningDeployments, taskFailure, this
+    )
 
   def isOnlyScaleChange(to: AppDefinition): Boolean =
     !isUpgrade(to) && (instances != to.instances)
@@ -300,6 +303,7 @@ object AppDefinition {
 
   protected[marathon] class WithTaskCountsAndDeployments(
     appTasks: Seq[EnrichedTask],
+    healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
       extends AppDefinition(
@@ -329,6 +333,18 @@ object AppDefinition {
     }
 
     /**
+      * Snapshot of the number of healthy tasks for this app
+      */
+    @JsonProperty
+    val tasksHealthy: Int = healthCounts.healthy
+
+    /**
+      * Snapshot of the number of unhealthy tasks for this app
+      */
+    @JsonProperty
+    val tasksUnhealthy: Int = healthCounts.unhealthy
+
+    /**
       * Snapshot of the running deployments that affect this app
       */
     @JsonProperty
@@ -340,21 +356,21 @@ object AppDefinition {
   }
 
   protected[marathon] class WithTasksAndDeployments(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
-      extends WithTaskCountsAndDeployments(appTasks, runningDeployments, app) {
+      extends WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, app) {
 
     @JsonProperty
     def tasks: Seq[EnrichedTask] = appTasks
   }
 
   protected[marathon] class WithTasksAndDeploymentsAndTaskFailures(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     taskFailure: Option[TaskFailure],
     private val app: AppDefinition)
-      extends WithTasksAndDeployments(appTasks, runningDeployments, app) {
+      extends WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, app) {
 
     @JsonProperty
     def lastTaskFailure: Option[TaskFailure] = taskFailure
