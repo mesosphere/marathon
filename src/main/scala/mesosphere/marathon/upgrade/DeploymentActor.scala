@@ -83,10 +83,10 @@ class DeploymentActor(
       val futures = step.actions.map { action =>
         healthCheckManager.addAllFor(action.app) // ensure health check actors are in place before tasks are launched
         action match {
-          case StartApplication(app, scaleTo) => startApp(app, scaleTo)
-          case ScaleApplication(app, scaleTo) => scaleApp(app, scaleTo)
+          case StartApplication(app, scaleTo) => storeAndThen(app) { startApp(app, scaleTo) }
+          case ScaleApplication(app, scaleTo) => storeAndThen(app) { scaleApp(app, scaleTo) }
+          case RestartApplication(app)        => storeAndThen(app) { restartApp(app) }
           case StopApplication(app)           => stopApp(app)
-          case RestartApplication(app)        => restartApp(app)
           case ResolveArtifacts(app, urls)    => resolveArtifacts(app, urls)
         }
       }
@@ -113,12 +113,12 @@ class DeploymentActor(
         promise
       )
     )
-    storeAndThen(app, promise.future)
+    promise.future
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int): Future[Unit] = {
     val runningTasks = taskTracker.get(app.id)
-    val res = if (scaleTo == runningTasks.size) {
+    if (scaleTo == runningTasks.size) {
       Future.successful(())
     }
     else if (scaleTo > runningTasks.size) {
@@ -137,19 +137,17 @@ class DeploymentActor(
           promise
         )
       )
-      promise.future.map(_ => ())
+      promise.future
     }
     else {
       killTasks(app.id, runningTasks.toSeq.sortBy(_.getStartedAt).drop(scaleTo))
     }
-
-    storeAndThen(app, res)
   }
 
   def killTasks(appId: PathId, tasks: Seq[MarathonTask]): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(Props(classOf[TaskKillActor], driver, appId, taskTracker, eventBus, tasks.toSet, promise))
-    promise.future.map(_ => ())
+    promise.future
   }
 
   def stopApp(app: AppDefinition): Future[Unit] = {
@@ -161,7 +159,7 @@ class DeploymentActor(
   }
 
   def restartApp(app: AppDefinition): Future[Unit] = {
-    val res = if (app.instances == 0) {
+    if (app.instances == 0) {
       Future.successful(())
     }
     else {
@@ -175,11 +173,8 @@ class DeploymentActor(
             eventBus,
             app,
             promise)))
-
-      promise.future.map(_ => ())
+      promise.future
     }
-
-    storeAndThen(app, res)
   }
 
   def resolveArtifacts(app: AppDefinition, urls: Map[URL, String]): Future[Unit] = {
@@ -188,11 +183,9 @@ class DeploymentActor(
     promise.future.map(_ => ())
   }
 
-  def storeAndThen[A](app: AppDefinition, future: Future[A]): Future[A] = for {
-    _ <- appRepository.store(app)
-    x <- future
-  } yield x
-
+  def storeAndThen[A](app: AppDefinition)(cont: => Future[A]): Future[A] = {
+    appRepository.store(app) flatMap { _ => cont }
+  }
 }
 
 object DeploymentActor {
