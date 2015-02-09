@@ -5,6 +5,7 @@ import akka.testkit.{ TestActorRef, TestKit }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
@@ -14,7 +15,7 @@ import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.InMemoryState
 import org.mockito.Mockito.{ times, spy, verify, when }
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
+import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
@@ -24,7 +25,23 @@ class TaskStartActorTest
     with FunSuiteLike
     with Matchers
     with MockitoSugar
+    with BeforeAndAfter
     with BeforeAndAfterAll {
+
+  var driver: SchedulerDriver = _
+  var scheduler: SchedulerActions = _
+  var taskQueue: TaskQueue = _
+  var taskTracker: TaskTracker = _
+  var registry: MetricRegistry = _
+
+  before {
+    driver = mock[SchedulerDriver]
+    scheduler = mock[SchedulerActions]
+    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new MetricRegistry)
+    taskQueue = spy(new TaskQueue)
+    registry = new MetricRegistry
+    taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], registry))
+  }
 
   override protected def afterAll(): Unit = {
     super.afterAll()
@@ -32,11 +49,6 @@ class TaskStartActorTest
   }
 
   test("Start success") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
@@ -49,7 +61,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -65,11 +76,6 @@ class TaskStartActorTest
   }
 
   test("Start success with tasks in taskQueue") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
@@ -84,7 +90,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -100,11 +105,6 @@ class TaskStartActorTest
   }
 
   test("Start success with existing task") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
@@ -123,7 +123,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -139,11 +138,6 @@ class TaskStartActorTest
   }
 
   test("Start success with no instances to start") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
     val app = AppDefinition("/myApp".toPath, instances = 0)
 
@@ -156,7 +150,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -167,13 +160,12 @@ class TaskStartActorTest
   }
 
   test("Start with health checks") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("/myApp".toPath, instances = 5)
+    val app = AppDefinition(
+      "/myApp".toPath,
+      instances = 5,
+      healthChecks = Set(HealthCheck())
+    )
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -184,7 +176,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      true,
       promise))
 
     watch(ref)
@@ -200,13 +191,12 @@ class TaskStartActorTest
   }
 
   test("Start with health checks with no instances to start") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("/myApp".toPath, instances = 0)
+    val app = AppDefinition(
+      "/myApp".toPath,
+      instances = 0,
+      healthChecks = Set(HealthCheck())
+    )
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -217,7 +207,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      true,
       promise))
 
     watch(ref)
@@ -228,11 +217,6 @@ class TaskStartActorTest
   }
 
   test("Cancelled") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
@@ -245,7 +229,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -260,11 +243,6 @@ class TaskStartActorTest
   }
 
   test("Task fails to start") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = spy(new TaskQueue)
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 1)
 
@@ -277,7 +255,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -301,11 +278,6 @@ class TaskStartActorTest
   }
 
   test("Start success with dying existing task, reschedules, but finishes early") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], registry))
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
@@ -325,7 +297,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)

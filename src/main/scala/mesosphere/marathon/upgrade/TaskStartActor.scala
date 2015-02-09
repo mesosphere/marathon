@@ -17,7 +17,6 @@ class TaskStartActor(
     val eventBus: EventStream,
     val app: AppDefinition,
     val scaleTo: Int,
-    val withHealthChecks: Boolean,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
   val nrToStart: Int = scaleTo - taskQueue.count(app.id) - taskTracker.count(app.id)

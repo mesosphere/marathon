@@ -83,12 +83,12 @@ class TaskReplaceActor(
   }
 
   def commonBehavior: PartialFunction[Any, Unit] = {
-    case MesosStatusUpdateEvent(slaveId, taskId, ErrorState(_), _, `appId`, _, _, `version`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, ReplaceErrorState(_), _, `appId`, _, _, `version`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       log.error(s"New task $taskId failed on slave $slaveId during app ${app.id.toString} restart")
       healthy -= taskId
       taskQueue.add(app)
 
-    case MesosStatusUpdateEvent(slaveId, taskId, ErrorState(_), _, `appId`, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, ReplaceErrorState(_), _, `appId`, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       log.error(s"Old task $taskId failed on slave $slaveId during app ${app.id.toString} restart")
       oldTaskIds -= taskId
       conciliateNewTasks()
@@ -135,9 +135,10 @@ class TaskReplaceActor(
       .build()
 }
 
-private object ErrorState {
+private object ReplaceErrorState {
   def unapply(state: String): Option[String] = state match {
     case "TASK_ERROR" | "TASK_FAILED" | "TASK_KILLED" | "TASK_LOST" => Some(state)
     case _ => None
   }
 }
+
