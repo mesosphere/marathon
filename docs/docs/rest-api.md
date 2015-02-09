@@ -2148,37 +2148,38 @@ Transfer-Encoding: chunked
 {
     "queue": [
         {
-            "app": {
-                "args": null,
-                "backoffFactor": 1.15,
-                "backoffSeconds": 1,
-                "maxLaunchDelaySeconds": 3600,
-                "cmd": "python toggle.py $PORT0",
-                "constraints": [],
-                "container": null,
-                "cpus": 0.2,
-                "dependencies": [],
-                "disk": 0.0,
-                "env": {},
-                "executor": "",
-                "healthChecks": [],
-                "id": "/test",
-                "instances": 3,
-                "mem": 32.0,
-                "ports": [10000],
-                "requirePorts": false,
-                "storeUrls": [],
-                "upgradeStrategy": {
-                    "minimumHealthCapacity": 1.0,
-                    "maximumOverCapacity": 1.0
-                },
-                "uris": [
-                    "http://downloads.mesosphere.com/misc/toggle.tgz"
+            "count" : 10,
+            "app" : {
+                "cmd" : "tail -f /dev/null",
+                "backoffSeconds" : 1,
+                "healthChecks" : [],
+                "storeUrls" : [],
+                "constraints" : [],
+                "env" : {},
+                "cpus" : 0.1,
+                "labels" : {},
+                "instances" : 10,
+                "ports" : [
+                   10000
                 ],
-                "user": null,
-                "version": "2014-08-26T05:04:49.766Z"
-            },
-            "delay": { "overdue": true }
+                "requirePorts" : false,
+                "uris" : [],
+                "container" : null,
+                "backoffFactor" : 1.15,
+                "args" : null,
+                "version" : "2015-02-09T10:49:59.831Z",
+                "maxLaunchDelaySeconds" : 3600,
+                "upgradeStrategy" : {
+                   "minimumHealthCapacity" : 1,
+                   "maximumOverCapacity" : 1
+                },
+                "dependencies" : [],
+                "mem" : 16,
+                "id" : "/foo",
+                "disk" : 0,
+                "executor" : "",
+                "user" : null
+            }
         }
     ]
 }
