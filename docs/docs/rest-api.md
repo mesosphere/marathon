@@ -111,6 +111,9 @@ The full JSON format of an application resource is as follows:
     "constraints": [
         ["attribute", "OPERATOR", "value"]
     ],
+    "labels": {
+        "environment": "staging"
+    },
     "healthChecks": [
         {
             "protocol": "HTTP",
@@ -190,6 +193,13 @@ The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${
 Valid constraint operators are one of ["UNIQUE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
 the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
+
+##### labels
+
+Attaching metadata to apps can be useful to expose additional information
+to other services, so we added the ability to place labels on apps
+(for example, you could label apps "staging" and "production" to mark
+services by their position in the pipeline).
 
 ##### container
 
