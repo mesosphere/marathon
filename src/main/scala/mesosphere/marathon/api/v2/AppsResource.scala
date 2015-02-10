@@ -17,7 +17,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.{ DeploymentStep, RestartApplication, DeploymentPlan }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.json.{ Writes, JsObject, Json }
 
@@ -96,7 +96,9 @@ class AppsResource @Inject() (
 
   private def create(req: HttpServletRequest, app: AppDefinition, force: Boolean): Response = {
     val baseId = app.id.canonicalPath()
-    requireValid(checkApp(app, baseId.parent))
+    requireValid(checkAppConstraints(app, baseId.parent))
+    val conflicts = checkAppConflicts(app, baseId, service)
+    if (conflicts.nonEmpty) throw new ConflictingChangeException(conflicts.mkString(","))
     maybePostEvent(req, app)
     val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
     result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
