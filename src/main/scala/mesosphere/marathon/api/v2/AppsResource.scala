@@ -57,7 +57,7 @@ class AppsResource @Inject() (
             healthCounts(app),
             runningDeployments
           )
-          WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
+          WithTasksAndDeploymentsWrites.writes(enrichedApp)
         }
 
       case EmbedTasksAndFailures =>
