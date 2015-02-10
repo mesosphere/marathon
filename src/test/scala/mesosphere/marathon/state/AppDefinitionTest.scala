@@ -128,7 +128,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       val violations = checkAppConstraints(app, PathId.empty)
       assert(
         violations.exists { v =>
-          v.getPropertyPath.toString == path && v.getMessageTemplate.toString == template
+          v.getPropertyPath.toString == path && v.getMessageTemplate == template
         },
         s"Violations:\n${violations.mkString}"
       )
@@ -153,8 +153,6 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     shouldViolate(app.copy(id = "dash-disallowed-at-end-".toRootPath), "id", idError)
     shouldViolate(app.copy(id = "uppercaseLettersNoGood".toRootPath), "id", idError)
     shouldNotViolate(app.copy(id = "ab".toRootPath), "id", idError)
-
-    shouldViolate(app.copy(id = "".toRootPath), "id", "the empty path can't be used as id")
 
     shouldViolate(
       AppDefinition(id = "test".toPath, instances = -3, ports = Seq(9000, 8080, 9000)),
