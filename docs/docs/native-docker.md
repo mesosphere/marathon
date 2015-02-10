@@ -84,9 +84,8 @@ app definition JSON:
 where `volumes` and `type` are optional (the default type is `DOCKER`).  More
 container types may be added later.
 
-For convenience, the mount point of the mesos sandbox is available in the
-environment as `$MESOS_SANDBOX`.  The `$HOME` environment variable is set
-by default to the same value as `$MESOS_SANDBOX`.
+For convenience, the mount point of the Mesos sandbox is available in the
+environment as `$MESOS_SANDBOX`.
 
 ### Bridged Networking Mode
 
@@ -165,7 +164,9 @@ documentation for more details on how Docker handles networking.
 ### Using a private Docker Repository
 
 To supply credentials to pull from a private repository, add a `.dockercfg` to
-the `uris` field of your app.
+the `uris` field of your app. The `$HOME` environment variable will then be set
+to the same value as `$MESOS_SANDBOX` so Docker can automatically pick up the
+config file.
 
 ### Advanced Usage
 
