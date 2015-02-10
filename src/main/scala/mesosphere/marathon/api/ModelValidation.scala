@@ -215,10 +215,6 @@ trait ModelValidation extends BeanValidation {
   }
 
   def idErrors[T: ClassTag](t: T, base: PathId, id: PathId, path: String): Iterable[ConstraintViolation[T]] = {
-    if (id == PathId.empty) {
-      return List(violation(t, id, path, "the empty path can't be used as id"))
-    }
-
     val p = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
     val valid = id.path.forall(p.pattern.matcher(_).matches())
     val errors =
