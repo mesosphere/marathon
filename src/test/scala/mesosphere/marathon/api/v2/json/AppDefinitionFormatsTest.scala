@@ -96,5 +96,15 @@ class AppDefinitionFormatsTest
     r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
   }
 
+  test("FromJSON should fail for empty id") {
+    val json = Json.parse( """ { "id": "" }""")
+    a [JsResultException] shouldBe thrownBy { json.as[AppDefinition] }
+  }
+
+  test("FromJSON should fail when using / as an id") {
+    val json = Json.parse( """ { "id": "/" }""")
+    a [JsResultException] shouldBe thrownBy { json.as[AppDefinition] }
+  }
+
 }
 

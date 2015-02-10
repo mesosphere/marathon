@@ -95,7 +95,7 @@ trait Formats
   }
 
   implicit lazy val PathIdFormat: Format[PathId] = Format(
-    Reads.of[String].map(PathId(_)),
+    Reads.of[String](Reads.minLength[String](1)).map(PathId(_)).filterNot(_.isRoot),
     Writes[PathId] { id => JsString(id.toString) }
   )
 
