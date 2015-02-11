@@ -1,21 +1,21 @@
 package mesosphere.marathon.state
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import mesosphere.marathon.Protos.{ GroupDefinition, UpgradeStrategyDefinition, StorageVersion }
+import mesosphere.marathon.Protos.GroupDefinition
+import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
-import org.jgrapht.traverse.TopologicalOrderIterator
 
 import scala.collection.JavaConversions._
 
 case class Group(
     id: PathId,
-    apps: Set[AppDefinition] = Set.empty,
-    groups: Set[Group] = Set.empty,
-    dependencies: Set[PathId] = Set.empty,
-    version: Timestamp = Timestamp.now()) extends MarathonState[GroupDefinition, Group] {
+    apps: Set[AppDefinition] = DefaultApps,
+    groups: Set[Group] = DefaultGroups,
+    dependencies: Set[PathId] = DefaultDependencies,
+    version: Timestamp = DefaultVersion) extends MarathonState[GroupDefinition, Group] {
 
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
@@ -166,5 +166,10 @@ object Group {
       version = Timestamp(msg.getVersion)
     )
   }
+
+  def DefaultApps: Set[AppDefinition] = Set.empty
+  def DefaultGroups: Set[Group] = Set.empty
+  def DefaultDependencies: Set[PathId] = Set.empty
+  def DefaultVersion: Timestamp = Timestamp.now()
 }
 
