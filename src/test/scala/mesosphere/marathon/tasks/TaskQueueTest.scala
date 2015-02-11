@@ -11,7 +11,7 @@ class TaskQueueTest extends MarathonSpec {
   val app2 = AppDefinition(id = "app2".toPath, constraints = Set(buildConstraint("hostname", "UNIQUE"), buildConstraint("rack_id", "CLUSTER", "rack-1")))
   val app3 = AppDefinition(id = "app3".toPath, constraints = Set(buildConstraint("hostname", "UNIQUE")))
 
-  var queue: TaskQueue = null
+  var queue: TaskQueue = _
 
   before {
     queue = new TaskQueue()
@@ -99,5 +99,14 @@ class TaskQueueTest extends MarathonSpec {
 
     assert(matching.isEmpty)
     assert(counter == 0)
+  }
+
+  // regression test for #1155
+  test("Don't list tasks with a count of 0") {
+    queue.add(app1)
+    queue.add(app2)
+    queue.poll()
+
+    assert(queue.list.forall(_.count.get > 0))
   }
 }

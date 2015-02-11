@@ -47,7 +47,7 @@ class TaskQueue {
 
   protected[tasks] var apps = TrieMap.empty[(PathId, Timestamp), QueuedTask]
 
-  def list: Seq[QueuedTask] = apps.values.to[Seq]
+  def list: Seq[QueuedTask] = apps.values.to[Seq].filter(_.count.get() > 0)
 
   def listApps: Seq[AppDefinition] = list.map(_.app)
 
