@@ -103,10 +103,6 @@ a,
   display: block;
 }
 
-.modal-body-no-top {
-  padding-top: 0;
-}
-
 .modal-header {
   background-color: #222224;
   border-bottom: none;
@@ -114,13 +110,29 @@ a,
   border-radius: 6px 6px 0 0;
 }
 
-.modal-header .btn + .btn {
+.modal-content {
+  background-color: #323539;
+}
+
+.page-header {
+  border-bottom: none;
+  margin: 0;
+  margin-top: -20px;
+  padding: 15px;
+}
+
+.page-header .btn + .btn {
   margin-left: 5px;
   margin-bottom: 0;
 }
 
-.modal-content {
-  background-color: #323539;
+.page-body {
+  position: relative;
+  padding: 0 20px 0 20px;
+}
+
+.page-body-no-top {
+  padding-top: 0;
 }
 
 .has-error .help-block,
@@ -141,11 +153,12 @@ a,
 }
 
 .breadcrumb {
-  background-color: #454a50;
+  margin-top: -20px;
+  background-color: #2a2d2f;
 }
 
-.breadcrumb > .active {
-  color: #f6f6f6;
+.breadcrumb > li + li:before {
+  content:"\0FF1E";
 }
 
 .table > thead > tr > th,
@@ -317,7 +330,7 @@ fieldset[disabled] .btn-info.active {
 }
 
 .navbar-inverse {
-  background-color: #2a2d2f;
+  background-color: #222426;
   border-color: transparent;
 }
 

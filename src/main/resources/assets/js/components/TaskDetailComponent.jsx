@@ -67,13 +67,7 @@ var TaskDetailComponent = React.createClass({
     }
 
     return (
-      <div>
-        <ol className="breadcrumb">
-          <li>
-            <a href="#" onClick={this.handleShowTaskList}>Task List</a>
-          </li>
-          <li className="active">{task.get("id")}</li>
-        </ol>
+      <div className="page-body page-body-no-top">
         <h5>Task Details</h5>
         {hasError ?
           <p className="text-center text-danger">
