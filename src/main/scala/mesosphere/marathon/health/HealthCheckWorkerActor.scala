@@ -33,7 +33,8 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
       doCheck(task, check)
         .andThen {
-          case Success(result) => replyTo ! result
+          case Success(Some(result)) => replyTo ! result
+          case Success(None)         => // ignore
           case Failure(t) =>
             replyTo ! Unhealthy(
               task.getId,
@@ -44,10 +45,10 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         .onComplete { case _ => self ! PoisonPill }
   }
 
-  def doCheck(task: MarathonTask, check: HealthCheck): Future[HealthResult] =
+  def doCheck(task: MarathonTask, check: HealthCheck): Future[Option[HealthResult]] =
     task.getPortsList.asScala.lift(check.portIndex) match {
       case None =>
-        Future { Unhealthy(task.getId, task.getVersion, "Invalid port index") }
+        Future { Some(Unhealthy(task.getId, task.getVersion, "Invalid port index")) }
 
       case Some(port) => check.protocol match {
         case HTTP => http(task, check, port)
@@ -68,7 +69,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       }
     }
 
-  def http(task: MarathonTask, check: HealthCheck, port: Int): Future[HealthResult] = {
+  def http(task: MarathonTask, check: HealthCheck, port: Int): Future[Option[HealthResult]] = {
     val host = task.getHost
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
@@ -83,13 +84,16 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Healthy(task.getId, task.getVersion)
-      else
-        Unhealthy(task.getId, task.getVersion, response.status.toString())
+        Some(Healthy(task.getId, task.getVersion))
+      else if (check.ignoreHttp1xx && (toIgnoreResponses contains response.status.intValue)) {
+        log.debug(s"Ignoring health check HTTP response ${response.status.intValue} for task ${task.getId}")
+        None
+      } else
+        Some(Unhealthy(task.getId, task.getVersion, response.status.toString()))
     }
   }
 
-  def tcp(task: MarathonTask, check: HealthCheck, port: Int): Future[HealthResult] = {
+  def tcp(task: MarathonTask, check: HealthCheck, port: Int): Future[Option[HealthResult]] = {
     val host = task.getHost
     val address = s"$host:$port"
     val timeoutMillis = check.timeout.toMillis.toInt
@@ -100,7 +104,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       val socket = new Socket
       socket.connect(address, timeoutMillis)
       socket.close()
-      Healthy(task.getId, task.getVersion, Timestamp.now())
+      Some(Healthy(task.getId, task.getVersion, Timestamp.now()))
     }
   }
 
@@ -110,6 +114,7 @@ object HealthCheckWorker {
 
   // Similar to AWS R53, we accept all responses in [200, 399]
   protected[health] val acceptableResponses = Range(200, 400)
+  protected[health] val toIgnoreResponses = Range(100, 200)
 
   case class HealthCheckJob(task: MarathonTask, check: HealthCheck)
 }
