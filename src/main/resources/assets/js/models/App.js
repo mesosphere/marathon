@@ -227,6 +227,23 @@ var App = Backbone.Model.extend({
     return status;
   },
 
+  restart: function (options) {
+    /* jshint -W030 */
+    options || (options = {});
+    /* jshint +W030 */
+
+    if (options.force == null) {
+      options.force = false;
+    }
+
+    options.contentType = "application/json";
+    options.data = JSON.stringify({force: options.force});
+    options.method = "POST";
+    options.url = this.url() + "/restart";
+
+    this.fetch(options);
+  },
+
   suspend: function (options) {
     this.save({instances: 0}, options);
   },
