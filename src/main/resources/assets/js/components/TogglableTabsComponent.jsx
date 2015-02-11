@@ -9,7 +9,6 @@ module.exports = React.createClass({
     propTypes: {
       activeTabId: React.PropTypes.string.isRequired,
       className: React.PropTypes.string,
-      onTabClick: React.PropTypes.func,
       tabs: React.PropTypes.array
     },
 
@@ -24,7 +23,7 @@ module.exports = React.createClass({
       /* jshint trailing:false, quotmark:false, newcap:false */
       /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       var nav;
-      if (this.props.onTabClick != null && this.props.tabs != null) {
+      if (this.props.tabs != null) {
         nav = (
           <NavTabsComponent
             activeTabId={this.props.activeTabId}

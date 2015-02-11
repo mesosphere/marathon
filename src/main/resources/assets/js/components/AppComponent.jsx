@@ -4,8 +4,15 @@ var React = require("react/addons");
 var AppHealthComponent = require("../components/AppHealthComponent");
 
 var AppComponent = React.createClass({
+  propTypes: {
+    router: React.PropTypes.object.isRequired
+  },
+
   onClick: function () {
-    this.props.onClick(this.props.model);
+    this.props.router.navigate(
+      "apps/" + encodeURIComponent(this.props.model.get("id")),
+      {trigger: true}
+    );
   },
 
   render: function () {
