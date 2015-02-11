@@ -31,6 +31,7 @@ title: REST API
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
   * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Cancel the deployment with `deploymentId`
+  * [POST /v2/deployments/generate](#post-/v2/deployments/generate): Generate deployment steps for a group without executing them
 * [Event Subscriptions](#event-subscriptions)
   * [POST /v2/eventSubscriptions](#post-/v2/eventsubscriptions): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
@@ -1995,6 +1996,85 @@ HTTP/1.1 202 Accepted
 Content-Length: 0
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
+{% endhighlight %}
+
+#### POST /v2/deployments/generate
+
+Generates deployment steps for a given group without executing them.
+
+**Request:**
+
+{% highlight http %}
+POST /v2/deployments/generate HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+
+{
+    "id": "product",
+    "groups": [{
+        "id": "service",
+        "groups": [{
+            "id": "us-east",
+            "apps": [
+                {
+                    "id": "app1",
+                    "cmd": "someExecutable"
+                },
+                {
+                    "id": "app2",
+                    "cmd": "someOtherExecutable"
+                }
+            ]
+        }],
+        "dependencies": ["/product/database", "../backend"]
+    }],
+    "version": "2014-03-01T23:29:30.158Z"
+}
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "steps" : [
+        {
+            "actions" : [
+                {
+                    "app" : "app1",
+                    "type" : "StartApplication"
+                },
+                {
+                    "app" : "app2",
+                    "type" : "StartApplication"
+                }
+            ]
+        },
+        {
+            "actions" : [
+                {
+                    "type" : "ScaleApplication",
+                    "app" : "app1"
+                }
+            ]
+        },
+        {
+            "actions" : [
+                {
+                    "app" : "app2",
+                    "type" : "ScaleApplication"
+                }
+            ]
+        }
+    ]
+}
 {% endhighlight %}
 
 ### Event Subscriptions
