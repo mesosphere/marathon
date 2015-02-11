@@ -27,13 +27,17 @@ The following options can influence how Marathon works:
     Examples: `"hdfs://localhost:54310/path/to/store"`,
     `"file:///var/log/store"`. For details, see the
     [artifact store]({{ site.baseurl }}/docs/artifact-store.html) docs.
-* `--checkpoint` (Optional. Default: false): Enable checkpointing of tasks.
+* `--checkpoint` (Optional. Default: true): Enable checkpointing of tasks.
     Requires checkpointing enabled on slaves. Allows tasks to continue running
-    during mesos-slave restarts and upgrades.
+    during mesos-slave restarts and Marathon scheduler failover.  See the
+    description of `--failover_timeout`.
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
-    failover_timeout for Mesos in seconds.
+    failover_timeout for Mesos in seconds.  If a new Marathon instance has
+    not re-registered with Mesos this long after a failover, Mesos will shut
+    down all running tasks started by Marathon.  Requires checkpointing to be
+    enabled.
 * `--framework_name` (Optional. Default: marathon-VERSION): The framework name
     to register with Mesos.
 * `--ha` (Optional. Default: true): Runs Marathon in HA mode with leader election.
@@ -51,14 +55,15 @@ The following options can influence how Marathon works:
 * `--mesos_user` (Optional. Default: current user): Mesos user for
     this framework. _Note: Default is determined by
     [`SystemProperties.get("user.name")`](http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String])._
-* `--reconciliation_initial_delay` (Optional. Default: 30000 (30 seconds)): The
+* `--reconciliation_initial_delay` (Optional. Default: 15000 (15 seconds)): The
     delay, in milliseconds, before Marathon begins to periodically perform task
     reconciliation operations.
-* `--reconciliation_interval` (Optional. Default: 30000 (30 seconds)): The
+* `--reconciliation_interval` (Optional. Default: 300000 (5 minutes)): The
     period, in milliseconds, between task reconciliation operations.
-* `--task_launch_timeout` (Optional. Default: 60000 (60 seconds)): Time,
-    in milliseconds, to wait for a task to enter the TASK_RUNNING state before
-    killing it.
+* `--task_launch_timeout` **DEPRECATED** (Optional. Default: 300000 (5 minutes)):
+    Time, in milliseconds, to wait for a task to enter the TASK_RUNNING state
+    before killing it. _Note: This is a temporary fix for MESOS-1922.
+    This option will be removed in a later release._
 * `--event_subscriber` (Optional. Default: None): Event subscriber module to
     enable. Currently the only valid value is `http_callback`.
 * `--http_endpoints` (Optional. Default: None): Pre-configured http callback
