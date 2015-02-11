@@ -201,7 +201,14 @@ trait DeploymentFormats {
         JsArray(xs.to[Seq].map(b => JsNumber(b.toInt)))
       }
     )
-  implicit lazy val GroupFormat: Format[Group] = Json.format[Group]
+  implicit lazy val GroupFormat: Format[Group] = (
+    (__ \ "id").format[PathId] ~
+    (__ \ "apps").formatNullable[Set[AppDefinition]].withDefault(Group.DefaultApps) ~
+    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.DefaultGroups) ~
+    (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.DefaultDependencies) ~
+    (__ \ "version").formatNullable[Timestamp].withDefault(Group.DefaultVersion)
+  )(Group(_, _, _, _, _), unlift(Group.unapply))
+
   implicit lazy val URLToStringMapFormat: Format[Map[java.net.URL, String]] = Format(
     Reads.of[Map[String, String]]
       .map(
