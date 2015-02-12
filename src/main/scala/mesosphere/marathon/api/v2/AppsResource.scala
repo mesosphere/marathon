@@ -91,8 +91,16 @@ class AppsResource @Inject() (
   def create(@Context req: HttpServletRequest, body: Array[Byte],
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val app = Json.parse(body).as[AppDefinition]
-    val (_, managed) = create(req, app, force)
-    Response.created(new URI(managed.id.toString)).entity(managed).build()
+    service.getApp(app.id.copy(absolute = true)) match {
+      case None =>
+        val (_, managed) = create(req, app, force)
+        Response.created(new URI(managed.id.toString)).entity(managed).build()
+      case _ => Response.status(409).entity(
+        Json.obj(
+          "message" -> s"An app with id [${app.id}] already exists."
+        ).toString()
+      ).build()
+    }
   }
 
   private def create(req: HttpServletRequest, app: AppDefinition, force: Boolean): (DeploymentPlan, AppDefinition) = {
