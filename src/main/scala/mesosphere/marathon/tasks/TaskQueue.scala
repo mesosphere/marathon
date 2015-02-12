@@ -9,6 +9,7 @@ import org.apache.log4j.Logger
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Seq
+import scala.concurrent.duration.Deadline
 
 object TaskQueue {
   protected[marathon] case class QueuedTask(app: AppDefinition, count: AtomicInteger)
@@ -48,6 +49,9 @@ class TaskQueue {
   protected[tasks] var apps = TrieMap.empty[(PathId, Timestamp), QueuedTask]
 
   def list: Seq[QueuedTask] = apps.values.to[Seq].filter(_.count.get() > 0)
+  def listWithDelay: Seq[(QueuedTask, Deadline)] = list.map { task =>
+    task -> rateLimiter.getDelay(task.app)
+  }
 
   def listApps: Seq[AppDefinition] = list.map(_.app)
 
