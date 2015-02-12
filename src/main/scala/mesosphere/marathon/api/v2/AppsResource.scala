@@ -91,18 +91,20 @@ class AppsResource @Inject() (
   def create(@Context req: HttpServletRequest, body: Array[Byte],
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val app = Json.parse(body).as[AppDefinition]
-    create(req, app, force)
+    val (_, managed) = create(req, app, force)
+    Response.created(new URI(managed.id.toString)).entity(managed).build()
   }
 
-  private def create(req: HttpServletRequest, app: AppDefinition, force: Boolean): Response = {
+  private def create(req: HttpServletRequest, app: AppDefinition, force: Boolean): (DeploymentPlan, AppDefinition) = {
     val baseId = app.id.canonicalPath()
     requireValid(checkAppConstraints(app, baseId.parent))
     val conflicts = checkAppConflicts(app, baseId, service)
     if (conflicts.nonEmpty) throw new ConflictingChangeException(conflicts.mkString(","))
     maybePostEvent(req, app)
     val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
-    result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
-    Response.created(new URI(baseId.toString)).entity(managed).build()
+    val deploymentPlan = result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
+
+    (deploymentPlan, managed)
   }
 
   @GET
@@ -168,7 +170,9 @@ class AppsResource @Inject() (
         }
         response.getOrElse(unknownApp(appId, updateWithId.version))
 
-      case None => create(req, updateWithId(AppDefinition(appId)), force)
+      case None =>
+        val (deploymentPlan, app) = create(req, updateWithId(AppDefinition(appId)), force)
+        deploymentResult(deploymentPlan, Response.created(new URI(app.id.toString)))
     }
   }
 
