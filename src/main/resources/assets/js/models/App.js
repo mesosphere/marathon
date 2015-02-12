@@ -244,6 +244,11 @@ var App = Backbone.Model.extend({
     this.fetch(options);
   },
 
+  hasHealth: function () {
+    return this.get("healthChecks") != null &&
+      this.get("healthChecks").length > 0;
+  },
+
   suspend: function (options) {
     this.save({instances: 0}, options);
   },
