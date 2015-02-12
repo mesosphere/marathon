@@ -173,7 +173,7 @@ class MarathonScheduler @Inject() (
             case None       => log.warn(s"Couldn't post event for ${status.getTaskId}")
           }
 
-          schedulerActor ! ScaleApp(appId)
+          schedulerActor ! ScaleApp(appId, force = false)
         }
 
       case TASK_RUNNING if !maybeTask.exists(_.hasStartedAt) => // staged, not running
