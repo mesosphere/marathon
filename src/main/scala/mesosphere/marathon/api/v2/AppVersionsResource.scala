@@ -32,6 +32,7 @@ class AppVersionsResource(service: MarathonSchedulerService, val config: Maratho
   def show(@PathParam("appId") appId: String,
            @PathParam("version") version: String): Response = {
     val id = appId.toRootPath
-    service.getApp(id, Timestamp(version)).map(ok(_)) getOrElse unknownApp(id)
+    val timestamp = Timestamp(version)
+    service.getApp(id, timestamp).map(ok(_)) getOrElse unknownApp(id, Option(timestamp))
   }
 }
