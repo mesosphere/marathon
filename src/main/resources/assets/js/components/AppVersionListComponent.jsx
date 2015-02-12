@@ -44,6 +44,22 @@ var AppVersionListComponent = React.createClass({
     this.setState({currentPage: pageNum});
   },
 
+  getAppVersionList: function (appVersions) {
+    return appVersions.map(function (v) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <AppVersionListItemComponent
+          app={this.props.app}
+          appVersion={v}
+          key={v.get("version")}
+          onRollback={this.props.onRollback} />
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    }, this);
+  },
+
   render: function () {
     // take out current version, to be displayed seperately
     var appVersions = this.props.app.versions.models.slice(1);
@@ -51,36 +67,19 @@ var AppVersionListComponent = React.createClass({
     var itemsPerPage = this.state.itemsPerPage;
     var currentPage = this.state.currentPage;
 
-    var tableContents;
+    var loadingClassSet = React.addons.classSet({
+      "text-muted text-center": true,
+      "hidden": this.props.fetchState !== States.STATE_LOADING
+    });
+
+    var errorClassSet = React.addons.classSet({
+      "text-danger text-center": true,
+      "hidden": this.props.fetchState === States.STATE_LOADING ||
+        this.props.fetchState === States.STATE_SUCCESS
+    });
 
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    if (this.props.fetchState === States.STATE_LOADING) {
-      tableContents = <p className="text-muted text-center">Loading versions...</p>;
-    } else if (this.props.fetchState === States.STATE_SUCCESS) {
-      tableContents =
-        <PagedContentComponent
-            currentPage={currentPage}
-            itemsPerPage={itemsPerPage}>
-          {
-            appVersions.map(function (v) {
-              return (
-                  <AppVersionListItemComponent
-                    app={this.props.app}
-                    appVersion={v}
-                    key={v.get("version")}
-                    onRollback={this.props.onRollback} />
-              );
-            }, this)
-          }
-        </PagedContentComponent>;
-    } else {
-      tableContents =
-        <p className="text-danger text-center">
-          Error fetching app versions
-        </p>;
-    }
-
     // at least two pages
     var pagedNav = appVersions.length > itemsPerPage ?
       <PagedNavComponent
@@ -101,7 +100,13 @@ var AppVersionListComponent = React.createClass({
             {pagedNav}
           </div>
         </div>
-        {tableContents}
+        <PagedContentComponent
+            currentPage={currentPage}
+            itemsPerPage={itemsPerPage}>
+          <p className={loadingClassSet}>Loading versions...</p>
+          <p className={errorClassSet}>Error fetching app versions</p>
+          {this.getAppVersionList(appVersions)}
+        </PagedContentComponent>
       </div> :
       null;
 
@@ -109,7 +114,8 @@ var AppVersionListComponent = React.createClass({
       <div>
         <h5>
           Current Version
-          <button className="btn btn-sm btn-info pull-right" onClick={this.handleRefresh}>
+          <button className="btn btn-sm btn-info pull-right"
+              onClick={this.handleRefresh}>
             ↻ Refresh
           </button>
         </h5>

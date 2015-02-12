@@ -398,7 +398,12 @@ fieldset[disabled] .btn-info.active {
   margin: 0 0 10px;
 }
 
-.pagination > li > a,
+.pagination button {
+  border: 0;
+  padding: 5px 10px;
+}
+
+.pagination > li > button,
 .pagination > li > span {
   color: #f6f6f6;
   background-color: #5b6067;
@@ -406,9 +411,9 @@ fieldset[disabled] .btn-info.active {
   line-height: 1.5;
 }
 
-.pagination > li > a:hover,
+.pagination > li > button:hover,
 .pagination > li > span:hover,
-.pagination > li > a:focus,
+.pagination > li > button:focus,
 .pagination > li > span:focus {
   color: #f6f6f6;
   background-color: #8e929b;
@@ -418,9 +423,9 @@ fieldset[disabled] .btn-info.active {
 .pagination > .disabled > span,
 .pagination > .disabled > span:hover,
 .pagination > .disabled > span:focus,
-.pagination > .disabled > a,
-.pagination > .disabled > a:hover,
-.pagination > .disabled > a:focus {
+.pagination > .disabled > button,
+.pagination > .disabled > button:hover,
+.pagination > .disabled > button:focus {
   color: #838a93;
   background-color: #454a50;
   border-color: #323539;
@@ -429,9 +434,9 @@ fieldset[disabled] .btn-info.active {
 .pagination > .success > span,
 .pagination > .success > span:hover,
 .pagination > .success > span:focus,
-.pagination > .success > a,
-.pagination > .success > a:hover,
-.pagination > .success > a:focus {
+.pagination > .success > button,
+.pagination > .success > button:hover,
+.pagination > .success > button:focus {
   color: #f6f6f6;
   background-color: #00b482;
 }

@@ -8,9 +8,7 @@ var AppBreadcrumbsComponent = React.createClass({
   propTypes: {
     activeTask: React.PropTypes.object,
     activeViewIndex: React.PropTypes.number.isRequired,
-    model: React.PropTypes.object.isRequired,
-    onDestroy: React.PropTypes.func.isRequired,
-    showTaskList: React.PropTypes.func.isRequired
+    model: React.PropTypes.object.isRequired
   },
 
   getDefaultProps: function () {
@@ -23,6 +21,7 @@ var AppBreadcrumbsComponent = React.createClass({
     var model = this.props.model;
     var activeViewIndex = this.props.activeViewIndex;
     var appName = model.get("id");
+    var appUri = "#apps/" + encodeURIComponent(this.props.model.get("id"));
 
     var taskName;
     if (activeViewIndex === 1 && this.props.activeTask != null) {
@@ -45,18 +44,18 @@ var AppBreadcrumbsComponent = React.createClass({
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <ol className="breadcrumb">
-        <li key="apps">
-          <a href="#" onClick={this.props.onDestroy}>Apps</a>
+        <li>
+          <a href="#apps">Apps</a>
         </li>
         <li className={activeAppClassSet}>
           {appName}
         </li>
         <li className={inactiveAppClassSet}>
-          <a href="#" onClick={this.props.showTaskList}>
+          <a href={appUri}>
             {appName}
           </a>
         </li>
-        <li className={taskClassSet} key="task">
+        <li className={taskClassSet}>
           {taskName}
         </li>
       </ol>

@@ -83,10 +83,10 @@ var PagedNavComponent = React.createClass({
             pagination.push(
               <li className={pageNumber === currentPage ? "success disabled" : ""}
                   key={pageNumber + 1}>
-                <a href="#"
+                <button
                   onClick={this.handlePageChange.bind(this, pageNumber)}>
                   {pageNumber + 1}
-                </a>
+                </button>
               </li>
             );
           }
@@ -103,34 +103,34 @@ var PagedNavComponent = React.createClass({
     var leftArrow =
       this.props.useArrows ?
         <li className={leftArrowsClassSet}>
-          <a href="#" onClick={this.handlePageChange.bind(this, currentPage - 1)}>
+          <button onClick={this.handlePageChange.bind(this, currentPage - 1)}>
             ‹
-          </a>
+          </button>
         </li> :
         null;
     var leftEndArrow =
       this.props.useEndArrows ?
         <li className={leftArrowsClassSet}>
-          <a href="#" onClick={this.handlePageChange.bind(this, 0)}>
+          <button onClick={this.handlePageChange.bind(this, 0)}>
             «
-          </a>
+          </button>
         </li> :
         null;
     var rightArrow =
       this.props.useArrows ?
         <li className={rightArrowsClassSet}>
-          <a href="#" onClick={this.handlePageChange.bind(this, currentPage + 1)}>
+          <button onClick={this.handlePageChange.bind(this, currentPage + 1)}>
             ›
-          </a>
+          </button>
         </li> :
         null;
     var rightEndArrow =
       this.props.useEndArrows ?
         <li className={rightArrowsClassSet}>
-          <a href="#"
+          <button
             onClick={this.handlePageChange.bind(this, noPages - 1)}>
             »
-          </a>
+          </button>
         </li> :
         null;
 
