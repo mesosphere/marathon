@@ -6,6 +6,11 @@ When posting a group definition to this endpoint, it will
 return the deployment steps Marathon would execute to deploy
 this group.
 
+#### POST `/v2/apps` rejects existing ids
+
+If an app with an already existing id is posted to this endpoint,
+it will now be rejected
+
 #### PUT `/v2/apps/{id}` always returns deployment info
 
 In versions <= 0.8.0 it used to return the complete app definition
