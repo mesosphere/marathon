@@ -206,8 +206,6 @@ var AppPageComponent = React.createClass({
         </div>
       </div>
     );
-    /* jshint trailing:true, quotmark:true, newcap:true */
-    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   }
 });
 

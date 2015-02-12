@@ -61,8 +61,6 @@ var AppBreadcrumbsComponent = React.createClass({
         </li>
       </ol>
     );
-    /* jshint trailing:true, quotmark:true, newcap:true */
-    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   }
 });
 
