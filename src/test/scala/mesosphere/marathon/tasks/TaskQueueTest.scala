@@ -109,4 +109,20 @@ class TaskQueueTest extends MarathonSpec {
 
     assert(queue.list.forall(_.count.get > 0))
   }
+
+  test("List tasks with delay") {
+    queue.add(app1, 1)
+    queue.rateLimiter.addDelay(app1)
+    val withDelay = queue.listWithDelay
+
+    println(withDelay)
+
+    assert(withDelay.size == 1)
+    assert(withDelay.headOption.exists {
+      case (task, delay) =>
+        task.count.get() == 1 &&
+          task.app == app1 &&
+          delay == queue.rateLimiter.getDelay(app1)
+    })
+  }
 }
