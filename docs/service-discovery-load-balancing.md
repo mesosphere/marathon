@@ -4,7 +4,9 @@ title: Service Discovery & Load Balancing
 
 # Service Discovery & Load Balancing
 
-Once our app is up and running, we need a way to send outside traffic to it. If we're running multiple apps, they also need a way to find each other. A simple way to do this is to run a TCP proxy on each host in the cluster, and transparently forward a static port on localhost to the hosts that are running the app. That way, clients simply connect to that port, and the implementation details of discovery are completely abstracted away.
+Once our app is up and running, we need a way to send outside traffic to it. If we're running multiple apps, they also need a way to find each other. We can use [Mesos-DNS](https://github.com/mesosphere/mesos-dns) for service discovery through the domain name system ([DNS](http://en.wikipedia.org/wiki/Domain_Name_System)). Mesos-DNS generates a hostname for each application running on Mesos and translates these names to the IP address and port on the machine currently running each application. Mesos-DNS is particularly useful if the apps are launched through multiple frameworks (not just Marathon). Check the Mesos-DNS [documentation and tutorials page](http://mesosphere.github.io/mesos-dns/) for further information. 
+
+An alternative way for service discovery is to run a TCP proxy on each host in the cluster, and transparently forward a static port on localhost to the hosts that are running the app. That way, clients simply connect to that port, and the implementation details of discovery are completely abstracted away. This approach is sufficient if all apps are launched through Marathon. 
 
 ## Ports Assignment
 
