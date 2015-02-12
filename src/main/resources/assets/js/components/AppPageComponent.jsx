@@ -190,18 +190,20 @@ var AppPageComponent = React.createClass({
           model={model}
           onDestroy={this.props.onDestroy}
           showTaskList={this.showTaskList} />
-        <div className="page-header">
-          <span className="h3 modal-title">{model.get("id")}</span>
-          <ul className="list-inline list-inline-subtext">
-            <li>
-              <span className={statusClassSet}>
-                {model.getStatus()}
-              </span>
-            </li>
-          </ul>
-          {this.getControls()}
+        <div className="container-fluid">
+          <div className="page-header">
+            <span className="h3 modal-title">{model.get("id")}</span>
+            <ul className="list-inline list-inline-subtext">
+              <li>
+                <span className={statusClassSet}>
+                  {model.getStatus()}
+                </span>
+              </li>
+            </ul>
+            {this.getControls()}
+          </div>
+          {content}
         </div>
-        {content}
       </div>
     );
     /* jshint trailing:true, quotmark:true, newcap:true */
