@@ -403,6 +403,11 @@ Transfer-Encoding: chunked
     },
     "cpus": 0.25,
     "dependencies": [],
+    "deployments": [
+        {
+            "id": "f44fd4fc-4330-4600-a68b-99c7bd33014a"
+        }
+    ],
     "disk": 0.0,
     "env": {},
     "executor": "",
