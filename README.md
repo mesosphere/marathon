@@ -145,6 +145,7 @@ If you want to inspect the contents of the Docker:
 * [Qubit](http://www.qubitproducts.com/)
 * [RelateIQ](http://relateiq.com/)
 * [Sailthru](http://www.sailthru.com/)
+* [Strava](https://www.strava.com)
 * [Viadeo](http://www.viadeo.com)
 * [WooRank](http://www.woorank.com)
 * [Yelp](http://www.yelp.com/)
