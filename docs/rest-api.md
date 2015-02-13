@@ -31,7 +31,6 @@ title: REST API
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
   * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Cancel the deployment with `deploymentId`
-  * [POST /v2/deployments/generate](#post-/v2/deployments/generate): Generate deployment steps for a group without executing them
 * [Event Subscriptions](#event-subscriptions)
   * [POST /v2/eventSubscriptions](#post-/v2/eventsubscriptions): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
@@ -112,9 +111,6 @@ The full JSON format of an application resource is as follows:
     "constraints": [
         ["attribute", "OPERATOR", "value"]
     ],
-    "labels": {
-        "environment": "staging"
-    },
     "healthChecks": [
         {
             "protocol": "HTTP",
@@ -148,8 +144,6 @@ The full JSON format of an application resource is as follows:
     "backoffFactor": 1.15,
     "maxLaunchDelaySeconds": 3600,
     "tasksRunning": 3,
-    "tasksHealthy": 3,
-    "tasksUnhealthy": 0,
     "tasksStaged": 0,
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -194,13 +188,6 @@ The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${
 Valid constraint operators are one of ["UNIQUE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
 the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
-
-##### labels
-
-Attaching metadata to apps can be useful to expose additional information
-to other services, so we added the ability to place labels on apps
-(for example, you could label apps "staging" and "production" to mark
-services by their position in the pipeline).
 
 ##### container
 
@@ -558,8 +545,6 @@ Transfer-Encoding: chunked
             "requirePorts": false,
             "storeUrls": [],
             "tasksRunning": 2,
-            "tasksHealthy": 2,
-            "tasksUnhealthy": 0,
             "tasksStaged": 0,
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
@@ -647,8 +632,6 @@ Transfer-Encoding: chunked
                 }
             ],
             "tasksRunning": 0,
-            "tasksHealthy": 0,
-            "tasksUnhealthy": 0,
             "tasksStaged": 1,
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
@@ -774,8 +757,6 @@ Transfer-Encoding: chunked
             }
         ],
         "tasksRunning": 2,
-        "tasksHealthy": 2,
-        "tasksUnhealthy": 0,
         "tasksStaged": 0,
         "upgradeStrategy": {
             "minimumHealthCapacity": 1.0
@@ -1998,85 +1979,6 @@ Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 {% endhighlight %}
 
-#### POST /v2/deployments/generate
-
-Generates deployment steps for a given group without executing them.
-
-**Request:**
-
-{% highlight http %}
-POST /v2/deployments/generate HTTP/1.1
-Accept: */*
-Accept-Encoding: gzip, deflate
-Content-Type: application/json
-Host: mesos.vm:8080
-User-Agent: HTTPie/0.8.0
-
-{
-    "id": "product",
-    "groups": [{
-        "id": "service",
-        "groups": [{
-            "id": "us-east",
-            "apps": [
-                {
-                    "id": "app1",
-                    "cmd": "someExecutable"
-                },
-                {
-                    "id": "app2",
-                    "cmd": "someOtherExecutable"
-                }
-            ]
-        }],
-        "dependencies": ["/product/database", "../backend"]
-    }],
-    "version": "2014-03-01T23:29:30.158Z"
-}
-{% endhighlight %}
-
-**Response:**
-
-{% highlight http %}
-HTTP/1.1 200 OK
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-Transfer-Encoding: chunked
-
-{
-    "steps" : [
-        {
-            "actions" : [
-                {
-                    "app" : "app1",
-                    "type" : "StartApplication"
-                },
-                {
-                    "app" : "app2",
-                    "type" : "StartApplication"
-                }
-            ]
-        },
-        {
-            "actions" : [
-                {
-                    "type" : "ScaleApplication",
-                    "app" : "app1"
-                }
-            ]
-        },
-        {
-            "actions" : [
-                {
-                    "app" : "app2",
-                    "type" : "ScaleApplication"
-                }
-            ]
-        }
-    ]
-}
-{% endhighlight %}
-
 ### Event Subscriptions
 
 #### POST /v2/eventSubscriptions
@@ -2246,38 +2148,37 @@ Transfer-Encoding: chunked
 {
     "queue": [
         {
-            "count" : 10,
-            "app" : {
-                "cmd" : "tail -f /dev/null",
-                "backoffSeconds" : 1,
-                "healthChecks" : [],
-                "storeUrls" : [],
-                "constraints" : [],
-                "env" : {},
-                "cpus" : 0.1,
-                "labels" : {},
-                "instances" : 10,
-                "ports" : [
-                   10000
-                ],
-                "requirePorts" : false,
-                "uris" : [],
-                "container" : null,
-                "backoffFactor" : 1.15,
-                "args" : null,
-                "version" : "2015-02-09T10:49:59.831Z",
-                "maxLaunchDelaySeconds" : 3600,
-                "upgradeStrategy" : {
-                   "minimumHealthCapacity" : 1,
-                   "maximumOverCapacity" : 1
+            "app": {
+                "args": null,
+                "backoffFactor": 1.15,
+                "backoffSeconds": 1,
+                "maxLaunchDelaySeconds": 3600,
+                "cmd": "python toggle.py $PORT0",
+                "constraints": [],
+                "container": null,
+                "cpus": 0.2,
+                "dependencies": [],
+                "disk": 0.0,
+                "env": {},
+                "executor": "",
+                "healthChecks": [],
+                "id": "/test",
+                "instances": 3,
+                "mem": 32.0,
+                "ports": [10000],
+                "requirePorts": false,
+                "storeUrls": [],
+                "upgradeStrategy": {
+                    "minimumHealthCapacity": 1.0,
+                    "maximumOverCapacity": 1.0
                 },
-                "dependencies" : [],
-                "mem" : 16,
-                "id" : "/foo",
-                "disk" : 0,
-                "executor" : "",
-                "user" : null
-            }
+                "uris": [
+                    "http://downloads.mesosphere.com/misc/toggle.tgz"
+                ],
+                "user": null,
+                "version": "2014-08-26T05:04:49.766Z"
+            },
+            "delay": { "overdue": true }
         }
     ]
 }
