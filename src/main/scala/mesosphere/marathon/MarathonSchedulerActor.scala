@@ -124,9 +124,9 @@ class MarathonSchedulerActor(
     case ReconcileHealthChecks =>
       scheduler.reconcileHealthChecks()
 
-    case cmd @ ScaleApp(appId) =>
+    case cmd @ ScaleApp(appId, force) =>
       val origSender = sender()
-      performAsyncWithLockFor(appId, origSender, cmd, blocking = false) {
+      performAsyncWithLockFor(appId, origSender, cmd, blocking = force) {
         val res = scheduler.scale(driver, appId)
 
         if (origSender != context.system.deadLetters)
@@ -163,7 +163,10 @@ class MarathonSchedulerActor(
               .getOrElse(Future.successful(()))
           } yield ()
         }
-        else promise.future
+        else promise.future andThen {
+          case _ =>
+            self ! ScaleApp(appId, force = true)
+        }
 
         res.sendAnswer(origSender, cmd)
       }
@@ -300,7 +303,13 @@ object MarathonSchedulerActor {
 
   case object ReconcileHealthChecks
 
-  case class ScaleApp(appId: PathId) extends Command {
+  /**
+    *
+    * @param appId The id of the app to be scaled.
+    * @param force If set to true and another operation currently holds the lock
+    *              on the specified app, this operation will wait on the lock.
+    */
+  case class ScaleApp(appId: PathId, force: Boolean) extends Command {
     def answer: Event = AppScaled(appId)
   }
 
@@ -402,7 +411,7 @@ class SchedulerActions(
       case Success(appIds) =>
         log.info("Syncing tasks for all apps")
 
-        for (appId <- appIds) schedulerActor ! ScaleApp(appId)
+        for (appId <- appIds) schedulerActor ! ScaleApp(appId, force = false)
 
         val knownTaskStatuses = appIds.flatMap { appId =>
           taskTracker.get(appId).collect {

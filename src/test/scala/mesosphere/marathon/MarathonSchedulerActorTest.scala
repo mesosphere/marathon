@@ -165,7 +165,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val schedulerActor = createActor()
     try {
       schedulerActor ! Start
-      schedulerActor ! ScaleApp("test-app".toPath)
+      schedulerActor ! ScaleApp("test-app".toPath, force = false)
 
       awaitAssert({
         verify(queue).add(app, 1)
@@ -223,6 +223,45 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       }
 
       verify(repo, times(3)).store(app.copy(instances = 0))
+    }
+    finally {
+      stopActor(schedulerActor)
+    }
+  }
+
+  test("Kill tasks without scaling") {
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
+
+    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
+    when(tracker.get(app.id)).thenReturn(Set[MarathonTask](taskA))
+    when(tracker.fetchTask(app.id, taskA.getId))
+      .thenReturn(Some(taskA))
+      .thenReturn(None)
+
+    when(repo.currentVersion(app.id))
+      .thenReturn(Future.successful(Some(app)))
+      .thenReturn(Future.successful(Some(app.copy(instances = 0))))
+    when(tracker.count(app.id)).thenReturn(0)
+    when(repo.store(any())).thenReturn(Future.successful(app))
+
+    val statusUpdateEvent = MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+
+    when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        system.eventStream.publish(statusUpdateEvent)
+        Status.DRIVER_RUNNING
+      }
+    })
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! Start
+      schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = false)
+
+      expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
+
+      awaitAssert(verify(queue).add(app, 1))
     }
     finally {
       stopActor(schedulerActor)
