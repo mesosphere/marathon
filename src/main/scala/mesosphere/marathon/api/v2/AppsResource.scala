@@ -94,25 +94,53 @@ class AppsResource @Inject() (
     service.getApp(app.id.copy(absolute = true)) match {
       case None =>
         val (_, managed) = create(req, app, force)
-        Response.created(new URI(managed.id.toString)).entity(managed).build()
-      case _ => Response.status(409).entity(
-        Json.obj(
-          "message" -> s"An app with id [${app.id}] already exists."
-        ).toString()
-      ).build()
+        Response
+          .created(new URI(managed.id.toString))
+          .entity(managed)
+          .build()
+
+      case _ =>
+        Response
+          .status(409)
+          .entity(Json.obj("message" -> s"An app with id [${app.id}] already exists.").toString)
+          .build()
     }
   }
 
-  private def create(req: HttpServletRequest, app: AppDefinition, force: Boolean): (DeploymentPlan, AppDefinition) = {
+  private def create(
+    req: HttpServletRequest,
+    app: AppDefinition,
+    force: Boolean): (DeploymentPlan, AppDefinition.WithTasksAndDeployments) = {
     val baseId = app.id.canonicalPath()
     requireValid(checkAppConstraints(app, baseId.parent))
-    val conflicts = checkAppConflicts(app, baseId, service)
-    if (conflicts.nonEmpty) throw new ConflictingChangeException(conflicts.mkString(","))
-    maybePostEvent(req, app)
-    val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
-    val deploymentPlan = result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
 
-    (deploymentPlan, managed)
+    val conflicts = checkAppConflicts(app, baseId, service)
+    if (conflicts.nonEmpty)
+      throw new ConflictingChangeException(conflicts.mkString(","))
+
+    maybePostEvent(req, app)
+
+    val managedApp = app.copy(
+      id = baseId,
+      dependencies = app.dependencies.map(_.canonicalPath(baseId))
+    )
+
+    val deploymentPlan = result(
+      groupManager.updateApp(
+        baseId,
+        _ => managedApp,
+        managedApp.version,
+        force
+      )
+    )
+
+    val managedAppWithDeployments = managedApp.withTasksAndDeployments(
+      appTasks = Nil,
+      healthCounts = HealthCounts(0, 0, 0),
+      runningDeployments = Seq(deploymentPlan)
+    )
+
+    deploymentPlan -> managedAppWithDeployments
   }
 
   @GET
