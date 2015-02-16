@@ -69,9 +69,22 @@ var AppVersionListItemComponent = React.createClass({
       "hidden": this.state.fetchState !== States.STATE_ERROR
     });
 
+    var appVersionComponent;
+
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    if (this.state.fetchState !== States.STATE_LOADING &&
+        this.state.fetchState !== States.STATE_ERROR) {
+      appVersionComponent = (
+        <AppVersionComponent
+          className="dl-unstyled"
+          app={this.props.app}
+          appVersion={this.props.appVersion}
+          onRollback={this.props.onRollback} />
+      );
+    }
+
     if (this.state.open) {
-      /* jshint trailing:false, quotmark:false, newcap:false */
-      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       return (
         <div className="panel-body">
           <p className={loadingClassSet}>
@@ -80,11 +93,7 @@ var AppVersionListItemComponent = React.createClass({
           <p className={errorClassSet}>
             Error fetching version details. Refresh the list to try again.
           </p>
-          <AppVersionComponent
-            className="dl-unstyled"
-            app={this.props.app}
-            appVersion={this.props.appVersion}
-            onRollback={this.props.onRollback} />
+          {appVersionComponent}
         </div>
       );
       /* jshint trailing:true, quotmark:true, newcap:true */
@@ -96,6 +105,7 @@ var AppVersionListItemComponent = React.createClass({
 
   render: function () {
     var versionDate = new Date(this.props.appVersion.get("version"));
+    var versionDateISOString = versionDate.toISOString();
 
     var caretClassSet = React.addons.classSet({
       "clickable text-right col-xs-2": true,
@@ -106,11 +116,14 @@ var AppVersionListItemComponent = React.createClass({
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <div className="panel panel-inverse">
-        <div className="panel-heading clickable" onClick={this.handleDetailsClick}>
+        <div className="panel-heading clickable"
+            onClick={this.handleDetailsClick}>
           <div className="row">
             <div className="col-xs-10">
-              <time dateTime={versionDate.toISOString()} title={versionDate.toISOString()}>
-                {versionDate.toLocaleString()}</time>
+              <time dateTime={versionDateISOString}
+                  title={versionDateISOString}>
+                {versionDate.toLocaleString()}
+              </time>
             </div>
             <div className={caretClassSet}>
               <span className="caret"></span>
