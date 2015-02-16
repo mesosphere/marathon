@@ -4,7 +4,7 @@ import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
-import akka.testkit.{ TestActorRef, TestKit, TestProbe }
+import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.health.HealthCheckManager
@@ -13,8 +13,8 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
-import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, PerformDeployment }
-import mesosphere.marathon.{ MarathonConf, SchedulerActions }
+import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, CancelDeployment, PerformDeployment }
+import mesosphere.marathon.{ DeploymentCanceledException, MarathonConf, SchedulerActions }
 import org.rogach.scallop.ScallopConf
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.InMemoryState
@@ -30,7 +30,8 @@ class DeploymentManagerTest
     with Matchers
     with BeforeAndAfter
     with BeforeAndAfterAll
-    with MockitoSugar {
+    with MockitoSugar
+    with ImplicitSender {
 
   override protected def afterAll(): Unit = {
     super.afterAll()
@@ -112,12 +113,10 @@ class DeploymentManagerTest
     val newGroup = Group("/".toRootPath, Set(app))
     val plan = DeploymentPlan(oldGroup, newGroup)
 
-    val res = manager ? PerformDeployment(driver, plan)
+    manager ! PerformDeployment(driver, plan)
 
-    manager ! CancelDeployment(plan.id, new Exception)
+    manager ! CancelDeployment(plan.id)
 
-    intercept[Exception] {
-      Await.result(res, 5.seconds)
-    }
+    expectMsgType[DeploymentFailed]
   }
 }

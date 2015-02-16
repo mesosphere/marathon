@@ -16,7 +16,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ PathId, AppDefinition, AppRepository }
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentStepInfo, DeploymentFinished }
+import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentStepInfo, DeploymentFinished }
 
 class DeploymentActor(
     parent: ActorRef,
@@ -43,9 +43,7 @@ class DeploymentActor(
   }
 
   override def postStop(): Unit = {
-    // it doesn't matter if it's a failure or success,
-    // it just has to be removed from the running deployments
-    parent ! DeploymentFinished(plan.id)
+    parent ! DeploymentFinished(plan)
   }
 
   def receive: Receive = {
@@ -56,21 +54,22 @@ class DeploymentActor(
       parent ! DeploymentStepInfo(plan, currentStep.getOrElse(DeploymentStep(Nil)), currentStepNr)
 
       performStep(step) onComplete {
-        case Success(_) =>
-          self ! NextStep
-        case Failure(t) =>
-          self ! Cancel(t)
+        case Success(_) => self ! NextStep
+        case Failure(t) => self ! Fail(t)
       }
 
     case NextStep =>
       // no more steps, we're done
-      receiver ! Finished
+      receiver ! DeploymentFinished(plan)
       context.stop(self)
 
     case Cancel(t) =>
-      receiver ! Status.Failure(t)
+      receiver ! DeploymentFailed(plan, t)
       context.stop(self)
 
+    case Fail(t) =>
+      receiver ! DeploymentFailed(plan, t)
+      context.stop(self)
   }
 
   def performStep(step: DeploymentStep): Future[Unit] = {
@@ -191,4 +190,5 @@ object DeploymentActor {
   case object NextStep
   case object Finished
   final case class Cancel(reason: Throwable)
+  final case class Fail(reason: Throwable)
 }

@@ -152,7 +152,7 @@ class DeploymentActorTest
         case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
       }
 
-      managerProbe.expectMsg(5.seconds, DeploymentFinished(plan.id))
+      managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
       verify(scheduler).startApp(driver, app3.copy(instances = 0))
       verify(driver, times(1)).killTask(TaskID(task1_2.getId))
@@ -229,7 +229,7 @@ class DeploymentActorTest
         )
       )
 
-      receiverProbe.expectMsg(Finished)
+      receiverProbe.expectMsg(DeploymentFinished(plan))
 
       verify(driver).killTask(TaskID(task1_1.getId))
       verify(driver).killTask(TaskID(task1_2.getId))
@@ -274,7 +274,7 @@ class DeploymentActorTest
         )
       )
 
-      receiverProbe.expectMsg(Finished)
+      receiverProbe.expectMsg(DeploymentFinished(plan))
     }
     finally {
       system.shutdown()
