@@ -1871,6 +1871,59 @@ my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382
 my-app2  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383 
 {% endhighlight %}
 
+#### DELETE `/v2/tasks`
+
+Kill the given list of tasks and scale apps if requested.
+
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>scale</code></td>
+      <td><code>boolean</code></td>
+      <td>Scale the app down (i.e. decrement its <code>instances</code> setting
+        by the number of tasks killed) after killing the specified tasks.
+        Default: <code>false</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+##### Example (as JSON)
+
+**Request:**
+
+{% highlight http %}
+DELETE /v2/tasks HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Content-Type: application/json; charset=utf-8
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+
+[
+    "task.25ab260e-b5ec-11e4-a4f4-685b35c8a22e",
+    "task.5e7b39d4-b5f0-11e4-8021-685b35c8a22e",
+    "task.a21cb64a-b5eb-11e4-a4f4-685b35c8a22e"
+]
+
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 0
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
 ### Deployments
 
 <span class="label label-default">v0.7.0</span>

@@ -4,14 +4,16 @@ import java.util
 import javax.ws.rs._
 import javax.ws.rs.core.{ MediaType, Response }
 import javax.inject.Inject
+import com.sun.jersey.api.Responses
 import mesosphere.marathon.api.{ EndpointsHelper, RestResource }
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import org.apache.log4j.Logger
 import com.codahale.metrics.annotation.Timed
 import org.apache.mesos.Protos.TaskState
+import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
 
@@ -20,7 +22,8 @@ class TasksResource @Inject() (
     service: MarathonSchedulerService,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
-    val config: MarathonConf) extends RestResource {
+    val config: MarathonConf,
+    taskIdUtil: TaskIdUtil) extends RestResource {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -55,6 +58,36 @@ class TasksResource @Inject() (
     service.listApps().toSeq,
     "\t"
   ))
+
+  @DELETE
+  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Consumes(Array(MediaType.APPLICATION_JSON))
+  @Timed
+  def killTasks(
+    @QueryParam("scale")@DefaultValue("false") scale: Boolean,
+    body: Array[Byte]): Response = {
+    val taskIds = Json.parse(body).as[Seq[String]]
+
+    val groupedTasks = taskIds.flatMap { taskId =>
+      val appId = try {
+        taskIdUtil.appId(taskId)
+      }
+      catch {
+        case e: MatchError => throw new BadRequestException(s"Invalid task id '$taskId'.")
+      }
+
+      taskTracker.fetchTask(appId, taskId)
+    }.groupBy { x =>
+      taskIdUtil.appId(x.getId)
+    }
+
+    groupedTasks.foreach {
+      case (appId, tasks) =>
+        service.killTasks(appId, tasks, scale)
+    }
+
+    Response.ok().build()
+  }
 
   private def toTaskState(state: String): Option[TaskState] = state.toLowerCase match {
     case "running" => Some(TaskState.TASK_RUNNING)
