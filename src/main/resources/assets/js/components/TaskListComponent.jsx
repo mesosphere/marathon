@@ -49,7 +49,6 @@ var TaskListComponent = React.createClass({
   },
 
   getTasks: function () {
-    var appId = this.props.tasks.options.appId;
     var hasHealth = !!this.props.hasHealth;
 
     return (
@@ -60,7 +59,7 @@ var TaskListComponent = React.createClass({
         /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
         return (
           <TaskListItemComponent
-            appId={appId}
+            appId={this.props.tasks.options.appId}
             hasHealth={hasHealth}
             isActive={isActive}
             key={task.id}
@@ -75,24 +74,14 @@ var TaskListComponent = React.createClass({
   },
 
   allTasksSelected: function (tasksLength) {
-    // If there are no tasks, they can't all be selected. Otherwise, assume
-    // they are all selected and let the iteration below decide if that is
-    // true.
-    var allTasksSelected = tasksLength > 0;
-
-    this.props.tasks.forEach(function (task) {
-      // Expicitly check for Boolean since the key might not exist in the
-      // object.
-      var isActive = this.props.selectedTasks[task.id] === true;
-      if (!isActive) { allTasksSelected = false; }
-    }, this);
-
-    return allTasksSelected;
+    var selectedTasks = this.props.selectedTasks;
+    return tasksLength > 0  && this.props.tasks.find(function (task) {
+      return selectedTasks[task.id] == null;
+    }) == null;
   },
 
   render: function () {
     var tasksLength = this.props.tasks.length;
-    var allTasksSelected = this.allTasksSelected(tasksLength);
     var hasHealth = !!this.props.hasHealth;
     var hasError = this.props.fetchState === States.STATE_ERROR;
 
@@ -138,7 +127,7 @@ var TaskListComponent = React.createClass({
                 width="1"
                 onClick={this.handleThToggleClick}>
                 <input type="checkbox"
-                  checked={allTasksSelected}
+                  checked={this.allTasksSelected(tasksLength)}
                   disabled={tasksLength === 0}
                   onChange={this.props.toggleAllTasks} />
               </th>

@@ -30,41 +30,43 @@ var DeploymentListComponent = React.createClass({
     deployments.sort();
   },
 
+  getDeploymentNodes: function () {
+    return this.props.deployments.map(function (model) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <DeploymentComponent
+          key={model.id}
+          destroyDeployment={this.props.destroyDeployment}
+          model={model} />
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    }, this);
+  },
+
   render: function () {
     var sortKey = this.props.deployments.sortKey;
-
-    var deploymentNodes;
 
     var headerClassSet = React.addons.classSet({
       "clickable": true,
       "dropup": this.props.deployments.sortReverse
     });
 
+    var loadingClassSet = React.addons.classSet({
+      "hidden": this.props.fetchState !== States.STATE_LOADING
+    });
+
+    var errorClassSet = React.addons.classSet({
+      "hidden": this.props.fetchState !== States.STATE_ERROR
+    });
+
+    var noDeploymentsClassSet = React.addons.classSet({
+      "hidden": this.props.deployments.length !== 0
+    });
+
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    if (this.props.fetchState === States.STATE_LOADING) {
-      deploymentNodes =
-        <tr>
-          <td className="text-center text-muted" colSpan="5">
-            Loading deployments...
-          </td>
-        </tr>;
-    } else if (this.props.deployments.length === 0) {
-      deploymentNodes =
-        <tr>
-          <td className="text-center" colSpan="5">No deployments in progress.</td>
-        </tr>;
-    } else {
-      deploymentNodes = this.props.deployments.map(function (model) {
-        return (
-          <DeploymentComponent
-            key={model.id}
-            destroyDeployment={this.props.destroyDeployment}
-            model={model} />
-        );
-      }, this);
-    }
-
     return (
       <table className="table table-fixed">
         <colgroup>
@@ -101,16 +103,22 @@ var DeploymentListComponent = React.createClass({
           </tr>
         </thead>
         <tbody>
-          {
-            (this.props.fetchState === States.STATE_ERROR) ?
-            <tr>
-              <td className="text-center text-danger" colSpan="5">
-                Error fetching deployments. Refresh to try again.
-              </td>
-            </tr> :
-            null
-          }
-          {deploymentNodes}
+          <tr className={loadingClassSet}>
+            <td className="text-center text-muted" colSpan="5">
+              Loading deployments...
+            </td>
+          </tr>
+          <tr className={errorClassSet}>
+            <td className="text-center text-danger" colSpan="5">
+              Error fetching deployments. Refresh to try again.
+            </td>
+          </tr>
+          <tr className={noDeploymentsClassSet}>
+            <td className="text-center" colSpan="5">
+              No deployments in progress.
+            </td>
+          </tr>
+          {this.getDeploymentNodes()}
         </tbody>
       </table>
     );

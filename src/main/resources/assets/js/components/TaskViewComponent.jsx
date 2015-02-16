@@ -87,68 +87,89 @@ var TaskViewComponent = React.createClass({
     this.setState({selectedTasks: selectedTasks});
   },
 
-  render: function () {
+  getButtons: function () {
     var selectedTasksLength = Object.keys(this.state.selectedTasks).length;
-    var buttons;
 
-    var tasksLength = this.props.collection.length;
-    var itemsPerPage = this.state.itemsPerPage;
-    var currentPage = this.state.currentPage;
+    var refreshButtonClassSet = React.addons.classSet({
+      "btn btn-sm btn-info": true,
+      "hidden": selectedTasksLength !== 0
+    });
+
+    var killButtonClassSet = React.addons.classSet({
+      "btn btn-sm btn-info": true,
+      "hidden": selectedTasksLength === 0
+    });
 
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    // at least two pages
-    var pagedNav = tasksLength > itemsPerPage ?
-      <PagedNavComponent
-        className="text-right"
-        currentPage={currentPage}
-        onPageChange={this.handlePageChange}
-        itemsPerPage={itemsPerPage}
-        noItems={tasksLength}
-        useArrows={true} /> :
-      null;
-
-    if (selectedTasksLength === 0) {
-      buttons =
-        <button className="btn btn-sm btn-info" onClick={this.props.fetchTasks}>
+    return (
+      <div className="btn-group">
+        <button
+            className={refreshButtonClassSet}
+            onClick={this.props.fetchTasks}>
           ↻ Refresh
-        </button>;
-    } else {
-      // Killing two tasks in quick succession raises an exception. Disable
-      // "Kill & Scale" if more than one task is selected to prevent the
-      // exception from happening.
-      //
-      // TODO(ssorallen): Remove once
-      //   https://github.com/mesosphere/marathon/issues/108 is addressed.
-      buttons =
-        <div className="btn-group">
-          <button className="btn btn-sm btn-info" onClick={this.killSelectedTasks}>
-            Kill
-          </button>
-          <button className="btn btn-sm btn-info" disabled={selectedTasksLength > 1}
-              onClick={this.killSelectedTasksAndScale}>
-            Kill &amp; Scale
-          </button>
-        </div>;
+        </button>
+        <button
+            className={killButtonClassSet}
+            onClick={this.killSelectedTasks}>
+          Kill
+        </button>
+        <button
+            className={killButtonClassSet}
+            disabled={selectedTasksLength > 1}
+            onClick={this.killSelectedTasksAndScale}>
+          Kill &amp; Scale
+        </button>
+      </div>
+    );
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+  },
+
+  getPagedNav: function () {
+    var tasksLength = this.props.collection.length;
+    var itemsPerPage = this.state.itemsPerPage;
+
+    // at least two pages
+    if (tasksLength > itemsPerPage) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <PagedNavComponent
+          className="text-right"
+          currentPage={this.state.currentPage}
+          onPageChange={this.handlePageChange}
+          itemsPerPage={itemsPerPage}
+          noItems={tasksLength}
+          useArrows={true} />
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     }
 
+    return null;
+  },
+
+  render: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <div>
         <div className="row">
           <div className="col-sm-6">
-            {buttons}
+            {this.getButtons()}
           </div>
           <div className="col-sm-6">
-            {pagedNav}
+            {this.getPagedNav()}
           </div>
         </div>
         <TaskListComponent
-          currentPage={currentPage}
+          currentPage={this.state.currentPage}
           fetchState={this.props.fetchState}
           formatTaskHealthMessage={this.props.formatTaskHealthMessage}
           hasHealth={this.props.hasHealth}
           onTaskToggle={this.onTaskToggle}
-          itemsPerPage={itemsPerPage}
+          itemsPerPage={this.state.itemsPerPage}
           selectedTasks={this.state.selectedTasks}
           tasks={this.props.collection}
           toggleAllTasks={this.toggleAllTasks} />

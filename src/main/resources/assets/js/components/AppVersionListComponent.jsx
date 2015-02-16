@@ -60,12 +60,32 @@ var AppVersionListComponent = React.createClass({
     }, this);
   },
 
-  render: function () {
+  getPagedNav: function (appVersions) {
+    var itemsPerPage = this.state.itemsPerPage;
+
+    // at least two pages
+    if (appVersions.length > itemsPerPage) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <PagedNavComponent
+          className="pull-right"
+          currentPage={this.state.currentPage}
+          onPageChange={this.handlePageChange}
+          itemsPerPage={itemsPerPage}
+          noItems={appVersions.length}
+          useArrows={true} />
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    }
+
+    return null;
+  },
+
+  getAppVersionTable: function () {
     // take out current version, to be displayed seperately
     var appVersions = this.props.app.versions.models.slice(1);
-
-    var itemsPerPage = this.state.itemsPerPage;
-    var currentPage = this.state.currentPage;
 
     var loadingClassSet = React.addons.classSet({
       "text-muted text-center": true,
@@ -78,38 +98,37 @@ var AppVersionListComponent = React.createClass({
         this.props.fetchState === States.STATE_SUCCESS
     });
 
+    // at least one older version
+    if (appVersions.length > 0) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <div className="panel-group">
+          <div className="panel panel-header panel-inverse">
+            <div className="panel-heading">
+              Older versions
+              {this.getPagedNav(appVersions)}
+            </div>
+          </div>
+          <PagedContentComponent
+              currentPage={this.state.currentPage}
+              itemsPerPage={this.state.itemsPerPage}>
+            <p className={loadingClassSet}>Loading versions...</p>
+            <p className={errorClassSet}>Error fetching app versions</p>
+            {this.getAppVersionList(appVersions)}
+          </PagedContentComponent>
+        </div>
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    }
+
+    return null;
+  },
+
+  render: function () {
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    // at least two pages
-    var pagedNav = appVersions.length > itemsPerPage ?
-      <PagedNavComponent
-        className="pull-right"
-        currentPage={currentPage}
-        onPageChange={this.handlePageChange}
-        itemsPerPage={itemsPerPage}
-        noItems={appVersions.length}
-        useArrows={true} /> :
-      null;
-
-    // at least one older version
-    var versionTable = appVersions.length > 0 ?
-      <div className="panel-group">
-        <div className="panel panel-header panel-inverse">
-          <div className="panel-heading">
-            Older versions
-            {pagedNav}
-          </div>
-        </div>
-        <PagedContentComponent
-            currentPage={currentPage}
-            itemsPerPage={itemsPerPage}>
-          <p className={loadingClassSet}>Loading versions...</p>
-          <p className={errorClassSet}>Error fetching app versions</p>
-          {this.getAppVersionList(appVersions)}
-        </PagedContentComponent>
-      </div> :
-      null;
-
     return (
       <div>
         <h5>
@@ -123,7 +142,7 @@ var AppVersionListComponent = React.createClass({
             app={this.props.app}
             appVersion={this.props.app.getCurrentVersion()}
             currentVersion={true} />
-          {versionTable}
+          {this.getAppVersionTable()}
       </div>
     );
   }

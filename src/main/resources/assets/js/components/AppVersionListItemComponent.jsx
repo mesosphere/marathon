@@ -58,40 +58,52 @@ var AppVersionListItemComponent = React.createClass({
     this.setState({open: !this.state.open});
   },
 
-  render: function () {
-    var caretClassSet = React.addons.classSet({
-      "clickable text-right col-xs-2": true,
-      "dropup": this.state.open
+  getAppVersion: function () {
+    var loadingClassSet = React.addons.classSet({
+      "text-center text-muted": true,
+      "hidden": this.state.fetchState !== States.STATE_LOADING
     });
-    var versionDate = new Date(this.props.appVersion.get("version"));
 
-    /* jshint trailing:false, quotmark:false, newcap:false */
-    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    var versionNode;
-    if (this.state.fetchState === States.STATE_LOADING) {
-      versionNode =
+    var errorClassSet = React.addons.classSet({
+      "text-center text-danger": true,
+      "hidden": this.state.fetchState !== States.STATE_ERROR
+    });
+
+    if (this.state.open) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
         <div className="panel-body">
-          <p className="text-center text-muted">
+          <p className={loadingClassSet}>
             Loading version details...
           </p>
-        </div>;
-    } else if (this.state.fetchState === States.STATE_ERROR) {
-      versionNode =
-        <div className="panel-body">
-          <p className="text-center text-danger">
+          <p className={errorClassSet}>
             Error fetching version details. Refresh the list to try again.
           </p>
-        </div>;
-    } else {
-      versionNode =
-        <div className="panel-body">
           <AppVersionComponent
             className="dl-unstyled"
             app={this.props.app}
             appVersion={this.props.appVersion}
             onRollback={this.props.onRollback} />
-        </div>;
+        </div>
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     }
+
+    return null;
+  },
+
+  render: function () {
+    var versionDate = new Date(this.props.appVersion.get("version"));
+
+    var caretClassSet = React.addons.classSet({
+      "clickable text-right col-xs-2": true,
+      "dropup": this.state.open
+    });
+
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <div className="panel panel-inverse">
         <div className="panel-heading clickable" onClick={this.handleDetailsClick}>
@@ -105,11 +117,7 @@ var AppVersionListItemComponent = React.createClass({
             </div>
           </div>
         </div>
-          {
-            this.state.open ?
-                versionNode :
-                null
-          }
+        {this.getAppVersion()}
       </div>
     );
   }

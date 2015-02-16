@@ -54,7 +54,7 @@ var Marathon = React.createClass({
     router.on("route:deployments",
       _.bind(this.activateTab, this, "deployments")
     );
-    router.on("route:newapp", this.setRouteNewapp);
+    router.on("route:newapp", this.setRouteNewApp);
 
     // Override Mousetrap's `stopCallback` to allow "esc" to trigger even within
     // input elements so the new app modal can be closed via "esc".
@@ -132,7 +132,7 @@ var Marathon = React.createClass({
     }
   },
 
-  setRouteNewapp: function () {
+  setRouteNewApp: function () {
     this.setState({
       modalClass: NewAppModalComponent
     });
@@ -144,15 +144,10 @@ var Marathon = React.createClass({
         this.setState({fetchState: States.STATE_ERROR});
       }.bind(this),
       success: function () {
-        var state = this.state;
         this.fetchDeployments();
-        var activeApp = state.activeAppId ?
-          state.collection.get(state.activeAppId) :
-          null;
-
         this.setState({
           fetchState: States.STATE_SUCCESS,
-          activeApp: activeApp
+          activeApp: this.state.collection.get(this.state.activeAppId)
         });
       }.bind(this)
     });
@@ -209,16 +204,19 @@ var Marathon = React.createClass({
     }
 
     var router = this.props.router;
+    var navigation = this.state.activeTabId;
 
-    if (this.state.activeApp != null) {
-      router.navigate(
-          "apps/" + encodeURIComponent(this.state.activeApp.get("id")) +
-          (this.state.activeAppView ? "/" + this.state.activeAppView : ""),
-          {trigger: true}
-        );
-    } else {
-      router.navigate(this.state.activeTabId, {trigger: true});
+    var activeApp = this.state.activeApp;
+    if (activeApp != null) {
+      navigation = "apps/" + encodeURIComponent(activeApp.get("id"));
+
+      var activeAppView = this.state.activeAppView;
+      if (activeAppView != null) {
+        navigation += "/" + activeAppView;
+      }
     }
+
+    router.navigate(navigation, {trigger: true});
   },
 
   handleTasksKilled: function (options) {
