@@ -50,15 +50,30 @@ var NewAppModalComponent = React.createClass({
   },
 
   validateResponse: function (response) {
+    var validAttrs = [
+      "id",
+      "cpus",
+      "mem",
+      "disk",
+      "instances",
+      "cmd",
+      "executor",
+      "ports",
+      "uris",
+      "constraints"
+    ];
     var errors;
 
     if (response.status === 422 && response.responseJSON != null &&
         _.isArray(response.responseJSON.errors)) {
       errors = response.responseJSON.errors.map(function (e) {
+        // default errors to be a "general" error.
+        var attr = "general";
+        if (_.contains(validAttrs, e.attribute)) {
+          attr = e.attribute;
+        }
         return new ValidationError(
-          // Errors that affect multiple attributes provide a blank string. In
-          // that case, count it as a "general" error.
-          e.attribute.length < 1 ? "general" : e.attribute,
+          attr,
           e.error
         );
       });
