@@ -88,10 +88,9 @@ options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 ## Developing Marathon
 
-The [Marathon Project Docs](https://mesosphere.github.io/marathon/docs/contributing.html)
+The [Marathon Wiki Page](https://github.com/mesosphere/marathon/wiki/Developing-Marathon-in-a-Preconfigured-VM)
 contains documentation on simplifying local development and testing of Marathon
-including how to run a Mesos environment inside a preconfigured virtual machine
-and a list of recipes for launching applications that test specific Marathon
+including how to run a Mesos environment inside a preconfigured virtual machine running on Vagrant and a list of recipes for launching applications that test specific Marathon
 features.
 
 ### Running the development Docker
