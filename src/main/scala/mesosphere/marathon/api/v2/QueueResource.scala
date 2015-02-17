@@ -33,6 +33,6 @@ class QueueResource @Inject() (
         )
     }
 
-    ok(Json.obj("queue" -> queuedWithDelay))
+    ok(Json.obj("queue" -> queuedWithDelay).toString())
   }
 }
