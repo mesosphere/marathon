@@ -12,15 +12,11 @@ var AppListComponent = React.createClass({
 
   propTypes: {
     collection: React.PropTypes.object.isRequired,
-    onSelectApp: React.PropTypes.func.isRequired
+    router: React.PropTypes.object.isRequired
   },
 
   getResource: function () {
     return this.props.collection;
-  },
-
-  onClickApp: function (app) {
-    this.props.onSelectApp(app);
   },
 
   sortCollectionBy: function (comparator) {
@@ -33,42 +29,54 @@ var AppListComponent = React.createClass({
     collection.sort();
   },
 
+  getAppNodes: function () {
+    return (
+      this.props.collection.map(function (model) {
+        /* jshint trailing:false, quotmark:false, newcap:false */
+        /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+        return (
+          <AppComponent
+            key={model.id}
+            model={model}
+            router={this.props.router} />
+        );
+        /* jshint trailing:true, quotmark:true, newcap:true */
+        /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      }, this)
+    );
+  },
+
   render: function () {
     var sortKey = this.props.collection.sortKey;
 
-    var appNodes;
-    var tableClassName = "table table-fixed";
+    var loadingClassSet = React.addons.classSet({
+      "hidden": this.props.fetchState !== States.STATE_LOADING
+    });
+
+    var noAppsClassSet = React.addons.classSet({
+      "hidden": this.props.collection.length !== 0
+    });
+
+    var errorClassSet = React.addons.classSet({
+      "hidden": this.props.fetchState !== States.STATE_ERROR
+    });
 
     var headerClassSet = React.addons.classSet({
       "clickable": true,
       "dropup": this.props.collection.sortReverse
     });
 
+    var tableClassSet = React.addons.classSet({
+      "table table-fixed": true,
+      "table-hover table-selectable":
+        this.props.collection.length !== 0 &&
+        this.props.fetchState !== States.STATE_LOADING
+    });
+
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    if (this.props.fetchState === States.STATE_LOADING) {
-      appNodes =
-        <tr>
-          <td className="text-center text-muted" colSpan="6">
-            Loading apps...
-          </td>
-        </tr>;
-    } else if (this.props.collection.length === 0) {
-      appNodes =
-        <tr>
-          <td className="text-center" colSpan="6">No running apps.</td>
-        </tr>;
-    } else {
-      appNodes = this.props.collection.map(function (model) {
-        return <AppComponent key={model.id} model={model} onClick={this.onClickApp} />;
-      }, this);
-
-      // Give rows the selectable look when there are apps to click.
-      tableClassName += " table-hover table-selectable";
-    }
-
     return (
-      <table className={tableClassName}>
+      <table className={tableClassSet}>
         <colgroup>
           <col style={{width: "28%"}} />
           <col style={{width: "14%"}} />
@@ -112,16 +120,20 @@ var AppListComponent = React.createClass({
           </tr>
         </thead>
         <tbody>
-          {
-            (this.props.fetchState === States.STATE_ERROR) ?
-              <tr>
-                <td className="text-center text-danger" colSpan="6">
-                  Error fetching apps. Refresh to try again.
-                </td>
-              </tr> :
-              null
-          }
-          {appNodes}
+          <tr className={loadingClassSet}>
+            <td className="text-center text-muted" colSpan="6">
+              Loading apps...
+            </td>
+          </tr>
+          <tr className={noAppsClassSet}>
+            <td className="text-center" colSpan="6">No running apps.</td>
+          </tr>
+          <tr className={errorClassSet}>
+            <td className="text-center text-danger" colSpan="6">
+              Error fetching apps. Refresh to try again.
+            </td>
+          </tr>
+          {this.getAppNodes()}
         </tbody>
       </table>
     );

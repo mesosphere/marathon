@@ -28,6 +28,44 @@ var DeploymentComponent = React.createClass({
     );
   },
 
+  getButtons: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    if (this.state.loading) {
+      return (
+        <div className="progress progress-striped active pull-right"
+            style={{"width": "140px"}}>
+          <span className="progress-bar progress-bar-info" role="progressbar"
+              aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"
+              style={{"width": "100%"}}>
+            <span className="sr-only">Rolling back deployment</span>
+          </span>
+        </div>
+      );
+    } else {
+      return (
+        <ul className="list-inline">
+          <li>
+            <button
+                onClick={this.handleDestroyDeployment.bind(this, true)}
+                className="btn btn-xs btn-default">
+              Stop
+            </button>
+          </li>
+          <li>
+            <button
+                onClick={this.handleDestroyDeployment.bind(this, false)}
+                className="btn btn-xs btn-default">
+              Rollback
+            </button>
+          </li>
+        </ul>
+      );
+    }
+    /* jshint trailing:true, quotmark:true, newcap:true */
+    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+  },
+
   render: function () {
     var model = this.props.model;
 
@@ -66,30 +104,7 @@ var DeploymentComponent = React.createClass({
           </span> / {model.get("totalSteps")}
         </td>
         <td className="text-right">
-          {
-            this.state.loading ?
-              <div className="progress progress-striped active pull-right" style={{"width": "140px"}}>
-                <span className="progress-bar progress-bar-info" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style={{"width": "100%"}}>
-                  <span className="sr-only">Rolling back deployment</span>
-                </span>
-              </div> :
-              <ul className="list-inline">
-                <li>
-                  <button
-                      onClick={this.handleDestroyDeployment.bind(this, true)}
-                      className="btn btn-xs btn-default">
-                    Stop
-                  </button>
-                </li>
-                <li>
-                  <button
-                      onClick={this.handleDestroyDeployment.bind(this, false)}
-                      className="btn btn-xs btn-default">
-                    Rollback
-                  </button>
-                </li>
-              </ul>
-          }
+          {this.getButtons()}
         </td>
       </tr>
     );

@@ -1,5 +1,6 @@
 /** @jsx React.DOM */
 
+var _ = require("underscore");
 var React = require("react/addons");
 var AppBreadcrumbsComponent = require("../components/AppBreadcrumbsComponent");
 var AppVersionListComponent = require("../components/AppVersionListComponent");
@@ -8,66 +9,80 @@ var TaskDetailComponent = require("../components/TaskDetailComponent");
 var TaskViewComponent = require("../components/TaskViewComponent");
 var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 
-var tabs = [
-  {id: "tasks", text: "Tasks"},
-  {id: "configuration", text: "Configuration"}
+var tabsTemplate = [
+  {id: "apps/:appid", text: "Tasks"},
+  {id: "apps/:appid/configuration", text: "Configuration"}
 ];
 
 var AppPageComponent = React.createClass({
   displayName: "AppPageComponent",
 
   propTypes: {
-    activeTask: React.PropTypes.object,
     appVersionsFetchState: React.PropTypes.number.isRequired,
     model: React.PropTypes.object.isRequired,
     destroyApp: React.PropTypes.func.isRequired,
     fetchTasks: React.PropTypes.func.isRequired,
     fetchAppVersions: React.PropTypes.func.isRequired,
-    onDestroy: React.PropTypes.func.isRequired,
-    onShowTaskDetails: React.PropTypes.func.isRequired,
-    onShowTaskList: React.PropTypes.func.isRequired,
     onTasksKilled: React.PropTypes.func.isRequired,
     restartApp: React.PropTypes.func.isRequired,
     rollBackApp: React.PropTypes.func.isRequired,
     scaleApp: React.PropTypes.func.isRequired,
     suspendApp: React.PropTypes.func.isRequired,
-    tasksFetchState: React.PropTypes.number.isRequired
+    tasksFetchState: React.PropTypes.number.isRequired,
+    view: React.PropTypes.string
   },
 
   getInitialState: function () {
+    var appId = this.props.model.get("id");
+    var activeTabId;
+
+    var tabs = _.map(tabsTemplate, function (tab) {
+      var id = tab.id.replace(":appid", encodeURIComponent(appId));
+      if (activeTabId == null) {
+        activeTabId = id;
+      }
+
+      return {
+        id: id,
+        text: tab.text
+      };
+    });
+
     return {
       activeViewIndex: 0,
-      activeTabId: tabs[0].id
+      activeTabId: activeTabId,
+      tabs: tabs
     };
   },
 
-  handleDestroyApp: function () {
-    this.props.destroyApp();
-    this.onDestroy();
-  },
+  componentWillReceiveProps: function (nextProps) {
+    var view = nextProps.view;
+    var activeTabId = "apps/" + encodeURIComponent(this.props.model.get("id"));
+    var activeTask = this.props.model.tasks.get(view);
+    var activeViewIndex = 0;
 
-  handleRestartApp: function () {
-    this.props.restartApp();
+    if (view === "configuration") {
+      activeTabId += "/configuration";
+    }
+
+    if (view != null && activeTask == null) {
+      activeTask = this.state.activeTask;
+    }
+
+    if (activeTask != null) {
+      activeViewIndex = 1;
+    }
+
+    this.setState({
+      activeTabId: activeTabId,
+      activeTask: activeTask,
+      activeViewIndex: activeViewIndex
+    });
   },
 
   onTabClick: function (id) {
     this.setState({
       activeTabId: id
-    });
-  },
-
-  showTaskDetails: function (task) {
-    this.props.onShowTaskDetails(task, function () {
-      this.setState({
-        activeViewIndex: 1
-      });
-    }.bind(this));
-  },
-
-  showTaskList: function () {
-    this.props.onShowTaskList();
-    this.setState({
-      activeViewIndex: 0
     });
   },
 
@@ -102,11 +117,11 @@ var AppPageComponent = React.createClass({
           Scale
         </button>
         <button className="btn btn-sm btn-danger pull-right"
-          onClick={this.handleDestroyApp}>
+          onClick={this.props.destroyApp}>
           Destroy App
         </button>
         <button className="btn btn-sm btn-default pull-right"
-          onClick={this.handleRestartApp}>
+          onClick={this.props.restartApp}>
           Restart App
         </button>
       </div>
@@ -123,10 +138,9 @@ var AppPageComponent = React.createClass({
     return (
       <TaskDetailComponent
         fetchState={this.props.tasksFetchState}
-        taskHealthMessage={model.formatTaskHealthMessage(this.props.activeTask)}
+        taskHealthMessage={model.formatTaskHealthMessage(this.state.activeTask)}
         hasHealth={model.hasHealth()}
-        onShowTaskList={this.showTaskList}
-        task={this.props.activeTask} />
+        task={this.state.activeTask} />
     );
     /* jshint trailing:true, quotmark:true, newcap:true */
     /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
@@ -141,19 +155,19 @@ var AppPageComponent = React.createClass({
       <TogglableTabsComponent className="page-body page-body-no-top"
           activeTabId={this.state.activeTabId}
           onTabClick={this.onTabClick}
-          tabs={tabs} >
-        <TabPaneComponent id="tasks">
+          tabs={this.state.tabs} >
+        <TabPaneComponent
+          id={"apps/" + encodeURIComponent(model.get("id"))}>
           <TaskViewComponent
             collection={model.tasks}
             fetchState={this.props.tasksFetchState}
             fetchTasks={this.props.fetchTasks}
             formatTaskHealthMessage={model.formatTaskHealthMessage}
             hasHealth={model.hasHealth()}
-            onTasksKilled={this.props.onTasksKilled}
-            onTaskDetailSelect={this.showTaskDetails} />
+            onTasksKilled={this.props.onTasksKilled} />
         </TabPaneComponent>
         <TabPaneComponent
-          id="configuration"
+          id={"apps/" + encodeURIComponent(model.get("id")) + "/configuration"}
           onActivate={this.props.fetchAppVersions} >
           <AppVersionListComponent
             app={model}
@@ -185,11 +199,9 @@ var AppPageComponent = React.createClass({
     return (
       <div>
         <AppBreadcrumbsComponent
-          activeTask={this.props.activeTask}
+          activeTask={this.state.activeTask}
           activeViewIndex={this.state.activeViewIndex}
-          model={model}
-          onDestroy={this.props.onDestroy}
-          showTaskList={this.showTaskList} />
+          model={model} />
         <div className="container-fluid">
           <div className="page-header">
             <span className="h3 modal-title">{model.get("id")}</span>

@@ -15,17 +15,11 @@ var TaskDetailComponent = React.createClass({
   propTypes: {
     fetchState: React.PropTypes.number.isRequired,
     hasHealth: React.PropTypes.bool,
-    onShowTaskList: React.PropTypes.func.isRequired,
     task: React.PropTypes.object.isRequired
   },
 
   getResource: function () {
     return this.props.task;
-  },
-
-  handleShowTaskList: function (event) {
-    event.preventDefault();
-    this.props.onShowTaskList();
   },
 
   render: function () {
@@ -38,6 +32,7 @@ var TaskDetailComponent = React.createClass({
     var healthClassSet;
     var timeNodes;
     var timeFields;
+    var appUri = "#apps/" + encodeURIComponent(this.props.task.get("appId"));
 
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
@@ -72,7 +67,7 @@ var TaskDetailComponent = React.createClass({
         {hasError ?
           <p className="text-center text-danger">
             Error fetching task details.
-            Go to <a href="#" onClick={this.handleShowTaskList}>Task List</a> to see the full list.
+            Go to <a href={appUri}>Task List</a> to see the full list.
           </p> :
           null}
         {<div>

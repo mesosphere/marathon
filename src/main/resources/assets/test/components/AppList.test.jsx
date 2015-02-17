@@ -7,6 +7,7 @@ var Backbone = require("backbone");
 var cheerio = require("cheerio");
 var React = require("react");
 var sinon = require("sinon");
+var Backbone = require("backbone");
 
 var AppListComponent = require("../../js/components/AppListComponent");
 
@@ -46,13 +47,12 @@ module.exports = {
       var appList = React.renderToString(
         <AppListComponent
                   collection={this.collection}
-                  onSelectApp={noop}
-                  fetchState={States.STATE_SUCCESS} />
+                  router={new Backbone.Router()} />
       );
 
       $("body").append(appList);
 
-      assert.equal( $(".table tr td").eq(6).text(), "/docker-app" );
+      assert.equal( $(".table tr td").eq(9).text(), "/docker-app" );
     }
   }
 };

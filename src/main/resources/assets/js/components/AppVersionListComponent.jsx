@@ -44,72 +44,97 @@ var AppVersionListComponent = React.createClass({
     this.setState({currentPage: pageNum});
   },
 
-  render: function () {
+  getAppVersionList: function (appVersions) {
+    return appVersions.map(function (v) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <AppVersionListItemComponent
+          app={this.props.app}
+          appVersion={v}
+          key={v.get("version")}
+          onRollback={this.props.onRollback} />
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    }, this);
+  },
+
+  getPagedNav: function (appVersions) {
+    var itemsPerPage = this.state.itemsPerPage;
+
+    // at least two pages
+    if (appVersions.length > itemsPerPage) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <PagedNavComponent
+          className="pull-right"
+          currentPage={this.state.currentPage}
+          onPageChange={this.handlePageChange}
+          itemsPerPage={itemsPerPage}
+          noItems={appVersions.length}
+          useArrows={true} />
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    }
+
+    return null;
+  },
+
+  getAppVersionTable: function () {
     // take out current version, to be displayed seperately
     var appVersions = this.props.app.versions.models.slice(1);
 
-    var itemsPerPage = this.state.itemsPerPage;
-    var currentPage = this.state.currentPage;
+    var loadingClassSet = React.addons.classSet({
+      "text-muted text-center": true,
+      "hidden": this.props.fetchState !== States.STATE_LOADING
+    });
 
-    var tableContents;
-
-    /* jshint trailing:false, quotmark:false, newcap:false */
-    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    if (this.props.fetchState === States.STATE_LOADING) {
-      tableContents = <p className="text-muted text-center">Loading versions...</p>;
-    } else if (this.props.fetchState === States.STATE_SUCCESS) {
-      tableContents =
-        <PagedContentComponent
-            currentPage={currentPage}
-            itemsPerPage={itemsPerPage}>
-          {
-            appVersions.map(function (v) {
-              return (
-                  <AppVersionListItemComponent
-                    app={this.props.app}
-                    appVersion={v}
-                    key={v.get("version")}
-                    onRollback={this.props.onRollback} />
-              );
-            }, this)
-          }
-        </PagedContentComponent>;
-    } else {
-      tableContents =
-        <p className="text-danger text-center">
-          Error fetching app versions
-        </p>;
-    }
-
-    // at least two pages
-    var pagedNav = appVersions.length > itemsPerPage ?
-      <PagedNavComponent
-        className="pull-right"
-        currentPage={currentPage}
-        onPageChange={this.handlePageChange}
-        itemsPerPage={itemsPerPage}
-        noItems={appVersions.length}
-        useArrows={true} /> :
-      null;
+    var errorClassSet = React.addons.classSet({
+      "text-danger text-center": true,
+      "hidden": this.props.fetchState === States.STATE_LOADING ||
+        this.props.fetchState === States.STATE_SUCCESS
+    });
 
     // at least one older version
-    var versionTable = appVersions.length > 0 ?
-      <div className="panel-group">
-        <div className="panel panel-header panel-inverse">
-          <div className="panel-heading">
-            Older versions
-            {pagedNav}
+    if (appVersions.length > 0) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <div className="panel-group">
+          <div className="panel panel-header panel-inverse">
+            <div className="panel-heading">
+              Older versions
+              {this.getPagedNav(appVersions)}
+            </div>
           </div>
+          <PagedContentComponent
+              currentPage={this.state.currentPage}
+              itemsPerPage={this.state.itemsPerPage}>
+            <p className={loadingClassSet}>Loading versions...</p>
+            <p className={errorClassSet}>Error fetching app versions</p>
+            {this.getAppVersionList(appVersions)}
+          </PagedContentComponent>
         </div>
-        {tableContents}
-      </div> :
-      null;
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    }
 
+    return null;
+  },
+
+  render: function () {
+    /* jshint trailing:false, quotmark:false, newcap:false */
+    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       <div>
         <h5>
           Current Version
-          <button className="btn btn-sm btn-info pull-right" onClick={this.handleRefresh}>
+          <button className="btn btn-sm btn-info pull-right"
+              onClick={this.handleRefresh}>
             ↻ Refresh
           </button>
         </h5>
@@ -117,7 +142,7 @@ var AppVersionListComponent = React.createClass({
             app={this.props.app}
             appVersion={this.props.app.getCurrentVersion()}
             currentVersion={true} />
-          {versionTable}
+          {this.getAppVersionTable()}
       </div>
     );
   }
