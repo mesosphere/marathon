@@ -58,6 +58,25 @@ var AppVersionListItemComponent = React.createClass({
     this.setState({open: !this.state.open});
   },
 
+  getAppVersionComponent: function () {
+    if (this.state.fetchState !== States.STATE_LOADING &&
+        this.state.fetchState !== States.STATE_ERROR) {
+      return (
+        /* jshint trailing:false, quotmark:false, newcap:false */
+        /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+        <AppVersionComponent
+          className="dl-unstyled"
+          app={this.props.app}
+          appVersion={this.props.appVersion}
+          onRollback={this.props.onRollback} />
+      );
+      /* jshint trailing:true, quotmark:true, newcap:true */
+      /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+    }
+
+    return null;
+  },
+
   getAppVersion: function () {
     var loadingClassSet = React.addons.classSet({
       "text-center text-muted": true,
@@ -69,22 +88,9 @@ var AppVersionListItemComponent = React.createClass({
       "hidden": this.state.fetchState !== States.STATE_ERROR
     });
 
-    var appVersionComponent;
-
-    /* jshint trailing:false, quotmark:false, newcap:false */
-    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-    if (this.state.fetchState !== States.STATE_LOADING &&
-        this.state.fetchState !== States.STATE_ERROR) {
-      appVersionComponent = (
-        <AppVersionComponent
-          className="dl-unstyled"
-          app={this.props.app}
-          appVersion={this.props.appVersion}
-          onRollback={this.props.onRollback} />
-      );
-    }
-
     if (this.state.open) {
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       return (
         <div className="panel-body">
           <p className={loadingClassSet}>
@@ -93,7 +99,7 @@ var AppVersionListItemComponent = React.createClass({
           <p className={errorClassSet}>
             Error fetching version details. Refresh the list to try again.
           </p>
-          {appVersionComponent}
+          {this.getAppVersionComponent()}
         </div>
       );
       /* jshint trailing:true, quotmark:true, newcap:true */
