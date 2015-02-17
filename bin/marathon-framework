@@ -35,6 +35,9 @@ function element_in {
 }
 
 function load_options_and_log {
+  # Call mesosphere-dnsconf if present on the system to generate config files.
+  [ -x /usr/bin/mesosphere-dnsconfig ] && mesosphere-dnsconfig mesos && mesosphere-dnsconfig marathon
+
   # Load Marathon options from Mesos and Marathon conf files that are present.
   # Launch main program with Syslog enabled.
   local cmd=( run_jar )
