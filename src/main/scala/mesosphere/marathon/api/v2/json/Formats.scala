@@ -95,7 +95,7 @@ trait Formats
   }
 
   implicit lazy val PathIdFormat: Format[PathId] = Format(
-    Reads.of[String](Reads.minLength[String](1)).map(PathId(_)).filterNot(_.isRoot),
+    Reads.of[String](Reads.minLength[String](1)).map(PathId(_)),
     Writes[PathId] { id => JsString(id.toString) }
   )
 
@@ -340,7 +340,7 @@ trait AppDefinitionFormats {
     val executorPattern = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r
 
     (
-      (__ \ "id").read[PathId] ~
+      (__ \ "id").read[PathId].filterNot(_.isRoot) ~
       (__ \ "cmd").readNullable[String] ~
       (__ \ "args").readNullable[Seq[String]] ~
       (__ \ "user").readNullable[String] ~
@@ -429,7 +429,7 @@ trait AppDefinitionFormats {
   implicit lazy val AppUpdateReads: Reads[AppUpdate] = {
 
     (
-      (__ \ "id").readNullable[PathId] ~
+      (__ \ "id").readNullable[PathId].filterNot(_.exists(_.isRoot)) ~
       (__ \ "cmd").readNullable[String] ~
       (__ \ "args").readNullable[Seq[String]] ~
       (__ \ "user").readNullable[String] ~
