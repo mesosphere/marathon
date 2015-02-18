@@ -6,27 +6,20 @@ import scala.math.Ordered
 /**
   * An ordered wrapper for UTC timestamps.
   */
-case class Timestamp(dateTime: DateTime) extends Ordered[Timestamp] {
+abstract case class Timestamp private (utcDateTime: DateTime) extends Ordered[Timestamp] {
+  def compare(that: Timestamp): Int = this.utcDateTime compareTo that.utcDateTime
 
-  val time = dateTime.toDateTime(DateTimeZone.UTC)
+  override def toString: String = utcDateTime.toString
 
-  override def equals(obj: Any): Boolean = obj match {
-    case that: Timestamp => this.time == that.time
-    case _               => false
-  }
-
-  /** hashCode must be computed on the UTC timestamp in order to uphold
-    * the equals/hashCode contract, 
-    * compare java.org.joda.time.base.AbstractInstant.hashCode
-    */
-  override def hashCode: Int = time.hashCode
-
-  def compare(that: Timestamp): Int = this.time compareTo that.time
-
-  override def toString: String = time.toString
+  def toDateTime: DateTime = utcDateTime
 }
 
 object Timestamp {
+  /**
+    * Returns a new Timestamp representing the instant that is the supplied
+    * dateTime converted to UTC.
+    */
+  def apply(dateTime: DateTime): Timestamp = new Timestamp(dateTime.toDateTime(DateTimeZone.UTC)) {}
 
   /**
     * Returns a new Timestamp representing the instant that is the supplied
