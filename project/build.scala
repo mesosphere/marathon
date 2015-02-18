@@ -55,6 +55,7 @@ object MarathonBuild extends Build {
       "-Yno-adapted-args",
       "-Ywarn-numeric-widen"
     ),
+    scalacOptions in (Compile, console) ~= (_.filterNot(_.startsWith("-X"))),
     javacOptions in Compile ++= Seq("-encoding", "UTF-8", "-source", "1.6", "-target", "1.6", "-Xlint:unchecked", "-Xlint:deprecation"),
     resolvers ++= Seq(
       "Mesosphere Public Repo"    at "http://downloads.mesosphere.io/maven",
