@@ -15,6 +15,12 @@ case class Timestamp(dateTime: DateTime) extends Ordered[Timestamp] {
     case _               => false
   }
 
+  /** hashCode must be computed on the UTC timestamp in order to uphold
+    * the equals/hashCode contract, 
+    * compare java.org.joda.time.base.AbstractInstant.hashCode
+    */
+  override def hashCode: Int = time.hashCode
+
   def compare(that: Timestamp): Int = this.time compareTo that.time
 
   override def toString: String = time.toString
