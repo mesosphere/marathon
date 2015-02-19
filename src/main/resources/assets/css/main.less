@@ -304,6 +304,26 @@ fieldset[disabled] .btn-info.active {
   border-color: #323539;
 }
 
+.icon {
+  background-repeat: no-repeat;
+  display: inline-block;
+}
+
+.icon-folder-closed {
+  background-image: url(../img/icons/folder-closed-35x30.png);
+  background-size: 17px 15px;
+  width: 17px;
+  height: 15px;
+  margin-right: 3px; // Accounts for 3 extra pixels of open icon
+}
+
+.icon-folder-open {
+  background-image: url(../img/icons/folder-open-40x30.png);
+  background-size: 20px 15px;
+  width: 20px;
+  height: 15px;
+}
+
 .overflow-ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -620,6 +640,23 @@ fieldset[disabled] .btn-info.active {
 
 .modal-header-blend {
   background: transparent;
+}
+
+/* ==============
+ * Groups
+ * ==============
+ */
+.app-group {
+  margin-bottom: 15px;
+}
+
+.app-group-title {
+  cursor: pointer;
+  display: block;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 @media (min-width: 768px) {

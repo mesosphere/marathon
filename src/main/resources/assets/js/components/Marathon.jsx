@@ -1,11 +1,13 @@
 /** @jsx React.DOM */
 
+var _ = require("underscore");
 var Mousetrap = require("mousetrap");
 var React = require("react/addons");
 var States = require("../constants/States");
 var AppCollection = require("../models/AppCollection");
 var DeploymentCollection = require("../models/DeploymentCollection");
 var AppListComponent = require("../components/AppListComponent");
+var GroupsListComponent = require("../components/GroupsListComponent");
 var AboutModalComponent = require("../components/modals/AboutModalComponent");
 var AppPageComponent = require("../components/AppPageComponent");
 var DeploymentsListComponent =
@@ -19,6 +21,7 @@ var UPDATE_INTERVAL = 5000;
 
 var tabs = [
   {id: "apps", text: "Apps"},
+  {id: "groups", text: "Groups"},
   {id: "deployments", text: "Deployments"}
 ];
 
@@ -130,7 +133,7 @@ var Marathon = React.createClass({
         this.setState({deploymentsFetchState: States.STATE_ERROR});
       }.bind(this),
       success: function (response) {
-        tabs[1].badge = response.models.length;
+        _.findWhere(tabs, {id: "deployments"}).badge = response.models.length;
         this.setState({deploymentsFetchState: States.STATE_SUCCESS});
       }.bind(this)
     });
@@ -424,6 +427,12 @@ var Marathon = React.createClass({
             + New App
           </button>
           <AppListComponent
+            collection={this.state.collection}
+            onSelectApp={this.showAppPage}
+            fetchState={this.state.fetchState} />
+        </TabPaneComponent>
+        <TabPaneComponent id="groups">
+          <GroupsListComponent
             collection={this.state.collection}
             onSelectApp={this.showAppPage}
             fetchState={this.state.fetchState} />
