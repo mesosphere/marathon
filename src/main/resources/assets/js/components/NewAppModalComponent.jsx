@@ -278,7 +278,8 @@ var NewAppModalComponent = React.createClass({
               <textarea style={{resize: "vertical"}} />
             </FormGroupComponent>
             <div className="row">
-              <button className="btn btn-success" onClick={this.toggleSettings}>
+              <button className="btn btn-success" 
+                onClick={this.toggleSettings}>
                 Hide optional settings
               </button>
             </div>
@@ -344,11 +345,14 @@ var NewAppModalComponent = React.createClass({
               <h4>Privileges</h4>
               <FormGroupComponent
                   attribute="privileges"
-                  help='Select to give this container access to all devices on the host'
+                  help='Select to give this container access to all 
+                  devices on the host'
                   label="Extend runtime privileges to this container"
                   model={model}
                   errors={errors}>
-                <input type="checkbox" value="true"/>
+                <label className="checkbox">
+                  <input type="checkbox" value="true"/>
+                </label>
               </FormGroupComponent>
               <h4>Parameters</h4>
               <div className="row">
