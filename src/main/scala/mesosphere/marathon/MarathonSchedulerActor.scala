@@ -5,7 +5,7 @@ import java.util.concurrent.Semaphore
 import akka.actor._
 import akka.event.EventStream
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.apache.mesos.Protos.TaskInfo
+import org.apache.mesos.Protos.{ TaskState, TaskID, TaskStatus, TaskInfo }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
@@ -80,30 +80,43 @@ class MarathonSchedulerActor(
 
     historyActor = context.actorOf(
       Props(classOf[HistoryActor], eventBus, taskFailureRepository), "HistoryActor")
-
-    deploymentRepository.all() onComplete {
-      case Success(deployments) => self ! RecoveredDeployments(deployments)
-      case Failure(_)           => self ! RecoveredDeployments(Nil)
-    }
-
   }
 
-  def receive: Receive = recovering
+  def receive: Receive = suspended
 
-  def recovering: Receive = {
-    case RecoveredDeployments(deployments) =>
+  def suspended: Receive = {
+    case Start =>
+      log.info("Starting scheduler actor")
+      deploymentRepository.all() onComplete {
+        case Success(deployments) => self ! RecoverDeployments(deployments)
+        case Failure(_)           => self ! RecoverDeployments(Nil)
+      }
+
+    case RecoverDeployments(deployments) =>
       deployments.foreach { plan =>
         log.info(s"Recovering deployment: $plan")
-        deploy(Actor.noSender, Deploy(plan, force = false), plan, blocking = false)
+        deploy(context.system.deadLetters, Deploy(plan, force = false), plan, blocking = false)
       }
+
+      log.info("Scheduler actor ready")
       unstashAll()
-      context.become(ready)
+      context.become(started)
       self ! ReconcileHealthChecks
 
-    case _ => stash()
+    case Suspend(_) => // ignore
+
+    case _          => stash()
   }
 
-  def ready: Receive = {
+  def started: Receive = {
+    case Suspend(t) =>
+      log.info("Suspending scheduler actor")
+      healthCheckManager.removeAll()
+      deploymentManager ! CancelAllDeployments(t)
+      context.become(suspended)
+
+    case Start => // ignore
+
     case ReconcileTasks =>
       scheduler.reconcileTasks(driver)
       sender ! ReconcileTasks.answer
@@ -111,12 +124,12 @@ class MarathonSchedulerActor(
     case ReconcileHealthChecks =>
       scheduler.reconcileHealthChecks()
 
-    case cmd @ ScaleApp(appId) =>
+    case cmd @ ScaleApp(appId, force) =>
       val origSender = sender()
-      performAsyncWithLockFor(appId, origSender, cmd, blocking = false) {
+      performAsyncWithLockFor(appId, origSender, cmd, blocking = force) {
         val res = scheduler.scale(driver, appId)
 
-        if (origSender != Actor.noSender)
+        if (origSender != context.system.deadLetters)
           res.sendAnswer(origSender, cmd)
         else
           res
@@ -150,7 +163,10 @@ class MarathonSchedulerActor(
               .getOrElse(Future.successful(()))
           } yield ()
         }
-        else promise.future
+        else promise.future andThen {
+          case _ =>
+            self ! ScaleApp(appId, force = true)
+        }
 
         res.sendAnswer(origSender, cmd)
       }
@@ -176,17 +192,16 @@ class MarathonSchedulerActor(
 
     def performWithLock(lockFn: Set[Semaphore] => Set[Semaphore]): Future[Unit] = {
       val locks = appIds.map(appLocks.get) // needed locks for all applications
-      Future(blocking(lockFn(locks))).flatMap { acquired => // acquired locks, fetched in a future
-        if (acquired.size == locks.size) {
-          log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
-          f.andThen {
-            case _ =>
-              log.debug(s"Releasing locks for $appIds")
-              acquired.foreach(_.release())
-          }.map { _ => () }
-        }
-        else lockNotAvailable(acquired)
+      val acquired = lockFn(locks)
+      if (acquired.size == locks.size) {
+        log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
+        f.andThen {
+          case _ =>
+            log.debug(s"Releasing locks for $appIds")
+            acquired.foreach(_.release())
+        }.map { _ => () }
       }
+      else lockNotAvailable(acquired)
     }
 
     def lockNotAvailable(acquiredLocks: Set[Semaphore]): Future[Unit] = Future {
@@ -210,7 +225,14 @@ class MarathonSchedulerActor(
 
     def acquireBlocking(locks: Set[Semaphore]): Set[Semaphore] = locks.map{ s => s.acquire(); s }
     def acquireIfPossible(locks: Set[Semaphore]): Set[Semaphore] = locks.takeWhile(_.tryAcquire())
-    performWithLock(if (isBlocking) acquireBlocking else acquireIfPossible)
+
+    if (isBlocking) {
+      // TODO: there is still a race condition in this line, we should try to find a better solution for this
+      Future(performWithLock(acquireBlocking)).flatMap(identity)
+    }
+    else {
+      performWithLock(acquireIfPossible)
+    }
   }
 
   /**
@@ -233,8 +255,6 @@ class MarathonSchedulerActor(
     val ids = plan.affectedApplicationIds
 
     performAsyncWithLockFor(ids, origSender, cmd, isBlocking = blocking) {
-      ids.foreach(taskQueue.rateLimiter.resetDelay)
-
       val res = deploy(driver, plan)
       if (origSender != Actor.noSender) origSender ! cmd.answer
       res
@@ -268,7 +288,10 @@ class MarathonSchedulerActor(
 }
 
 object MarathonSchedulerActor {
-  case class RecoveredDeployments(deployments: Seq[DeploymentPlan])
+  case object Start
+  case class Suspend(reason: Throwable)
+
+  case class RecoverDeployments(deployments: Seq[DeploymentPlan])
 
   sealed trait Command {
     def answer: Event
@@ -280,7 +303,13 @@ object MarathonSchedulerActor {
 
   case object ReconcileHealthChecks
 
-  case class ScaleApp(appId: PathId) extends Command {
+  /**
+    *
+    * @param appId The id of the app to be scaled.
+    * @param force If set to true and another operation currently holds the lock
+    *              on the specified app, this operation will wait on the lock.
+    */
+  case class ScaleApp(appId: PathId, force: Boolean) extends Command {
     def answer: Event = AppScaled(appId)
   }
 
@@ -363,7 +392,7 @@ class SchedulerActions(
       }
       taskQueue.purge(app.id)
       taskTracker.shutdown(app.id)
-      taskQueue.rateLimiter.resetDelay(app.id)
+      taskQueue.rateLimiter.resetDelay(app)
       // TODO after all tasks have been killed we should remove the app from taskTracker
 
       eventBus.publish(AppTerminatedEvent(app.id))
@@ -382,11 +411,16 @@ class SchedulerActions(
       case Success(appIds) =>
         log.info("Syncing tasks for all apps")
 
-        for (appId <- appIds) schedulerActor ! ScaleApp(appId)
+        for (appId <- appIds) schedulerActor ! ScaleApp(appId, force = false)
 
         val knownTaskStatuses = appIds.flatMap { appId =>
           taskTracker.get(appId).collect {
             case task if task.hasStatus => task.getStatus
+            case task => // staged tasks, which have no status yet
+              TaskStatus.newBuilder
+                .setState(TaskState.TASK_STAGING)
+                .setTaskId(TaskID.newBuilder.setValue(task.getId))
+                .build()
           }
         }
 
@@ -462,13 +496,12 @@ class SchedulerActions(
       if (targetCount > currentCount) {
         log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
 
-        val queuedCount = taskQueue.count(app)
+        val queuedCount = taskQueue.count(app.id)
         val toQueue = targetCount - (currentCount + queuedCount)
 
         if (toQueue > 0) {
           log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
-          for (i <- 0 until toQueue)
-            taskQueue.add(app)
+          taskQueue.add(app, toQueue)
         }
         else {
           log.info(s"Already queued $queuedCount tasks for ${app.id}. Not scaling.")
@@ -506,7 +539,6 @@ class SchedulerActions(
         val updatedApp = appUpdate(currentVersion)
 
         taskQueue.purge(id)
-        taskQueue.rateLimiter.resetDelay(id)
 
         appRepository.store(updatedApp).map { _ =>
           update(driver, updatedApp, appUpdate)

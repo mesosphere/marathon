@@ -6,9 +6,10 @@ import com.google.common.collect.Lists
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ Protos, MarathonSpec }
 import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
 import org.apache.mesos.{ Protos => mesos }
@@ -44,6 +45,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     assert(256 == getScalarResourceValue(proto1, "mem"), 1e-6)
     assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
     assert(!proto1.hasContainer)
+    assert(1.0 == proto1.getUpgradeStrategy.getMinimumHealthCapacity)
+    assert(1.0 == proto1.getUpgradeStrategy.getMaximumOverCapacity)
 
     val app2 = AppDefinition(
       id = "play".toPath,
@@ -56,7 +59,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       mem = 256,
       instances = 5,
       ports = Seq(8080, 8081),
-      executor = "//cmd"
+      executor = "//cmd",
+      upgradeStrategy = UpgradeStrategy(0.7, 0.4)
     )
 
     val proto2 = app2.toProto
@@ -70,6 +74,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     assert(4 == getScalarResourceValue(proto2, "cpus"), 1e-6)
     assert(256 == getScalarResourceValue(proto2, "mem"), 1e-6)
     assert(proto2.hasContainer)
+    assert(0.7 == proto2.getUpgradeStrategy.getMinimumHealthCapacity)
+    assert(0.4 == proto2.getUpgradeStrategy.getMaximumOverCapacity)
   }
 
   test("MergeFromProto") {
@@ -100,7 +106,12 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       mem = 256,
       instances = 5,
       ports = Seq(8080, 8081),
-      executor = "//cmd"
+      executor = "//cmd",
+      labels = Map(
+        "one" -> "aaa",
+        "two" -> "bbb",
+        "three" -> "ccc"
+      )
     )
     val result1 = AppDefinition().mergeFromProto(app1.toProto)
     assert(result1 == app1)
@@ -114,17 +125,17 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
     def shouldViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = checkApp(app, PathId.empty)
+      val violations = checkAppConstraints(app, PathId.empty)
       assert(
         violations.exists { v =>
-          v.getPropertyPath.toString == path && v.getMessageTemplate.toString == template
+          v.getPropertyPath.toString == path && v.getMessageTemplate == template
         },
         s"Violations:\n${violations.mkString}"
       )
     }
 
     def shouldNotViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = checkApp(app, PathId.empty)
+      val violations = checkAppConstraints(app, PathId.empty)
       assert(
         !violations.exists { v =>
           v.getPropertyPath.toString == path && v.getMessageTemplate == template
@@ -205,6 +216,30 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
 
+    shouldViolate(
+      correct.copy(upgradeStrategy = UpgradeStrategy(1.2)),
+      "upgradeStrategy.minimumHealthCapacity",
+      "is greater than 1"
+    )
+
+    shouldViolate(
+      correct.copy(upgradeStrategy = UpgradeStrategy(0.5, 1.2)),
+      "upgradeStrategy.maximumOverCapacity",
+      "is greater than 1"
+    )
+
+    shouldViolate(
+      correct.copy(upgradeStrategy = UpgradeStrategy(-1.2)),
+      "upgradeStrategy.minimumHealthCapacity",
+      "is less than 0"
+    )
+
+    shouldViolate(
+      correct.copy(upgradeStrategy = UpgradeStrategy(0.5, -1.2)),
+      "upgradeStrategy.maximumOverCapacity",
+      "is less than 0"
+    )
+
     shouldNotViolate(
       correct.copy(
         container = Some(Container(
@@ -223,6 +258,20 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       "Health check port indices must address an element of the ports array or container port mappings."
     )
 
+    shouldNotViolate(
+      correct.copy(
+        container = Some(Container(
+          docker = Some(Docker(
+            network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+            portMappings = None
+          ))
+        )),
+        ports = Nil,
+        healthChecks = Set(HealthCheck(protocol = Protocol.COMMAND))
+      ),
+      "",
+      "Health check port indices must address an element of the ports array or container port mappings."
+    )
   }
 
   test("SerializationRoundtrip") {
@@ -287,6 +336,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       requirePorts = true,
       backoff = 5.seconds,
       backoffFactor = 1.5,
+      maxLaunchDelay = 3.minutes,
       container = Some(
         Container(docker = Some(Container.Docker("group/image")))
       ),
@@ -413,12 +463,18 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
             }
         ],
         "instances": 3,
+        "labels": {
+          "one": "aaa",
+          "two": "bbb",
+          "three": "ccc"
+        },
         "ports": [
             8080,
             9000
         ],
         "backoffSeconds": 1,
         "backoffFactor": 1.15,
+        "maxLaunchDelaySeconds": 300,
         "tasksRunning": 3,
         "tasksStaged": 0,
         "uris": [
@@ -426,7 +482,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
         ],
         "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
         "upgradeStrategy": {
-            "minimumHealthCapacity": 0.5
+            "minimumHealthCapacity": 0.5,
+            "maximumOverCapacity": 0.5
         },
         "version": "2014-03-01T23:29:30.158Z"
     }"""
@@ -459,8 +516,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       .build()
 
     val appGroup = Group(PathId("/foo"), Set(app))
-
-    val enrichedApp = app.withTaskCountsAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), Seq(DeploymentPlan(Group.empty, appGroup)))
+    val enrichedApp = app.withTaskCountsAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
 
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -493,7 +549,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
 
     val appGroup = Group(PathId("/foo"), Set(app))
 
-    val enrichedApp = app.withTasksAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), Seq(DeploymentPlan(Group.empty, appGroup)))
+    val enrichedApp = app.withTasksAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
 
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -532,7 +588,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
       mesos.TaskState.TASK_FAILED
     )
 
-    val enrichedApp = app.withTasksAndDeploymentsAndFailures(Seq(EnrichedTask(app.id, task, Nil, Nil)), Seq(DeploymentPlan(Group.empty, appGroup)), Some(failure))
+    val enrichedApp = app.withTasksAndDeploymentsAndFailures(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)), Some(failure))
 
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule

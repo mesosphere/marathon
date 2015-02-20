@@ -15,8 +15,8 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   import mesosphere.marathon.upgrade.StartingBehavior._
 
   def eventBus: EventStream
-  def expectedSize: Int
-  def withHealthChecks: Boolean
+  def scaleTo: Int
+  def nrToStart: Int
   def taskQueue: TaskQueue
   def driver: SchedulerDriver
   def scheduler: SchedulerActions
@@ -24,9 +24,10 @@ trait StartingBehavior { this: Actor with ActorLogging =>
 
   val app: AppDefinition
   val Version = app.version.toString
-  var healthyTasks = Set.empty[String]
-  var runningTasks = Set.empty[String]
+  var atLeastOnceHealthyTasks = Set.empty[String]
+  var startedRunningTasks = Set.empty[String]
   val AppId = app.id
+  val withHealthChecks: Boolean = app.healthChecks.nonEmpty
 
   def initializeStart(): Unit
 
@@ -52,39 +53,41 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   }
 
   final def checkForHealthy: Receive = {
-    case HealthStatusChanged(AppId, taskId, Version, true, _, _) if !healthyTasks(taskId) =>
-      healthyTasks += taskId
+    case HealthStatusChanged(AppId, taskId, Version, true, _, _) if !atLeastOnceHealthyTasks(taskId) =>
+      atLeastOnceHealthyTasks += taskId
       log.info(s"$taskId is now healthy")
       checkFinished()
   }
 
   final def checkForRunning: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", _, app.`id`, _, _, Version, _, _) if !runningTasks(taskId) =>
-      runningTasks += taskId
-      log.info(s"Started $taskId")
+    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", _, app.`id`, _, _, Version, _, _) if !startedRunningTasks(taskId) => // scalastyle:off line.size.limit
+      startedRunningTasks += taskId
+      log.info(s"New task $taskId now running during app ${app.id.toString} scaling, " +
+        s"${nrToStart - startedRunningTasks.size} more to go")
       checkFinished()
   }
 
   def commonBehavior: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, "TASK_ERROR" | "TASK_FAILED" | "TASK_LOST" | "TASK_KILLED", _, app.`id`, _, _, Version, _, _) => // scalastyle:off line.size.limit
-      log.warning(s"Failed to start $taskId for app ${app.id}. Rescheduling.")
-      runningTasks -= taskId
+    case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, app.`id`, _, _, Version, _, _) => // scalastyle:off line.size.limit
+      log.warning(s"New task $taskId failed during app ${app.id.toString} scaling, queueing another task")
+      startedRunningTasks -= taskId
       taskQueue.add(app)
 
     case Sync =>
-      val actualSize = taskQueue.count(app) + taskTracker.count(app.id)
-
-      if (actualSize < expectedSize) {
-        for (_ <- 0 until (expectedSize - actualSize)) taskQueue.add(app)
+      val actualSize = taskQueue.count(app.id) + taskTracker.count(app.id)
+      val tasksToStartNow = Math.max(scaleTo - actualSize, 0)
+      if (tasksToStartNow > 0) {
+        log.info(s"Reconciling tasks during app ${app.id.toString} scaling: queuing ${tasksToStartNow} new tasks")
+        taskQueue.add(app, tasksToStartNow)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
   def checkFinished(): Unit = {
-    if (withHealthChecks && healthyTasks.size == expectedSize) {
-      success()
-    }
-    else if (runningTasks.size == expectedSize) {
+    val started =
+      if (withHealthChecks) atLeastOnceHealthyTasks.size
+      else startedRunningTasks.size
+    if (started == nrToStart) {
       success()
     }
   }
@@ -94,4 +97,11 @@ trait StartingBehavior { this: Actor with ActorLogging =>
 
 object StartingBehavior {
   case object Sync
+}
+
+private object StartErrorState {
+  def unapply(state: String): Option[String] = state match {
+    case "TASK_ERROR" | "TASK_FAILED" | "TASK_KILLED" | "TASK_LOST" => Some(state)
+    case _ => None
+  }
 }

@@ -6,6 +6,7 @@ import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state.PathId._
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.immutable.Seq
@@ -70,6 +71,7 @@ class AppUpdateTest extends MarathonSpec {
       ports = Some(Seq(0, 0)),
       backoff = Some(2.seconds),
       backoffFactor = Some(1.2),
+      maxLaunchDelay = Some(1.minutes),
       container = Some(
         Container(
           `type` = mesos.ContainerInfo.Type.DOCKER,
@@ -79,7 +81,14 @@ class AppUpdateTest extends MarathonSpec {
       ),
       healthChecks = Some(Set[HealthCheck]()),
       dependencies = Some(Set[PathId]()),
-      upgradeStrategy = Some(UpgradeStrategy.empty)
+      upgradeStrategy = Some(UpgradeStrategy.empty),
+      labels = Some(
+        Map(
+          "one" -> "aaa",
+          "two" -> "bbb",
+          "three" -> "ccc"
+        )
+      )
     )
     val json1 = mapper.writeValueAsString(update1)
     val readResult1 = mapper.readValue(json1, classOf[AppUpdate])
@@ -122,7 +131,11 @@ class AppUpdateTest extends MarathonSpec {
 
   }
 
-  test("'version' field has to be exclusive") {
+  test("'version' field can only be combined with 'id'") {
+    assert(AppUpdate(version = Some(Timestamp.now())).onlyVersionOrIdSet)
+
+    assert(AppUpdate(id = Some("foo".toPath), version = Some(Timestamp.now())).onlyVersionOrIdSet)
+
     intercept[Exception] {
       AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
     }

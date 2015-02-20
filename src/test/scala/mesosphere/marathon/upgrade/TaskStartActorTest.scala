@@ -3,16 +3,19 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
+import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.InMemoryState
-import org.mockito.Mockito.{ spy, times, verify }
+import org.mockito.Mockito.{ times, spy, verify, when }
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
+import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
@@ -22,7 +25,23 @@ class TaskStartActorTest
     with FunSuiteLike
     with Matchers
     with MockitoSugar
+    with BeforeAndAfter
     with BeforeAndAfterAll {
+
+  var driver: SchedulerDriver = _
+  var scheduler: SchedulerActions = _
+  var taskQueue: TaskQueue = _
+  var taskTracker: TaskTracker = _
+  var registry: MetricRegistry = _
+
+  before {
+    driver = mock[SchedulerDriver]
+    scheduler = mock[SchedulerActions]
+    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new MetricRegistry)
+    taskQueue = spy(new TaskQueue)
+    registry = new MetricRegistry
+    taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], registry))
+  }
 
   override protected def afterAll(): Unit = {
     super.afterAll()
@@ -30,13 +49,8 @@ class TaskStartActorTest
   }
 
   test("Start success") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
-    val app = AppDefinition("myApp".toPath, instances = 5)
+    val app = AppDefinition("/myApp".toPath, instances = 5)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -47,14 +61,75 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app) == 5, 3.seconds)
+    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
 
-    for ((task, i) <- taskQueue.removeAll().zipWithIndex)
+    for (i <- 0 until taskQueue.count(app.id))
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+
+    Await.result(promise.future, 3.seconds) should be(())
+
+    expectTerminated(ref)
+  }
+
+  test("Start success with tasks in taskQueue") {
+    val promise = Promise[Unit]()
+    val app = AppDefinition("/myApp".toPath, instances = 5)
+
+    taskQueue.add(app)
+
+    val ref = TestActorRef(Props(
+      classOf[TaskStartActor],
+      driver,
+      scheduler,
+      taskQueue,
+      taskTracker,
+      system.eventStream,
+      app,
+      app.instances,
+      promise))
+
+    watch(ref)
+
+    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
+
+    for (i <- 0 until taskQueue.count(app.id))
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+
+    Await.result(promise.future, 3.seconds) should be(())
+
+    expectTerminated(ref)
+  }
+
+  test("Start success with existing task") {
+    val promise = Promise[Unit]()
+    val app = AppDefinition("/myApp".toPath, instances = 5)
+
+    val task = MarathonTask.newBuilder
+      .setId(TaskIdUtil.newTaskId(app.id).getValue)
+      .setVersion(Timestamp(1024).toString)
+      .build
+    taskTracker.created(app.id, task)
+
+    val ref = TestActorRef(Props(
+      classOf[TaskStartActor],
+      driver,
+      scheduler,
+      taskQueue,
+      taskTracker,
+      system.eventStream,
+      app,
+      app.instances,
+      promise))
+
+    watch(ref)
+
+    awaitCond(taskQueue.count(app.id) == 4, 3.seconds)
+
+    for (i <- 0 until taskQueue.count(app.id))
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
@@ -63,13 +138,8 @@ class TaskStartActorTest
   }
 
   test("Start success with no instances to start") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp".toPath, instances = 0)
+    val app = AppDefinition("/myApp".toPath, instances = 0)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -80,7 +150,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -91,13 +160,12 @@ class TaskStartActorTest
   }
 
   test("Start with health checks") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp".toPath, instances = 5)
+    val app = AppDefinition(
+      "/myApp".toPath,
+      instances = 5,
+      healthChecks = Set(HealthCheck())
+    )
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -108,15 +176,14 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      true,
       promise))
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app) == 5, 3.seconds)
+    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
 
-    for ((_, i) <- taskQueue.removeAll().zipWithIndex)
-      system.eventStream.publish(HealthStatusChanged(app.id, s"task_${i}", app.version.toString, true))
+    for (i <- 0 until taskQueue.count(app.id))
+      system.eventStream.publish(HealthStatusChanged(app.id, s"task_$i", app.version.toString, alive = true))
 
     Await.result(promise.future, 3.seconds) should be(())
 
@@ -124,13 +191,12 @@ class TaskStartActorTest
   }
 
   test("Start with health checks with no instances to start") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp".toPath, instances = 0)
+    val app = AppDefinition(
+      "/myApp".toPath,
+      instances = 0,
+      healthChecks = Set(HealthCheck())
+    )
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -141,7 +207,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      true,
       promise))
 
     watch(ref)
@@ -152,13 +217,8 @@ class TaskStartActorTest
   }
 
   test("Cancelled") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = new TaskQueue
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Boolean]()
-    val app = AppDefinition("myApp".toPath, instances = 5)
+    val app = AppDefinition("/myApp".toPath, instances = 5)
 
     val ref = system.actorOf(Props(
       classOf[TaskStartActor],
@@ -169,7 +229,6 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
@@ -184,13 +243,8 @@ class TaskStartActorTest
   }
 
   test("Task fails to start") {
-    val driver = mock[SchedulerDriver]
-    val scheduler = mock[SchedulerActions]
-    val taskQueue = spy(new TaskQueue)
-    val registry = new MetricRegistry
-    val taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], registry)
     val promise = Promise[Unit]()
-    val app = AppDefinition("myApp".toPath, instances = 1)
+    val app = AppDefinition("/myApp".toPath, instances = 1)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -201,23 +255,74 @@ class TaskStartActorTest
       system.eventStream,
       app,
       app.instances,
-      false,
       promise))
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app) == 1, 3.seconds)
+    awaitCond(taskQueue.count(app.id) == 1, 3.seconds)
 
-    for (task <- taskQueue.removeAll())
-      system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", "", app.id, "", Nil, app.version.toString))
+    taskQueue.purge(app.id)
 
-    awaitCond(taskQueue.count(app) == 1, 3.seconds)
+    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", "", app.id, "", Nil, app.version.toString))
 
-    verify(taskQueue, times(2)).add(app)
+    awaitCond(taskQueue.count(app.id) == 1, 3.seconds)
 
-    for (task <- taskQueue.removeAll())
+    verify(taskQueue, times(2)).add(app, 1)
+
+    for (i <- 0 until taskQueue.count(app.id))
       system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
+    Await.result(promise.future, 3.seconds) should be(())
+
+    expectTerminated(ref)
+  }
+
+  test("Start success with dying existing task, reschedules, but finishes early") {
+    val promise = Promise[Unit]()
+    val app = AppDefinition("/myApp".toPath, instances = 5)
+
+    val taskId = TaskIdUtil.newTaskId(app.id)
+    val task = MarathonTask.newBuilder
+      .setId(taskId.getValue)
+      .setVersion(Timestamp(1024).toString)
+      .build
+    taskTracker.created(app.id, task)
+
+    val ref = TestActorRef(Props(
+      classOf[TaskStartActor],
+      driver,
+      scheduler,
+      taskQueue,
+      taskTracker,
+      system.eventStream,
+      app,
+      app.instances,
+      promise))
+
+    watch(ref)
+
+    // wait for initial sync
+    awaitCond(taskQueue.count(app.id) == 4, 3.seconds)
+
+    // let existing task die
+    // doesn't work because it needs Zookeeper: taskTracker.terminated(app.id, taskStatus)
+    // we mock instead
+    when(taskTracker.count(app.id)).thenReturn(0)
+    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_ERROR", "", app.id, "", Nil, task.getVersion))
+
+    // sync will reschedule task
+    ref ! StartingBehavior.Sync
+    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
+
+    // launch 4 of the tasks
+    when(taskTracker.count(app.id)).thenReturn(4)
+    List(0, 1, 2, 3) foreach { i =>
+      taskQueue.poll
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+    }
+    assert(taskQueue.count(app.id) == 1)
+
+    // it finished early
     Await.result(promise.future, 3.seconds) should be(())
 
     expectTerminated(ref)

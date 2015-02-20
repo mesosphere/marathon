@@ -24,7 +24,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{ Seq, Set }
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -102,6 +102,23 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     system.shutdown()
   }
 
+  test("RecoversDeploymentsAndReconcilesHealthChecksOnStart") {
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
+    when(repo.apps()).thenReturn(Future.successful(Seq(app)))
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! Start
+      awaitAssert({
+        verify(hcManager).reconcileWith(app.id)
+      }, 5.seconds, 10.millis)
+      verify(deploymentRepo, times(1)).all()
+    }
+    finally {
+      stopActor(schedulerActor)
+    }
+  }
+
   test("ReconcileTasks") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
@@ -120,13 +137,14 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! ReconcileTasks
 
       expectMsg(5.seconds, TasksReconciled)
 
       awaitAssert({
         verify(tracker).shutdown("nope".toPath)
-        verify(queue).add(app)
+        verify(queue).add(app, 1)
         verify(driver).killTask(TaskID("task_a"))
       }, 5.seconds, 10.millis)
     }
@@ -146,10 +164,11 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! ScaleApp("test-app".toPath)
+      schedulerActor ! Start
+      schedulerActor ! ScaleApp("test-app".toPath, force = false)
 
       awaitAssert({
-        verify(queue).add(app)
+        verify(queue).add(app, 1)
       }, 5.seconds, 10.millis)
 
       expectMsg(5.seconds, AppScaled(app.id))
@@ -186,6 +205,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
       schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
 
@@ -198,9 +218,50 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       val Some(taskFailureEvent) = TaskFailure.FromMesosStatusUpdateEvent(statusUpdateEvent)
 
-      verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent)
+      awaitAssert {
+        verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent)
+      }
 
       verify(repo, times(3)).store(app.copy(instances = 0))
+    }
+    finally {
+      stopActor(schedulerActor)
+    }
+  }
+
+  test("Kill tasks without scaling") {
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
+
+    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
+    when(tracker.get(app.id)).thenReturn(Set[MarathonTask](taskA))
+    when(tracker.fetchTask(app.id, taskA.getId))
+      .thenReturn(Some(taskA))
+      .thenReturn(None)
+
+    when(repo.currentVersion(app.id))
+      .thenReturn(Future.successful(Some(app)))
+      .thenReturn(Future.successful(Some(app.copy(instances = 0))))
+    when(tracker.count(app.id)).thenReturn(0)
+    when(repo.store(any())).thenReturn(Future.successful(app))
+
+    val statusUpdateEvent = MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+
+    when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        system.eventStream.publish(statusUpdateEvent)
+        Status.DRIVER_RUNNING
+      }
+    })
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! Start
+      schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = false)
+
+      expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
+
+      awaitAssert(verify(queue).add(app, 1))
     }
     finally {
       stopActor(schedulerActor)
@@ -222,6 +283,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -239,6 +301,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   test("Deployment resets rate limiter for affected apps") {
     val probe = TestProbe()
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
     val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
@@ -247,12 +310,16 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
+    when(tracker.get(app.id)).thenReturn(Set(taskA))
+    when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
+
     system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
     queue.rateLimiter.addDelay(app)
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -279,6 +346,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
+      schedulerActor ! Start
       schedulerActor ! Deploy(plan)
 
       expectMsgType[DeploymentStarted]
@@ -306,6 +374,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(deploymentRepo.expunge(any())).thenReturn(Future.successful(Seq(true)))
 
     when(deploymentRepo.all()).thenReturn(Future.successful(Seq(plan)))
+    when(deploymentRepo.store(plan)).thenReturn(Future.successful(plan))
 
     val schedulerActor = system.actorOf(Props(
       classOf[MarathonSchedulerActor],
@@ -324,6 +393,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     ))
 
     try {
+      schedulerActor ! Start
       schedulerActor ! Deploy(plan)
 
       // This indicates that the deployment is already running,

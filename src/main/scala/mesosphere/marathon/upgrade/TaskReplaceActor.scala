@@ -24,17 +24,26 @@ class TaskReplaceActor(
   val appId = app.id
   val version = app.version.toString
   var healthy = Set.empty[String]
-  var taskIds = tasksToKill.map(_.getId)
-  val toKill = taskIds.to[mutable.Queue]
+  var newTasksStarted: Int = 0
+  var oldTaskIds = tasksToKill.map(_.getId)
+  val toKill = oldTaskIds.to[mutable.Queue]
+  var maxCapacity = (app.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
 
   override def preStart(): Unit = {
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[HealthStatusChanged])
 
-    val minHealthy = (toKill.size.toDouble * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
-    val nrToKill = math.min(0, toKill.size - minHealthy)
+    val minHealthy = (app.instances * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
+    val nrToKillImmediately = math.max(0, toKill.size - minHealthy)
 
-    for (_ <- 0 until nrToKill) {
+    // make sure at least one task can be started to get the ball rolling
+    if (nrToKillImmediately == 0 && maxCapacity == app.instances)
+      maxCapacity += 1
+
+    log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} of ${app.id.toString} leave " +
+      s"${minHealthy} tasks running, maximum capacity ${maxCapacity}, killing ${nrToKillImmediately} tasks immediately")
+
+    for (_ <- 0 until nrToKillImmediately) {
       val taskId = Protos.TaskID.newBuilder
         .setValue(toKill.dequeue())
         .build()
@@ -42,7 +51,7 @@ class TaskReplaceActor(
       driver.killTask(taskId)
     }
 
-    for (_ <- 0 until app.instances) taskQueue.add(app)
+    conciliateNewTasks()
   }
 
   override def postStop(): Unit = {
@@ -74,13 +83,28 @@ class TaskReplaceActor(
   }
 
   def commonBehavior: PartialFunction[Any, Unit] = {
-    case MesosStatusUpdateEvent(slaveId, taskId, ErrorState(_), _, `appId`, _, _, `version`, _, _) if !taskIds(taskId) => // scalastyle:ignore line.size.limit
-      val msg = s"Task $taskId failed on slave $slaveId"
-      log.error(msg)
+    case MesosStatusUpdateEvent(slaveId, taskId, ReplaceErrorState(_), _, `appId`, _, _, `version`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+      log.error(s"New task $taskId failed on slave $slaveId during app ${app.id.toString} restart")
       healthy -= taskId
       taskQueue.add(app)
 
+    case MesosStatusUpdateEvent(slaveId, taskId, ReplaceErrorState(_), _, `appId`, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+      log.error(s"Old task $taskId failed on slave $slaveId during app ${app.id.toString} restart")
+      oldTaskIds -= taskId
+      conciliateNewTasks()
+
     case x => log.debug(s"Received $x")
+  }
+
+  def conciliateNewTasks(): Unit = {
+    val leftCapacity = math.max(0, maxCapacity - oldTaskIds.size - newTasksStarted)
+    val tasksNotStartedYet = math.max(0, app.instances - newTasksStarted)
+    val tasksToStartNow = math.min(tasksNotStartedYet, leftCapacity)
+    if (tasksToStartNow > 0) {
+      log.info(s"Reconciliating tasks during app ${app.id.toString} restart: queuing ${tasksToStartNow} new tasks")
+      taskQueue.add(app, tasksToStartNow)
+      newTasksStarted += tasksToStartNow
+    }
   }
 
   def handleNewHealthyTask(taskId: String): Unit = {
@@ -111,9 +135,10 @@ class TaskReplaceActor(
       .build()
 }
 
-private object ErrorState {
+private object ReplaceErrorState {
   def unapply(state: String): Option[String] = state match {
     case "TASK_ERROR" | "TASK_FAILED" | "TASK_KILLED" | "TASK_LOST" => Some(state)
     case _ => None
   }
 }
+

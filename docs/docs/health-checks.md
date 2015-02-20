@@ -22,9 +22,9 @@ health checks consecutively, that task is killed.
   "path": "/api/health",
   "portIndex": 0,
   "protocol": "HTTP",
-  "gracePeriodSeconds": 30,
-  "intervalSeconds": 30,
-  "timeoutSeconds": 30,
+  "gracePeriodSeconds": 300,
+  "intervalSeconds": 60,
+  "timeoutSeconds": 20,
   "maxConsecutiveFailures": 3
 }
 ```
@@ -35,9 +35,9 @@ OR
 {
   "portIndex": 0,
   "protocol": "TCP",
-  "gracePeriodSeconds": 30,
-  "intervalSeconds": 30,
-  "timeoutSeconds": 30,
+  "gracePeriodSeconds": 300,
+  "intervalSeconds": 60,
+  "timeoutSeconds": 20,
   "maxConsecutiveFailures": 0
 }
 ```
@@ -48,19 +48,19 @@ OR
 {
   "protocol": "COMMAND",
   "command": { "value": "curl -f -X GET http://$HOST:$PORT0/health" },
-  "gracePeriodSeconds": 30,
-  "intervalSeconds": 30,
-  "timeoutSeconds": 30,
+  "gracePeriodSeconds": 300,
+  "intervalSeconds": 60,
+  "timeoutSeconds": 20,
   "maxConsecutiveFailures": 3
 }
 ```
 
 #### Health check options
 
-* `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
+* `gracePeriodSeconds` (Optional. Default: 300): Health check failures are
   ignored within this number of seconds or until the task becomes healthy for
   the first time.
-* `intervalSeconds` (Optional. Default: 10): Number of seconds to wait between
+* `intervalSeconds` (Optional. Default: 60): Number of seconds to wait between
   health checks.
 * `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
   check failures after which the unhealthy task should be killed. If this value

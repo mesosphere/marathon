@@ -41,7 +41,7 @@ object MarathonBuild extends Build {
 
   lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
     organization := "mesosphere",
-    scalaVersion := "2.11.4",
+    scalaVersion := "2.11.5",
     scalacOptions in Compile ++= Seq(
       "-encoding", "UTF-8",
       "-target:jvm-1.6",
@@ -162,10 +162,10 @@ object Dependency {
     val Chaos = "0.6.1"
     val JacksonCCM = "0.1.2"
     val MesosUtils = "0.21.0-1"
-    val Akka = "2.3.6"
-    val Spray = "1.3.1"
-    val TwitterCommons = "0.0.60"
-    val TwitterZKClient = "0.0.60"
+    val Akka = "2.3.9"
+    val Spray = "1.3.2"
+    val TwitterCommons = "0.0.76"
+    val TwitterZKClient = "0.0.70"
     val Jersey = "1.18.1"
     val JodaTime = "2.3"
     val JodaConvert = "1.6"
@@ -173,7 +173,7 @@ object Dependency {
     val JGraphT = "0.9.1"
     val Hadoop = "2.4.1"
     val Scallop = "0.9.5"
-    val PlayJson = "2.3.4"
+    val PlayJson = "2.3.7"
 
     // test deps versions
     val Mockito = "1.9.5"

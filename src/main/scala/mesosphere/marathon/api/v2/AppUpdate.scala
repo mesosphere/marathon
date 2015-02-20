@@ -57,6 +57,8 @@ case class AppUpdate(
 
     backoffFactor: Option[JDouble] = None,
 
+    @FieldJsonProperty("maxLaunchDelaySeconds") maxLaunchDelay: Option[FiniteDuration] = None,
+
     container: Option[Container] = None,
 
     healthChecks: Option[Set[HealthCheck]] = None,
@@ -65,12 +67,14 @@ case class AppUpdate(
 
     upgradeStrategy: Option[UpgradeStrategy] = None,
 
+    labels: Option[Map[String, String]] = None,
+
     version: Option[Timestamp] = None) {
 
-  require(version.isEmpty || onlyVersionSet, "The 'version' field may not be combined with other fields.")
+  require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
-  private def onlyVersionSet: Boolean = productIterator forall {
-    case x @ Some(_) => x == version
+  protected[api] def onlyVersionOrIdSet: Boolean = productIterator forall {
+    case x @ Some(_) => x == version || x == id
     case _           => true
   }
 
@@ -96,10 +100,12 @@ case class AppUpdate(
     requirePorts.getOrElse(app.requirePorts),
     backoff.getOrElse(app.backoff),
     backoffFactor.getOrElse(app.backoffFactor),
+    maxLaunchDelay.getOrElse(app.maxLaunchDelay),
     container.filterNot(_ == Container.Empty).orElse(app.container),
     healthChecks.getOrElse(app.healthChecks),
     dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy.getOrElse(app.upgradeStrategy),
+    labels.getOrElse(app.labels),
     version.getOrElse(Timestamp.now())
   )
 

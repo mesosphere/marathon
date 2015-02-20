@@ -170,8 +170,8 @@ class HealthCheckTest extends MarathonSpec {
           "protocol": "COMMAND",
           "portIndex": 0,
           "command": { "value": "echo healthy" },
-          "gracePeriodSeconds": 15,
-          "intervalSeconds": 10,
+          "gracePeriodSeconds": 300,
+          "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 3
         }
@@ -192,8 +192,8 @@ class HealthCheckTest extends MarathonSpec {
           "protocol": "COMMAND",
           "portIndex": 0,
           "command": { "value": "echo healthy" },
-          "gracePeriodSeconds": 15,
-          "intervalSeconds": 10,
+          "gracePeriodSeconds": 300,
+          "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 3
         }

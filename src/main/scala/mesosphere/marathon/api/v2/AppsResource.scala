@@ -12,12 +12,12 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.{ ModelValidation, RestResource }
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.health.{ HealthCheckManager, HealthCounts }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.{ DeploymentStep, RestartApplication, DeploymentPlan }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.json.{ Writes, JsObject, Json }
 
@@ -52,8 +52,12 @@ class AppsResource @Inject() (
     val mapped = embed match {
       case EmbedTasks =>
         apps.map { app =>
-          val enrichedApp = app.withTasksAndDeployments(enrichedTasks(app), runningDeployments)
-          WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
+          val enrichedApp = app.withTasksAndDeployments(
+            enrichedTasks(app),
+            healthCounts(app),
+            runningDeployments
+          )
+          WithTasksAndDeploymentsWrites.writes(enrichedApp)
         }
 
       case EmbedTasksAndFailures =>
@@ -61,6 +65,7 @@ class AppsResource @Inject() (
           WithTasksAndDeploymentsAndFailuresWrites.writes(
             app.withTasksAndDeploymentsAndFailures(
               enrichedTasks(app),
+              healthCounts(app),
               runningDeployments,
               taskFailureRepository.current(app.id)
             )
@@ -69,7 +74,11 @@ class AppsResource @Inject() (
 
       case _ =>
         apps.map { app =>
-          val enrichedApp = app.withTaskCountsAndDeployments(enrichedTasks(app), runningDeployments)
+          val enrichedApp = app.withTaskCountsAndDeployments(
+            enrichedTasks(app),
+            healthCounts(app),
+            runningDeployments
+          )
           WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
         }
     }
@@ -82,16 +91,56 @@ class AppsResource @Inject() (
   def create(@Context req: HttpServletRequest, body: Array[Byte],
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val app = Json.parse(body).as[AppDefinition]
-    create(req, app, force)
+    service.getApp(app.id.copy(absolute = true)) match {
+      case None =>
+        val (_, managed) = create(req, app, force)
+        Response
+          .created(new URI(managed.id.toString))
+          .entity(managed)
+          .build()
+
+      case _ =>
+        Response
+          .status(409)
+          .entity(Json.obj("message" -> s"An app with id [${app.id}] already exists.").toString)
+          .build()
+    }
   }
 
-  private def create(req: HttpServletRequest, app: AppDefinition, force: Boolean): Response = {
+  private def create(
+    req: HttpServletRequest,
+    app: AppDefinition,
+    force: Boolean): (DeploymentPlan, AppDefinition.WithTasksAndDeployments) = {
     val baseId = app.id.canonicalPath()
-    requireValid(checkApp(app, baseId.parent))
+    requireValid(checkAppConstraints(app, baseId.parent))
+
+    val conflicts = checkAppConflicts(app, baseId, service)
+    if (conflicts.nonEmpty)
+      throw new ConflictingChangeException(conflicts.mkString(","))
+
     maybePostEvent(req, app)
-    val managed = app.copy(id = baseId, dependencies = app.dependencies.map(_.canonicalPath(baseId)))
-    result(groupManager.updateApp(baseId, _ => managed, managed.version, force))
-    Response.created(new URI(baseId.toString)).entity(managed).build()
+
+    val managedApp = app.copy(
+      id = baseId,
+      dependencies = app.dependencies.map(_.canonicalPath(baseId))
+    )
+
+    val deploymentPlan = result(
+      groupManager.updateApp(
+        baseId,
+        _ => managedApp,
+        managedApp.version,
+        force
+      )
+    )
+
+    val managedAppWithDeployments = managedApp.withTasksAndDeployments(
+      appTasks = Nil,
+      healthCounts = HealthCounts(0, 0, 0),
+      runningDeployments = Seq(deploymentPlan)
+    )
+
+    deploymentPlan -> managedAppWithDeployments
   }
 
   @GET
@@ -104,6 +153,7 @@ class AppsResource @Inject() (
       val withTasks = apps.map { app =>
         val enrichedApp = app.withTasksAndDeploymentsAndFailures(
           enrichedTasks(app),
+          healthCounts(app),
           runningDeployments,
           taskFailureRepository.current(app.id)
         )
@@ -116,6 +166,7 @@ class AppsResource @Inject() (
       case Some(app) =>
         val mapped = app.withTasksAndDeploymentsAndFailures(
           enrichedTasks(app),
+          healthCounts(app),
           runningDeployments,
           taskFailureRepository.current(app.id)
         )
@@ -155,7 +206,9 @@ class AppsResource @Inject() (
         }
         response.getOrElse(unknownApp(appId, updateWithId.version))
 
-      case None => create(req, updateWithId(AppDefinition(appId)), force)
+      case None =>
+        val (deploymentPlan, app) = create(req, updateWithId(AppDefinition(appId)), force)
+        deploymentResult(deploymentPlan, Response.created(new URI(app.id.toString)))
     }
   }
 
@@ -217,7 +270,7 @@ class AppsResource @Inject() (
               UUID.randomUUID().toString,
               group,
               newGroup,
-              DeploymentStep(RestartApplication(newApp, 0, newApp.instances) :: Nil) :: Nil,
+              DeploymentStep(RestartApplication(newApp) :: Nil) :: Nil,
               Timestamp.now())
             val res = service.deploy(plan)
             result(res)
@@ -236,6 +289,8 @@ class AppsResource @Inject() (
       val hcResults = result(healthCheckManager.status(app.id, task.getId))
       EnrichedTask(app.id, task, hcResults)
     }.to[Seq]
+
+  private def healthCounts(app: AppDefinition): HealthCounts = result(healthCheckManager.healthCounts(app.id))
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
@@ -267,6 +322,8 @@ object AppsResource {
     appJson ++ Json.obj(
       "tasksStaged" -> app.tasksStaged,
       "tasksRunning" -> app.tasksRunning,
+      "tasksHealthy" -> app.tasksHealthy,
+      "tasksUnhealthy" -> app.tasksUnhealthy,
       "deployments" -> app.deployments
     )
   }

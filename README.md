@@ -88,10 +88,9 @@ options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 ## Developing Marathon
 
-The [Marathon Project Wiki](https://github.com/mesosphere/marathon/wiki)
+The [Marathon Wiki Page](https://github.com/mesosphere/marathon/wiki/Developing-Marathon-in-a-Preconfigured-VM)
 contains documentation on simplifying local development and testing of Marathon
-including how to run a Mesos environment inside a preconfigured virtual machine
-and a list of recipes for launching applications that test specific Marathon
+including how to run a Mesos environment inside a preconfigured virtual machine running on Vagrant and a list of recipes for launching applications that test specific Marathon
 features.
 
 ### Running the development Docker
@@ -121,8 +120,10 @@ If you want to inspect the contents of the Docker:
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
 * [Python client](https://github.com/thefactory/marathon-python), developed at [The Factory](http://www.thefactory.com)
 * [Python client](https://github.com/Wizcorp/marathon-client.py), developed at [Wizcorp](http://www.wizcorp.jp)
+* [Go client](https://github.com/gambol99/go-marathon) by Rohith Jayawardene
 * [Go client](https://github.com/jbdalido/gomarathon) by Jean-Baptiste Dalido
 * [Node client](https://github.com/silas/node-mesos) by Silas Sewell
+* [Clojure client](https://github.com/codemomentum/marathonclj) by Halit Olali
 
 ## Companies using Marathon
 
@@ -131,17 +132,20 @@ If you want to inspect the contents of the Docker:
 * [bol.com](https://www.bol.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
 * [Daemon](http://www.daemon.com.au/)
+* [DHL Parcel](http://www.dhlparcel.nl)
 * [Disqus](https://www.disqus.com/)
 * [eBay](http://www.ebay.com/)
 * [The Factory](https://github.com/thefactory/)
 * [Guidewire](http://www.guidewire.com/)
 * [Groupon](http://www.groupon.com/)
 * [iQIYI](http://www.iqiyi.com/)
+* [Measurence](http://www.measurence.com/)
 * [OpenTable](http://www.opentable.com/)
 * [PayPal](https://www.paypal.com)
 * [Qubit](http://www.qubitproducts.com/)
 * [RelateIQ](http://relateiq.com/)
 * [Sailthru](http://www.sailthru.com/)
+* [Strava](https://www.strava.com)
 * [Viadeo](http://www.viadeo.com)
 * [WooRank](http://www.woorank.com)
 * [Yelp](http://www.yelp.com/)

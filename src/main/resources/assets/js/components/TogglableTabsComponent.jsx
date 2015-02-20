@@ -1,43 +1,44 @@
 /** @jsx React.DOM */
 
-define([
-  "React",
-  "jsx!components/NavTabsComponent"
-], function(React, NavTabsComponent) {
-  "use strict";
+var React = require("react/addons");
+var NavTabsComponent = require("../components/NavTabsComponent");
 
-  return React.createClass({
+module.exports = React.createClass({
     name: "TogglableTabsComponent",
 
     propTypes: {
       activeTabId: React.PropTypes.string.isRequired,
       className: React.PropTypes.string,
-      onTabClick: React.PropTypes.func,
       tabs: React.PropTypes.array
     },
 
-    render: function() {
-      var childNodes = React.Children.map(this.props.children, function(child) {
-        return React.addons.cloneWithProps(child, {
-          isActive: (child.props.id === this.props.activeTabId)
-        });
-      }, this);
+    getDefaultProps: function () {
+      return {
+        tabs: []
+      };
+    },
 
-      var nav;
-      if (this.props.onTabClick != null && this.props.tabs != null) {
-        /* jshint trailing:false, quotmark:false, newcap:false */
-        nav = (
+    render: function () {
+      var childNodes = React.Children.map(this.props.children,
+        function (child) {
+          return React.addons.cloneWithProps(child, {
+            isActive: (child.props.id === this.props.activeTabId)
+          });
+        }, this);
+
+      var navTabsClassSet = React.addons.classSet({
+        "hidden": this.props.tabs.length === 0
+      });
+
+      /* jshint trailing:false, quotmark:false, newcap:false */
+      /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      return (
+        <div className={this.props.className}>
           <NavTabsComponent
+            className={navTabsClassSet}
             activeTabId={this.props.activeTabId}
             onTabClick={this.props.onTabClick}
             tabs={this.props.tabs} />
-        );
-      }
-
-      /* jshint trailing:false, quotmark:false, newcap:false */
-      return (
-        <div className={this.props.className}>
-          {nav}
           <div className="tab-content">
             {childNodes}
           </div>
@@ -45,4 +46,3 @@ define([
       );
     }
   });
-});

@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import java.util
 import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem }
@@ -105,44 +106,26 @@ class MarathonScheduler @Inject() (
       try {
         log.debug("Received offer %s".format(offer))
 
-        val queuedTasks: Seq[QueuedTask] = taskQueue.removeAll()
-
-        val withTaskInfos: collection.Seq[(QueuedTask, (TaskInfo, Seq[Long]))] =
-          queuedTasks.view.flatMap { case qt => newTask(qt.app, offer).map(qt -> _) }
-
-        val launchedTask = withTaskInfos.find {
-          case (qt, (taskInfo, ports)) =>
-            val timeLeft = qt.delay.timeLeft
-            if (timeLeft.toNanos <= 0) {
-              true
-            }
-            else {
-              log.info(s"Delaying task ${taskInfo.getTaskId.getValue} due to backoff. Time left: $timeLeft.")
-              false
-            }
+        val matchingTask = taskQueue.pollMatching { app =>
+          newTask(app, offer).map(app -> _)
         }
 
-        launchedTask.foreach {
-          case (qt, (taskInfo, ports)) =>
-            val taskInfos = Seq(taskInfo)
-            log.debug("Launching tasks: " + taskInfos)
-
+        matchingTask.foreach {
+          case (app, (taskInfo, ports)) =>
             val marathonTask = MarathonTasks.makeTask(
               taskInfo.getTaskId.getValue, offer.getHostname, ports,
-              offer.getAttributesList.asScala, qt.app.version)
+              offer.getAttributesList.asScala, app.version)
 
-            taskTracker.created(qt.app.id, marathonTask)
-            driver.launchTasks(Seq(offer.getId).asJava, taskInfos.asJava)
+            log.debug("Launching task: " + taskInfo)
 
-            // here it is assumed that the health checks for the current
-            // version are already running.
+            taskTracker.created(app.id, marathonTask)
+            driver.launchTasks(Seq(offer.getId).asJava, util.Arrays.asList(taskInfo))
+
+          // here it is assumed that the health checks for the current
+          // version are already running.
         }
 
-        // put unscheduled tasks back in the queue
-        val launchedTaskSeq: Seq[QueuedTask] = launchedTask.map(_._1).to[Seq]
-        taskQueue.addAll(queuedTasks diff launchedTaskSeq)
-
-        if (launchedTask.isEmpty) {
+        if (matchingTask.isEmpty) {
           log.debug("Offer doesn't match request. Declining.")
           driver.declineOffer(offer.getId)
         }
@@ -168,7 +151,8 @@ class MarathonScheduler @Inject() (
     val appId = taskIdUtil.appId(status.getTaskId)
 
     // forward health changes to the health check manager
-    for (marathonTask <- taskTracker.fetchTask(appId, status.getTaskId.getValue))
+    val maybeTask = taskTracker.fetchTask(appId, status.getTaskId.getValue)
+    for (marathonTask <- maybeTask)
       healthCheckManager.update(status, Timestamp(marathonTask.getVersion))
 
     import org.apache.mesos.Protos.TaskState._
@@ -189,13 +173,17 @@ class MarathonScheduler @Inject() (
             case None       => log.warn(s"Couldn't post event for ${status.getTaskId}")
           }
 
-          schedulerActor ! ScaleApp(appId)
+          schedulerActor ! ScaleApp(appId, force = false)
         }
 
-      case TASK_RUNNING =>
-        taskQueue.rateLimiter.resetDelay(appId)
+      case TASK_RUNNING if !maybeTask.exists(_.hasStartedAt) => // staged, not running
         taskTracker.running(appId, status).onComplete {
-          case Success(task) => postEvent(status, task)
+          case Success(task) =>
+            appRepo.app(appId, Timestamp(task.getVersion)).onSuccess {
+              case maybeApp => maybeApp.foreach(taskQueue.rateLimiter.resetDelay)
+            }
+            postEvent(status, task)
+
           case Failure(t) =>
             log.warn(s"Couldn't post event for ${status.getTaskId}", t)
             log.warn(s"Killing task ${status.getTaskId}")
@@ -289,7 +277,6 @@ class MarathonScheduler @Inject() (
   private def newTask(
     app: AppDefinition,
     offer: Offer): Option[(TaskInfo, Seq[Long])] = {
-    // TODO this should return a MarathonTask
     new TaskBuilder(app, taskIdUtil.newTaskId, taskTracker, config, mapper).buildIfMatches(offer)
   }
 }

@@ -57,6 +57,7 @@ class AppDefinitionFormatsTest
     r1 \ "requirePorts" should equal (JsBoolean(DefaultRequirePorts))
     r1 \ "backoffSeconds" should equal (JsNumber(DefaultBackoff.toSeconds))
     r1 \ "backoffFactor" should equal (JsNumber(DefaultBackoffFactor))
+    r1 \ "maxLaunchDelaySeconds" should equal (JsNumber(DefaultMaxLaunchDelay.toSeconds))
     r1 \ "container" should equal (JsNull)
     r1 \ "healthChecks" should equal (Json.toJson(DefaultHealthChecks))
     r1 \ "dependencies" should equal (Json.toJson(DefaultDependencies))
@@ -88,10 +89,21 @@ class AppDefinitionFormatsTest
     r1.requirePorts should equal (DefaultRequirePorts)
     r1.backoff should equal (DefaultBackoff)
     r1.backoffFactor should equal (DefaultBackoffFactor)
+    r1.maxLaunchDelay should equal (DefaultMaxLaunchDelay)
     r1.container should equal (DefaultContainer)
     r1.healthChecks should equal (DefaultHealthChecks)
     r1.dependencies should equal (DefaultDependencies)
     r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
+  }
+
+  test("FromJSON should fail for empty id") {
+    val json = Json.parse(""" { "id": "" }""")
+    a[JsResultException] shouldBe thrownBy { json.as[AppDefinition] }
+  }
+
+  test("FromJSON should fail when using / as an id") {
+    val json = Json.parse(""" { "id": "/" }""")
+    a[JsResultException] shouldBe thrownBy { json.as[AppDefinition] }
   }
 
 }

@@ -94,7 +94,7 @@ object Container {
       network: Option[mesos.ContainerInfo.DockerInfo.Network] = None,
       portMappings: Option[Seq[Docker.PortMapping]] = None,
       privileged: Boolean = false,
-      parameters: Map[String, String] = Map[String, String]()) {
+      parameters: Seq[Parameter] = Nil) {
 
     def toProto(): Protos.ExtendedContainerInfo.DockerInfo = {
       val builder = Protos.ExtendedContainerInfo.DockerInfo.newBuilder
@@ -109,7 +109,7 @@ object Container {
 
       builder.setPrivileged(privileged)
 
-      builder.addAllParameters(Docker.mapToParameters(parameters).asJava)
+      builder.addAllParameters(parameters.map(_.toProto).asJava)
 
       builder.build
     }
@@ -127,7 +127,7 @@ object Container {
 
       builder.setPrivileged(privileged)
 
-      builder.addAllParameters(Docker.mapToParameters(parameters).asJava)
+      builder.addAllParameters(parameters.map(_.toProto).asJava)
 
       builder.build
     }
@@ -150,22 +150,8 @@ object Container {
 
         privileged = proto.getPrivileged,
 
-        parameters = parametersToMap(proto.getParametersList.asScala.to[Seq])
+        parameters = proto.getParametersList.asScala.map(Parameter(_)).to[Seq]
       )
-
-    protected def mapToParameters(ps: Map[String, String]): Iterable[mesos.Parameter] =
-      ps.map {
-        case (key, value) =>
-          mesos.Parameter.newBuilder
-            .setKey(key)
-            .setValue(value)
-            .build
-      }
-
-    protected def parametersToMap(ps: Seq[mesos.Parameter]): Map[String, String] =
-      ps.map { parameter =>
-        parameter.getKey -> parameter.getValue
-      }.toMap
 
     /**
       * @param containerPort The container port to expose

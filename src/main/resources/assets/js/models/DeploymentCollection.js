@@ -1,20 +1,18 @@
-define([
-  "models/Deployment",
-  "models/SortableCollection"
-], function(Deployment, SortableCollection) {
-  "use strict";
+var Deployment = require("../models/Deployment");
+var SortableCollection = require("../models/SortableCollection");
 
-  return SortableCollection.extend({
-    model: Deployment,
+var DeploymentCollection = SortableCollection.extend({
+  model: Deployment,
 
-    initialize: function(models, options) {
-      this.options = options;
-      this.setComparator("-id");
-      this.sort();
-    },
+  initialize: function (models, options) {
+    this.options = options;
+    this.setComparator("-id");
+    this.sort();
+  },
 
-    url: function() {
-      return "/v2/deployments";
-    }
-  });
+  url: function () {
+    return "/v2/deployments";
+  }
 });
+
+module.exports = DeploymentCollection;

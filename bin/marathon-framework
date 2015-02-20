@@ -35,6 +35,9 @@ function element_in {
 }
 
 function load_options_and_log {
+  # Call mesosphere-dnsconf if present on the system to generate config files.
+  [ -x /usr/bin/mesosphere-dnsconfig ] && mesosphere-dnsconfig mesos && mesosphere-dnsconfig marathon
+
   # Load Marathon options from Mesos and Marathon conf files that are present.
   # Launch main program with Syslog enabled.
   local cmd=( run_jar )
@@ -65,7 +68,7 @@ function load_options_and_log {
       cmd+=( --master "$(cat /etc/mesos/zk)" )
     fi
   fi
-  for env_op in `env |grep ^MARATHON_ | sed -e 's/MARATHON_//' -e 's/=/ /'| awk '{printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'| sed -e 's/ $//'`; do
+  for env_op in `env | grep ^MARATHON_ | sed -e '/^MARATHON_APP/d' -e 's/MARATHON_//' -e 's/=/ /'| awk '{printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'| sed -e 's/ $//'`; do
     cmd+=( "$env_op" )
   done
   echo "${cmd[@]}"
@@ -76,7 +79,7 @@ function run_jar {
   local log_format='%2$s%5$s%6$s%n' # Class name, message, exception
   ulimit -n 8192
   export PATH=/usr/local/bin:"$PATH"
-  local vm_opts=( -Djava.library.path=/usr/local/lib
+  local vm_opts=( -Djava.library.path=/usr/local/lib:/usr/lib:/usr/lib64
                   -Djava.util.logging.SimpleFormatter.format="$log_format" )
   for j_opt in ${JAVA_OPTS:-"-Xmx512m"}; do
     vm_opts+=( ${j_opt} )

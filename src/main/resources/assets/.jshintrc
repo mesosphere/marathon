@@ -16,7 +16,7 @@
   "quotmark"      : true,
   "undef"         : true,
   "unused"        : true,
-  "strict"        : true,
+  "strict"        : false,
   "maxparams"     : false,
   "maxdepth"      : false,
   "maxstatements" : false,
@@ -58,7 +58,5 @@
   "worker"        : false,
   "wsh"           : false,
   "yui"           : false,
-  "globals"       : {
-      "define"    : true
-  }
+  "node"   : true
 }

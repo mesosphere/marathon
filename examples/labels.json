@@ -1,0 +1,20 @@
+{
+  "id": "labels",
+  "cmd": "python -m SimpleHTTPServer $PORT",
+  "mem": 50,
+  "cpus": 0.1,
+  "instances": 1,
+  "constraints": [
+    ["hostname", "UNIQUE"]
+  ],
+  "labels": {
+    "DO": "a deer, a female deer",
+    "RA": "a drop of golden sun",
+    "ME": "a name I call myself",
+    "FA": "a long long way to run",
+    "SO": "a needle pulling thread",
+    "LA": "a note that follows SO",
+    "TI": "a drink with jam and bread"
+  }
+}
+

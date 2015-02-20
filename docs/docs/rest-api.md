@@ -31,6 +31,7 @@ title: REST API
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
   * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Cancel the deployment with `deploymentId`
+  * [POST /v2/deployments/generate](#post-/v2/deployments/generate): Generate deployment steps for a group without executing them
 * [Event Subscriptions](#event-subscriptions)
   * [POST /v2/eventSubscriptions](#post-/v2/eventsubscriptions): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
@@ -39,6 +40,8 @@ title: REST API
   * [GET /v2/queue](#get-/v2/queue): List content of the staging queue.
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
+  * [GET /v2/leader](#get-/v2/leader): Get the current leader
+  * [DELETE /v2/leader](#delete-/v2/leader): Causes the current leader to abdicate, triggering a new election
 * [Miscellaneous](#miscellaneous)
   * [GET /ping](#get-/ping)
   * [GET /logging](#get-/logging)
@@ -77,10 +80,10 @@ The full JSON format of an application resource is as follows:
                 }
             ],
             "privileged": false,
-            "parameters": {
-                "a-docker-option": "xxx",
-                "b-docker-option": "yyy"
-            }
+            "parameters": [
+                { "key": "a-docker-option", "value": "xxx" },
+                { "key": "b-docker-option", "value": "yyy" }
+            ]
         },
         "volumes": [
             {
@@ -109,6 +112,9 @@ The full JSON format of an application resource is as follows:
     "constraints": [
         ["attribute", "OPERATOR", "value"]
     ],
+    "labels": {
+        "environment": "staging"
+    },
     "healthChecks": [
         {
             "protocol": "HTTP",
@@ -140,14 +146,18 @@ The full JSON format of an application resource is as follows:
     ],
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
+    "maxLaunchDelaySeconds": 3600,
     "tasksRunning": 3,
+    "tasksHealthy": 3,
+    "tasksUnhealthy": 0,
     "tasksStaged": 0,
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
     ],
     "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
     "upgradeStrategy": {
-        "minimumHealthCapacity": 0.5
+        "minimumHealthCapacity": 0.5,
+        "maximumOverCapacity": 0.2
     },
     "version": "2014-03-01T23:29:30.158Z"
 }
@@ -167,13 +177,13 @@ The allowable format is represented by the following regular expression
 
 An array of strings that represents an alternative mode of specifying the command to run. This was motivated by safe usage of containerizer features like a custom Docker ENTRYPOINT. This args field may be used in place of cmd even when using the default command executor. This change mirrors API and semantics changes in the Mesos CommandInfo protobuf message starting with version `0.20.0`.  Either `cmd` or `args` must be supplied. It is invalid to supply both `cmd` and `args` in the same app.
 
-##### backoffSeconds, backoffFactor
+##### `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`
 
 Configures exponential backoff behavior when launching potentially sick apps.
 This prevents sandboxes associated with consecutively failing tasks from
 filling up the hard disk on Mesos slaves. The backoff period is multiplied by
-the factor for each consecutive failure.  This applies also to tasks that are
-killed due to failing too many health checks.
+the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
+This applies also to tasks that are killed due to failing too many health checks.
 
 ##### cmd
 
@@ -184,6 +194,13 @@ The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${
 Valid constraint operators are one of ["UNIQUE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
 the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
+
+##### labels
+
+Attaching metadata to apps can be useful to expose additional information
+to other services, so we added the ability to place labels on apps
+(for example, you could label apps "staging" and "production" to mark
+services by their position in the pipeline).
 
 ##### container
 
@@ -224,7 +241,7 @@ An HTTP health check is considered passing if (1) its HTTP response code is betw
 If a task fails more than `maxConseutiveFailures`
 health checks consecutively, that task is killed causing Marathon to start
 more instances. These restarts are modulated like any other failing app
-by `backoffSeconds` and `backoffFactor`.
+by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
 
 ###### HEALTH CHECK OPTIONS
 
@@ -258,13 +275,49 @@ values. Each port value is exposed to the instance via environment variables
 via the task resource.
 
 ##### upgradeStrategy
+
 During an upgrade all instances of an application get replaced by a new version.
-The `minimumHealthCapacity` defines the minimum number of healthy nodes, that do not sacrifice overall application purpose.
-It is a number between `0` and `1` which is multiplied with the instance count.
-The default `minimumHealthCapacity` is `1`, which means no old instance can be stopped, before all new instances are deployed.
-A value of `0.5` means that an upgrade can be deployed side by side, by taking half of the instances down in the first step,
-deploy half of the new version and then take the other half down and deploy the rest.
-A value of `0` means take all instances down immediately and replace with the new application.
+The upgradeStrategy controls how Marathon stops old versions and launches
+new versions. It consists of two values:
+
+* `minimumHealthCapacity` (Optional. Default: 1.0) - a number between `0`and `1`
+that is multiplied with the instance count. This is the minimum number of healthy
+nodes that do not sacrifice overall application purpose. Marathon will make sure,
+during the upgrade process, that at any point of time this number of healthy
+instances are up.
+* `maximumOverCapacity` (Optional. Default: 1.0) - a number between `0` and
+`1` which is multiplied with the instance count. This is the maximum number of
+additional instances launched at any point of time during the upgrade process.
+
+The default `minimumHealthCapacity` is `1`, which means no old instance can be
+stopped before another healthy new version is deployed.
+A value of `0.5` means that during an upgrade half of the old version instances
+are stopped first to make space for the new version.
+A value of `0` means take all instances down immediately and replace with the
+new application.
+
+The default `maximumOverCapacity` is `1`, which means that all old and new
+instances can co-exist during the upgrade process.
+A value of `0.1` means that during the upgrade process 10% more capacity than
+usual may be used for old and new instances.
+A value of `0.0` means that even during the upgrade process no more capacity may
+be used for the new instances than usual. Only when an old version is stopped,
+a new instance can be deployed.
+
+If `minimumHealthCapacity` is `1` and `maximumOverCapacity` is `0`, at least
+one additional new instance is launched in the beginning of the upgrade process.
+When it is healthy, one of the old instances is stopped. After it is stopped,
+another new instance is started, and so on.
+
+A combination of `minimumHealthCapacity` equal to `0.9` and
+`maximumOverCapacity` equal to `0` results in a rolling update, replacing
+10% of the instances at a time, keeping at least 90% of the app online at any
+point of time during the upgrade.
+
+A combination of `minimumHealthCapacity` equal to `1.0` and
+`maximumOverCapacity` equal to `0.1` results in a rolling update, replacing
+10% of the instances at a time and keeping at least 100% of the app online at
+any point of time during the upgrade with 10% of additional capacity.
 
 ##### Example
 
@@ -313,7 +366,8 @@ User-Agent: HTTPie/0.8.0
         0
     ],
     "upgradeStrategy": {
-        "minimumHealthCapacity": 0.5
+        "minimumHealthCapacity": 0.5,
+        "minimumOverCapacity": 0.5
     }
 }
 {% endhighlight json %}
@@ -332,6 +386,7 @@ Transfer-Encoding: chunked
     "args": null,
     "backoffFactor": 1.15,
     "backoffSeconds": 1,
+    "maxLaunchDelaySeconds": 3600,
     "cmd": "env && python3 -m http.server $PORT0",
     "constraints": [
         [
@@ -348,6 +403,11 @@ Transfer-Encoding: chunked
     },
     "cpus": 0.25,
     "dependencies": [],
+    "deployments": [
+        {
+            "id": "f44fd4fc-4330-4600-a68b-99c7bd33014a"
+        }
+    ],
     "disk": 0.0,
     "env": {},
     "executor": "",
@@ -372,7 +432,8 @@ Transfer-Encoding: chunked
     "requirePorts": false,
     "storeUrls": [],
     "upgradeStrategy": {
-        "minimumHealthCapacity": 0.5
+        "minimumHealthCapacity": 0.5,
+        "minimumOverCapacity": 0.5
     },
     "uris": [],
     "user": null,
@@ -450,6 +511,7 @@ Transfer-Encoding: chunked
             "args": null,
             "backoffFactor": 1.15,
             "backoffSeconds": 1,
+            "maxLaunchDelaySeconds": 3600,
             "cmd": "python3 -m http.server 8080",
             "constraints": [],
             "container": {
@@ -501,6 +563,8 @@ Transfer-Encoding: chunked
             "requirePorts": false,
             "storeUrls": [],
             "tasksRunning": 2,
+            "tasksHealthy": 2,
+            "tasksUnhealthy": 0,
             "tasksStaged": 0,
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
@@ -527,6 +591,7 @@ Transfer-Encoding: chunked
             "args": null,
             "backoffFactor": 1.15,
             "backoffSeconds": 1,
+            "maxLaunchDelaySeconds": 3600,
             "cmd": "while sleep 10; do date -u +%T; done",
             "constraints": [],
             "container": {
@@ -587,6 +652,8 @@ Transfer-Encoding: chunked
                 }
             ],
             "tasksRunning": 0,
+            "tasksHealthy": 0,
+            "tasksUnhealthy": 0,
             "tasksStaged": 1,
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
@@ -628,6 +695,7 @@ Transfer-Encoding: chunked
         "args": null,
         "backoffFactor": 1.15,
         "backoffSeconds": 1,
+        "maxLaunchDelaySeconds": 3600,
         "cmd": "python toggle.py $PORT0",
         "constraints": [],
         "container": null,
@@ -711,6 +779,8 @@ Transfer-Encoding: chunked
             }
         ],
         "tasksRunning": 2,
+        "tasksHealthy": 2,
+        "tasksUnhealthy": 0,
         "tasksStaged": 0,
         "upgradeStrategy": {
             "minimumHealthCapacity": 1.0
@@ -1257,6 +1327,7 @@ Transfer-Encoding: chunked
                     "args": null,
                     "backoffFactor": 1.15,
                     "backoffSeconds": 1,
+                    "maxLaunchDelaySeconds": 3600,
                     "cmd": "sleep 30",
                     "constraints": [],
                     "container": null,
@@ -1321,6 +1392,7 @@ Transfer-Encoding: chunked
             "args": null,
             "backoffFactor": 1.15,
             "backoffSeconds": 1,
+            "maxLaunchDelaySeconds": 3600,
             "cmd": "sleep 30",
             "constraints": [],
             "container": null,
@@ -1931,6 +2003,85 @@ Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 {% endhighlight %}
 
+#### POST /v2/deployments/generate
+
+Generates deployment steps for a given group without executing them.
+
+**Request:**
+
+{% highlight http %}
+POST /v2/deployments/generate HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+
+{
+    "id": "product",
+    "groups": [{
+        "id": "service",
+        "groups": [{
+            "id": "us-east",
+            "apps": [
+                {
+                    "id": "app1",
+                    "cmd": "someExecutable"
+                },
+                {
+                    "id": "app2",
+                    "cmd": "someOtherExecutable"
+                }
+            ]
+        }],
+        "dependencies": ["/product/database", "../backend"]
+    }],
+    "version": "2014-03-01T23:29:30.158Z"
+}
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "steps" : [
+        {
+            "actions" : [
+                {
+                    "app" : "app1",
+                    "type" : "StartApplication"
+                },
+                {
+                    "app" : "app2",
+                    "type" : "StartApplication"
+                }
+            ]
+        },
+        {
+            "actions" : [
+                {
+                    "type" : "ScaleApplication",
+                    "app" : "app1"
+                }
+            ]
+        },
+        {
+            "actions" : [
+                {
+                    "app" : "app2",
+                    "type" : "ScaleApplication"
+                }
+            ]
+        }
+    ]
+}
+{% endhighlight %}
+
 ### Event Subscriptions
 
 #### POST /v2/eventSubscriptions
@@ -2100,35 +2251,41 @@ Transfer-Encoding: chunked
 {
     "queue": [
         {
-            "app": {
-                "args": null,
-                "backoffFactor": 1.15,
-                "backoffSeconds": 1,
-                "cmd": "python toggle.py $PORT0",
-                "constraints": [],
-                "container": null,
-                "cpus": 0.2,
-                "dependencies": [],
-                "disk": 0.0,
-                "env": {},
-                "executor": "",
-                "healthChecks": [],
-                "id": "/test",
-                "instances": 3,
-                "mem": 32.0,
-                "ports": [10000],
-                "requirePorts": false,
-                "storeUrls": [],
-                "upgradeStrategy": {
-                    "minimumHealthCapacity": 1.0
-                },
-                "uris": [
-                    "http://downloads.mesosphere.com/misc/toggle.tgz"
+            "count" : 10,
+            "delay": {
+              "overdue": "true"
+            }
+            "app" : {
+                "cmd" : "tail -f /dev/null",
+                "backoffSeconds" : 1,
+                "healthChecks" : [],
+                "storeUrls" : [],
+                "constraints" : [],
+                "env" : {},
+                "cpus" : 0.1,
+                "labels" : {},
+                "instances" : 10,
+                "ports" : [
+                   10000
                 ],
-                "user": null,
-                "version": "2014-08-26T05:04:49.766Z"
-            },
-            "delay": { "overdue": true }
+                "requirePorts" : false,
+                "uris" : [],
+                "container" : null,
+                "backoffFactor" : 1.15,
+                "args" : null,
+                "version" : "2015-02-09T10:49:59.831Z",
+                "maxLaunchDelaySeconds" : 3600,
+                "upgradeStrategy" : {
+                   "minimumHealthCapacity" : 1,
+                   "maximumOverCapacity" : 1
+                },
+                "dependencies" : [],
+                "mem" : 16,
+                "id" : "/foo",
+                "disk" : 0,
+                "executor" : "",
+                "user" : null
+            }
         }
     ]
 }
@@ -2202,6 +2359,64 @@ Server: Jetty(8.y.z-SNAPSHOT)
         "zk_state": "/marathon",
         "zk_timeout": 10
     }
+}
+{% endhighlight %}
+
+#### GET `/v2/leader`
+
+Returns the current leader.
+If no leader exists, Marathon will respond with a 404 error.
+
+**Request:**
+
+{% highlight http %}
+GET /v2/leader HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 872
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
+{
+    "leader": "127.0.0.1:8080"
+}
+{% endhighlight %}
+
+#### DELETE `/v2/leader`
+
+<span class="label label-default">v0.7.7</span>
+
+Causes the current leader to abdicate, triggering a new election.
+If no leader exists, Marathon will respond with a 404 error.
+
+**Request:**
+
+{% highlight http %}
+DELETE /v2/leader HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate, compress
+Host: localhost:8080
+User-Agent: HTTPie/0.7.2
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 872
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
+{
+    "message": "Leadership abdicted"
 }
 {% endhighlight %}
 

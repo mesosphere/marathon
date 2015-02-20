@@ -1,24 +1,22 @@
-define([
-  "models/SortableCollection",
-  "models/Task"
-], function(SortableCollection, Task) {
-  "use strict";
+var SortableCollection = require("../models/SortableCollection");
+var Task = require("../models/Task");
 
-  return SortableCollection.extend({
-    model: Task,
+var TaskCollection = SortableCollection.extend({
+  model: Task,
 
-    initialize: function(models, options) {
-      this.options = options;
-      this.setComparator("updatedAt");
-      this.sort();
-    },
+  initialize: function (models, options) {
+    this.options = options;
+    this.setComparator("updatedAt");
+    this.sort();
+  },
 
-    parse: function(response) {
-      return response.app.tasks;
-    },
+  parse: function (response) {
+    return response.app.tasks;
+  },
 
-    url: function() {
-      return "/v2/apps/" + this.options.appId;
-    }
-  });
+  url: function () {
+    return "/v2/apps/" + this.options.appId;
+  }
 });
+
+module.exports = TaskCollection;

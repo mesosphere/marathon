@@ -14,6 +14,7 @@ import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.state.{ InMemoryState, State }
 import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.mockito.Matchers.any
+import org.scalatest.concurrent.ScalaFutures
 
 import scala.collection.JavaConverters._
 import scala.collection._
@@ -57,14 +58,14 @@ class TaskTrackerTest extends MarathonSpec {
       .build
   }
 
-  def shouldContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) {
-    assert(
-      tasks.exists(t => t.getId == task.getId
-        && t.getHost == task.getHost
-        && t.getPortsList == task.getPortsList),
-      s"Should contain task ${task.getId}"
-    )
-  }
+  def containsTask(tasks: Iterable[MarathonTask], task: MarathonTask) =
+    tasks.exists(t => t.getId == task.getId
+      && t.getHost == task.getHost
+      && t.getPortsList == task.getPortsList)
+  def shouldContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) =
+    assert(containsTask(tasks, task), s"Should contain task ${task.getId}")
+  def shouldNotContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) =
+    assert(!containsTask(tasks, task), s"Should not contain task ${task.getId}")
 
   def shouldHaveTaskStatus(task: MarathonTask, taskStatus: TaskStatus) {
     assert(
@@ -154,6 +155,12 @@ class TaskTrackerTest extends MarathonSpec {
     stateShouldContainKey(state, sampleTaskKey)
     taskTracker.get(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
+    // TASK STILL RUNNING
+    val res = taskTracker.running(TEST_APP_NAME, runningTaskStatus)
+    ScalaFutures.whenReady(res.failed) { e =>
+      assert(e.getMessage == s"Task for ID $TEST_TASK_ID already running, ignoring")
+    }
+
     // TASK TERMINATED
     val finishedTaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_FINISHED)
 
@@ -176,6 +183,20 @@ class TaskTrackerTest extends MarathonSpec {
 
     // Empty option means this message was discarded since there was no matching task
     assert(taskOption.isEmpty, "Task was able to be updated and was not removed")
+  }
+
+  test("UnknownTasks") {
+    val sampleTask = makeSampleTask(TEST_TASK_ID)
+    val sampleTaskKey = taskTracker.getKey(TEST_APP_NAME, TEST_TASK_ID)
+
+    // don't call taskTracker.created, but directly running
+    val runningTaskStatus: TaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_RUNNING)
+    val res = taskTracker.running(TEST_APP_NAME, runningTaskStatus)
+    ScalaFutures.whenReady(res.failed) { e =>
+      assert(e.getMessage == s"No staged task for ID $TEST_TASK_ID, ignoring")
+    }
+    shouldNotContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    stateShouldNotContainKey(state, sampleTaskKey)
   }
 
   test("MultipleApps") {

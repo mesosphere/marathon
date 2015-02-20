@@ -7,15 +7,16 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-import org.apache.mesos.Protos.TaskState
+import org.apache.mesos.{ Protos => mesos }
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -59,6 +60,8 @@ case class AppDefinition(
 
   backoffFactor: JDouble = AppDefinition.DefaultBackoffFactor,
 
+  @FieldJsonProperty("maxLaunchDelaySeconds") maxLaunchDelay: FiniteDuration = AppDefinition.DefaultMaxLaunchDelay,
+
   container: Option[Container] = AppDefinition.DefaultContainer,
 
   healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
@@ -66,6 +69,8 @@ case class AppDefinition(
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
   upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
+
+  labels: Map[String, String] = AppDefinition.DefaultLabels,
 
   version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {
@@ -85,7 +90,7 @@ case class AppDefinition(
   def portIndicesAreValid(): Boolean = {
     val validPortIndices = 0 until hostPorts.size
     healthChecks.forall { hc =>
-      validPortIndices contains hc.portIndex
+      hc.protocol == Protocol.COMMAND || (validPortIndices contains hc.portIndex)
     }
   }
 
@@ -94,6 +99,13 @@ case class AppDefinition(
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
+    val appLabels = labels.map {
+      case (key, value) =>
+        mesos.Parameter.newBuilder
+          .setKey(key)
+          .setValue(value)
+          .build
+    }
 
     val builder = Protos.ServiceDefinition.newBuilder
       .setId(id.toString)
@@ -103,6 +115,7 @@ case class AppDefinition(
       .setRequirePorts(requirePorts)
       .setBackoff(backoff.toMillis)
       .setBackoffFactor(backoffFactor)
+      .setMaxLaunchDelay(maxLaunchDelay.toMillis)
       .setExecutor(executor)
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
@@ -113,6 +126,7 @@ case class AppDefinition(
       .setUpgradeStrategy(upgradeStrategy.toProto)
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
+      .addAllLabels(appLabels.asJava)
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
@@ -160,6 +174,7 @@ case class AppDefinition(
       requirePorts = proto.getRequirePorts,
       backoff = proto.getBackoff.milliseconds,
       backoffFactor = proto.getBackoffFactor,
+      maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds,
       constraints = proto.getConstraintsList.asScala.toSet,
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
@@ -169,6 +184,7 @@ case class AppDefinition(
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
       healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
+      labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
       version = Timestamp(proto.getVersion),
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
@@ -205,21 +221,24 @@ case class AppDefinition(
   }
 
   def withTaskCountsAndDeployments(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTaskCountsAndDeployments = {
-    new AppDefinition.WithTaskCountsAndDeployments(appTasks, runningDeployments, this)
+    new AppDefinition.WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, this)
   }
 
   def withTasksAndDeployments(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTasksAndDeployments =
-    new AppDefinition.WithTasksAndDeployments(appTasks, runningDeployments, this)
+    new AppDefinition.WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, this)
 
   def withTasksAndDeploymentsAndFailures(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     taskFailure: Option[TaskFailure]): AppDefinition.WithTasksAndDeploymentsAndTaskFailures =
-    new AppDefinition.WithTasksAndDeploymentsAndTaskFailures(appTasks, runningDeployments, taskFailure, this)
+    new AppDefinition.WithTasksAndDeploymentsAndTaskFailures(
+      appTasks, healthCounts,
+      runningDeployments, taskFailure, this
+    )
 
   def isOnlyScaleChange(to: AppDefinition): Boolean =
     !isUpgrade(to) && (instances != to.instances)
@@ -267,6 +286,8 @@ object AppDefinition {
 
   val DefaultBackoffFactor = 1.15
 
+  val DefaultMaxLaunchDelay: FiniteDuration = 1.hour
+
   val DefaultContainer: Option[Container] = None
 
   val DefaultHealthChecks: Set[HealthCheck] = Set.empty
@@ -275,19 +296,23 @@ object AppDefinition {
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
+  val DefaultLabels: Map[String, String] = Map.empty
+
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
   protected[marathon] class WithTaskCountsAndDeployments(
     appTasks: Seq[EnrichedTask],
+    healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
       extends AppDefinition(
         app.id, app.cmd, app.args, app.user, app.env, app.instances, app.cpus,
         app.mem, app.disk, app.executor, app.constraints, app.uris,
         app.storeUrls, app.ports, app.requirePorts, app.backoff,
-        app.backoffFactor, app.container, app.healthChecks, app.dependencies,
-        app.upgradeStrategy, app.version) {
+        app.backoffFactor, app.maxLaunchDelay, app.container,
+        app.healthChecks, app.dependencies, app.upgradeStrategy,
+        app.labels, app.version) {
 
     /**
       * Snapshot of the number of staged (but not running) tasks
@@ -304,8 +329,20 @@ object AppDefinition {
     @JsonProperty
     val tasksRunning: Int = appTasks.count { eTask =>
       eTask.task.hasStatus &&
-        eTask.task.getStatus.getState == TaskState.TASK_RUNNING
+        eTask.task.getStatus.getState == mesos.TaskState.TASK_RUNNING
     }
+
+    /**
+      * Snapshot of the number of healthy tasks for this app
+      */
+    @JsonProperty
+    val tasksHealthy: Int = healthCounts.healthy
+
+    /**
+      * Snapshot of the number of unhealthy tasks for this app
+      */
+    @JsonProperty
+    val tasksUnhealthy: Int = healthCounts.unhealthy
 
     /**
       * Snapshot of the running deployments that affect this app
@@ -319,21 +356,21 @@ object AppDefinition {
   }
 
   protected[marathon] class WithTasksAndDeployments(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
-      extends WithTaskCountsAndDeployments(appTasks, runningDeployments, app) {
+      extends WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, app) {
 
     @JsonProperty
     def tasks: Seq[EnrichedTask] = appTasks
   }
 
   protected[marathon] class WithTasksAndDeploymentsAndTaskFailures(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     taskFailure: Option[TaskFailure],
     private val app: AppDefinition)
-      extends WithTasksAndDeployments(appTasks, runningDeployments, app) {
+      extends WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, app) {
 
     @JsonProperty
     def lastTaskFailure: Option[TaskFailure] = taskFailure

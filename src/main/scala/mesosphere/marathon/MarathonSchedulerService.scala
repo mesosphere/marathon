@@ -6,7 +6,7 @@ import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
-import akka.pattern.ask
+import akka.pattern.{ after, ask }
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.twitter.common.base.ExceptionalCommand
@@ -23,11 +23,13 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
 import org.apache.log4j.Logger
+import org.apache.mesos.Protos.FrameworkID
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.{ MILLISECONDS, _ }
 import scala.concurrent.{ TimeoutException, Await, Future, Promise }
-import scala.util.{ Failure, Random, Success }
+import scala.util.control.NonFatal
+import scala.util.{ Failure, Success }
 
 /**
   * Wrapper class for the scheduler
@@ -59,24 +61,32 @@ class MarathonSchedulerService @Inject() (
   val reconciliationInterval =
     Duration(config.reconciliationInterval(), MILLISECONDS)
 
-  val reconciliationTimer = new Timer("reconciliationTimer")
+  private[mesosphere] var reconciliationTimer = newTimer()
 
   val log = Logger.getLogger(getClass.getName)
 
-  val frameworkId = frameworkIdUtil.fetch
-  frameworkId match {
-    case Some(id) =>
-      log.info(s"Setting framework ID to ${id.getValue}")
-    case None =>
-      log.info("No previous framework ID found")
+  def frameworkId: Option[FrameworkID] = {
+    val fid = frameworkIdUtil.fetch
+
+    fid match {
+      case Some(id) =>
+        log.info(s"Setting framework ID to ${id.getValue}")
+      case None =>
+        log.info("No previous framework ID found")
+    }
+
+    fid
   }
 
   // This is a little ugly as we are using a mutable variable. But drivers can't
   // be reused (i.e. once stopped they can't be started again. Thus,
   // we have to allocate a new driver before each run or after each stop.
-  var driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
+  var driver = newDriver()
 
   implicit val timeout: Timeout = 5.seconds
+
+  protected def newDriver() = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
+  protected def newTimer() = new Timer("reconciliationTimer")
 
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
     log.info(s"Deploy plan:$plan with force:$force")
@@ -143,9 +153,6 @@ class MarathonSchedulerService @Inject() (
     // leadership election then we will wait to be elected. If we aren't (i.e.
     // no HA) then we take over leadership run the driver immediately.
     offerLeadership()
-
-    // Start the timer that handles reconciliation
-    schedulePeriodicOperations()
 
     // Block on the latch which will be countdown only when shutdown has been
     // triggered. This is to prevent run()
@@ -219,10 +226,10 @@ class MarathonSchedulerService @Inject() (
     // We need to allocate a new driver as drivers can't be reused. Once they
     // are in the stopped state they cannot be restarted. See the Mesos C++
     // source code for the MesosScheduleDriver.
-    driver = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
+    driver = newDriver()
   }
 
-  def isLeader(): Boolean = leader.get()
+  def isLeader: Boolean = leader.get()
 
   def getLeader: Option[String] = {
     candidate.flatMap { c =>
@@ -244,25 +251,47 @@ class MarathonSchedulerService @Inject() (
 
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
     log.info("Elected (Leader Interface)")
+    var migrationComplete = false
+    try {
+      //execute tasks, only the leader is allowed to
+      migration.migrate()
+      migrationComplete = true
 
-    //execute tasks, only the leader is allowed to
-    migration.migrate()
+      // We have been elected. Thus, elect leadership with the abdication command.
+      electLeadership(Some(abdicateCmd))
 
-    // We have been elected. Thus, elect leadership with the abdication command.
-    electLeadership(Some(abdicateCmd))
+      // We successfully took over leadership. Time to reset backoff
+      resetOfferLeadershipBackOff
+    }
+    catch {
+      case NonFatal(e) => // catch Scala and Java exceptions
+        log.error(s"Failed to take over leadership: $e")
+
+        increaseOfferLeadershipBackOff()
+
+        abdicateLeadership()
+
+        if (!migrationComplete) {
+          // here the driver is not running yet and therefore it cannot execute
+          // the abdication command and offer the leadership. So we do it here
+          abdicateCmd.execute()
+          offerLeadership()
+        }
+    }
   }
   //End Leader interface
 
   private def defeatLeadership(): Unit = {
     log.info("Defeat leadership")
 
+    schedulerActor ! Suspend(LostLeadershipException("Leadership was defeated"))
+
+    reconciliationTimer.cancel()
+    reconciliationTimer = newTimer()
+
     // Our leadership has been defeated. Thus, update leadership and stop the driver.
     // Note that abdication command will be ran upon driver shutdown.
     leader.set(false)
-
-    // Stop all health checks
-    healthCheckManager.removeAll()
-
     stopDriver()
   }
 
@@ -273,8 +302,10 @@ class MarathonSchedulerService @Inject() (
     leader.set(true)
     runDriver(abdicateOption)
 
-    // Create health checks for any existing app and each running version of that
-    schedulerActor ! ReconcileHealthChecks
+    schedulerActor ! Start
+
+    // Start the timer that handles reconciliation
+    schedulePeriodicOperations()
   }
 
   def abdicateLeadership(): Unit = {
@@ -284,23 +315,39 @@ class MarathonSchedulerService @Inject() (
     defeatLeadership()
   }
 
-  private def offerLeadership(): Unit = {
-    log.info("Offering leadership")
+  var offerLeadershipBackOff = 0.5.seconds
+  val maximumOfferLeadershipBackOff = 16.seconds
 
-    candidate.synchronized {
-      candidate match {
-        case Some(c) =>
-          // In this case we care using Zookeeper for leadership candidacy.
-          // Thus, offer our leadership.
-          log.info("Using HA and therefore offering leadership")
-          c.offerLeadership(this)
-        case _ =>
-          // In this case we aren't using Zookeeper for leadership election.
-          // Thus, we simply elect ourselves as leader.
-          log.info("Not using HA and therefore electing as leader by default")
-          electLeadership(None)
-      }
+  private def increaseOfferLeadershipBackOff() {
+    if (offerLeadershipBackOff <= maximumOfferLeadershipBackOff) {
+      offerLeadershipBackOff *= 2
+      log.info(s"Increasing offerLeadership backoff to $offerLeadershipBackOff")
     }
+  }
+
+  private def resetOfferLeadershipBackOff() {
+    log.info("Reset offerLeadership backoff")
+    offerLeadershipBackOff = 0.5.seconds
+  }
+
+  private def offerLeadership(): Unit = {
+    log.info(s"Will offer leadership after $offerLeadershipBackOff backoff")
+    after(offerLeadershipBackOff, system.scheduler)(Future {
+      candidate.synchronized {
+        candidate match {
+          case Some(c) =>
+            // In this case we care using Zookeeper for leadership candidacy.
+            // Thus, offer our leadership.
+            log.info("Using HA and therefore offering leadership")
+            c.offerLeadership(this)
+          case _ =>
+            // In this case we aren't using Zookeeper for leadership election.
+            // Thus, we simply elect ourselves as leader.
+            log.info("Not using HA and therefore electing as leader by default")
+            electLeadership(None)
+        }
+      }
+    })
   }
 
   private def schedulePeriodicOperations(): Unit = {
@@ -324,26 +371,12 @@ class MarathonSchedulerService @Inject() (
     reconciliationTimer.schedule(
       new TimerTask {
         def run() {
-          taskTracker.expungeOrphanedTasks()
+          if (isLeader) {
+            taskTracker.expungeOrphanedTasks()
+          }
         }
       },
       reconciliationInitialDelay.toMillis + reconciliationInterval.toMillis
     )
-  }
-
-  private def newAppPort(app: AppDefinition): Integer = {
-    // TODO this is pretty expensive, find a better way
-    val assignedPorts = listApps().flatMap(_.ports).toSet
-    val portSum = config.localPortMax() - config.localPortMin()
-
-    // prevent infinite loop if all ports are taken
-    if (assignedPorts.size >= portSum)
-      throw new PortRangeExhaustedException(config.localPortMin(), config.localPortMax())
-
-    var port = 0
-    do {
-      port = config.localPortMin() + Random.nextInt(portSum)
-    } while (assignedPorts.contains(port))
-    port
   }
 }

@@ -113,4 +113,9 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       host3 should be("")
     }
   }
+
+  it("handles root paths") {
+    PathId("/").isRoot shouldBe true
+    PathId("").isRoot shouldBe true
+  }
 }

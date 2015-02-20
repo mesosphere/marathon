@@ -18,7 +18,7 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
-import org.mockito.Matchers.any
+import org.mockito.Matchers.{ any, same }
 import org.mockito.Mockito.{ times, verify, when }
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
@@ -100,9 +100,11 @@ class DeploymentActorTest
       }
     })
 
-    when(queue.add(app2New)).thenAnswer(new Answer[Boolean] {
+    when(queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", UUID.randomUUID().toString, "TASK_RUNNING", "", app2.id, "", Nil, app2New.version.toString))
+        println(invocation.getArguments.toSeq)
+        for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
+          system.eventStream.publish(MesosStatusUpdateEvent("", UUID.randomUUID().toString, "TASK_RUNNING", "", app2.id, "", Nil, app2New.version.toString))
         true
       }
     })
@@ -177,7 +179,7 @@ class DeploymentActorTest
 
     when(tracker.get(app.id)).thenReturn(Set(task1_1, task1_2))
 
-    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew, 0, 2)))), Timestamp.now())
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
     when(driver.killTask(TaskID(task1_1.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -194,17 +196,15 @@ class DeploymentActorTest
     })
 
     val taskIDs = Iterator.from(3)
-    var taskCount = 0
 
-    when(queue.count(appNew)).thenAnswer(new Answer[Int] {
-      override def answer(p1: InvocationOnMock): Int = taskCount
+    when(queue.count(appNew.id)).thenAnswer(new Answer[Int] {
+      override def answer(p1: InvocationOnMock): Int = appNew.instances
     })
 
-    when(queue.add(appNew)).thenAnswer(new Answer[Boolean] {
+    when(queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
-        if (taskCount >= 2) throw new Exception("Too many invocations.")
-        taskCount += 1
-        system.eventStream.publish(MesosStatusUpdateEvent("", s"task1_${taskIDs.next()}", "TASK_RUNNING", "", app.id, "", Nil, appNew.version.toString))
+        for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
+          system.eventStream.publish(MesosStatusUpdateEvent("", s"task1_${taskIDs.next()}", "TASK_RUNNING", "", app.id, "", Nil, appNew.version.toString))
         true
       }
     })
@@ -233,7 +233,7 @@ class DeploymentActorTest
 
       verify(driver).killTask(TaskID(task1_1.getId))
       verify(driver).killTask(TaskID(task1_2.getId))
-      verify(queue, times(2)).add(appNew)
+      verify(queue).add(appNew, 2)
     }
     finally {
       system.shutdown()
@@ -251,7 +251,7 @@ class DeploymentActorTest
     val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
-    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew, 0, 0)))), Timestamp.now())
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
     when(tracker.get(app.id)).thenReturn(Set[MarathonTask]())
     when(repo.store(appNew)).thenReturn(Future.successful(appNew))

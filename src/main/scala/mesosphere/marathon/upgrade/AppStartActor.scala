@@ -16,12 +16,10 @@ class AppStartActor(
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
     val app: AppDefinition,
-    scaleTo: Int,
+    val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
-  val expectedSize = scaleTo
-
-  def withHealthChecks: Boolean = app.healthChecks.nonEmpty
+  val nrToStart: Int = scaleTo
 
   def initializeStart(): Unit = {
     scheduler.startApp(driver, app.copy(instances = scaleTo))

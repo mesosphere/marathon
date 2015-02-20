@@ -16,14 +16,14 @@ class TaskStartActor(
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
     val app: AppDefinition,
-    nrToStart: Int,
-    val withHealthChecks: Boolean,
+    val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
-  var running: Int = 0
+  val nrToStart: Int = scaleTo - taskQueue.count(app.id) - taskTracker.count(app.id)
 
   override def initializeStart(): Unit = {
-    for (_ <- 0 until nrToStart) taskQueue.add(app)
+    if (nrToStart > 0)
+      taskQueue.add(app, nrToStart)
   }
 
   override def postStop(): Unit = {
@@ -33,8 +33,6 @@ class TaskStartActor(
         new TaskUpgradeCanceledException(
           "The task upgrade has been cancelled"))
   }
-
-  override def expectedSize: Int = nrToStart
 
   override def success(): Unit = {
     log.info(s"Successfully started $nrToStart instances of ${app.id}")

@@ -1,14 +1,40 @@
 package mesosphere.marathon.tasks
 
-import java.util.concurrent.PriorityBlockingQueue
+import java.util.concurrent.atomic.AtomicInteger
 
-import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.util.RateLimiter
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.util._
+import org.apache.log4j.Logger
 
-import scala.concurrent.duration.Deadline
-import scala.collection.mutable
+import scala.annotation.tailrec
+import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Seq
-import scala.collection.JavaConverters._
+import scala.concurrent.duration.Deadline
+
+object TaskQueue {
+  protected[marathon] case class QueuedTask(app: AppDefinition, count: AtomicInteger)
+
+  protected[tasks] implicit object AppConstraintsOrdering extends Ordering[QueuedTask] {
+    def compare(t1: QueuedTask, t2: QueuedTask): Int =
+      t2.app.constraints.size compare t1.app.constraints.size
+  }
+
+  protected[tasks] implicit class AtomicIntDecrementIfPositive(val value: AtomicInteger) extends AnyVal {
+    @tailrec
+    final def decrementIfPositive(): Boolean = {
+      val num = value.get()
+      if (num <= 0) {
+        false
+      }
+      else if (value.compareAndSet(num, num - 1)) {
+        true
+      }
+      else {
+        decrementIfPositive()
+      }
+    }
+  }
+}
 
 /**
   * Utility class to stage tasks before they get scheduled
@@ -17,58 +43,90 @@ class TaskQueue {
 
   import mesosphere.marathon.tasks.TaskQueue._
 
+  private val log = Logger.getLogger(getClass)
   protected[marathon] val rateLimiter = new RateLimiter
 
-  // we used SynchronizedPriorityQueue before, but it has been deprecated
-  // because it is not safe to use
-  protected[tasks] var queue =
-    new PriorityBlockingQueue[QueuedTask](11, AppConstraintsOrdering.reverse)
+  protected[tasks] var apps = TrieMap.empty[(PathId, Timestamp), QueuedTask]
 
-  def list: Seq[QueuedTask] = queue.asScala.to[scala.collection.immutable.Seq]
+  def list: Seq[QueuedTask] = apps.values.to[Seq].filter(_.count.get() > 0)
+  def listWithDelay: Seq[(QueuedTask, Deadline)] = list.map { task =>
+    task -> rateLimiter.getDelay(task.app)
+  }
 
   def listApps: Seq[AppDefinition] = list.map(_.app)
 
-  def poll(): Option[QueuedTask] = Option(queue.poll())
+  def poll(): Option[QueuedTask] = {
+    // TODO: make prioritization pluggable
+    // Marathon prioritizes tasks by number of constraints, so we have to sort here
+    apps.values.toSeq.sorted.find {
+      case QueuedTask(_, count) => count.decrementIfPositive()
+    }
+  }
 
-  def add(app: AppDefinition): Unit =
-    queue.add(QueuedTask(app, rateLimiter.getDelay(app)))
+  def add(app: AppDefinition): Unit = add(app, 1)
+
+  def add(app: AppDefinition, count: Int): Unit = {
+    require(count > 0, "count has to be positive")
+    val queuedTask = apps.getOrElseUpdate(
+      (app.id, app.version),
+      QueuedTask(app, new AtomicInteger(0)))
+    queuedTask.count.addAndGet(count)
+  }
 
   /**
     * Number of tasks in the queue for the given app
     *
-    * @param app The app
+    * @param appId The app id
     * @return count
     */
-  def count(app: AppDefinition): Int = queue.asScala.count(_.app.id == app.id)
+  def count(appId: PathId): Int = apps.values.foldLeft(0) {
+    case (count, task) if task.app.id == appId => count + task.count.get()
+    case (count, _)                            => count
+  }
 
   def purge(appId: PathId): Unit = {
-    val retained = queue.asScala.filterNot(_.app.id == appId)
-    removeAll()
-    queue.addAll(retained.asJavaCollection)
+    for {
+      QueuedTask(app, _) <- apps.values
+      if app.id == appId
+    } {
+      apps.remove(app.id -> app.version)
+      rateLimiter.resetDelay(app)
+    }
   }
 
   /**
     * Retains only elements that satisfy the supplied predicate.
     */
   def retain(f: (QueuedTask => Boolean)): Unit =
-    queue.iterator.asScala.foreach { qt => if (!f(qt)) queue.remove(qt) }
+    apps.values.foreach {
+      case qt @ QueuedTask(app, _) => if (!f(qt)) apps.remove(app.id -> app.version)
+    }
 
-  def addAll(xs: Seq[QueuedTask]): Unit = queue.addAll(xs.asJavaCollection)
+  def pollMatching[B](f: AppDefinition => Option[B]): Option[B] = {
+    val sorted = apps.values.toList.sorted
 
-  def removeAll(): Seq[QueuedTask] = {
-    val builder = new java.util.ArrayList[QueuedTask]()
-    queue.drainTo(builder)
-    builder.asScala.to[Seq]
-  }
+    @tailrec
+    def findMatching(xs: List[QueuedTask]): Option[B] = xs match {
+      case Nil => None
+      case head :: tail => head match {
+        case QueuedTask(app, count) if rateLimiter.getDelay(app).hasTimeLeft() =>
+          log.info(
+            s"Delaying ${app.id} due to backoff. Time left: ${rateLimiter.getDelay(app).timeLeft.toHumanReadable}.")
+          findMatching(tail)
 
-}
+        case QueuedTask(app, count) if count.get() > 0 =>
+          val res = f(app)
+          if (res.isDefined && count.decrementIfPositive()) {
+            res
+          }
+          else {
+            findMatching(tail)
+          }
 
-object TaskQueue {
+        case _ => findMatching(tail)
+      }
+    }
 
-  protected[marathon] case class QueuedTask(app: AppDefinition, delay: Deadline)
-
-  protected object AppConstraintsOrdering extends Ordering[QueuedTask] {
-    def compare(t1: QueuedTask, t2: QueuedTask): Int =
-      t1.app.constraints.size compare t2.app.constraints.size
+    findMatching(sorted)
   }
 }
