@@ -1,4 +1,5 @@
 /** @jsx React.DOM */
+
 var $ = require("jquery");
 var _ = require("underscore");
 var React = require("react/addons");
@@ -7,7 +8,7 @@ var App = require("../models/App");
 var FormGroupComponent = require("../components/FormGroupComponent");
 var ModalComponent = require("../components/ModalComponent");
 
-function ValidationError (attribute, message) {
+function ValidationError(attribute, message) {
   this.attribute = attribute;
   this.message = message;
 }
@@ -56,6 +57,14 @@ var NewAppModalComponent = React.createClass({
 
   removeVolumes: function () {
     this.setState({volumesCount: this.state.volumesCount - 1});
+  },
+
+  toggleSettings: function () {
+    $(".settings").toggle();
+  },
+
+  toggleDocker: function () {
+    $(".docker-settings").toggle();
   },
 
   getResource: function () {
@@ -268,146 +277,157 @@ var NewAppModalComponent = React.createClass({
                 errors={errors}>
               <textarea style={{resize: "vertical"}} />
             </FormGroupComponent>
-            <h4>Hide optional settings</h4>
-            <FormGroupComponent
-                attribute="ports"
-                help="Comma-separated list of numbers. 
-                0's (zeros) assign random ports. (Default: one random port)"
-                label="Ports"
-                model={model}
-                errors={errors}>
-              <input />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="uris"
-                help="Comma-separated list of valid URIs."
-                label="URIs"
-                model={model}
-                errors={errors}>
-              <input />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="constraints"
-                help='Comma-separated list of valid constraints. 
-                Valid constraint format is "field:operator[:value]".'
-                label="Constraints"
-                model={model}
-                errors={errors}>
-              <input />
-            </FormGroupComponent>
-            <h4>Hide docker container settings</h4>
             <div className="row">
-              <div className="col-md-6">
-                <FormGroupComponent
-                    attribute="image"
-                    help='Image for docker'
-                    label="Image"
-                    model={model}
-                    errors={errors}>
-                  <input />
-                </FormGroupComponent>
-              </div>
-              <div className="col-md-6">
-                <FormGroupComponent
-                    attribute="network"
-                    help='Network host'
-                    label="Network"
-                    model={model}
-                    errors={errors}>
-                  <select>
-                    <option value="host">Host</option>
-                    <option value="host_two">Host two</option>
-                  </select>
-                </FormGroupComponent>
-              </div>
+              <button className="btn btn-success" onClick={this.toggleSettings}>
+                Hide optional settings
+              </button>
             </div>
-            <h4>Privileges</h4>
-            <FormGroupComponent
-                attribute="privileges"
-                help='Select to give this container access to all 
-                devices on the host'
-                label="Extend runtime privileges to this container"
-                model={model}
-                errors={errors}>
-              <input type="checkbox" value="true"/>
-            </FormGroupComponent>
-            <h4>Parameters</h4>
-            <div className="row">
-              <div className="col-md-5">
-                <FormGroupComponent
-                    attribute="key"
-                    label="Key"
-                    model={model}
-                    errors={errors}>
-                  <input />
-                </FormGroupComponent>
-              </div>
-              <div className="col-md-5">
-                <FormGroupComponent
-                    attribute="value"
-                    label="Value"
-                    model={model}
-                    errors={errors}>
-                  <input />
-                </FormGroupComponent>
-              </div>
-              <div className="col-md-1">
-                <button className="btn btn-default" 
-                  type="button" onClick={this.addParameters}>
-                  +
-                </button>
-              </div>
-              <div className="col-md-1">
-                <button className="btn btn-default" 
-                  type="button" onClick={this.removeParameters}>
-                  -
-                </button>
-              </div>
+            <div className="row settings">
+              <FormGroupComponent
+                  attribute="ports"
+                  help="Comma-separated list of numbers. 
+                  0's (zeros) assign random ports. (Default: one random port)"
+                  label="Ports"
+                  model={model}
+                  errors={errors}>
+                <input />
+              </FormGroupComponent>
+              <FormGroupComponent
+                  attribute="uris"
+                  help="Comma-separated list of valid URIs."
+                  label="URIs"
+                  model={model}
+                  errors={errors}>
+                <input />
+              </FormGroupComponent>
+              <FormGroupComponent
+                  attribute="constraints"
+                  help='Comma-separated list of valid constraints.
+                   Valid constraint format is "field:operator[:value]".'
+                  label="Constraints"
+                  model={model}
+                  errors={errors}>
+                <input />
+              </FormGroupComponent>
             </div>
-            <h4>Volumes</h4>
             <div className="row">
-              <div className="col-md-3">
-                <FormGroupComponent
-                    attribute="container_path"
-                    label="Container path"
-                    model={model}
-                    errors={errors}>
-                  <input />
-                </FormGroupComponent>
+              <button className="btn btn-success" onClick={this.toggleDocker}>
+                Hide docker container settings
+              </button>
+            </div>
+            <div className="docker-settings">
+              <div className="row">
+                <div className="col-md-6">
+                  <FormGroupComponent
+                      attribute="image"
+                      help='Image for docker'
+                      label="Image"
+                      model={model}
+                      errors={errors}>
+                    <input />
+                  </FormGroupComponent>
+                </div>
+                <div className="col-md-6">
+                  <FormGroupComponent
+                      attribute="network"
+                      help='Network host'
+                      label="Network"
+                      model={model}
+                      errors={errors}>
+                    <select>
+                      <option value="host">Host</option>
+                      <option value="host_two">Host two</option>
+                    </select>
+                  </FormGroupComponent>
+                </div>
               </div>
-              <div className="col-md-3">
-                <FormGroupComponent
-                    attribute="host_path"
-                    label="Host path"
-                    model={model}
-                    errors={errors}>
-                  <input />
-                </FormGroupComponent>
+              <h4>Privileges</h4>
+              <FormGroupComponent
+                  attribute="privileges"
+                  help='Select to give this container access to all devices on the host'
+                  label="Extend runtime privileges to this container"
+                  model={model}
+                  errors={errors}>
+                <input type="checkbox" value="true"/>
+              </FormGroupComponent>
+              <h4>Parameters</h4>
+              <div className="row">
+                <div className="col-md-5">
+                  <FormGroupComponent
+                      attribute="key"
+                      label="Key"
+                      model={model}
+                      errors={errors}>
+                    <input />
+                  </FormGroupComponent>
+                </div>
+                <div className="col-md-5">
+                  <FormGroupComponent
+                      attribute="value"
+                      label="Value"
+                      model={model}
+                      errors={errors}>
+                    <input />
+                  </FormGroupComponent>
+                </div>
+                <div className="col-md-1">
+                  <button className="btn btn-default" 
+                    type="button" onClick={this.addParameters}>
+                    +
+                  </button>
+                </div>
+                <div className="col-md-1">
+                  <button className="btn btn-default" 
+                    type="button" onClick={this.removeParameters}>
+                    -
+                  </button>
+                </div>
               </div>
-              <div className="col-md-3">
-                <FormGroupComponent
-                    attribute="mode"
-                    label="Mode"
-                    model={model}
-                    errors={errors}>
-                  <select>
-                    <option value="read">Read only</option>
-                    <option value="write">Write - Read</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </FormGroupComponent>
-              </div>
-              <div className="col-md-1">
-                <button className="btn btn-default" 
-                  type="button" onClick={this.addVolumes}>
-                  +
-                </button>
-              </div>
-              <div className="col-md-1">
-                <button className="btn btn-default" 
-                  type="button" onClick={this.removeVolumes}>
-                  -
-                </button>
+              <h4>Volumes</h4>
+              <div className="row">
+                <div className="col-md-3">
+                  <FormGroupComponent
+                      attribute="container_path"
+                      label="Container path"
+                      model={model}
+                      errors={errors}>
+                    <input />
+                  </FormGroupComponent>
+                </div>
+                <div className="col-md-3">
+                  <FormGroupComponent
+                      attribute="host_path"
+                      label="Host path"
+                      model={model}
+                      errors={errors}>
+                    <input />
+                  </FormGroupComponent>
+                </div>
+                <div className="col-md-3">
+                  <FormGroupComponent
+                      attribute="mode"
+                      label="Mode"
+                      model={model}
+                      errors={errors}>
+                    <select>
+                      <option value="read">Read only</option>
+                      <option value="write">Write - Read</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </FormGroupComponent>
+                </div>
+                <div className="col-md-1">
+                  <button className="btn btn-default" 
+                    type="button" onClick={this.addVolumes}>
+                    +
+                  </button>
+                </div>
+                <div className="col-md-1">
+                  <button className="btn btn-default" 
+                    type="button" onClick={this.removeVolumes}>
+                    -
+                  </button>
+                </div>
               </div>
             </div>
             <div>
