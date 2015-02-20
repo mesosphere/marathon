@@ -13,6 +13,7 @@ import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
 import com.twitter.common.zookeeper.Group.JoinException
+import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
@@ -38,6 +39,7 @@ class MarathonSchedulerService @Inject() (
     healthCheckManager: HealthCheckManager,
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
+    httpConfig: HttpConf,
     frameworkIdUtil: FrameworkIdUtil,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
     appRepository: AppRepository,
@@ -85,7 +87,7 @@ class MarathonSchedulerService @Inject() (
 
   implicit val timeout: Timeout = 5.seconds
 
-  protected def newDriver() = MarathonSchedulerDriver.newDriver(config, scheduler, frameworkId)
+  protected def newDriver() = MarathonSchedulerDriver.newDriver(config, httpConfig, scheduler, frameworkId)
   protected def newTimer() = new Timer("reconciliationTimer")
 
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {

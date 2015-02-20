@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import mesosphere.chaos.http.HttpConf
 import org.apache.mesos.Protos.{ FrameworkID, FrameworkInfo, Credential }
 import org.apache.mesos.{ SchedulerDriver, MesosSchedulerDriver }
 
@@ -16,6 +17,7 @@ object MarathonSchedulerDriver {
   var scheduler: Option[MarathonScheduler] = None
 
   def newDriver(config: MarathonConf,
+                httpConfig: HttpConf,
                 newScheduler: MarathonScheduler,
                 frameworkId: Option[FrameworkID]): SchedulerDriver = {
     val frameworkInfoBuilder = FrameworkInfo.newBuilder()
@@ -29,6 +31,15 @@ object MarathonSchedulerDriver {
 
     // Set the ID, if provided
     frameworkId.foreach(frameworkInfoBuilder.setId)
+
+    if (httpConfig.sslKeystorePath.isDefined) {
+      // ssl enabled, use https
+      frameworkInfoBuilder.setWebuiUrl(s"https://${config.hostname()}:${httpConfig.httpsPort()}")
+    }
+    else {
+      // ssl disabled, use http
+      frameworkInfoBuilder.setWebuiUrl(s"http://${config.hostname()}:${httpConfig.httpPort()}")
+    }
 
     // set the authentication principal, if provided
     config.mesosAuthenticationPrincipal.get.foreach(frameworkInfoBuilder.setPrincipal)
