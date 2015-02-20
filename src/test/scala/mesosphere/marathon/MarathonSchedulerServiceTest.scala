@@ -8,6 +8,7 @@ import akka.testkit.{ TestKit, TestProbe }
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.{ Group, Candidate }
 import com.twitter.common.zookeeper.Group.JoinException
+import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppRepository, Migration }
@@ -63,6 +64,7 @@ class MarathonSchedulerServiceTest
   var healthCheckManager: HealthCheckManager = _
   var candidate: Option[Candidate] = _
   var config: MarathonConf = _
+  var httpConfig: HttpConf = _
   var frameworkIdUtil: FrameworkIdUtil = _
   var leader: AtomicBoolean = _
   var appRepository: AppRepository = _
@@ -76,6 +78,7 @@ class MarathonSchedulerServiceTest
     healthCheckManager = mock[HealthCheckManager]
     candidate = mock[Option[Candidate]]
     config = mockConfig
+    httpConfig = mock[HttpConf]
     frameworkIdUtil = mock[FrameworkIdUtil]
     leader = mock[AtomicBoolean]
     appRepository = mock[AppRepository]
@@ -94,6 +97,7 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
+      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
@@ -124,6 +128,7 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
+      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
@@ -154,6 +159,7 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
+      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
@@ -189,6 +195,7 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
+      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
@@ -221,6 +228,7 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
+      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
