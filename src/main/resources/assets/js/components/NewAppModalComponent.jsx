@@ -1,5 +1,4 @@
 /** @jsx React.DOM */
- 
 var $ = require("jquery");
 var _ = require("underscore");
 var React = require("react/addons");
@@ -7,12 +6,12 @@ var BackboneMixin = require("../mixins/BackboneMixin");
 var App = require("../models/App");
 var FormGroupComponent = require("../components/FormGroupComponent");
 var ModalComponent = require("../components/ModalComponent");
- 
-function ValidationError(attribute, message) {
+
+function ValidationError (attribute, message) {
   this.attribute = attribute;
   this.message = message;
 }
- 
+
 var NewAppModalComponent = React.createClass({
   displayName: "NewAppModalComponent",
   mixins: [BackboneMixin],
@@ -20,14 +19,14 @@ var NewAppModalComponent = React.createClass({
     onCreate: React.PropTypes.func,
     onDestroy: React.PropTypes.func
   },
- 
+
   getDefaultProps: function () {
     return {
       onCreate: $.noop,
       onDestroy: $.noop
     };
   },
- 
+
   getInitialState: function () {
     return {
       model: new App(),
@@ -36,40 +35,40 @@ var NewAppModalComponent = React.createClass({
       errors: []
     };
   },
- 
+
   destroy: function () {
     // This will also call `this.props.onDestroy` since it is passed as the
     // callback for the modal's `onDestroy` prop.
     this.refs.modalComponent.destroy();
   },
- 
+
   addParameters: function () {
     this.setState({parametersCount: this.state.parametersCount + 1});
   },
- 
+
   removeParameters: function () {
     this.setState({parametersCount: this.state.parametersCount - 1});
   },
- 
+
   addVolumes: function () {
     this.setState({volumesCount: this.state.volumesCount + 1});
   },
- 
+
   removeVolumes: function () {
     this.setState({volumesCount: this.state.volumesCount - 1});
   },
- 
+
   getResource: function () {
     return this.state.model;
   },
- 
+
   clearValidation: function () {
     this.setState({errors: []});
   },
- 
+
   validateResponse: function (response) {
     var errors;
- 
+
     if (response.status === 422 && response.responseJSON != null &&
         _.isArray(response.responseJSON.errors)) {
       errors = response.responseJSON.errors.map(function (e) {
@@ -92,30 +91,30 @@ var NewAppModalComponent = React.createClass({
         )
       ];
     }
- 
+
     this.setState({errors: errors});
   },
- 
+
   onSubmit: function (event) {
     event.preventDefault();
- 
+
     var attrArray = $(event.target).serializeArray();
     var modelAttrs = {};
- 
+
     for (var i = 0; i < attrArray.length; i++) {
       var val = attrArray[i];
       if (val.value !== "") {
         modelAttrs[val.name] = val.value;
       }
     }
- 
+
     // URIs should be an Array of Strings.
     if ("uris" in modelAttrs) {
       modelAttrs.uris = modelAttrs.uris.split(",");
     } else {
       modelAttrs.uris = [];
     }
- 
+
     // Constraints should be an Array of Strings.
     if ("constraints" in modelAttrs) {
       var constraintsArray = modelAttrs.constraints.split(",");
@@ -125,7 +124,7 @@ var NewAppModalComponent = React.createClass({
         });
       });
     }
- 
+
     // Ports should always be an Array.
     if ("ports" in modelAttrs) {
       var portStrings = modelAttrs.ports.split(",");
@@ -136,7 +135,7 @@ var NewAppModalComponent = React.createClass({
     } else {
       modelAttrs.ports = [];
     }
- 
+
     // mem, cpus, and instances are all Numbers and should be parsed as such.
     if ("mem" in modelAttrs) {
       modelAttrs.mem = parseFloat(modelAttrs.mem);
@@ -155,9 +154,9 @@ var NewAppModalComponent = React.createClass({
         modelAttrs.instances = true;
       }
     }
- 
+
     this.state.model.set(modelAttrs);
- 
+
     if (this.state.model.isValid()) {
       this.props.onCreate(
         this.state.model,
@@ -173,7 +172,7 @@ var NewAppModalComponent = React.createClass({
             this.clearValidation();
             this.destroy();
           }.bind(this),
- 
+
           // Wait to add the model to the collection until a successful
           // response code is received from the server.
           wait: true
@@ -181,26 +180,26 @@ var NewAppModalComponent = React.createClass({
       );
     }
   },
- 
+
   render: function () {
     var model = this.state.model;
     var errors = this.state.errors;
- 
+
     var generalErrors = errors.filter(function (e) {
       return (e.attribute === "general");
     });
- 
+
     var inputs = [];
-    for (var i=0;i<this.state.parametersCount; i++) {
+    for (var i = 0; i < this.state.parametersCount; i++) {
       inputs.push(i);
     }
- 
+
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     var errorBlock = generalErrors.map(function (error, i) {
       return <p key={i} className="text-danger"><strong>{error.message}</strong></p>;
     });
- 
+
     return (
       <ModalComponent ref="modalComponent" onDestroy={this.props.onDestroy}>
         <form method="post" role="form" onSubmit={this.onSubmit}>
@@ -210,42 +209,57 @@ var NewAppModalComponent = React.createClass({
             <h3 className="modal-title">New Application</h3>
           </div>
           <div className="modal-body">
-            <FormGroupComponent
-                attribute="id"
-                label="ID"
-                model={model}
-                errors={errors}>
-              <input autoFocus required />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="cpus"
-                label="CPUs"
-                model={model}
-                errors={errors}>
-              <input min="0" step="any" type="number" required />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="mem"
-                label="Memory (MB)"
-                model={model}
-                errors={errors}>
-              <input min="0" step="any" type="number" required />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="disk"
-                label="Disk Space (MB)"
-                model={model}
-                errors={errors}>
-              <input min="0" step="any" type="number" required />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="instances"
-                label="Instances"
-                model={model}
-                errors={errors}>
-              <input min="1" step="1" type="number" required />
-            </FormGroupComponent>
-            <hr />
+            <div className="row">
+              <FormGroupComponent
+                  attribute="id"
+                  label="ID"
+                  model={model}
+                  errors={errors}>
+                <input autoFocus required />
+              </FormGroupComponent>
+            </div>
+            <div className="row">
+              <div className="col-md-3">
+                <FormGroupComponent
+                    attribute="cpus"
+                    label="CPUs"
+                    model={model}
+                    errors={errors}>
+                  <input min="0" step="any" 
+                    type="number" required />
+                </FormGroupComponent>
+              </div>
+              <div className="col-md-3">
+                <FormGroupComponent
+                    attribute="mem"
+                    label="Memory (MB)"
+                    model={model}
+                    errors={errors}>
+                  <input min="0" step="any"
+                    type="number" required />
+                </FormGroupComponent>
+              </div>
+              <div className="col-md-3">
+                <FormGroupComponent
+                    attribute="disk"
+                    label="Disk Space (MB)"
+                    model={model}
+                    errors={errors}>
+                  <input min="0" step="any"
+                    type="number" required />
+                </FormGroupComponent>
+              </div>
+              <div className="col-md-3">
+                <FormGroupComponent
+                    attribute="instances"
+                    label="Instances"
+                    model={model}
+                    errors={errors}>
+                  <input min="1" step="1"
+                    type="number" required />
+                </FormGroupComponent>
+              </div>
+            </div>
             <h4>Optional Settings</h4>
             <FormGroupComponent
                 attribute="cmd"
@@ -254,18 +268,11 @@ var NewAppModalComponent = React.createClass({
                 errors={errors}>
               <textarea style={{resize: "vertical"}} />
             </FormGroupComponent>
-            <FormGroupComponent
-                attribute="executor"
-                label="Executor"
-                model={model}
-                errors={errors}>
-              <input
-                pattern={App.VALID_EXECUTOR_PATTERN}
-                title="Executor must be the string '//cmd', a string containing only single slashes ('/'), or blank." />
-            </FormGroupComponent>
+            <h4>Hide optional settings</h4>
             <FormGroupComponent
                 attribute="ports"
-                help="Comma-separated list of numbers. 0's (zeros) assign random ports. (Default: one random port)"
+                help="Comma-separated list of numbers. 
+                0's (zeros) assign random ports. (Default: one random port)"
                 label="Ports"
                 model={model}
                 errors={errors}>
@@ -281,111 +288,134 @@ var NewAppModalComponent = React.createClass({
             </FormGroupComponent>
             <FormGroupComponent
                 attribute="constraints"
-                help='Comma-separated list of valid constraints. Valid constraint format is "field:operator[:value]".'
+                help='Comma-separated list of valid constraints. 
+                Valid constraint format is "field:operator[:value]".'
                 label="Constraints"
                 model={model}
                 errors={errors}>
               <input />
             </FormGroupComponent>
-            <hr />
             <h4>Hide docker container settings</h4>
-            <FormGroupComponent
-                attribute="image"
-                help='Image for docker'
-                label="Image"
-                model={model}
-                errors={errors}>
-              <input />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="network"
-                help='Network host'
-                label="Network"
-                model={model}
-                errors={errors}>
-              <select>
-                <option value="host">Host</option>
-                <option value="host_two">Host two</option>
-              </select>
-            </FormGroupComponent>
-            <hr />
+            <div className="row">
+              <div className="col-md-6">
+                <FormGroupComponent
+                    attribute="image"
+                    help='Image for docker'
+                    label="Image"
+                    model={model}
+                    errors={errors}>
+                  <input />
+                </FormGroupComponent>
+              </div>
+              <div className="col-md-6">
+                <FormGroupComponent
+                    attribute="network"
+                    help='Network host'
+                    label="Network"
+                    model={model}
+                    errors={errors}>
+                  <select>
+                    <option value="host">Host</option>
+                    <option value="host_two">Host two</option>
+                  </select>
+                </FormGroupComponent>
+              </div>
+            </div>
             <h4>Privileges</h4>
             <FormGroupComponent
                 attribute="privileges"
-                help='Select to give this container access to all devices on the host'
+                help='Select to give this container access to all 
+                devices on the host'
                 label="Extend runtime privileges to this container"
                 model={model}
                 errors={errors}>
               <input type="checkbox" value="true"/>
             </FormGroupComponent>
-            <hr />
             <h4>Parameters</h4>
-            <FormGroupComponent
-                attribute="key"
-                label="Key"
-                model={model}
-                errors={errors}>
-              <input />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="value"
-                label="Value"
-                model={model}
-                errors={errors}>
-              <input />
-            </FormGroupComponent>
-            {inputs.map(function (result) {
-              return <FormGroupComponent
-                attribute="key"
-                label="Key"
-                model={model}
-                errors={errors}>
-                <input />
-              </FormGroupComponent>;
-            })}
-            <button className="btn btn-default" type="button" onClick={this.addParameters}>
-              +
-            </button>
-            <button className="btn btn-default" type="button" onClick={this.removeParameters}>
-              -
-            </button>
-            <hr />
+            <div className="row">
+              <div className="col-md-5">
+                <FormGroupComponent
+                    attribute="key"
+                    label="Key"
+                    model={model}
+                    errors={errors}>
+                  <input />
+                </FormGroupComponent>
+              </div>
+              <div className="col-md-5">
+                <FormGroupComponent
+                    attribute="value"
+                    label="Value"
+                    model={model}
+                    errors={errors}>
+                  <input />
+                </FormGroupComponent>
+              </div>
+              <div className="col-md-1">
+                <button className="btn btn-default" 
+                  type="button" onClick={this.addParameters}>
+                  +
+                </button>
+              </div>
+              <div className="col-md-1">
+                <button className="btn btn-default" 
+                  type="button" onClick={this.removeParameters}>
+                  -
+                </button>
+              </div>
+            </div>
             <h4>Volumes</h4>
-            <FormGroupComponent
-                attribute="container_path"
-                label="Container path"
-                model={model}
-                errors={errors}>
-              <input />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="host_path"
-                label="Host path"
-                model={model}
-                errors={errors}>
-              <input />
-            </FormGroupComponent>
-            <FormGroupComponent
-                attribute="mode"
-                label="Mode"
-                model={model}
-                errors={errors}>
-              <select>
-                <option value="read">Read only</option>
-                <option value="write">Write - Read</option>
-                <option value="admin">Admin</option>
-              </select>
-            </FormGroupComponent>
-            <button className="btn btn-default" type="button" onClick={this.addVolumes}>
-              +
-            </button>
-            <button className="btn btn-default" type="button" onClick={this.removeVolumes}>
-              -
-            </button>
+            <div className="row">
+              <div className="col-md-3">
+                <FormGroupComponent
+                    attribute="container_path"
+                    label="Container path"
+                    model={model}
+                    errors={errors}>
+                  <input />
+                </FormGroupComponent>
+              </div>
+              <div className="col-md-3">
+                <FormGroupComponent
+                    attribute="host_path"
+                    label="Host path"
+                    model={model}
+                    errors={errors}>
+                  <input />
+                </FormGroupComponent>
+              </div>
+              <div className="col-md-3">
+                <FormGroupComponent
+                    attribute="mode"
+                    label="Mode"
+                    model={model}
+                    errors={errors}>
+                  <select>
+                    <option value="read">Read only</option>
+                    <option value="write">Write - Read</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </FormGroupComponent>
+              </div>
+              <div className="col-md-1">
+                <button className="btn btn-default" 
+                  type="button" onClick={this.addVolumes}>
+                  +
+                </button>
+              </div>
+              <div className="col-md-1">
+                <button className="btn btn-default" 
+                  type="button" onClick={this.removeVolumes}>
+                  -
+                </button>
+              </div>
+            </div>
             <div>
               {errorBlock}
-              <input type="submit" className="btn btn-success" value="+ Create" /> 
-              <button className="btn btn-default" type="button" onClick={this.destroy}>
+              <input type="submit" className="btn btn-success" 
+                value="+ Create" /> 
+              <button className="btn btn-default" 
+                type="button" onClick={this.destroy}>
                 Cancel
               </button>
             </div>
@@ -395,5 +425,5 @@ var NewAppModalComponent = React.createClass({
     );
   }
 });
- 
+
 module.exports = NewAppModalComponent;
