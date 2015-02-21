@@ -138,6 +138,7 @@ If you want to inspect the contents of the Docker:
 * [The Factory](https://github.com/thefactory/)
 * [Guidewire](http://www.guidewire.com/)
 * [Groupon](http://www.groupon.com/)
+* [Human API](https://humanapi.co/)
 * [iQIYI](http://www.iqiyi.com/)
 * [Measurence](http://www.measurence.com/)
 * [OpenTable](http://www.opentable.com/)
