@@ -17,8 +17,10 @@ class TaskIdUtil {
     appId.safePath + taskDelimiter + uuidGenerator.generate()
   }
 
-  def appId(taskId: TaskID): PathId = {
-    taskId.getValue match {
+  def appId(taskId: TaskID): PathId = appId(taskId.getValue)
+
+  def appId(taskId: String): PathId = {
+    taskId match {
       case TaskIdRegex(appId, uuid) => PathId.fromSafePath(appId)
     }
   }
