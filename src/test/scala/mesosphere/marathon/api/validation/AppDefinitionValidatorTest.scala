@@ -3,7 +3,7 @@ package mesosphere.marathon.api.validation
 import javax.validation.ConstraintValidatorContext
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.{Container, PathId, AppDefinition}
+import mesosphere.marathon.state.{ Container, PathId, AppDefinition }
 
 class AppDefinitionValidatorTest extends MarathonSpec {
   var validator: AppDefinitionValidator = _

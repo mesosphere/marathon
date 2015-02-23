@@ -272,7 +272,7 @@ class AppsResource @Inject() (
               newGroup,
               DeploymentStep(RestartApplication(newApp) :: Nil) :: Nil,
               Timestamp.now())
-            val res = service.deploy(plan)
+            val res = service.deploy(plan, force = force)
             result(res)
             deploymentResult(plan)
 
