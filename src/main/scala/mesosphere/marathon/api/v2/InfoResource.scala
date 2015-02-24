@@ -25,6 +25,7 @@ class InfoResource @Inject() (
     "local_port_max" -> conf.localPortMax.get,
     "executor" -> conf.defaultExecutor.get,
     "hostname" -> conf.hostname.get,
+    "webui_url" -> conf.webuiUrl.get,
     "mesos_role" -> conf.mesosRole.get,
     "task_launch_timeout" -> conf.taskLaunchTimeout.get,
     "reconciliation_initial_delay" -> conf.reconciliationInitialDelay.get,

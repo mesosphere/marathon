@@ -45,6 +45,11 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
       "host can redirect to this elected leader",
     default = Some(java.net.InetAddress.getLocalHost.getHostName))
 
+  lazy val webuiUrl = opt[String]("webui_url",
+    descr = "The http(s) url of the web ui, defaulting to the advertised hostname",
+    noshort = true,
+    default = None)
+
   def executor: Executor = Executor.dispatch(defaultExecutor())
 
   lazy val mesosRole = opt[String]("mesos_role",
