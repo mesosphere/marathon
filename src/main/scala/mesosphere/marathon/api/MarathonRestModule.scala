@@ -33,6 +33,9 @@ class MarathonRestModule extends RestModule {
     // This filter will redirect to the master if running in HA mode.
     bind(classOf[LeaderProxyFilter]).asEagerSingleton()
     filter("/*").through(classOf[LeaderProxyFilter])
+
+    bind(classOf[CacheDisablingFilter]).asEagerSingleton()
+    filter("/*").through(classOf[CacheDisablingFilter])
   }
 
 }
