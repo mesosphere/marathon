@@ -45,6 +45,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var taskIdUtil: TaskIdUtil = _
   var storage: StorageProvider = _
   var taskFailureEventRepository: TaskFailureRepository = _
+  var taskOffersDeclinedRepository: TaskOffersDeclinedRepository = _
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -60,6 +61,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     taskIdUtil = new TaskIdUtil
     storage = mock[StorageProvider]
     taskFailureEventRepository = mock[TaskFailureRepository]
+    taskOffersDeclinedRepository = mock[TaskOffersDeclinedRepository]
 
     when(deploymentRepo.store(any())).thenAnswer(new Answer[Future[DeploymentPlan]] {
       override def answer(p1: InvocationOnMock): Future[DeploymentPlan] = {
@@ -88,6 +90,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       storage,
       system.eventStream,
       taskFailureEventRepository,
+      taskOffersDeclinedRepository,
       mock[MarathonConf]
     ))
   }
@@ -389,6 +392,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       storage,
       system.eventStream,
       taskFailureEventRepository,
+      taskOffersDeclinedRepository,
       mock[MarathonConf]
     ))
 

@@ -203,3 +203,9 @@ case class MesosFrameworkMessageEvent(
   message: Array[Byte],
   eventType: String = "framework_message_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+case class TaskOfferDeclinedEvent(
+  appId: PathId,
+  message: Array[Byte],
+  eventType: String = "app_failed_to_start_event",
+  timestamp: String = Timestamp.now().toString) extends MarathonEvent

@@ -5,6 +5,7 @@ import java.util.concurrent.Semaphore
 import akka.actor._
 import akka.event.EventStream
 import com.fasterxml.jackson.databind.ObjectMapper
+import mesosphere.mesos.TaskBuilder.BuildResult
 import org.apache.mesos.Protos.{ TaskState, TaskID, TaskStatus, TaskInfo }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
@@ -40,6 +41,7 @@ class MarathonSchedulerActor(
     storage: StorageProvider,
     eventBus: EventStream,
     taskFailureRepository: TaskFailureRepository,
+    taskOffersDeclinedRepository: TaskOffersDeclinedRepository,
     config: MarathonConf) extends Actor with ActorLogging with Stash {
   import context.dispatcher
 
@@ -79,7 +81,7 @@ class MarathonSchedulerActor(
     )
 
     historyActor = context.actorOf(
-      Props(classOf[HistoryActor], eventBus, taskFailureRepository), "HistoryActor")
+      Props(classOf[HistoryActor], eventBus, taskFailureRepository, taskOffersDeclinedRepository), "HistoryActor")
   }
 
   def receive: Receive = suspended
@@ -456,7 +458,7 @@ class SchedulerActions(
     } healthCheckManager.reconcileWith(app.id)
 
   private def newTask(app: AppDefinition,
-                      offer: Offer): Option[(TaskInfo, Seq[Long])] = {
+                      offer: Offer): BuildResult = {
     // TODO this should return a MarathonTask
     val builder = new TaskBuilder(
       app,
@@ -466,10 +468,10 @@ class SchedulerActions(
       mapper
     )
 
-    builder.buildIfMatches(offer) map {
-      case (task, ports) =>
-        val taskBuilder = task.toBuilder
-        taskBuilder.build -> ports
+    builder.buildIfMatches(offer) match {
+      case TaskBuilder.BuildSuccess(task, ports) =>
+        TaskBuilder.BuildSuccess(task.toBuilder.build, ports)
+      case declined: TaskBuilder.BuildDeclined => declined
     }
   }
 
