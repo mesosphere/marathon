@@ -6,7 +6,7 @@ package mesosphere.marathon;
 option java_package = "mesosphere.marathon";
 option java_outer_classname = "Protos";
 
-import "mesos/mesos.proto";
+import "mesos.proto";
 
 message Constraint {
   required string field = 1;
