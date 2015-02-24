@@ -32,7 +32,10 @@ object MarathonSchedulerDriver {
     // Set the ID, if provided
     frameworkId.foreach(frameworkInfoBuilder.setId)
 
-    if (httpConfig.sslKeystorePath.isDefined) {
+    if (config.webuiUrl.isSupplied) {
+      frameworkInfoBuilder.setWebuiUrl(config.webuiUrl())
+    }
+    else if (httpConfig.sslKeystorePath.isDefined) {
       // ssl enabled, use https
       frameworkInfoBuilder.setWebuiUrl(s"https://${config.hostname()}:${httpConfig.httpsPort()}")
     }
