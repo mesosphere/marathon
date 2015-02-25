@@ -1,17 +1,14 @@
 package mesosphere.marathon
 
-import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeoutException
 
 import akka.actor._
 import akka.event.EventStream
+import akka.pattern.ask
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.apache.mesos.Protos.{ TaskState, TaskID, TaskStatus, TaskInfo }
-import org.apache.mesos.SchedulerDriver
-import org.slf4j.LoggerFactory
-
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.event.{ HistoryActor, AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
+import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, HistoryActor }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
@@ -21,12 +18,17 @@ import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKill
 import mesosphere.mesos.protos.Offer
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.{ TaskBuilder, protos }
-import mesosphere.util.{ LockManager, PromiseActor }
+import org.apache.mesos.Protos.{ TaskID, TaskInfo, TaskState, TaskStatus }
+import org.apache.mesos.SchedulerDriver
+import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionContext, Future, Promise, blocking }
-import scala.util.{ Failure, Success }
+import scala.collection.immutable.Seq
+import scala.concurrent.duration._
+import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.util.{ Failure, Success, Try }
+
+class LockingFailedException(msg: String) extends Exception(msg)
 
 class MarathonSchedulerActor(
     mapper: ObjectMapper,
@@ -42,14 +44,14 @@ class MarathonSchedulerActor(
     taskFailureRepository: TaskFailureRepository,
     config: MarathonConf) extends Actor with ActorLogging with Stash {
   import context.dispatcher
-
   import mesosphere.marathon.MarathonSchedulerActor._
 
-  val appLocks = LockManager[PathId]()
+  var lockedApps = Set.empty[PathId]
   var scheduler: SchedulerActions = _
-
   var deploymentManager: ActorRef = _
   var historyActor: ActorRef = _
+
+  val cancellationTimeout: FiniteDuration = 1.minute
 
   override def preStart(): Unit = {
 
@@ -95,7 +97,7 @@ class MarathonSchedulerActor(
     case RecoverDeployments(deployments) =>
       deployments.foreach { plan =>
         log.info(s"Recovering deployment: $plan")
-        deploy(context.system.deadLetters, Deploy(plan, force = false), plan, blocking = false)
+        deploy(context.system.deadLetters, Deploy(plan, force = false))
       }
 
       log.info("Scheduler actor ready")
@@ -108,11 +110,12 @@ class MarathonSchedulerActor(
     case _          => stash()
   }
 
-  def started: Receive = {
+  def started: Receive = sharedHandlers orElse {
     case Suspend(t) =>
       log.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
-      deploymentManager ! CancelAllDeployments(t)
+      deploymentManager ! CancelAllDeployments
+      lockedApps = Set.empty
       context.become(suspended)
 
     case Start => // ignore
@@ -124,33 +127,28 @@ class MarathonSchedulerActor(
     case ReconcileHealthChecks =>
       scheduler.reconcileHealthChecks()
 
-    case cmd @ ScaleApp(appId, force) =>
+    case cmd @ ScaleApp(appId) =>
       val origSender = sender()
-      performAsyncWithLockFor(appId, origSender, cmd, blocking = force) {
+      withLockFor(appId) {
         val res = scheduler.scale(driver, appId)
 
         if (origSender != context.system.deadLetters)
           res.sendAnswer(origSender, cmd)
-        else
-          res
+
+        res andThen {
+          case _ => self ! cmd.answer
+        }
       }
 
     case cmd: CancelDeployment =>
       deploymentManager forward cmd
 
-    case cmd @ Deploy(plan, false) =>
-      deploy(sender(), cmd, plan, blocking = false)
-
-    case cmd @ Deploy(plan, true) =>
-      deploymentManager ! CancelConflictingDeployments(
-        plan,
-        new DeploymentCanceledException("The upgrade has been cancelled")
-      )
-      deploy(sender(), cmd, plan, blocking = true)
+    case cmd @ Deploy(plan, force) =>
+      deploy(sender(), cmd)
 
     case cmd @ KillTasks(appId, taskIds, scale) =>
       val origSender = sender()
-      performAsyncWithLockFor(appId, origSender, cmd, blocking = true) {
+      withLockFor(appId) {
         val promise = Promise[Unit]()
         val tasksToKill = taskIds.flatMap(taskTracker.fetchTask(appId, _)).toSet
         context.actorOf(Props(classOf[TaskKillActor], driver, appId, taskTracker, eventBus, tasksToKill, promise))
@@ -163,127 +161,166 @@ class MarathonSchedulerActor(
               .getOrElse(Future.successful(()))
           } yield ()
         }
-        else promise.future andThen {
-          case _ =>
-            self ! ScaleApp(appId, force = true)
+        else {
+          for {
+            _ <- promise.future
+            Some(app) <- appRepository.currentVersion(appId)
+          } yield scheduler.scale(driver, app)
+        }
+
+        res onComplete { _ =>
+          self ! cmd.answer
         }
 
         res.sendAnswer(origSender, cmd)
       }
+  }
 
-    case ConflictingDeploymentsCanceled(id) =>
-      log.info(s"Conflicting deployments for deployment $id have been canceled")
+  /**
+    * handlers for messages that unlock apps and to retrieve running deployments
+    */
+  def sharedHandlers: Receive = {
+    case DeploymentFinished(plan) =>
+      lockedApps --= plan.affectedApplicationIds
+      deploymentSuccess(plan)
+
+    case DeploymentManager.DeploymentFailed(plan, reason) =>
+      lockedApps --= plan.affectedApplicationIds
+      deploymentFailed(plan, reason)
+
+    case AppScaled(id)         => lockedApps -= id
+
+    case TasksKilled(appId, _) => lockedApps -= appId
 
     case RetrieveRunningDeployments =>
       deploymentManager forward RetrieveRunningDeployments
   }
 
   /**
-    * Tries to acquire the lock for all given appIds.
-    * If it succeeds it executes the given function,
-    * otherwise a [CommandFailed] message is sent to
-    * the original sender.
+    * Waits for all the apps affected by @plan to be unlocked
+    * and starts @plan. If it receives a [[CancellationTimeoutExceeded]]
+    * message, it will mark the deployment as failed and go into
+    * the started state.
+    *
+    * @param plan The deployment plan we are trying to execute.
+    * @param origSender The original sender of the [[Deploy]] message.
+    * @return
     */
-  def performAsyncWithLockFor[U](
-    appIds: Set[PathId],
-    origSender: ActorRef,
-    cmd: Command,
-    isBlocking: Boolean)(f: => Future[U]): Future[Unit] = {
-
-    def performWithLock(lockFn: Set[Semaphore] => Set[Semaphore]): Future[Unit] = {
-      val locks = appIds.map(appLocks.get) // needed locks for all applications
-      val acquired = lockFn(locks)
-      if (acquired.size == locks.size) {
-        log.debug(s"Acquired locks for $appIds, performing cmd: $cmd")
-        f.andThen {
-          case _ =>
-            log.debug(s"Releasing locks for $appIds")
-            acquired.foreach(_.release())
-        }.map { _ => () }
+  def awaitCancellation(plan: DeploymentPlan, origSender: ActorRef, cancellationHandler: Cancellable): Receive =
+    sharedHandlers.andThen[Unit] { _ =>
+      if (tryDeploy(plan, origSender)) {
+        cancellationHandler.cancel()
       }
-      else lockNotAvailable(acquired)
+    } orElse {
+      case CancellationTimeoutExceeded =>
+        val reason = new TimeoutException("Exceeded timeout for canceling conflicting deployments.")
+        deploymentFailed(plan, reason)
+        origSender ! CommandFailed(Deploy(plan, force = true), reason)
+        unstashAll()
+        context.become(started)
+
+      case _ => stash()
     }
 
-    def lockNotAvailable(acquiredLocks: Set[Semaphore]): Future[Unit] = Future {
-      log.debug(s"Failed to acquire some of the locks for $appIds to perform cmd: $cmd")
-      acquiredLocks.foreach(_.release())
-
-      import scala.concurrent.duration._
-      import akka.pattern.ask
-      import akka.util.Timeout
-
-      deploymentManager.ask(RetrieveRunningDeployments)(Timeout(2.seconds))
-        .mapTo[RunningDeployments]
-        .foreach {
-          case RunningDeployments(plans) =>
-            val relatedDeploymentIds: Seq[String] = plans.collect {
-              case (p, _) if p.affectedApplicationIds.intersect(appIds).nonEmpty => p.id
-            }
-            origSender ! CommandFailed(cmd, AppLockedException(relatedDeploymentIds))
-        }
-    }
-
-    def acquireBlocking(locks: Set[Semaphore]): Set[Semaphore] = locks.map{ s => s.acquire(); s }
-    def acquireIfPossible(locks: Set[Semaphore]): Set[Semaphore] = locks.takeWhile(_.tryAcquire())
-
-    if (isBlocking) {
-      // TODO: there is still a race condition in this line, we should try to find a better solution for this
-      Future(performWithLock(acquireBlocking)).flatMap(identity)
+  /**
+    * If all required apps are unlocked, start the deployment,
+    * unstash all messages and put actor in started state
+    *
+    * @param plan The deployment plan that has been sent with force=true
+    * @param origSender The original sender of the deployment
+    */
+  def tryDeploy(plan: DeploymentPlan, origSender: ActorRef): Boolean = {
+    val affectedApps = plan.affectedApplicationIds
+    if (!lockedApps.exists(affectedApps)) {
+      deploy(origSender, Deploy(plan, force = false))
+      unstashAll()
+      context.become(started)
+      true
     }
     else {
-      performWithLock(acquireIfPossible)
+      false
     }
   }
 
   /**
     * Tries to acquire the lock for the given appId.
     * If it succeeds it executes the given function,
-    * otherwise a [CommandFailed] message is sent to
-    * the original sender.
+    * otherwise the result will contain an AppLockedException.
     */
-  def performAsyncWithLockFor[U](
-    appId: PathId,
-    origSender: ActorRef,
-    cmd: Command,
-    blocking: Boolean)(f: => Future[U]): Future[_] =
-    performAsyncWithLockFor(Set(appId), origSender, cmd, blocking)(f)
+  def withLockFor[A](appIds: Set[PathId])(f: => A): Try[A] = {
+    // there's no need for synchronization here, because this is being
+    // executed inside an actor, i.e. single threaded
+    val conflicts = lockedApps intersect appIds
+    if (conflicts.isEmpty) {
+      lockedApps ++= appIds
+      Try(f)
+    }
+    else {
+      Failure(new LockingFailedException("Failed to acquire locks."))
+    }
+  }
+
+  /**
+    * Tries to acquire the lock for the given appId.
+    * If it succeeds it executes the given function,
+    * otherwise the result will contain an AppLockedException.
+    */
+  def withLockFor[A](appId: PathId)(f: => A): Try[A] =
+    withLockFor(Set(appId))(f)
 
   // there has to be a better way...
   def driver: SchedulerDriver = MarathonSchedulerDriver.driver.get
 
-  def deploy(origSender: ActorRef, cmd: Command, plan: DeploymentPlan, blocking: Boolean): Unit = {
+  def deploy(origSender: ActorRef, cmd: Deploy): Unit = {
+    val plan = cmd.plan
     val ids = plan.affectedApplicationIds
 
-    performAsyncWithLockFor(ids, origSender, cmd, isBlocking = blocking) {
-      val res = deploy(driver, plan)
-      if (origSender != Actor.noSender) origSender ! cmd.answer
-      res
+    val res = withLockFor(ids) {
+      deploy(driver, plan)
+    }
+
+    res match {
+      case Success(_) =>
+        if (origSender != Actor.noSender) origSender ! cmd.answer
+      case Failure(e: LockingFailedException) if cmd.force =>
+        deploymentManager ! CancelConflictingDeployments(plan)
+        val cancellationHandler = context.system.scheduler.scheduleOnce(
+          cancellationTimeout,
+          self,
+          CancellationTimeoutExceeded)
+
+        context.become(awaitCancellation(plan, origSender, cancellationHandler))
+      case Failure(e: LockingFailedException) =>
+        deploymentManager.ask(RetrieveRunningDeployments)(2.seconds)
+          .mapTo[RunningDeployments]
+          .foreach {
+            case RunningDeployments(plans) =>
+              val relatedDeploymentIds: Seq[String] = plans.collect {
+                case (p, _) if p.affectedApplicationIds.intersect(plan.affectedApplicationIds).nonEmpty => p.id
+              }
+              origSender ! CommandFailed(cmd, AppLockedException(relatedDeploymentIds))
+          }
     }
   }
 
-  def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Future[Unit] = {
-    deploymentRepository.store(plan).flatMap { _ =>
-      val promise = Promise[Any]()
-      val promiseActor = context.actorOf(Props(classOf[PromiseActor], promise))
-      val msg = PerformDeployment(driver, plan)
-      deploymentManager.tell(msg, promiseActor)
-
-      val res = promise.future.map(_ => ())
-
-      res andThen {
-        case Success(_) =>
-          log.info(s"Deployment of ${plan.target.id} successful")
-          eventBus.publish(DeploymentSuccess(plan.id))
-          deploymentRepository.expunge(plan.id)
-
-        case Failure(e) =>
-          log.error(e, s"Deployment of ${plan.target.id} failed")
-          plan.affectedApplicationIds.foreach(appId => taskQueue.purge(appId))
-          eventBus.publish(DeploymentFailed(plan.id))
-          if (e.isInstanceOf[DeploymentCanceledException])
-            deploymentRepository.expunge(plan.id)
-      }
+  def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Unit = {
+    deploymentRepository.store(plan).foreach { _ =>
+      deploymentManager ! PerformDeployment(driver, plan)
     }
+  }
+
+  def deploymentSuccess(plan: DeploymentPlan): Unit = {
+    log.info(s"Deployment of ${plan.target.id} successful")
+    eventBus.publish(DeploymentSuccess(plan.id))
+    deploymentRepository.expunge(plan.id)
+  }
+
+  def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
+    log.error(reason, s"Deployment of ${plan.target.id} failed")
+    plan.affectedApplicationIds.foreach(appId => taskQueue.purge(appId))
+    eventBus.publish(DeploymentFailed(plan.id))
+    if (reason.isInstanceOf[DeploymentCanceledException])
+      deploymentRepository.expunge(plan.id)
   }
 }
 
@@ -303,13 +340,7 @@ object MarathonSchedulerActor {
 
   case object ReconcileHealthChecks
 
-  /**
-    *
-    * @param appId The id of the app to be scaled.
-    * @param force If set to true and another operation currently holds the lock
-    *              on the specified app, this operation will wait on the lock.
-    */
-  case class ScaleApp(appId: PathId, force: Boolean) extends Command {
+  case class ScaleApp(appId: PathId) extends Command {
     def answer: Event = AppScaled(appId)
   }
 
@@ -332,6 +363,8 @@ object MarathonSchedulerActor {
   case class RunningDeployments(plans: Seq[(DeploymentPlan, DeploymentStepInfo)])
 
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
+
+  case object CancellationTimeoutExceeded
 
   implicit class AnswerOps[A](val f: Future[A]) extends AnyVal {
     def sendAnswer(receiver: ActorRef, cmd: Command)(implicit ec: ExecutionContext): Future[A] = {
@@ -356,7 +389,7 @@ class SchedulerActions(
     taskIdUtil: TaskIdUtil,
     taskQueue: TaskQueue,
     eventBus: EventStream,
-    schedulerActor: ActorRef,
+    val schedulerActor: ActorRef,
     config: MarathonConf)(implicit ec: ExecutionContext) {
   import mesosphere.mesos.protos.Implicits._
 
@@ -411,7 +444,7 @@ class SchedulerActions(
       case Success(appIds) =>
         log.info("Syncing tasks for all apps")
 
-        for (appId <- appIds) schedulerActor ! ScaleApp(appId, force = false)
+        for (appId <- appIds) schedulerActor ! ScaleApp(appId)
 
         val knownTaskStatuses = appIds.flatMap { appId =>
           taskTracker.get(appId).collect {

@@ -1,5 +1,7 @@
 package mesosphere.marathon
 
+import java.util.concurrent.TimeoutException
+
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.testkit._
 import akka.util.Timeout
@@ -165,7 +167,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val schedulerActor = createActor()
     try {
       schedulerActor ! Start
-      schedulerActor ! ScaleApp("test-app".toPath, force = false)
+      schedulerActor ! ScaleApp("test-app".toPath)
 
       awaitAssert({
         verify(queue).add(app, 1)
@@ -207,12 +209,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     try {
       schedulerActor ! Start
       schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
-      schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
-
-      expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
-      expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
-
-      schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
 
       expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
 
@@ -222,7 +218,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
         verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent)
       }
 
-      verify(repo, times(3)).store(app.copy(instances = 0))
+      verify(repo, times(1)).store(app.copy(instances = 0))
     }
     finally {
       stopActor(schedulerActor)
@@ -401,6 +397,80 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       val answer = expectMsgType[CommandFailed]
       answer.cmd should equal(Deploy(plan))
       answer.reason.isInstanceOf[AppLockedException] should be(true)
+    }
+    finally {
+      stopActor(schedulerActor)
+    }
+  }
+
+  test("Forced deployment") {
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val group = Group(PathId("/foo/bar"), Set(app))
+
+    val plan = DeploymentPlan(Group.empty, group)
+
+    when(repo.store(any())).thenReturn(Future.successful(app))
+    when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
+    when(tracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(repo.expunge(app.id)).thenReturn(Future.successful(Nil))
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! Start
+      schedulerActor ! Deploy(plan)
+
+      expectMsgType[DeploymentStarted]
+
+      schedulerActor ! Deploy(plan, force = true)
+
+      val answer = expectMsgType[DeploymentStarted]
+
+    }
+    finally {
+      stopActor(schedulerActor)
+    }
+  }
+
+  test("Cancellation timeout") {
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val group = Group(PathId("/foo/bar"), Set(app))
+
+    val plan = DeploymentPlan(Group.empty, group)
+
+    when(repo.store(any())).thenReturn(Future.successful(app))
+    when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
+    when(tracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(repo.expunge(app.id)).thenReturn(Future.successful(Nil))
+
+    val schedulerActor = TestActorRef(Props(
+      new MarathonSchedulerActor(
+        new ObjectMapper(),
+        repo,
+        deploymentRepo,
+        hcManager,
+        tracker,
+        queue,
+        frameworkIdUtil,
+        taskIdUtil,
+        storage,
+        system.eventStream,
+        taskFailureEventRepository,
+        mock[MarathonConf]) {
+        override val cancellationTimeout = 0.millisecond
+      }
+    ))
+    try {
+      schedulerActor ! Start
+      schedulerActor ! Deploy(plan)
+
+      expectMsgType[DeploymentStarted]
+
+      schedulerActor ! Deploy(plan, force = true)
+
+      val answer = expectMsgType[CommandFailed]
+
+      answer.reason.isInstanceOf[TimeoutException] should be(true)
+      answer.reason.getMessage should be
     }
     finally {
       stopActor(schedulerActor)

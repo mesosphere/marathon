@@ -54,7 +54,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: AppLockedException =>
       Map(
         "message" -> e.getMessage,
-        "deployments" -> e.deploymentIds.map(Identifiable(_))
+        "deployments" -> e.deploymentIds.map(Identifiable)
       )
     case e: JsonParseException =>
       Map("message" -> e.getOriginalMessage)

@@ -6,9 +6,10 @@ import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.AppRepository
+import mesosphere.marathon.state.{ PathId, Timestamp, Group, AppRepository }
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import mesosphere.marathon.{ ConcurrentTaskUpgradeException, SchedulerActions }
+import mesosphere.marathon.upgrade.DeploymentActor.Cancel
+import mesosphere.marathon.{ DeploymentCanceledException, ConcurrentTaskUpgradeException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.immutable.Seq
@@ -35,47 +36,49 @@ class DeploymentManager(
   }
 
   def receive: Receive = {
-    case CancelConflictingDeployments(plan, reason) =>
-      val origSender = sender()
+    case CancelConflictingDeployments(plan) =>
       val conflictingDeployments = for {
         info <- runningDeployments.values
         if info.plan.isAffectedBy(plan)
       } yield info
 
       val cancellations = conflictingDeployments.map { info =>
-        stopActor(info.ref, reason)
+        stopActor(info.ref, new DeploymentCanceledException("The upgrade has been cancelled"))
       }
 
       Future.sequence(cancellations) onComplete {
-        case _ => origSender ! ConflictingDeploymentsCanceled(plan.id)
+        case _ =>
+          log.info(s"Conflicting deployments for deployment ${plan.id} have been canceled")
+          scheduler.schedulerActor ! ConflictingDeploymentsCanceled(
+            plan.id,
+            if (conflictingDeployments.nonEmpty) {
+              conflictingDeployments.map(_.plan).to[Seq]
+            }
+            else Seq(plan))
       }
 
-    case CancelAllDeployments(t) =>
-      val origSender = sender()
-      val res = runningDeployments.keys map { id =>
-        stopActor(runningDeployments(id).ref, t)
-      }
-      Future.sequence(res) onComplete { _ =>
-        origSender ! AllDeploymentsCanceled
-      }
+    case CancelAllDeployments =>
+      for ((_, DeploymentInfo(ref, _)) <- runningDeployments)
+        ref ! Cancel(new DeploymentCanceledException("The upgrade has been cancelled"))
+      runningDeployments.clear()
+      deploymentStatus.clear()
 
-    case CancelDeployment(id, t) =>
+    case CancelDeployment(id) =>
       val origSender = sender()
 
       runningDeployments.get(id) match {
         case Some(info) =>
-          stopActor(info.ref, t) onComplete {
-            case _ => origSender ! DeploymentCanceled(id)
-          }
-
+          info.ref ! Cancel(new DeploymentCanceledException("The upgrade has been cancelled"))
         case None =>
-          origSender ! DeploymentCanceled(id)
+          origSender ! DeploymentFailed(
+            DeploymentPlan(id, Group.empty, Group.empty, Nil, Timestamp.now()),
+            new DeploymentCanceledException("The upgrade has been cancelled"))
       }
 
-    case DeploymentFinished(id) =>
-      log.info(s"Removing $id from list of running deployments")
-      runningDeployments -= id
-      deploymentStatus -= id
+    case msg @ DeploymentFinished(plan) =>
+      log.info(s"Removing ${plan.id} from list of running deployments")
+      runningDeployments -= plan.id
+      deploymentStatus -= plan.id
 
     case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.id) =>
       val ref = context.actorOf(
@@ -117,15 +120,15 @@ class DeploymentManager(
 
 object DeploymentManager {
   final case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
-  final case class CancelDeployment(id: String, reason: Throwable)
-  final case class CancelAllDeployments(reason: Throwable)
-  final case class CancelConflictingDeployments(plan: DeploymentPlan, reason: Throwable)
+  final case class CancelDeployment(id: String)
+  case object CancelAllDeployments
+  final case class CancelConflictingDeployments(plan: DeploymentPlan)
 
   final case class DeploymentStepInfo(plan: DeploymentPlan, step: DeploymentStep, nr: Int)
-  final case class DeploymentFinished(id: String)
-  final case class DeploymentCanceled(id: String)
-  final case class AllDeploymentsCanceled()
-  final case class ConflictingDeploymentsCanceled(id: String)
+  final case class DeploymentFinished(plan: DeploymentPlan)
+  final case class DeploymentFailed(plan: DeploymentPlan, reason: Throwable)
+  final case class AllDeploymentsCanceled(plans: Seq[DeploymentPlan])
+  final case class ConflictingDeploymentsCanceled(id: String, deployments: Seq[DeploymentPlan])
 
   final case class DeploymentInfo(
     ref: ActorRef,

@@ -104,10 +104,7 @@ class MarathonSchedulerService @Inject() (
   }
 
   def cancelDeployment(id: String): Unit =
-    schedulerActor ! CancelDeployment(
-      id,
-      new DeploymentCanceledException("The upgrade has been cancelled")
-    )
+    schedulerActor ! CancelDeployment(id)
 
   def listApps(): Iterable[AppDefinition] =
     Await.result(appRepository.apps(), config.zkTimeoutDuration)
