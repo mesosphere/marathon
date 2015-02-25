@@ -72,7 +72,13 @@ function load_options_and_log {
     cmd+=( "$env_op" )
   done
   echo "${cmd[@]}"
-  logged marathon "${cmd[@]}" "$@"
+
+  if [[ "${cmd[@]} $@" == *'--no-logger'* ]]
+  then
+    marathon "${cmd[@]}" "$@"
+  else
+    logged marathon "${cmd[@]}" "$@"
+  fi
 }
 
 function run_jar {
