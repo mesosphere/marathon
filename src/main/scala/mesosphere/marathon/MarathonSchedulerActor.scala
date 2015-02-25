@@ -198,12 +198,12 @@ class MarathonSchedulerActor(
 
   /**
     * Waits for all the apps affected by @plan to be unlocked
-    * and starts @plan. If it receives a [[CancellationTimeoutExceeded]]
+    * and starts @plan. If it receives a CancellationTimeoutExceeded
     * message, it will mark the deployment as failed and go into
     * the started state.
     *
     * @param plan The deployment plan we are trying to execute.
-    * @param origSender The original sender of the [[Deploy]] message.
+    * @param origSender The original sender of the Deploy message.
     * @return
     */
   def awaitCancellation(plan: DeploymentPlan, origSender: ActorRef, cancellationHandler: Cancellable): Receive =
