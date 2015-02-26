@@ -1,3 +1,11 @@
+## Changes from 0.8.1 to 0.8.2
+
+#### New health check option `ignoreHttp1xx`
+
+When set to true, the health check for the given app will ignore HTTP
+response codes 100 to 199, in contrast to considering it as unhealthy. With this unbounded task startup times can be handled: the tasks are neither
+healthy nor unhealthy as long as e.g. "100 - continue" is returned.
+
 ## Changes from 0.8.0 to 0.8.1
 
 #### New endpoint `/v2/deployments/generate`
@@ -29,8 +37,3 @@ it still return a `201 - Created` if the resource didn't exist.
 In 0.8.0 the queueing behavior has changed and the output of this endpoint
 did not contain the delay field anymore. In 0.8.1 we re-added this field.
 
-#### New health check option `ignoreHttp1xx`
-
-When set to true, the health check for the given app will ignore HTTP
-response codes 100 to 199, in contrast to considering it as unhealthy. With this unbounded task startup times can be handled: the tasks are neither
-healthy nor unhealthy as long as e.g. "100 - continue" is returned.
