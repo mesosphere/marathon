@@ -87,7 +87,8 @@ class MarathonScheduler @Inject() (
     val toKill = taskTracker.checkStagedTasks
 
     if (toKill.nonEmpty) {
-      log.warn(s"There are ${toKill.size} tasks stuck in staging which will be killed")
+      log.warn(s"There are ${toKill.size} tasks stuck in staging for more " +
+        s"than ${config.taskLaunchTimeout()}ms which will be killed")
       log.info(s"About to kill these tasks: $toKill")
       for (task <- toKill)
         driver.killTask(protos.TaskID(task.getId))
