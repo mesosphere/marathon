@@ -28,3 +28,9 @@ it still return a `201 - Created` if the resource didn't exist.
 
 In 0.8.0 the queueing behavior has changed and the output of this endpoint
 did not contain the delay field anymore. In 0.8.1 we re-added this field.
+
+#### New health check option `ignoreHttp1xx`
+
+When set to true, the health check for the given app will ignore HTTP
+response codes 100 to 199, in contrast to considering it as unhealthy. With this unbounded task startup times can be handled: the tasks are neither
+healthy nor unhealthy as long as e.g. "100 - continue" is returned.

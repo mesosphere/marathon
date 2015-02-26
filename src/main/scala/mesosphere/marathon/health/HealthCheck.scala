@@ -30,7 +30,9 @@ case class HealthCheck(
 
   @FieldJsonProperty("timeoutSeconds") timeout: FiniteDuration = HealthCheck.DefaultTimeout,
 
-  maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures)
+  maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures,
+
+  ignoreHttp1xx: Boolean = HealthCheck.DefaultIgnoreHttp1xx)
     extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
   def toProto: Protos.HealthCheckDefinition = {
@@ -41,6 +43,7 @@ case class HealthCheck(
       .setIntervalSeconds(this.interval.toSeconds.toInt)
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
       .setMaxConsecutiveFailures(this.maxConsecutiveFailures)
+      .setIgnoreHttp1Xx(this.ignoreHttp1xx)
 
     command foreach { c => builder.setCommand(c.toProto) }
 
@@ -61,7 +64,8 @@ case class HealthCheck(
       gracePeriod = proto.getGracePeriodSeconds.seconds,
       timeout = proto.getTimeoutSeconds.seconds,
       interval = proto.getIntervalSeconds.seconds,
-      maxConsecutiveFailures = proto.getMaxConsecutiveFailures
+      maxConsecutiveFailures = proto.getMaxConsecutiveFailures,
+      ignoreHttp1xx = proto.getIgnoreHttp1Xx
     )
 
   def mergeFromProto(bytes: Array[Byte]): HealthCheck =
@@ -116,4 +120,5 @@ object HealthCheck {
   val DefaultInterval = 1.minute
   val DefaultTimeout = 20.seconds
   val DefaultMaxConsecutiveFailures = 3
+  val DefaultIgnoreHttp1xx = false
 }

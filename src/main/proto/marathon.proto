@@ -41,6 +41,7 @@ message HealthCheckDefinition {
   optional string path = 6 [default = "/"]; // used for HTTP only
   optional uint32 maxConsecutiveFailures = 7 [default = 3];
   optional mesos.CommandInfo command = 8;
+  optional bool ignoreHttp1xx = 9 [default = false];
 }
 
 message ServiceDefinition {

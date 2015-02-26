@@ -12,8 +12,8 @@ Health checks may be specified per application to be run against that applicatio
 
 A health check is considered passing if (1) its HTTP response code is between
 200 and 399, inclusive, and (2) its response is received within the
-`timeoutSeconds` period. If a task fails more than `maxConseutiveFailures`
-health checks consecutively, that task is killed.
+`timeoutSeconds` period. If a task fails more than `maxConseutiveFailures` health
+checks consecutively, that task is killed.
 
 ##### Example usage
 
@@ -25,7 +25,8 @@ health checks consecutively, that task is killed.
   "gracePeriodSeconds": 300,
   "intervalSeconds": 60,
   "timeoutSeconds": 20,
-  "maxConsecutiveFailures": 3
+  "maxConsecutiveFailures": 3,
+  "ignoreHttp1xx": false,
 }
 ```
 
@@ -76,6 +77,9 @@ OR
   performed. One of "HTTP" or "TCP".
 * `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
   health check is considered a failure regardless of the response.
+* `ignoreHttp1xx` (Optional. Default: false): Ignore HTTP informational status
+codes 100 to 199. If the HTTP health check returns one of these, the result is
+discarded and the health status of the task remains unchanged.
 
 #### Health Lifecycle
 
