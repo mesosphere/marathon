@@ -67,15 +67,14 @@ class LeaderProxyFilter @Inject() (schedulerService: MarathonSchedulerService,
             buildUrl(leaderData.get, request)
               .openConnection().asInstanceOf[HttpURLConnection]
 
-          val names = request.getHeaderNames
           // getHeaderNames() and getHeaders() are known to return null, see:
           //http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
-          if (names != null) {
-            for (name <- names.asScala) {
-              val values = request.getHeaders(name)
-              if (values != null) {
-                proxy.setRequestProperty(name, values.asScala.mkString(","))
-              }
+          val names = Option(request.getHeaderNames).map(_.asScala).getOrElse(Nil)
+
+          for (name <- names) {
+            val values = request.getHeaders(name)
+            if (values != null) {
+              proxy.setRequestProperty(name, values.asScala.mkString(","))
             }
           }
 
@@ -86,6 +85,9 @@ class LeaderProxyFilter @Inject() (schedulerService: MarathonSchedulerService,
               proxy.setDoOutput(false)
             case _ =>
               proxy.setDoOutput(true)
+              if (!names.exists(_.toLowerCase == "content-type"))
+                proxy.setRequestProperty("Content-Type", "application/json")
+
               val proxyOutputStream = proxy.getOutputStream
               copy(request.getInputStream, proxyOutputStream)
               proxyOutputStream.close
