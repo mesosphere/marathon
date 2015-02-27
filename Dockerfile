@@ -1,12 +1,9 @@
-FROM ubuntu:14.04
+FROM mesosphere/mesos:0.21.1-1.1.ubuntu1404
 
-RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources.list.d/mesosphere.list && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
-    apt-get update
-
-RUN apt-get install -y \
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install --no-install-recommends -y \
     default-jdk \
-    mesos \
     scala \
     curl
 
@@ -16,6 +13,9 @@ RUN curl -SsL -O http://dl.bintray.com/sbt/debian/sbt-0.13.5.deb && \
 COPY . /marathon
 WORKDIR /marathon
 
-RUN sbt assembly
+RUN sbt assembly && \
+    mv $(find target -name 'marathon-assembly-*.jar' | sort | tail -1) ./ && \
+    rm -rf target/* ~/.sbt ~/.ivy2 && \
+    mv marathon-assembly-*.jar target
 
 ENTRYPOINT ["./bin/start"]
