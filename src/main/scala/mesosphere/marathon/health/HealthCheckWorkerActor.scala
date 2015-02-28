@@ -145,6 +145,38 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     }
   }
 
+  def https(task: MarathonTask, check: HealthCheck, port: Int): Future[HealthResult] = {
+    val host = task.getHost
+    val rawPath = check.path.getOrElse("")
+    val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
+    val url = s"https://$host:$port$absolutePath"
+    log.debug("Checking the health of [{}] via HTTPS", url)
+
+    def get(url: String): Future[HttpResponse] = {
+      implicit val requestTimeout = Timeout(check.timeout)
+      implicit def trustfulSslContext: SSLContext = {
+        object BlindFaithX509TrustManager extends X509TrustManager {
+          def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
+          def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
+          def getAcceptedIssuers(): Array[X509Certificate] = Array[X509Certificate]()
+        }
+
+        val context = SSLContext.getInstance("Default")
+        context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
+        context
+      }
+      val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
+      pipeline(Get(url))
+    }
+
+    get(url).map { response =>
+      if (acceptableResponses contains response.status.intValue)
+        Healthy(task.getId, task.getVersion)
+      else
+        Unhealthy(task.getId, task.getVersion, response.status.toString())
+    }
+  }
+
 }
 
 object HealthCheckWorker {
