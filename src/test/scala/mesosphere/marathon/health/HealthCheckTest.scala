@@ -4,7 +4,7 @@ import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.marathon.state.Command
 import mesosphere.jackson.CaseClassModule
 import Protos.HealthCheckDefinition.Protocol
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 import scala.collection.JavaConverters._
 import java.util.concurrent.TimeUnit.SECONDS
 import javax.validation.Validation
@@ -16,8 +16,8 @@ class HealthCheckTest extends MarathonSpec {
       path = Some("/health"),
       protocol = Protocol.HTTP,
       portIndex = 0,
-      gracePeriod = FiniteDuration(10, SECONDS),
-      interval = FiniteDuration(60, SECONDS),
+      gracePeriod = 10.seconds,
+      interval = 60.seconds,
       maxConsecutiveFailures = 0
     )
 
@@ -35,8 +35,8 @@ class HealthCheckTest extends MarathonSpec {
     val healthCheck = HealthCheck(
       protocol = Protocol.TCP,
       portIndex = 1,
-      gracePeriod = FiniteDuration(7, SECONDS),
-      interval = FiniteDuration(35, SECONDS),
+      gracePeriod = 7.seconds,
+      interval = 35.seconds,
       maxConsecutiveFailures = 10
     )
 
@@ -66,9 +66,9 @@ class HealthCheckTest extends MarathonSpec {
       path = Some("/health"),
       protocol = Protocol.HTTP,
       portIndex = 0,
-      gracePeriod = FiniteDuration(10, SECONDS),
-      interval = FiniteDuration(60, SECONDS),
-      timeout = FiniteDuration(10, SECONDS),
+      gracePeriod = 10.seconds,
+      interval = 60.seconds,
+      timeout = 10.seconds,
       maxConsecutiveFailures = 10
     )
 
@@ -91,9 +91,35 @@ class HealthCheckTest extends MarathonSpec {
       path = None,
       protocol = Protocol.TCP,
       portIndex = 1,
-      gracePeriod = FiniteDuration(7, SECONDS),
-      interval = FiniteDuration(35, SECONDS),
-      timeout = FiniteDuration(10, SECONDS),
+      gracePeriod = 7.seconds,
+      interval = 35.seconds,
+      timeout = 10.seconds,
+      maxConsecutiveFailures = 10
+    )
+
+    assert(mergeResult == expectedResult)
+  }
+
+  test("MergeFromProtoHttps") {
+    val proto = Protos.HealthCheckDefinition.newBuilder
+      .setPath("/health")
+      .setProtocol(Protocol.HTTPS)
+      .setPortIndex(0)
+      .setGracePeriodSeconds(10)
+      .setIntervalSeconds(60)
+      .setTimeoutSeconds(10)
+      .setMaxConsecutiveFailures(10)
+      .build
+
+    val mergeResult = HealthCheck().mergeFromProto(proto)
+
+    val expectedResult = HealthCheck(
+      path = Some("/health"),
+      protocol = Protocol.HTTPS,
+      portIndex = 0,
+      gracePeriod = 10.seconds,
+      interval = 60.seconds,
+      timeout = 10.seconds,
       maxConsecutiveFailures = 10
     )
 
