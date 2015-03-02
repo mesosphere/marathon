@@ -2,17 +2,15 @@ package mesosphere.marathon.api.v2
 
 import javax.inject.Inject
 import javax.ws.rs._
-import javax.ws.rs.core.{ MediaType, Response }
 import javax.ws.rs.core.Response.Status._
+import javax.ws.rs.core.{ MediaType, Response }
 
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.state.{ Group, GroupManager }
+import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentPlan }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.util.Logging
-import play.api.libs.json.Json
 
 @Path("v2/deployments")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -24,26 +22,10 @@ class DeploymentsResource @Inject() (
     extends RestResource
     with Logging {
 
-  import mesosphere.util.ThreadPoolContext.context
-
   @GET
   def running(): Response = ok(result(service.listRunningDeployments()).map {
     case (plan, currentStep) => toInfo(plan, currentStep)
   })
-
-  @POST
-  @Path("/generate")
-  def generate(body: Array[Byte]): Response = {
-    val group = Json.parse(body).as[Group]
-
-    val planFuture = groupManager.group(group.id).map { oldGroup =>
-      Json.obj(
-        "steps" -> DeploymentPlan(oldGroup.getOrElse(Group.empty), group).steps
-      )
-    }
-
-    ok(result(planFuture).toString())
-  }
 
   @DELETE
   @Path("{id}")
@@ -66,6 +48,7 @@ class DeploymentsResource @Inject() (
             force = true
           )))
       }
+
   private def toInfo(
     deployment: DeploymentPlan,
     currentStepInfo: DeploymentStepInfo): Map[String, Any] =
