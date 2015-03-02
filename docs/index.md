@@ -1,11 +1,11 @@
 ---
-title: A cluster-wide init and control system for services in cgroups or Docker containers
+title: A cluster-wide init and control system for containerized services
 ---
 
 <div class="jumbotron text-center">
   <h1>Marathon</h1>
   <p class="lead">
-    A cluster-wide init and control system for services in cgroups or Docker containers
+    A cluster-wide init and control system for containerized services
   </p>
   <p>
     <a href="http://downloads.mesosphere.com/marathon/v0.8.0/marathon-0.8.0.tgz"
