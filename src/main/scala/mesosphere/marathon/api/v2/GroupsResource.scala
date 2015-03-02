@@ -9,9 +9,12 @@ import com.codahale.metrics.annotation.Timed
 
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
 import mesosphere.marathon.api.{ ModelValidation, RestResource }
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.util.ThreadPoolContext.context
+import play.api.libs.json.Json
 
 @Path("v2/groups")
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -95,8 +98,10 @@ class GroupsResource @Inject() (
   @PUT
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def updateRoot(group: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response =
-    update("", group, force)
+  def updateRoot(group: GroupUpdate,
+                 @DefaultValue("false")@QueryParam("force") force: Boolean,
+                 @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean): Response =
+    update("", group, force, dryRun)
 
   /**
     * Create or update a group.
@@ -111,10 +116,23 @@ class GroupsResource @Inject() (
   @Timed
   def update(@PathParam("id") id: String,
              update: GroupUpdate,
-             @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+             @DefaultValue("false")@QueryParam("force") force: Boolean,
+             @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean): Response = {
     requireValid(checkGroupUpdate(update, needsId = false))
-    val (deployment, _, _) = updateOrCreate(id.toRootPath, update, force)
-    deploymentResult(deployment)
+    if (dryRun) {
+      val planFuture = groupManager.group(id.toRootPath).map { maybeOldGroup =>
+        val oldGroup = maybeOldGroup.getOrElse(Group.empty)
+        Json.obj(
+          "steps" -> DeploymentPlan(oldGroup, update.apply(oldGroup, Timestamp.now())).steps
+        )
+      }
+
+      ok(result(planFuture).toString())
+    }
+    else {
+      val (deployment, _, _) = updateOrCreate(id.toRootPath, update, force)
+      deploymentResult(deployment)
+    }
   }
 
   @DELETE
