@@ -59,14 +59,15 @@ class TasksResource @Inject() (
     "\t"
   ))
 
-  @DELETE
+  @POST
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
+  @Path("/delete")
   def killTasks(
     @QueryParam("scale")@DefaultValue("false") scale: Boolean,
     body: Array[Byte]): Response = {
-    val taskIds = Json.parse(body).as[Seq[String]]
+    val taskIds = (Json.parse(body) \ "ids").as[Seq[String]]
 
     val groupedTasks = taskIds.flatMap { taskId =>
       val appId = try {

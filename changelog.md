@@ -14,11 +14,11 @@ When posting a group definition to this endpoint, it will
 return the deployment steps Marathon would execute to deploy
 this group.
 
-#### New endpoint DELETE `/v2/tasks`
+#### New endpoint POST `/v2/tasks/delete`
 
-Takes a JSON array of task ids and kills them. If `?scale=true`
-the tasks will not be restarted and the instances number will
-be adjusted.
+Takes a JSON object containing an array of task ids and kills them.
+If `?scale=true` the tasks will not be restarted and the `instances`
+field of the affected apps will be adjusted.
 
 #### POST `/v2/apps` rejects existing ids
 
