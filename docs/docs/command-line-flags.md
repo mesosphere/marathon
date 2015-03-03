@@ -48,7 +48,8 @@ The following options can influence how Marathon works:
     _Note: Default is determined by
     [`InetAddress.getLocalHost`](http://docs.oracle.com/javase/7/docs/api/java/net/InetAddress.html#getLocalHost())._
 * `--webui_url` (Optional. Default: None): The url of the Marathon web ui. It
-    is passed to Mesos to be used in links back to the Marathon UI.
+    is passed to Mesos to be used in links back to the Marathon UI. If not set,
+    the url to the leading instance will be sent to Mesos.
 * `--local_port_max` (Optional. Default: 20000): Max port number to use when
     assigning ports to apps.
 * `--local_port_min` (Optional. Default: 10000): Min port number to use when
