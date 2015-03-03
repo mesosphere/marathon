@@ -141,6 +141,7 @@ If you want to inspect the contents of the Docker:
 * [Human API](https://humanapi.co/)
 * [iQIYI](http://www.iqiyi.com/)
 * [Measurence](http://www.measurence.com/)
+* [Motus](http://www.motus.com/)
 * [OpenTable](http://www.opentable.com/)
 * [PayPal](https://www.paypal.com)
 * [Qubit](http://www.qubitproducts.com/)
