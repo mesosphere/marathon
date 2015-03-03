@@ -354,7 +354,7 @@ User-Agent: HTTPie/0.8.0
     ],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
-        "minimumOverCapacity": 0.5
+        "maximumOverCapacity": 0.5
     }
 }
 {% endhighlight json %}
@@ -415,7 +415,7 @@ Transfer-Encoding: chunked
     "storeUrls": [],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
-        "minimumOverCapacity": 0.5
+        "maximumOverCapacity": 0.5
     },
     "uris": [],
     "user": null,
