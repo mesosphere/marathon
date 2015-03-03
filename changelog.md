@@ -6,6 +6,10 @@ When set to true, the health check for the given app will ignore HTTP
 response codes 100 to 199, in contrast to considering it as unhealthy. With this unbounded task startup times can be handled: the tasks are neither
 healthy nor unhealthy as long as e.g. "100 - continue" is returned.
 
+#### HTTPS support for health checks
+
+Health checks now work with HTTPS.
+
 ## Changes from 0.8.0 to 0.8.1
 
 #### New endpoint `/v2/deployments/generate`
