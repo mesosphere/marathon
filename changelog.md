@@ -12,10 +12,10 @@ Health checks now work with HTTPS.
 
 ## Changes from 0.8.0 to 0.8.1
 
-#### New endpoint `/v2/deployments/generate`
+#### New option `dryRun` on endpoint `PUT /v2/groups/{id}`
 
-When posting a group definition to this endpoint, it will
-return the deployment steps Marathon would execute to deploy
+When sending a group definition to this endpoint with `dryRun=true`,
+it will return the deployment steps Marathon would execute to deploy
 this group.
 
 #### New endpoint POST `/v2/tasks/delete`
