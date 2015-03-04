@@ -28,6 +28,7 @@ title: REST API
   * [DELETE /v2/groups/{groupId}](#delete-/v2/groups/{groupid}): Destroy a group
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
+  * [POST /v2/tasks/delete](#post-/v2/tasks/delete): Kill given list of tasks
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
   * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Cancel the deployment with `deploymentId`
@@ -1871,7 +1872,7 @@ my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382
 my-app2  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383 
 {% endhighlight %}
 
-#### DELETE `/v2/tasks`
+#### POST `/v2/tasks/delete`
 
 Kill the given list of tasks and scale apps if requested.
 
@@ -1901,18 +1902,19 @@ Kill the given list of tasks and scale apps if requested.
 **Request:**
 
 {% highlight http %}
-DELETE /v2/tasks HTTP/1.1
+POST /v2/tasks/delete HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate
 Content-Type: application/json; charset=utf-8
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-
-[
-    "task.25ab260e-b5ec-11e4-a4f4-685b35c8a22e",
-    "task.5e7b39d4-b5f0-11e4-8021-685b35c8a22e",
-    "task.a21cb64a-b5eb-11e4-a4f4-685b35c8a22e"
-]
+{
+    "ids": [
+        "task.25ab260e-b5ec-11e4-a4f4-685b35c8a22e",
+        "task.5e7b39d4-b5f0-11e4-8021-685b35c8a22e",
+        "task.a21cb64a-b5eb-11e4-a4f4-685b35c8a22e"
+    ]
+}
 
 {% endhighlight %}
 
