@@ -17,6 +17,7 @@ import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, ZooKeeperClient, Group => ZGroup }
+import mesosphere.util.ZookeeperDirectState
 import org.apache.log4j.Logger
 import org.apache.mesos.state.{ State, ZooKeeperState }
 import org.apache.zookeeper.ZooDefs
@@ -69,12 +70,17 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideMesosState(): State = {
-    new ZooKeeperState(
+    val zds = new ZookeeperDirectState(
+      conf.zooKeeperStatePath(),
       conf.zkHosts,
-      conf.zkTimeoutDuration.toMillis,
-      TimeUnit.MILLISECONDS,
-      conf.zooKeeperStatePath
+      conf.zkTimeoutDuration,
+      conf.zkTimeoutDuration
     )
+
+    // It's safe to block here until Zookeeper is connected
+    zds.await(conf.zkTimeoutDuration)
+
+    zds
   }
 
   @Named("schedulerActor")

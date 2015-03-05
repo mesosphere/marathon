@@ -139,6 +139,8 @@ object Dependencies {
     twitterZkClient % "compile",
     jodaTime % "compile",
     jodaConvert % "compile",
+    curatorFramework % "compile",
+    curatorTest % "compile",
     jerseyServlet % "compile",
     jerseyMultiPart % "compile",
     uuidGenerator % "compile",
@@ -169,6 +171,7 @@ object Dependency {
     val Jersey = "1.18.1"
     val JodaTime = "2.3"
     val JodaConvert = "1.6"
+    val Curator = "2.7.1"
     val UUIDGenerator = "3.1.3"
     val JGraphT = "0.9.1"
     val Hadoop = "2.4.1"
@@ -195,6 +198,8 @@ object Dependency {
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
+  val curatorFramework = "org.apache.curator" % "curator-framework" % V.Curator
+  val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
   val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
   val twitterZkClient = "com.twitter.common.zookeeper" % "client" % V.TwitterZKClient
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
