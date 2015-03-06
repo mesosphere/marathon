@@ -90,6 +90,8 @@ The following options can influence how Marathon works:
 * `--assets_path` (Optional. Default: None): Local file system path from which
     to load assets for the web UI. If not supplied, assets are loaded from the
     packaged JAR.
+* `--http_address` (Optional. Default: None): The address on which to listen
+    for HTTP requests.
 * `--http_credentials` (Optional. Default: None): Credentials for accessing the
     HTTP service in the format of `username:password`. The username may not
     contain a colon (:).
