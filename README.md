@@ -139,6 +139,7 @@ If you want to inspect the contents of the Docker:
 * [Guidewire](http://www.guidewire.com/)
 * [Groupon](http://www.groupon.com/)
 * [Human API](https://humanapi.co/)
+* [ING](http://www.ing.com/)
 * [iQIYI](http://www.iqiyi.com/)
 * [Measurence](http://www.measurence.com/)
 * [Motus](http://www.motus.com/)
