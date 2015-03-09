@@ -120,6 +120,9 @@ class HealthCheckActor(
   def receive: Receive = {
     case GetTaskHealth(taskId) => sender() ! taskHealth.get(taskId)
 
+    case GetAppHealth =>
+      sender() ! AppHealth(taskHealth.values.toSeq)
+
     case Tick =>
       purgeStatusOfDoneTasks()
       dispatchJobs()
@@ -173,4 +176,7 @@ object HealthCheckActor {
   // self-sent every healthCheck.intervalSeconds
   case object Tick
   case class GetTaskHealth(taskId: String)
+  case object GetAppHealth
+
+  case class AppHealth(health: Seq[Health])
 }

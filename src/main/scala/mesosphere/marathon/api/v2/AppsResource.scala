@@ -284,11 +284,16 @@ class AppsResource @Inject() (
     }
   }
 
-  private def enrichedTasks(app: AppDefinition): Seq[EnrichedTask] =
-    taskTracker.get(app.id).map { task =>
-      val hcResults = result(healthCheckManager.status(app.id, task.getId))
-      EnrichedTask(app.id, task, hcResults)
-    }.to[Seq]
+  private def enrichedTasks(app: AppDefinition): Seq[EnrichedTask] = {
+    val tasks = taskTracker.get(app.id).map { task =>
+      task.getId -> task
+    }.toMap
+
+    for {
+      (taskId, results) <- result(healthCheckManager.statuses(app.id)).to[Seq]
+      task <- tasks.get(taskId)
+    } yield EnrichedTask(app.id, task, results.map(Option(_)))
+  }
 
   private def healthCounts(app: AppDefinition): HealthCounts = result(healthCheckManager.healthCounts(app.id))
 

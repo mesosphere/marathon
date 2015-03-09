@@ -58,6 +58,37 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     system.shutdown()
   }
 
+  def makeRunningTask(appId: PathId, version: Timestamp) = {
+    val taskId = TaskIdUtil.newTaskId(appId)
+
+    val taskStatus = mesos.TaskStatus.newBuilder
+      .setTaskId(taskId)
+      .setState(mesos.TaskState.TASK_RUNNING)
+      .build
+
+    val marathonTask = MarathonTask.newBuilder
+      .setId(taskId.getValue)
+      .setVersion(version.toString)
+      .build
+
+    taskTracker.created(appId, marathonTask)
+    taskTracker.running(appId, taskStatus)
+
+    taskId
+  }
+
+  def updateTaskHealth(taskId: mesos.TaskID, version: Timestamp, healthy: Boolean): Unit = {
+    val taskStatus = mesos.TaskStatus.newBuilder
+      .setTaskId(taskId)
+      .setState(mesos.TaskState.TASK_RUNNING)
+      .setHealthy(healthy)
+      .build
+
+    EventFilter.info(start = "Received health result: [", occurrences = 1).intercept {
+      hcManager.update(taskStatus, version)
+    }
+  }
+
   test("Add") {
     val healthCheck = HealthCheck()
     val version = Timestamp(1024)
@@ -116,67 +147,93 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
   test("healthCounts") {
     val appId = "test".toRootPath
     val version = Timestamp(1024)
-
-    def makeRunningTask() = {
-      val taskId = TaskIdUtil.newTaskId(appId)
-
-      val taskStatus = mesos.TaskStatus.newBuilder
-        .setTaskId(taskId)
-        .setState(mesos.TaskState.TASK_RUNNING)
-        .build
-
-      val marathonTask = MarathonTask.newBuilder
-        .setId(taskId.getValue)
-        .setVersion(version.toString)
-        .build
-
-      taskTracker.created(appId, marathonTask)
-      taskTracker.running(appId, taskStatus)
-
-      taskId
-    }
-
-    def updateTaskHealth(taskId: mesos.TaskID, healthy: Boolean): Unit = {
-      val taskStatus = mesos.TaskStatus.newBuilder
-        .setTaskId(taskId)
-        .setState(mesos.TaskState.TASK_RUNNING)
-        .setHealthy(healthy)
-        .build
-
-      EventFilter.info(start = "Received health result: [", occurrences = 1).intercept {
-        hcManager.update(taskStatus.toBuilder.setHealthy(healthy).build, version)
-      }
-    }
+    appRepository.store(AppDefinition(id = appId, version = version))
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
     hcManager.add(appId, version, healthCheck)
 
-    val task1 = makeRunningTask()
-    val task2 = makeRunningTask()
-    val task3 = makeRunningTask()
+    val task1 = makeRunningTask(appId, version)
+    val task2 = makeRunningTask(appId, version)
+    val task3 = makeRunningTask(appId, version)
 
     var healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(0, 3, 0))
 
-    updateTaskHealth(task1, healthy = true)
+    updateTaskHealth(task1, version, healthy = true)
 
     healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(1, 2, 0))
 
-    updateTaskHealth(task2, healthy = true)
+    updateTaskHealth(task2, version, healthy = true)
 
     healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(2, 1, 0))
 
-    updateTaskHealth(task3, healthy = false)
+    updateTaskHealth(task3, version, healthy = false)
 
     healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(2, 0, 1))
 
-    updateTaskHealth(task1, healthy = false)
+    updateTaskHealth(task1, version, healthy = false)
 
     healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
     assert(healthCounts == HealthCounts(1, 0, 2))
+  }
+
+  test("statuses") {
+    val appId = "test".toRootPath
+    val version = Timestamp(1024)
+    appRepository.store(AppDefinition(id = appId, version = version))
+
+    val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
+    hcManager.add(appId, version, healthCheck)
+
+    val task1 = makeRunningTask(appId, version)
+    val task2 = makeRunningTask(appId, version)
+    val task3 = makeRunningTask(appId, version)
+
+    def statuses = Await.result(hcManager.statuses(appId), 5.seconds)
+
+    statuses.foreach {
+      case (_, health) => assert(health.isEmpty)
+    }
+
+    updateTaskHealth(task1, version, healthy = true)
+    statuses.foreach {
+      case (id, health) if id == task1.getValue =>
+        assert(health.size == 1)
+        assert(health.head.alive)
+      case (_, health) => assert(health.isEmpty)
+    }
+
+    updateTaskHealth(task2, version, healthy = true)
+    statuses.foreach {
+      case (id, health) if id == task3.getValue =>
+        assert(health.isEmpty)
+      case (_, health) =>
+        assert(health.size == 1)
+        assert(health.head.alive)
+    }
+
+    updateTaskHealth(task3, version, healthy = false)
+    statuses.foreach {
+      case (id, health) if id == task3.getValue =>
+        assert(health.size == 1)
+        assert(!health.head.alive)
+      case (_, health) =>
+        assert(health.size == 1)
+        assert(health.head.alive)
+    }
+
+    updateTaskHealth(task1, version, healthy = false)
+    statuses.foreach {
+      case (id, health) if id == task2.getValue =>
+        assert(health.size == 1)
+        assert(health.head.alive)
+      case (_, health) =>
+        assert(health.size == 1)
+        assert(!health.head.alive)
+    }
   }
 
   test("reconcileWith") {
