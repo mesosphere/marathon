@@ -225,7 +225,7 @@ the future, as Mesos may not always interact with Docker via the CLI.
     "id": "privileged-job",
     "container": {
         "docker": {
-            "image": "mesosphere/inky"
+            "image": "mesosphere/inky",
             "privileged": true,
             "parameters": [
                 { "key": "hostname", "value": "a.corp.org" },
