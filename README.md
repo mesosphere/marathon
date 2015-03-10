@@ -109,13 +109,13 @@ If you want to inspect the contents of the Docker:
 
 ## Marathon Clients
 
-* [Ruby gem and command line client](https://rubygems.org/gems/marathon_client)
+* [Ruby gem and command line client](https://rubygems.org/gems/marathon-api)
 
     Running Chronos with the Ruby Marathon Client:
 
-        marathon start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
+        marathon -M http://foo.bar:8080 start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
             -C "./chronos/bin/demo ./chronos/config/nomail.yml \
-            ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024 -H http://foo.bar:8080
+            ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
 * [Python client](https://github.com/thefactory/marathon-python), developed at [The Factory](http://www.thefactory.com)
