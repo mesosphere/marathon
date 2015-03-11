@@ -160,9 +160,9 @@ Not in the list? Open a pull request and add yourself!
 
 If you have questions, please post on the
 [Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework)
-email list. You can find Mesos support in the `#mesos` channel on
-[freenode][freenode] (IRC). The team at [Mesosphere][Mesosphere] is also happy
-to answer any questions.
+email list. You can find Marathon support in the `#marathon` channel, and Mesos
+support in the `#mesos` channel, on [freenode][freenode] (IRC). The team at
+[Mesosphere][Mesosphere] is also happy to answer any questions.
 
 ## Authors
 
