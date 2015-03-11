@@ -7,6 +7,8 @@ import org.apache.mesos.{ SchedulerDriver, MesosSchedulerDriver }
 import com.google.protobuf.ByteString
 import java.io.{ FileInputStream, IOException }
 
+import scala.io.Source
+
 /**
   * Wrapper class for the scheduler
   */
@@ -54,8 +56,10 @@ object MarathonSchedulerDriver {
 
         config.mesosAuthenticationSecretFile.get.foreach { secretFile =>
           try {
-            val secretBytes = ByteString.readFrom(new FileInputStream(secretFile))
+            val source = Source.fromFile(secretFile)
+            val secretBytes = ByteString.copyFromUtf8(source.getLines().next())
             credentialBuilder.setSecret(secretBytes)
+            source.close()
           }
           catch {
             case cause: Throwable =>
