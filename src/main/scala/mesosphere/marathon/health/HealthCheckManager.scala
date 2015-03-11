@@ -58,6 +58,11 @@ trait HealthCheckManager {
   def status(appId: PathId, taskId: String): Future[Seq[Option[Health]]]
 
   /**
+    * Returns the health status of all tasks of the supplied app.
+    */
+  def statuses(appId: PathId): Future[Map[String, Seq[Health]]]
+
+  /**
     * Returns the health status counter for the supplied app.
     */
   def healthCounts(

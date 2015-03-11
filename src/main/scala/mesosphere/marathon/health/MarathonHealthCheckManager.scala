@@ -1,23 +1,23 @@
 package mesosphere.marathon.health
 
 import java.util.concurrent.locks.{ Lock, ReentrantReadWriteLock }
-import java.util.concurrent.locks.ReentrantReadWriteLock.{ ReadLock, WriteLock }
 import javax.inject.{ Inject, Named }
-import scala.concurrent.Future
-import scala.concurrent.duration._
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
-import org.apache.mesos.Protos.TaskStatus
-
-import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, AppRepository }
+import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
+import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.util.ThreadPoolContext.context
+import org.apache.mesos.Protos.TaskStatus
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class MarathonHealthCheckManager @Inject() (
     system: ActorSystem,
@@ -59,7 +59,7 @@ class MarathonHealthCheckManager @Inject() (
 
   protected[this] def listActive(appId: PathId, appVersion: Timestamp): Set[ActiveHealthCheck] =
     withReadLock {
-      appHealthChecks.get(AppVersion(appId, appVersion)).getOrElse(Set.empty)
+      appHealthChecks.getOrElse(AppVersion(appId, appVersion), Set.empty)
     }
 
   override def add(appId: PathId, appVersion: Timestamp, healthCheck: HealthCheck): Unit =
@@ -192,38 +192,47 @@ class MarathonHealthCheckManager @Inject() (
       Future.sequence(taskHealth)
     }
 
+  override def statuses(appId: PathId): Future[Map[String, Seq[Health]]] = withReadLock {
+    val futureVersions = appRepository.listVersions(appId)
+    implicit val timeout: Timeout = Timeout(2, SECONDS)
+
+    futureVersions flatMap { versions =>
+      val futureHealths = for {
+        version <- versions
+        ActiveHealthCheck(_, actor) <- listActive(appId, version)
+      } yield (actor ? GetAppHealth).mapTo[AppHealth]
+
+      Future.sequence(futureHealths) map { healths =>
+        val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
+
+        taskTracker.get(appId).toSeq.map { task =>
+          groupedHealth.get(task.getId) match {
+            case Some(xs) => task.getId -> xs.toSeq
+            case None     => task.getId -> Nil
+          }
+        }.toMap
+      }
+    }
+  }
+
   override def healthCounts(appId: PathId): Future[HealthCounts] =
     withReadLock {
-      implicit val timeout: Timeout = Timeout(2, SECONDS)
-      val tasks = taskTracker.get(appId)
 
-      // aggregate health check results of each tasks to:
-      //
-      //   -1: at least one task unhealthy
-      //   0: at least one task unknown, none unhealthy
-      //   1: all tasks healthy
-      //
-      // by mapping each result to -1, 0 or 1 and taking the minimum.
-      val futureTasksHealth = Future.sequence(tasks.toSeq.map { task =>
-        for {
-          maybeHealthSet <- this.status(appId, task.getId)
-        } yield maybeHealthSet.toSeq.map {
-          case Some(health) => if (health.alive) 1 else -1
-          case None         => 0
-        } match {
-          case Nil  => 0 // no health check found => assume unknown
-          case list => list.min
+      statuses(appId).map { statusMap =>
+        val builder = HealthCounts.newBuilder
+        statusMap.values foreach { statuses =>
+          if (statuses.isEmpty) {
+            builder.incUnknown()
+          }
+          else if (statuses.forall(_.alive)) {
+            builder.incHealthy()
+          }
+          else {
+            builder.incUnhealthy()
+          }
         }
-      })
 
-      // count healthy, unknown and unhealthy
-      futureTasksHealth.map { tasksHealth =>
-        val countMap = tasksHealth.groupBy(identity).mapValues(_.size)
-        HealthCounts(
-          countMap.get(1).getOrElse(0),
-          countMap.get(0).getOrElse(0),
-          countMap.get(-1).getOrElse(0)
-        )
+        builder.result()
       }
     }
 
