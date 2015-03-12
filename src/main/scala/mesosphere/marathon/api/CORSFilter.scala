@@ -5,13 +5,13 @@ import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 import scala.collection.JavaConverters._
 
-class CORSFilter extends Filter {
+class CORSFilter @Inject() (config: MarathonConfig) extends Filter {
   override def init(filterConfig: FilterConfig): Unit = {}
 
   override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
 
     response match {
-      case httpResponse: HttpServletResponse =>
+      case httpResponse: HttpServletResponse if config.accessControlAllowOrigin.isSupplied =>
         val httpRequest = request.asInstanceOf[HttpServletRequest]
         val static = ("Accept,Content-Type,Referer,Origin,Connection,Cache-Control,Access-Control-Request-Headers," +
           "Pragma,Access-Control-Request-Method,Accept-Language,Accept-Encoding,User-Agent,Host,Accept-Language," +
@@ -21,7 +21,7 @@ class CORSFilter extends Filter {
           .flatMap(_.split(","))
           .filter(hd => staticSet.contains(hd.toLowerCase))
 
-        httpResponse.setHeader("Access-Control-Allow-Origin", "*")
+        httpResponse.setHeader("Access-Control-Allow-Origin", config.accessControlAllowOrigin())
         httpResponse.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
         httpResponse.setHeader("Access-Control-Max-Age", "86400")
         httpResponse.setHeader("Access-Control-Allow-Headers", (static ++ control).toList.distinct.mkString(", "))
