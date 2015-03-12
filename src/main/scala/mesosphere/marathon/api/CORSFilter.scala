@@ -1,11 +1,13 @@
 package mesosphere.marathon.api
 
+import javax.inject.{ Inject }
 import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import mesosphere.marathon.{ MarathonConf }
 
 import scala.collection.JavaConverters._
 
-class CORSFilter @Inject() (config: MarathonConfig) extends Filter {
+class CORSFilter @Inject() (config: MarathonConf) extends Filter {
   override def init(filterConfig: FilterConfig): Unit = {}
 
   override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
