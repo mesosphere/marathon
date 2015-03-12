@@ -127,6 +127,8 @@ If you want to inspect the contents of the Docker:
 
 ## Companies using Marathon
 
+Marathon is managing applications on more than 100,000 nodes at these companies, and many more:
+
 * [Airbnb](https://www.airbnb.com/)
 * [Artirix](http://www.artirix.com/)
 * [bol.com](https://www.bol.com/)
