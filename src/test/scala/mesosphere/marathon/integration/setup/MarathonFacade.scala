@@ -68,7 +68,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
   //apps tasks resource --------------------------------------
 
   def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
-    val pipeline = sendReceive ~> read[ListTasks]
+    val pipeline = addHeader("Accept", "application/json") ~> sendReceive ~> read[ListTasks]
     val res = result(pipeline(Get(s"$url/v2/apps$appId/tasks")), waitTime)
     RestResult(res.value.tasks.toList, res.code)
   }
