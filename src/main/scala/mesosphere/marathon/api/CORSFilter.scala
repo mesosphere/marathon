@@ -21,7 +21,6 @@ class CORSFilter extends Filter {
           .flatMap(_.split(","))
           .filter(hd => staticSet.contains(hd.toLowerCase))
 
-        //TODO: Michael wanted to have this one specific, but it should be "*"
         httpResponse.setHeader("Access-Control-Allow-Origin", "*")
         httpResponse.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
         httpResponse.setHeader("Access-Control-Max-Age", "86400")
