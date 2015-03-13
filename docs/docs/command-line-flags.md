@@ -28,6 +28,7 @@ The following options can influence how Marathon works:
     `"file:///var/log/store"`. For details, see the
     [artifact store]({{ site.baseurl }}/docs/artifact-store.html) docs.
 * `--access_control_allow_origin` (Optional. Default: None):
+    Comma separated list of allowed originating domains for HTTP requests.
     The origin(s) to allow in Marathon. Not set by default.
     Examples: `"*"`, or `"http://localhost:8888, http://domain.com"`.
 * `--checkpoint` (Optional. Default: true): Enable checkpointing of tasks.
