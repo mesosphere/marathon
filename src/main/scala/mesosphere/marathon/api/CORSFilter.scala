@@ -15,19 +15,28 @@ class CORSFilter @Inject() (config: MarathonConf) extends Filter {
     response match {
       case httpResponse: HttpServletResponse if config.accessControlAllowOrigin.isSupplied =>
         val httpRequest = request.asInstanceOf[HttpServletRequest]
-        val static = ("Accept,Content-Type,Referer,Origin,Connection,Cache-Control,Access-Control-Request-Headers," +
-          "Pragma,Access-Control-Request-Method,Accept-Language,Accept-Encoding,User-Agent,Host,Accept-Language," +
-          "Accept-Encoding,Content-Length,Origin,X-DevTools-Emulate-Network-Conditions-Client-Id").split(",")
-        val staticSet = static.map(_.toLowerCase).toSet
-        val control = httpRequest.getHeaders("Access-Control-Request-Headers").asScala
-          .flatMap(_.split(","))
-          .filter(hd => staticSet.contains(hd.toLowerCase))
 
-        httpResponse.setHeader("Access-Control-Allow-Origin", config.accessControlAllowOrigin())
+        // Map access_control_allow_origin flag into separate headers
+        val origins: Seq[String] = config.accessControlAllowOrigin()
+          .split(",")
+          .map(_.trim)
+
+        origins.foreach { origin =>
+          httpResponse.setHeader("Access-Control-Allow-Origin", origin)
+        }
+
+        // Add all headers from request as accepted headers
+        val accessControlRequestHeaders =
+          httpRequest.getHeaders("Access-Control-Request-Headers")
+            .asScala
+            .flatMap(_.split(","))
+
+        httpResponse.setHeader("Access-Control-Allow-Headers", accessControlRequestHeaders.mkString(", "))
+
         httpResponse.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
         httpResponse.setHeader("Access-Control-Max-Age", "86400")
-        httpResponse.setHeader("Access-Control-Allow-Headers", (static ++ control).toList.distinct.mkString(", "))
-      case _ => // ignore other responses
+
+      case _ => // Ignore other responses
 
     }
     chain.doFilter(request, response)
