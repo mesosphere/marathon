@@ -51,7 +51,9 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     default = None)
 
   lazy val accessControlAllowOrigin = opt[String]("access_control_allow_origin",
-    descr = "The origin(s) to allow in marathon. Not set by default",
+    descr = "The origin(s) to allow in marathon. Not set by default. " +
+      "Example values are \"*\", or " +
+      "\"http://localhost:8888, http://domain.com\"",
     noshort = true,
     default = None)
 
