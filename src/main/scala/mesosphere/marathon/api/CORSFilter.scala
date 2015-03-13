@@ -8,6 +8,11 @@ import mesosphere.marathon.{ MarathonConf }
 import scala.collection.JavaConverters._
 
 class CORSFilter @Inject() (config: MarathonConf) extends Filter {
+  // Map access_control_allow_origin flag into separate headers
+  lazy val origins: Seq[String] = config.accessControlAllowOrigin()
+    .split(",")
+    .map(_.trim)
+
   override def init(filterConfig: FilterConfig): Unit = {}
 
   override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
@@ -15,11 +20,6 @@ class CORSFilter @Inject() (config: MarathonConf) extends Filter {
     response match {
       case httpResponse: HttpServletResponse if config.accessControlAllowOrigin.isSupplied =>
         val httpRequest = request.asInstanceOf[HttpServletRequest]
-
-        // Map access_control_allow_origin flag into separate headers
-        val origins: Seq[String] = config.accessControlAllowOrigin()
-          .split(",")
-          .map(_.trim)
 
         origins.foreach { origin =>
           httpResponse.setHeader("Access-Control-Allow-Origin", origin)
