@@ -50,6 +50,13 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     noshort = true,
     default = None)
 
+  lazy val accessControlAllowOrigin = opt[String]("access_control_allow_origin",
+    descr = "The origin(s) to allow in Marathon. Not set by default. " +
+      "Example values are \"*\", or " +
+      "\"http://localhost:8888, http://domain.com\"",
+    noshort = true,
+    default = None)
+
   def executor: Executor = Executor.dispatch(defaultExecutor())
 
   lazy val mesosRole = opt[String]("mesos_role",

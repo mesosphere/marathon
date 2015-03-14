@@ -27,6 +27,10 @@ The following options can influence how Marathon works:
     Examples: `"hdfs://localhost:54310/path/to/store"`,
     `"file:///var/log/store"`. For details, see the
     [artifact store]({{ site.baseurl }}/docs/artifact-store.html) docs.
+* `--access_control_allow_origin` (Optional. Default: None):
+    Comma separated list of allowed originating domains for HTTP requests.
+    The origin(s) to allow in Marathon. Not set by default.
+    Examples: `"*"`, or `"http://localhost:8888, http://domain.com"`.
 * `--checkpoint` (Optional. Default: true): Enable checkpointing of tasks.
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and Marathon scheduler failover.  See the
@@ -82,8 +86,8 @@ The following options can influence how Marathon works:
     authentication
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret
     file containing the authentication secret
-* `--marathon_store_timeout` (Optional. Default: 2000 (2 seconds)): Maximum time 
-    in milliseconds, to wait for persistent storage operations to complete. 
+* `--marathon_store_timeout` (Optional. Default: 2000 (2 seconds)): Maximum time
+    in milliseconds, to wait for persistent storage operations to complete.
 
 ### Optional Flags Inherited from [Chaos](https://github.com/mesosphere/chaos)
 
