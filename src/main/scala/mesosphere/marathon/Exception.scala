@@ -2,9 +2,9 @@ package mesosphere.marathon
 
 import mesosphere.marathon.state.PathId
 
-class Exception(msg: String) extends scala.RuntimeException(msg)
+class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
-class StorageException(msg: String) extends Exception(msg)
+class StorageException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
 
 class UnknownAppException(id: PathId) extends Exception(s"App '$id' does not exist")
 
