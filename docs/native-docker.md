@@ -142,7 +142,9 @@ and defaults to `0`.  Like `hostPort`, If the value is `0`, a random port will
 be assigned.  The values for random service ports are in the
 range `[local_port_min, local_port_max]` where `local_port_min` and
 `local_port_max` are command line options with default values of `10000` and
-`20000`, respectively.
+`20000`, respectively. Note that HAProxy supports forwarding only TCP traffic.
+If the `"protocol"` parameter is set to `"udp"`, HAProxy will forward only
+TCP traffic on the service port.
 
 The `"protocol"` parameter is optional and defaults to `"tcp"`.
 
