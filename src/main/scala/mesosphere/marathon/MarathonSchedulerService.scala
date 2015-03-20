@@ -92,12 +92,8 @@ class MarathonSchedulerService @Inject() (
 
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
     log.info(s"Deploy plan:$plan with force:$force")
-    val promise = Promise[AnyRef]()
-    val receiver = system.actorOf(Props(classOf[PromiseActor], promise))
-
-    schedulerActor.tell(Deploy(plan, force), receiver)
-
-    promise.future.map {
+    val future: Future[Any] = PromiseActor.askWithoutTimeout(system, schedulerActor, Deploy(plan, force))
+    future.map {
       case DeploymentStarted(_) => ()
       case CommandFailed(_, t)  => throw t
     }

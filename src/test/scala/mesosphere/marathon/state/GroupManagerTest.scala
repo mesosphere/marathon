@@ -1,12 +1,18 @@
 package mesosphere.marathon.state
 
+import java.util.concurrent.atomic.AtomicInteger
 import javax.validation.ConstraintViolationException
 
+import akka.actor.{ ActorRefFactory, ActorSystem }
 import akka.event.EventStream
+import akka.testkit.TestKit
+import com.google.inject.name.Named
+import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
+import mesosphere.marathon.{ MarathonSpec, MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
+import mesosphere.util.SerializeExecution
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopConf
@@ -17,7 +23,10 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
+class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar with Matchers with MarathonSpec {
+
+  val actorId = new AtomicInteger(0)
+  def serializeExecutions() = SerializeExecution(system, s"serializeGroupUpdates${actorId.incrementAndGet()}")
 
   test("Assign dynamic app ports") {
     val group = Group(PathId.empty, Set(
@@ -105,7 +114,7 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
     val provider = mock[StorageProvider]
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
-    val manager = new GroupManager(scheduler, taskTracker, groupRepo, provider, config, eventBus)
+    val manager = new GroupManager(serializeExecutions(), scheduler, taskTracker, groupRepo, provider, config, eventBus)
 
     val group = Group(PathId.empty, Set(AppDefinition("/app1".toPath)), Set(Group("/group1".toPath)))
 
@@ -126,6 +135,6 @@ class GroupManagerTest extends FunSuite with MockitoSugar with Matchers {
     val groupRepo = mock[GroupRepository]
     val eventBus = mock[EventStream]
     val provider = mock[StorageProvider]
-    new GroupManager(scheduler, taskTracker, groupRepo, provider, config, eventBus)
+    new GroupManager(serializeExecutions(), scheduler, taskTracker, groupRepo, provider, config, eventBus)
   }
 }

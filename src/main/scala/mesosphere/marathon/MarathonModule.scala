@@ -4,11 +4,12 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Named
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.util.SerializeExecution
 
 import scala.util.control.NonFatal
 
 import akka.actor.SupervisorStrategy.Restart
-import akka.actor.{ ActorRef, ActorSystem, OneForOneStrategy, Props }
+import akka.actor.{ ActorRefFactory, ActorRef, ActorSystem, OneForOneStrategy, Props }
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
 import com.codahale.metrics.MetricRegistry
@@ -33,6 +34,7 @@ object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
   final val NAMED_LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
+  final val NAMED_SERIALIZE_GROUP_UPDATES = "SERIALIZE_GROUP_UPDATES"
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
@@ -202,6 +204,11 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   def provideActorSystem(): ActorSystem = ActorSystem("marathon")
 
+  /** Reexports the [[ActorSystem]] as [[ActorRefFactory]]. It doesn't work automatically. */
+  @Provides
+  @Singleton
+  def provideActorRefFactory(system: ActorSystem): ActorRefFactory = system
+
   @Provides
   @Singleton
   def provideFrameworkIdUtil(state: State): FrameworkIdUtil =
@@ -225,5 +232,12 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   def provideStorageProvider(config: MarathonConf, http: HttpConf): StorageProvider =
     StorageProvider.provider(config, http)
+
+  @Named(ModuleNames.NAMED_SERIALIZE_GROUP_UPDATES)
+  @Provides
+  @Singleton
+  def provideSerializeGroupUpdates(actorRefFactory: ActorRefFactory): SerializeExecution = {
+    SerializeExecution(actorRefFactory, "serializeGroupUpdates")
+  }
 
 }
