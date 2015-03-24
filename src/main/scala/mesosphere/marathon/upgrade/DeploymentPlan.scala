@@ -31,27 +31,27 @@ final case class RestartApplication(app: AppDefinition) extends DeploymentAction
 final case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends DeploymentAction
 
 /**
- * One step in a deployment plan.
- * The contained actions may be executed in parallel.
- *
- * @param actions the actions of this step that maybe executed in parallel
- */
+  * One step in a deployment plan.
+  * The contained actions may be executed in parallel.
+  *
+  * @param actions the actions of this step that maybe executed in parallel
+  */
 final case class DeploymentStep(actions: Seq[DeploymentAction]) {
   def +(step: DeploymentStep): DeploymentStep = DeploymentStep(actions ++ step.actions)
   def nonEmpty(): Boolean = actions.nonEmpty
 }
 
 /**
- * A deployment plan consists of the [[DeploymentStep]]s necessary to
- * change the group state from original to target.
- *
- * The steps are executed sequentially after each other. The actions within a
- * step maybe executed in parallel.
-
- * See [[mesosphere.marathon.upgrade.DeploymentPlan.appsGroupedByLongestPath]] to
- * understand how we can guarantee that all dependencies for a step are fulfilled
- * by prior steps.
- */
+  * A deployment plan consists of the [[DeploymentStep]]s necessary to
+  * change the group state from original to target.
+  *
+  * The steps are executed sequentially after each other. The actions within a
+  * step maybe executed in parallel.
+  *
+  * See [[mesosphere.marathon.upgrade.DeploymentPlan.appsGroupedByLongestPath]] to
+  * understand how we can guarantee that all dependencies for a step are fulfilled
+  * by prior steps.
+  */
 final case class DeploymentPlan(
     id: String,
     original: Group,
