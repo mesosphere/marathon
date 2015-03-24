@@ -25,6 +25,7 @@ import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.FrameworkID
+import org.apache.mesos.SchedulerDriver
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.{ MILLISECONDS, _ }
@@ -83,7 +84,7 @@ class MarathonSchedulerService @Inject() (
   // This is a little ugly as we are using a mutable variable. But drivers can't
   // be reused (i.e. once stopped they can't be started again. Thus,
   // we have to allocate a new driver before each run or after each stop.
-  var driver = newDriver()
+  var driver: Option[SchedulerDriver] = None
 
   implicit val timeout: Timeout = 5.seconds
 
@@ -185,7 +186,7 @@ class MarathonSchedulerService @Inject() (
     // The following block asynchronously runs the driver. Note that driver.run()
     // blocks until the driver has been stopped (or aborted).
     Future {
-      driver.run()
+      driver.foreach(_.run())
     } onComplete {
       case Success(_) =>
         log.info("Driver future completed. Executing optional abdication command.")
@@ -220,12 +221,8 @@ class MarathonSchedulerService @Inject() (
     log.info("Stopping driver")
 
     // Stopping the driver will cause the driver run() method to return.
-    driver.stop(true) // failover = true
-
-    // We need to allocate a new driver as drivers can't be reused. Once they
-    // are in the stopped state they cannot be restarted. See the Mesos C++
-    // source code for the MesosScheduleDriver.
-    driver = newDriver()
+    driver.foreach(_.stop(true)) // failover = true
+    driver = None
   }
 
   def isLeader: Boolean = leader.get()
@@ -250,6 +247,7 @@ class MarathonSchedulerService @Inject() (
 
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
     log.info("Elected (Leader Interface)")
+    driver = Some(newDriver())
     var migrationComplete = false
     try {
       //execute tasks, only the leader is allowed to
