@@ -5,7 +5,7 @@ import akka.event.EventStream
 import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
-import mesosphere.marathon.{ MarathonConf, MarathonSpec }
+import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, MarathonStore, PathId, Timestamp }
