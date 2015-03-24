@@ -312,7 +312,7 @@ var App = Backbone.Model.extend({
           VALID_CONSTRAINTS.map(function (c) {
             return "`" + c + "`";
           }).join(", ") +
-          ". See https://github.com/mesosphere/marathon/wiki/Constraints."
+          ". See https://mesosphere.github.io/marathon/docs/constraints.html."
         )
       );
     }
