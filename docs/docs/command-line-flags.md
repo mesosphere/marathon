@@ -2,16 +2,22 @@
 title: Command Line Flags
 ---
 
-# Environment Variables
+# General Environment Variables
 
 * `JAVA_OPTS`  Default: `-Xmx512m`
     Any options that should be passed to the JVM that marathon will run in.
 
+
 # Marathon Command Line Flags
 
-The following options can influence how Marathon works:
+## Core Functionality
 
-*All options can be also set by environment variable `MARATON_OPTION_NAME` (the option name with a `MARATHON_` prefix added to it), for example `MARATHON_MASTER` for `--master` option.  Please note that command line options precede environment variables.  This means that if the `MARATHON_MASTER` environment variable is set and `--master` is supplied on the command line, then the environment variable is ignored.*
+These flags control the core functionality of the Marathon server.
+
+
+### Note - Command Line Flags May Be Specified Using Environment Variables
+
+The core functionality flags can be also set by environment variable `MARATHON_OPTION_NAME` (the option name with a `MARATHON_` prefix added to it), for example `MARATHON_MASTER` for `--master` option.  Please note that command line options precede environment variables.  This means that if the `MARATHON_MASTER` environment variable is set and `--master` is supplied on the command line, then the environment variable is ignored.
 
 ### Required Flags
 
@@ -89,7 +95,13 @@ The following options can influence how Marathon works:
 * `--marathon_store_timeout` (Optional. Default: 2000 (2 seconds)): Maximum time
     in milliseconds, to wait for persistent storage operations to complete.
 
-### Optional Flags Inherited from [Chaos](https://github.com/mesosphere/chaos)
+
+## Web Site Flags
+
+The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API. They are inherited from the 
+[Chaos](https://github.com/mesosphere/chaos) library upon which Marathon and its companion project [Chronos](https://github.com/mesos/chronos) are based.
+
+### Optional Flags
 
 * `--assets_path` (Optional. Default: None): Local file system path from which
     to load assets for the web UI. If not supplied, assets are loaded from the
@@ -98,12 +110,19 @@ The following options can influence how Marathon works:
     for HTTP requests.
 * `--http_credentials` (Optional. Default: None): Credentials for accessing the
     HTTP service in the format of `username:password`. The username may not
-    contain a colon (:).
+    contain a colon (:). May also be specified with the `MESOSPHERE_HTTP_CREDENTIALS` environment variable. 
 * `--http_port` (Optional. Default: 8080): The port on which to listen for HTTP
     requests.
 * `--https_port` (Optional. Default: 8443): The port on which to listen for
-    HTTPS requests.
+    HTTPS requests. Only used if `--ssl_keystore_path` and `--ssl_keystore_password` are set.
+* `--http_realm` (Optional. Default: Mesosphere): The security realm (aka 'area') associated with the credentials
+* `--ssl_keystore_path` (Optional. Default: None): Path to the SSL keystore. HTTPS (SSL)
+    will be enabled if this option is supplied. Requires `--ssl_keystore_password`.
+    May also be specified with the `MESOSPHERE_KEYSTORE_PATH` environment variable.
 * `--ssl_keystore_password` (Optional. Default: None): Password for the keystore
-    supplied with the `ssl_keystore_path` option.
-* `--ssl_keystore_path` (Optional. Default: None): Path to the SSL keystore. SSL
-    will be enabled if this option is supplied.
+    supplied with the `ssl_keystore_path` option. Required if `ssl_keystore_path` is supplied.
+    May also be specified with the `MESOSPHERE_KEYSTORE_PASS` environment variable.
+
+
+
+
