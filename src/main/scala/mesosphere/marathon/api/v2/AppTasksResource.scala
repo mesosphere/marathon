@@ -33,8 +33,9 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
 
     def tasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
       id <- appIds
+      health = result(healthCheckManager.statuses(id))
       task <- taskTracker.get(id)
-    } yield EnrichedTask(id, task, result(healthCheckManager.status(id, task.getId)))
+    } yield EnrichedTask(id, task, health.getOrElse(task.getId, Nil).map(Some(_)))
 
     val matchingApps = appId match {
       case GroupTasks(gid) =>
