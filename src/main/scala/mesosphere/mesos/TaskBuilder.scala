@@ -207,9 +207,9 @@ object TaskBuilder {
     val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(app.ports)
     val envMap: Map[String, String] =
-      app.env ++
-        taskContextEnv(app, taskId) ++
-        portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _)
+      taskContextEnv(app, taskId) ++
+        portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _) ++
+        app.env
 
     val builder = CommandInfo.newBuilder()
       .setEnvironment(environment(envMap))

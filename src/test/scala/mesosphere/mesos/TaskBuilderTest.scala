@@ -458,6 +458,40 @@ class TaskBuilderTest extends MarathonSpec {
     assert("1970-01-01T00:00:00.000Z" == env("MARATHON_APP_VERSION"))
   }
 
+  test("user defined variables override automatic port variables") {
+    // why?
+    // see https://github.com/mesosphere/marathon/issues/905
+
+    val command =
+      TaskBuilder.commandInfo(
+        AppDefinition(
+          id = "/test".toPath,
+          ports = Seq(8080, 8081),
+          version = Timestamp(0),
+          env = Map(
+            "PORT" -> "1",
+            "PORTS" -> "ports",
+            "PORT0" -> "1",
+            "PORT1" -> "2",
+            "PORT_8080" -> "port8080",
+            "PORT_8081" -> "port8081"
+          )
+        ),
+        Some(TaskID("task-123")),
+        Some ("host.mega.corp"),
+        Seq(1000, 1001)
+      )
+    val env: Map[String, String] =
+      command.getEnvironment().getVariablesList().asScala.toList.map(v => v.getName() -> v.getValue()).toMap
+
+    assert("1" == env("PORT"))
+    assert("ports" == env("PORTS"))
+    assert("1" == env("PORT0"))
+    assert("2" == env("PORT1"))
+    assert("port8080" == env("PORT_8080"))
+    assert("port8081" == env("PORT_8081"))
+  }
+
   test("PortsEnvWithOnlyPorts") {
     val command =
       TaskBuilder.commandInfo(
