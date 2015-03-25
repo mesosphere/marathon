@@ -23,7 +23,7 @@ can even start other Marathon instances via Marathon.
 
 Using Marathon versions 0.7.0+ and Mesos 0.20.0+, you can [deploy, run and scale Docker containers](https://mesosphere.github.io/marathon/docs/native-docker.html) with ease.
 
-Documentation for installing and configuring the full Mesosphere stack with Mesos + Marathon is
+Documentation for installing and configuring the full Mesosphere stack including Mesos and Marathon is
 available on the [Mesosphere website](http://mesosphere.com/docs/).
 
 ## Features
@@ -46,21 +46,11 @@ available on the [Mesosphere website](http://mesosphere.com/docs/).
 
 #### Install Mesos
 
-Marathon requires Mesos installed on the same machine in order to use a shared library.
-One easy way is via your system's package manager.
-Current builds for major Linux distributions are available
-from on the Mesosphere [downloads page](http://mesosphere.com/downloads/)
-or from Mesosphere's [repositories](http://mesosphere.com/2014/07/17/mesosphere-package-repositories/).
-
-If building from source, see the
-Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
-[Mesosphere tutorial](http://mesosphere.com/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
-for details. Running `make install` will install Mesos in `/usr/local` in
-the same way as these packages do.
+Marathon requires Mesos installed on the same machine in order to use a shared library. Instructions on how to install prepackaged releases of Mesos are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 #### Install Marathon
 
-Full instructions on how to install prepackaged releases are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/). Alternatively, you can build Marathon from source.
+Instructions on how to install prepackaged releases are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/). Alternatively, you can build Marathon from source.
 
 ##### Building from Source
 
@@ -107,6 +97,14 @@ Run it:
 If you want to inspect the contents of the Docker:
 
     docker run -i -t --entrypoint=/bin/bash marathon-tip -s
+
+## Documentation
+
+Marathon documentation is available on the [Marathon GitHub pages site](http://mesosphere.github.io/marathon/).
+
+### Contributing
+
+We heartily welcome external contributions to Marathon's documentation. Documentation should be committed to the `master` branch and published to our GitHub pages site using the instructions in [docs/README.md](https://github.com/mesosphere/marathon/tree/master/docs).
 
 ## Marathon Clients
 
