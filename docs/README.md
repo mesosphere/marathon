@@ -2,7 +2,7 @@
 
 ## Run it locally
 
-Ensure you have installed everything listed in the dependencies setction before
+Ensure you have installed everything listed in the dependencies section before
 following the instructions.
 
 ### Dependencies
