@@ -83,6 +83,7 @@ class TaskBuilderTest extends MarathonSpec {
     }
 
     // TODO test for resources etc.
+    assert(!taskInfo.hasLabels)
   }
 
   test("BuildIfMatchesWithArgs") {
@@ -101,7 +102,8 @@ class TaskBuilderTest extends MarathonSpec {
         mem = 64,
         disk = 1,
         executor = "//cmd",
-        ports = Seq(8080, 8081)
+        ports = Seq(8080, 8081),
+        labels = Map("foo" -> "bar", "baz" -> "xyzzy")
       )
     )
 
@@ -128,6 +130,11 @@ class TaskBuilderTest extends MarathonSpec {
     }
 
     // TODO test for resources etc.
+    assert(taskInfo.hasLabels)
+    val labels = taskInfo.getLabels.getLabelsList
+    assert(labels.size == 2)
+    assert(labels.asScala.exists { label => label.getKey == "foo" && label.getValue == "bar" })
+    assert(labels.asScala.exists { label => label.getKey == "baz" && label.getValue == "xyzzy" })
   }
   test("BuildIfMatchesWithCommandAndExecutor") {
     val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
