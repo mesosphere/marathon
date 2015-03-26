@@ -5,7 +5,6 @@ Wants=network.target
 
 [Service]
 ExecStart=/usr/bin/marathon
-Restart=on-abort
 Restart=always
 RestartSec=20
 
