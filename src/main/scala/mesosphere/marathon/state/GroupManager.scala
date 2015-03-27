@@ -1,32 +1,33 @@
 package mesosphere.marathon.state
 
-import java.net.URL
-import javax.inject.Inject
 import java.lang.{ Integer => JInt }
-import scala.concurrent.Future
-import scala.util.{ Failure, Success }
-import scala.collection.immutable.Seq
-import scala.collection.mutable
+import java.net.URL
+import javax.inject.{ Inject, Named }
 
 import akka.event.EventStream
 import com.google.inject.Singleton
-import com.google.inject.name.Named
 import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade._
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, ModuleNames, PortRangeExhaustedException }
+import mesosphere.util.SerializeExecution
 import mesosphere.util.ThreadPoolContext.context
 import org.apache.log4j.Logger
-import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+
+import scala.collection.immutable.Seq
+import scala.collection.mutable
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 /**
   * The group manager is the facade for all group related actions.
   * It persists the state of a group and initiates deployments.
   */
 class GroupManager @Singleton @Inject() (
+    @Named(ModuleNames.NAMED_SERIALIZE_GROUP_UPDATES) serializeUpdates: SerializeExecution,
     scheduler: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
@@ -119,7 +120,7 @@ class GroupManager @Singleton @Inject() (
     gid: PathId,
     change: Group => Group,
     version: Timestamp = Timestamp.now(),
-    force: Boolean = false): Future[DeploymentPlan] = synchronized {
+    force: Boolean = false): Future[DeploymentPlan] = serializeUpdates {
     log.info(s"Upgrade id:$gid version:$version with force:$force")
 
     def deploy(from: Group, to: Group, resolve: Seq[ResolveArtifacts]): Future[DeploymentPlan] = {
