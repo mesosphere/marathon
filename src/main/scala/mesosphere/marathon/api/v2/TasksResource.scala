@@ -30,23 +30,40 @@ class TasksResource @Inject() (
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def indexJson(@QueryParam("status") status: String,
-                @QueryParam("status[]") statuses: util.List[String]): Response = {
+  def indexJson(
+    @QueryParam("status") status: String,
+    @QueryParam("status[]") statuses: util.List[String]): Response = {
     if (status != null) statuses.add(status)
     val statusSet = statuses.asScala.flatMap(toTaskState).toSet
+
+    val tasks = taskTracker.list.values.view.flatMap { app =>
+      app.tasks.view.map(t => app.appName -> t)
+    }
+
+    val appIds = taskTracker.list.keySet
+
+    val appToPorts = appIds.map { appId =>
+      appId -> service.getApp(appId).map(_.servicePorts()).getOrElse(Nil)
+    }.toMap
+
+    val health = appIds.flatMap { appId =>
+      result(healthCheckManager.statuses(appId))
+    }.toMap
+
+    val enrichedTasks = for {
+      (appId, task) <- tasks
+      if statusSet.isEmpty || statusSet(task.getStatus.getState)
+    } yield {
+      EnrichedTask(
+        appId,
+        task,
+        health.getOrElse(task.getId, Nil).map(Some(_)),
+        appToPorts.getOrElse(appId, Nil)
+      )
+    }
+
     ok(Map(
-      "tasks" -> taskTracker.list.flatMap {
-        case (appId, setOfTasks) =>
-          setOfTasks.tasks.collect {
-            case task if statusSet.isEmpty || statusSet(task.getStatus.getState) =>
-              EnrichedTask(
-                appId,
-                task,
-                result(healthCheckManager.status(appId, task.getId)),
-                service.getApp(appId).map(_.servicePorts).getOrElse(Nil)
-              )
-          }
-      }
+      "tasks" -> enrichedTasks
     ))
   }
 
