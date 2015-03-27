@@ -175,17 +175,17 @@ class MarathonHealthCheckManager @Inject() (
 
   override def status(
     appId: PathId,
-    taskId: String): Future[Seq[Option[Health]]] =
+    taskId: String): Future[Seq[Health]] =
     withReadLock {
       import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
       implicit val timeout: Timeout = Timeout(2, SECONDS)
 
       val maybeAppVersion: Option[Timestamp] = taskTracker.getVersion(appId, taskId)
 
-      val taskHealth: Seq[Future[Option[Health]]] = maybeAppVersion.map { appVersion =>
+      val taskHealth: Seq[Future[Health]] = maybeAppVersion.map { appVersion =>
         listActive(appId, appVersion).toSeq.collect {
           case ActiveHealthCheck(_, actor) =>
-            (actor ? GetTaskHealth(taskId)).mapTo[Option[Health]]
+            (actor ? GetTaskHealth(taskId)).mapTo[Health]
         }
       }.getOrElse(Nil)
 

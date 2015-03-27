@@ -7,5 +7,5 @@ import mesosphere.marathon.state.PathId
 case class EnrichedTask(
   appId: PathId,
   task: MarathonTask,
-  healthCheckResults: Seq[Option[Health]],
+  healthCheckResults: Seq[Health],
   servicePorts: Seq[Int] = Nil)

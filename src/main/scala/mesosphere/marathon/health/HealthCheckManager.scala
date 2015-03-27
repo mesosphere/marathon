@@ -55,7 +55,7 @@ trait HealthCheckManager {
   /**
     * Returns the health status of the supplied task.
     */
-  def status(appId: PathId, taskId: String): Future[Seq[Option[Health]]]
+  def status(appId: PathId, taskId: String): Future[Seq[Health]]
 
   /**
     * Returns the health status of all tasks of the supplied app.
