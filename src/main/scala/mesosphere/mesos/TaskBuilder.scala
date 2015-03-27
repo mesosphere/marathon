@@ -143,6 +143,10 @@ class TaskBuilder(app: AppDefinition,
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
 
+    if (app.labels.nonEmpty) {
+      builder.setLabels(TaskBuilder.labels(app.labels))
+    }
+
     Some(builder.build -> ports)
   }
 
@@ -294,5 +298,16 @@ object TaskBuilder {
       "MARATHON_APP_ID" -> app.id.toString,
       "MARATHON_APP_VERSION" -> app.version.toString
     )
+
+  def labels(labelMap: Map[String, String]): Labels = {
+    val builder = Labels.newBuilder()
+
+    for ((key, value) <- labelMap) {
+      val variable = Label.newBuilder().setKey(key).setValue(value)
+      builder.addLabels(variable)
+    }
+
+    builder.build()
+  }
 
 }
