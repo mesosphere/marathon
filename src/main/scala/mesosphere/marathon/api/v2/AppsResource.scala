@@ -292,7 +292,7 @@ class AppsResource @Inject() (
     for {
       (taskId, results) <- result(healthCheckManager.statuses(app.id)).to[Seq]
       task <- tasks.get(taskId)
-    } yield EnrichedTask(app.id, task, results.map(Option(_)))
+    } yield EnrichedTask(app.id, task, results)
   }
 
   private def healthCounts(app: AppDefinition): HealthCounts = result(healthCheckManager.healthCounts(app.id))
