@@ -15,6 +15,7 @@ import com.codahale.metrics.annotation.Timed
 import org.apache.mesos.Protos.TaskState
 import play.api.libs.json.Json
 
+import scala.collection.IterableView
 import scala.collection.JavaConverters._
 
 @Path("v2/tasks")
@@ -33,7 +34,10 @@ class TasksResource @Inject() (
   def indexJson(
     @QueryParam("status") status: String,
     @QueryParam("status[]") statuses: util.List[String]): Response = {
-    if (status != null) statuses.add(status)
+
+    if (status != null) {
+      statuses.add(status)
+    }
     val statusSet = statuses.asScala.flatMap(toTaskState).toSet
 
     val tasks = taskTracker.list.values.view.flatMap { app =>
@@ -50,7 +54,7 @@ class TasksResource @Inject() (
       result(healthCheckManager.statuses(appId))
     }.toMap
 
-    val enrichedTasks = for {
+    val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
       (appId, task) <- tasks
       if statusSet.isEmpty || statusSet(task.getStatus.getState)
     } yield {
