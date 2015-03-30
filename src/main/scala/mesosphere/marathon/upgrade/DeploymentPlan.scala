@@ -173,9 +173,10 @@ object DeploymentPlan extends Logging {
 
     val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
     appsByLongestPath.valuesIterator.foreach { equivalenceClass =>
+      
+      val actions = Seq.newBuilder[DeploymentAction]
 
       equivalenceClass.foreach { newApp =>
-        val actions = Seq.newBuilder[DeploymentAction]
         originalApps.get(newApp.id) match {
 
           // New app.
@@ -194,8 +195,9 @@ object DeploymentPlan extends Logging {
           case _ => ()
 
         }
-        steps += DeploymentStep(actions.result)
       }
+
+      steps += DeploymentStep(actions.result)
     }
 
     steps.result

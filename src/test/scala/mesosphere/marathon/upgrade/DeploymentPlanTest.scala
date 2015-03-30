@@ -156,7 +156,34 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     plan.steps(1).actions.toSet should equal (Set(RestartApplication(service._2)))
   }
 
-  test("when updating a group without dependencies, a random order of updates is used") {
+  test("when starting apps without dependencies, they are first started and then scaled parallely") {
+    Given("an empty group and the same group but now including four independent apps")
+    val emptyGroup = Group(id = "/test".toPath)
+
+    val instances: Integer = 10
+
+    val apps: Set[AppDefinition] = (1 to 4).map { i =>
+      AppDefinition(s"/test/$i".toPath, Some("cmd"), instances = instances, version = Timestamp(0))
+    }.toSet
+
+    val targetGroup = Group(
+      id = "/test".toPath,
+      apps = apps,
+      groups = Set()
+    )
+
+    When("the deployment plan is computed")
+    val plan = DeploymentPlan(emptyGroup, targetGroup)
+
+    Then("we get two deployment steps")
+    plan.steps should have size 2
+    Then("the first with all StartApplication actions")
+    plan.steps(0).actions.toSet should equal (apps.map(StartApplication(_, 0)))
+    Then("and the second with all ScaleApplication actions")
+    plan.steps(1).actions.toSet should equal (apps.map(ScaleApplication(_, instances)))
+  }
+
+  test("when updating apps without dependencies, the restarts are executed in the same step") {
     Given("Two application updates with command and scale changes")
     val mongoId = "/test/database/mongo".toPath
     val serviceId = "/test/service/srv1".toPath
@@ -184,9 +211,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     val plan = DeploymentPlan(from, to)
 
     Then("the deployment steps are correct")
-    plan.steps should have size 2
-    plan.steps(0).actions.toSet should equal (Set(RestartApplication(mongo._2)))
-    plan.steps(1).actions.toSet should equal (Set(RestartApplication(service._2)))
+    plan.steps should have size 1
+    plan.steps(0).actions.toSet should equal (Set(RestartApplication(mongo._2), RestartApplication(service._2)))
   }
 
   test("when updating a group with dependent and independent applications, the correct order is computed") {
@@ -227,16 +253,15 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     val plan = DeploymentPlan(from, to)
 
     Then("the deployment contains steps for dependent and independent applications")
-    plan.steps should have size (6)
+    plan.steps should have size (5)
 
     actionsOf(plan) should have size (6)
 
     plan.steps(0).actions.toSet should equal (Set(StopApplication(toStop)))
     plan.steps(1).actions.toSet should equal (Set(StartApplication(toStart, 0)))
-    plan.steps(2).actions.toSet should equal (Set(RestartApplication(mongo._2)))
-    plan.steps(3).actions.toSet should equal (Set(RestartApplication(independent._2)))
-    plan.steps(4).actions.toSet should equal (Set(RestartApplication(service._2)))
-    plan.steps(5).actions.toSet should equal (Set(ScaleApplication(toStart, 2)))
+    plan.steps(2).actions.toSet should equal (Set(RestartApplication(mongo._2), RestartApplication(independent._2)))
+    plan.steps(3).actions.toSet should equal (Set(RestartApplication(service._2)))
+    plan.steps(4).actions.toSet should equal (Set(ScaleApplication(toStart, 2)))
   }
 
   test("when the only action is to stop an application") {
