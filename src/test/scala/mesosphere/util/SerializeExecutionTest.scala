@@ -27,7 +27,7 @@ class SerializeExecutionTest extends TestKit(ActorSystem("system")) with Maratho
   }
 
   test("submit successful futures after a failure") {
-    val serialize = SerializeExecution(system, "serialize1")
+    val serialize = SerializeExecution(system, "serialize2")
     try {
       val future1: Future[Int] = serialize(Future.failed(new IllegalStateException()))
       a[IllegalStateException] should be thrownBy Await.result(future1, 3.seconds)
@@ -44,7 +44,7 @@ class SerializeExecutionTest extends TestKit(ActorSystem("system")) with Maratho
   }
 
   test("submit successful futures after a failure to return future") {
-    val serialize = SerializeExecution(system, "serialize1")
+    val serialize = SerializeExecution(system, "serialize3")
     try {
       val future1: Future[Int] = serialize(throw new IllegalStateException())
       a[IllegalStateException] should be thrownBy Await.result(future1, 3.seconds)
