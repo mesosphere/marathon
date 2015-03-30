@@ -75,8 +75,16 @@ The REST interface allows the force flag for all state-changing operations.
 __ATTENTION__: The force flag should be used only in the case of a failed deployment!
 
 If a force flag is set, then all deployments that are affected by this deployment are cancelled.
-This leaves the system in a possible inconsistent state.
-The only good reason to force a deployment is to correct a failed deployment.
+This may leave the system in an inconsistent state. Specifically, when an app is in the middle
+of a rolling upgrade and the deployment is cancelled, it may end up in a state where some old and
+some new tasks are running. If the new deployment does not update that app, it will stay in
+that state until a future deployment is being made for that app.
+
+By contrast, the only kind of deployments that can be force-updated safely are those which
+affect single apps only.
+
+Consequently, the only good reason to force a deployment affecting multiple apps is to correct
+a failed deployment.
 
 
 ## A failed Deployment
