@@ -37,7 +37,7 @@ trait ExternalMarathonIntegrationTest {
   def config: IntegrationTestConfig
 
   def env = {
-    val envName = "MESOS_NATIVE_LIBRARY"
+    val envName = "MESOS_NATIVE_JAVA_LIBRARY"
     if (sys.env.contains(envName)) sys.env else sys.env + (envName -> config.mesosLib)
   }
 
@@ -113,12 +113,17 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
   */
 trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with BeforeAndAfterAllConfigMap { self: Suite =>
 
-  var config = IntegrationTestConfig(ConfigMap.empty)
+  /**
+    * We only want to fail for configuration problems if the configuration is actually used.
+    */
+  private var configOption: Option[IntegrationTestConfig] = None
+  def config: IntegrationTestConfig = configOption.get
+
   lazy val marathon: MarathonFacade = new MarathonFacade(s"http://localhost:${config.singleMarathonPort}")
   val events = new ConcurrentLinkedQueue[CallbackEvent]()
 
   override protected def beforeAll(configMap: ConfigMap): Unit = {
-    config = IntegrationTestConfig(configMap)
+    configOption = Some(IntegrationTestConfig(configMap))
     super.beforeAll(configMap)
     ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo")
     ProcessKeeper.startMesosLocal()

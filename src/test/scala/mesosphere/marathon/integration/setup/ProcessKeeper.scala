@@ -30,7 +30,6 @@ object ProcessKeeper {
 
   private[this] val ENV_MESOS_WORK_DIR: String = "MESOS_WORK_DIR"
 
-
   def startHttpService(port: Int, assetPath: String) = {
     log.info(s"Start Http Service on port $port")
     val conf = new ScallopConf(Array("--http_port", port.toString, "--assets_path", assetPath)) with HttpConf
