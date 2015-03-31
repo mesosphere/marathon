@@ -1,17 +1,18 @@
 package mesosphere.marathon.integration.setup
 
-import akka.actor.ActorSystem
-import scala.concurrent.duration._
-import scala.concurrent.Await.result
-import spray.client.pipelining._
-import spray.http.HttpResponse
-import mesosphere.marathon.state.{ Timestamp, PathId, Group }
-import mesosphere.marathon.event.http.EventSubscribers
-import mesosphere.marathon.event.{ Unsubscribe, Subscribe }
-import mesosphere.marathon.state.AppDefinition
 import java.util.Date
+
+import akka.actor.ActorSystem
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import mesosphere.marathon.api.v2.GroupUpdate
+import mesosphere.marathon.event.http.EventSubscribers
+import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import spray.client.pipelining._
+import spray.http.HttpResponse
+
+import scala.concurrent.Await.result
+import scala.concurrent.duration._
 
 /**
   * GET /apps will deliver something like Apps instead of List[App]
@@ -23,15 +24,19 @@ case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: 
 case class ITDeploymentResult(version: String, deploymentId: String)
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Integer], startedAt: Date, stagedAt: Date, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
+
+case class ListDeployments(deployments: Seq[Deployment])
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+case class Deployment(id: String)
 /**
   * The MarathonFacade offers the REST API of a remote marathon instance
   * with all local domain objects.
   * @param url the url of the remote marathon instance
   */
-class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends JacksonSprayMarshaller {
+class MarathonFacade(url: String, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends JacksonSprayMarshaller {
   import mesosphere.util.ThreadPoolContext.context
 
-  implicit val system = ActorSystem()
   implicit val appDefMarshaller = marshaller[AppDefinition]
   implicit val groupMarshaller = marshaller[Group]
   implicit val groupUpdateMarshaller = marshaller[GroupUpdate]
@@ -50,8 +55,8 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
     result(pipeline(Get(s"$url/v2/apps$id")), waitTime)
   }
 
-  def createApp(app: AppDefinition): RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
+  def createApp(app: AppDefinition): RestResult[AppDefinition] = {
+    val pipeline = sendReceive ~> read[AppDefinition]
     result(pipeline(Post(s"$url/v2/apps", app)), waitTime)
   }
 
@@ -113,6 +118,13 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
 
   def rollbackGroup(groupId: PathId, version: String, force: Boolean = false): RestResult[ITDeploymentResult] = {
     updateGroup(groupId, GroupUpdate(None, version = Some(Timestamp(version))), force)
+  }
+
+  //deployment resource ------
+
+  def listDeployments(): RestResult[List[Deployment]] = {
+    val pipeline = sendReceive ~> read[Array[Deployment]] ~> toList[Deployment]
+    result(pipeline(Get(s"$url/v2/deployments")), waitTime)
   }
 
   //event resource ---------------------------------------------

@@ -2,16 +2,21 @@ package mesosphere.marathon.integration.setup
 
 import java.io.File
 import java.util.concurrent.ConcurrentLinkedQueue
-import mesosphere.marathon.state.PathId
+
+import akka.actor.ActorSystem
+import com.typesafe.config.ConfigFactory
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.{ AppDefinition, PathId }
+import org.apache.commons.io.FileUtils
 import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
+import org.joda.time.DateTime
 import org.scalatest._
+import org.slf4j.LoggerFactory
+
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.util.Try
-import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.AppDefinition
-import org.joda.time.DateTime
-import scala.collection.JavaConverters._
 
 /**
   * All integration tests should be marked with this tag.
@@ -33,6 +38,8 @@ trait IntegrationFunSuite extends FunSuite {
   * Trait for running external marathon instances.
   */
 trait ExternalMarathonIntegrationTest {
+
+  implicit lazy val system = ActorSystem()
 
   def config: IntegrationTestConfig
 
@@ -99,6 +106,10 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
   def pingSince(duration: Duration): Boolean = DateTime.now.minusMillis(duration.toMillis.toInt).isBefore(lastUpdate)
 }
 
+object SingleMarathonIntegrationTest {
+  private val log = LoggerFactory.getLogger(getClass)
+}
+
 /**
   * Convenient trait to test against one marathon instance.
   * Following things are managed at start:
@@ -112,6 +123,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
   * After the test is finished, everything will be clean up.
   */
 trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with BeforeAndAfterAllConfigMap { self: Suite =>
+  import SingleMarathonIntegrationTest.log
 
   /**
     * We only want to fail for configuration problems if the configuration is actually used.
@@ -119,29 +131,39 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
   private var configOption: Option[IntegrationTestConfig] = None
   def config: IntegrationTestConfig = configOption.get
 
+  lazy val appMock: AppMockFacade = new AppMockFacade()
   lazy val marathon: MarathonFacade = new MarathonFacade(s"http://localhost:${config.singleMarathonPort}")
   val events = new ConcurrentLinkedQueue[CallbackEvent]()
 
   override protected def beforeAll(configMap: ConfigMap): Unit = {
+    log.info("Setting up local mesos/marathon infrastructure...")
     configOption = Some(IntegrationTestConfig(configMap))
     super.beforeAll(configMap)
+
     ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo")
     ProcessKeeper.startMesosLocal()
     cleanMarathonState()
+
     startMarathon(config.singleMarathonPort, "--master", config.master, "--event_subscriber", "http_callback")
+
     ProcessKeeper.startHttpService(config.httpPort, config.cwd)
     ExternalMarathonIntegrationTest.listener += this
     marathon.subscribe(s"http://localhost:${config.httpPort}/callback")
+    log.info("Setting up local mesos/marathon infrastructure: done.")
   }
 
   override protected def afterAll(configMap: ConfigMap): Unit = {
     super.afterAll(configMap)
+    log.info("Cleaning up local mesos/marathon structure...")
     cleanUp(withSubscribers = true)
     ExternalMarathonIntegrationTest.listener -= this
     ExternalMarathonIntegrationTest.healthChecks.clear()
     ProcessKeeper.stopAllServices()
     ProcessKeeper.stopAllProcesses()
     ProcessKeeper.stopOSProcesses("mesosphere.marathon.integration.setup.AppMock")
+    system.shutdown()
+    system.awaitTermination()
+    log.info("Cleaning up local mesos/marathon structure: done.")
   }
 
   def cleanMarathonState() {
@@ -161,16 +183,27 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
   override def handleEvent(event: CallbackEvent): Unit = events.add(event)
 
   def waitForEvent(kind: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
+
+  def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
+    waitForEventWith("deployment_success", _.info.getOrElse("id", "") == deploymentId, maxWait)
+  }
+
   def waitForChange(change: RestResult[ITDeploymentResult], maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    waitForEventWith("deployment_success", _.info.getOrElse("id", "") == change.value.deploymentId, maxWait)
+    waitForDeploymentId(change.value.deploymentId, maxWait)
+  }
+
+  def waitForEventMatching(description: String, maxWait: FiniteDuration = 30.seconds)(fn: CallbackEvent => Boolean): CallbackEvent = {
+    def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
+      val event = events.poll()
+      if (fn(event)) Some(event) else None
+    }
+    waitFor(description, maxWait)(nextEvent)
   }
 
   def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
-      val event = events.poll()
-      if (event.eventType == kind) Some(event) else None
+    waitForEventMatching(s"event $kind to arrive", maxWait) { event =>
+      event.eventType == kind && fn(event)
     }
-    waitFor(s"event $kind to arrive", maxWait)(nextEvent)
   }
 
   def waitForTasks(appId: PathId, num: Int, maxWait: FiniteDuration = 30.seconds): List[ITEnrichedTask] = {
@@ -215,11 +248,32 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     next()
   }
 
-  def appProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
+  private def appProxyMainInvocationImpl: String = {
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[AppMock].getName
-    val exec = Some(s"""$javaExecutable -classpath $classPath $main $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId""")
+    s"""$javaExecutable -classpath $classPath $main"""
+  }
+
+  /**
+    * Writes the appProxy invocation command into a shell script -- otherwise the whole log
+    * of the test is spammed by overly long classpath definitions.
+    */
+  private lazy val appProxyMainInvocation: String = {
+    val file = File.createTempFile("appProxy", ".sh")
+    file.deleteOnExit()
+
+    FileUtils.write(file,
+      s"""#!/bin/sh
+         |exec $appProxyMainInvocationImpl $$*""".stripMargin)
+    file.setExecutable(true)
+
+    file.getAbsolutePath
+  }
+
+  def appProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
+    val mainInvocation = appProxyMainInvocation
+    val exec = Some(s"""$mainInvocation $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId""")
     val health = if (withHealth) Set(HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)) else Set.empty[HealthCheck]
     AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128.0, healthChecks = health, dependencies = dependencies)
   }
