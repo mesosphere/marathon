@@ -42,7 +42,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
   def listApps: RestResult[List[AppDefinition]] = {
     val pipeline = sendReceive ~> read[ListAppsResult]
     val res = result(pipeline(Get(s"$url/v2/apps")), waitTime)
-    RestResult(res.value.apps.toList, res.code)
+    res.map(_.apps.toList)
   }
 
   def app(id: PathId): RestResult[AppDefinition] = {
@@ -70,7 +70,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
   def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
     val pipeline = addHeader("Accept", "application/json") ~> sendReceive ~> read[ListTasks]
     val res = result(pipeline(Get(s"$url/v2/apps$appId/tasks")), waitTime)
-    RestResult(res.value.tasks.toList, res.code)
+    res.map(_.tasks.toList)
   }
 
   //group resource -------------------------------------------
@@ -78,7 +78,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds) extends Jacks
   def listGroups: RestResult[Set[Group]] = {
     val pipeline = sendReceive ~> read[Group]
     val root = result(pipeline(Get(s"$url/v2/groups")), waitTime)
-    RestResult(root.value.groups, root.code)
+    root.map(_.groups)
   }
 
   def listGroupVersions(id: PathId): RestResult[List[String]] = {

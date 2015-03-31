@@ -1,7 +1,10 @@
 package mesosphere.marathon.integration.setup
 
 import mesosphere.marathon.state.PathId._
+import play.api.libs.json.{ Json, JsValue }
 
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, Awaitable }
 import scala.reflect.ClassTag
 import com.google.inject.Scopes
 import javax.ws.rs._
@@ -18,8 +21,34 @@ import mesosphere.marathon.api.MarathonRestModule
 /**
   * Result of an REST operation.
   */
-case class RestResult[T](value: T, code: Int) {
-  def success = code == 200
+case class RestResult[+T](value: T, originalResponse: HttpResponse) {
+  def code: Int = originalResponse.status.intValue
+  def success: Boolean = code == 200
+
+  /** Transform the value of this result. */
+  def map[R](change: T => R): RestResult[R] = {
+    val changed: R = change(value)
+    RestResult(changed, originalResponse)
+  }
+
+  /** Display the original response entity (=body) as string. */
+  def entityString: String = originalResponse.entity.asString
+
+  /** Parse the original response entity (=body) as json. */
+  def entityJson: JsValue = Json.parse(entityString)
+
+  /** Pretty print the original response entity (=body) as json. */
+  def entityPrettyJsonString: String = Json.prettyPrint(entityJson)
+}
+
+object RestResult {
+  def apply(response: HttpResponse): RestResult[HttpResponse] = {
+    new RestResult[HttpResponse](response, response)
+  }
+
+  def await(responseFuture: Awaitable[HttpResponse], waitTime: Duration): RestResult[HttpResponse] = {
+    apply(Await.result(responseFuture, waitTime))
+  }
 }
 
 /**
@@ -38,15 +67,18 @@ trait JacksonSprayMarshaller {
   def read[T](implicit tag: ClassTag[T]): HttpResponse ⇒ RestResult[T] =
     response ⇒
       if (response.status.isSuccess) {
-        val value = mapper.readValue(response.entity.asString, tag.runtimeClass.asInstanceOf[Class[T]])
-        RestResult(value, response.status.intValue)
+        RestResult(response).map { response =>
+          mapper.readValue(response.entity.asString, tag.runtimeClass.asInstanceOf[Class[T]])
+        }
       }
       else {
         throw new UnsuccessfulResponseException(response)
       }
 
-  def responseResult: HttpResponse => RestResult[HttpResponse] = response => RestResult(response, response.status.intValue)
-  def toList[T]: RestResult[Array[T]] => RestResult[List[T]] = result => RestResult(result.value.toList, result.code)
+  def responseResult: HttpResponse => RestResult[HttpResponse] =
+    response => RestResult(response)
+  def toList[T]: RestResult[Array[T]] => RestResult[List[T]] =
+    result => result.map(_.toList)
 }
 
 /**
