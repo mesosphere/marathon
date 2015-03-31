@@ -164,41 +164,34 @@ object DeploymentPlan extends Logging {
     * from the topology of the target group's dependency graph.
     */
   def dependencyOrderedSteps(original: Group, target: Group): Seq[DeploymentStep] = {
-
-    // Result builder.
-    val steps = Seq.newBuilder[DeploymentStep]
-
     val originalApps: Map[PathId, AppDefinition] =
       original.transitiveApps.map(app => app.id -> app).toMap
 
     val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
-    appsByLongestPath.valuesIterator.foreach { equivalenceClass =>
 
-      equivalenceClass.foreach { newApp =>
-        val actions = Seq.newBuilder[DeploymentAction]
+    appsByLongestPath.valuesIterator.map { (equivalenceClass: Set[AppDefinition]) =>
+      val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newApp: AppDefinition) =>
         originalApps.get(newApp.id) match {
-
           // New app.
           case None =>
-            actions += ScaleApplication(newApp, newApp.instances)
+            Some(ScaleApplication(newApp, newApp.instances))
 
           // Scale-only change.
           case Some(oldApp) if oldApp.isOnlyScaleChange(newApp) =>
-            actions += ScaleApplication(newApp, newApp.instances)
+            Some(ScaleApplication(newApp, newApp.instances))
 
           // Update existing app.
           case Some(oldApp) if oldApp.isUpgrade(newApp) =>
-            actions += RestartApplication(newApp)
+            Some(RestartApplication(newApp))
 
           // Other cases require no action.
-          case _ => ()
-
+          case _ =>
+            None
         }
-        steps += DeploymentStep(actions.result)
       }
-    }
 
-    steps.result
+      DeploymentStep(actions.to[Seq])
+    }.to[Seq]
   }
 
   def apply(
