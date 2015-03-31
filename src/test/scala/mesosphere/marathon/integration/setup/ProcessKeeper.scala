@@ -1,4 +1,7 @@
+
 package mesosphere.marathon.integration.setup
+
+import org.apache.commons.io.FileUtils
 
 import scala.sys.ShutdownHookThread
 import scala.sys.process._
@@ -25,6 +28,9 @@ object ProcessKeeper {
   private[this] var processes = List.empty[Process]
   private[this] var services = List.empty[Service]
 
+  private[this] val ENV_MESOS_WORK_DIR: String = "MESOS_WORK_DIR"
+
+
   def startHttpService(port: Int, assetPath: String) = {
     log.info(s"Start Http Service on port $port")
     val conf = new ScallopConf(Array("--http_port", port.toString, "--assets_path", assetPath)) with HttpConf
@@ -40,11 +46,29 @@ object ProcessKeeper {
     startJavaProcess("zookeeper", args, new File("."), sys.env, _.contains("binding to port"))
   }
 
-  def startMesosLocal(): Process = startProcess("mesos", Process("mesos local"), _.toLowerCase.contains("registered with master"))
+  def startMesosLocal(): Process = {
+    val mesosWorkDirForMesos: String = "/tmp/marathon-itest-mesos"
+    val mesosWorkDirFile: File = new File(mesosWorkDirForMesos)
+    FileUtils.deleteDirectory(mesosWorkDirFile)
+    FileUtils.forceMkdir(mesosWorkDirFile)
+    startProcess(
+      "mesos",
+      Process("mesos-local", cwd = None, ENV_MESOS_WORK_DIR -> mesosWorkDirForMesos),
+      upWhen = _.toLowerCase.contains("registered with master"))
+  }
 
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String]): Process = {
     val argsWithMain = "mesosphere.marathon.Main" :: arguments
-    startJavaProcess("marathon", argsWithMain, cwd, env, _.contains("Started SelectChannelConnector"))
+
+    val mesosWorkDir: String = "/tmp/marathon-itest-marathon"
+    val mesosWorkDirFile: File = new File(mesosWorkDir)
+    FileUtils.deleteDirectory(mesosWorkDirFile)
+    FileUtils.forceMkdir(mesosWorkDirFile)
+
+    startJavaProcess(
+      "marathon", argsWithMain, cwd,
+      env + (ENV_MESOS_WORK_DIR -> mesosWorkDir),
+      upWhen = _.contains("Started SelectChannelConnector"))
   }
 
   def startJavaProcess(name: String, arguments: List[String], cwd: File, env: Map[String, String], upWhen: String => Boolean): Process = {
