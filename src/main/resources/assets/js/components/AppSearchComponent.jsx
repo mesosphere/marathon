@@ -17,11 +17,15 @@ var AppSearchComponent = React.createClass({
 
   handleChange: function (event) {
     this.setState({searchValue: event.target.value});
+    this.search(event.target.value);
   },
 
-  search: function (event) {
+  handleSubmit: function (event) {
     event.preventDefault();
-    this.props.onSearch(this.state.searchValue);
+  },
+
+  search: function (value) {
+    this.props.onSearch(value);
   },
 
   resetSearch: function () {
@@ -36,7 +40,7 @@ var AppSearchComponent = React.createClass({
     });
 
     return (
-      <form onSubmit={this.search}>
+      <form onSubmit={this.handleSubmit}>
         <input className={inputClass} type="text" value={this.state.searchValue}
           onChange={this.handleChange} placeholder="Filter List" />
         <span onClick={this.resetSearch} className="close-input-btn">reset</span>
