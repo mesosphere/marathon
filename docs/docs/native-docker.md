@@ -137,9 +137,13 @@ host ports for each task are exposed via the task details in the REST API and
 the Marathon web UI. `"hostPort"` is optional and defaults to `0`.
 
 `"servicePort"` is a helper port intended for doing service discovery using
-a well-known port per service.  The `servicePort` parameter is optional
+a well-known port per service.  The assigned `servicePort` value is not used/interpreted by Marathon itself but
+supposed to used by load balancer infrastructure.
+See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.md).
+The `servicePort` parameter is optional
 and defaults to `0`.  Like `hostPort`, If the value is `0`, a random port will
-be assigned.  The values for random service ports are in the
+be assigned.  If a `servicePort` value is assigned by Marathon then Marathon guarantees that its value
+is unique across the cluster. The values for random service ports are in the
 range `[local_port_min, local_port_max]` where `local_port_min` and
 `local_port_max` are command line options with default values of `10000` and
 `20000`, respectively.
