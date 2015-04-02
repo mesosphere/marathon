@@ -19,7 +19,8 @@ var AppSearchComponent = React.createClass({
     this.setState({searchValue: event.target.value});
   },
 
-  search: function () {
+  search: function (event) {
+    event.preventDefault();
     this.props.onSearch(this.state.searchValue);
   },
 
