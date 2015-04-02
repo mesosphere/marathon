@@ -485,10 +485,10 @@ var Marathon = React.createClass({
         <TabPaneComponent id="apps">
           <div className="col-xs-8 col-sm-3">
             <AppSearchComponent onSearch={this.setCollectionFilter} />
-             <AppSearchResultTextComponent filteredCount={this.getFilteredCollection().length}
-            overallCount={this.state.collection.length} />
+            <AppSearchResultTextComponent filteredCount={this.getFilteredCollection().length}
+              overallCount={this.state.collection.length} />
           </div>
-          <a href="#newapp" className="btn btn-success navbar-btn pull-right">
+          <a href="#newapp" className="btn btn-success pull-right">
             + New App
           </a>
           <AppListComponent
