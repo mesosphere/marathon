@@ -15,6 +15,7 @@ var NewAppModalComponent = require("../components/NewAppModalComponent");
 var TabPaneComponent = require("../components/TabPaneComponent");
 var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 var NavTabsComponent = require("../components/NavTabsComponent");
+var AppSearchComponent = require("../components/AppSearchComponent");
 
 var UPDATE_INTERVAL = 5000;
 
@@ -42,7 +43,8 @@ var Marathon = React.createClass({
       deploymentsFetchState: States.STATE_LOADING,
       fetchState: States.STATE_LOADING,
       modalClass: null,
-      tasksFetchState: States.STATE_LOADING
+      tasksFetchState: States.STATE_LOADING,
+      collectionFilter: null
     };
   },
 
@@ -461,6 +463,18 @@ var Marathon = React.createClass({
     /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   },
 
+  setCollectionFilter: function (filterValue) {
+    this.setState({collectionFilter: filterValue});
+  },
+
+  getFilteredCollection: function () {
+    if (this.state.collectionFilter) {
+      return this.state.collection.filterById(this.state.collectionFilter);
+    } else {
+      return this.state.collection;
+    }
+  },
+
   getTabPane: function () {
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
@@ -468,11 +482,14 @@ var Marathon = React.createClass({
       <TogglableTabsComponent activeTabId={this.state.activeTabId}
         className="container-fluid">
         <TabPaneComponent id="apps">
-          <a href="#newapp" className="btn btn-success navbar-btn" >
+          <div className="col-xs-8 col-sm-3">
+            <AppSearchComponent onSearch={this.setCollectionFilter} />
+          </div>
+          <a href="#newapp" className="btn btn-success navbar-btn pull-right">
             + New App
           </a>
           <AppListComponent
-            collection={this.state.collection}
+            collection={this.getFilteredCollection()}
             fetchState={this.state.fetchState}
             router={this.props.router} />
         </TabPaneComponent>
