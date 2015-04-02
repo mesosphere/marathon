@@ -1,4 +1,4 @@
-FROM mesosphere/mesos:0.21.1-1.1.ubuntu1404
+FROM mesosphere/mesos:0.22.0-1.0.ubuntu1404
 
 RUN apt-get update && \
     apt-get upgrade -y && \
