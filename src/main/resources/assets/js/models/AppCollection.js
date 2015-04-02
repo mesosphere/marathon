@@ -14,6 +14,14 @@ var AppCollection = SortableCollection.extend({
     return response.apps;
   },
 
+  filterById: function (searchValue) {
+    var filteredCollection = this.filter(function (app) {
+      return app.id.indexOf(searchValue) > -1;
+    });
+
+    return new AppCollection(filteredCollection);
+  },
+
   url: "/v2/apps"
 });
 
