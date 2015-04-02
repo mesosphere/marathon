@@ -132,6 +132,9 @@ trait Formats
   def minValue[A](min: A)(implicit O: Ordering[A], reads: Reads[A]): Reads[A] =
     Reads.filterNot[A](ValidationError(s"value must not be less than $min"))(x => O.lt(x, min))(reads)
 
+  def greaterThan[A](x: A)(implicit Ord: Ordering[A], reads: Reads[A]): Reads[A] =
+    Reads.filter[A](ValidationError(s"value must be greater than $x"))(y => Ord.gt(y, x))(reads)
+
   def enumFormat[A <: java.lang.Enum[A]](read: String => A, errorMsg: String => String): Format[A] = {
     val reads = Reads[A] {
       case JsString(str) =>
@@ -347,7 +350,7 @@ trait AppDefinitionFormats {
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, String]].withDefault(DefaultEnv) ~
       (__ \ "instances").readNullable[Integer](minValue(0)).withDefault(DefaultInstances) ~
-      (__ \ "cpus").readNullable[JDouble].withDefault(DefaultCpus) ~
+      (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)).withDefault(DefaultCpus) ~
       (__ \ "mem").readNullable[JDouble].withDefault(DefaultMem) ~
       (__ \ "disk").readNullable[JDouble].withDefault(DefaultDisk) ~
       (__ \ "executor").readNullable[String](Reads.pattern(executorPattern)).withDefault(DefaultExecutor) ~
@@ -436,7 +439,7 @@ trait AppDefinitionFormats {
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, String]] ~
       (__ \ "instances").readNullable[Integer](minValue(0)) ~
-      (__ \ "cpus").readNullable[JDouble] ~
+      (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)) ~
       (__ \ "mem").readNullable[JDouble] ~
       (__ \ "disk").readNullable[JDouble] ~
       (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)) ~
