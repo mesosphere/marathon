@@ -32,7 +32,14 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
   def broadcast(event: MarathonEvent): Unit = {
     log.info("POSTing to all endpoints.")
     (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].foreach {
-      _.urls.foreach { post(_, event) }
+      _.urls.foreach { (url: String) =>
+        try {
+          post(url, event)
+        }
+        catch {
+          case e: Exception => log.error(s"Failed to post $event to $url: $e")
+        }
+      }
     }
   }
 
@@ -48,7 +55,6 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
           log.warning(s"Failed to post $event to $urlString")
 
       case Failure(t) =>
-        log.warning(s"Failed to post $event to $urlString")
         throw t
     }
   }
