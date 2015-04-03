@@ -7,6 +7,7 @@ import mesosphere.marathon.{
   AppLockedException,
   BadRequestException,
   ConflictingChangeException,
+  InvalidQueryException,
   UnknownAppException
 }
 import mesosphere.marathon.state.Identifiable
@@ -44,6 +45,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: BadRequestException        => 400 // Bad Request
     case e: JsonParseException         => 400 // Bad Request
     case e: JsResultException          => 400 // Bad Request
+    case e: InvalidQueryException      => 400 // Bad Request
     case e: WebApplicationException    => e.getResponse.getStatus
     case _                             => 500 // Internal server error
   }
@@ -60,6 +62,8 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       Map("message" -> e.getOriginalMessage)
     case e: JsResultException =>
       Map("message" -> s"Invalid JSON: ${e.getMessage}")
+    case e: InvalidQueryException =>
+      Map("message" -> s"Invalid Query: ${e.getMessage}")
     case e: WebApplicationException =>
       if (e.getResponse.getEntity != null) {
         Map("message" -> e.getResponse.getEntity)

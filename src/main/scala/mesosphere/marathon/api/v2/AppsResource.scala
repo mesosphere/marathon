@@ -17,7 +17,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.{ DeploymentStep, RestartApplication, DeploymentPlan }
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ ConflictingChangeException, InvalidQueryException, MarathonConf, MarathonSchedulerService }
 import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.json.{ Writes, JsObject, Json }
 
@@ -46,8 +46,14 @@ class AppsResource @Inject() (
   @Timed
   def index(@QueryParam("cmd") cmd: String,
             @QueryParam("id") id: String,
-            @QueryParam("embed") embed: String): String = {
-    val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
+            @QueryParam("embed") embed: String,
+            @QueryParam("labels") labels: String): String = {
+    val apps = if (cmd != null || id != null || labels != null) {
+      search(cmd, id, Option(labels))
+    }
+    else {
+      service.listApps()
+    }
     val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
     val mapped = embed match {
       case EmbedTasks =>
@@ -300,10 +306,37 @@ class AppsResource @Inject() (
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
-  private def search(cmd: String, id: String): Iterable[AppDefinition] = {
+  type LabelMatcher = (Map[String, String]) => Boolean
+
+  private def labelMatcher(labels: String): LabelMatcher = {
+    if (labels.indexOf(",,") != -1)
+      throw new InvalidQueryException(labels)
+
+    val pairs = for (pair <- labels.split(",")) yield pair.split("=")
+    val queryLabels = pairs.collect {
+      case Array(x, y, _*) => (x, y)
+    }.toMap
+
+    def matcher(appLabels: Map[String, String]): Boolean = {
+      val matches = for ((k, v) <- queryLabels) yield {
+        if (appLabels.contains(k) && appLabels(k) == v) {
+          true
+        }
+        else {
+          false
+        }
+      }
+      matches.size > 0 && !matches.exists(_ == false)
+    }
+    matcher
+  }
+
+  private def search(cmd: String, id: String, labels: Option[String]): Iterable[AppDefinition] = {
     /* Returns true iff `a` is a prefix of `b`, case-insensitively */
     def isPrefix(a: String, b: String): Boolean =
       b.toLowerCase contains a.toLowerCase
+
+    val matcher = labelMatcher(labels.getOrElse(""))
 
     service.listApps().filter { app =>
       val appMatchesCmd =
@@ -315,7 +348,9 @@ class AppsResource @Inject() (
         id != null &&
           id.nonEmpty && isPrefix(id, app.id.toString)
 
-      appMatchesCmd || appMatchesId
+      val appMatchesLabelQuery = matcher(app.labels)
+
+      appMatchesCmd || appMatchesId || appMatchesLabelQuery
     }
   }
 }
