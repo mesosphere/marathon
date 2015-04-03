@@ -79,6 +79,16 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
       "reconciliation operations.",
     default = Some(300000L)) // 300 seconds (5 minutes)
 
+  lazy val scaleAppsInitialDelay = opt[Long]("scale_apps_initial_delay",
+    descr = "This is the length of time, in milliseconds, before Marathon " +
+      "begins to periodically attempt to scale apps",
+    default = Some(15000L)) // 15 seconds
+
+  lazy val scaleAppsInterval = opt[Long]("scale_apps_interval",
+    descr = "This is the length of time, in milliseconds, between task " +
+      "scale apps.",
+    default = Some(300000L)) // 300 seconds (5 minutes)
+
   lazy val marathonStoreTimeout = opt[Long]("marathon_store_timeout",
     descr = "Maximum time, in milliseconds, to wait for persistent storage " +
       "operations to complete.",

@@ -146,8 +146,37 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       awaitAssert({
         verify(tracker).shutdown("nope".toPath)
-        verify(queue).add(app, 1)
         verify(driver).killTask(TaskID("task_a"))
+      }, 5.seconds, 10.millis)
+    }
+    finally {
+      stopActor(schedulerActor)
+    }
+  }
+
+  test("ScaleApps") {
+    val app = AppDefinition(id = "test-app".toPath, instances = 1)
+    val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
+
+    when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
+    when(tracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(tracker.list).thenReturn(
+      mutable.HashMap(
+        PathId("nope") -> new TaskTracker.App(
+          "nope".toPath,
+          tasks,
+          false)))
+    when(tracker.get("nope".toPath)).thenReturn(tasks)
+    when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
+    when(tracker.count(app.id)).thenReturn(0)
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! Start
+      schedulerActor ! ScaleApps
+
+      awaitAssert({
+        verify(queue).add(app, 1)
       }, 5.seconds, 10.millis)
     }
     finally {

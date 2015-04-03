@@ -127,6 +127,8 @@ class MarathonSchedulerActor(
     case ReconcileHealthChecks =>
       scheduler.reconcileHealthChecks()
 
+    case ScaleApps => scheduler.scaleApps()
+
     case cmd @ ScaleApp(appId) =>
       val origSender = sender()
       withLockFor(appId) {
@@ -340,6 +342,8 @@ object MarathonSchedulerActor {
 
   case object ReconcileHealthChecks
 
+  case object ScaleApps
+
   case class ScaleApp(appId: PathId) extends Command {
     def answer: Event = AppScaled(appId)
   }
@@ -432,6 +436,13 @@ class SchedulerActions(
     }
   }
 
+  def scaleApps(): Future[Unit] = {
+    appRepository.allPathIds().map(_.toSet).andThen {
+      case Success(appIds) => { for (appId <- appIds) schedulerActor ! ScaleApp(appId) }
+      case Failure(t)      => log.warn("Failed to get task names", t)
+    }.map(_ => ())
+  }
+
   /**
     * Make sure all apps are running the configured amount of tasks.
     *
@@ -443,8 +454,6 @@ class SchedulerActions(
     appRepository.allPathIds().map(_.toSet).andThen {
       case Success(appIds) =>
         log.info("Syncing tasks for all apps")
-
-        for (appId <- appIds) schedulerActor ! ScaleApp(appId)
 
         val knownTaskStatuses = appIds.flatMap { appId =>
           taskTracker.get(appId).collect {

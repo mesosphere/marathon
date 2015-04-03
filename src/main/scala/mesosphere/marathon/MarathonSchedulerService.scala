@@ -64,7 +64,15 @@ class MarathonSchedulerService @Inject() (
   val reconciliationInterval =
     Duration(config.reconciliationInterval(), MILLISECONDS)
 
-  private[mesosphere] var reconciliationTimer = newTimer()
+  // Time to wait before trying to scale apps after driver starts
+  val scaleAppsInitialDelay =
+    Duration(config.scaleAppsInitialDelay(), MILLISECONDS)
+
+  // Interval between attempts to scale apps
+  val scaleAppsInterval =
+    Duration(config.scaleAppsInterval(), MILLISECONDS)
+
+  private[mesosphere] var timer = newTimer()
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -89,7 +97,7 @@ class MarathonSchedulerService @Inject() (
   implicit val timeout: Timeout = 5.seconds
 
   protected def newDriver() = MarathonSchedulerDriver.newDriver(config, httpConfig, scheduler, frameworkId)
-  protected def newTimer() = new Timer("reconciliationTimer")
+  protected def newTimer() = new Timer("marathonSchedulerTimer")
 
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
     log.info(s"Deploy plan:$plan with force:$force")
@@ -165,8 +173,8 @@ class MarathonSchedulerService @Inject() (
 
     stopDriver()
 
-    log.info("Cancelling reconciliation timer")
-    reconciliationTimer.cancel()
+    log.info("Cancelling timer")
+    timer.cancel()
 
     log.info("Removing the blocking of run()")
 
@@ -279,8 +287,8 @@ class MarathonSchedulerService @Inject() (
 
     schedulerActor ! Suspend(LostLeadershipException("Leadership was defeated"))
 
-    reconciliationTimer.cancel()
-    reconciliationTimer = newTimer()
+    timer.cancel()
+    timer = newTimer()
 
     // Our leadership has been defeated. Thus, update leadership and stop the driver.
     // Note that abdication command will be ran upon driver shutdown.
@@ -297,7 +305,7 @@ class MarathonSchedulerService @Inject() (
 
     schedulerActor ! Start
 
-    // Start the timer that handles reconciliation
+    // Start the timer
     schedulePeriodicOperations()
   }
 
@@ -344,7 +352,21 @@ class MarathonSchedulerService @Inject() (
   }
 
   private def schedulePeriodicOperations(): Unit = {
-    reconciliationTimer.schedule(
+
+    timer.schedule(
+      new TimerTask {
+        def run() {
+          if (isLeader) {
+            schedulerActor ! ScaleApps
+          }
+          else log.info("Not leader therefore not scaling apps")
+        }
+      },
+      scaleAppsInitialDelay.toMillis,
+      scaleAppsInterval.toMillis
+    )
+
+    timer.schedule(
       new TimerTask {
         def run() {
           if (isLeader) {
@@ -361,7 +383,7 @@ class MarathonSchedulerService @Inject() (
     // Tasks are only expunged once after the application launches
     // Wait until reconciliation is definitely finished so that we are guaranteed
     // to have loaded in all apps
-    reconciliationTimer.schedule(
+    timer.schedule(
       new TimerTask {
         def run() {
           if (isLeader) {
