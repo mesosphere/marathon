@@ -48,8 +48,7 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
           log.warning(s"Failed to post $event to $urlString")
 
       case Failure(t) =>
-        log.warning(s"Failed to post $event to $urlString")
-        throw t
+        log.warning(s"Failed to post $event to $urlString", t)
     }
   }
 
