@@ -113,6 +113,8 @@ The Web Site flags control the behavior of Marathon's web site, including the us
     contain a colon (:). May also be specified with the `MESOSPHERE_HTTP_CREDENTIALS` environment variable. 
 * `--http_port` (Optional. Default: 8080): The port on which to listen for HTTP
     requests.
+* `--disable_http` (Optional.): Disable HTTP completely. This is only allowed if you configure HTTPS.
+    HTTPS stays enabled.
 * `--https_port` (Optional. Default: 8443): The port on which to listen for
     HTTPS requests. Only used if `--ssl_keystore_path` and `--ssl_keystore_password` are set.
 * `--http_realm` (Optional. Default: Mesosphere): The security realm (aka 'area') associated with the credentials
