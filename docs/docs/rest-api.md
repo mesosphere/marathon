@@ -2036,6 +2036,7 @@ HTTP/1.1 200 OK
 Content-Length: 0
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
+{% endhighlight %}
 
 ### Deployments
 
