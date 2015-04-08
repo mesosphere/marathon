@@ -306,37 +306,12 @@ class AppsResource @Inject() (
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
-  type LabelMatcher = (Map[String, String]) => Boolean
-
-  private def labelMatcher(labels: String): LabelMatcher = {
-    if (labels.indexOf(",,") != -1)
-      throw new InvalidQueryException(labels)
-
-    val pairs = for (pair <- labels.split(",")) yield pair.split("=")
-    val queryLabels = pairs.collect {
-      case Array(x, y, _*) => (x, y)
-    }.toMap
-
-    def matcher(appLabels: Map[String, String]): Boolean = {
-      val matches = for ((k, v) <- queryLabels) yield {
-        if (appLabels.contains(k) && appLabels(k) == v) {
-          true
-        }
-        else {
-          false
-        }
-      }
-      matches.size > 0 && !matches.exists(_ == false)
-    }
-    matcher
-  }
-
   private def search(cmd: String, id: String, labels: Option[String]): Iterable[AppDefinition] = {
     /* Returns true iff `a` is a prefix of `b`, case-insensitively */
     def isPrefix(a: String, b: String): Boolean =
       b.toLowerCase contains a.toLowerCase
 
-    val matcher = labelMatcher(labels.getOrElse(""))
+    val matcher = AppsResourceUtils.labelMatcher(labels.getOrElse(""))
 
     service.listApps().filter { app =>
       val appMatchesCmd =
@@ -352,6 +327,28 @@ class AppsResource @Inject() (
 
       appMatchesCmd || appMatchesId || appMatchesLabelQuery
     }
+  }
+}
+
+object AppsResourceUtils {
+  type LabelMatcher = (Map[String, String]) => Boolean
+
+  def labelMatcher(labels: String): LabelMatcher = {
+    if (labels.indexOf(",,") != -1)
+      throw new InvalidQueryException(labels)
+
+    val pairs = for (pair <- labels.split(",")) yield pair.split("=")
+    val queryLabels = pairs.collect {
+      case Array(x, y, _*) => (x, y)
+    }.toMap
+
+    def matcher(appLabels: Map[String, String]): Boolean = {
+      val matches = for ((k, v) <- queryLabels) yield {
+        appLabels.contains(k) && appLabels(k) == v
+      }
+      matches.size > 0 && !matches.exists(_ == false)
+    }
+    matcher
   }
 }
 
