@@ -73,6 +73,11 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     reconciliation operations.
 * `--reconciliation_interval` (Optional. Default: 300000 (5 minutes)): The
     period, in milliseconds, between task reconciliation operations.
+* `--scale_apps_initial_delay` (Optional. Default: 15000 (15 seconds)): The
+    delay, in milliseconds, before Marathon begins to periodically perform
+    application scaling operations.
+* `--scale_apps_interval` (Optional. Default: 300000 (5 minutes)): The period,
+    in milliseconds, between application scaling operations.
 * `--task_launch_timeout` **DEPRECATED** (Optional. Default: 300000 (5 minutes)):
     Time, in milliseconds, to wait for a task to enter the TASK_RUNNING state
     before killing it. _Note: This is a temporary fix for MESOS-1922.
