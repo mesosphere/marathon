@@ -75,8 +75,7 @@ function load_options_and_log {
 
   if [[ "${cmd[@]} $@" == *'--no-logger'* ]]
   then
-    params=$(echo "$@"|sed 's/--no-logger//g') 
-    "${cmd[@]}" ${params}
+    "${cmd[@]}" ${@//--no-logger/}
   else
     logged marathon "${cmd[@]}" "$@"
   fi
