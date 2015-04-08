@@ -28,6 +28,7 @@ title: REST API
   * [DELETE /v2/groups/{groupId}](#delete-/v2/groups/{groupid}): Destroy a group
 * [Tasks](#tasks)
   * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
+  * [POST /v2/tasks/delete](#post-/v2/tasks/delete): Kill given list of tasks
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
   * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Cancel the deployment with `deploymentId`
@@ -111,6 +112,9 @@ The full JSON format of an application resource is as follows:
     "constraints": [
         ["attribute", "OPERATOR", "value"]
     ],
+    "labels": {
+        "environment": "staging"
+    },
     "healthChecks": [
         {
             "protocol": "HTTP",
@@ -144,6 +148,8 @@ The full JSON format of an application resource is as follows:
     "backoffFactor": 1.15,
     "maxLaunchDelaySeconds": 3600,
     "tasksRunning": 3,
+    "tasksHealthy": 3,
+    "tasksUnhealthy": 0,
     "tasksStaged": 0,
     "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
@@ -188,6 +194,13 @@ The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${
 Valid constraint operators are one of ["UNIQUE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
 the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
+
+##### labels
+
+Attaching metadata to apps can be useful to expose additional information
+to other services, so we added the ability to place labels on apps
+(for example, you could label apps "staging" and "production" to mark
+services by their position in the pipeline).
 
 ##### container
 
@@ -354,7 +367,7 @@ User-Agent: HTTPie/0.8.0
     ],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
-        "maximumOverCapacity": 0.5
+        "minimumOverCapacity": 0.5
     }
 }
 {% endhighlight json %}
@@ -390,6 +403,11 @@ Transfer-Encoding: chunked
     },
     "cpus": 0.25,
     "dependencies": [],
+    "deployments": [
+        {
+            "id": "f44fd4fc-4330-4600-a68b-99c7bd33014a"
+        }
+    ],
     "disk": 0.0,
     "env": {},
     "executor": "",
@@ -415,7 +433,7 @@ Transfer-Encoding: chunked
     "storeUrls": [],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
-        "maximumOverCapacity": 0.5
+        "minimumOverCapacity": 0.5
     },
     "uris": [],
     "user": null,
@@ -545,6 +563,8 @@ Transfer-Encoding: chunked
             "requirePorts": false,
             "storeUrls": [],
             "tasksRunning": 2,
+            "tasksHealthy": 2,
+            "tasksUnhealthy": 0,
             "tasksStaged": 0,
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
@@ -632,6 +652,8 @@ Transfer-Encoding: chunked
                 }
             ],
             "tasksRunning": 0,
+            "tasksHealthy": 0,
+            "tasksUnhealthy": 0,
             "tasksStaged": 1,
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
@@ -757,6 +779,8 @@ Transfer-Encoding: chunked
             }
         ],
         "tasksRunning": 2,
+        "tasksHealthy": 2,
+        "tasksUnhealthy": 0,
         "tasksStaged": 0,
         "upgradeStrategy": {
             "minimumHealthCapacity": 1.0
@@ -1449,7 +1473,7 @@ Content-Type: application/json
 Content-Length: 273
 
 {
-  "id": "product",
+  "id" : "product",
   "apps":[
     {
       "id": "myapp",
@@ -1461,6 +1485,76 @@ Content-Length: 273
 {% endhighlight %}
 
 **Response:**
+
+{% highlight http %}
+HTTP/1.1 201 Created
+Location: http://localhost:8080/v2/groups/product
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(8.y.z-SNAPSHOT)
+{"version":"2014-07-01T10:20:50.196Z"}
+{% endhighlight %}
+
+Create and start a new application group.
+Application groups can contain other application groups.
+An application group can either hold other groups or applications, but can not be mixed in one.
+
+The JSON format of a group resource is as follows:
+
+```json
+{
+  "id": "product",
+  "groups": [{
+    "id": "service",
+    "groups": [{
+      "id": "us-east",
+      "apps": [{
+        "id": "app1",
+        "cmd": "someExecutable"
+      }, 
+      {
+        "id": "app2",
+        "cmd": "someOtherExecutable"
+      }]
+    }],
+    "dependencies": ["/product/database", "../backend"]
+  }
+],
+"version": "2014-03-01T23:29:30.158Z"
+}
+```
+
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
+The failure or success of the action is signalled via event. There is a
+`group_change_success` and `group_change_failed` event with the given version.
+
+
+### Example
+
+**Request:**
+
+{% highlight http %}
+POST /v2/groups HTTP/1.1
+User-Agent: curl/7.35.0
+Accept: application/json
+Host: localhost:8080
+Content-Type: application/json
+Content-Length: 273
+
+{
+  "id" : "product",
+  "apps":[
+    {
+      "id": "myapp",
+      "cmd": "ruby app2.rb",
+      "instances": 1
+    }
+  ]
+}
+{% endhighlight %}
+
+**Response:**
+
 
 {% highlight http %}
 HTTP/1.1 201 Created
@@ -1614,6 +1708,87 @@ Transfer-Encoding: chunked
 {
     "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231",
     "version": "2014-08-28T16:45:41.063Z"
+}
+{% endhighlight %}
+
+### Example
+
+Deployment dry run.
+
+Get a preview of the deployment steps Marathon would run for a given group update.
+
+**Request:**
+
+{% highlight http %}
+PUT /v2/groups/product?dryRun=true HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+
+{
+    "id": "product",
+    "groups": [{
+        "id": "service",
+        "groups": [{
+            "id": "us-east",
+            "apps": [
+                {
+                    "id": "app1",
+                    "cmd": "someExecutable"
+                },
+                {
+                    "id": "app2",
+                    "cmd": "someOtherExecutable"
+                }
+            ]
+        }],
+        "dependencies": ["/product/database", "../backend"]
+    }],
+    "version": "2014-03-01T23:29:30.158Z"
+}
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "steps" : [
+        {
+            "actions" : [
+                {
+                    "app" : "app1",
+                    "type" : "StartApplication"
+                },
+                {
+                    "app" : "app2",
+                    "type" : "StartApplication"
+                }
+            ]
+        },
+        {
+            "actions" : [
+                {
+                    "type" : "ScaleApplication",
+                    "app" : "app1"
+                }
+            ]
+        },
+        {
+            "actions" : [
+                {
+                    "app" : "app2",
+                    "type" : "ScaleApplication"
+                }
+            ]
+        }
+    ]
 }
 {% endhighlight %}
 
@@ -1777,6 +1952,60 @@ my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382
 my-app2  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383 
 {% endhighlight %}
 
+#### POST `/v2/tasks/delete`
+
+Kill the given list of tasks and scale apps if requested.
+
+##### Parameters
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>scale</code></td>
+      <td><code>boolean</code></td>
+      <td>Scale the app down (i.e. decrement its <code>instances</code> setting
+        by the number of tasks killed) after killing the specified tasks.
+        Default: <code>false</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+##### Example (as JSON)
+
+**Request:**
+
+{% highlight http %}
+POST /v2/tasks/delete HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Content-Type: application/json; charset=utf-8
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+{
+    "ids": [
+        "task.25ab260e-b5ec-11e4-a4f4-685b35c8a22e",
+        "task.5e7b39d4-b5f0-11e4-8021-685b35c8a22e",
+        "task.a21cb64a-b5eb-11e4-a4f4-685b35c8a22e"
+    ]
+}
+
+{% endhighlight %}
+
+**Response:**
+
+{% highlight http %}
+HTTP/1.1 200 OK
+Content-Length: 0
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+
 ### Deployments
 
 <span class="label label-default">v0.7.0</span>
@@ -1825,7 +2054,7 @@ Transfer-Encoding: chunked
         ],
         "version": "2014-08-26T08:18:03.595Z",
         "currentStep": 1,
-        "totalSteps": 1
+        "totalSteps" 1
     }
 ]
 {% endhighlight %}
@@ -2078,37 +2307,41 @@ Transfer-Encoding: chunked
 {
     "queue": [
         {
-            "app": {
-                "args": null,
-                "backoffFactor": 1.15,
-                "backoffSeconds": 1,
-                "maxLaunchDelaySeconds": 3600,
-                "cmd": "python toggle.py $PORT0",
-                "constraints": [],
-                "container": null,
-                "cpus": 0.2,
-                "dependencies": [],
-                "disk": 0.0,
-                "env": {},
-                "executor": "",
-                "healthChecks": [],
-                "id": "/test",
-                "instances": 3,
-                "mem": 32.0,
-                "ports": [10000],
-                "requirePorts": false,
-                "storeUrls": [],
-                "upgradeStrategy": {
-                    "minimumHealthCapacity": 1.0,
-                    "maximumOverCapacity": 1.0
-                },
-                "uris": [
-                    "http://downloads.mesosphere.com/misc/toggle.tgz"
+            "count" : 10,
+            "delay": {
+              "overdue": "true"
+            }
+            "app" : {
+                "cmd" : "tail -f /dev/null",
+                "backoffSeconds" : 1,
+                "healthChecks" : [],
+                "storeUrls" : [],
+                "constraints" : [],
+                "env" : {},
+                "cpus" : 0.1,
+                "labels" : {},
+                "instances" : 10,
+                "ports" : [
+                   10000
                 ],
-                "user": null,
-                "version": "2014-08-26T05:04:49.766Z"
-            },
-            "delay": { "overdue": true }
+                "requirePorts" : false,
+                "uris" : [],
+                "container" : null,
+                "backoffFactor" : 1.15,
+                "args" : null,
+                "version" : "2015-02-09T10:49:59.831Z",
+                "maxLaunchDelaySeconds" : 3600,
+                "upgradeStrategy" : {
+                   "minimumHealthCapacity" : 1,
+                   "maximumOverCapacity" : 1
+                },
+                "dependencies" : [],
+                "mem" : 16,
+                "id" : "/foo",
+                "disk" : 0,
+                "executor" : "",
+                "user" : null
+            }
         }
     ]
 }

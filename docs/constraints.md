@@ -38,7 +38,7 @@ $ marathon start -i sleep -C 'sleep 60' -n 3 --constraint hostname:UNIQUE
 via curl:
 
 ``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
     "id": "sleep-unique",
     "cmd": "sleep 60",
     "instances": 3,
@@ -59,7 +59,7 @@ $ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:CLUSTER:rack-1
 via curl:
 
 ``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
     "id": "sleep-cluster",
     "cmd": "sleep 60",
     "instances": 3,
@@ -70,7 +70,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 You can also use this attribute to tie an application to a specific node by using the hostname property:
 
 ``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
     "id": "sleep-cluster",
     "cmd": "sleep 60",
     "instances": 3,
@@ -91,7 +91,7 @@ $ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:GROUP_BY
 via curl:
 
 ``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
     "id": "sleep-group-by",
     "cmd": "sleep 60",
     "instances": 3,
@@ -114,7 +114,7 @@ $ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:LIKE:rack-[1-3
 via curl:
 
 ``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
     "id": "sleep-group-by",
     "cmd": "sleep 60",
     "instances": 3,
@@ -137,7 +137,7 @@ $ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:UNLIKE:rack-[7
 via curl:
 
 ``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v1/apps/start -d '{
     "id": "sleep-group-by",
     "cmd": "sleep 60",
     "instances": 3,
