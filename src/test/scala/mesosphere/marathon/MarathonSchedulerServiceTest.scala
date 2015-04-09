@@ -33,12 +33,16 @@ object MarathonSchedulerServiceTest {
 
   val ReconciliationDelay = 5000L
   val ReconciliationInterval = 5000L
+  val ScaleAppsDelay = 4000L
+  val ScaleAppsInterval = 4000L
 
   def mockConfig = {
     val config = mock(classOf[MarathonConf])
 
     when(config.reconciliationInitialDelay).thenReturn(scallopOption(Some(ReconciliationDelay)))
     when(config.reconciliationInterval).thenReturn(scallopOption(Some(ReconciliationInterval)))
+    when(config.scaleAppsInitialDelay).thenReturn(scallopOption(Some(ScaleAppsDelay)))
+    when(config.scaleAppsInterval).thenReturn(scallopOption(Some(ScaleAppsInterval)))
     when(config.zkFutureTimeout).thenReturn(Timeout(1.second))
 
     config
@@ -89,7 +93,7 @@ class MarathonSchedulerServiceTest
   }
 
   test("Start timer when elected") {
-    val timer = mock[Timer]
+    val mockTimer = mock[Timer]
 
     when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
 
@@ -111,16 +115,16 @@ class MarathonSchedulerServiceTest
       override def newDriver() = mock[SchedulerDriver]
     }
 
-    schedulerService.reconciliationTimer = timer
+    schedulerService.timer = mockTimer
 
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
-    verify(timer).schedule(any[TimerTask](), mockEq(ReconciliationDelay), mockEq(ReconciliationInterval))
-    verify(timer).schedule(any(), mockEq(ReconciliationDelay + ReconciliationInterval))
+    verify(mockTimer).schedule(any[TimerTask](), mockEq(ReconciliationDelay), mockEq(ReconciliationInterval))
+    verify(mockTimer).schedule(any(), mockEq(ReconciliationDelay + ReconciliationInterval))
   }
 
   test("Cancel timer when defeated") {
-    val timer = mock[Timer]
+    val mockTimer = mock[Timer]
 
     when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
 
@@ -142,16 +146,16 @@ class MarathonSchedulerServiceTest
       override def newDriver() = mock[SchedulerDriver]
     }
 
-    schedulerService.reconciliationTimer = timer
+    schedulerService.timer = mockTimer
 
     schedulerService.onDefeated()
 
-    verify(timer).cancel()
-    assert(schedulerService.reconciliationTimer != timer, "timer should be replaced after leadership defeat")
+    verify(mockTimer).cancel()
+    assert(schedulerService.timer != mockTimer, "Timer should be replaced after leadership defeat")
   }
 
   test("Re-enable timer when re-elected") {
-    val timer = mock[Timer]
+    val mockTimer = mock[Timer]
 
     when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
 
@@ -171,7 +175,7 @@ class MarathonSchedulerServiceTest
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
       override def newDriver() = mock[SchedulerDriver]
-      override def newTimer() = timer
+      override def newTimer() = mockTimer
     }
 
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
@@ -180,14 +184,15 @@ class MarathonSchedulerServiceTest
 
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
-    verify(timer, times(2)).schedule(any[TimerTask](), mockEq(ReconciliationDelay), mockEq(ReconciliationInterval))
-    verify(timer, times(2)).schedule(any(), mockEq(ReconciliationDelay + ReconciliationInterval))
-    verify(timer).cancel()
+    verify(mockTimer, times(2)).schedule(any(), mockEq(ScaleAppsDelay), mockEq(ScaleAppsInterval))
+    verify(mockTimer, times(2)).schedule(any[TimerTask](), mockEq(ReconciliationDelay), mockEq(ReconciliationInterval))
+    verify(mockTimer, times(2)).schedule(any(), mockEq(ReconciliationDelay + ReconciliationInterval))
+    verify(mockTimer).cancel()
   }
 
   test("Always fetch current framework ID") {
     val frameworkId = mesos.FrameworkID.newBuilder.setValue("myId").build()
-    val timer = mock[Timer]
+    val mockTimer = mock[Timer]
 
     frameworkIdUtil = new FrameworkIdUtil(new InMemoryState)
 
@@ -207,7 +212,7 @@ class MarathonSchedulerServiceTest
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
       override def newDriver() = mock[SchedulerDriver]
-      override def newTimer() = timer
+      override def newTimer() = mockTimer
     }
 
     schedulerService.frameworkId should be(None)
@@ -219,7 +224,7 @@ class MarathonSchedulerServiceTest
   }
 
   test("Abdicate leadership when migration fails and reoffer leadership") {
-    val timer = mock[Timer]
+    val mockTimer = mock[Timer]
 
     when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
     candidate = Some(mock[Candidate])
