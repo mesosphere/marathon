@@ -111,13 +111,17 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * `--assets_path` (Optional. Default: None): Local file system path from which
     to load assets for the web UI. If not supplied, assets are loaded from the
     packaged JAR.
-* `--http_address` (Optional. Default: None): The address on which to listen
+* `--http_address` (Optional. Default: all): The address on which to listen
     for HTTP requests.
 * `--http_credentials` (Optional. Default: None): Credentials for accessing the
     HTTP service in the format of `username:password`. The username may not
     contain a colon (:). May also be specified with the `MESOSPHERE_HTTP_CREDENTIALS` environment variable. 
 * `--http_port` (Optional. Default: 8080): The port on which to listen for HTTP
     requests.
+* `--disable_http` (Optional.): Disable HTTP completely. This is only allowed if you configure HTTPS.
+    HTTPS stays enabled.
+* `--https_address` (Optional. Default: all): The address on which to listen
+    for HTTPS requests.
 * `--https_port` (Optional. Default: 8443): The port on which to listen for
     HTTPS requests. Only used if `--ssl_keystore_path` and `--ssl_keystore_password` are set.
 * `--http_realm` (Optional. Default: Mesosphere): The security realm (aka 'area') associated with the credentials
