@@ -531,37 +531,35 @@ class SchedulerActions(
     * Make sure the app is running the correct number of instances
     */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    taskTracker.get(app.id).synchronized {
-      val currentCount = taskTracker.count(app.id)
-      val targetCount = app.instances
+    val currentCount = taskTracker.count(app.id)
+    val targetCount = app.instances
 
-      if (targetCount > currentCount) {
-        log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
+    if (targetCount > currentCount) {
+      log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
 
-        val queuedCount = taskQueue.count(app.id)
-        val toQueue = targetCount - (currentCount + queuedCount)
+      val queuedCount = taskQueue.count(app.id)
+      val toQueue = targetCount - (currentCount + queuedCount)
 
-        if (toQueue > 0) {
-          log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
-          taskQueue.add(app, toQueue)
-        }
-        else {
-          log.info(s"Already queued $queuedCount tasks for ${app.id}. Not scaling.")
-        }
-      }
-      else if (targetCount < currentCount) {
-        log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
-        taskQueue.purge(app.id)
-
-        val toKill = taskTracker.take(app.id, currentCount - targetCount)
-        log.info(s"Killing tasks: ${toKill.map(_.getId)}")
-        for (task <- toKill) {
-          driver.killTask(protos.TaskID(task.getId))
-        }
+      if (toQueue > 0) {
+        log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
+        taskQueue.add(app, toQueue)
       }
       else {
-        log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")
+        log.info(s"Already queued $queuedCount tasks for ${app.id}. Not scaling.")
       }
+    }
+    else if (targetCount < currentCount) {
+      log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
+      taskQueue.purge(app.id)
+
+      val toKill = taskTracker.take(app.id, currentCount - targetCount)
+      log.info(s"Killing tasks: ${toKill.map(_.getId)}")
+      for (task <- toKill) {
+        driver.killTask(protos.TaskID(task.getId))
+      }
+    }
+    else {
+      log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")
     }
   }
 
