@@ -105,6 +105,7 @@ We heartily welcome external contributions to Marathon's documentation. Document
 
 ## Marathon Clients
 
+* [marathonctl](https://github.com/shoenig/marathonctl) A handy CLI tool for controlling Marathon
 * [Ruby gem and command line client](https://rubygems.org/gems/marathon-api)
 
     Running Chronos with the Ruby Marathon Client:
