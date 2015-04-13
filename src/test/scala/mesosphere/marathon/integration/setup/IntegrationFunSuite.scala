@@ -40,10 +40,9 @@ trait ExternalMarathonIntegrationTest {
     if (sys.env.contains(envName)) sys.env else sys.env + (envName -> config.mesosLib)
   }
 
-  def startMarathon(port: Int, args: String*): MarathonFacade = {
+  def startMarathon(port: Int, args: String*): Unit = {
     val cwd = new File(".")
     ProcessKeeper.startMarathon(cwd, env, List("--http_port", port.toString, "--zk", config.zk) ++ args.toList)
-    new MarathonFacade(s"http://localhost:$port")
   }
 
   def handleEvent(event: CallbackEvent): Unit

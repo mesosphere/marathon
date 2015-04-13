@@ -1,7 +1,6 @@
 package mesosphere.marathon.integration.setup
 
 import java.io.File
-import java.util.concurrent.ConcurrentLinkedQueue
 
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId }
@@ -10,10 +9,9 @@ import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
 import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration.FiniteDuration
-import scala.util.Try
 import scala.collection.JavaConverters._
-import scala.concurrent.duration._
+import scala.concurrent.duration.{ FiniteDuration, _ }
+import scala.util.Try
 
 object SingleMarathonIntegrationTest {
   private val log = LoggerFactory.getLogger(getClass)
@@ -31,7 +29,10 @@ object SingleMarathonIntegrationTest {
   *
   * After the test is finished, everything will be clean up.
   */
-trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with BeforeAndAfterAllConfigMap { self: Suite =>
+trait SingleMarathonIntegrationTest
+    extends ExternalMarathonIntegrationTest
+    with BeforeAndAfterAllConfigMap with MarathonCallbackTestSupport { self: Suite =>
+
   import SingleMarathonIntegrationTest.log
 
   /**
@@ -41,31 +42,42 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
   def config: IntegrationTestConfig = configOption.get
 
   lazy val appMock: AppMockFacade = new AppMockFacade()
-  lazy val marathon: MarathonFacade = new MarathonFacade(s"http://localhost:${config.singleMarathonPort}")
-  val events = new ConcurrentLinkedQueue[CallbackEvent]()
+
+  val testBasePath: PathId = PathId("/marathonintegrationtest")
+  override lazy val marathon: MarathonFacade = new MarathonFacade(config.marathonUrl, testBasePath)
+
+  implicit class PathIdTestHelper(path: String) {
+    def toRootTestPath: PathId = testBasePath.append(path).canonicalPath()
+    def toTestPath: PathId = testBasePath.append(path)
+  }
 
   override protected def beforeAll(configMap: ConfigMap): Unit = {
     log.info("Setting up local mesos/marathon infrastructure...")
     configOption = Some(IntegrationTestConfig(configMap))
     super.beforeAll(configMap)
 
-    ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo")
-    ProcessKeeper.startMesosLocal()
-    cleanMarathonState()
+    if (!config.useExternalSetup) {
+      log.info("Setting up local mesos/marathon infrastructure...")
 
-    startMarathon(config.singleMarathonPort, "--master", config.master, "--event_subscriber", "http_callback")
+      ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo")
+      ProcessKeeper.startMesosLocal()
+      cleanMarathonState()
 
-    ProcessKeeper.startHttpService(config.httpPort, config.cwd)
-    ExternalMarathonIntegrationTest.listener += this
-    marathon.subscribe(s"http://localhost:${config.httpPort}/callback")
-    log.info("Setting up local mesos/marathon infrastructure: done.")
+      startMarathon(config.marathonPort, "--master", config.master, "--event_subscriber", "http_callback")
+      log.info("Setting up local mesos/marathon infrastructure: done.")
+    }
+    else {
+      log.info("Using already running Marathon at {}", config.marathonUrl)
+    }
+
+    startCallbackEndpoint(config.httpPort, config.cwd)
+
   }
 
   override protected def afterAll(configMap: ConfigMap): Unit = {
     super.afterAll(configMap)
     log.info("Cleaning up local mesos/marathon structure...")
-    cleanUp(withSubscribers = true)
-    ExternalMarathonIntegrationTest.listener -= this
+    cleanUp(withSubscribers = !config.useExternalSetup)
     ExternalMarathonIntegrationTest.healthChecks.clear()
     ProcessKeeper.stopAllServices()
     ProcessKeeper.stopAllProcesses()
@@ -89,72 +101,16 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
     zooKeeper.close()
   }
 
-  override def handleEvent(event: CallbackEvent): Unit = events.add(event)
-
-  def waitForEvent(kind: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
-
-  def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    waitForEventWith("deployment_success", _.info.getOrElse("id", "") == deploymentId, maxWait)
-  }
-
-  def waitForChange(change: RestResult[ITDeploymentResult], maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    waitForDeploymentId(change.value.deploymentId, maxWait)
-  }
-
-  def waitForEventMatching(description: String, maxWait: FiniteDuration = 30.seconds)(fn: CallbackEvent => Boolean): CallbackEvent = {
-    def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
-      val event = events.poll()
-      if (fn(event)) Some(event) else None
-    }
-    waitFor(description, maxWait)(nextEvent)
-  }
-
-  def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    waitForEventMatching(s"event $kind to arrive", maxWait) { event =>
-      event.eventType == kind && fn(event)
-    }
-  }
-
   def waitForTasks(appId: PathId, num: Int, maxWait: FiniteDuration = 30.seconds): List[ITEnrichedTask] = {
     def checkTasks: Option[List[ITEnrichedTask]] = {
       val tasks = Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil)
       if (tasks.size == num) Some(tasks) else None
     }
-    waitFor(s"$num tasks to launch", maxWait)(checkTasks)
+    WaitTestSupport.waitFor(s"$num tasks to launch", maxWait)(checkTasks)
   }
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = 30.seconds) = {
-    waitUntil("Health check to get queried", maxWait) { check.pinged }
-  }
-
-  def validFor(description: String, until: FiniteDuration)(valid: => Boolean): Boolean = {
-    val deadLine = until.fromNow
-    def checkValid(): Boolean = {
-      if (!valid) throw new IllegalStateException(s"$description not valid for $until. Give up.")
-      if (deadLine.isOverdue()) true else {
-        Thread.sleep(100)
-        checkValid()
-      }
-    }
-    checkValid()
-  }
-
-  def waitUntil(description: String, maxWait: FiniteDuration)(fn: => Boolean) = {
-    waitFor(description, maxWait) {
-      if (fn) Some(true) else None
-    }
-  }
-
-  def waitFor[T](description: String, maxWait: FiniteDuration)(fn: => Option[T]): T = {
-    val deadLine = maxWait.fromNow
-    def next(): T = {
-      if (deadLine.isOverdue()) throw new AssertionError(s"Waiting for $description took longer than $maxWait. Give up.")
-      fn match {
-        case Some(t) => t
-        case None    => Thread.sleep(100); next()
-      }
-    }
-    next()
+    WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged }
   }
 
   private def appProxyMainInvocationImpl: String = {
@@ -212,8 +168,15 @@ trait SingleMarathonIntegrationTest extends ExternalMarathonIntegrationTest with
   def cleanUp(withSubscribers: Boolean = false, maxWait: FiniteDuration = 30.seconds) {
     events.clear()
     ExternalMarathonIntegrationTest.healthChecks.clear()
-    waitForChange(marathon.deleteRoot(force = true))
-    waitUntil("cleanUp", maxWait) { marathon.listApps.value.isEmpty && marathon.listGroups.value.isEmpty }
+
+    try {
+      waitForChange(marathon.deleteGroup(testBasePath, force = true))
+    }
+    catch {
+      case e: spray.httpx.UnsuccessfulResponseException if e.response.status.intValue == 404 => // ignore
+    }
+
+    WaitTestSupport.waitUntil("cleanUp", maxWait) { marathon.listAppsInBaseGroup.value.isEmpty && marathon.listGroupsInBaseGroup.value.isEmpty }
     if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
     events.clear()
   }

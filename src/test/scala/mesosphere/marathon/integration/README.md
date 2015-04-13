@@ -11,12 +11,16 @@ The integration test infrastructure allows to communicate and control the state 
 ## Single Marathon Test <a name="single"></a> 
 
 There is a special setup, which makes testing a single instance of marathon simple.
-By extending the trait SingleMarathonIntegrationTest, following behaviuor is provided:
+By extending the trait SingleMarathonIntegrationTest, following behavior is provided:
 
-Before the suite runs:
+Before the suite runs (except `useExternalSetup` is true):
 
+- start zookeeper
 - start mesos local
 - start a marathon instance
+
+Before the suite runs even if useExternalSetup is true:
+
 - start a local http service 
 - register the test driver as event callback listener
 - provide a facade, to interact with the marathon instance
@@ -67,6 +71,7 @@ $sbt> integration:test
 
 There are following parameters, that can be used to configure the test setup
 
+- useExternalSetup: Use an already running marathon instance instead of starting one in the test setup.
 - cwd: the working directory, used to launch processes. 
   Default value is .
 - zkPort: the port where a local zookeeper is started
@@ -74,17 +79,19 @@ There are following parameters, that can be used to configure the test setup
 - master: the url of the mesos master to connect from marathon. 
   Default is local.
 - mesosLib: the path to the native mesos library. This parameter will only take effect, 
-  if the environment variable MESOS_NATIVE_LIBRARY is not set.
-  Default value is: /usr/local/lib/libmesos.dylib
+  if the environment variable MESOS_NATIVE_JAVA_LIBRARY is not set.
+  If not set, the java.library.path is searched for matches.
 - httpPort: the port used for the http service to launch.
   Default value is: a random port between 11211 and 11311
-- singleMarathonPort: the port used for the marathon process to start
+- marathonPort: the port used for the marathon process to start
   Default value is: a random port between 8080 and 8180
+- marathonGroup: The marathon group inside which all app definitions created by the integration tests reside.
+  Default value is: /marathon_integration_test
   
 The test config can be given via the command line as:
 
 ```
-$> integration:testOnly mesosphere.marathon.integration.GroupDeployIntegrationTest -- -Dmaster=local -DhttpPort=12345 -Dcwd=/
+$> integration:testOnly mesosphere.marathon.integration.*IntegrationTest -- -Dmaster=local -DhttpPort=12345 -Dcwd=/
 ```
  
 

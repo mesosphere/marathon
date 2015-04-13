@@ -1,6 +1,7 @@
 
 package mesosphere.marathon.integration.setup
 
+import com.google.common.util.concurrent.Service.{ State, Listener }
 import org.apache.commons.io.FileUtils
 
 import scala.sys.ShutdownHookThread
@@ -8,13 +9,13 @@ import scala.sys.process._
 import scala.util.{ Failure, Success, Try }
 import com.google.inject.Guice
 import org.rogach.scallop.ScallopConf
-import com.google.common.util.concurrent.Service
+import com.google.common.util.concurrent.{ AbstractIdleService, Service }
 import mesosphere.chaos.http.{ HttpService, HttpConf, HttpModule }
 import mesosphere.chaos.metrics.MetricsModule
 import java.io.File
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ Executor, TimeUnit }
 import org.apache.log4j.Logger
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.{ duration, Await, Promise }
 import scala.concurrent.duration._
 
 /**
@@ -99,6 +100,16 @@ object ProcessKeeper {
         throw new IllegalStateException(s"Process does not came up within time bounds ($timeout). Give up. $processBuilder")
     }
     process
+  }
+
+  def onStopServices(block: => Unit): Unit = {
+    services ::= new AbstractIdleService {
+      override def shutDown(): Unit = {
+        block
+      }
+
+      override def startUp(): Unit = {}
+    }
   }
 
   def stopOSProcesses(grep: String): Unit = {

@@ -1,8 +1,7 @@
 package mesosphere.marathon.integration
 
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ PathId, AppDefinition }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsArray
@@ -28,8 +27,9 @@ class AppDeployIntegrationTest
   private def createAndDeployAnAppWithTwoTasksImpl(): Unit = {
     Given("a new app")
     log.info("new app")
-    val appId: String = "/test/app"
-    val app = appProxy(appId.toRootPath, "v1", instances = 2, withHealth = false)
+    val appIdPath: PathId = testBasePath / "/test/app"
+    val appId: String = appIdPath.toString
+    val app = appProxy(appIdPath, "v1", instances = 2, withHealth = false)
 
     When("the app gets posted")
     log.info("new app")
@@ -49,7 +49,7 @@ class AppDeployIntegrationTest
       be(appId)
 
     val groupChangeSuccess = waitForEvent("group_change_success")
-    groupChangeSuccess.info("groupId").asInstanceOf[String] should be("/test")
+    groupChangeSuccess.info("groupId").asInstanceOf[String] should be(appIdPath.parent.toString)
 
     waitForEvent("deployment_info")
 
@@ -64,7 +64,7 @@ class AppDeployIntegrationTest
     deploymentSuccess.info("id") should be(deploymentId)
 
     Then("after that deployments should be empty")
-    val event: RestResult[List[Deployment]] = marathon.listDeployments()
+    val event: RestResult[List[Deployment]] = marathon.listDeploymentsForBaseGroup()
     event.value should be('empty)
 
     Then("Both tasks respond to http requests")

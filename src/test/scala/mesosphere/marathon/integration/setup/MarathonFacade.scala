@@ -28,44 +28,58 @@ case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[In
 case class ListDeployments(deployments: Seq[Deployment])
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-case class Deployment(id: String)
+case class Deployment(id: String, affectedApps: Seq[String])
 /**
   * The MarathonFacade offers the REST API of a remote marathon instance
   * with all local domain objects.
   * @param url the url of the remote marathon instance
   */
-class MarathonFacade(url: String, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends JacksonSprayMarshaller {
+class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends JacksonSprayMarshaller {
   import mesosphere.util.ThreadPoolContext.context
+
+  require(baseGroup.absolute)
 
   implicit val appDefMarshaller = marshaller[AppDefinition]
   implicit val groupMarshaller = marshaller[Group]
   implicit val groupUpdateMarshaller = marshaller[GroupUpdate]
   implicit val versionMarshaller = marshaller[ITDeploymentResult]
 
+  def isInBaseGroup(pathId: PathId): Boolean = {
+    pathId.path.startsWith(baseGroup.path)
+  }
+
+  def requireInBaseGroup(pathId: PathId): Unit = {
+    require(isInBaseGroup(pathId), s"pathId $pathId must be in baseGroup ($baseGroup)")
+  }
+
   //app resource ----------------------------------------------
 
-  def listApps: RestResult[List[AppDefinition]] = {
+  def listAppsInBaseGroup: RestResult[List[AppDefinition]] = {
     val pipeline = sendReceive ~> read[ListAppsResult]
     val res = result(pipeline(Get(s"$url/v2/apps")), waitTime)
-    res.map(_.apps.toList)
+    res.map(_.apps.toList.filter(app => isInBaseGroup(app.id)))
   }
 
   def app(id: PathId): RestResult[AppDefinition] = {
+    requireInBaseGroup(id)
     val pipeline = sendReceive ~> read[AppDefinition]
     result(pipeline(Get(s"$url/v2/apps$id")), waitTime)
   }
 
   def createApp(app: AppDefinition): RestResult[AppDefinition] = {
+    requireInBaseGroup(app.id)
     val pipeline = sendReceive ~> read[AppDefinition]
     result(pipeline(Post(s"$url/v2/apps", app)), waitTime)
   }
 
   def deleteApp(id: PathId): RestResult[HttpResponse] = {
+    requireInBaseGroup(id)
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Delete(s"$url/v2/apps$id")), waitTime)
   }
 
   def updateApp(app: AppDefinition): RestResult[HttpResponse] = {
+    requireInBaseGroup(app.id)
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Put(s"$url/v2/apps${app.id}", app)), waitTime)
   }
@@ -73,6 +87,7 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds)(implicit val 
   //apps tasks resource --------------------------------------
 
   def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
+    requireInBaseGroup(appId)
     val pipeline = addHeader("Accept", "application/json") ~> sendReceive ~> read[ListTasks]
     val res = result(pipeline(Get(s"$url/v2/apps$appId/tasks")), waitTime)
     res.map(_.tasks.toList)
@@ -80,30 +95,34 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds)(implicit val 
 
   //group resource -------------------------------------------
 
-  def listGroups: RestResult[Set[Group]] = {
+  def listGroupsInBaseGroup: RestResult[Set[Group]] = {
     val pipeline = sendReceive ~> read[Group]
     val root = result(pipeline(Get(s"$url/v2/groups")), waitTime)
-    root.map(_.groups)
+    root.map(_.groups.filter(group => isInBaseGroup(group.id)))
   }
 
   def listGroupVersions(id: PathId): RestResult[List[String]] = {
+    requireInBaseGroup(id)
     val pipeline = sendReceive ~> read[Array[String]] ~> toList[String]
     result(pipeline(Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
   def group(id: PathId): RestResult[Group] = {
+    requireInBaseGroup(id)
     val pipeline = sendReceive ~> read[Group]
     result(pipeline(Get(s"$url/v2/groups$id")), waitTime)
   }
 
   def createGroup(group: GroupUpdate): RestResult[ITDeploymentResult] = {
+    requireInBaseGroup(group.groupId)
     val pipeline = sendReceive ~> read[ITDeploymentResult]
     result(pipeline(Post(s"$url/v2/groups", group)), waitTime)
   }
 
-  def deleteGroup(id: PathId): RestResult[ITDeploymentResult] = {
+  def deleteGroup(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
+    requireInBaseGroup(id)
     val pipeline = sendReceive ~> read[ITDeploymentResult]
-    result(pipeline(Delete(s"$url/v2/groups$id")), waitTime)
+    result(pipeline(Delete(s"$url/v2/groups$id?force=$force")), waitTime)
   }
 
   def deleteRoot(force: Boolean): RestResult[ITDeploymentResult] = {
@@ -112,19 +131,25 @@ class MarathonFacade(url: String, waitTime: Duration = 30.seconds)(implicit val 
   }
 
   def updateGroup(id: PathId, group: GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+    requireInBaseGroup(id)
     val pipeline = sendReceive ~> read[ITDeploymentResult]
     result(pipeline(Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
   }
 
   def rollbackGroup(groupId: PathId, version: String, force: Boolean = false): RestResult[ITDeploymentResult] = {
+    requireInBaseGroup(groupId)
     updateGroup(groupId, GroupUpdate(None, version = Some(Timestamp(version))), force)
   }
 
   //deployment resource ------
 
-  def listDeployments(): RestResult[List[Deployment]] = {
+  def listDeploymentsForBaseGroup(): RestResult[List[Deployment]] = {
     val pipeline = sendReceive ~> read[Array[Deployment]] ~> toList[Deployment]
-    result(pipeline(Get(s"$url/v2/deployments")), waitTime)
+    result(pipeline(Get(s"$url/v2/deployments")), waitTime).map { deployments =>
+      deployments.filter { deployment =>
+        deployment.affectedApps.map(PathId(_)).exists(id => isInBaseGroup(id))
+      }
+    }
   }
 
   //event resource ---------------------------------------------
