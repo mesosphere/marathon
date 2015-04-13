@@ -11,7 +11,6 @@ import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonSpec, MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
 import mesosphere.util.SerializeExecution
 import org.mockito.Matchers.any
@@ -126,47 +125,6 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
     }.printStackTrace()
 
     verify(groupRepo, times(0)).store(any(), any())
-  }
-
-  test("Remove empty groups after update") {
-    val scheduler = mock[MarathonSchedulerService]
-    val taskTracker = mock[TaskTracker]
-    val groupRepo = mock[GroupRepository]
-    val eventBus = mock[EventStream]
-    val provider = mock[StorageProvider]
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
-    val manager = new GroupManager(serializeExecutions(), scheduler, taskTracker, groupRepo, provider, config, eventBus)
-
-    val appId: PathId = "/test/database/service1/main".toPath
-    val app = AppDefinition(appId, cmd = Some("some command"), executor = "//cmd")
-
-    val group = Group(
-      PathId.empty,
-      groups = Set(
-        Group(
-          "/test".toPath,
-          groups = Set(
-            Group(
-              "/test/database".toPath,
-              groups = Set(
-                Group(
-                  "/test/database/service1".toPath,
-                  apps = Set(app))
-              )
-            )
-          ))
-      )
-    )
-
-    val groupWithoutApp = group.update(appId.parent, _.removeApplication(appId), group.version)
-    when(groupRepo.group("root", withLatestApps = false)).thenReturn(Future.successful(Some(group)))
-    when(scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
-    when(groupRepo.store(any(), any())).thenReturn(Future.successful(groupWithoutApp))
-
-    Await.result(manager.update(group.id, _ => groupWithoutApp), 3.seconds)
-
-    verify(groupRepo, times(1)).store("root", groupWithoutApp.withoutEmptyGroups)
   }
 
   def manager(from: Int, to: Int) = {
