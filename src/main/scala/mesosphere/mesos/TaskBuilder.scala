@@ -62,6 +62,11 @@ class TaskBuilder(app: AppDefinition,
 
     val ports = portsResource.ranges.flatMap(_.asScala()).to[Seq]
 
+    val labels = app.labels.map {
+      case (key, value) =>
+        Label.newBuilder.setKey(key).setValue(value).build()
+    }
+
     val taskId = newTaskId(app.id)
     val builder = TaskInfo.newBuilder
       // Use a valid hostname to make service discovery easier
@@ -71,9 +76,11 @@ class TaskBuilder(app: AppDefinition,
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
 
-    if (portsResource.ranges.nonEmpty) {
+    if (labels.nonEmpty)
+      builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
+
+    if (portsResource.ranges.nonEmpty)
       builder.addResources(portsResource)
-    }
 
     val containerProto: Option[ContainerInfo] =
       app.container.map { c =>
