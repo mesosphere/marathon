@@ -95,6 +95,21 @@ case class Group(
     }
   }
 
+  /**
+    * @return true if and only if this group contains neither apps nor groups
+    */
+  def isEmpty: Boolean = apps.isEmpty && groups.isEmpty
+
+  /**
+    * Removes all empty groups inside of this group.
+    */
+  def withoutEmptyGroups: Group = {
+    copy(groups = groups
+      .map(_.withoutEmptyGroups)
+      .filterNot(_.isEmpty)
+    )
+  }
+
   def transitiveApps: Set[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
 
   def transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this

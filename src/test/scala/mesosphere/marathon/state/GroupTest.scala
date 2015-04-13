@@ -276,4 +276,134 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       current.hasNonCyclicDependencies should equal(false)
     }
   }
+
+  describe("Group.withoutEmptyGroups") {
+    it("leaves top-level groups with apps unchanged") {
+      Given("a top-level group with an app")
+      val group = Group(
+        PathId.empty,
+        groups = Set(
+          Group("/test".toPath, apps = Set(AppDefinition("/test/main".toPath)))
+        )
+      )
+      When("applying withoutEmptyGroups")
+      val groupWithout = group.withoutEmptyGroups
+      Then("the original group is unchanged")
+      groupWithout should equal(group)
+    }
+
+    it("leaves nested groups with apps unchanged") {
+      Given("a nested group with an app")
+      val group = Group(
+        PathId.empty,
+        groups = Set(
+          Group(
+            "/test".toPath,
+            groups = Set(
+              Group(
+                "/test/database".toPath,
+                groups = Set(
+                  Group(
+                    "/test/database/service1".toPath,
+                    apps = Set(AppDefinition("/test/database/service1/main".toPath)))
+                )
+              )
+            ))
+        )
+      )
+      When("applying withoutEmptyGroups")
+      val groupWithout = group.withoutEmptyGroups
+      Then("the original group is unchanged")
+      groupWithout should equal(group)
+    }
+
+    it("removes a single top-level empty group") {
+      Given("a single empty group")
+      val group = Group(
+        PathId.empty,
+        groups = Set(Group("/test".toPath)))
+      When("applying withoutEmptyGroups")
+      val groupWithout = group.withoutEmptyGroups
+      Then("the empty group should be removed")
+      groupWithout should equal(group.copy(groups = Set()))
+    }
+
+    it("removes a single nested empty group with all parent groups") {
+      Given("a nested empty group")
+      val group = Group(
+        PathId.empty,
+        groups = Set(
+          Group(
+            "/test".toPath,
+            groups = Set(
+              Group(
+                "/test/database".toPath,
+                groups = Set(
+                  Group("/test/database/service1".toPath)
+                )
+              )
+            ))
+        )
+      )
+      When("applying withoutEmptyGroups")
+      val groupWithout = group.withoutEmptyGroups
+      Then("the empty group should be removed")
+      groupWithout should equal(group.copy(groups = Set()))
+    }
+
+    it("leaves nested groups with apps unchanged but removes empty groups on all levels") {
+      val timestamp = Timestamp(123)
+
+      Given("a nested group with an app")
+      val app: AppDefinition = AppDefinition("/test/database/service1/main".toPath)
+      val group = Group(
+        PathId.empty,
+        version = timestamp,
+        groups = Set(
+          Group("/deleteme".toPath),
+          Group(
+            "/test".toPath,
+            version = timestamp,
+            groups = Set(
+              Group(
+                "/test/database".toPath,
+                version = timestamp,
+                groups = Set(
+                  Group("/test/database/deleteme".toPath),
+                  Group(
+                    "/test/database/service1".toPath,
+                    version = timestamp,
+                    apps = Set(app))
+                )
+              )
+            ))
+        )
+      )
+      When("applying withoutEmptyGroups")
+      val groupWithoutEmptyGroups = group.withoutEmptyGroups
+      Then("the original group is unchanged")
+      val expectedGroupWithoutEmptyGroups = Group(
+        PathId.empty,
+        version = timestamp,
+        groups = Set(
+          Group(
+            "/test".toPath,
+            version = timestamp,
+            groups = Set(
+              Group(
+                "/test/database".toPath,
+                version = timestamp,
+                groups = Set(
+                  Group(
+                    "/test/database/service1".toPath,
+                    version = timestamp,
+                    apps = Set(app))
+                )
+              )
+            ))
+        )
+      )
+      groupWithoutEmptyGroups should equal(expectedGroupWithoutEmptyGroups)
+    }
+  }
 }

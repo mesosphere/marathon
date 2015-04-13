@@ -132,7 +132,8 @@ class GroupManager @Singleton @Inject() (
 
     val deployment = for {
       from <- rootGroup //ignore the state of the scheduler
-      (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(from, change(from)))
+      changedGroup = change(from).withoutEmptyGroups
+      (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(from, changedGroup))
       _ = requireValid(checkGroup(to))
       plan <- deploy(from, to, resolve)
       _ <- groupRepo.store(zkName, to)
