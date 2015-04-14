@@ -39,9 +39,16 @@ class MarathonStore[S <: MarathonState[_, S]](
     state.fetch(prefix + key) map {
       case Some(variable) =>
         bytesRead.update(variable.value.length)
-        stateFromBytes(variable.value)
+        try {
+          Some(stateFromBytes(variable.value))
+        }
+        catch {
+          case e: InvalidProtocolBufferException =>
+            log.error(s"Failed to read $key, could not deserialize data.", e)
+            None
+        }
       case None =>
-        throw new StorageException(s"Failed to read $key")
+        throw new StorageException(s"Failed to read $key, does not exist, should have been created automatically.")
     }
   }
 
@@ -49,18 +56,29 @@ class MarathonStore[S <: MarathonState[_, S]](
     val lock = locks.get(key)
     lock.acquire()
 
-    val res = state.fetch(prefix + key) flatMap {
+    val res: Future[Option[S]] = state.fetch(prefix + key) flatMap {
       case Some(variable) =>
         bytesRead.update(variable.value.length)
-        val deserialize = () => stateFromBytes(variable.value).getOrElse(newState())
-        state.store(variable.mutate(f(deserialize).toProtoByteArray)) map {
+        val deserialize = { () =>
+          try {
+            stateFromBytes(variable.value)
+          }
+          catch {
+            case e: InvalidProtocolBufferException =>
+              log.error(s"Failed to read $key, could not deserialize data.", e)
+              newState()
+          }
+        }
+        val newValue: S = f(deserialize)
+        state.store(variable.mutate(newValue.toProtoByteArray)) map {
           case Some(newVar) =>
             bytesWritten.update(newVar.value.size)
-            stateFromBytes(newVar.value)
+            Some(stateFromBytes(newVar.value))
           case None =>
             throw new StorageException(s"Failed to store $key")
         }
-      case None => throw new StorageException(s"Failed to read $key")
+      case None =>
+        throw new StorageException(s"Failed to read $key, does not exist, should have been created automatically.")
     }
 
     res onComplete { _ =>
@@ -108,12 +126,7 @@ class MarathonStore[S <: MarathonState[_, S]](
     }
   }
 
-  private def stateFromBytes(bytes: Array[Byte]): Option[S] = {
-    try {
-      Some(newState().mergeFromProto(bytes))
-    }
-    catch {
-      case e: InvalidProtocolBufferException => None
-    }
+  private def stateFromBytes(bytes: Array[Byte]): S = {
+    newState().mergeFromProto(bytes)
   }
 }
