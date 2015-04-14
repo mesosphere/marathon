@@ -4,6 +4,7 @@
     "docker": {
       "image": "libmesos/ubuntu"
     },
+    "forcePullImage": false,
     "volumes" : [
       {
         "containerPath": "/etc/a",

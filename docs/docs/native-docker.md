@@ -174,6 +174,21 @@ config file.
 
 ### Advanced Usage
 
+#### Forcing a Docker Pull
+
+Marathon 0.8.2 with Mesos 0.22.0 supports an option to force Docker to pull
+the image before launching each task.
+
+```json
+{
+  "type": "DOCKER",
+  "docker": {
+    "image": "group/image",
+    "forcePullImage": true
+  }
+}
+```
+
 #### Command vs Args
 
 As of version 0.7.0, Marathon supports an `args` field in the app JSON.  It is

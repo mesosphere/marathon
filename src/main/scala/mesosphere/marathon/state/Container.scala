@@ -94,7 +94,8 @@ object Container {
       network: Option[mesos.ContainerInfo.DockerInfo.Network] = None,
       portMappings: Option[Seq[Docker.PortMapping]] = None,
       privileged: Boolean = false,
-      parameters: Seq[Parameter] = Nil) {
+      parameters: Seq[Parameter] = Nil,
+      forcePullImage: Boolean = false) {
 
     def toProto(): Protos.ExtendedContainerInfo.DockerInfo = {
       val builder = Protos.ExtendedContainerInfo.DockerInfo.newBuilder
@@ -110,6 +111,8 @@ object Container {
       builder.setPrivileged(privileged)
 
       builder.addAllParameters(parameters.map(_.toProto).asJava)
+
+      builder.setForcePullImage(forcePullImage)
 
       builder.build
     }
@@ -128,6 +131,8 @@ object Container {
       builder.setPrivileged(privileged)
 
       builder.addAllParameters(parameters.map(_.toProto).asJava)
+
+      builder.setForcePullImage(forcePullImage)
 
       builder.build
     }
@@ -150,7 +155,9 @@ object Container {
 
         privileged = proto.getPrivileged,
 
-        parameters = proto.getParametersList.asScala.map(Parameter(_)).to[Seq]
+        parameters = proto.getParametersList.asScala.map(Parameter(_)).to[Seq],
+
+        forcePullImage = if (proto.hasForcePullImage) proto.getForcePullImage else false
       )
 
     /**
