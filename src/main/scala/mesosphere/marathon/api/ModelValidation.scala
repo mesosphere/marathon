@@ -10,10 +10,12 @@ import scala.util.{ Failure, Success, Try }
 import mesosphere.marathon.api.v2.{ AppUpdate, GroupUpdate }
 import mesosphere.marathon.state._
 
+import BeanValidation._
+
 /**
   * Specific validation helper for specific model classes.
   */
-trait ModelValidation extends BeanValidation {
+object ModelValidation {
 
   def checkGroup(
     group: Group,

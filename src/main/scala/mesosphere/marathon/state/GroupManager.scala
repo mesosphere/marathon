@@ -6,7 +6,7 @@ import javax.inject.{ Inject, Named }
 
 import akka.event.EventStream
 import com.google.inject.Singleton
-import mesosphere.marathon.api.ModelValidation
+import mesosphere.marathon.api.{ BeanValidation, ModelValidation }
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
@@ -33,7 +33,7 @@ class GroupManager @Singleton @Inject() (
     groupRepo: GroupRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    @Named(EventModule.busName) eventBus: EventStream) extends ModelValidation with PathFun {
+    @Named(EventModule.busName) eventBus: EventStream) extends PathFun {
 
   private[this] val log = Logger.getLogger(getClass.getName)
   private[this] val zkName = "root"
@@ -133,7 +133,7 @@ class GroupManager @Singleton @Inject() (
     val deployment = for {
       from <- rootGroup //ignore the state of the scheduler
       (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(from, change(from)))
-      _ = requireValid(checkGroup(to))
+      _ = BeanValidation.requireValid(ModelValidation.checkGroup(to))
       plan <- deploy(from, to, resolve)
       _ <- groupRepo.store(zkName, to)
     } yield plan

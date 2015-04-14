@@ -52,7 +52,8 @@ case class Group(
     makeGroup(groupId).update(timestamp) { group =>
       if (group.id == groupId) {
         val current = group.apps.find(_.id == path).getOrElse(AppDefinition(path))
-        group.putApplication(fn(current))
+        val changed: AppDefinition = fn(current)
+        group.putApplication(changed)
       }
       else group
     }
@@ -80,7 +81,20 @@ case class Group(
     copy(groups = groups.filter(_.id != gid).map(_.remove(gid, timestamp)), version = timestamp)
   }
 
-  def putApplication(appDef: AppDefinition): Group = copy(apps = apps.filter(_.id != appDef.id) + appDef)
+  /**
+    * Add the given app definition to this group replacing any priorly existing app definition with the same ID.
+    *
+    * If a group exists with a conflicting ID which does not contain any app definition, replace that as well.
+    */
+  private def putApplication(appDef: AppDefinition): Group = {
+    copy(
+      // If there is a group with a conflicting id which contains no app definitions,
+      // replace it. Otherwise do not replace it. Validation will catch conflicting app/group IDs later.
+      groups = groups.filter { group => group.id != appDef.id || group.containsApps },
+      // replace potentially existing app definition
+      apps = apps.filter(_.id != appDef.id) + appDef
+    )
+  }
 
   def removeApplication(appId: PathId): Group = copy(apps = apps.filter(_.id != appId))
 
@@ -151,6 +165,10 @@ case class Group(
   def hasNonCyclicDependencies: Boolean = {
     !new CycleDetector[AppDefinition, DefaultEdge](dependencyGraph).detectCycles()
   }
+
+  /** @return true if and only if this group directly or indirectly contains app definitions. */
+  @JsonIgnore
+  def containsApps: Boolean = apps.nonEmpty || groups.exists(_.containsApps)
 }
 
 object Group {

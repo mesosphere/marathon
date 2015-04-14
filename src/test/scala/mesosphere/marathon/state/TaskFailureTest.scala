@@ -1,13 +1,12 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.api.ModelValidation
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos
 import mesosphere.marathon.state.PathId._
 import org.scalatest.Matchers
 import org.apache.mesos.{ Protos => mesos }
 
-class TaskFailureTest extends MarathonSpec with Matchers with ModelValidation {
+class TaskFailureTest extends MarathonSpec with Matchers {
 
   class Fixture {
     lazy val taskFailure = TaskFailure(

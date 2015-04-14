@@ -2,15 +2,13 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos
-import mesosphere.marathon.api.ModelValidation
-import javax.validation.Validation
 import org.scalatest.Matchers
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 
-class ContainerTest extends MarathonSpec with Matchers with ModelValidation {
+class ContainerTest extends MarathonSpec with Matchers {
 
   class Fixture {
     lazy val volumes = Seq(

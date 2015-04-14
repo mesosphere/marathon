@@ -1,5 +1,8 @@
 package mesosphere.marathon.state
 
+import javax.validation.ConstraintViolation
+
+import mesosphere.marathon.api.{ ModelValidation, BeanValidation }
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
@@ -124,6 +127,66 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("nothing has been changed")
       group3 should equal(current)
+    }
+
+    it("can replace a group without apps by a app definition") {
+      // See https://github.com/mesosphere/marathon/issues/851
+      // Groups are created implicitly by creating apps and are not visible as separate entities
+      // at the time of the creation of this test/issue. They are only visible in the GUI if they contain apps.
+
+      Given("an existing group /some/nested which does not directly or indirectly contain apps")
+      val current =
+        Group
+          .empty
+          .makeGroup("/some/nested/path".toPath)
+          .makeGroup("/some/nested/path2".toPath)
+      current.transitiveGroups.map(_.id.toString) should be(
+        Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
+
+      When("requesting to put an app definition")
+      val changed = current.updateApp(
+        "/some/nested".toPath,
+        _ => AppDefinition("/some/nested".toPath, cmd = Some("true")),
+        Timestamp.now())
+
+      Then("the group with same path has been replaced by the new app definition")
+      changed.transitiveGroups.map(_.id.toString) should be(Set("/", "/some"))
+      changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested"))
+
+      Then("the resulting group should be valid")
+      ModelValidation.checkGroup(changed) should be('empty)
+    }
+
+    it("cannot replace a group with apps by an app definition") {
+      Given("an existing group /some/nested which does contain an app")
+      val current =
+        Group
+          .empty
+          .makeGroup("/some/nested/path".toPath)
+          .makeGroup("/some/nested/path2".toPath)
+          .updateApp(
+            "/some/nested/path2/app".toPath,
+            _ => AppDefinition("/some/nested/path2/app".toPath, cmd = Some("true")),
+            Timestamp.now())
+
+      current.transitiveGroups.map(_.id.toString) should be(
+        Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
+
+      When("requesting to put an app definition")
+      val changed = current.updateApp(
+        "/some/nested".toPath,
+        _ => AppDefinition("/some/nested".toPath, cmd = Some("true")),
+        Timestamp.now())
+
+      Then("the group with same path has NOT been replaced by the new app definition")
+      current.transitiveGroups.map(_.id.toString) should be(
+        Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
+      changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested", "/some/nested/path2/app"))
+
+      Then("the conflict will be detected by our validation")
+      val constraintViolations: Iterable[ConstraintViolation[Group]] = ModelValidation.checkGroup(changed)
+      constraintViolations should be('nonEmpty)
+      constraintViolations.map(_.getMessage) should be(Set("Groups and Applications may not have the same identifier: /some/nested"))
     }
 
     it("can marshal and unmarshal from to protos") {

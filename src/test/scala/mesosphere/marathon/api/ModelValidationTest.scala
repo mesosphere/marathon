@@ -19,10 +19,9 @@ class ModelValidationTest
     with OptionValues {
 
   test("A group update should pass validation") {
-    val mv = new ModelValidation {}
     val update = GroupUpdate(id = Some("/a/b/c".toPath))
 
-    val violations = mv.checkGroupUpdate(update, true)
+    val violations = ModelValidation.checkGroupUpdate(update, true)
     violations should have size (0)
   }
 
@@ -61,8 +60,6 @@ class ModelValidationTest
 
     validations should not be Nil
   }
-
-  private object ModelValidation extends ModelValidation
 
   private def createServicePortApp(id: PathId, servicePort: Int) = {
     AppDefinition(

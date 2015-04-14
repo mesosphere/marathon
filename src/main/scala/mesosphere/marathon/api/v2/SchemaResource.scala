@@ -5,14 +5,14 @@ import javax.ws.rs._
 import javax.ws.rs.core.{ MediaType }
 import mesosphere.marathon.MarathonConf
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.api.{ ModelValidation, RestResource }
+import mesosphere.marathon.api.RestResource
 import java.io.InputStream
 
 @Path("v2/schemas")
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MediaType.APPLICATION_JSON))
 class SchemaResource @Inject() (
-    val config: MarathonConf) extends RestResource with ModelValidation {
+    val config: MarathonConf) extends RestResource {
 
   @GET
   @Timed
