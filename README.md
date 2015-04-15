@@ -11,8 +11,6 @@ starting, stopping, and scaling applications. Marathon is written in Scala and
 can run in highly-available mode by running multiple copies. The
 state of running tasks gets stored in the Mesos state abstraction.
 
-Try Marathon now with [Mesosphere for Google Compute Platform](http://google.mesosphere.com) or [Mesosphere for DigitalOcean](http://digitalocean.mesosphere.com).
-
 Marathon is a *meta framework*: you can start other Mesos frameworks such as
 Chronos or [Storm][Storm] with it to ensure they survive machine failures.
 It can launch anything that can be launched in a standard shell. In fact, you
