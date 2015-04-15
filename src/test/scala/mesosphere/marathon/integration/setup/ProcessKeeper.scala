@@ -1,17 +1,21 @@
+
 package mesosphere.marathon.integration.setup
+
+import com.google.common.util.concurrent.Service.{ State, Listener }
+import org.apache.commons.io.FileUtils
 
 import scala.sys.ShutdownHookThread
 import scala.sys.process._
 import scala.util.{ Failure, Success, Try }
 import com.google.inject.Guice
 import org.rogach.scallop.ScallopConf
-import com.google.common.util.concurrent.Service
+import com.google.common.util.concurrent.{ AbstractIdleService, Service }
 import mesosphere.chaos.http.{ HttpService, HttpConf, HttpModule }
 import mesosphere.chaos.metrics.MetricsModule
 import java.io.File
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ Executor, TimeUnit }
 import org.apache.log4j.Logger
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.{ duration, Await, Promise }
 import scala.concurrent.duration._
 
 /**
@@ -24,6 +28,8 @@ object ProcessKeeper {
   private[this] val log = Logger.getLogger(getClass.getName)
   private[this] var processes = List.empty[Process]
   private[this] var services = List.empty[Service]
+
+  private[this] val ENV_MESOS_WORK_DIR: String = "MESOS_WORK_DIR"
 
   def startHttpService(port: Int, assetPath: String) = {
     log.info(s"Start Http Service on port $port")
@@ -40,11 +46,29 @@ object ProcessKeeper {
     startJavaProcess("zookeeper", args, new File("."), sys.env, _.contains("binding to port"))
   }
 
-  def startMesosLocal(): Process = startProcess("mesos", Process("mesos local"), _.toLowerCase.contains("registered with master"))
+  def startMesosLocal(): Process = {
+    val mesosWorkDirForMesos: String = "/tmp/marathon-itest-mesos"
+    val mesosWorkDirFile: File = new File(mesosWorkDirForMesos)
+    FileUtils.deleteDirectory(mesosWorkDirFile)
+    FileUtils.forceMkdir(mesosWorkDirFile)
+    startProcess(
+      "mesos",
+      Process("mesos-local", cwd = None, ENV_MESOS_WORK_DIR -> mesosWorkDirForMesos),
+      upWhen = _.toLowerCase.contains("registered with master"))
+  }
 
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String]): Process = {
     val argsWithMain = "mesosphere.marathon.Main" :: arguments
-    startJavaProcess("marathon", argsWithMain, cwd, env, _.contains("Started SelectChannelConnector"))
+
+    val mesosWorkDir: String = "/tmp/marathon-itest-marathon"
+    val mesosWorkDirFile: File = new File(mesosWorkDir)
+    FileUtils.deleteDirectory(mesosWorkDirFile)
+    FileUtils.forceMkdir(mesosWorkDirFile)
+
+    startJavaProcess(
+      "marathon", argsWithMain, cwd,
+      env + (ENV_MESOS_WORK_DIR -> mesosWorkDir),
+      upWhen = _.contains("Started SelectChannelConnector"))
   }
 
   def startJavaProcess(name: String, arguments: List[String], cwd: File, env: Map[String, String], upWhen: String => Boolean): Process = {
@@ -76,6 +100,16 @@ object ProcessKeeper {
         throw new IllegalStateException(s"Process does not came up within time bounds ($timeout). Give up. $processBuilder")
     }
     process
+  }
+
+  def onStopServices(block: => Unit): Unit = {
+    services ::= new AbstractIdleService {
+      override def shutDown(): Unit = {
+        block
+      }
+
+      override def startUp(): Unit = {}
+    }
   }
 
   def stopOSProcesses(grep: String): Unit = {

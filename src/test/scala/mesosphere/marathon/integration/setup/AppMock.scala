@@ -32,11 +32,20 @@ class AppMock(appId: String, version: String, url: String) extends AbstractHandl
                       baseRequest: Request,
                       request: HttpServletRequest,
                       response: HttpServletResponse): Unit = {
-    val res = result(pipeline(Get(url)), waitTime)
-    println(s"AppMock[$appId $version]: current health is $res")
-    response.setStatus(res.status.intValue)
-    baseRequest.setHandled(true)
-    response.getWriter.print(res.entity.asString)
+
+    if (request.getMethod == "GET" && request.getPathInfo == "/ping") {
+      response.setStatus(200)
+      baseRequest.setHandled(true)
+      val marathonId = sys.env.getOrElse("MARATHON_APP_ID", "NO_MARATHON_APP_ID_SET")
+      response.getWriter.println(s"Pong $marathonId")
+    }
+    else {
+      val res = result(pipeline(Get(url)), waitTime)
+      println(s"AppMock[$appId $version]: current health is $res")
+      response.setStatus(res.status.intValue)
+      baseRequest.setHandled(true)
+      response.getWriter.print(res.entity.asString)
+    }
   }
 }
 

@@ -7,10 +7,14 @@ import org.apache.mesos.{ SchedulerDriver, MesosSchedulerDriver }
 import com.google.protobuf.ByteString
 import java.io.{ FileInputStream, IOException }
 
+import org.slf4j.LoggerFactory
+
 /**
   * Wrapper class for the scheduler
   */
 object MarathonSchedulerDriver {
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   var driver: Option[SchedulerDriver] = None
 
@@ -68,6 +72,8 @@ object MarathonSchedulerDriver {
 
     val frameworkInfo = frameworkInfoBuilder.build()
 
+    log.debug("Start creating new driver")
+
     val newDriver: MesosSchedulerDriver = credential match {
       case Some(cred) =>
         new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster(), cred)
@@ -76,8 +82,11 @@ object MarathonSchedulerDriver {
         new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster())
     }
 
+    log.debug("Finished creating new driver")
+
     driver = Some(newDriver)
     scheduler = Some(newScheduler)
+
     newDriver
   }
 }
