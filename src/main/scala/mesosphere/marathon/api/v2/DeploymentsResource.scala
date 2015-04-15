@@ -44,7 +44,7 @@ class DeploymentsResource @Inject() (
           // create a new deployment to return to the previous state
           deploymentResult(result(groupManager.update(
             plan.original.id,
-            _ => plan.original,
+            plan.revert,
             force = true
           )))
       }

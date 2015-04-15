@@ -3,6 +3,8 @@ package mesosphere.marathon.state
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
+import scala.collection.SortedSet
+
 class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
 
   describe("A PathId") {
@@ -117,5 +119,27 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
   it("handles root paths") {
     PathId("/").isRoot shouldBe true
     PathId("").isRoot shouldBe true
+  }
+
+  describe("An ordered PathID collection") {
+    val a = PathId("/a")
+    val aa = a / "a"
+    val ab = a / "b"
+    val ac = a / "c"
+    val b = PathId("/b")
+    val c = PathId("/c")
+
+    it("can be sorted if all paths are on the same level") {
+      SortedSet(a, b, a).toSeq should equal(Seq(a, b))
+    }
+
+    it("can be sorted if with paths on different levels") {
+      SortedSet(a, b, aa, a).toSeq should equal(Seq(a, aa, b))
+    }
+
+    it("can be sorted if it was reversed") {
+      SortedSet(c, b, a).toSeq should equal(Seq(a, b, c))
+      SortedSet(ac, ab, aa).toSeq should equal(Seq(aa, ab, ac))
+    }
   }
 }

@@ -5,11 +5,11 @@ import java.util.UUID
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.state._
-import mesosphere.util.Logging
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.collection.SortedMap
+import scala.collection.immutable.Seq
 
 sealed trait DeploymentAction {
   def app: AppDefinition
@@ -59,13 +59,22 @@ final case class DeploymentPlan(
     steps: Seq[DeploymentStep],
     version: Timestamp) extends MarathonState[Protos.DeploymentPlanDefinition, DeploymentPlan] {
 
+  /**
+    * Reverts this plan by applying the reverse changes to the given Group.
+    *
+    * See [[DeploymentPlanReverter.revert]].
+    */
+  def revert(group: Group): Group = DeploymentPlanReverter.revert(original, target)(group)
+
   def isEmpty: Boolean = steps.isEmpty
 
   def nonEmpty: Boolean = !isEmpty
 
+  /** @return all ids of apps which are referenced in any deployment actions */
   def affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
 
   def isAffectedBy(other: DeploymentPlan): Boolean =
+    // FIXME: check for group change conflicts?
     affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
   override def toString: String = {
@@ -100,7 +109,9 @@ final case class DeploymentPlan(
       .build()
 }
 
-object DeploymentPlan extends Logging {
+object DeploymentPlan {
+  private val log = LoggerFactory.getLogger(getClass)
+
   def empty: DeploymentPlan =
     DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
 
