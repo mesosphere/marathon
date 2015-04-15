@@ -20,7 +20,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation {
+class AppDefinitionTest extends MarathonSpec with Matchers {
 
   test("ToProto") {
     val app1 = AppDefinition(
@@ -125,7 +125,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
     def shouldViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = checkAppConstraints(app, PathId.empty)
+      val violations = ModelValidation.checkAppConstraints(app, PathId.empty)
       assert(
         violations.exists { v =>
           v.getPropertyPath.toString == path && v.getMessageTemplate == template
@@ -135,7 +135,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers with ModelValidation 
     }
 
     def shouldNotViolate(app: AppDefinition, path: String, template: String) = {
-      val violations = checkAppConstraints(app, PathId.empty)
+      val violations = ModelValidation.checkAppConstraints(app, PathId.empty)
       assert(
         !violations.exists { v =>
           v.getPropertyPath.toString == path && v.getMessageTemplate == template

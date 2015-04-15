@@ -12,7 +12,7 @@ import org.hibernate.validator.internal.engine.path.PathImpl
   * Bean validation helper trait.
   * TODO: we should not use bean validation any longer.
   */
-trait BeanValidation {
+object BeanValidation {
 
   val validator = Validation.buildDefaultValidatorFactory().getValidator
 

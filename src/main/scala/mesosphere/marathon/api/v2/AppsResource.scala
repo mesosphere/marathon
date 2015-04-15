@@ -9,7 +9,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.api.{ ModelValidation, RestResource }
+import mesosphere.marathon.api.{ BeanValidation, ModelValidation, RestResource }
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.health.{ HealthCheckManager, HealthCounts }
@@ -33,7 +33,7 @@ class AppsResource @Inject() (
     healthCheckManager: HealthCheckManager,
     taskFailureRepository: TaskFailureRepository,
     val config: MarathonConf,
-    groupManager: GroupManager) extends RestResource with ModelValidation {
+    groupManager: GroupManager) extends RestResource {
 
   import AppsResource._
   import mesosphere.util.ThreadPoolContext.context
@@ -112,9 +112,9 @@ class AppsResource @Inject() (
     app: AppDefinition,
     force: Boolean): (DeploymentPlan, AppDefinition.WithTasksAndDeployments) = {
     val baseId = app.id.canonicalPath()
-    requireValid(checkAppConstraints(app, baseId.parent))
+    BeanValidation.requireValid(ModelValidation.checkAppConstraints(app, baseId.parent))
 
-    val conflicts = checkAppConflicts(app, baseId, service)
+    val conflicts = ModelValidation.checkAppConflicts(app, baseId, service)
     if (conflicts.nonEmpty)
       throw new ConflictingChangeException(conflicts.mkString(","))
 
@@ -193,7 +193,7 @@ class AppsResource @Inject() (
     // TODO error if they're not the same?
     val updateWithId = appUpdate.copy(id = Some(appId))
 
-    requireValid(checkUpdate(updateWithId, needsId = false))
+    BeanValidation.requireValid(ModelValidation.checkUpdate(updateWithId, needsId = false))
 
     service.getApp(appId) match {
       case Some(app) =>
@@ -216,7 +216,7 @@ class AppsResource @Inject() (
   @Timed
   def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean, body: Array[Byte]): Response = {
     val updates = Json.parse(body).as[Seq[AppUpdate]]
-    requireValid(checkUpdates(updates))
+    BeanValidation.requireValid(ModelValidation.checkUpdates(updates))
     val version = Timestamp.now()
     def updateApp(update: AppUpdate, app: AppDefinition): AppDefinition = {
       update.version.flatMap(v => service.getApp(app.id, v)).orElse(Some(update(app))).getOrElse(app)
