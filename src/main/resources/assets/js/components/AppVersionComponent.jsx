@@ -89,7 +89,7 @@ var AppVersionComponent = React.createClass({
     var urisNode = (appVersion.get("uris").length === 0) ?
       <UNSPECIFIED_NODE /> :
       appVersion.get("uris").map(function (u) {
-        return <dd key={u}>{u}</dd>;
+        return <dd class="overflow-ellipsis" key={u}>{u}</dd>;
       });
     return (
       <div>
