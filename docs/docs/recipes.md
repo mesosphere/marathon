@@ -55,6 +55,55 @@ CMD ["inky"]
 ENTRYPOINT ["echo"]
 ```
 
+
+### Start a private docker registry
+
+This will make a private docker registry available in your cluster.
+Note: this will persist all data on the local file system, which is not ideal.
+Either restrict the service to run always on the same node with 
+<a href="{{ site.baseurl }}/docs/constraints.html">Constraints</a> or use another persistence backend.
+See [docker-registry](https://github.com/docker/docker-registry) for a list of possible backends.
+
+
+```json
+{
+  "id": "/docker/registry",
+  "instances": 1,
+  "cpus": 0.5,
+  "mem": 1024.0,
+  "disk": 128,
+  "container": {
+    "docker": {
+      "type": "DOCKER",
+      "image": "registry:latest",
+      "network": "BRIDGE",
+      "parameters": [],
+      "portMappings": [
+        {
+          "containerPort": 5000,
+          "hostPort": 0,
+          "protocol": "tcp",
+          "servicePort": 5000
+        }
+      ]
+    },
+    "volumes": [
+      {
+        "hostPath": "/local/path/to/store/packages",
+        "containerPath": "/storage",
+        "mode": "RW"
+      }
+    ]
+  },
+  "env": {
+    "SETTINGS_FLAVOR": "local",
+    "STORAGE_PATH": "/storage"
+  },
+  "ports": [ 0 ]
+}
+```
+
+
 ## Health Checks
 
 See the detailed docs on
