@@ -268,11 +268,42 @@ by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
 
 ##### ports
 
-An array of required port resources on the host. To generate one or more
-arbitrary free ports for each application instance, pass zeros as port
-values. Each port value is exposed to the instance via environment variables
+An array of required port resources on the host.
+
+The port array currently serves multiple roles:
+
+* The number of items in the array determines how many dynamic ports are allocated
+  for every task.
+* For every port that is zero, a globally unique (cluster-wide) port is assigned and
+  provided as part of the app definition to be used in load balancing definitions.
+  See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.md)
+  for details.
+
+Since this is confusing, we recommend to configure ports assignment for docker
+containers in `container.docker.portMappings` instead, see
+[Docker Containers doc page]({{ site.baseurl }}/docs/native-docker.md#bridged-networking-mode)).
+
+Alternatively or if you use the Mesos Containerizer, pass zeros as port values to generate one or more arbitrary
+free ports for each application instance.
+Each port value is exposed to the instance via environment variables
 `$PORT0`, `$PORT1`, etc. Ports assigned to running instances are also available
 via the task resource.
+
+We will probably provide an alternative way to configure this for non-docker apps in the future
+as well, see [Rethink ports API](https://github.com/mesosphere/marathon/issues/670).
+
+##### requirePorts
+
+Normally, the host ports of your tasks are automatically assigned. This corresponds to the
+`requirePorts` value `false` which is the default.
+
+If you need more control and want to specify your host ports in advance, you can
+ set `requirePorts` to `true`. This way the ports you have specified are used as host ports. That also
+ means that Marathon can schedule the associated tasks only on hosts that have the specified ports available.
+
+ The specified ports need to be in the local port range specified by the
+ `--local_port_min` and `--local_port_max` flags. See
+ [Command Line Flags doc page]({{ site.baseurl }}/docs/command-line-flags.md)).
 
 ##### upgradeStrategy
 
@@ -367,7 +398,7 @@ User-Agent: HTTPie/0.8.0
     ],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
-        "minimumOverCapacity": 0.5
+        "maximumOverCapacity": 0.5
     }
 }
 {% endhighlight json %}
@@ -433,7 +464,7 @@ Transfer-Encoding: chunked
     "storeUrls": [],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
-        "minimumOverCapacity": 0.5
+        "maximumOverCapacity": 0.5
     },
     "uris": [],
     "user": null,
@@ -2005,6 +2036,7 @@ HTTP/1.1 200 OK
 Content-Length: 0
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
+{% endhighlight %}
 
 ### Deployments
 
