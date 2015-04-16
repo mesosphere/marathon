@@ -5,9 +5,8 @@ cat <<USAGE
  USAGE: marathon-framework (--jar <marathon.jar>)? <option>*
 
   Run the Marathon scheduler, collecting options from the configuration
-  directory and appending the options supplied on the command line.
-
-    $conf_dir
+  directory $conf_dir and configuration file $conf_file,
+  and appending the options supplied on the command line.
 
   If you would like to pass the Jar to be run, do so with --jar. If the Jar is
   not supplied, the script assumes the Jar has been concatenated to it and
@@ -20,6 +19,7 @@ export LC_ALL=en_US.UTF-8
 self="$(cd "$(dirname "$0")" && pwd -P)"/"$(basename "$0")"
 marathon_jar="$self"
 conf_dir=/etc/marathon/conf
+conf_file=/etc/default/marathon
 
 function main {
   if [[ ${1:-} = --jar ]]
@@ -56,6 +56,11 @@ function load_options_and_log {
       fi
     done 9< <(cd "$conf_dir" && find . -type f -not -name '.*' -print0)
   fi
+  # Read environment variables from config file
+  [[ ! -f "$conf_file" ]] || . "$conf_file"
+  for env_op in `env | grep ^MARATHON_ | sed -e '/^MARATHON_APP/d' -e 's/MARATHON_//' -e 's/=/ /'| awk '{printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'| sed -e 's/ $//'`; do
+    cmd+=( "$env_op" )
+  done
   # Default zk and master option
   if [[ -s /etc/mesos/zk ]]
   then
@@ -68,9 +73,6 @@ function load_options_and_log {
       cmd+=( --master "$(cat /etc/mesos/zk)" )
     fi
   fi
-  for env_op in `env | grep ^MARATHON_ | sed -e '/^MARATHON_APP/d' -e 's/MARATHON_//' -e 's/=/ /'| awk '{printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'| sed -e 's/ $//'`; do
-    cmd+=( "$env_op" )
-  done
   echo "${cmd[@]}"
 
   if [[ "${cmd[@]} $@" == *'--no-logger'* ]]
