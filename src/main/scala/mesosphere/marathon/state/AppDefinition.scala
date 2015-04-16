@@ -240,6 +240,8 @@ case class AppDefinition(
       runningDeployments, taskFailure, this
     )
 
+  def withNormalizedVersion: AppDefinition = copy(version = Timestamp(0))
+
   def isOnlyScaleChange(to: AppDefinition): Boolean =
     !isUpgrade(to) && (instances != to.instances)
 

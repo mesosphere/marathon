@@ -2,7 +2,7 @@ package mesosphere.marathon.state
 
 import scala.language.implicitConversions
 
-case class PathId(path: List[String], absolute: Boolean = true) {
+case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[PathId] {
 
   def root: String = path.headOption.getOrElse("")
 
@@ -57,6 +57,12 @@ case class PathId(path: List[String], absolute: Boolean = true) {
 
   override def toString: String = toString("/")
   private def toString(delimiter: String): String = path.mkString(if (absolute) delimiter else "", delimiter, "")
+
+  override def compare(that: PathId): Int = {
+    import Ordering.Implicits._
+    val seqOrder = implicitly(Ordering[List[String]])
+    seqOrder.compare(canonicalPath().path, that.canonicalPath().path)
+  }
 }
 
 object PathId {

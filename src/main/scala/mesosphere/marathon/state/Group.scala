@@ -77,6 +77,7 @@ case class Group(
     fn(this.copy(groups = in(groups.toList).toSet, version = timestamp))
   }
 
+  /** Removes the group with the given gid if it exists */
   def remove(gid: PathId, timestamp: Timestamp = Timestamp.now()): Group = {
     copy(groups = groups.filter(_.id != gid).map(_.remove(gid, timestamp)), version = timestamp)
   }
@@ -96,6 +97,11 @@ case class Group(
     )
   }
 
+  /**
+    * Remove the app with the given id if it is a direct child of this group.
+    *
+    * Use together with [[update]].
+    */
   def removeApplication(appId: PathId): Group = copy(apps = apps.filter(_.id != appId))
 
   def makeGroup(gid: PathId): Group = {
@@ -169,6 +175,15 @@ case class Group(
   /** @return true if and only if this group directly or indirectly contains app definitions. */
   @JsonIgnore
   def containsApps: Boolean = apps.nonEmpty || groups.exists(_.containsApps)
+
+  @JsonIgnore
+  def containsAppsOrGroups: Boolean = apps.nonEmpty || groups.nonEmpty
+
+  @JsonIgnore
+  def withNormalizedVersion: Group = copy(version = Timestamp(0))
+
+  @JsonIgnore
+  def withoutChildren: Group = copy(apps = Set.empty, groups = Set.empty)
 }
 
 object Group {
