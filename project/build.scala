@@ -13,6 +13,7 @@ import sbtbuildinfo.Plugin._
 import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
 
 object MarathonBuild extends Build {
+
   lazy val root = Project(
     id = "marathon",
     base = file("."),
@@ -34,6 +35,21 @@ object MarathonBuild extends Build {
     .settings(inConfig(IntegrationTest)(Defaults.testTasks): _*)
     .settings(testOptions in Test := Seq(Tests.Argument("-l", "integration")))
     .settings(testOptions in IntegrationTest := Seq(Tests.Argument("-n", "integration")))
+    .dependsOn(marathonInterface)
+
+  lazy val marathonInterface = Project(
+    id = "marathon-interface",
+    base = file("interface"),
+    settings = baseSettings ++
+      asmSettings ++
+      publishSettings ++
+      formatSettings ++
+      styleSettings ++
+      graphSettings ++
+      Seq(
+        libraryDependencies ++= Dependencies.interface
+      )
+  )
 
   lazy val testScalaStyle = taskKey[Unit]("testScalaStyle")
 
@@ -125,6 +141,8 @@ object MarathonBuild extends Build {
 
 object Dependencies {
   import Dependency._
+
+  val interface = Seq.empty[ModuleID]
 
   val root = Seq(
     // runtime

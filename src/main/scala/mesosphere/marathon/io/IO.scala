@@ -2,14 +2,20 @@ package mesosphere.marathon.io
 
 import java.io._
 import java.math.BigInteger
-import java.security.{ MessageDigest, DigestInputStream }
-import scala.annotation.tailrec
+import java.security.{ DigestInputStream, MessageDigest }
 
 import com.google.common.io.ByteStreams
+
+import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 trait IO {
 
   private val BufferSize = 8192
+
+  protected def listFiles(inDir: File, regex: Regex): Array[File] = {
+    inDir.listFiles().filter(f => regex.pattern.matcher(f.getName).matches)
+  }
 
   protected def moveFile(from: File, to: File): File = {
     if (to.exists()) delete(to)
