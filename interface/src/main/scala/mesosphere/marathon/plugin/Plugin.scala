@@ -1,6 +1,9 @@
 package mesosphere.marathon.plugin
 
-trait Plugin {
-
-}
+/**
+  * Marker trait for all service provider plugins.
+  *
+  * TODO: add documentation for creating a service provider plugin.
+  */
+trait Plugin
 

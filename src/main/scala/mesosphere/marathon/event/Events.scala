@@ -1,6 +1,7 @@
 package mesosphere.marathon.event
 
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.plugin.event.Event
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.rogach.scallop.ScallopConf
 import com.google.inject.{ Inject, Singleton, Provides, AbstractModule }
@@ -40,7 +41,7 @@ object EventModule {
   final val busName = "events"
 }
 
-sealed trait MarathonEvent {
+sealed trait MarathonEvent extends Event {
   val eventType: String
   val timestamp: String
 }
