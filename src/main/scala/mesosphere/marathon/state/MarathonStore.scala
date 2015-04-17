@@ -44,7 +44,9 @@ class MarathonStore[S <: MarathonState[_, S]](
         }
         catch {
           case e: InvalidProtocolBufferException =>
-            log.error(s"Failed to read $key, could not deserialize data.", e)
+            if (variable.value.nonEmpty) {
+              log.error(s"Failed to read $key, could not deserialize data (${variable.value.length} bytes).", e)
+            }
             None
         }
       case None =>
@@ -65,7 +67,9 @@ class MarathonStore[S <: MarathonState[_, S]](
           }
           catch {
             case e: InvalidProtocolBufferException =>
-              log.error(s"Failed to read $key, could not deserialize data.", e)
+              if (variable.value.nonEmpty) {
+                log.error(s"Failed to read $key, could not deserialize data (${variable.value.length} bytes).", e)
+              }
               newState()
           }
         }
