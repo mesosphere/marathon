@@ -113,7 +113,9 @@ For example:
 $ MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
 ```
 
+### Launch an Application
 
+For an introduction to Marathon application definitions and how they are executed, see [Application Basics](application-basics.html).
 
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
 [Zookeeper]: https://zookeeper.apache.org/ "Apache ZooKeeper"
