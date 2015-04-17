@@ -4,7 +4,7 @@ title: Application Basics
 
 # Application Basics
 
-Applications are an integral concept in Marathon. Each application typically represents a long running service, of which there many be many instances running on multiple hosts.
+Applications are an integral concept in Marathon. Each application typically represents a long running service, of which there would be many instances running on multiple hosts.
 
 Let us start with a simple example: an app that prints `Hello Marathon` to stdout and then sleeps for 5 sec, in an endless loop.
 You would use the following application definition (in JSON format) to describe the application: 
