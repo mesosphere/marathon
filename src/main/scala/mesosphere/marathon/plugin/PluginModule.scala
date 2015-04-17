@@ -27,7 +27,9 @@ class PluginModule(conf: PluginConfiguration) extends AbstractModule {
 
   @Provides
   @Named(PluginModule.PluginEventDelegate)
-  def provideEventDelegate(system: ActorSystem, pluginManager: PluginManager, @Named(EventModule.busName) stream: EventStream): ActorRef = {
+  def provideEventDelegate(system: ActorSystem,
+                           pluginManager: PluginManager,
+                           @Named(EventModule.busName) stream: EventStream): ActorRef = {
     val listener = pluginManager.providers[EventListener]
     system.actorOf(Props(new EventDelegate(stream, listener)))
   }

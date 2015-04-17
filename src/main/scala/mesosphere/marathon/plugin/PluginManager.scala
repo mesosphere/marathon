@@ -37,7 +37,9 @@ class PluginManager(val urls: Seq[URL]) {
   private[this] def load[T <: Plugin](implicit ct: ClassTag[T]): PluginReference[T] = {
     val serviceLoader = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[T]], classLoader)
     val instances = serviceLoader.iterator().asScala.toSeq
-    log.info(s"""Load plugin ${ct.runtimeClass.getName} from this locations: ${urls.mkString(", ")}. Found ${instances.size} instances.""")
+    log.info(
+      s"""Load plugin ${ct.runtimeClass.getName} from this locations: ${urls.mkString(", ")}.
+         |Found ${instances.size} instances.""".stripMargin)
     PluginReference(ct, serviceLoader, instances)
   }
 
@@ -66,7 +68,7 @@ class PluginManager(val urls: Seq[URL]) {
     if (p.nonEmpty) fn(p)
   }
 
-  def installedPlugins = plugins
+  def installedPlugins: Seq[PluginReference[_]] = plugins
 }
 
 object PluginManager extends IO {
