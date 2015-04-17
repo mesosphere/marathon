@@ -19,12 +19,11 @@ import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker, _ }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.SerializeExecution
 import org.apache.log4j.Logger
-import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.{ State, ZooKeeperState }
 import org.apache.zookeeper.ZooDefs
 
@@ -57,6 +56,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
+    bind(classOf[TaskFactory]).to(classOf[DefaultTaskFactory]).in(Scopes.SINGLETON)
+    bind(classOf[IterativeOfferMatcherMetrics]).in(Scopes.SINGLETON)
+    bind(classOf[OfferMatcher]).to(classOf[IterativeOfferMatcher]).in(Scopes.SINGLETON)
     bind(classOf[GroupManager]).in(Scopes.SINGLETON)
 
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
@@ -72,6 +74,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       .toInstance(leader)
 
   }
+
+  @Provides
+  @Singleton
+  def provideIterativeOfferMatcherConfig(): IterativeOfferMatcherConfig = conf
 
   @Provides
   @Singleton
@@ -246,5 +252,4 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   def provideSerializeGroupUpdates(actorRefFactory: ActorRefFactory): SerializeExecution = {
     SerializeExecution(actorRefFactory, "serializeGroupUpdates")
   }
-
 }
