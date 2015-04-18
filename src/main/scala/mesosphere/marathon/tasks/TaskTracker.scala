@@ -57,6 +57,8 @@ class TaskTracker @Inject() (
         Timestamp(mt.getVersion)
     }
 
+  def clearCachedState(): Unit = apps.clear()
+
   private def getInternal(appId: PathId): TrieMap[String, MarathonTask] =
     apps.getOrElseUpdate(appId, fetchApp(appId)).tasks
 
@@ -137,7 +139,7 @@ class TaskTracker @Inject() (
 
   def statusUpdate(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = {
     val taskId = status.getTaskId.getValue
-    getInternal(appId).get(taskId) match {
+    fetchTaskById(appId, taskId) match {
       case Some(task) if statusDidChange(task.getStatus, status) =>
         val updatedTask = task.toBuilder
           .setStatus(status)
@@ -218,7 +220,15 @@ class TaskTracker @Inject() (
       val bytes = fetchFromState(taskKey).value
       if (bytes.length > 0) {
         val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
-        deserialize(taskKey, source)
+        val taskOption = deserialize(taskKey, source)
+
+        for (task <- taskOption) {
+          // Update the in-memory storage.
+          val internalApp = apps.getOrElseUpdate(appId, new InternalApp(appId, TrieMap(), false))
+          internalApp.tasks.putIfAbsent(taskKey, task)
+        }
+
+        taskOption
       }
       else None
     }
