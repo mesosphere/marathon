@@ -215,7 +215,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(tracker.get(app.id)).thenReturn(Set[MarathonTask](taskA))
-    when(tracker.fetchTask(app.id, taskA.getId))
+    when(tracker.fetchTaskById(app.id, taskA.getId))
       .thenReturn(Some(taskA))
       .thenReturn(None)
 
@@ -260,7 +260,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(tracker.get(app.id)).thenReturn(Set[MarathonTask](taskA))
-    when(tracker.fetchTask(app.id, taskA.getId))
+    when(tracker.fetchTaskById(app.id, taskA.getId))
       .thenReturn(Some(taskA))
       .thenReturn(None)
 
