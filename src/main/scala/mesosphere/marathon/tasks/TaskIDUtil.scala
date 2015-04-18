@@ -22,6 +22,7 @@ class TaskIdUtil {
   def appId(taskId: String): PathId = {
     taskId match {
       case TaskIdRegex(appId, uuid) => PathId.fromSafePath(appId)
+      case _                        => PathId.empty
     }
   }
 
