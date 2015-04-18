@@ -98,7 +98,7 @@ class TasksResource @Inject() (
         case e: MatchError => throw new BadRequestException(s"Invalid task id '$taskId'.")
       }
 
-      taskTracker.fetchTask(appId, taskId)
+      taskTracker.fetchTaskById(appId, taskId)
     }.groupBy { x =>
       taskIdUtil.appId(x.getId)
     }

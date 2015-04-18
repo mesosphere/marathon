@@ -167,7 +167,7 @@ class MarathonSchedulerActor(
       val origSender = sender()
       withLockFor(appId) {
         val promise = Promise[Unit]()
-        val tasksToKill = taskIds.flatMap(taskTracker.fetchTask(appId, _))
+        val tasksToKill = taskIds.flatMap(taskTracker.fetchTaskById(appId, _))
         context.actorOf(Props(classOf[TaskKillActor], driver, appId, taskTracker, eventBus, tasksToKill, promise))
         val res = if (scale) {
           for {

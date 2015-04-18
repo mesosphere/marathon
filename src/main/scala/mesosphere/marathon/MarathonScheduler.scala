@@ -100,7 +100,7 @@ class MarathonScheduler @Inject() (
     val appId = taskIdUtil.appId(status.getTaskId)
 
     // forward health changes to the health check manager
-    val maybeTask = taskTracker.fetchTask(appId, status.getTaskId.getValue)
+    val maybeTask = taskTracker.fetchTaskById(appId, status.getTaskId.getValue)
     for (marathonTask <- maybeTask)
       healthCheckManager.update(status, Timestamp(marathonTask.getVersion))
 

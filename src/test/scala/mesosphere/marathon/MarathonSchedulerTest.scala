@@ -223,7 +223,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     val task = Protos.MarathonTask.newBuilder.setId(taskId).setVersion(taskVersion).build()
     for (_ <- 0 until 20) queue.rateLimiter.addDelay(app)
 
-    when(tracker.fetchTask(app.id, taskId)).thenReturn(None)
+    when(tracker.fetchTaskById(app.id, taskId)).thenReturn(None)
     when(tracker.running(app.id, status)).thenReturn(Future.successful(task))
     when(repo.app(app.id, Timestamp(taskVersion))).thenReturn(Future.successful(Some(app)))
 
