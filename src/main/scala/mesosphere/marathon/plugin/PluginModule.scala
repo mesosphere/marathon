@@ -11,7 +11,7 @@ import mesosphere.marathon.plugin.event.EventListener
 import org.rogach.scallop.ScallopConf
 
 trait PluginConfiguration extends ScallopConf {
-  lazy val pluginDir = opt[String]("plugin-dir",
+  lazy val pluginDir = opt[String]("plugin_dir",
     descr = "Path to the local directory with plugin jars.",
     required = false,
     noshort = true)
@@ -19,10 +19,15 @@ trait PluginConfiguration extends ScallopConf {
 
 class PluginModule(conf: PluginConfiguration) extends AbstractModule {
 
-  override def configure(): Unit = conf.pluginDir.foreach { dir =>
-    val pluginManager = PluginManager(dir)
-    bind(classOf[PluginManager]).toInstance(pluginManager)
-    bind(classOf[EagerDependency]).asEagerSingleton()
+  override def configure(): Unit = {
+    conf.pluginDir.map { dir =>
+      val pluginManager = PluginManager(dir)
+      bind(classOf[PluginManager]).toInstance(pluginManager)
+      bind(classOf[EagerDependency]).asEagerSingleton()
+    }.get.getOrElse {
+      //fallback, if no plugin directory was defined
+      bind(classOf[PluginManager]).toInstance(new PluginManager(Seq.empty))
+    }
   }
 
   @Provides
