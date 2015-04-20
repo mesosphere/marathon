@@ -146,9 +146,7 @@ be assigned.  If a `servicePort` value is assigned by Marathon then Marathon gua
 is unique across the cluster. The values for random service ports are in the
 range `[local_port_min, local_port_max]` where `local_port_min` and
 `local_port_max` are command line options with default values of `10000` and
-`20000`, respectively. Note that HAProxy supports forwarding only TCP traffic.
-If the `"protocol"` parameter is set to `"udp"`, HAProxy will forward only
-TCP traffic on the service port.
+`20000`, respectively.
 
 The `"protocol"` parameter is optional and defaults to `"tcp"`.
 

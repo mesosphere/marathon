@@ -4,13 +4,9 @@ title: Setting Up and Running Marathon
 
 ## Setting Up And Running Marathon
 
-### Quickstart on Google Cloud Platform
+### Quickstart
 
-A quick way to try out Marathon is to launch a cluster using
-[Mesosphere for Google Cloud Platform](https://google.mesosphere.io) or
-[Mesosphere for Digital Ocean](https://digitalocean.mesosphere.io).
-Each cluster has Mesos and Marathon configured and offers secure access
-over a custom VPN.
+An easy way to try out Marathon locally is using the [playa-mesos](https://github.com/mesosphere/playa-mesos) project, a virtual machine installation of Mesos and Marathon.
 
 ### Requirements
 
@@ -117,7 +113,9 @@ For example:
 $ MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
 ```
 
+### Launch an Application
 
+For an introduction to Marathon application definitions and how they are executed, see [Application Basics](application-basics.html).
 
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
 [Zookeeper]: https://zookeeper.apache.org/ "Apache ZooKeeper"

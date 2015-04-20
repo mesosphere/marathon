@@ -31,7 +31,7 @@ title: REST API
   * [POST /v2/tasks/delete](#post-/v2/tasks/delete): Kill given list of tasks
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
-  * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Cancel the deployment with `deploymentId`
+  * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Revert or cancel the deployment with `deploymentId`
 * [Event Subscriptions](#event-subscriptions)
   * [POST /v2/eventSubscriptions](#post-/v2/eventsubscriptions): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
@@ -2109,8 +2109,9 @@ Transfer-Encoding: chunked
       <td><code>boolean</code></td>
       <td>
         If set to <code>false</code> (the default) then the deployment is
-        canceled and a new deployment is created to restore the previous
-        configuration.  If set to <code>true</code>, then the deployment
+        canceled and a new deployment is created to revert the changes of this
+        deployment. Without concurrent deployments, this restores the configuration before this
+        deployment. If set to <code>true</code>, then the deployment
         is still canceled but no rollback deployment is created.
         Default: <code>false</code>.</td>
     </tr>
@@ -2119,7 +2120,8 @@ Transfer-Encoding: chunked
 
 ##### Example
 
-Cancel the deployment with `deploymentId`
+Revert the deployment with `deploymentId` by creating a new deployment which reverses
+all changes.
 
 **Request:**
 
