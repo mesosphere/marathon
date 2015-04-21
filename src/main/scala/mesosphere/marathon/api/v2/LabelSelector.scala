@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.state.AppDefinition
+import org.apache.log4j.Logger
 
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
@@ -18,12 +19,12 @@ case class LabelSelectors(selectors: Seq[LabelSelector]) {
   * A label selector query has this format:
   * Query: Selector {, Selector}
   * Selector: ExistenceSelector | SetSelector | EqualsSelector
-  * ExistenceSelector: Id
+  * ExistenceSelector: Label
   * SetSelector: Label in|notin Set
-  * EqualsSelector: Label ==|!= Ident
-  * Set: ( Ident {, Ident} )
+  * EqualsSelector: Label ==|!= LabelValue
+  * Set: ( LabelValue {, LabelValue} )
   * Label: any character without whitespace
-  * Ident: any character without , or )
+  * LabelValue: any character without , or )
   *
   * Examples:
   * test == foo
@@ -37,20 +38,22 @@ case class LabelSelectors(selectors: Seq[LabelSelector]) {
   */
 class LabelSelectorParsers extends RegexParsers {
 
+  private[this] val log = Logger.getLogger(getClass.getName)
+
   def label: Parser[String] = """[^\s!=]+""".r
   def eqOp: Parser[String] = """(==|!=)""".r
   def setOp: Parser[String] = """(in|notin)""".r
-  def ident: Parser[String] = """[^,)=]+""".r
+  def labelValue: Parser[String] = """[^,)=]+""".r
 
-  def list: Parser[List[String]] = "(" ~> repsep(ident, ",") <~ ")"
+  def list: Parser[List[String]] = "(" ~> repsep(labelValue, ",") <~ ")"
 
   def existenceSelector: Parser[LabelSelector] = label ^^ {
     case existence => LabelSelector(existence, _ => true, List.empty)
   }
 
-  def equalitySelector: Parser[LabelSelector] = label ~ eqOp ~ ident ^^ {
-    case label ~ "==" ~ ident => LabelSelector(label, ident == _, List(ident))
-    case label ~ "!=" ~ ident => LabelSelector(label, ident != _, List(ident))
+  def equalitySelector: Parser[LabelSelector] = label ~ eqOp ~ labelValue ^^ {
+    case label ~ "==" ~ value => LabelSelector(label, value == _, List(value))
+    case label ~ "!=" ~ value => LabelSelector(label, value != _, List(value))
   }
 
   def setSelector: Parser[LabelSelector] = label ~ setOp ~ list ^^ {
@@ -66,13 +69,13 @@ class LabelSelectorParsers extends RegexParsers {
     try {
       parseAll(selectors, in) match {
         case Success(selectors, _) => Right(LabelSelectors(selectors))
-        case Failure(message, _)   => Left(message)
-        case Error(message, _)     => Left(message)
         case NoSuccess(message, _) => Left(message)
       }
     }
     catch {
-      case NonFatal(ex) => Left(ex.getMessage)
+      case NonFatal(ex) =>
+        log.warn(s"Could not parse $in", ex)
+        Left(ex.getMessage)
     }
   }
 

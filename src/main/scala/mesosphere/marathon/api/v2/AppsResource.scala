@@ -307,10 +307,10 @@ class AppsResource @Inject() (
     val selectors = if (label != null) Some(new LabelSelectorParsers().parsed(label)) else None
 
     service.listApps().filter { app =>
-      val appMatchesCmd = cmd != null && cmd.nonEmpty && app.cmd.exists(isPrefix(cmd, _))
-      val appMatchesId = id != null && id.nonEmpty && isPrefix(id, app.id.toString)
-      val appMatchesLabel = selectors.exists(_.matches(app))
-      appMatchesCmd || appMatchesId || appMatchesLabel
+      val appMatchesCmd = cmd == null || (cmd != null && cmd.nonEmpty && app.cmd.exists(isPrefix(cmd, _)))
+      val appMatchesId = id == null || (id != null && id.nonEmpty && isPrefix(id, app.id.toString))
+      val appMatchesLabel = label == null || selectors.exists(_.matches(app))
+      appMatchesCmd && appMatchesId && appMatchesLabel
     }
   }
 }
