@@ -46,8 +46,9 @@ class AppsResource @Inject() (
   @Timed
   def index(@QueryParam("cmd") cmd: String,
             @QueryParam("id") id: String,
+            @QueryParam("label") label: String,
             @QueryParam("embed") embed: String): String = {
-    val apps = if (cmd != null || id != null) search(cmd, id) else service.listApps()
+    val apps = if (cmd != null || id != null || label != null) search(cmd, id, label) else service.listApps()
     val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
     val mapped = embed match {
       case EmbedTasks =>
@@ -300,22 +301,16 @@ class AppsResource @Inject() (
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
-  private def search(cmd: String, id: String): Iterable[AppDefinition] = {
-    /* Returns true iff `a` is a prefix of `b`, case-insensitively */
-    def isPrefix(a: String, b: String): Boolean =
-      b.toLowerCase contains a.toLowerCase
+  private def search(cmd: String, id: String, label: String): Iterable[AppDefinition] = {
+    /* Returns true if `a` is a prefix of `b`, case-insensitively */
+    def isPrefix(a: String, b: String): Boolean = b.toLowerCase contains a.toLowerCase
+    val selectors = if (label != null) Some(new LabelSelectorParsers().parsed(label)) else None
 
     service.listApps().filter { app =>
-      val appMatchesCmd =
-        cmd != null &&
-          cmd.nonEmpty &&
-          app.cmd.exists(isPrefix(cmd, _))
-
-      val appMatchesId =
-        id != null &&
-          id.nonEmpty && isPrefix(id, app.id.toString)
-
-      appMatchesCmd || appMatchesId
+      val appMatchesCmd = cmd != null && cmd.nonEmpty && app.cmd.exists(isPrefix(cmd, _))
+      val appMatchesId = id != null && id.nonEmpty && isPrefix(id, app.id.toString)
+      val appMatchesLabel = selectors.exists(_.matches(app))
+      appMatchesCmd || appMatchesId || appMatchesLabel
     }
   }
 }
