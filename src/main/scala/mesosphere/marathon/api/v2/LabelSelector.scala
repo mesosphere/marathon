@@ -23,7 +23,7 @@ case class LabelSelectors(selectors: Seq[LabelSelector]) {
   * equalsSelector: term ==|!= term
   * setSelector: term in|notin set
   * set: ( term {, term} )
-  * term: character sequence with character groups A-Za-z0-9. Any other character needs to be escaped with backslash.
+  * term: character sequence with character groups A-Za-z0-9 and characters .-_. Any other character needs to be escaped with backslash.
   *
   * Examples:
   * test == foo
@@ -39,8 +39,8 @@ class LabelSelectorParsers extends RegexParsers {
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
-  //Allowed characters are A-Za-z0-9. All other characters can be used, but need to be escaped.
-  def term: Parser[String] = """(\Q\\E.|[A-Za-z0-9])+""".r ^^ { _.replaceAll("""\Q\\E(.)""", "$1") }
+  //Allowed characters are A-Za-z0-9._- All other characters can be used, but need to be escaped.
+  def term: Parser[String] = """(\\.|[-A-Za-z0-9_.])+""".r ^^ { _.replaceAll("""\\(.)""", "$1") }
 
   def existenceSelector: Parser[LabelSelector] = term ^^ {
     case existence => LabelSelector(existence, _ => true, List.empty)
