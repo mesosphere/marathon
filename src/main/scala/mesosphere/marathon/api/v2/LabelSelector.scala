@@ -23,7 +23,8 @@ case class LabelSelectors(selectors: Seq[LabelSelector]) {
   * equalsSelector: term ==|!= term
   * setSelector: term in|notin set
   * set: ( term {, term} )
-  * term: character sequence with character groups A-Za-z0-9 and characters .-_. Any other character needs to be escaped with backslash.
+  * term: character sequence with character groups A-Za-z0-9 and characters .-_.
+  * Any other character needs to be escaped with backslash.
   *
   * Examples:
   * test == foo

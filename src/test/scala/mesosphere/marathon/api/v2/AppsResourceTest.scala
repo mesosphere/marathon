@@ -8,6 +8,7 @@ import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpe
 import org.mockito.Matchers.{ any, eq => meq, same }
 import org.mockito.Mockito.{ verify, when }
 import org.scalatest.Matchers
+import PathId._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -58,4 +59,31 @@ class AppsResourceTest extends MarathonSpec with Matchers {
 
     verify(service).deploy(any(), meq(true))
   }
+
+  test("Search apps can be filtered") {
+    val app1 = AppDefinition(id = "/app/service-a".toRootPath, cmd = Some("party hard"), labels = Map("a" -> "1", "b" -> "2"))
+    val app2 = AppDefinition(id = "/app/service-b".toRootPath, cmd = Some("work hard"), labels = Map("a" -> "1", "b" -> "3"))
+    when(service.listApps()).thenReturn(Seq(app1, app2))
+
+    appsResource.search(None, None, None) should be(Seq(app1, app2))
+    appsResource.search(Some(""), None, None) should be(Seq(app1, app2))
+    appsResource.search(Some("party"), None, None) should be(Seq(app1))
+    appsResource.search(Some("work"), None, None) should be(Seq(app2))
+    appsResource.search(Some("hard"), None, None) should be(Seq(app1, app2))
+    appsResource.search(Some("none"), None, None) should be(Seq.empty)
+
+    appsResource.search(None, Some("app"), None) should be(Seq(app1, app2))
+    appsResource.search(None, Some("service-a"), None) should be(Seq(app1))
+    appsResource.search(Some("party"), Some("app"), None) should be(Seq(app1))
+    appsResource.search(Some("work"), Some("app"), None) should be(Seq(app2))
+    appsResource.search(Some("hard"), Some("service-a"), None) should be(Seq(app1))
+    appsResource.search(Some(""), Some(""), None) should be(Seq(app1, app2))
+
+    appsResource.search(None, None, Some("b==2")) should be(Seq(app1))
+    appsResource.search(Some("party"), Some("app"), Some("a==1")) should be(Seq(app1))
+    appsResource.search(Some("work"), Some("app"), Some("a==1")) should be(Seq(app2))
+    appsResource.search(Some("hard"), Some("service-a"), Some("a==1")) should be(Seq(app1))
+    appsResource.search(Some(""), Some(""), Some("")) should be(Seq(app1, app2))
+  }
+
 }

@@ -301,7 +301,7 @@ class AppsResource @Inject() (
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
-  private def search(cmd: Option[String], id: Option[String], label: Option[String]): Iterable[AppDefinition] = {
+  private[v2] def search(cmd: Option[String], id: Option[String], label: Option[String]): Iterable[AppDefinition] = {
     def containCaseInsensitive(a: String, b: String): Boolean = b.toLowerCase contains a.toLowerCase
     val selectors = label.map(new LabelSelectorParsers().parsed)
 
