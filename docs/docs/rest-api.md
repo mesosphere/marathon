@@ -1122,9 +1122,18 @@ User-Agent: HTTPie/0.7.2
 **Response:**
 
 {% highlight http %}
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
+Cache-Control: no-cache, no-store, must-revalidate
 Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
+Expires: 0
+Pragma: no-cache
+Server: Jetty(8.1.15.v20140411)
+Transfer-Encoding: chunked
+
+{
+    "deploymentId": "14f48a7d-261e-4641-a158-8c5894c3116a",
+    "version": "2015-04-21T10:34:13.646Z"
+}
 {% endhighlight %}
 
 
