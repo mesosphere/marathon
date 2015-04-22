@@ -48,7 +48,7 @@ class AppsResource @Inject() (
             @QueryParam("id") id: String,
             @QueryParam("label") label: String,
             @QueryParam("embed") embed: String): String = {
-    val apps = if (cmd != null || id != null || label != null) search(cmd, id, label) else service.listApps()
+    val apps = search(Option(cmd), Option(id), Option(label))
     val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
     val mapped = embed match {
       case EmbedTasks =>
@@ -103,7 +103,7 @@ class AppsResource @Inject() (
       case _ =>
         Response
           .status(409)
-          .entity(Json.obj("message" -> s"An app with id [${app.id}] already exists.").toString)
+          .entity(Json.obj("message" -> s"An app with id [${app.id}] already exists.").toString())
           .build()
     }
   }
@@ -301,15 +301,14 @@ class AppsResource @Inject() (
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
-  private def search(cmd: String, id: String, label: String): Iterable[AppDefinition] = {
-    /* Returns true if `a` is a prefix of `b`, case-insensitively */
-    def isPrefix(a: String, b: String): Boolean = b.toLowerCase contains a.toLowerCase
-    val selectors = if (label != null) Some(new LabelSelectorParsers().parsed(label)) else None
+  private def search(cmd: Option[String], id: Option[String], label: Option[String]): Iterable[AppDefinition] = {
+    def containCaseInsensitive(a: String, b: String): Boolean = b.toLowerCase contains a.toLowerCase
+    val selectors = label.map(new LabelSelectorParsers().parsed)
 
     service.listApps().filter { app =>
-      val appMatchesCmd = cmd == null || (cmd != null && cmd.nonEmpty && app.cmd.exists(isPrefix(cmd, _)))
-      val appMatchesId = id == null || (id != null && id.nonEmpty && isPrefix(id, app.id.toString))
-      val appMatchesLabel = label == null || selectors.exists(_.matches(app))
+      val appMatchesCmd = cmd.fold(true)(c => app.cmd.exists(containCaseInsensitive(c, _)))
+      val appMatchesId = id.fold(true)(s => containCaseInsensitive(s, app.id.toString))
+      val appMatchesLabel = selectors.fold(true)(_.matches(app))
       appMatchesCmd && appMatchesId && appMatchesLabel
     }
   }
