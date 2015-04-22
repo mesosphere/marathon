@@ -199,9 +199,11 @@ This filter selects applications by application labels.
 A label selector query contains one or more label selectors, which are comma separated.
 Marathon supports three types of selectors: existence-based, equality-based and set-based. 
 In the case of multiple selectors, all must be satisfied so comma separator acts as an AND logical operator.
+Labels and values must consist of alphanumeric characters `A-Za-z0-9`. 
+Any other character is possible, but must be escaped with a backslash character.
 
 Example:
-environment==production, tier!=frontend, deployed in (us, eu), deployed notin (aa, bb)  
+`environment==production, tier!=frontend\ tier, deployed in (us, eu), deployed notin (aa, bb)`  
 
 #### Existence based Selector Query
 
