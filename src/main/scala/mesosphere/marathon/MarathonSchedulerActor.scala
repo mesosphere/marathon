@@ -38,6 +38,7 @@ class MarathonSchedulerActor(
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     taskIdUtil: TaskIdUtil,
     storage: StorageProvider,
     eventBus: EventStream,
@@ -271,7 +272,7 @@ class MarathonSchedulerActor(
     withLockFor(Set(appId))(f)
 
   // there has to be a better way...
-  def driver: SchedulerDriver = MarathonSchedulerDriver.driver.get
+  def driver: SchedulerDriver = marathonSchedulerDriverHolder.driver.get
 
   def deploy(origSender: ActorRef, cmd: Deploy): Unit = {
     val plan = cmd.plan

@@ -44,6 +44,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var queue: TaskQueue = _
   var frameworkIdUtil: FrameworkIdUtil = _
   var driver: SchedulerDriver = _
+  var holder: MarathonSchedulerDriverHolder = _
   var taskIdUtil: TaskIdUtil = _
   var storage: StorageProvider = _
   var taskFailureEventRepository: TaskFailureRepository = _
@@ -52,7 +53,8 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   before {
     driver = mock[SchedulerDriver]
-    MarathonSchedulerDriver.driver = Some(driver)
+    holder = new MarathonSchedulerDriverHolder
+    holder.driver = Some(driver)
     repo = mock[AppRepository]
     deploymentRepo = mock[DeploymentRepository]
     hcManager = mock[HealthCheckManager]
@@ -86,6 +88,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       tracker,
       queue,
       frameworkIdUtil,
+      holder,
       taskIdUtil,
       storage,
       system.eventStream,
@@ -410,6 +413,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       tracker,
       queue,
       frameworkIdUtil,
+      holder,
       taskIdUtil,
       storage,
       system.eventStream,
@@ -480,6 +484,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
         tracker,
         queue,
         frameworkIdUtil,
+        holder,
         taskIdUtil,
         storage,
         system.eventStream,

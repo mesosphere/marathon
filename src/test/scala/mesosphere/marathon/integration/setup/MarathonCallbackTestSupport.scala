@@ -2,6 +2,7 @@ package mesosphere.marathon.integration.setup
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import scala.annotation.tailrec
 import scala.concurrent.duration.{ FiniteDuration, _ }
 
 /**
@@ -37,9 +38,10 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   }
 
   def waitForEventMatching(description: String, maxWait: FiniteDuration = 30.seconds)(fn: CallbackEvent => Boolean): CallbackEvent = {
+    @tailrec
     def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
       val event = events.poll()
-      if (fn(event)) Some(event) else None
+      if (fn(event)) Some(event) else nextEvent
     }
     WaitTestSupport.waitFor(description, maxWait)(nextEvent)
   }

@@ -1,22 +1,21 @@
 package mesosphere.marathon
 
-import mesosphere.chaos.App
-import org.rogach.scallop.ScallopConf
-import mesosphere.chaos.http.{ HttpService, HttpModule, HttpConf }
+import com.google.inject.Module
+import com.twitter.common.quantity.{ Amount, Time }
+import com.twitter.common.zookeeper.ZooKeeperClient
+import mesosphere.chaos.{ App, AppConfiguration }
+import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
-import mesosphere.chaos.AppConfiguration
-import mesosphere.marathon.event.{ EventModule, EventConfiguration }
-import mesosphere.marathon.event.http.{ HttpEventModule, HttpEventConfiguration }
-import com.google.inject.AbstractModule
-import com.twitter.common.quantity.{ Time, Amount }
-import com.twitter.common.zookeeper.ZooKeeperClient
-import scala.collection.JavaConverters._
+import mesosphere.marathon.event.http.{ HttpEventConfiguration, HttpEventModule }
+import mesosphere.marathon.event.{ EventConfiguration, EventModule }
 import org.apache.log4j.Logger
+import org.rogach.scallop.ScallopConf
 
-object Main extends App {
+import scala.collection.JavaConverters._
+
+class MarathonApp extends App {
   val log = Logger.getLogger(getClass.getName)
-  log.info(s"Starting Marathon ${BuildInfo.version}")
 
   lazy val zk: ZooKeeperClient = {
     require(
@@ -47,7 +46,7 @@ object Main extends App {
     client
   }
 
-  def modules(): Seq[AbstractModule] = {
+  def modules(): Seq[Module] = {
     Seq(
       new HttpModule(conf) {
         // burst browser cache for assets
@@ -61,12 +60,12 @@ object Main extends App {
     ) ++ getEventsModule
   }
 
-  def getEventsModule: Option[AbstractModule] = {
+  def getEventsModule: Option[Module] = {
     conf.eventSubscriber.get flatMap {
       case "http_callback" =>
         log.info("Using HttpCallbackEventSubscriber for event" +
           "notification")
-        Some(new HttpEventModule())
+        Some(new HttpEventModule(conf))
 
       case _ =>
         log.info("Event notification disabled.")
@@ -82,10 +81,17 @@ object Main extends App {
     with HttpEventConfiguration
     with DebugConf
 
-  lazy val conf = new AllConf
+  override lazy val conf = new AllConf
 
-  run(
-    classOf[HttpService],
-    classOf[MarathonSchedulerService]
-  )
+  def runDefault(): Unit = {
+    log.info(s"Starting Marathon ${BuildInfo.version}")
+    run(
+      classOf[HttpService],
+      classOf[MarathonSchedulerService]
+    )
+  }
+}
+
+object Main extends MarathonApp {
+  runDefault()
 }

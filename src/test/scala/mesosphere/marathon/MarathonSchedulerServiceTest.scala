@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestKit, TestProbe }
+import com.google.inject.Provider
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.{ Group, Candidate }
 import com.twitter.common.zookeeper.Group.JoinException
@@ -92,6 +93,12 @@ class MarathonSchedulerServiceTest
     schedulerActor = probe.ref
   }
 
+  def driverFactory[T](provide: => SchedulerDriver): SchedulerDriverFactory = {
+    new SchedulerDriverFactory {
+      override def createDriver(): SchedulerDriver = provide
+    }
+  }
+
   test("Start timer when elected") {
     val mockTimer = mock[Timer]
 
@@ -101,18 +108,16 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
-      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
       taskTracker,
-      scheduler,
+      driverFactory(mock[SchedulerDriver]),
       system,
       migration,
       schedulerActor
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
-      override def newDriver() = mock[SchedulerDriver]
     }
 
     schedulerService.timer = mockTimer
@@ -132,18 +137,16 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
-      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
       taskTracker,
-      scheduler,
+      driverFactory(mock[SchedulerDriver]),
       system,
       migration,
       schedulerActor
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
-      override def newDriver() = mock[SchedulerDriver]
     }
 
     schedulerService.timer = mockTimer
@@ -163,18 +166,16 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
-      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
       taskTracker,
-      scheduler,
+      driverFactory(mock[SchedulerDriver]),
       system,
       migration,
       schedulerActor
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
-      override def newDriver() = mock[SchedulerDriver]
       override def newTimer() = mockTimer
     }
 
@@ -200,18 +201,16 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
-      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
       taskTracker,
-      scheduler,
+      driverFactory(mock[SchedulerDriver]),
       system,
       migration,
       schedulerActor
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
-      override def newDriver() = mock[SchedulerDriver]
       override def newTimer() = mockTimer
     }
 
@@ -224,8 +223,6 @@ class MarathonSchedulerServiceTest
   }
 
   test("Abdicate leadership when migration fails and reoffer leadership") {
-    val mockTimer = mock[Timer]
-
     when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
     candidate = Some(mock[Candidate])
 
@@ -233,18 +230,16 @@ class MarathonSchedulerServiceTest
       healthCheckManager,
       candidate,
       config,
-      httpConfig,
       frameworkIdUtil,
       leader,
       appRepository,
       taskTracker,
-      scheduler,
+      driverFactory(mock[SchedulerDriver]),
       system,
       migration,
       schedulerActor
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
-      override def newDriver() = mock[SchedulerDriver]
     }
 
     // use an Answer object here because Mockito's thenThrow does only

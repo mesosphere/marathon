@@ -60,7 +60,10 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       frameworkIdUtil,
       taskIdUtil,
       mock[ActorSystem],
-      config
+      config,
+      new SchedulerCallbacks {
+        override def disconnected(): Unit = {}
+      }
     )
   }
 
