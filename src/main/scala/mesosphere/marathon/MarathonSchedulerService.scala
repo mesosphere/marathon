@@ -6,6 +6,7 @@ import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.event.EventStream
 import akka.pattern.{ after, ask }
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
@@ -16,6 +17,7 @@ import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.event.{ DefeatedAsLeader, ElectedAsLeader, EventModule }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
@@ -37,6 +39,7 @@ import scala.util.{ Failure, Success }
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
+    @Named(EventModule.busName) eventBus: EventStream,
     healthCheckManager: HealthCheckManager,
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
@@ -284,9 +287,7 @@ class MarathonSchedulerService @Inject() (
 
   private def defeatLeadership(): Unit = {
     log.info("Defeat leadership")
-
     schedulerActor ! Suspend(LostLeadershipException("Leadership was defeated"))
-
     timer.cancel()
     timer = newTimer()
 
@@ -294,16 +295,16 @@ class MarathonSchedulerService @Inject() (
     // Note that abdication command will be ran upon driver shutdown.
     leader.set(false)
     stopDriver()
+    eventBus.publish(DefeatedAsLeader())
   }
 
   private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = {
     log.info("Elect leadership")
-
     // We have been elected as leader. Thus, update leadership and run the driver.
     leader.set(true)
     runDriver(abdicateOption)
-
     schedulerActor ! Start
+    eventBus.publish(ElectedAsLeader())
 
     // Start the timer
     schedulePeriodicOperations()

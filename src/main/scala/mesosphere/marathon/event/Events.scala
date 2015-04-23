@@ -75,6 +75,15 @@ final case class SchedulerDisconnectedEvent(
   timestamp: String = Timestamp.now().toString)
     extends MarathonSchedulerEvent
 
+// leader message
+final case class ElectedAsLeader(
+  eventType: String = "elected_as_leader",
+  timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+final case class DefeatedAsLeader(
+  eventType: String = "defeated_as_leader",
+  timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
 // event subscriptions
 
 sealed trait MarathonSubscriptionEvent extends MarathonEvent {
@@ -203,3 +212,4 @@ case class MesosFrameworkMessageEvent(
   message: Array[Byte],
   eventType: String = "framework_message_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
