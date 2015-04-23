@@ -4,6 +4,7 @@ import java.util.{ TimerTask, Timer }
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.{ ActorRef, ActorSystem }
+import akka.event.EventStream
 import akka.testkit.{ TestKit, TestProbe }
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.{ Group, Candidate }
@@ -76,6 +77,7 @@ class MarathonSchedulerServiceTest
   var scheduler: MarathonScheduler = _
   var migration: Migration = _
   var schedulerActor: ActorRef = _
+  var eventStream: EventStream = _
 
   before {
     probe = TestProbe()
@@ -89,6 +91,7 @@ class MarathonSchedulerServiceTest
     taskTracker = mock[TaskTracker]
     scheduler = mock[MarathonScheduler]
     migration = mock[Migration]
+    eventStream = mock[EventStream]
     schedulerActor = probe.ref
   }
 
@@ -98,6 +101,7 @@ class MarathonSchedulerServiceTest
     when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
 
     val schedulerService = new MarathonSchedulerService(
+      eventStream,
       healthCheckManager,
       candidate,
       config,
@@ -129,6 +133,7 @@ class MarathonSchedulerServiceTest
     when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
 
     val schedulerService = new MarathonSchedulerService(
+      eventStream,
       healthCheckManager,
       candidate,
       config,
@@ -160,6 +165,7 @@ class MarathonSchedulerServiceTest
     when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
 
     val schedulerService = new MarathonSchedulerService(
+      eventStream,
       healthCheckManager,
       candidate,
       config,
@@ -197,6 +203,7 @@ class MarathonSchedulerServiceTest
     frameworkIdUtil = new FrameworkIdUtil(new InMemoryState)
 
     val schedulerService = new MarathonSchedulerService(
+      eventStream,
       healthCheckManager,
       candidate,
       config,
@@ -230,6 +237,7 @@ class MarathonSchedulerServiceTest
     candidate = Some(mock[Candidate])
 
     val schedulerService = new MarathonSchedulerService(
+      eventStream,
       healthCheckManager,
       candidate,
       config,

@@ -119,4 +119,9 @@ trait MarathonConf extends ScallopConf with ZookeeperConf {
     descr = "Mesos Authentication Secret",
     noshort = true
   )
+
+  lazy val initialAppsDirectory = opt[String]("initial_app_install_dir",
+    descr = "The directory with application definitions that should get installed during first start up.",
+    noshort = true
+  )
 }

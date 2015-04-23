@@ -243,6 +243,8 @@ trait DeploymentFormats {
 trait EventFormats {
   import Formats._
 
+  implicit lazy val ElectedAsLeaderWrites: Writes[ElectedAsLeader] = Json.writes[ElectedAsLeader]
+  implicit lazy val DefeatedAsLeaderWrites: Writes[DefeatedAsLeader] = Json.writes[DefeatedAsLeader]
   implicit lazy val AppTerminatedEventWrites: Writes[AppTerminatedEvent] = Json.writes[AppTerminatedEvent]
   implicit lazy val ApiPostEventWrites: Writes[ApiPostEvent] = Json.writes[ApiPostEvent]
   implicit lazy val SubscribeWrites: Writes[Subscribe] = Json.writes[Subscribe]

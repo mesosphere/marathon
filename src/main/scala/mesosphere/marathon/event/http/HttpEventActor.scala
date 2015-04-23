@@ -73,6 +73,8 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     case event: SchedulerDisconnectedEvent => Json.toJson(event)
     case event: SchedulerRegisteredEvent   => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
+    case event: ElectedAsLeader            => Json.toJson(event)
+    case event: DefeatedAsLeader           => Json.toJson(event)
   }
 }
 

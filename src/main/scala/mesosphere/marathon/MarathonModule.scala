@@ -51,10 +51,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
     bind(classOf[MetricRegistry]).asEagerSingleton()
-
     bind(classOf[GroupManager]).in(Scopes.SINGLETON)
-
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
+    bind(classOf[ApplicationOnInitStarter]).asEagerSingleton()
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))

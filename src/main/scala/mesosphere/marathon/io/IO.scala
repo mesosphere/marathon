@@ -7,9 +7,25 @@ import scala.annotation.tailrec
 
 import com.google.common.io.ByteStreams
 
+import scala.util.matching.Regex
+
 trait IO {
 
   private val BufferSize = 8192
+
+  protected def listFiles(inDir: File, regex: Regex): Array[File] = {
+    val files = Option(inDir.listFiles()).getOrElse(Array.empty)
+    files.filter(f => regex.pattern.matcher(f.getName).matches)
+  }
+
+  protected def readFile(file: File): Array[Byte] = {
+    using(new FileInputStream(file)) { in =>
+      using(new ByteArrayOutputStream(file.length().toInt)) { out =>
+        transfer(in, out)
+        out.toByteArray
+      }
+    }
+  }
 
   protected def moveFile(from: File, to: File): File = {
     if (to.exists()) delete(to)
