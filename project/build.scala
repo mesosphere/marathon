@@ -13,10 +13,12 @@ import sbtbuildinfo.Plugin._
 import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
 
 object MarathonBuild extends Build {
+
   lazy val root = Project(
     id = "marathon",
     base = file("."),
     settings = baseSettings ++
+               buildInfoSettings ++
                asmSettings ++
                releaseSettings ++
                publishSettings ++
@@ -26,6 +28,9 @@ object MarathonBuild extends Build {
                graphSettings ++
       Seq(
         libraryDependencies ++= Dependencies.root,
+        sourceGenerators in Compile <+= buildInfo,
+        buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
+        buildInfoPackage := "mesosphere.marathon",
         parallelExecution in Test := false,
         fork in Test := true
       )
@@ -34,12 +39,27 @@ object MarathonBuild extends Build {
     .settings(inConfig(IntegrationTest)(Defaults.testTasks): _*)
     .settings(testOptions in Test := Seq(Tests.Argument("-l", "integration")))
     .settings(testOptions in IntegrationTest := Seq(Tests.Argument("-n", "integration")))
+    .dependsOn(marathonInterface)
+
+  lazy val marathonInterface = Project(
+    id = "marathon-interface",
+    base = file("interface"),
+    settings = baseSettings ++
+      asmSettings ++
+      publishSettings ++
+      formatSettings ++
+      styleSettings ++
+      graphSettings ++
+      Seq(
+        libraryDependencies ++= Dependencies.interface
+      )
+  )
 
   lazy val testScalaStyle = taskKey[Unit]("testScalaStyle")
 
   lazy val IntegrationTest = config("integration") extend Test
 
-  lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
+  lazy val baseSettings = Defaults.defaultSettings ++ Seq (
     organization := "mesosphere",
     scalaVersion := "2.11.5",
     scalacOptions in Compile ++= Seq(
@@ -62,10 +82,6 @@ object MarathonBuild extends Build {
       "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
       "Spray Maven Repository"    at "http://repo.spray.io/"
     ),
-    sourceGenerators in Compile <+= buildInfo,
-    fork in Test := true,
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
-    buildInfoPackage := "mesosphere.marathon",
     testScalaStyle := {
       org.scalastyle.sbt.PluginKeys.scalastyle.toTask("").value
     },
@@ -125,6 +141,8 @@ object MarathonBuild extends Build {
 
 object Dependencies {
   import Dependency._
+
+  val interface = Seq.empty[ModuleID]
 
   val root = Seq(
     // runtime

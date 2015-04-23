@@ -1,19 +1,19 @@
 package mesosphere.marathon
 
-import mesosphere.chaos.App
-import org.rogach.scallop.ScallopConf
-import mesosphere.chaos.http.{ HttpService, HttpModule, HttpConf }
+import com.google.inject.AbstractModule
+import com.twitter.common.quantity.{ Amount, Time }
+import com.twitter.common.zookeeper.ZooKeeperClient
+import mesosphere.chaos.{ App, AppConfiguration }
+import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
-import mesosphere.chaos.AppConfiguration
-import mesosphere.marathon.event.{ EventModule, EventConfiguration }
-import mesosphere.marathon.event.http.{ HttpEventModule, HttpEventConfiguration }
-import com.google.inject.AbstractModule
-import com.twitter.common.quantity.{ Time, Amount }
-import com.twitter.common.zookeeper.ZooKeeperClient
-import scala.collection.JavaConverters._
-import java.util.Properties
+import mesosphere.marathon.event.http.{ HttpEventConfiguration, HttpEventModule }
+import mesosphere.marathon.event.{ EventConfiguration, EventModule }
+import mesosphere.marathon.plugin.{ PluginModule, PluginConfiguration }
 import org.apache.log4j.Logger
+import org.rogach.scallop.ScallopConf
+
+import scala.collection.JavaConverters._
 
 object Main extends App {
   val log = Logger.getLogger(getClass.getName)
@@ -57,7 +57,8 @@ object Main extends App {
       new MetricsModule,
       new MarathonModule(conf, conf, zk),
       new MarathonRestModule,
-      new EventModule(conf)
+      new EventModule(conf),
+      new PluginModule(conf)
     ) ++ getEventsModule
   }
 
@@ -80,6 +81,7 @@ object Main extends App {
     with AppConfiguration
     with EventConfiguration
     with HttpEventConfiguration
+    with PluginConfiguration
 
   lazy val conf = new AllConf
 
