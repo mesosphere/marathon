@@ -12,7 +12,6 @@ import com.google.inject.AbstractModule
 import com.twitter.common.quantity.{ Time, Amount }
 import com.twitter.common.zookeeper.ZooKeeperClient
 import scala.collection.JavaConverters._
-import java.util.Properties
 import org.apache.log4j.Logger
 
 object Main extends App {
@@ -57,7 +56,8 @@ object Main extends App {
       new MetricsModule,
       new MarathonModule(conf, conf, zk),
       new MarathonRestModule,
-      new EventModule(conf)
+      new EventModule(conf),
+      new DebugModule(conf)
     ) ++ getEventsModule
   }
 
@@ -80,6 +80,7 @@ object Main extends App {
     with AppConfiguration
     with EventConfiguration
     with HttpEventConfiguration
+    with DebugConf
 
   lazy val conf = new AllConf
 

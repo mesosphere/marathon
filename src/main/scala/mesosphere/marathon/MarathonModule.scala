@@ -50,8 +50,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
-    bind(classOf[MetricRegistry]).asEagerSingleton()
-
     bind(classOf[GroupManager]).in(Scopes.SINGLETON)
 
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
