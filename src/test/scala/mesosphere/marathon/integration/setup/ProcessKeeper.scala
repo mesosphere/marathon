@@ -57,8 +57,8 @@ object ProcessKeeper {
       upWhen = _.toLowerCase.contains("registered with master"))
   }
 
-  def startMarathon(cwd: File, env: Map[String, String], arguments: List[String]): Process = {
-    val argsWithMain = "mesosphere.marathon.Main" :: arguments
+  def startMarathon(cwd: File, env: Map[String, String], arguments: List[String], mainClass: String = "mesosphere.marathon.Main"): Process = {
+    val argsWithMain = mainClass :: arguments
 
     val mesosWorkDir: String = "/tmp/marathon-itest-marathon"
     val mesosWorkDirFile: File = new File(mesosWorkDir)
@@ -85,7 +85,7 @@ object ProcessKeeper {
     val up = Promise[Boolean]()
     val logger = new ProcessLogger {
       def checkUp(out: String) = {
-        log.info(s"$name out: $out")
+        log.info(s"$name: $out")
         if (!up.isCompleted && upWhen(out)) up.success(true)
       }
       override def buffer[T](f: => T): T = f

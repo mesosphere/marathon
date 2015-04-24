@@ -28,23 +28,6 @@ trait SchedulerCallbacks {
   def disconnected(): Unit
 }
 
-object MarathonScheduler {
-  private class MarathonSchedulerCallbacksImpl(
-    serviceOption: Option[MarathonSchedulerService])
-      extends SchedulerCallbacks {
-
-    override def disconnected(): Unit = {
-      // Abdicate leadership when we become disconnected from the Mesos master.
-      serviceOption.foreach(_.abdicateLeadership())
-    }
-
-  }
-
-  val callbacks: SchedulerCallbacks = new MarathonSchedulerCallbacksImpl(
-    Some(Main.injector.getInstance(classOf[MarathonSchedulerService]))
-  )
-}
-
 class MarathonScheduler @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
     @Named("restMapper") mapper: ObjectMapper,
@@ -56,7 +39,8 @@ class MarathonScheduler @Inject() (
     frameworkIdUtil: FrameworkIdUtil,
     taskIdUtil: TaskIdUtil,
     system: ActorSystem,
-    config: MarathonConf) extends Scheduler {
+    config: MarathonConf,
+    schedulerCallbacks: SchedulerCallbacks) extends Scheduler {
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
@@ -228,7 +212,7 @@ class MarathonScheduler @Inject() (
 
     // Disconnection from the Mesos master has occurred.
     // Thus, call the scheduler callbacks.
-    MarathonScheduler.callbacks.disconnected()
+    schedulerCallbacks.disconnected()
   }
 
   override def slaveLost(driver: SchedulerDriver, slave: SlaveID) {

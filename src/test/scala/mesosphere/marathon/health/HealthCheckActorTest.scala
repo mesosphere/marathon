@@ -3,7 +3,7 @@ package mesosphere.marathon.health
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon.health.HealthCheckActorTest.SameThreadExecutionContext
-import mesosphere.marathon.{ Protos, MarathonSpec }
+import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder, Protos, MarathonSpec }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
 import org.mockito.Mockito.when
@@ -29,9 +29,10 @@ class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultE
 
     when(tracker.get(appId)).thenReturn(Set(task))
 
+    val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val actor = TestActorRef[HealthCheckActor](
       Props(
-        new HealthCheckActor(appId, taskVersion, HealthCheck(), tracker, system.eventStream) {
+        new HealthCheckActor(appId, taskVersion, holder, mock[MarathonScheduler], HealthCheck(), tracker, system.eventStream) {
           override val workerProps = Props {
             latch.countDown()
             new TestActors.EchoActor

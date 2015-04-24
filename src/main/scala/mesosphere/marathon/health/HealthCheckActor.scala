@@ -2,7 +2,7 @@ package mesosphere.marathon.health
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
-import mesosphere.marathon.MarathonSchedulerDriver
+import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event._
@@ -13,6 +13,8 @@ import mesosphere.mesos.protos.TaskID
 class HealthCheckActor(
     appId: PathId,
     appVersion: String,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+    marathonScheduler: MarathonScheduler,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
@@ -97,14 +99,12 @@ class HealthCheckActor(
       log.info(f"Killing task ${task.getId} on host ${task.getHost}")
 
       // kill the task
-      MarathonSchedulerDriver.driver.foreach { driver =>
+      marathonSchedulerDriverHolder.driver.foreach { driver =>
         driver.killTask(TaskID(task.getId))
       }
 
       // increase the task launch delay for this questionably healthy app
-      MarathonSchedulerDriver.scheduler.foreach { scheduler =>
-        scheduler.unhealthyTaskKilled(appId, task.getId)
-      }
+      marathonScheduler.unhealthyTaskKilled(appId, task.getId)
     }
   }
 

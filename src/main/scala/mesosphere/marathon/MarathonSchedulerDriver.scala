@@ -1,24 +1,15 @@
 package mesosphere.marathon
 
-import mesosphere.chaos.http.HttpConf
-import org.apache.mesos.Protos.{ FrameworkID, FrameworkInfo, Credential }
-import org.apache.mesos.{ SchedulerDriver, MesosSchedulerDriver }
+import java.io.{ IOException, FileInputStream }
 
 import com.google.protobuf.ByteString
-import java.io.{ FileInputStream, IOException }
-
+import mesosphere.chaos.http.HttpConf
+import org.apache.mesos.Protos.{ Credential, FrameworkInfo, FrameworkID }
+import org.apache.mesos.{ MesosSchedulerDriver, SchedulerDriver }
 import org.slf4j.LoggerFactory
 
-/**
-  * Wrapper class for the scheduler
-  */
 object MarathonSchedulerDriver {
-
   private[this] val log = LoggerFactory.getLogger(getClass)
-
-  var driver: Option[SchedulerDriver] = None
-
-  var scheduler: Option[MarathonScheduler] = None
 
   def newDriver(config: MarathonConf,
                 httpConfig: HttpConf,
@@ -83,9 +74,6 @@ object MarathonSchedulerDriver {
     }
 
     log.debug("Finished creating new driver")
-
-    driver = Some(newDriver)
-    scheduler = Some(newScheduler)
 
     newDriver
   }

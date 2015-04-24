@@ -3,7 +3,7 @@ package mesosphere.marathon
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{ Timer, TimerTask }
-import javax.inject.{ Inject, Named }
+import javax.inject.{ Provider, Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.pattern.{ after, ask }
@@ -40,12 +40,11 @@ class MarathonSchedulerService @Inject() (
     healthCheckManager: HealthCheckManager,
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
-    httpConfig: HttpConf,
     frameworkIdUtil: FrameworkIdUtil,
     @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
     appRepository: AppRepository,
     taskTracker: TaskTracker,
-    scheduler: MarathonScheduler,
+    driverFactory: SchedulerDriverFactory,
     system: ActorSystem,
     migration: Migration,
     @Named("schedulerActor") schedulerActor: ActorRef) extends AbstractExecutionThreadService with Leader {
@@ -76,6 +75,7 @@ class MarathonSchedulerService @Inject() (
 
   val log = Logger.getLogger(getClass.getName)
 
+  // FIXME: Remove from this class
   def frameworkId: Option[FrameworkID] = {
     val fid = frameworkIdUtil.fetch
 
@@ -96,7 +96,6 @@ class MarathonSchedulerService @Inject() (
 
   implicit val timeout: Timeout = 5.seconds
 
-  protected def newDriver() = MarathonSchedulerDriver.newDriver(config, httpConfig, scheduler, frameworkId)
   protected def newTimer() = new Timer("marathonSchedulerTimer")
 
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
@@ -251,7 +250,7 @@ class MarathonSchedulerService @Inject() (
 
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
     log.info("Elected (Leader Interface)")
-    driver = Some(newDriver())
+    driver = Some(driverFactory.createDriver())
     var migrationComplete = false
     try {
       //execute tasks, only the leader is allowed to

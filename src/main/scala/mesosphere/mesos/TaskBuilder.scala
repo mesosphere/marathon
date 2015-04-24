@@ -44,7 +44,7 @@ class TaskBuilder(app: AppDefinition,
 
   private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String, portsResource: RangesResource) = {
     val executor: Executor = if (app.executor == "") {
-      Main.conf.executor
+      config.executor
     }
     else {
       Executor.dispatch(app.executor)

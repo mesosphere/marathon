@@ -13,7 +13,7 @@ import sbtbuildinfo.Plugin._
 import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
 
 object MarathonBuild extends Build {
-  lazy val root = Project(
+  lazy val root: Project = Project(
     id = "marathon",
     base = file("."),
     settings = baseSettings ++
@@ -21,9 +21,11 @@ object MarathonBuild extends Build {
                releaseSettings ++
                publishSettings ++
                formatSettings ++
-               styleSettings ++
+               scalaStyleSettings ++
                revolverSettings ++
                graphSettings ++
+               testSettings ++
+               integrationTestSettings ++
       Seq(
         libraryDependencies ++= Dependencies.root,
         parallelExecution in Test := false,
@@ -31,11 +33,38 @@ object MarathonBuild extends Build {
       )
     )
     .configs(IntegrationTest)
-    .settings(inConfig(IntegrationTest)(Defaults.testTasks): _*)
-    .settings(testOptions in Test := Seq(Tests.Argument("-l", "integration")))
-    .settings(testOptions in IntegrationTest := Seq(Tests.Argument("-n", "integration")))
+    // run mesos-simulation/test:test when running test
+    .settings((test in Test) <<= (test in Test) dependsOn (test in Test in LocalProject("mesosSimulation")))
+
+  lazy val mesosSimulation: Project = Project(
+    id = "mesosSimulation",
+    base = file("mesos-simulation"),
+    settings = baseSettings ++
+      formatSettings ++
+      scalaStyleSettings ++
+      revolverSettings ++
+      testSettings ++
+      integrationTestSettings
+    ).dependsOn(root % "compile->compile; test->test").configs(IntegrationTest)
+
+  lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
+    Seq(
+      testOptions in Test := Seq(Tests.Argument("-l", "integration")),
+      testOptions in IntegrationTest := Seq(Tests.Argument("-n", "integration")))
+
+  lazy val testSettings = Seq(
+    parallelExecution in Test := false,
+    fork in Test := true
+  )
 
   lazy val testScalaStyle = taskKey[Unit]("testScalaStyle")
+
+  lazy val scalaStyleSettings = styleSettings ++ Seq(
+    testScalaStyle := {
+      org.scalastyle.sbt.PluginKeys.scalastyle.toTask("").value
+    },
+    (test in Test) <<= (test in Test) dependsOn testScalaStyle
+  )
 
   lazy val IntegrationTest = config("integration") extend Test
 
@@ -65,11 +94,7 @@ object MarathonBuild extends Build {
     sourceGenerators in Compile <+= buildInfo,
     fork in Test := true,
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
-    buildInfoPackage := "mesosphere.marathon",
-    testScalaStyle := {
-      org.scalastyle.sbt.PluginKeys.scalastyle.toTask("").value
-    },
-    (test in Test) <<= (test in Test) dependsOn testScalaStyle
+    buildInfoPackage := "mesosphere.marathon"
   )
 
   lazy val asmSettings = assemblySettings ++ Seq(
