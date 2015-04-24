@@ -135,6 +135,7 @@ Marathon is managing applications on more than 100,000 nodes at these companies,
 * [The Factory](https://github.com/thefactory/)
 * [Guidewire](http://www.guidewire.com/)
 * [Groupon](http://www.groupon.com/)
+* [HolidayCheck](http://www.holidaycheck.com/)
 * [Human API](https://humanapi.co/)
 * [ING](http://www.ing.com/)
 * [iQIYI](http://www.iqiyi.com/)
