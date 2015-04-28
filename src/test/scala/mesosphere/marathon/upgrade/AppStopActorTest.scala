@@ -1,14 +1,15 @@
 package mesosphere.marathon.upgrade
 
 import akka.actor.{ ActorSystem, Props }
-import akka.testkit.{ TestProbe, TestActorRef, TestKit }
+import akka.testkit.{ TestActorRef, TestKit }
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.event.{ HistoryActor, AppTerminatedEvent, MesosStatusUpdateEvent }
-import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, AppDefinition, PathId }
+import mesosphere.marathon.event.{ AppTerminatedEvent, HistoryActor, MesosStatusUpdateEvent }
+import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure, TaskFailureRepository }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
-import mesosphere.marathon.{ MarathonSpec, SchedulerActions, TaskUpgradeCanceledException }
+import mesosphere.marathon.{ MarathonSpec, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
+import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
@@ -24,13 +25,11 @@ class AppStopActorTest
     with MockitoSugar {
 
   var driver: SchedulerDriver = _
-  var scheduler: SchedulerActions = _
   var taskTracker: TaskTracker = _
   var taskFailureRepository: TaskFailureRepository = _
 
   before {
     driver = mock[SchedulerDriver]
-    scheduler = mock[SchedulerActions]
     taskTracker = mock[TaskTracker]
     taskFailureRepository = mock[TaskFailureRepository]
   }
@@ -46,7 +45,6 @@ class AppStopActorTest
       Props(
         new AppStopActor(
           driver,
-          scheduler,
           taskTracker,
           system.eventStream,
           app,
@@ -81,7 +79,7 @@ class AppStopActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(scheduler).stopApp(driver, app)
+    verify(driver, times(2)).killTask(any())
 
     system.eventStream.publish(AppTerminatedEvent(app.id))
 
@@ -104,7 +102,6 @@ class AppStopActorTest
       Props(
         new AppStopActor(
           driver,
-          scheduler,
           taskTracker,
           system.eventStream,
           app,
@@ -115,7 +112,7 @@ class AppStopActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(scheduler).stopApp(driver, app)
+    verify(driver, times(0)).killTask(any())
     expectTerminated(ref)
   }
 
@@ -130,7 +127,6 @@ class AppStopActorTest
       Props(
         new AppStopActor(
           driver,
-          scheduler,
           taskTracker,
           system.eventStream,
           app,
@@ -145,7 +141,7 @@ class AppStopActorTest
       Await.result(promise.future, 5.seconds)
     }
 
-    verify(scheduler).stopApp(driver, app)
+    verify(driver, times(2)).killTask(any())
     expectTerminated(ref)
   }
 
@@ -162,7 +158,6 @@ class AppStopActorTest
       Props(
         classOf[AppStopActor],
         driver,
-        scheduler,
         taskTracker,
         system.eventStream,
         app,
@@ -177,7 +172,7 @@ class AppStopActorTest
 
     Await.result(promise.future, 10.seconds) should be(())
 
-    verify(scheduler).stopApp(driver, app)
+    verify(driver, times(2)).killTask(any())
     expectTerminated(ref)
   }
 

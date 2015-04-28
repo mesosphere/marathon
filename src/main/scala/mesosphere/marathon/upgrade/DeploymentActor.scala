@@ -85,7 +85,7 @@ class DeploymentActor(
           case StartApplication(app, scaleTo) => storeAndThen(app) { startApp(app, scaleTo) }
           case ScaleApplication(app, scaleTo) => storeAndThen(app) { scaleApp(app, scaleTo) }
           case RestartApplication(app)        => storeAndThen(app) { restartApp(app) }
-          case StopApplication(app)           => stopApp(app)
+          case StopApplication(app)           => storeAndThen(app.copy(instances = 0)) { stopApp(app) }
           case ResolveArtifacts(app, urls)    => resolveArtifacts(app, urls)
         }
       }
@@ -150,9 +150,9 @@ class DeploymentActor(
 
   def stopApp(app: AppDefinition): Future[Unit] = {
     val promise = Promise[Unit]()
-    context.actorOf(Props(classOf[AppStopActor], driver, scheduler, taskTracker, eventBus, app, promise))
+    context.actorOf(Props(classOf[AppStopActor], driver, taskTracker, eventBus, app, promise))
     promise.future.andThen {
-      case Success(_) => appRepository.expunge(app.id)
+      case Success(_) => scheduler.stopApp(driver, app)
     }
   }
 

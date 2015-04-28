@@ -123,10 +123,10 @@ class DeploymentActorTest
       }
     })
 
-    when(scheduler.stopApp(driver, app4)).thenAnswer(new Answer[Future[Unit]] {
-      def answer(invocation: InvocationOnMock): Future[Unit] = {
+    when(driver.killTask(TaskID(task4_1.getId))).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent("", "task4_1", "TASK_FINISHED", "", app4.id, "", Nil, app4.version.toString))
-        Future.successful(())
+        Status.DRIVER_RUNNING
       }
     })
 
