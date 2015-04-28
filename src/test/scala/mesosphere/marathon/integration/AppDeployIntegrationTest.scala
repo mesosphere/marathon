@@ -5,7 +5,7 @@ import mesosphere.marathon.state.{ PathId, AppDefinition }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsArray
-import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 class AppDeployIntegrationTest
     extends IntegrationFunSuite
@@ -24,7 +24,7 @@ class AppDeployIntegrationTest
       yield (deployment \ "id").as[String]
   }
 
-  private def createAndDeployAnAppWithTwoTasksImpl(): Unit = {
+  test("create and deploy an app with two tasks") {
     Given("a new app")
     log.info("new app")
     val appIdPath: PathId = testBasePath / "/test/app"
@@ -44,23 +44,24 @@ class AppDeployIntegrationTest
     deploymentIds.length should be(1)
     val deploymentId = deploymentIds.head
 
-    val apiPostEvent = waitForEvent("api_post_event")
+    log.info("waiting for deployment success")
+    val events: Map[String, Seq[CallbackEvent]] = waitForEvents(
+      "api_post_event", "group_change_success", "deployment_info",
+      "status_update_event", "status_update_event",
+      "deployment_success")(30.seconds)
+
+    val Seq(apiPostEvent) = events("api_post_event")
     apiPostEvent.info("appDefinition").asInstanceOf[Map[String, Any]]("id").asInstanceOf[String] should
       be(appId)
 
-    val groupChangeSuccess = waitForEvent("group_change_success")
+    val Seq(groupChangeSuccess) = events("group_change_success")
     groupChangeSuccess.info("groupId").asInstanceOf[String] should be(appIdPath.parent.toString)
 
-    waitForEvent("deployment_info")
-
-    val taskUpdate1: CallbackEvent = waitForEvent("status_update_event")
+    val Seq(taskUpdate1, taskUpdate2) = events("status_update_event")
     taskUpdate1.info("appId").asInstanceOf[String] should be(appId)
-
-    val taskUpdate2 = waitForEvent("status_update_event")
     taskUpdate2.info("appId").asInstanceOf[String] should be(appId)
 
-    log.info("waiting for deployment success")
-    val deploymentSuccess = waitForEvent("deployment_success")
+    val Seq(deploymentSuccess) = events("deployment_success")
     deploymentSuccess.info("id") should be(deploymentId)
 
     Then("after that deployments should be empty")
@@ -76,17 +77,5 @@ class AppDeployIntegrationTest
 
     pingTask(taskUpdate1).entityString should be(s"Pong $appId\n")
     pingTask(taskUpdate2).entityString should be(s"Pong $appId\n")
-  }
-
-  test("create and deploy an app with two tasks") {
-    try {
-      createAndDeployAnAppWithTwoTasksImpl()
-    }
-    catch {
-      case NonFatal(e) =>
-        log.error("Error, sleeping for a while for analysis", e)
-        Thread.sleep(120000)
-        throw e
-    }
   }
 }
