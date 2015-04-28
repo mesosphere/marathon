@@ -29,8 +29,6 @@ object ResourceMatcher {
     val memRoleOpt = findScalarResourceRole(Resource.MEM, app.mem)
     val diskRoleOpt = findScalarResourceRole(Resource.DISK, app.disk)
 
-    val portsMatcher = new PortsMatcher(app, offer)
-
     val meetsAllConstraints: Boolean = {
       lazy val tasks = runningTasks
       val badConstraints = app.constraints.filterNot { constraint =>
@@ -47,7 +45,7 @@ object ResourceMatcher {
       badConstraints.isEmpty
     }
 
-    val portsOpt = portsMatcher.portRanges match {
+    val portsOpt = new PortsMatcher(app, offer).portRanges match {
       case None =>
         log.warn("App ports are not available in the offer.")
         None

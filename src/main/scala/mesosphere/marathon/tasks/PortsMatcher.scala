@@ -26,7 +26,6 @@ class PortsMatcher(app: AppDefinition, offer: Offer) extends Logging {
   lazy val role = portsResource.map(_.getRole).getOrElse("*")
 
   lazy val portRanges: Option[RangesResource] = {
-
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
       for {
         c <- app.container

@@ -498,24 +498,6 @@ class SchedulerActions(
       app <- apps
     } healthCheckManager.reconcileWith(app.id)
 
-  private def newTask(app: AppDefinition,
-                      offer: Offer): Option[(TaskInfo, Seq[Long])] = {
-    // TODO this should return a MarathonTask
-    val builder = new TaskBuilder(
-      app,
-      taskIdUtil.newTaskId,
-      taskTracker,
-      config,
-      mapper
-    )
-
-    builder.buildIfMatches(offer) map {
-      case (task, ports) =>
-        val taskBuilder = task.toBuilder
-        taskBuilder.build -> ports
-    }
-  }
-
   /**
     * Ensures current application parameters (resource requirements, URLs,
     * command, and constraints) are applied consistently across running

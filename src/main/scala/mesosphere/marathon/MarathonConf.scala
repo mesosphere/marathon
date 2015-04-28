@@ -1,11 +1,12 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.tasks.IterativeOfferMatcherConfig
 import org.rogach.scallop.ScallopConf
 import scala.sys.SystemProperties
 
 import mesosphere.marathon.io.storage.StorageProvider
 
-trait MarathonConf extends ScallopConf with ZookeeperConf {
+trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMatcherConfig {
 
   lazy val mesosMaster = opt[String]("master",
     descr = "The URL of the Mesos master",
