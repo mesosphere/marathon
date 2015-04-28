@@ -101,7 +101,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     taskTracker.store(TEST_APP_NAME, sampleTask)
 
-    val fetchedTask = taskTracker.fetchTask(taskTracker.getKey(TEST_APP_NAME, TEST_TASK_ID))
+    val fetchedTask = taskTracker.fetchTaskByKey(TEST_APP_NAME, taskTracker.getKey(TEST_APP_NAME, TEST_TASK_ID))
 
     assert(fetchedTask.get.equals(sampleTask), "Tasks are not properly stored")
   }

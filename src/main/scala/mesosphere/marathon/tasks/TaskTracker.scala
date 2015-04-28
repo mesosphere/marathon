@@ -41,7 +41,11 @@ class TaskTracker @Inject() (
   }
 
   private[tasks] def getKey(appId: PathId, taskId: String): String = {
-    PREFIX + appId.safePath + ID_DELIMITER + taskId
+    getKeyPrefix(appId) + taskId
+  }
+
+  private[tasks] def getKeyPrefix(appId: PathId): String = {
+    PREFIX + appId.safePath + ID_DELIMITER
   }
 
   def get(appId: PathId): Set[MarathonTask] =
@@ -52,6 +56,8 @@ class TaskTracker @Inject() (
       case mt: MarathonTask if mt.getId == taskId =>
         Timestamp(mt.getVersion)
     }
+
+  def clearCachedState(): Unit = apps.clear()
 
   private def getInternal(appId: PathId): TrieMap[String, MarathonTask] =
     apps.getOrElseUpdate(appId, fetchApp(appId)).tasks
@@ -133,7 +139,7 @@ class TaskTracker @Inject() (
 
   def statusUpdate(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = {
     val taskId = status.getTaskId.getValue
-    getInternal(appId).get(taskId) match {
+    fetchTaskById(appId, taskId) match {
       case Some(task) if statusDidChange(task.getStatus, status) =>
         val updatedTask = task.toBuilder
           .setStatus(status)
@@ -188,25 +194,47 @@ class TaskTracker @Inject() (
     log.debug(s"Fetching app from store $appId")
     val names = timedRead { state.names().get.asScala.toSet }
     val tasks = TrieMap[String, MarathonTask]()
-    val taskKeys = names.filter(name => name.startsWith(PREFIX + appId.safePath + ID_DELIMITER))
+    val taskKeys = names.filter(name => name.startsWith(getKeyPrefix(appId)))
     for {
       taskKey <- taskKeys
-      task <- fetchTask(taskKey)
+      task <- fetchTaskByKey(appId, taskKey)
     } tasks += (task.getId -> task)
 
     new InternalApp(appId, tasks, false)
   }
 
-  def fetchTask(appId: PathId, taskId: String): Option[MarathonTask] =
-    fetchTask(getKey(appId, taskId))
+  def fetchTaskById(appId: PathId, taskId: String): Option[MarathonTask] =
+    fetchTaskByKey(appId, getKey(appId, taskId))
 
-  private[tasks] def fetchTask(taskKey: String): Option[MarathonTask] = {
-    val bytes = fetchFromState(taskKey).value
-    if (bytes.length > 0) {
-      val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
-      deserialize(taskKey, source)
+  private[tasks] def fetchTaskByKey(appId: PathId, taskKey: String): Option[MarathonTask] = {
+    // Search the in-memory storage for the supplied task.
+    def inMemory(): Option[MarathonTask] = {
+      val taskId = taskKey.stripPrefix(getKeyPrefix(appId))
+      apps.get(appId).flatMap { app =>
+        app.tasks.get(taskId)
+      }
     }
-    else None
+
+    // Search the non-local storage for the supplied task.
+    def fromPersistentStorage(): Option[MarathonTask] = {
+      val bytes = fetchFromState(taskKey).value
+      if (bytes.length > 0) {
+        val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
+        val taskOption = deserialize(taskKey, source)
+
+        for (task <- taskOption) {
+          // Update the in-memory storage.
+          val internalApp = apps.getOrElseUpdate(appId, new InternalApp(appId, TrieMap(), false))
+          internalApp.tasks.putIfAbsent(taskKey, task)
+        }
+
+        taskOption
+      }
+      else None
+    }
+
+    // Prefer cached lookups.
+    inMemory orElse fromPersistentStorage
   }
 
   def deserialize(taskKey: String, source: ObjectInputStream): Option[MarathonTask] = {
