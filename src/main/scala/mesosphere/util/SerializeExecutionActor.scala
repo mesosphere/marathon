@@ -10,8 +10,8 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 /**
-  * Allows the sequential execution of methods which return [[Future]]s.
-  * The execution of a [[Future]] waits for the prior Future to complete (not only the
+  * Allows the sequential execution of methods which return `scala.concurrent.Future`s.
+  * The execution of a `scala.concurrent.Future` waits for the prior Future to complete (not only the
   * method returning the Future).
   *
   * {{{
@@ -48,8 +48,8 @@ class SerializeExecution private (actorRefFactory: ActorRefFactory, actorName: S
 }
 
 /**
-  * Accepts messages containing functions returning [[Future]]s.
-  * It starts the execution of a function after the [[Future]]s generated
+  * Accepts messages containing functions returning `scala.concurrent.Future`s.
+  * It starts the execution of a function after the `scala.concurrent.Future`s generated
   * by prior functions have been completed.
   */
 private[util] class SerializeExecutionActor extends Actor {

@@ -217,7 +217,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   def provideActorSystem(): ActorSystem = ActorSystem("marathon")
 
-  /** Reexports the [[ActorSystem]] as [[ActorRefFactory]]. It doesn't work automatically. */
+  /* Reexports the `akka.actor.ActorSystem` as `akka.actor.ActorRefFactory`. It doesn't work automatically. */
   @Provides
   @Singleton
   def provideActorRefFactory(system: ActorSystem): ActorRefFactory = system

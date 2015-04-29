@@ -14,10 +14,11 @@ import scala.collection.JavaConversions._
   * The facade to the mesos simulation.
   *
   * It starts/stops a new actor system for the simulation when the corresponding life-cycle methods of the
-  * [[SchedulerDriver]] interface are called.
+  * [[org.apache.mesos.SchedulerDriver]] interface are called.
   *
-  * The implemented commands of the driver interface are forwarded as messages to the [[DriverActor]].
-  * Unimplemented methods throw [[NotImplementedError]]s.
+  * The implemented commands of the driver interface are forwarded as messages to the
+  * [[mesosphere.mesos.simulation.DriverActor]].
+  * Unimplemented methods throw [[scala.NotImplementedError]]s.
   */
 class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
 
