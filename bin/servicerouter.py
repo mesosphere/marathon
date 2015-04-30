@@ -123,7 +123,8 @@ class ConfigTemplater(object):
     ''')
 
     HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS = '''\
-  redirect scheme https if !{ ssl_fc }
+  bind {bindAddr}:80
+  redirect scheme https if !{{ ssl_fc }}
 '''
 
     HAPROXY_HTTP_FRONTEND_ACL = '''\
@@ -426,7 +427,8 @@ def config(apps, groups):
 
         if app.redirectHttpToHttps:
             logger.debug("rule to redirect http to https traffic")
-            frontends += templater.haproxy_backend_redirect_http_to_https
+            haproxy_backend_redirect_http_to_https = templater.haproxy_backend_redirect_http_to_https
+            frontends += haproxy_backend_redirect_http_to_https.format(bindAddr=app.bindAddr)
 
         backend_head = templater.haproxy_backend_head
         backends += backend_head.format(
