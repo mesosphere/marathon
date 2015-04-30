@@ -126,6 +126,7 @@ We heartily welcome external contributions to Marathon's documentation. Document
 Marathon is managing applications on more than 100,000 nodes at these companies, and many more:
 
 * [Airbnb](https://www.airbnb.com/)
+* [Allegro Group](http://www.allegrogroup.com)
 * [Artirix](http://www.artirix.com/)
 * [bol.com](https://www.bol.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
