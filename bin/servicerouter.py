@@ -240,32 +240,31 @@ class ConfigTemplater(object):
 def string_to_bool(s):
   return s.lower() in ["true", "t", "yes", "y"]
 
-
 def set_hostname(x, y):
     x.hostname = y
-
 
 def set_sticky(x, y):
     x.sticky = string_to_bool(y)
 
-
-def redirect_http_to_https(x, y):
+def set_redirect_http_to_https(x, y):
     x.redirectHttpToHttps = string_to_bool(y)
 
-
-def sslCert(x, y):
+def set_sslCert(x, y):
     x.sslCert = y
 
-
-def bindAddr(x, y):
+def set_bindAddr(x, y):
     x.bindAddr = y
+
+def set_mode(x, y):
+    x.mode = y
 
 env_keys = {
     'HAPROXY_{0}_VHOST': set_hostname,
     'HAPROXY_{0}_STICKY': set_sticky,
-    'HAPROXY_{0}_REDIRECT_TO_HTTPS': redirect_http_to_https,
-    'HAPROXY_{0}_SSL_CERT': sslCert,
-    'HAPROXY_{0}_BIND_ADDR': bindAddr
+    'HAPROXY_{0}_REDIRECT_TO_HTTPS': set_redirect_http_to_https,
+    'HAPROXY_{0}_SSL_CERT': set_sslCert,
+    'HAPROXY_{0}_BIND_ADDR': set_bindAddr,
+    'HAPROXY_{0}_MODE': set_mode
 }
 
 logger = logging.getLogger('servicerouter')
@@ -294,6 +293,7 @@ class MarathonService(object):
         self.redirectHttpToHttps = False
         self.sslCert = None
         self.bindAddr = '*'
+        self.mode = 'tcp'
         self.groups = frozenset()
 
     def add_backend(self, host, port):
@@ -420,7 +420,7 @@ def config(apps, groups):
             bindAddr=app.bindAddr,
             backend=backend,
             servicePort=app.servicePort,
-            mode='http' if app.hostname else 'tcp',
+            mode=app.mode,
             sslCertOptions=' ssl crt ' + app.sslCert if app.sslCert else ''
         )
 
@@ -431,7 +431,7 @@ def config(apps, groups):
         backend_head = templater.haproxy_backend_head
         backends += backend_head.format(
             backend=backend,
-            mode='http' if app.hostname else 'tcp'
+            mode=app.mode
         )
 
         # if a hostname is set we add the app to the vhost section
