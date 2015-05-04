@@ -7,7 +7,7 @@ jdk:
   - openjdk6
 scala:
   - 2.11.5
-script: pushd src/main/resources/assets && npm install && npm run dist && popd && sbt assembly
+script: pushd src/main/resources/assets && npm install && npm run dist && popd && sbt assembly doc
 notifications:
   slack:
     secure: apUObVUa/OhaTEvoYw3oM1ZTTT0LtYolofJYqnWiBOusc6qgMlK2rfk5kod7vDn33cSKwGhFcyVrrFCn2qxuvYUWCpK4Yo6Hj7KIjoqMi9yHLHXAAWIfAFNMlCdaUGjlHLWn757rBkbuQUDVH8HmB6Vc3J3sybTbiFmMDP1cEVo=
