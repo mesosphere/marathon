@@ -134,7 +134,11 @@ Let's begin by taking an example app definition:
 Here `"hostPort": 0` retains the traditional meaning in Marathon, which is "a
 random port from the range included in the Mesos resource offer". The resulting
 host ports for each task are exposed via the task details in the REST API and
-the Marathon web UI. `"hostPort"` is optional and defaults to `0`.
+the Marathon web UI. `"hostPort"` is optional and defaults to `0`. 
+`"containerPort"` is optional and defaults to `0`. When `"containerPort": 0`, marathon assigns 
+the container port same as the assigned `hostPort`. This would be particulary required for softwares
+that have their own service registry and need to advertise their ports for P2P communication between their
+components. 
 
 `"servicePort"` is a helper port intended for doing service discovery using
 a well-known port per service.  The assigned `servicePort` value is not used/interpreted by Marathon itself but
