@@ -60,7 +60,7 @@ var AppVersionComponent = React.createClass({
       });
     var containerNode = (appVersion.get("container") == null) ?
       <UNSPECIFIED_NODE /> :
-      <dd>{JSON.stringify(appVersion.get("container"))}</dd>;
+      <dd><pre>{JSON.stringify(appVersion.get("container"), null, 2)}</pre></dd>;
     var envNode = (Object.keys(appVersion.get("env")).length === 0) ?
       <UNSPECIFIED_NODE /> :
 
@@ -73,7 +73,7 @@ var AppVersionComponent = React.createClass({
       <dd>{appVersion.get("executor")}</dd>;
     var diskNode = (appVersion.get("disk") == null) ?
       <UNSPECIFIED_NODE /> :
-      <dd>{appVersion.get("disk")}</dd>;
+      <dd>{appVersion.get("disk")} MB</dd>;
     var portsNode = (appVersion.get("ports").length === 0) ?
       <UNSPECIFIED_NODE /> :
       <dd>{appVersion.get("ports").join(",")}</dd>;
@@ -82,10 +82,10 @@ var AppVersionComponent = React.createClass({
       <dd>{appVersion.get("backoffFactor")}</dd>;
     var backoffSecondsNode = (appVersion.get("backoffSeconds") == null) ?
       <UNSPECIFIED_NODE /> :
-      <dd>{appVersion.get("backoffSeconds")}</dd>;
+      <dd>{appVersion.get("backoffSeconds")} seconds</dd>;
     var maxLaunchDelaySecondsNode = (appVersion.get("maxLaunchDelaySeconds") == null) ?
       <UNSPECIFIED_NODE /> :
-      <dd>{appVersion.get("maxLaunchDelaySeconds")}</dd>;
+      <dd>{appVersion.get("maxLaunchDelaySeconds")} seconds</dd>;
     var urisNode = (appVersion.get("uris").length === 0) ?
       <UNSPECIFIED_NODE /> :
       appVersion.get("uris").map(function (u) {
@@ -108,17 +108,17 @@ var AppVersionComponent = React.createClass({
           {executorNode}
           <dt>Instances</dt>
           <dd>{appVersion.get("instances")}</dd>
-          <dt>Memory (MB)</dt>
-          <dd>{appVersion.get("mem")}</dd>
-          <dt>Disk Space (MB)</dt>
+          <dt>Memory</dt>
+          <dd>{appVersion.get("mem")} MB</dd>
+          <dt>Disk Space</dt>
           <dd>{diskNode}</dd>
           <dt>Ports</dt>
           {portsNode}
           <dt>Backoff Factor</dt>
           {backoffFactorNode}
-          <dt>Backoff Seconds</dt>
+          <dt>Backoff</dt>
           {backoffSecondsNode}
-          <dt>Max Launch Delay Seconds</dt>
+          <dt>Max Launch Delay</dt>
           {maxLaunchDelaySecondsNode}
           <dt>URIs</dt>
           {urisNode}
