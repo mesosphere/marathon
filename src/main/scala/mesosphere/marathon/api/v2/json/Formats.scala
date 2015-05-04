@@ -164,7 +164,7 @@ trait ContainerFormats {
     enumFormat(Network.valueOf, str => s"$str is not a valid network type")
 
   implicit lazy val PortMappingFormat: Format[Docker.PortMapping] = (
-    (__ \ "containerPort").format[Integer] ~
+    (__ \ "containerPort").formatNullable[Integer].withDefault(0) ~
     (__ \ "hostPort").formatNullable[Integer].withDefault(0) ~
     (__ \ "servicePort").formatNullable[Integer].withDefault(0) ~
     (__ \ "protocol").formatNullable[String].withDefault("tcp")
