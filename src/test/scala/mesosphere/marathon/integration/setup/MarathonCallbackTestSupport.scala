@@ -52,4 +52,33 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
     }
   }
 
+  /**
+    * Wait for the events of the given kinds (=types).
+    */
+  def waitForEvents(kinds: String*)(maxWait: FiniteDuration = 30.seconds): Map[String, Seq[CallbackEvent]] = {
+
+    val deadline = maxWait.fromNow
+
+    /** Receive the events for the given kinds (duplicates allowed) in any order. */
+    val receivedEventsForKinds: Seq[CallbackEvent] = {
+      var eventsToWaitFor = kinds
+      val receivedEvents = Vector.newBuilder[CallbackEvent]
+
+      while (eventsToWaitFor.nonEmpty) {
+        val event = waitForEventMatching(s"event $eventsToWaitFor to arrive", deadline.timeLeft) { event =>
+          eventsToWaitFor.contains(event.eventType)
+        }
+        receivedEvents += event
+
+        // Remove received event kind. Only remove one element for duplicates.
+        val kindIndex = eventsToWaitFor.indexWhere(_ == event.eventType)
+        assert(kindIndex >= 0)
+        eventsToWaitFor = eventsToWaitFor.patch(kindIndex, Nil, 1)
+      }
+
+      receivedEvents.result()
+    }
+
+    receivedEventsForKinds.groupBy(_.eventType)
+  }
 }
