@@ -3,6 +3,7 @@ package mesosphere.marathon.tasks
 import org.apache.mesos.Protos.TaskID
 import org.scalatest.{ Matchers, FunSuite }
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.PathId
 
 class TaskIDUtilTest extends FunSuite with Matchers {
 
@@ -12,6 +13,15 @@ class TaskIDUtilTest extends FunSuite with Matchers {
     val appId = "/test/foo/bla/rest".toPath
     val taskId = TaskID.newBuilder().setValue(taskIdUtil.taskId(appId)).build
     taskIdUtil.appId(taskId) should equal(appId)
+  }
+
+  test("Calling appId with unmatched String won't return MatchError") {
+    taskIdUtil.appId("notThere").isInstanceOf[PathId] should be(true)
+  }
+
+  test("Calling appId with unmatched TaskId won't return MatchError") {
+    val taskId = TaskID.newBuilder().setValue("").build
+    taskIdUtil.appId(taskId).isInstanceOf[PathId] should be(true)
   }
 
   test("Old TaskIds can be converted") {
