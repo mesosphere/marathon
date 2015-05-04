@@ -95,6 +95,14 @@ a,
   color: #fff;
 }
 
+.close-input-btn {
+  &:extend(.close);
+  position: absolute;
+  right: 25px;
+  top: 6px;
+  cursor: pointer;
+}
+
 .help-block {
   color: #8e929b;
 }
@@ -308,6 +316,12 @@ fieldset[disabled] .btn-info.active {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.input-success,
+.input-success:focus {
+  border-color: #7aff68;
+  border-width: 2px;
 }
 
 /* ==============
