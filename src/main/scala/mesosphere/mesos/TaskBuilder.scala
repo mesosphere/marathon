@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
@@ -79,7 +80,13 @@ class TaskBuilder(app: AppDefinition,
         val portMappings = c.docker.map { d =>
           d.portMappings.map { pms =>
             pms zip ports map {
-              case (mapping, port) => mapping.copy(hostPort = port.toInt)
+              case (mapping, port) => {
+                if(mapping.containerPort == 0) {
+                  mapping.copy(hostPort = port.toInt, containerPort = port.toInt)
+                } else {
+                  mapping.copy(hostPort = port.toInt)
+                }
+              }
             }
           }
         }
