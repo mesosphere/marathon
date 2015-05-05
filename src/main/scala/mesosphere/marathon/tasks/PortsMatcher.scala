@@ -116,13 +116,7 @@ class PortsMatcher(app: AppDefinition, offer: Offer) extends Logging {
           if (!availablePorts.hasNext) throw PortResourceException(
             s"Insufficient ports in offer for app [${app.id}]"
           )
-          val nextPort = availablePorts.next
-          if(containerPort == 0) {
-            PortMapping(nextPort, nextPort, servicePort, protocol)
-          }
-          else {
-            PortMapping(containerPort, nextPort, servicePort, protocol)
-          }
+          PortMapping(containerPort, availablePorts.next, servicePort, protocol)
         case pm: PortMapping => pm
       }
 
