@@ -278,6 +278,41 @@ class TaskBuilderTest extends MarathonSpec {
     // TODO test for resources etc.
   }
 
+  test("PortMappingsWithZeroValue") {
+
+    val offer = makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = "*")
+      .addResources(ScalarResource("cpus", 1, "*"))
+      .addResources(ScalarResource("mem", 128, "*"))
+      .addResources(ScalarResource("disk", 1000, "*"))
+      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+      .build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer, AppDefinition(
+        id = "testApp".toPath,
+        cpus = 1,
+        mem = 64,
+        disk = 1,
+        executor = "//cmd",
+        ports = Seq(8080, 8081),
+        container = Some(Container(
+          docker = Some(Docker(
+            network = Some(Network.BRIDGE),
+            portMappings = Some(Seq(
+              PortMapping(containerPort = 0, hostPort = 0, servicePort = 9000, protocol = "tcp")
+            ))
+          ))
+        ))
+      )
+    )
+    assert(task.isDefined)
+    val (taskInfo, taskPorts) = task.get
+    val containerPort = taskInfo.getContainer.getDocker.getPortMappings(0).getContainerPort
+    assert(containerPort != 0 && containerPort == 31000)
+    val hostPort = taskInfo.getContainer.getDocker.getPortMappings(0).getHostPort
+    assert(containerPort == hostPort)
+  }
+
   test("BuildIfMatchesWithRackIdConstraint") {
     val taskTracker = mock[TaskTracker]
 
@@ -536,29 +571,6 @@ class TaskBuilderTest extends MarathonSpec {
 
     assert("1000" == env("PORT_8080"))
     assert("1001" == env("PORT_8081"))
-  }
-
-  test("PortsEnvWithOnlyMappingsZeroValue") {
-    val command =
-      TaskBuilder.commandInfo(
-        AppDefinition(
-          container = Some(Container(
-            docker = Some(Docker(
-              network = Some(Network.BRIDGE),
-              portMappings = Some(Seq(
-                PortMapping(containerPort = 0, hostPort = 0, servicePort = 9000, protocol = "tcp")
-              ))
-            ))
-          ))
-        ),
-        Some(TaskID("task-123")),
-        Some("host.mega.corp"),
-        Seq(1000, 1001)
-      )
-    val env: Map[String, String] =
-      command.getEnvironment().getVariablesList().asScala.toList.map(v => v.getName() -> v.getValue()).toMap
-
-    assert("1000" == env("PORT0"))
   }
 
   test("PortsEnvWithBothPortsAndMappings") {
