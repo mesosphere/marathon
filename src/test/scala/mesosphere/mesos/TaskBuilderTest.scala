@@ -538,6 +538,29 @@ class TaskBuilderTest extends MarathonSpec {
     assert("1001" == env("PORT_8081"))
   }
 
+  test("PortsEnvWithOnlyMappingsZeroValue") {
+    val command =
+      TaskBuilder.commandInfo(
+        AppDefinition(
+          container = Some(Container(
+            docker = Some(Docker(
+              network = Some(Network.BRIDGE),
+              portMappings = Some(Seq(
+                PortMapping(containerPort = 0, hostPort = 0, servicePort = 9000, protocol = "tcp")
+              ))
+            ))
+          ))
+        ),
+        Some(TaskID("task-123")),
+        Some("host.mega.corp"),
+        Seq(1000, 1001)
+      )
+    val env: Map[String, String] =
+      command.getEnvironment().getVariablesList().asScala.toList.map(v => v.getName() -> v.getValue()).toMap
+
+    assert("1000" == env("PORT0"))
+  }
+
   test("PortsEnvWithBothPortsAndMappings") {
     val command =
       TaskBuilder.commandInfo(
