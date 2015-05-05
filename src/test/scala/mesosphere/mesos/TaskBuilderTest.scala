@@ -278,8 +278,7 @@ class TaskBuilderTest extends MarathonSpec {
     // TODO test for resources etc.
   }
 
-  test("PortMappingsWithZeroValue") {
-
+  test("PortMappingsWithZeroContainerPort") {
     val offer = makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = "*")
       .addResources(ScalarResource("cpus", 1, "*"))
       .addResources(ScalarResource("mem", 128, "*"))
@@ -307,9 +306,9 @@ class TaskBuilderTest extends MarathonSpec {
     )
     assert(task.isDefined)
     val (taskInfo, taskPorts) = task.get
-    val containerPort = taskInfo.getContainer.getDocker.getPortMappings(0).getContainerPort
-    assert(containerPort != 0 && containerPort == 31000)
     val hostPort = taskInfo.getContainer.getDocker.getPortMappings(0).getHostPort
+    assert(hostPort == 31000)
+    val containerPort = taskInfo.getContainer.getDocker.getPortMappings(0).getContainerPort
     assert(containerPort == hostPort)
   }
 
