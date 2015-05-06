@@ -89,7 +89,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
 
     queue.add(app)
 
-    when(tracker.checkStagedTasks).thenReturn(Seq())
     when(repo.currentAppVersions())
       .thenReturn(Future.successful(Map(app.id -> app.version)))
 

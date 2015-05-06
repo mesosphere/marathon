@@ -83,10 +83,6 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     application scaling operations.
 * `--scale_apps_interval` (Optional. Default: 300000 (5 minutes)): The period,
     in milliseconds, between application scaling operations.
-* `--task_launch_timeout` **DEPRECATED** (Optional. Default: 300000 (5 minutes)):
-    Time, in milliseconds, to wait for a task to enter the TASK_RUNNING state
-    before killing it. _Note: This is a temporary fix for MESOS-1922.
-    This option will be removed in a later release._
 * `--event_subscriber` (Optional. Default: None): Event subscriber module to
     enable. Currently the only valid value is `http_callback`.
 * `--http_endpoints` (Optional. Default: None): Pre-configured http callback

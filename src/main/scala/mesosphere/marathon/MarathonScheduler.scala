@@ -43,7 +43,6 @@ class MarathonScheduler @Inject() (
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
-  import mesosphere.mesos.protos.Implicits._
   import mesosphere.util.ThreadPoolContext.context
 
   implicit val zkTimeout = config.zkFutureTimeout
@@ -65,18 +64,6 @@ class MarathonScheduler @Inject() (
   }
 
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
-    // Check for any tasks which were started but never entered TASK_RUNNING
-    // TODO resourceOffers() doesn't feel like the right place to run this
-    val toKill = taskTracker.checkStagedTasks
-
-    if (toKill.nonEmpty) {
-      log.warn(s"There are ${toKill.size} tasks stuck in staging for more " +
-        s"than ${config.taskLaunchTimeout()}ms which will be killed")
-      log.info(s"About to kill these tasks: $toKill")
-      for (task <- toKill)
-        driver.killTask(protos.TaskID(task.getId))
-    }
-
     // remove queued tasks with stale (non-current) app definition versions
     val appVersions: Map[PathId, Timestamp] =
       Await.result(appRepo.currentAppVersions(), config.zkTimeoutDuration)

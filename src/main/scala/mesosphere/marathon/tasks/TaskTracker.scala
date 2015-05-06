@@ -151,20 +151,6 @@ class TaskTracker @Inject() (
     }
   }
 
-  def stagedTasks(): Iterable[MarathonTask] = apps.values.flatMap(_.tasks.values.filter(_.getStartedAt == 0))
-
-  def checkStagedTasks: Iterable[MarathonTask] = {
-    // stagedAt is set when the task is created by the scheduler
-    val now = System.currentTimeMillis
-    val expires = now - config.taskLaunchTimeout()
-    val toKill = stagedTasks.filter(_.getStagedAt < expires)
-
-    toKill.foreach(t => {
-      log.warn(s"Task '${t.getId}' was staged ${(now - t.getStagedAt) / 1000}s ago and has not yet started")
-    })
-    toKill
-  }
-
   def expungeOrphanedTasks(): Unit = {
     // Remove tasks that don't have any tasks associated with them. Expensive!
     log.info("Expunging orphaned tasks from store")
