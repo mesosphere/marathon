@@ -209,6 +209,30 @@ class GroupDeployIntegrationTest
     waitForChange(force)
   }
 
+  test("A group with a running deployment can not be deleted without force") {
+    Given("A group with one application with an upgrade in progress")
+    val id = "forcetest".toRootTestPath
+    val appId = id / "app"
+    val proxy = appProxy(appId, "v1", 2)
+    appProxyCheck(appId, "v1", state = false) //will always fail
+    val group = GroupUpdate(id, Set(proxy))
+    val create = marathon.createGroup(group)
+
+    When("Delete the group, while the deployment is in progress")
+    intercept[UnsuccessfulResponseException] {
+      marathon.deleteGroup(id)
+    }
+
+    Then("An error is indicated")
+    waitForEvent("group_change_failed")
+
+    When("Delete is triggered with force, while the deployment is not completed")
+    val force = marathon.deleteGroup(id, force = true)
+
+    Then("The delete is performed")
+    waitForChange(force)
+  }
+
   test("Groups with Applications with circular dependencies can not get deployed") {
     Given("A group with 3 circular dependent applications")
     val db = appProxy("/test/db".toTestPath, "v1", 1, dependencies = Set("/test/frontend1".toTestPath))

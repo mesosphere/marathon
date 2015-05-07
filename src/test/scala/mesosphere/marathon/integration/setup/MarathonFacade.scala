@@ -20,6 +20,7 @@ import scala.concurrent.duration._
   * Needed for dumb jackson.
   */
 case class ListAppsResult(apps: Seq[AppDefinition])
+case class AppVersions(versions: Seq[String])
 case class ListTasks(tasks: Seq[ITEnrichedTask])
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
 case class ITDeploymentResult(version: String, deploymentId: String)
@@ -62,9 +63,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     res.map(_.apps.toList.filter(app => isInBaseGroup(app.id)))
   }
 
-  def app(id: PathId): RestResult[HttpResponse] = {
+  def app(id: PathId): RestResult[AppDefinition] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = sendReceive ~> read[AppDefinition]
     val getUrl: String = s"$url/v2/apps$id"
     LoggerFactory.getLogger(getClass).info(s"get url = $getUrl")
     result(pipeline(Get(getUrl)), waitTime)
@@ -91,6 +92,18 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Put(putUrl, app)), waitTime)
   }
 
+  def restartApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
+    requireInBaseGroup(id)
+    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    result(pipeline(Post(s"$url/v2/apps$id/restart?force=$force")), waitTime)
+  }
+
+  def listAppVersions(id: PathId): RestResult[AppVersions] = {
+    requireInBaseGroup(id)
+    val pipeline = sendReceive ~> read[AppVersions]
+    result(pipeline(Get(s"$url/v2/apps$id/versions")), waitTime)
+  }
+
   //apps tasks resource --------------------------------------
 
   def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
@@ -98,6 +111,18 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     val pipeline = addHeader("Accept", "application/json") ~> sendReceive ~> read[ListTasks]
     val res = result(pipeline(Get(s"$url/v2/apps$appId/tasks")), waitTime)
     res.map(_.tasks.toList)
+  }
+
+  def killAllTasks(appId: PathId, scale: Boolean = false): RestResult[ListTasks] = {
+    requireInBaseGroup(appId)
+    val pipeline = sendReceive ~> read[ListTasks]
+    result(pipeline(Delete(s"$url/v2/apps$appId/tasks?scale=$scale")), waitTime)
+  }
+
+  def killTask(appId: PathId, taskId: String, scale: Boolean = false): RestResult[HttpResponse] = {
+    requireInBaseGroup(appId)
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Delete(s"$url/v2/apps$appId/tasks/$taskId?scale=$scale")), waitTime)
   }
 
   //group resource -------------------------------------------
