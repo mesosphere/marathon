@@ -1,22 +1,25 @@
 package mesosphere.marathon.state
 
 import java.lang.{ Boolean => JBoolean }
-import java.util.concurrent.{ ExecutionException, Future => JFuture }
+import java.util
+import java.util.concurrent.{ Future => JFuture }
 
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.{ MarathonSpec, StorageException, MarathonConf }
-import org.rogach.scallop.ScallopConf
 import com.codahale.metrics.MetricRegistry
+import com.google.common.util.concurrent.Futures
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.{ MarathonConf, MarathonSpec, StorageException }
 import org.apache.mesos.state.{ InMemoryState, State, Variable }
 import org.mockito.Matchers._
 import org.mockito.Mockito._
+import org.rogach.scallop.ScallopConf
+import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq
+import scala.concurrent._
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 
-class MarathonStoreTest extends MarathonSpec {
+class MarathonStoreTest extends MarathonSpec with Matchers {
   test("Fetch") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
@@ -204,7 +207,10 @@ class MarathonStoreTest extends MarathonSpec {
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
-    when(state.names()).thenThrow(classOf[ExecutionException])
+    when(state.names()).thenReturn(Futures.immediateFailedFuture[util.Iterator[String]](
+      new java.util.concurrent.ExecutionException(new NullPointerException))
+    )
+
     when(state.fetch("__internal__:app:storage:version")).thenReturn(currentVersionFuture)
     when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
@@ -243,6 +249,35 @@ class MarathonStoreTest extends MarathonSpec {
 
     assert(1000 == Await.result(store.fetch("foo"), 5.seconds).map(_.instances)
       .getOrElse(0), "Instances of 'foo' should be set to 1000")
+  }
+
+  // regression test for #1481
+  test("names() correctly uses timeouts") {
+    val state = new InMemoryState() {
+      override def names(): JFuture[util.Iterator[String]] = new JFuture[util.Iterator[String]] {
+        override def isCancelled: Boolean = false
+        override def cancel(b: Boolean): Boolean = false
+        override def isDone: Boolean = false
+
+        override def get(): util.Iterator[String] = synchronized {
+          wait()
+          null
+        }
+
+        override def get(l: Long, timeUnit: TimeUnit): util.Iterator[String] = synchronized {
+          wait(Duration(l, timeUnit).toMillis)
+          null
+        }
+      }
+    }
+    val config = new ScallopConf(Seq("--master", "foo", "--marathon_store_timeout", "1")) with MarathonConf
+    config.afterInit()
+
+    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+
+    noException should be thrownBy {
+      Await.result(store.names(), 1.second)
+    }
   }
 
   private val currentVersionVariable = {

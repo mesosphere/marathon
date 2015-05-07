@@ -1,18 +1,18 @@
 package mesosphere.marathon.state
 
-import com.codahale.metrics.{ Histogram, MetricRegistry }
+import java.util.concurrent.ExecutionException
+
 import com.codahale.metrics.MetricRegistry.name
+import com.codahale.metrics.{ Histogram, MetricRegistry }
 import com.google.protobuf.InvalidProtocolBufferException
+import mesosphere.marathon.{ MarathonConf, StorageException }
+import mesosphere.util.{ BackToTheFuture, LockManager, ThreadPoolContext }
 import org.apache.mesos.state.State
-import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionException, Future }
-import mesosphere.marathon.StorageException
-import mesosphere.util.LockManager
-import mesosphere.util.{ ThreadPoolContext, BackToTheFuture }
-import mesosphere.marathon.MarathonConf
-import mesosphere.util.BackToTheFuture
-import scala.concurrent.duration._
 import org.slf4j.LoggerFactory
+
+import scala.collection.JavaConverters._
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class MarathonStore[S <: MarathonState[_, S]](
   conf: MarathonConf,
@@ -24,8 +24,8 @@ class MarathonStore[S <: MarathonState[_, S]](
       MILLISECONDS)))
     extends PersistenceStore[S] {
 
-  import ThreadPoolContext.context
   import BackToTheFuture.futureToFutureOption
+  import ThreadPoolContext.context
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] lazy val locks = LockManager[String]()
@@ -115,18 +115,13 @@ class MarathonStore[S <: MarathonState[_, S]](
   }
 
   def names(): Future[Iterator[String]] = {
-    // TODO use implicit conversion after it has been merged
-    Future {
-      try {
-        state.names().get.asScala.collect {
-          case name if name startsWith prefix =>
-            name.replaceFirst(prefix, "")
-        }
+    BackToTheFuture.futureToFuture(state.names()).map {
+      _.asScala.collect {
+        case name if name startsWith prefix =>
+          name.replaceFirst(prefix, "")
       }
-      catch {
-        // Thrown when node doesn't exist
-        case e: ExecutionException => Seq().iterator
-      }
+    }.recover {
+      case e: ExecutionException => Seq().iterator
     }
   }
 
