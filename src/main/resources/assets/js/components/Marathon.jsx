@@ -15,6 +15,7 @@ var NewAppModalComponent = require("../components/NewAppModalComponent");
 var TabPaneComponent = require("../components/TabPaneComponent");
 var TogglableTabsComponent = require("../components/TogglableTabsComponent");
 var NavTabsComponent = require("../components/NavTabsComponent");
+var FilterComponent = require("../components/FilterComponent");
 
 var UPDATE_INTERVAL = 5000;
 
@@ -37,6 +38,7 @@ var Marathon = React.createClass({
       activeAppView: null,
       activeTabId: tabs[0].id,
       appVersionsFetchState: States.STATE_LOADING,
+      appFilter: null,
       collection: new AppCollection(),
       deployments: new DeploymentCollection(),
       deploymentsFetchState: States.STATE_LOADING,
@@ -144,6 +146,7 @@ var Marathon = React.createClass({
         this.setState({fetchState: States.STATE_ERROR});
       }.bind(this),
       success: function () {
+
         this.fetchDeployments();
         this.setState({
           fetchState: States.STATE_SUCCESS,
@@ -408,6 +411,10 @@ var Marathon = React.createClass({
     });
   },
 
+  onAppFilterChange:function (value) {
+    this.setState({appFilter:value})
+  },
+
   getAboutModal: function () {
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
@@ -461,6 +468,8 @@ var Marathon = React.createClass({
     /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   },
 
+
+
   getTabPane: function () {
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
@@ -471,9 +480,13 @@ var Marathon = React.createClass({
           <a href="#newapp" className="btn btn-success navbar-btn" >
             + New App
           </a>
+          <FilterComponent
+              placeholder="Filter list"
+              onChange={this.onAppFilterChange} />
           <AppListComponent
             collection={this.state.collection}
             fetchState={this.state.fetchState}
+            filter={this.state.appFilter}
             router={this.props.router} />
         </TabPaneComponent>
         <TabPaneComponent
@@ -489,6 +502,10 @@ var Marathon = React.createClass({
     /* jshint trailing:true, quotmark:true, newcap:true */
     /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   },
+
+
+
+
 
   render: function () {
     var modal;
