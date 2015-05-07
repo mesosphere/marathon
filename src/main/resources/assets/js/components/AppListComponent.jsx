@@ -15,6 +15,10 @@ var AppListComponent = React.createClass({
     router: React.PropTypes.object.isRequired
   },
 
+  getInitialState: function() {
+    return  {filter:''};
+  },
+
   getResource: function () {
     return this.props.collection;
   },
@@ -29,21 +33,34 @@ var AppListComponent = React.createClass({
     collection.sort();
   },
 
+  filterCollection: function (filter) {
+    this.setState({filter:filter||''});
+  },
+
   getAppNodes: function () {
+    // Set the app filter pattern
+    var pattern = new RegExp("^/?"+this.state.filter);
     return (
       this.props.collection.map(function (model) {
-        /* jshint trailing:false, quotmark:false, newcap:false */
-        /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
-        return (
-          <AppComponent
-            key={model.id}
-            model={model}
-            router={this.props.router} />
-        );
+        //  Render app nodes based on app filter
+        if(pattern.test(model.id)){
+          /* jshint trailing:false, quotmark:false, newcap:false */
+          /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+          return (
+            <AppComponent
+              key={model.id}
+              model={model}
+              router={this.props.router} />
+          );
+        }
         /* jshint trailing:true, quotmark:true, newcap:true */
         /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
       }, this)
     );
+  },
+
+  componentWillReceiveProps: function(props) {
+    this.filterCollection(props.filter);
   },
 
   render: function () {
