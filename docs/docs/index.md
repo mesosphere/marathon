@@ -41,7 +41,7 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
 
 1.  Download and unpack the latest Marathon release.
 
-    **For Mesos 0.20.0, 0.21.0, 0.22.0:**
+    **For Mesos 0.20.0+:**
 
     ``` bash
     $ curl -O http://downloads.mesosphere.com/marathon/v0.8.1/marathon-0.8.1.tgz
