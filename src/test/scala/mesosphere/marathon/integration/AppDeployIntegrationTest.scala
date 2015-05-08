@@ -26,7 +26,6 @@ class AppDeployIntegrationTest
   test("create a simple app without health checks") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
-    val check = appProxyCheck(app.id, "v1", true)
 
     When("The app is deployed")
     val result = marathon.createApp(app)
@@ -35,7 +34,7 @@ class AppDeployIntegrationTest
     result.code should be (201) //Created
     extractDeploymentIds(result) should have size 1
     waitForEvent("deployment_success")
-    check.pingSince(5.seconds) should be (true) //make sure, the app has really started
+    waitForTasks(app.id, 1) //make sure, the app has really started
   }
 
   test("create a simple app with http health checks") {
@@ -128,7 +127,7 @@ class AppDeployIntegrationTest
   test("update an app") {
     Given("a new app")
     val appId = testBasePath / "app"
-    val v1 = appProxy(appId, "v1", instances = 1, withHealth = false)
+    val v1 = appProxy(appId, "v1", instances = 1, withHealth = true)
     marathon.createApp(v1).code should be (201)
     waitForEvent("deployment_success")
     val before = marathon.tasks(appId)
@@ -140,7 +139,6 @@ class AppDeployIntegrationTest
     Then("The app gets updated")
     update.code should be (200)
     waitForEvent("deployment_success")
-    val after = marathon.tasks(appId)
     waitForTasks(appId, before.value.size)
     check.pingSince(5.seconds) should be (true) //make sure, the new version is alive
   }
