@@ -83,15 +83,15 @@ features.
 
 Build tip:
 
-    docker build -t marathon-tip .
+    docker build -t marathon-head .
 
 Run it:
 
-    docker run marathon-tip --master local --zk zk://localhost:2181/marathon
+    docker run marathon-head --master local --zk zk://localhost:2181/marathon
 
 If you want to inspect the contents of the Docker:
 
-    docker run -i -t --entrypoint=/bin/bash marathon-tip -s
+    docker run -i -t --entrypoint=/bin/bash marathon-head -s
 
 ## Documentation
 
