@@ -18,9 +18,6 @@ can even start other Marathon instances via Marathon.
 
 Using Marathon versions 0.7.0+ and Mesos 0.20.0+, you can [deploy, run and scale Docker containers](https://mesosphere.github.io/marathon/docs/native-docker.html) with ease.
 
-Documentation for installing and configuring the full Mesosphere stack including Mesos and Marathon is
-available on the [Mesosphere website](http://mesosphere.com/docs/).
-
 ## Features
 
 * *HA* -- run any number of Marathon schedulers, but only one gets elected as
@@ -34,6 +31,16 @@ available on the [Mesosphere website](http://mesosphere.com/docs/).
 * *[JSON/REST API](https://mesosphere.github.io/marathon/docs/rest-api.html)* for easy integration and scriptability
 * *Basic Auth* and *SSL*
 * *Metrics*: available at `/metrics` in JSON format
+
+## Documentation
+
+Marathon documentation is available on the [Marathon GitHub pages site](http://mesosphere.github.io/marathon/).
+
+Documentation for installing and configuring the full Mesosphere stack including Mesos and Marathon is available on the [Mesosphere website](http://docs.mesosphere.com).
+
+### Contributing
+
+We heartily welcome external contributions to Marathon's documentation. Documentation should be committed to the `master` branch and published to our GitHub pages site using the instructions in [docs/README.md](https://github.com/mesosphere/marathon/tree/master/docs).
 
 ## Setting Up And Running Marathon
 
@@ -92,14 +99,6 @@ Run it:
 If you want to inspect the contents of the Docker:
 
     docker run -i -t --entrypoint=/bin/bash marathon-tip -s
-
-## Documentation
-
-Marathon documentation is available on the [Marathon GitHub pages site](http://mesosphere.github.io/marathon/).
-
-### Contributing
-
-We heartily welcome external contributions to Marathon's documentation. Documentation should be committed to the `master` branch and published to our GitHub pages site using the instructions in [docs/README.md](https://github.com/mesosphere/marathon/tree/master/docs).
 
 ## Marathon Clients
 
