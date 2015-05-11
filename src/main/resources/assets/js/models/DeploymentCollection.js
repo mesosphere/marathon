@@ -11,7 +11,7 @@ var DeploymentCollection = SortableCollection.extend({
   },
 
   url: function () {
-    return "/v2/deployments";
+    return "v2/deployments";
   }
 });
 
