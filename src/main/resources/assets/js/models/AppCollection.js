@@ -14,7 +14,7 @@ var AppCollection = SortableCollection.extend({
     return response.apps;
   },
 
-  url: "/v2/apps"
+  url: "v2/apps"
 });
 
 module.exports = AppCollection;
