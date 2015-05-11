@@ -1,4 +1,4 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Integer => JInt, Double => JDouble }
 
@@ -17,11 +17,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 
-// TODO: Accept a task restart strategy as a constructor parameter here, to be
-//       used in MarathonScheduler.
-
 @JsonIgnoreProperties(ignoreUnknown = true)
-case class AppUpdate(
+case class V2AppUpdate(
 
     id: Option[PathId] = None,
 
@@ -84,7 +81,14 @@ case class AppUpdate(
     * Returns the supplied [[mesosphere.marathon.state.AppDefinition]] after
     * updating its members with respect to this update request.
     */
-  def apply(app: AppDefinition): AppDefinition = app.copy(
+  def apply(app: AppDefinition): AppDefinition =
+    apply(V2AppDefinition(app)).toAppDefinition
+
+  /**
+    * Returns the supplied [[mesosphere.marathon.api.v2.json.V2AppDefinition]]
+    * after updating its members with respect to this update request.
+    */
+  def apply(app: V2AppDefinition): V2AppDefinition = app.copy(
     app.id,
     cmd.orElse(app.cmd),
     args.orElse(app.args),

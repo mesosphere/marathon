@@ -5,8 +5,6 @@ import java.lang.{ Double => JDouble, Integer => JInt }
 import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
 import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
@@ -21,9 +19,6 @@ import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-@PortIndices
-@JsonIgnoreProperties(ignoreUnknown = true)
-@ValidAppDefinition
 case class AppDefinition(
 
   id: PathId = AppDefinition.DefaultId,
@@ -36,7 +31,7 @@ case class AppDefinition(
 
   env: Map[String, String] = AppDefinition.DefaultEnv,
 
-  @FieldMin(0) instances: JInt = AppDefinition.DefaultInstances,
+  instances: JInt = AppDefinition.DefaultInstances,
 
   cpus: JDouble = AppDefinition.DefaultCpus,
 
@@ -44,7 +39,7 @@ case class AppDefinition(
 
   disk: JDouble = AppDefinition.DefaultDisk,
 
-  @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = AppDefinition.DefaultExecutor,
+  executor: String = AppDefinition.DefaultExecutor,
 
   constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
@@ -52,15 +47,15 @@ case class AppDefinition(
 
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
-  @FieldPortsArray ports: Seq[JInt] = AppDefinition.DefaultPorts,
+  ports: Seq[JInt] = AppDefinition.DefaultPorts,
 
   requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
 
-  @FieldJsonProperty("backoffSeconds") backoff: FiniteDuration = AppDefinition.DefaultBackoff,
+  backoff: FiniteDuration = AppDefinition.DefaultBackoff,
 
   backoffFactor: JDouble = AppDefinition.DefaultBackoffFactor,
 
-  @FieldJsonProperty("maxLaunchDelaySeconds") maxLaunchDelay: FiniteDuration = AppDefinition.DefaultMaxLaunchDelay,
+  maxLaunchDelay: FiniteDuration = AppDefinition.DefaultMaxLaunchDelay,
 
   container: Option[Container] = AppDefinition.DefaultContainer,
 
@@ -244,26 +239,6 @@ case class AppDefinition(
     mergeFromProto(proto)
   }
 
-  def withTaskCountsAndDeployments(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTaskCountsAndDeployments = {
-    new AppDefinition.WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, this)
-  }
-
-  def withTasksAndDeployments(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTasksAndDeployments =
-    new AppDefinition.WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, this)
-
-  def withTasksAndDeploymentsAndFailures(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan],
-    taskFailure: Option[TaskFailure]): AppDefinition.WithTasksAndDeploymentsAndTaskFailures =
-    new AppDefinition.WithTasksAndDeploymentsAndTaskFailures(
-      appTasks, healthCounts,
-      runningDeployments, taskFailure, this
-    )
-
   def withNormalizedVersion: AppDefinition = copy(version = Timestamp(0))
 
   def isOnlyScaleChange(to: AppDefinition): Boolean =
@@ -331,80 +306,4 @@ object AppDefinition {
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
-
-  protected[marathon] class WithTaskCountsAndDeployments(
-    appTasks: Seq[EnrichedTask],
-    healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan],
-    private val app: AppDefinition)
-      extends AppDefinition(
-        app.id, app.cmd, app.args, app.user, app.env, app.instances, app.cpus,
-        app.mem, app.disk, app.executor, app.constraints, app.uris,
-        app.storeUrls, app.ports, app.requirePorts, app.backoff,
-        app.backoffFactor, app.maxLaunchDelay, app.container,
-        app.healthChecks, app.dependencies, app.upgradeStrategy,
-        app.labels, app.acceptedResourceRoles, app.version) {
-
-    /**
-      * Snapshot of the number of staged (but not running) tasks
-      * for this app
-      */
-    @JsonProperty
-    val tasksStaged: Int = appTasks.count { eTask =>
-      eTask.task.getStagedAt != 0 && eTask.task.getStartedAt == 0
-    }
-
-    /**
-      * Snapshot of the number of running tasks for this app
-      */
-    @JsonProperty
-    val tasksRunning: Int = appTasks.count { eTask =>
-      eTask.task.hasStatus &&
-        eTask.task.getStatus.getState == mesos.TaskState.TASK_RUNNING
-    }
-
-    /**
-      * Snapshot of the number of healthy tasks for this app
-      */
-    @JsonProperty
-    val tasksHealthy: Int = healthCounts.healthy
-
-    /**
-      * Snapshot of the number of unhealthy tasks for this app
-      */
-    @JsonProperty
-    val tasksUnhealthy: Int = healthCounts.unhealthy
-
-    /**
-      * Snapshot of the running deployments that affect this app
-      */
-    @JsonProperty
-    def deployments: Seq[Identifiable] = {
-      runningDeployments.collect {
-        case plan: DeploymentPlan if plan.affectedApplicationIds contains app.id => Identifiable(plan.id)
-      }
-    }
-  }
-
-  protected[marathon] class WithTasksAndDeployments(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan],
-    private val app: AppDefinition)
-      extends WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, app) {
-
-    @JsonProperty
-    def tasks: Seq[EnrichedTask] = appTasks
-  }
-
-  protected[marathon] class WithTasksAndDeploymentsAndTaskFailures(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan],
-    taskFailure: Option[TaskFailure],
-    private val app: AppDefinition)
-      extends WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, app) {
-
-    @JsonProperty
-    def lastTaskFailure: Option[TaskFailure] = taskFailure
-  }
-
 }

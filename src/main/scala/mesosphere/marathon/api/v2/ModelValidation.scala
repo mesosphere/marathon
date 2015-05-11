@@ -1,4 +1,4 @@
-package mesosphere.marathon.api
+package mesosphere.marathon.api.v2
 
 import java.net.{ URLConnection, HttpURLConnection, URL }
 import javax.validation.ConstraintViolation
@@ -6,7 +6,7 @@ import mesosphere.marathon.MarathonSchedulerService
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
 
-import mesosphere.marathon.api.v2.{ AppUpdate, GroupUpdate }
+import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate, V2Group, V2GroupUpdate }
 import mesosphere.marathon.state._
 
 import BeanValidation._
@@ -18,10 +18,17 @@ object ModelValidation {
 
   //scalastyle:off null
 
+  // TODO: Re-implement this method on it's own terms
   def checkGroup(
     group: Group,
+    path: String,
+    parent: PathId): Iterable[ConstraintViolation[V2Group]] =
+    checkGroup(V2Group(group), path, parent)
+
+  def checkGroup(
+    group: V2Group,
     path: String = "",
-    parent: PathId = PathId.empty): Iterable[ConstraintViolation[Group]] = {
+    parent: PathId = PathId.empty): Iterable[ConstraintViolation[V2Group]] = {
     val base = group.id.canonicalPath(parent)
     validate(group,
       idErrors(group, base, group.id, "id"),
@@ -34,10 +41,10 @@ object ModelValidation {
   }
 
   def checkGroupUpdate(
-    group: GroupUpdate,
+    group: V2GroupUpdate,
     needsId: Boolean,
     path: String = "",
-    parent: PathId = PathId.empty): Iterable[ConstraintViolation[GroupUpdate]] = {
+    parent: PathId = PathId.empty): Iterable[ConstraintViolation[V2GroupUpdate]] = {
     if (group == null) {
       Seq(violation(group, null, "", "Given group is empty!"))
     }
@@ -47,14 +54,14 @@ object ModelValidation {
           group,
           group.version,
           "version",
-          (b: GroupUpdate, t: Timestamp, i: String) => hasOnlyOneDefinedOption(b, t, i),
+          (b: V2GroupUpdate, t: Timestamp, i: String) => hasOnlyOneDefinedOption(b, t, i),
           mandatory = false
         ),
         defined(
           group,
           group.scaleBy,
           "scaleBy",
-          (b: GroupUpdate, t: Double, i: String) => hasOnlyOneDefinedOption(b, t, i),
+          (b: V2GroupUpdate, t: Double, i: String) => hasOnlyOneDefinedOption(b, t, i),
           mandatory = false
         )
       )
@@ -66,7 +73,7 @@ object ModelValidation {
           group,
           group.id,
           "id",
-          (b: GroupUpdate, p: PathId, i: String) => idErrors(b, group.groupId.canonicalPath(parent), p, i),
+          (b: V2GroupUpdate, p: PathId, i: String) => idErrors(b, group.groupId.canonicalPath(parent), p, i),
           mandatory = needsId
         ),
         group.id.map(checkPath(group, parent, _, path + "id")).getOrElse(Nil),
@@ -87,8 +94,8 @@ object ModelValidation {
   def noAppsAndGroupsWithSameName[T](
     t: T,
     path: String,
-    apps: Set[AppDefinition],
-    groups: Set[Group])(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[_]] = {
+    apps: Set[V2AppDefinition],
+    groups: Set[V2Group])(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[_]] = {
     val groupIds = groups.map(_.id)
     val clashingIds = apps.map(_.id).filter(groupIds.contains)
     isTrue(
@@ -101,37 +108,37 @@ object ModelValidation {
   }
 
   def noCyclicDependencies(
-    group: Group,
-    path: String): Iterable[ConstraintViolation[Group]] = {
+    group: V2Group,
+    path: String): Iterable[ConstraintViolation[V2Group]] = {
     isTrue(
       group,
       group.dependencies,
       path,
       "Dependency graph has cyclic dependencies",
-      group.hasNonCyclicDependencies)
+      group.toGroup.hasNonCyclicDependencies)
   }
 
   def checkGroupUpdates(
-    groups: Iterable[GroupUpdate],
+    groups: Iterable[V2GroupUpdate],
     path: String = "res",
-    parent: PathId = PathId.empty): Iterable[ConstraintViolation[GroupUpdate]] =
+    parent: PathId = PathId.empty): Iterable[ConstraintViolation[V2GroupUpdate]] =
     groups.zipWithIndex.flatMap {
       case (group, pos) =>
         checkGroupUpdate(group, needsId = true, s"$path[$pos].", parent)
     }
 
   def checkGroups(
-    groups: Iterable[Group],
+    groups: Iterable[V2Group],
     path: String = "res",
-    parent: PathId = PathId.empty): Iterable[ConstraintViolation[Group]] =
+    parent: PathId = PathId.empty): Iterable[ConstraintViolation[V2Group]] =
     groups.zipWithIndex.flatMap {
       case (group, pos) =>
         checkGroup(group, s"$path[$pos].", parent)
     }
 
   def checkUpdates(
-    apps: Iterable[AppUpdate],
-    path: String = "res"): Iterable[ConstraintViolation[AppUpdate]] =
+    apps: Iterable[V2AppUpdate],
+    path: String = "res"): Iterable[ConstraintViolation[V2AppUpdate]] =
     apps.zipWithIndex.flatMap {
       case (app, pos) =>
         checkUpdate(app, s"$path[$pos].")
@@ -149,49 +156,49 @@ object ModelValidation {
   }
 
   def checkApps(
-    apps: Iterable[AppDefinition],
+    apps: Iterable[V2AppDefinition],
     path: String = "res",
-    parent: PathId = PathId.empty): Iterable[ConstraintViolation[AppDefinition]] =
+    parent: PathId = PathId.empty): Iterable[ConstraintViolation[V2AppDefinition]] =
     apps.zipWithIndex.flatMap {
       case (app, pos) =>
         checkAppConstraints(app, parent, s"$path[$pos].")
     }
 
   def checkUpdate(
-    app: AppUpdate,
+    app: V2AppUpdate,
     path: String = "",
-    needsId: Boolean = false): Iterable[ConstraintViolation[AppUpdate]] = {
+    needsId: Boolean = false): Iterable[ConstraintViolation[V2AppUpdate]] = {
     validate(app,
       defined(
         app,
         app.id,
         "id",
-        (b: AppUpdate, p: PathId, i: String) => idErrors(b, PathId.empty, p, i),
+        (b: V2AppUpdate, p: PathId, i: String) => idErrors(b, PathId.empty, p, i),
         needsId
       ),
       defined(
         app,
         app.upgradeStrategy,
         "upgradeStrategy",
-        (b: AppUpdate, p: UpgradeStrategy, i: String) => upgradeStrategyErrors(b, p, i)
+        (b: V2AppUpdate, p: UpgradeStrategy, i: String) => upgradeStrategyErrors(b, p, i)
       ),
       defined(
         app,
         app.dependencies,
         "dependencies",
-        (b: AppUpdate, p: Set[PathId], i: String) => dependencyErrors(b, PathId.empty, p, i)
+        (b: V2AppUpdate, p: Set[PathId], i: String) => dependencyErrors(b, PathId.empty, p, i)
       ),
       defined(
         app,
         app.storeUrls,
         "storeUrls",
-        (b: AppUpdate, p: Seq[String], i: String) => urlsCanBeResolved(b, p, i)
+        (b: V2AppUpdate, p: Seq[String], i: String) => urlsCanBeResolved(b, p, i)
       )
     )
   }
 
-  def checkAppConstraints(app: AppDefinition, parent: PathId,
-                          path: String = ""): Iterable[ConstraintViolation[AppDefinition]] =
+  def checkAppConstraints(app: V2AppDefinition, parent: PathId,
+                          path: String = ""): Iterable[ConstraintViolation[V2AppDefinition]] =
     validate(app,
       idErrors(app, parent, app.id, path + "id"),
       checkPath(app, parent, app.id, path + "id"),
@@ -268,8 +275,8 @@ object ModelValidation {
     * Returns a non-empty list of validation messages if the given app definition
     * will conflict with existing apps.
     */
-  def checkAppConflicts(app: AppDefinition, baseId: PathId, service: MarathonSchedulerService): Seq[String] = {
-    app.containerServicePorts.toSeq.flatMap { servicePorts =>
+  def checkAppConflicts(app: V2AppDefinition, baseId: PathId, service: MarathonSchedulerService): Seq[String] = {
+    app.toAppDefinition.containerServicePorts.toSeq.flatMap { servicePorts =>
       checkServicePortConflicts(baseId, servicePorts, service)
     }
   }

@@ -7,8 +7,13 @@ import akka.event.EventStream
 import akka.pattern.ask
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.LeaderInfo
-import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
+import mesosphere.marathon.api.v2.json.V2AppUpdate
+import mesosphere.marathon.event.{
+  LocalLeadershipEvent,
+  AppTerminatedEvent,
+  DeploymentFailed,
+  DeploymentSuccess
+}
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -505,7 +510,7 @@ class SchedulerActions(
   private def update(
     driver: SchedulerDriver,
     updatedApp: AppDefinition,
-    appUpdate: AppUpdate): Unit = {
+    appUpdate: V2AppUpdate): Unit = {
     // TODO: implement app instance restart logic
   }
 
@@ -555,7 +560,7 @@ class SchedulerActions(
   def updateApp(
     driver: SchedulerDriver,
     id: PathId,
-    appUpdate: AppUpdate): Future[AppDefinition] = {
+    appUpdate: V2AppUpdate): Future[AppDefinition] = {
     appRepository.currentVersion(id).flatMap {
       case Some(currentVersion) =>
         val updatedApp = appUpdate(currentVersion)

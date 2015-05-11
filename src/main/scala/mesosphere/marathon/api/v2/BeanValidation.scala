@@ -1,4 +1,4 @@
-package mesosphere.marathon.api
+package mesosphere.marathon.api.v2
 
 import java.lang.annotation.ElementType
 import javax.validation.{ ConstraintViolation, ConstraintViolationException, Validation }

@@ -6,7 +6,7 @@ import javax.inject.{ Inject, Named }
 
 import akka.event.EventStream
 import com.google.inject.Singleton
-import mesosphere.marathon.api.{ BeanValidation, ModelValidation }
+import mesosphere.marathon.api.v2.{ BeanValidation, ModelValidation }
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
@@ -133,7 +133,7 @@ class GroupManager @Singleton @Inject() (
     val deployment = for {
       from <- rootGroup //ignore the state of the scheduler
       (to, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
-      _ = BeanValidation.requireValid(ModelValidation.checkGroup(to))
+      _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty))
       plan <- deploy(from, to, resolve)
       _ <- groupRepo.store(zkName, to)
     } yield plan

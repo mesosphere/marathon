@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
@@ -30,7 +31,7 @@ class QueueResourceTest extends MarathonSpec with Matchers {
       "delay" -> Json.obj(
         "overdue" -> true
       ),
-      "app" -> app1
+      "app" -> V2AppDefinition(app1)
     )
 
     val queuedApp2 = Json.obj(
@@ -38,7 +39,7 @@ class QueueResourceTest extends MarathonSpec with Matchers {
       "delay" -> Json.obj(
         "overdue" -> false
       ),
-      "app" -> app2
+      "app" -> V2AppDefinition(app2)
     )
 
     val queuedApps = (json \ "queue").as[Seq[JsObject]]
