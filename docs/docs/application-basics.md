@@ -31,7 +31,7 @@ What happens here is that Marathon hands over execution to Mesos. Mesos executes
 The sandbox is a special directory on each slave that acts as the execution environment (from a storage perspective) and also contains relevant log files as well as `stderr` and `stdout` for the command being executed. See also the role of the sandbox in [debugging distributed apps](https://docs.mesosphere.com/tutorials/debugging-a-mesosphere-cluster/).
 
 
-## Using Downloads of Resources in Applications
+## Using Resources in Applications
 
 For any non-trivial application you typically depend on a collection of resources, that is, files and/or archives of files. To deal with this, Marathon has the concept of `uris`. It leverages the Mesos fetcher to do the legwork in terms of downloading (and potentially) extracting resources.
 
