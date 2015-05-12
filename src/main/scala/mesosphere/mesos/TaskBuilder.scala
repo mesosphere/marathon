@@ -101,7 +101,7 @@ class TaskBuilder(app: AppDefinition,
 
     executor match {
       case CommandExecutor() =>
-        builder.setCommand(TaskBuilder.commandInfo(app, Some(taskId), host, ports))
+        builder.setCommand(TaskBuilder.commandInfo(app, resources, Some(taskId), host, ports))
         containerProto.foreach(builder.setContainer)
 
       case PathExecutor(path) =>
@@ -109,7 +109,8 @@ class TaskBuilder(app: AppDefinition,
         val executorPath = s"'$path'" // TODO: Really escape this.
         val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
-        val command = TaskBuilder.commandInfo(app, Some(taskId), host, ports).toBuilder.setValue(shell)
+        val command = TaskBuilder.commandInfo(app, resources,
+          Some(taskId), host, ports).toBuilder.setValue(shell)
 
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
@@ -145,11 +146,12 @@ class TaskBuilder(app: AppDefinition,
 
 object TaskBuilder {
 
-  def commandInfo(app: AppDefinition, taskId: Option[TaskID], host: Option[String], ports: Seq[Long]): CommandInfo = {
+  def commandInfo(app: AppDefinition, resources: Seq[Resource],
+                  taskId: Option[TaskID], host: Option[String], ports: Seq[Long]): CommandInfo = {
     val containerPorts = for (pms <- app.portMappings()) yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(app.ports)
     val envMap: Map[String, String] =
-      taskContextEnv(app, taskId) ++
+      taskContextEnv(app, resources, taskId) ++
         portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _) ++
         app.env
 
@@ -230,7 +232,7 @@ object TaskBuilder {
     }
   }
 
-  def auxResourceEnv(app: AppDefinition): String = {
+  def auxResourceEnv(resources: Seq[Resource]): String = {
     import mesosphere.mesos.protos.Implicits._
     import org.apache.mesos.Protos.{ Resource => ProtoResource }
     import mesosphere.mesos.protos._
@@ -243,13 +245,21 @@ object TaskBuilder {
       case SetResource(name, set, role) => s"""${name}(${role}):${set.mkString(",")}"""
     }
 
-    app.resources match {
-      case None     => ""
-      case Some(xs) => (for (res <- xs) yield resToString(res)).mkString(";")
-    }
+    val spec = resources.filterNot { r =>
+      val pr = implicitly[ProtoResource](r)
+      pr.getName() match {
+        case Resource.CPUS  => true
+        case Resource.MEM   => true
+        case Resource.DISK  => true
+        case Resource.PORTS => true
+        case _              => false
+      }
+    } map (resToString(_))
+    spec.mkString(";")
   }
 
-  def taskContextEnv(app: AppDefinition, taskId: Option[TaskID]): Map[String, String] =
+  def taskContextEnv(app: AppDefinition, resources: Seq[Resource],
+                     taskId: Option[TaskID]): Map[String, String] =
     if (taskId.isEmpty)
       Map.empty
     else
@@ -257,6 +267,6 @@ object TaskBuilder {
         "MESOS_TASK_ID" -> taskId.get.getValue,
         "MARATHON_APP_ID" -> app.id.toString,
         "MARATHON_APP_VERSION" -> app.version.toString,
-        "AUX_RESOURCES" -> auxResourceEnv(app)
+        "AUX_RESOURCES" -> auxResourceEnv(resources)
       )
 }

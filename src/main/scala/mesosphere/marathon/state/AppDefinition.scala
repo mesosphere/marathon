@@ -97,7 +97,7 @@ case class AppDefinition(
   }
 
   def toProto: Protos.ServiceDefinition = {
-    val commandInfo = TaskBuilder.commandInfo(this, None, None, Seq.empty)
+    val commandInfo = TaskBuilder.commandInfo(this, resources.getOrElse(Seq()), None, None, Seq.empty)
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
@@ -129,6 +129,10 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
+
+    for (rs <- resources)
+      for (r <- rs)
+        builder.addResources(r)
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
