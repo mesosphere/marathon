@@ -67,6 +67,27 @@ class TaskBuilder(app: AppDefinition,
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
+      .setDiscovery(DiscoveryInfo.newBuilder
+        .setEnvironment("env")
+        .setLabels(Labels.newBuilder
+          .addLabels(
+            Label.newBuilder
+              .setKey("dc")
+              .setValue("de1")
+          )
+        )
+        .setLocation("europe")
+        .setName("werner")
+        .setVersion("1.0")
+        .setVisibility(DiscoveryInfo.Visibility.CLUSTER)
+        .setPorts(Ports.newBuilder
+          .addPorts(Port.newBuilder
+            .setName("http")
+            .setNumber(80)
+            .setProtocol("tcp")
+          )
+        )
+      )
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
