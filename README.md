@@ -18,9 +18,6 @@ can even start other Marathon instances via Marathon.
 
 Using Marathon versions 0.7.0+ and Mesos 0.20.0+, you can [deploy, run and scale Docker containers](https://mesosphere.github.io/marathon/docs/native-docker.html) with ease.
 
-Documentation for installing and configuring the full Mesosphere stack including Mesos and Marathon is
-available on the [Mesosphere website](http://mesosphere.com/docs/).
-
 ## Features
 
 * *HA* -- run any number of Marathon schedulers, but only one gets elected as
@@ -34,6 +31,16 @@ available on the [Mesosphere website](http://mesosphere.com/docs/).
 * *[JSON/REST API](https://mesosphere.github.io/marathon/docs/rest-api.html)* for easy integration and scriptability
 * *Basic Auth* and *SSL*
 * *Metrics*: available at `/metrics` in JSON format
+
+## Documentation
+
+Marathon documentation is available on the [Marathon GitHub pages site](http://mesosphere.github.io/marathon/).
+
+Documentation for installing and configuring the full Mesosphere stack including Mesos and Marathon is available on the [Mesosphere website](http://docs.mesosphere.com).
+
+### Contributing
+
+We heartily welcome external contributions to Marathon's documentation. Documentation should be committed to the `master` branch and published to our GitHub pages site using the instructions in [docs/README.md](https://github.com/mesosphere/marathon/tree/master/docs).
 
 ## Setting Up And Running Marathon
 
@@ -83,23 +90,15 @@ features.
 
 Build tip:
 
-    docker build -t marathon-tip .
+    docker build -t marathon-head .
 
 Run it:
 
-    docker run marathon-tip --master local --zk zk://localhost:2181/marathon
+    docker run marathon-head --master local --zk zk://localhost:2181/marathon
 
 If you want to inspect the contents of the Docker:
 
-    docker run -i -t --entrypoint=/bin/bash marathon-tip -s
-
-## Documentation
-
-Marathon documentation is available on the [Marathon GitHub pages site](http://mesosphere.github.io/marathon/).
-
-### Contributing
-
-We heartily welcome external contributions to Marathon's documentation. Documentation should be committed to the `master` branch and published to our GitHub pages site using the instructions in [docs/README.md](https://github.com/mesosphere/marathon/tree/master/docs).
+    docker run -i -t --entrypoint=/bin/bash marathon-head -s
 
 ## Marathon Clients
 
@@ -113,6 +112,7 @@ We heartily welcome external contributions to Marathon's documentation. Document
             ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
+* [Maven plugin](https://github.com/holidaycheck/marathon-maven-plugin), developed at [HolidayCheck](http://www.holidaycheck.com/)
 * [Python client](https://github.com/thefactory/marathon-python), developed at [The Factory](http://www.thefactory.com)
 * [Python client](https://github.com/Wizcorp/marathon-client.py), developed at [Wizcorp](http://www.wizcorp.jp)
 * [Go client](https://github.com/gambol99/go-marathon) by Rohith Jayawardene
@@ -125,6 +125,7 @@ We heartily welcome external contributions to Marathon's documentation. Document
 Marathon is managing applications on more than 100,000 nodes at these companies, and many more:
 
 * [Airbnb](https://www.airbnb.com/)
+* [Allegro Group](http://www.allegrogroup.com)
 * [Artirix](http://www.artirix.com/)
 * [bol.com](https://www.bol.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
@@ -135,6 +136,7 @@ Marathon is managing applications on more than 100,000 nodes at these companies,
 * [The Factory](https://github.com/thefactory/)
 * [Guidewire](http://www.guidewire.com/)
 * [Groupon](http://www.groupon.com/)
+* [HolidayCheck](http://www.holidaycheck.com/)
 * [Human API](https://humanapi.co/)
 * [ING](http://www.ing.com/)
 * [iQIYI](http://www.iqiyi.com/)

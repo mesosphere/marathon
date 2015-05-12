@@ -51,7 +51,7 @@ var AboutModalComponent = React.createClass({
           <button type="button" className="close"
             aria-hidden="true" onClick={this.destroy}>&times;</button>
           <h3 className="modal-title">
-            <img width="160" height="27" alt="Marathon" src="/img/marathon-logo.png" />
+            <img width="160" height="27" alt="Marathon" src="img/marathon-logo.png" />
             <small className="text-muted" style={{"marginLeft": "1em"}}>
               Version {this.getInfo("version")}
             </small>

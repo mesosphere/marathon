@@ -38,6 +38,7 @@ class MarathonSchedulerActor(
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     taskIdUtil: TaskIdUtil,
     storage: StorageProvider,
     eventBus: EventStream,
@@ -271,7 +272,7 @@ class MarathonSchedulerActor(
     withLockFor(Set(appId))(f)
 
   // there has to be a better way...
-  def driver: SchedulerDriver = MarathonSchedulerDriver.driver.get
+  def driver: SchedulerDriver = marathonSchedulerDriverHolder.driver.get
 
   def deploy(origSender: ActorRef, cmd: Deploy): Unit = {
     val plan = cmd.plan
@@ -496,24 +497,6 @@ class SchedulerActions(
       apps <- appRepository.apps()
       app <- apps
     } healthCheckManager.reconcileWith(app.id)
-
-  private def newTask(app: AppDefinition,
-                      offer: Offer): Option[(TaskInfo, Seq[Long])] = {
-    // TODO this should return a MarathonTask
-    val builder = new TaskBuilder(
-      app,
-      taskIdUtil.newTaskId,
-      taskTracker,
-      config,
-      mapper
-    )
-
-    builder.buildIfMatches(offer) map {
-      case (task, ports) =>
-        val taskBuilder = task.toBuilder
-        taskBuilder.build -> ports
-    }
-  }
 
   /**
     * Ensures current application parameters (resource requirements, URLs,

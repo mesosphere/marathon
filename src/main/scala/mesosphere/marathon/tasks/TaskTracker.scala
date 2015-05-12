@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.state.{ PathId, StateMetrics, Timestamp }
-import mesosphere.marathon.{ Main, MarathonConf }
+import mesosphere.marathon.MarathonConf
 import com.codahale.metrics.MetricRegistry
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskStatus
@@ -156,7 +156,7 @@ class TaskTracker @Inject() (
   def checkStagedTasks: Iterable[MarathonTask] = {
     // stagedAt is set when the task is created by the scheduler
     val now = System.currentTimeMillis
-    val expires = now - Main.conf.taskLaunchTimeout()
+    val expires = now - config.taskLaunchTimeout()
     val toKill = stagedTasks.filter(_.getStagedAt < expires)
 
     toKill.foreach(t => {

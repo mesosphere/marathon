@@ -10,6 +10,24 @@ healthy nor unhealthy as long as e.g. "100 - continue" is returned.
 
 Health checks now work with HTTPS.
 
+#### Faster (configurable) task distribution
+
+In order to speed up task launching and use the resource offers Marathon receives from Mesos more efficiently,
+we added a new offer matching algorithm, that tries to start as many tasks as possible per task offer cycle.
+The maximum numbers of tasks to start are configurable with the follwing startup parameters:
+
+`--max_tasks_per_offer` (default 1): The maximum number of tasks to start on a single offer per cycle
+
+`--max_tasks_per_offer_cycle` (default 1000): The maximum number of tasks to start in total per cycle
+
+#### Security settings configurable through env variables
+
+Security settings are now configurable through the following environment variables:
+
+`$MESOSPHERE_HTTP_CREDENTIALS` for HTTP authentication
+
+`$MESOSPHERE_KEYSTORE_PATH` + `$MESOSPHERE_KEYSTORE_PASS` for SSL settings
+
 ## Changes from 0.8.0 to 0.8.1
 
 #### New option `dryRun` on endpoint `PUT /v2/groups/{id}`

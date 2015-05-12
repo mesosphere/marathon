@@ -44,6 +44,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var queue: TaskQueue = _
   var frameworkIdUtil: FrameworkIdUtil = _
   var driver: SchedulerDriver = _
+  var holder: MarathonSchedulerDriverHolder = _
   var taskIdUtil: TaskIdUtil = _
   var storage: StorageProvider = _
   var taskFailureEventRepository: TaskFailureRepository = _
@@ -52,7 +53,8 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   before {
     driver = mock[SchedulerDriver]
-    MarathonSchedulerDriver.driver = Some(driver)
+    holder = new MarathonSchedulerDriverHolder
+    holder.driver = Some(driver)
     repo = mock[AppRepository]
     deploymentRepo = mock[DeploymentRepository]
     hcManager = mock[HealthCheckManager]
@@ -86,6 +88,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       tracker,
       queue,
       frameworkIdUtil,
+      holder,
       taskIdUtil,
       storage,
       system.eventStream,
@@ -328,15 +331,54 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val origGroup = Group(PathId("/foo/bar"), Set(app))
-
-    val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
-
-    val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
+    val targetGroup = Group(PathId("/foo/bar"), Set())
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
     when(tracker.get(app.id)).thenReturn(Set(taskA))
+    when(repo.store(any())).thenReturn(Future.successful(app))
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
+
+    system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
+
+    queue.rateLimiter.addDelay(app)
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! Start
+      schedulerActor ! Deploy(plan)
+
+      expectMsg(DeploymentStarted(plan))
+
+      awaitAssert(verify(repo).store(app.copy(instances = 0)))
+
+      system.eventStream.unsubscribe(probe.ref)
+    }
+    finally {
+      stopActor(schedulerActor)
+    }
+  }
+
+  test("Stopping an app sets instance count to 0 before removing the app completely") {
+    val probe = TestProbe()
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val origGroup = Group(PathId("/foo/bar"), Set(app))
+    val targetGroup = Group(PathId("/foo/bar"), Set())
+
+    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
+
+    when(tracker.get(app.id)).thenReturn(Set(taskA))
+    when(repo.store(any())).thenReturn(Future.successful(app))
+    when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
+
+    when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString))
+        Status.DRIVER_RUNNING
+      }
+    })
 
     system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
@@ -410,6 +452,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       tracker,
       queue,
       frameworkIdUtil,
+      holder,
       taskIdUtil,
       storage,
       system.eventStream,
@@ -480,6 +523,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
         tracker,
         queue,
         frameworkIdUtil,
+        holder,
         taskIdUtil,
         storage,
         system.eventStream,

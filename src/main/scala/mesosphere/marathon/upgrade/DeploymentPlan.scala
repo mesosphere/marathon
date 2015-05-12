@@ -42,13 +42,13 @@ final case class DeploymentStep(actions: Seq[DeploymentAction]) {
 }
 
 /**
-  * A deployment plan consists of the [[DeploymentStep]]s necessary to
+  * A deployment plan consists of the [[mesosphere.marathon.upgrade.DeploymentStep]]s necessary to
   * change the group state from original to target.
   *
   * The steps are executed sequentially after each other. The actions within a
   * step maybe executed in parallel.
   *
-  * See [[mesosphere.marathon.upgrade.DeploymentPlan.appsGroupedByLongestPath]] to
+  * See `mesosphere.marathon.upgrade.DeploymentPlan.appsGroupedByLongestPath` to
   * understand how we can guarantee that all dependencies for a step are fulfilled
   * by prior steps.
   */
@@ -61,8 +61,6 @@ final case class DeploymentPlan(
 
   /**
     * Reverts this plan by applying the reverse changes to the given Group.
-    *
-    * See [[DeploymentPlanReverter.revert]].
     */
   def revert(group: Group): Group = DeploymentPlanReverter.revert(original, target)(group)
 

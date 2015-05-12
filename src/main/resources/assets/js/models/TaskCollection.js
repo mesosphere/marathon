@@ -15,7 +15,7 @@ var TaskCollection = SortableCollection.extend({
   },
 
   url: function () {
-    return "/v2/apps/" + this.options.appId;
+    return "v2/apps/" + this.options.appId;
   }
 });
 

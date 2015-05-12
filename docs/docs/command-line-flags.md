@@ -64,6 +64,11 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     assigning ports to apps.
 * `--local_port_min` (Optional. Default: 10000): Min port number to use when
     assigning ports to apps.
+* `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this number of tasks per Mesos offer. Usually,
+  there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
+* `--max_tasks_per_offer_cycle` (Optional. Default: 1000): Launch at most this number of tasks per Mesos offer cycle.
+  A larger value speeds up launching new tasks.
+  Yet, choosing a too large value might overwhelm Mesos/Marathon with processing task updates.
 * `--mesos_role` (Optional. Default: None): Mesos role for this framework.
 * `--mesos_user` (Optional. Default: current user): Mesos user for
     this framework. _Note: Default is determined by
@@ -135,3 +140,15 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 
 
 
+### Debug Flags
+
+Note: all debug flags are for debugging purposes only and should not be used in production settings.
+All debug flags are experimental and subject of change.
+
+* `--logging-level` (Optional.): Set the logging level of the application. 
+    Use one of `off`, `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `all`.
+* `--enable_metrics` (Optional.): Enable metrics for all service method calls.
+    The execution time per method is available via the metrics endpoint.
+* `--enable_tracing` (Optional.): Enable tracing for all service method calls.
+    Around the execution of every service method a trace log message is issued.
+    

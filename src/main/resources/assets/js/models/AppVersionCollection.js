@@ -19,7 +19,7 @@ var AppVersionCollection = SortableCollection.extend({
   },
 
   url: function () {
-    return "/v2/apps/" + this.options.appId + "/versions";
+    return "v2/apps/" + this.options.appId + "/versions";
   }
 });
 

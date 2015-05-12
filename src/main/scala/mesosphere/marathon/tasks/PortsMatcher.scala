@@ -16,17 +16,16 @@ import scala.collection.JavaConverters._
   */
 class PortsMatcher(app: AppDefinition, offer: Offer) extends Logging {
 
-  val portsResource = offer.getResourcesList.asScala
+  lazy val portsResource = offer.getResourcesList.asScala
     .find(_.getName == Resource.PORTS)
 
-  val offeredPortRanges = portsResource
+  lazy val offeredPortRanges = portsResource
     .map(_.getRanges.getRangeList.asScala)
     .getOrElse(Nil)
 
-  val role = portsResource.map(_.getRole).getOrElse("*")
+  lazy val role = portsResource.map(_.getRole).getOrElse("*")
 
-  def portRanges: Option[RangesResource] = {
-
+  lazy val portRanges: Option[RangesResource] = {
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
       for {
         c <- app.container
@@ -56,13 +55,9 @@ class PortsMatcher(app: AppDefinition, offer: Offer) extends Logging {
     }
   }
 
-  def matches: Boolean = {
-    portRanges.isDefined
-  }
+  def matches: Boolean = portRanges.isDefined
 
-  def ports: Seq[Long] = {
-    portRanges.map(_.ranges.flatMap(_.asScala())).getOrElse(Nil)
-  }
+  def ports: Seq[Long] = portRanges.map(_.ranges.flatMap(_.asScala())).getOrElse(Nil)
 
   private def appPortRanges: Option[RangesResource] = {
     val sortedPorts = app.ports.sorted

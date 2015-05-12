@@ -4,10 +4,11 @@ import java.util.Date
 
 import akka.actor.ActorSystem
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import mesosphere.marathon.api.v2.GroupUpdate
+import mesosphere.marathon.api.v2.{ AppUpdate, GroupUpdate }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import org.slf4j.LoggerFactory
 import spray.client.pipelining._
 import spray.http.HttpResponse
 
@@ -19,6 +20,7 @@ import scala.concurrent.duration._
   * Needed for dumb jackson.
   */
 case class ListAppsResult(apps: Seq[AppDefinition])
+case class AppVersions(versions: Seq[String])
 case class ListTasks(tasks: Seq[ITEnrichedTask])
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
 case class ITDeploymentResult(version: String, deploymentId: String)
@@ -40,6 +42,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   require(baseGroup.absolute)
 
   implicit val appDefMarshaller = marshaller[AppDefinition]
+  implicit val appUpdateMarshaller = marshaller[AppUpdate]
   implicit val groupMarshaller = marshaller[Group]
   implicit val groupUpdateMarshaller = marshaller[GroupUpdate]
   implicit val versionMarshaller = marshaller[ITDeploymentResult]
@@ -63,7 +66,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   def app(id: PathId): RestResult[AppDefinition] = {
     requireInBaseGroup(id)
     val pipeline = sendReceive ~> read[AppDefinition]
-    result(pipeline(Get(s"$url/v2/apps$id")), waitTime)
+    val getUrl: String = s"$url/v2/apps$id"
+    LoggerFactory.getLogger(getClass).info(s"get url = $getUrl")
+    result(pipeline(Get(getUrl)), waitTime)
   }
 
   def createApp(app: AppDefinition): RestResult[AppDefinition] = {
@@ -72,16 +77,31 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Post(s"$url/v2/apps", app)), waitTime)
   }
 
-  def deleteApp(id: PathId): RestResult[HttpResponse] = {
+  def deleteApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> responseResult
-    result(pipeline(Delete(s"$url/v2/apps$id")), waitTime)
+    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    result(pipeline(Delete(s"$url/v2/apps$id?force=$force")), waitTime)
   }
 
-  def updateApp(app: AppDefinition): RestResult[HttpResponse] = {
-    requireInBaseGroup(app.id)
+  def updateApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[HttpResponse] = {
+    requireInBaseGroup(id)
     val pipeline = sendReceive ~> responseResult
-    result(pipeline(Put(s"$url/v2/apps${app.id}", app)), waitTime)
+    val putUrl: String = s"$url/v2/apps$id?force=$force"
+    LoggerFactory.getLogger(getClass).info(s"put url = $putUrl")
+
+    result(pipeline(Put(putUrl, app)), waitTime)
+  }
+
+  def restartApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
+    requireInBaseGroup(id)
+    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    result(pipeline(Post(s"$url/v2/apps$id/restart?force=$force")), waitTime)
+  }
+
+  def listAppVersions(id: PathId): RestResult[AppVersions] = {
+    requireInBaseGroup(id)
+    val pipeline = sendReceive ~> read[AppVersions]
+    result(pipeline(Get(s"$url/v2/apps$id/versions")), waitTime)
   }
 
   //apps tasks resource --------------------------------------
@@ -91,6 +111,18 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     val pipeline = addHeader("Accept", "application/json") ~> sendReceive ~> read[ListTasks]
     val res = result(pipeline(Get(s"$url/v2/apps$appId/tasks")), waitTime)
     res.map(_.tasks.toList)
+  }
+
+  def killAllTasks(appId: PathId, scale: Boolean = false): RestResult[ListTasks] = {
+    requireInBaseGroup(appId)
+    val pipeline = sendReceive ~> read[ListTasks]
+    result(pipeline(Delete(s"$url/v2/apps$appId/tasks?scale=$scale")), waitTime)
+  }
+
+  def killTask(appId: PathId, taskId: String, scale: Boolean = false): RestResult[HttpResponse] = {
+    requireInBaseGroup(appId)
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Delete(s"$url/v2/apps$appId/tasks/$taskId?scale=$scale")), waitTime)
   }
 
   //group resource -------------------------------------------
@@ -169,4 +201,10 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Delete(s"$url/v2/eventSubscriptions?callbackUrl=$callbackUrl")), waitTime)
   }
 
+  //metrics ---------------------------------------------
+
+  def metrics(): RestResult[HttpResponse] = {
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Get(s"$url/metrics")), waitTime)
+  }
 }

@@ -1,6 +1,5 @@
 package mesosphere.marathon
 
-import java.util
 import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem }
@@ -11,8 +10,8 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
-import mesosphere.marathon.tasks._
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
+import mesosphere.marathon.tasks._
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.{ TaskBuilder, protos }
 import org.apache.log4j.Logger
@@ -28,26 +27,9 @@ trait SchedulerCallbacks {
   def disconnected(): Unit
 }
 
-object MarathonScheduler {
-  private class MarathonSchedulerCallbacksImpl(
-    serviceOption: Option[MarathonSchedulerService])
-      extends SchedulerCallbacks {
-
-    override def disconnected(): Unit = {
-      // Abdicate leadership when we become disconnected from the Mesos master.
-      serviceOption.foreach(_.abdicateLeadership())
-    }
-
-  }
-
-  val callbacks: SchedulerCallbacks = new MarathonSchedulerCallbacksImpl(
-    Some(Main.injector.getInstance(classOf[MarathonSchedulerService]))
-  )
-}
-
 class MarathonScheduler @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
-    @Named("restMapper") mapper: ObjectMapper,
+    offerMatcher: OfferMatcher,
     @Named("schedulerActor") schedulerActor: ActorRef,
     appRepo: AppRepository,
     healthCheckManager: HealthCheckManager,
@@ -56,7 +38,8 @@ class MarathonScheduler @Inject() (
     frameworkIdUtil: FrameworkIdUtil,
     taskIdUtil: TaskIdUtil,
     system: ActorSystem,
-    config: MarathonConf) extends Scheduler {
+    config: MarathonConf,
+    schedulerCallbacks: SchedulerCallbacks) extends Scheduler {
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
@@ -103,41 +86,7 @@ class MarathonScheduler @Inject() (
         appVersions.get(app.id) contains app.version
     }
 
-    for (offer <- offers.asScala) {
-      try {
-        log.debug("Received offer %s".format(offer))
-
-        val matchingTask = taskQueue.pollMatching { app =>
-          newTask(app, offer).map(app -> _)
-        }
-
-        matchingTask.foreach {
-          case (app, (taskInfo, ports)) =>
-            val marathonTask = MarathonTasks.makeTask(
-              taskInfo.getTaskId.getValue, offer.getHostname, ports,
-              offer.getAttributesList.asScala, app.version)
-
-            log.debug("Launching task: " + taskInfo)
-
-            taskTracker.created(app.id, marathonTask)
-            driver.launchTasks(Seq(offer.getId).asJava, util.Arrays.asList(taskInfo))
-
-          // here it is assumed that the health checks for the current
-          // version are already running.
-        }
-
-        if (matchingTask.isEmpty) {
-          log.debug("Offer doesn't match request. Declining.")
-          driver.declineOffer(offer.getId)
-        }
-      }
-      catch {
-        case t: Throwable =>
-          log.error("Caught an exception. Declining offer.", t)
-          // Ensure that we always respond
-          driver.declineOffer(offer.getId)
-      }
-    }
+    offerMatcher.processResourceOffers(driver, offers.asScala)
   }
 
   override def offerRescinded(driver: SchedulerDriver, offer: OfferID): Unit = {
@@ -228,7 +177,7 @@ class MarathonScheduler @Inject() (
 
     // Disconnection from the Mesos master has occurred.
     // Thus, call the scheduler callbacks.
-    MarathonScheduler.callbacks.disconnected()
+    schedulerCallbacks.disconnected()
   }
 
   override def slaveLost(driver: SchedulerDriver, slave: SlaveID) {
@@ -273,11 +222,5 @@ class MarathonScheduler @Inject() (
         task.getVersion
       )
     )
-  }
-
-  private def newTask(
-    app: AppDefinition,
-    offer: Offer): Option[(TaskInfo, Seq[Long])] = {
-    new TaskBuilder(app, taskIdUtil.newTaskId, taskTracker, config, mapper).buildIfMatches(offer)
   }
 }

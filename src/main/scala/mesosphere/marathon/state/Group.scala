@@ -100,7 +100,7 @@ case class Group(
   /**
     * Remove the app with the given id if it is a direct child of this group.
     *
-    * Use together with [[update]].
+    * Use together with [[mesosphere.marathon.state.Group!.update(timestamp*]].
     */
   def removeApplication(appId: PathId): Group = copy(apps = apps.filter(_.id != appId))
 
