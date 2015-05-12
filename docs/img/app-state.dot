@@ -15,21 +15,21 @@ digraph appState {
 		subgraph becomeHealthy {
 			edge [color=green4, fontcolor=green4]
 			initial -> healthy [label="i = 0"]
-			scaling -> healthy [label="r = i ^ h = i"]
-			unhealthy -> healthy [label="h = r ^ r = i"]
+			scaling -> healthy [label="r = i ∧ h = i"]
+			unhealthy -> healthy [label="h = r ∧ r = i"]
 		}
 
 		subgraph becomeUnhealthy {
 			edge [color=red, fontcolor=red]
 			healthy -> unhealthy [label="h != r"]
-			scaling -> unhealthy [label="h != r ^ r = i"]
+			scaling -> unhealthy [label="h != r ∧ r = i"]
 		}
 
 		subgraph scale {
 			edge [color=royalblue, fontcolor=royalblue]
 			initial -> scaling [label="r < i"]
-			healthy -> scaling [label="r != i ^ h = r"]
-			unhealthy -> scaling [label="h = r ^ r != i"]
+			healthy -> scaling [label="r != i ∧ h = r"]
+			unhealthy -> scaling [label="h = r ∧ r != i"]
 		}
 
 		healthy -> destroyed
