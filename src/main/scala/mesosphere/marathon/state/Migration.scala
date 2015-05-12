@@ -67,7 +67,7 @@ class Migration @Inject() (
 
     result.onComplete {
       case Success(version) => log.info(s"Migration successfully applied for version ${version.str}")
-      case Failure(ex)      => log.error(s"Migration failed! $ex")
+      case Failure(ex)      => log.error("Migration failed!", ex)
     }
 
     Await.result(result, Duration.Inf)
