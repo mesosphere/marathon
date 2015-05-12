@@ -151,7 +151,8 @@ object ResourceMatcher {
                 else
                   None
               }
-              else None
+              else
+                None
           }
 
         case RangesResource(name, ranges, _) =>
@@ -171,9 +172,17 @@ object ResourceMatcher {
         case SetResource(name, items, _) =>
           offered match {
             case SetResource(_, itemsOffered, roleOffered) =>
-              matchSet(items, itemsOffered) match {
-                case Some(selected) => Some(SetResource(name, selected, roleOffered))
-                case None           => None
+              if (config.useExtendedResourceMatch) {
+                matchSet(items, itemsOffered) match {
+                  case Some(selected) => Some(SetResource(name, selected, roleOffered))
+                  case None           => None
+                }
+              }
+              else {
+                if (items.subsetOf(itemsOffered))
+                  Some(SetResource(name, items, roleOffered))
+                else
+                  None
               }
             case _ => None
           }
