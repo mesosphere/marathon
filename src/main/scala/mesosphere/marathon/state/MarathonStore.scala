@@ -1,7 +1,5 @@
 package mesosphere.marathon.state
 
-import java.util.concurrent.ExecutionException
-
 import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.{ Histogram, MetricRegistry }
 import com.google.protobuf.InvalidProtocolBufferException
@@ -13,6 +11,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
 class MarathonStore[S <: MarathonState[_, S]](
   conf: MarathonConf,
@@ -121,7 +120,16 @@ class MarathonStore[S <: MarathonState[_, S]](
           name.replaceFirst(prefix, "")
       }
     }.recover {
-      case e: ExecutionException => Seq().iterator
+      case NonFatal(e) =>
+        // TODO: Currently this code path is taken when the zookeeper path does not exist yet. It would be nice
+        // to not log this as a warning.
+        //
+        // Unfortunately, this results in a NullPointerException in `throw e.getCause()` in BackToTheFuture because
+        // the native mesos code returns an ExecutionException without cause. Therefore, we cannot robustly
+        // differentiate between exceptions which are "normal" and exceptions which indicate real errors
+        // and we have to log them all.
+        log.warn(s"error while calling $getClass.names() for prefix $prefix", e)
+        Iterator.empty
     }
   }
 
