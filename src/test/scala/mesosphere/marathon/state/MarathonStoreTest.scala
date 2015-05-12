@@ -280,6 +280,76 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     }
   }
 
+  def dummyJFuture[T](value: => T): JFuture[T] = new JFuture[T] {
+    override def isCancelled: Boolean = false
+    override def cancel(b: Boolean): Boolean = false
+    override def isDone: Boolean = true
+    override def get(): T = value
+    override def get(l: Long, timeUnit: TimeUnit): T = value
+  }
+
+  // regression test for #1507
+  test("state.names() throwing exception is treated as empty iterator (ExecutionException without cause)") {
+    val state = new InMemoryState() {
+      override def names(): JFuture[util.Iterator[String]] =
+        dummyJFuture (throw new ExecutionException(null))
+    }
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
+    config.afterInit()
+
+    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+
+    noException should be thrownBy {
+      Await.result(store.names(), 1.second)
+    }
+  }
+
+  class MyWeirdExecutionException extends ExecutionException("weird without cause")
+
+  // regression test for #1507
+  test("state.names() throwing exception is treated as empty iterator (ExecutionException with itself as cause)") {
+    val state = new InMemoryState() {
+      override def names(): JFuture[util.Iterator[String]] = dummyJFuture(throw new MyWeirdExecutionException)
+    }
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
+    config.afterInit()
+
+    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+
+    noException should be thrownBy {
+      Await.result(store.names(), 1.second)
+    }
+  }
+
+  test("state.names() throwing exception is treated as empty iterator (direct)") {
+    val state = new InMemoryState() {
+      override def names(): JFuture[util.Iterator[String]] = dummyJFuture(throw new RuntimeException("dummy"))
+    }
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
+    config.afterInit()
+
+    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+
+    noException should be thrownBy {
+      Await.result(store.names(), 1.second)
+    }
+  }
+
+  test("state.names() throwing exception is treated as empty iterator (RuntimeException in ExecutionException)") {
+    val state = new InMemoryState() {
+      override def names(): JFuture[util.Iterator[String]] =
+        dummyJFuture(throw new ExecutionException(new RuntimeException("dummy")))
+    }
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
+    config.afterInit()
+
+    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+
+    noException should be thrownBy {
+      Await.result(store.names(), 1.second)
+    }
+  }
+
   private val currentVersionVariable = {
     val versionVariable = mock[Variable]
     when(versionVariable.value()).thenReturn(StorageVersions.current.toByteArray)
