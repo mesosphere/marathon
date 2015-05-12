@@ -43,6 +43,9 @@ object ProcessKeeper {
 
   def startZooKeeper(port: Int, workDir: String) {
     val args = "org.apache.zookeeper.server.ZooKeeperServerMain" :: port.toString :: workDir :: Nil
+    val workDirFile = new File(workDir)
+    FileUtils.deleteDirectory(workDirFile)
+    FileUtils.forceMkdir(workDirFile)
     startJavaProcess("zookeeper", args, new File("."), sys.env, _.contains("binding to port"))
   }
 
