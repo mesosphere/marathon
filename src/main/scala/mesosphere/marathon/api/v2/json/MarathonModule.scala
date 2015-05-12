@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.ser.Serializers
 import org.apache.mesos.{ Protos => mesos }
+import mesosphere.mesos.protos._
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.v2._
 import mesosphere.marathon.api.validation.FieldConstraints._
@@ -22,6 +23,7 @@ import scala.concurrent.duration.FiniteDuration
 
 class MarathonModule extends Module {
   import mesosphere.marathon.api.v2.json.MarathonModule._
+  import mesosphere.marathon.state.AppDefinition
 
   private val constraintClass = classOf[Constraint]
   private val marathonTaskClass = classOf[MarathonTask]
@@ -31,6 +33,7 @@ class MarathonModule extends Module {
   private val appUpdateClass = classOf[AppUpdate]
   private val groupIdClass = classOf[PathId]
   private val taskIdClass = classOf[mesos.TaskID]
+  private val resourceClass = classOf[Resource]
 
   def getModuleName: String = "MarathonModule"
 
@@ -50,6 +53,7 @@ class MarathonModule extends Module {
         else if (matches(finiteDurationClass)) FiniteDurationSerializer
         else if (matches(groupIdClass)) PathIdSerializer
         else if (matches(taskIdClass)) TaskIdSerializer
+        else if (matches(resourceClass)) ResourceSerializer
         else null
       }
     })
@@ -67,6 +71,7 @@ class MarathonModule extends Module {
         else if (matches(appUpdateClass)) AppUpdateDeserializer
         else if (matches(groupIdClass)) PathIdDeserializer
         else if (matches(taskIdClass)) TaskIdDeserializer
+        else if (matches(resourceClass)) ResourceDeserializer
         else null
       }
     })
@@ -201,6 +206,101 @@ class MarathonModule extends Module {
     }
   }
 
+  object ResourceSerializer extends JsonSerializer[Resource] {
+    def serialize(resource: Resource, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+
+      var role: String = ""
+      resource match {
+        case ScalarResource(name, value, _role) => {
+          jgen.writeStringField("name", name)
+          jgen.writeNumberField("value", value)
+          role = _role
+        }
+        case RangesResource(name, value, _role) => {
+          jgen.writeStringField("name", name)
+          jgen.writeObjectField("value", value)
+          role = _role
+        }
+        case SetResource(name, value, _role) => {
+          jgen.writeStringField("name", name)
+          jgen.writeObjectField("value", value)
+          role = _role
+        }
+      }
+
+      if (role.length() > 0) {
+        jgen.writeStringField("role", role)
+      }
+      else {
+        jgen.writeStringField("role", "*")
+      }
+
+      jgen.writeEndObject()
+    }
+  }
+
+  object ResourceDeserializer extends JsonDeserializer[Resource] {
+    def deserialize(json: JsonParser, context: DeserializationContext): Resource = {
+      val tree: JsonNode = json.getCodec.readTree(json)
+
+      val restype = tree.get("name").asText match {
+        case "cpus"     => mesosphere.mesos.protos.Resource.CPUS
+        case "mem"      => mesosphere.mesos.protos.Resource.MEM
+        case "disk"     => mesosphere.mesos.protos.Resource.DISK
+        case custom @ _ => custom
+      }
+
+      val value = tree.get("value")
+      val role = tree.get("role") match {
+        case null         => "*"
+        case roleNode @ _ => roleNode.asText
+      }
+
+      var res: Resource = null
+      if (value.isDouble()) {
+        res = ScalarResource(restype, value.asDouble, role)
+      }
+      else if (value.isArray()) {
+        println("[deserialize] ARRAY!!!: " + value)
+
+        // if elements exist
+        if (value.elements.hasNext()) {
+          // text -> SetResource
+          if (value.elements.next().isTextual()) {
+            var elemSet: Set[String] = Set()
+            val it = value.elements
+            while (it.hasNext) {
+              elemSet = elemSet + it.next.asText
+            }
+            res = SetResource(restype, elemSet, role)
+          }
+          // otherwise -> RangesResource        
+          else {
+            var rangeSeq: Seq[Range] = Seq()
+            val it = value.elements()
+            while (it.hasNext()) {
+              val rangeNode = it.next()
+              rangeSeq = rangeSeq :+ Range(rangeNode.get("begin").asLong, rangeNode.get("end").asLong)
+            }
+            res = RangesResource(restype, rangeSeq, role)
+          }
+        }
+        // otherwise make empty RangesResource or SetResource based on resource name 
+        else {
+          if (restype.toLowerCase.contains("port")) {
+            res = RangesResource(restype, Seq())
+          }
+          else {
+            res = SetResource(restype, Set())
+          }
+        }
+      }
+
+      res
+    }
+  }
+
   object AppUpdateDeserializer extends JsonDeserializer[AppUpdate] {
     override def deserialize(json: JsonParser, context: DeserializationContext): AppUpdate = {
       val oc = json.getCodec
@@ -250,11 +350,12 @@ object MarathonModule {
       dependencies: Option[Set[PathId]] = None,
       upgradeStrategy: Option[UpgradeStrategy] = None,
       labels: Option[Map[String, String]] = None,
+      resources: Option[Seq[Resource]] = None,
       version: Option[Timestamp] = None) {
     def build(): AppUpdate = AppUpdate(
       id, cmd, args, user, env, instances, cpus, mem, disk, executor, constraints,
       uris, storeUrls, ports, requirePorts, backoff, backoffFactor, maxLaunchDelay,
-      container, healthChecks, dependencies, upgradeStrategy, labels, version
+      container, healthChecks, dependencies, upgradeStrategy, labels, resources, version
     )
   }
 

@@ -120,4 +120,10 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
     descr = "Mesos Authentication Secret",
     noshort = true
   )
+
+  lazy val defaultUseExtendedResourceMatch = opt[Boolean]("extended_match",
+    descr = "Use extended resource match mechanism",
+    default = Some(false))
+
+  def useExtendedResourceMatch: Boolean = defaultUseExtendedResourceMatch()
 }

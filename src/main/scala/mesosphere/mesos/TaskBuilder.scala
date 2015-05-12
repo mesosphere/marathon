@@ -29,9 +29,9 @@ class TaskBuilder(app: AppDefinition,
 
   def buildIfMatches(offer: Offer): Option[(TaskInfo, Seq[Long])] = {
 
-    ResourceMatcher.matchResources(offer, app, taskTracker.get(app.id)) match {
-      case Some(ResourceMatch(cpu, mem, disk, ranges)) =>
-        build(offer, cpu, mem, disk, ranges)
+    ResourceMatcher.matchResources(offer, app, config, taskTracker.get(app.id)) match {
+      case Some(ResourceMatch(resources)) =>
+        build(offer, resources)
 
       case _ =>
         log.info(
@@ -42,7 +42,7 @@ class TaskBuilder(app: AppDefinition,
     }
   }
 
-  private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String, portsResource: RangesResource) = {
+  private def build(offer: Offer, resources: Seq[Resource]) = {
     val executor: Executor = if (app.executor == "") {
       config.executor
     }
@@ -52,7 +52,13 @@ class TaskBuilder(app: AppDefinition,
 
     val host: Option[String] = Some(offer.getHostname)
 
-    val ports = portsResource.ranges.flatMap(_.asScala()).to[Seq]
+    // val ports = portsResource.ranges.flatMap(_.asScala()).to[Seq]
+
+    val ports = resources.find(r => ResourceMatcher.getName(r) == Resource.PORTS)
+      .getOrElse(RangesResource(Resource.PORTS, Seq())) match {
+        case RangesResource(_, ranges, _) => ranges.flatMap(_.asScala()).to[Seq]
+        case _                            => Seq()
+      }
 
     val labels = app.labels.map {
       case (key, value) =>
@@ -65,14 +71,15 @@ class TaskBuilder(app: AppDefinition,
       .setName(app.id.toHostname)
       .setTaskId(taskId)
       .setSlaveId(offer.getSlaveId)
-      .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
-      .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
+
+    for (r <- resources)
+      builder.addResources(r)
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
 
-    if (portsResource.ranges.nonEmpty)
-      builder.addResources(portsResource)
+    // if (portsResource.ranges.nonEmpty)
+    //   builder.addResources(portsResource)
 
     val containerProto: Option[ContainerInfo] =
       app.container.map { c =>
@@ -134,7 +141,6 @@ class TaskBuilder(app: AppDefinition,
 
     Some(builder.build -> ports)
   }
-
 }
 
 object TaskBuilder {
@@ -224,6 +230,25 @@ object TaskBuilder {
     }
   }
 
+  def auxResourceEnv(app: AppDefinition): String = {
+    import mesosphere.mesos.protos.Implicits._
+    import org.apache.mesos.Protos.{ Resource => ProtoResource }
+    import mesosphere.mesos.protos._
+
+    def resToString(r: Resource): String = r match {
+      case ScalarResource(name, value, role) => s"${name}(${role}):${value}"
+      case RangesResource(name, ranges, role) =>
+        val s = (for (r <- ranges) yield s"${r.begin}-${r.end}").mkString(",")
+        s"${name}(${role}):[${s}]"
+      case SetResource(name, set, role) => s"""${name}(${role}):${set.mkString(",")}"""
+    }
+
+    app.resources match {
+      case None     => ""
+      case Some(xs) => (for (res <- xs) yield resToString(res)).mkString(";")
+    }
+  }
+
   def taskContextEnv(app: AppDefinition, taskId: Option[TaskID]): Map[String, String] =
     if (taskId.isEmpty)
       Map.empty
@@ -231,6 +256,7 @@ object TaskBuilder {
       Map(
         "MESOS_TASK_ID" -> taskId.get.getValue,
         "MARATHON_APP_ID" -> app.id.toString,
-        "MARATHON_APP_VERSION" -> app.version.toString
+        "MARATHON_APP_VERSION" -> app.version.toString,
+        "AUX_RESOURCES" -> auxResourceEnv(app)
       )
 }
