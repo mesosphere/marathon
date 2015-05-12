@@ -149,7 +149,7 @@ class MarathonScheduler @Inject() (
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
-    val appId = taskIdUtil.appId(status.getTaskId)
+    val appId = taskIdUtil.appId(status.getTaskId).get
 
     // forward health changes to the health check manager
     val maybeTask = taskTracker.fetchTask(appId, status.getTaskId.getValue)
@@ -267,7 +267,7 @@ class MarathonScheduler @Inject() (
         status.getTaskId.getValue,
         status.getState.name,
         if (status.hasMessage) status.getMessage else "",
-        taskIdUtil.appId(status.getTaskId),
+        taskIdUtil.appId(status.getTaskId).get,
         task.getHost,
         task.getPortsList.asScala,
         task.getVersion

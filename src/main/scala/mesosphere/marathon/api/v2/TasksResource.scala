@@ -17,6 +17,8 @@ import play.api.libs.json.Json
 
 import scala.collection.IterableView
 import scala.collection.JavaConverters._
+import scala.util.Failure
+import scala.util.Success
 
 @Path("v2/tasks")
 class TasksResource @Inject() (
@@ -91,16 +93,14 @@ class TasksResource @Inject() (
     val taskIds = (Json.parse(body) \ "ids").as[Seq[String]]
 
     val groupedTasks = taskIds.flatMap { taskId =>
-      val appId = try {
-        taskIdUtil.appId(taskId)
-      }
-      catch {
-        case e: MatchError => throw new BadRequestException(s"Invalid task id '$taskId'.")
+      val appId = taskIdUtil.appId(taskId) match {
+        case Success(id) => id
+        case Failure(ex) => throw new BadRequestException(s"Invalid task id '$taskId'.")
       }
 
       taskTracker.fetchTask(appId, taskId)
     }.groupBy { x =>
-      taskIdUtil.appId(x.getId)
+      taskIdUtil.appId(x.getId).get
     }
 
     groupedTasks.foreach {

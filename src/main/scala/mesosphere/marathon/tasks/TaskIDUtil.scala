@@ -3,6 +3,7 @@ package mesosphere.marathon.tasks
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskID
+import scala.util.Try
 
 /**
   * Utility functions for dealing with TaskIDs
@@ -17,13 +18,12 @@ class TaskIdUtil {
     appId.safePath + taskDelimiter + uuidGenerator.generate()
   }
 
-  def appId(taskId: TaskID): PathId = appId(taskId.getValue)
+  def appId(taskId: TaskID): Try[PathId] = appId(taskId.getValue)
 
-  def appId(taskId: String): PathId = {
-    taskId match {
+  def appId(taskId: String): Try[PathId] = {
+    Try(taskId match {
       case TaskIdRegex(appId, uuid) => PathId.fromSafePath(appId)
-      case _                        => PathId.empty
-    }
+    })
   }
 
   def newTaskId(appId: PathId): TaskID = {
