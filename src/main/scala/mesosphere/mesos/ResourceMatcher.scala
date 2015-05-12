@@ -10,6 +10,7 @@ import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Offer
 import org.apache.mesos.Protos.{ Resource => ProtoResource }
 import scala.collection.immutable.Seq
+import scala.util.matching.Regex
 
 import scala.collection.JavaConverters._
 
@@ -51,6 +52,53 @@ object ResourceMatcher {
       matchAll(app.resourcesToSeq, offer, app, config).map { rs => ResourceMatch(rs) }
     else
       None
+  }
+
+  private def extractRegex(s: String): (Regex, Int, String) = {
+    import java.util.regex.Pattern
+    val pattern = "^#([0-9]+);?([^#]+)?#(.*)$".r
+    s match {
+      case pattern(count, constr, pat) =>
+        val prefix = if (pat(0) != '^') "^" else ""
+        val postfix = if (pat.last != '$') "$" else ""
+        (new Regex(s"${prefix}${pat}${postfix}"), count.toInt, if (constr == null) "" else constr.trim)
+      case _ =>
+        (new Regex(s"^${Pattern.quote(s)}$$"), 1, "")
+    }
+  }
+
+  @annotation.tailrec
+  def matchSet(src: Set[String], dst: Set[String],
+               selected: Set[String] = Set()): Option[Set[String]] = {
+    import mesosphere.util.ExprEvaluator
+    import scala.util._
+
+    if (src.isEmpty) {
+      if (selected.isEmpty) None
+      else Some(selected)
+    }
+    else {
+      val (re, count, constr) = extractRegex(src.head)
+      val candidates = dst.filter { c =>
+        re.findFirstMatchIn(c) match {
+          case None => false
+          case Some(m) =>
+            Try(ExprEvaluator(constr).evalWithNumericMatch(m)) match {
+              case Success(Left(b)) => b
+              case Success(Right(d)) => if (d == 0) true
+              else false
+              case Failure(e) =>
+                log.warn(s"parse error on constraint/pattern: ${e.getMessage}")
+                false
+            }
+        }
+      }.take(count)
+
+      if (candidates.size < count)
+        None
+      else
+        matchSet(src - src.head, dst -- candidates, selected ++ candidates)
+    }
   }
 
   private def takeResource(need: Resource, offered: Resource, config: MarathonConf): Option[Resource] = {
@@ -123,10 +171,10 @@ object ResourceMatcher {
         case SetResource(name, items, _) =>
           offered match {
             case SetResource(_, itemsOffered, roleOffered) =>
-              if (items.subsetOf(itemsOffered))
-                Some(SetResource(name, items, roleOffered))
-              else
-                None
+              matchSet(items, itemsOffered) match {
+                case Some(selected) => Some(SetResource(name, selected, roleOffered))
+                case None           => None
+              }
             case _ => None
           }
       }
