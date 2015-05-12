@@ -19,6 +19,7 @@ class InfoResource @Inject() (
   private[this] lazy val marathonConfigValues = Map(
     "master" -> conf.mesosMaster.get,
     "failover_timeout" -> conf.mesosFailoverTimeout.get,
+    "framework_name" -> conf.frameworkName.get,
     "ha" -> conf.highlyAvailable.get,
     "checkpoint" -> conf.checkpoint.get,
     "local_port_min" -> conf.localPortMin.get,
