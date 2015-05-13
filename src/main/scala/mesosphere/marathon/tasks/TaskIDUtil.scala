@@ -20,11 +20,11 @@ class TaskIdUtil {
 
   def appId(taskId: TaskID): Try[PathId] = appId(taskId.getValue)
 
-  def appId(taskId: String): Try[PathId] = {
-    Try(taskId match {
+  def appId(taskId: String): Try[PathId] = Try(
+    taskId match {
       case TaskIdRegex(appId, uuid) => PathId.fromSafePath(appId)
-    })
-  }
+    }
+  )
 
   def newTaskId(appId: PathId): TaskID = {
     TaskID.newBuilder()
