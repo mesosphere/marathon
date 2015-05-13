@@ -163,13 +163,6 @@ class MarathonScheduler @Inject() (
     eventBus.publish(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message))
   }
 
-  def unhealthyTaskKilled(appId: PathId, taskId: String): Unit = {
-    log.warn(s"Task [$taskId] for app [$appId] was killed for failing too many health checks")
-    appRepo.currentVersion(appId).foreach {
-      _.foreach { app => taskQueue.rateLimiter.addDelay(app) }
-    }
-  }
-
   override def disconnected(driver: SchedulerDriver) {
     log.warn("Disconnected")
 
