@@ -32,7 +32,8 @@ trait ZookeeperConf extends ScallopConf {
   )
 
   lazy val zooKeeperMaxVersions = opt[Int]("zk_max_versions",
-    descr = "Limit the number of versions, stored for one entity."
+    descr = "Limit the number of versions, stored for one entity.",
+    default = Some(25)
   )
 
   //do not allow mixing of hostState and url
