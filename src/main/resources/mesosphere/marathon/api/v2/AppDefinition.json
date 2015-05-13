@@ -1,216 +1,238 @@
 {
-  "$schema": "http://json-schema.org/schema#",
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "pattern": "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$"
-    },
-    "cmd": {
-      "type": "string"
-    },
-    "args": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "user": {
-      "type": "string"
-    },
-    "env": {
-      "type": "object",
-      "patternProperties": {
-        ".*": { "type": "string" }
-      }
-    },
-    "instances": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "cpus": {
-      "type": "number",
-      "minimum": 0
-    },
-    "mem": {
-      "type": "number",
-      "minimum": 0
-    },
-    "disk": {
-      "type": "number",
-      "minimum": 0
-    },
-    "executor": {
-      "type": "string"
-    },
-    "constraints": {
-    },
-    "uris": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "storeUrls": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "ports": {
-      "type": "array",
-      "items": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 65535
-      }
-    },
-    "requirePorts": {
-      "type": "boolean"
-    },
-    "backoffSeconds": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "backoffFactor": {
-      "type": "number",
-      "minimum": 1.0
-    },
-    "container": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string"
-        },
-        "docker": {
-          "type": "object",
-          "properties": {
-            "image": {
-              "type": "string"
+    "$schema": "http://json-schema.org/schema#",
+    "additionalProperties": false,
+    "properties": {
+        "args": {
+            "items": {
+                "type": "string"
             },
-            "network": {
-              "type": "string"
-            },
-            "portMappings": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "containerPort": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 65535
-                  },
-                  "hostPort": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 65535
-                  },
-                  "servicePort": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 65535
-                  },
-                  "protocol": {
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
-              }
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "image"
-          ]
+            "type": "array"
         },
-        "volumes": {
-          "type": "array",
-          "items": {
-            "type": "object",
+        "backoffFactor": {
+            "minimum": 1.0,
+            "type": "number"
+        },
+        "backoffSeconds": {
+            "minimum": 0,
+            "type": "integer"
+        },
+        "cmd": {
+            "type": "string"
+        },
+        "constraints": {},
+        "container": {
+            "additionalProperties": false,
             "properties": {
-              "containerPath": {
-                "type": "string"
-              },
-              "hostPath": {
-                "type": "string"
-              },
-              "mode": {
-                "type": "string"
-              }
+                "docker": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "image": {
+                            "type": "string"
+                        },
+                        "network": {
+                            "type": "string"
+                        },
+                        "parameters": {
+                            "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                    "key": {
+                                        "type": "string"
+                                    },
+                                    "value": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "key",
+                                    "value"
+                                ],
+                                "type": "object"
+                            },
+                            "type": "array"
+                        },
+                        "portMappings": {
+                            "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                    "containerPort": {
+                                        "maximum": 65535,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                    },
+                                    "hostPort": {
+                                        "maximum": 65535,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                    },
+                                    "protocol": {
+                                        "type": "string"
+                                    },
+                                    "servicePort": {
+                                        "maximum": 65535,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "type": "array"
+                        },
+                        "privileged": {
+                            "type": "boolean"
+                        }
+                    },
+                    "required": [
+                        "image"
+                    ],
+                    "type": "object"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "volumes": {
+                    "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                            "containerPath": {
+                                "type": "string"
+                            },
+                            "hostPath": {
+                                "type": "string"
+                            },
+                            "mode": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "type": "array"
+                }
             },
-            "additionalProperties": false
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "healthChecks": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "protocol": {
-            "type": "string"
-          },
-          "command": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string"
-          },
-          "portIndex": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "gracePeriodSeconds": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "intervalSeconds": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "timeoutSeconds": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "maxConsecutiveFailures": {
-            "type": "integer",
-            "minimum": 0
-          }
+            "type": "object"
         },
-        "additionalProperties": false
-      }
-    },
-    "dependencies": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$"
-      }
-    },
-    "upgradeStrategy": {
-      "type": "object",
-      "properties": {
-        "minimumHealthCapacity": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 1.0
+        "cpus": {
+            "minimum": 0,
+            "type": "number"
+        },
+        "dependencies": {
+            "items": {
+                "pattern": "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$",
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "disk": {
+            "minimum": 0,
+            "type": "number"
+        },
+        "env": {
+            "patternProperties": {
+                ".*": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "executor": {
+            "type": "string"
+        },
+        "healthChecks": {
+            "items": {
+                "additionalProperties": false,
+                "properties": {
+                    "command": {
+                        "type": "string"
+                    },
+                    "gracePeriodSeconds": {
+                        "minimum": 0,
+                        "type": "integer"
+                    },
+                    "intervalSeconds": {
+                        "minimum": 0,
+                        "type": "integer"
+                    },
+                    "maxConsecutiveFailures": {
+                        "minimum": 0,
+                        "type": "integer"
+                    },
+                    "path": {
+                        "type": "string"
+                    },
+                    "portIndex": {
+                        "minimum": 0,
+                        "type": "integer"
+                    },
+                    "protocol": {
+                        "type": "string"
+                    },
+                    "timeoutSeconds": {
+                        "minimum": 0,
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "type": "array"
+        },
+        "id": {
+            "pattern": "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$",
+            "type": "string"
+        },
+        "instances": {
+            "minimum": 0,
+            "type": "integer"
+        },
+        "labels": {
+            "additionalProperties": {
+                "type": "string"
+            },
+            "type": "object"
+        },
+        "mem": {
+            "minimum": 0,
+            "type": "number"
+        },
+        "ports": {
+            "items": {
+                "maximum": 65535,
+                "minimum": 0,
+                "type": "integer"
+            },
+            "type": "array"
+        },
+        "requirePorts": {
+            "type": "boolean"
+        },
+        "storeUrls": {
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "upgradeStrategy": {
+            "additionalProperties": false,
+            "properties": {
+                "minimumHealthCapacity": {
+                    "maximum": 1.0,
+                    "minimum": 0.0,
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
+        "uris": {
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "user": {
+            "type": "string"
         }
-      },
-      "additionalProperties": false
     },
-    "labels": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      }
-    }
-  },
-  "additionalProperties": false,
-  "required": [
-    "id"
-  ]
+    "required": [
+        "id"
+    ],
+    "type": "object"
 }
-
