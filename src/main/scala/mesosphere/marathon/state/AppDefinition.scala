@@ -72,6 +72,8 @@ case class AppDefinition(
 
   labels: Map[String, String] = AppDefinition.DefaultLabels,
 
+  acceptedResourceRoles: Option[Set[String]] = None,
+
   version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {
 
@@ -130,6 +132,12 @@ case class AppDefinition(
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
+    acceptedResourceRoles.foreach { acceptedResourceRoles =>
+      val roles = Protos.ResourceRoles.newBuilder()
+      acceptedResourceRoles.seq.foreach(roles.addRole)
+      builder.setAcceptedResourceRoles(roles)
+    }
+
     builder.build
   }
 
@@ -163,6 +171,12 @@ case class AppDefinition(
         Some(Container(proto.getOBSOLETEContainer))
       else None
 
+    val acceptedResourceRoles: Option[Set[String]] =
+      if (proto.hasAcceptedResourceRoles)
+        Some(proto.getAcceptedResourceRoles.getRoleList.asScala.toSet)
+      else
+        None
+
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -176,6 +190,7 @@ case class AppDefinition(
       backoffFactor = proto.getBackoffFactor,
       maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds,
       constraints = proto.getConstraintsList.asScala.toSet,
+      acceptedResourceRoles = acceptedResourceRoles,
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
@@ -300,6 +315,11 @@ object AppDefinition {
 
   val DefaultLabels: Map[String, String] = Map.empty
 
+  /**
+    * This default is only used in tests
+    */
+  val DefaultAcceptedResourceRoles: Set[String] = Set.empty
+
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
@@ -314,7 +334,7 @@ object AppDefinition {
         app.storeUrls, app.ports, app.requirePorts, app.backoff,
         app.backoffFactor, app.maxLaunchDelay, app.container,
         app.healthChecks, app.dependencies, app.upgradeStrategy,
-        app.labels, app.version) {
+        app.labels, app.acceptedResourceRoles, app.version) {
 
     /**
       * Snapshot of the number of staged (but not running) tasks

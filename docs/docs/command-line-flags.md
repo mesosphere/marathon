@@ -69,7 +69,11 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--max_tasks_per_offer_cycle` (Optional. Default: 1000): Launch at most this number of tasks per Mesos offer cycle.
   A larger value speeds up launching new tasks.
   Yet, choosing a too large value might overwhelm Mesos/Marathon with processing task updates.
-* `--mesos_role` (Optional. Default: None): Mesos role for this framework.
+* `--mesos_role` (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
+    for the specified role in addition to resources with the role designation '*'.
+* `--default_accepted_resource_roles` (Optional. Default: all roles): Default for the `"acceptedResourceRoles"`
+    attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
+    use this value for launching new tasks. Examples: `*`, `production,*`, `production`
 * `--mesos_user` (Optional. Default: current user): Mesos user for
     this framework. _Note: Default is determined by
     [`SystemProperties.get("user.name")`](http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String])._

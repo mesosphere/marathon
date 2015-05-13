@@ -30,7 +30,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       mem = 256,
       instances = 5,
       ports = Seq(8080, 8081),
-      executor = "//cmd"
+      executor = "//cmd",
+      acceptedResourceRoles = Some(Set("a", "b"))
     )
 
     val proto1 = app1.toProto
@@ -47,6 +48,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(!proto1.hasContainer)
     assert(1.0 == proto1.getUpgradeStrategy.getMinimumHealthCapacity)
     assert(1.0 == proto1.getUpgradeStrategy.getMaximumOverCapacity)
+    assert(proto1.hasAcceptedResourceRoles)
+    assert(proto1.getAcceptedResourceRoles == Protos.ResourceRoles.newBuilder().addRole("a").addRole("b").build())
 
     val app2 = AppDefinition(
       id = "play".toPath,
@@ -76,6 +79,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(proto2.hasContainer)
     assert(0.7 == proto2.getUpgradeStrategy.getMinimumHealthCapacity)
     assert(0.4 == proto2.getUpgradeStrategy.getMaximumOverCapacity)
+    assert(!proto2.hasAcceptedResourceRoles)
   }
 
   test("MergeFromProto") {

@@ -112,6 +112,9 @@ The full JSON format of an application resource is as follows:
     "constraints": [
         ["attribute", "OPERATOR", "value"]
     ],
+    "acceptedResourceRoles": [
+        "role1", "*"
+    ],
     "labels": {
         "environment": "staging"
     },
@@ -194,6 +197,31 @@ The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${
 Valid constraint operators are one of ["UNIQUE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
 the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
+
+##### acceptedResourceRoles
+
+Optional. A list of resource roles. Marathon considers only resource offers with roles in this list for launching
+tasks of this app. If you do not specify this, Marathon considers all resource offers with roles that have been
+configured by the `--default_accepted_resource_roles` command line flag. If no `--default_accepted_resource_roles` was
+given on startup, Marathon considers all resource offers.
+
+Example 1: `"acceptedResourceRoles": [ "production", "*" ]` Tasks of this app definition are launched either
+on "production" or "*" resources.
+
+Example 2: `"acceptedResourceRoles": [ "public" ]` Tasks of this app definition are launched only on "public"
+resources.
+
+Background: Mesos can assign roles to certain resource shares. Frameworks which are not explicitly registered for
+a role do not see resources of that role. In this way, you can reserve resources for frameworks. Resources not reserved
+for custom role, are available for all frameworks. Mesos assigns the special role "*" to them.
+
+To register Marathon for a role, you need to specify the `--mesos_role` command line flag on startup.
+If you want to assign all resources of a
+slave to a role, you can use the `--default_role` argument when starting up the slave. If you need a more
+fine-grained configuration, you can use the `--resources' argument to specify resource shares per role. The Mesos master
+needs to be started with `--roles` followed by a comma-separated list of all roles you want to use across your cluster.
+See
+[the Mesos command line documentation](http://mesos.apache.org/documentation/latest/configuration/) for details.
 
 ##### labels
 

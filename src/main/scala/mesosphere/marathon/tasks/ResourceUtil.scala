@@ -9,6 +9,15 @@ object ResourceUtil {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   /**
+    * The resources in launched tasks, should
+    * be consumed from resources in the offer with the same [[ResourceMatchKey]].
+    */
+  private[this] case class ResourceMatchKey(role: String, name: String)
+  private[this] object ResourceMatchKey {
+    def apply(resource: Resource): ResourceMatchKey = ResourceMatchKey(resource.getRole, resource.getName)
+  }
+
+  /**
     * Deduct usedResource from resource. If nothing is left, None is returned.
     */
   def consumeResource(resource: Resource, usedResource: Resource): Option[Resource] = {
@@ -109,10 +118,10 @@ object ResourceUtil {
     * Deduct usedResources from resources by matching them by name.
     */
   def consumeResources(resources: Iterable[Resource], usedResources: Iterable[Resource]): Iterable[Resource] = {
-    val usedResourceMap = usedResources.map(resource => resource.getName -> resource).toMap
+    val usedResourceMap = usedResources.map(resource => ResourceMatchKey(resource) -> resource).toMap
 
     resources.flatMap { resource =>
-      usedResourceMap.get(resource.getName) match {
+      usedResourceMap.get(ResourceMatchKey(resource)) match {
         case Some(usedResource) =>
           if (resource.getType != usedResource.getType) {
             log.warn("Different resource types for resource {}: {} and {}",

@@ -215,7 +215,8 @@ class TaskBuilderTest extends MarathonSpec {
         disk = 2,
         executor = "//cmd",
         ports = Seq(8080, 8081)
-      )
+      ),
+      mesosRole = Some("marathon")
     )
 
     assert(task.isDefined)
@@ -595,11 +596,16 @@ class TaskBuilderTest extends MarathonSpec {
 
   }
 
-  def buildIfMatches(offer: Offer, app: AppDefinition) = {
+  def buildIfMatches(
+    offer: Offer, app: AppDefinition, mesosRole: Option[String] = None,
+    acceptedResourceRoles: Option[Set[String]] = None) = {
     val taskTracker = mock[TaskTracker]
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s.toString), taskTracker, defaultConfig())
+      s => TaskID(s.toString), taskTracker,
+      defaultConfig(
+        mesosRole = mesosRole,
+        acceptedResourceRoles = acceptedResourceRoles))
 
     builder.buildIfMatches(offer)
   }

@@ -2669,6 +2669,20 @@ public final class Protos {
      * </pre>
      */
     long getMaxLaunchDelay();
+
+    // optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;
+    /**
+     * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+     */
+    boolean hasAcceptedResourceRoles();
+    /**
+     * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+     */
+    mesosphere.marathon.Protos.ResourceRoles getAcceptedResourceRoles();
+    /**
+     * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+     */
+    mesosphere.marathon.Protos.ResourceRolesOrBuilder getAcceptedResourceRolesOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -2885,6 +2899,19 @@ public final class Protos {
             case 168: {
               bitField0_ |= 0x00001000;
               maxLaunchDelay_ = input.readInt64();
+              break;
+            }
+            case 178: {
+              mesosphere.marathon.Protos.ResourceRoles.Builder subBuilder = null;
+              if (((bitField0_ & 0x00002000) == 0x00002000)) {
+                subBuilder = acceptedResourceRoles_.toBuilder();
+              }
+              acceptedResourceRoles_ = input.readMessage(mesosphere.marathon.Protos.ResourceRoles.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(acceptedResourceRoles_);
+                acceptedResourceRoles_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00002000;
               break;
             }
           }
@@ -3555,6 +3582,28 @@ public final class Protos {
       return maxLaunchDelay_;
     }
 
+    // optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;
+    public static final int ACCEPTEDRESOURCEROLES_FIELD_NUMBER = 22;
+    private mesosphere.marathon.Protos.ResourceRoles acceptedResourceRoles_;
+    /**
+     * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+     */
+    public boolean hasAcceptedResourceRoles() {
+      return ((bitField0_ & 0x00002000) == 0x00002000);
+    }
+    /**
+     * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+     */
+    public mesosphere.marathon.Protos.ResourceRoles getAcceptedResourceRoles() {
+      return acceptedResourceRoles_;
+    }
+    /**
+     * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+     */
+    public mesosphere.marathon.Protos.ResourceRolesOrBuilder getAcceptedResourceRolesOrBuilder() {
+      return acceptedResourceRoles_;
+    }
+
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -3576,6 +3625,7 @@ public final class Protos {
       container_ = mesosphere.marathon.Protos.ExtendedContainerInfo.getDefaultInstance();
       labels_ = java.util.Collections.emptyList();
       maxLaunchDelay_ = 3600000L;
+      acceptedResourceRoles_ = mesosphere.marathon.Protos.ResourceRoles.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3711,6 +3761,9 @@ public final class Protos {
       if (((bitField0_ & 0x00001000) == 0x00001000)) {
         output.writeInt64(21, maxLaunchDelay_);
       }
+      if (((bitField0_ & 0x00002000) == 0x00002000)) {
+        output.writeMessage(22, acceptedResourceRoles_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -3814,6 +3867,10 @@ public final class Protos {
       if (((bitField0_ & 0x00001000) == 0x00001000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(21, maxLaunchDelay_);
+      }
+      if (((bitField0_ & 0x00002000) == 0x00002000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(22, acceptedResourceRoles_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3931,6 +3988,7 @@ public final class Protos {
           getUpgradeStrategyFieldBuilder();
           getContainerFieldBuilder();
           getLabelsFieldBuilder();
+          getAcceptedResourceRolesFieldBuilder();
         }
       }
       private static Builder create() {
@@ -4011,6 +4069,12 @@ public final class Protos {
         }
         maxLaunchDelay_ = 3600000L;
         bitField0_ = (bitField0_ & ~0x00080000);
+        if (acceptedResourceRolesBuilder_ == null) {
+          acceptedResourceRoles_ = mesosphere.marathon.Protos.ResourceRoles.getDefaultInstance();
+        } else {
+          acceptedResourceRolesBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00100000);
         return this;
       }
 
@@ -4160,6 +4224,14 @@ public final class Protos {
           to_bitField0_ |= 0x00001000;
         }
         result.maxLaunchDelay_ = maxLaunchDelay_;
+        if (((from_bitField0_ & 0x00100000) == 0x00100000)) {
+          to_bitField0_ |= 0x00002000;
+        }
+        if (acceptedResourceRolesBuilder_ == null) {
+          result.acceptedResourceRoles_ = acceptedResourceRoles_;
+        } else {
+          result.acceptedResourceRoles_ = acceptedResourceRolesBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4356,6 +4428,9 @@ public final class Protos {
         }
         if (other.hasMaxLaunchDelay()) {
           setMaxLaunchDelay(other.getMaxLaunchDelay());
+        }
+        if (other.hasAcceptedResourceRoles()) {
+          mergeAcceptedResourceRoles(other.getAcceptedResourceRoles());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -6679,6 +6754,123 @@ public final class Protos {
         return this;
       }
 
+      // optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;
+      private mesosphere.marathon.Protos.ResourceRoles acceptedResourceRoles_ = mesosphere.marathon.Protos.ResourceRoles.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          mesosphere.marathon.Protos.ResourceRoles, mesosphere.marathon.Protos.ResourceRoles.Builder, mesosphere.marathon.Protos.ResourceRolesOrBuilder> acceptedResourceRolesBuilder_;
+      /**
+       * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+       */
+      public boolean hasAcceptedResourceRoles() {
+        return ((bitField0_ & 0x00100000) == 0x00100000);
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+       */
+      public mesosphere.marathon.Protos.ResourceRoles getAcceptedResourceRoles() {
+        if (acceptedResourceRolesBuilder_ == null) {
+          return acceptedResourceRoles_;
+        } else {
+          return acceptedResourceRolesBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+       */
+      public Builder setAcceptedResourceRoles(mesosphere.marathon.Protos.ResourceRoles value) {
+        if (acceptedResourceRolesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          acceptedResourceRoles_ = value;
+          onChanged();
+        } else {
+          acceptedResourceRolesBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00100000;
+        return this;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+       */
+      public Builder setAcceptedResourceRoles(
+          mesosphere.marathon.Protos.ResourceRoles.Builder builderForValue) {
+        if (acceptedResourceRolesBuilder_ == null) {
+          acceptedResourceRoles_ = builderForValue.build();
+          onChanged();
+        } else {
+          acceptedResourceRolesBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00100000;
+        return this;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+       */
+      public Builder mergeAcceptedResourceRoles(mesosphere.marathon.Protos.ResourceRoles value) {
+        if (acceptedResourceRolesBuilder_ == null) {
+          if (((bitField0_ & 0x00100000) == 0x00100000) &&
+              acceptedResourceRoles_ != mesosphere.marathon.Protos.ResourceRoles.getDefaultInstance()) {
+            acceptedResourceRoles_ =
+              mesosphere.marathon.Protos.ResourceRoles.newBuilder(acceptedResourceRoles_).mergeFrom(value).buildPartial();
+          } else {
+            acceptedResourceRoles_ = value;
+          }
+          onChanged();
+        } else {
+          acceptedResourceRolesBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00100000;
+        return this;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+       */
+      public Builder clearAcceptedResourceRoles() {
+        if (acceptedResourceRolesBuilder_ == null) {
+          acceptedResourceRoles_ = mesosphere.marathon.Protos.ResourceRoles.getDefaultInstance();
+          onChanged();
+        } else {
+          acceptedResourceRolesBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00100000);
+        return this;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+       */
+      public mesosphere.marathon.Protos.ResourceRoles.Builder getAcceptedResourceRolesBuilder() {
+        bitField0_ |= 0x00100000;
+        onChanged();
+        return getAcceptedResourceRolesFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+       */
+      public mesosphere.marathon.Protos.ResourceRolesOrBuilder getAcceptedResourceRolesOrBuilder() {
+        if (acceptedResourceRolesBuilder_ != null) {
+          return acceptedResourceRolesBuilder_.getMessageOrBuilder();
+        } else {
+          return acceptedResourceRoles_;
+        }
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          mesosphere.marathon.Protos.ResourceRoles, mesosphere.marathon.Protos.ResourceRoles.Builder, mesosphere.marathon.Protos.ResourceRolesOrBuilder> 
+          getAcceptedResourceRolesFieldBuilder() {
+        if (acceptedResourceRolesBuilder_ == null) {
+          acceptedResourceRolesBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              mesosphere.marathon.Protos.ResourceRoles, mesosphere.marathon.Protos.ResourceRoles.Builder, mesosphere.marathon.Protos.ResourceRolesOrBuilder>(
+                  acceptedResourceRoles_,
+                  getParentForChildren(),
+                  isClean());
+          acceptedResourceRoles_ = null;
+        }
+        return acceptedResourceRolesBuilder_;
+      }
+
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
     }
 
@@ -6688,6 +6880,503 @@ public final class Protos {
     }
 
     // @@protoc_insertion_point(class_scope:mesosphere.marathon.ServiceDefinition)
+  }
+
+  public interface ResourceRolesOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // repeated string role = 1;
+    /**
+     * <code>repeated string role = 1;</code>
+     */
+    java.util.List<java.lang.String>
+    getRoleList();
+    /**
+     * <code>repeated string role = 1;</code>
+     */
+    int getRoleCount();
+    /**
+     * <code>repeated string role = 1;</code>
+     */
+    java.lang.String getRole(int index);
+    /**
+     * <code>repeated string role = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getRoleBytes(int index);
+  }
+  /**
+   * Protobuf type {@code mesosphere.marathon.ResourceRoles}
+   */
+  public static final class ResourceRoles extends
+      com.google.protobuf.GeneratedMessage
+      implements ResourceRolesOrBuilder {
+    // Use ResourceRoles.newBuilder() to construct.
+    private ResourceRoles(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ResourceRoles(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ResourceRoles defaultInstance;
+    public static ResourceRoles getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ResourceRoles getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ResourceRoles(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                role_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              role_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          role_ = new com.google.protobuf.UnmodifiableLazyStringList(role_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ResourceRoles_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ResourceRoles_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              mesosphere.marathon.Protos.ResourceRoles.class, mesosphere.marathon.Protos.ResourceRoles.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ResourceRoles> PARSER =
+        new com.google.protobuf.AbstractParser<ResourceRoles>() {
+      public ResourceRoles parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ResourceRoles(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ResourceRoles> getParserForType() {
+      return PARSER;
+    }
+
+    // repeated string role = 1;
+    public static final int ROLE_FIELD_NUMBER = 1;
+    private com.google.protobuf.LazyStringList role_;
+    /**
+     * <code>repeated string role = 1;</code>
+     */
+    public java.util.List<java.lang.String>
+        getRoleList() {
+      return role_;
+    }
+    /**
+     * <code>repeated string role = 1;</code>
+     */
+    public int getRoleCount() {
+      return role_.size();
+    }
+    /**
+     * <code>repeated string role = 1;</code>
+     */
+    public java.lang.String getRole(int index) {
+      return role_.get(index);
+    }
+    /**
+     * <code>repeated string role = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getRoleBytes(int index) {
+      return role_.getByteString(index);
+    }
+
+    private void initFields() {
+      role_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < role_.size(); i++) {
+        output.writeBytes(1, role_.getByteString(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      {
+        int dataSize = 0;
+        for (int i = 0; i < role_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(role_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getRoleList().size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static mesosphere.marathon.Protos.ResourceRoles parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static mesosphere.marathon.Protos.ResourceRoles parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.ResourceRoles parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static mesosphere.marathon.Protos.ResourceRoles parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.ResourceRoles parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static mesosphere.marathon.Protos.ResourceRoles parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.ResourceRoles parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static mesosphere.marathon.Protos.ResourceRoles parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.ResourceRoles parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static mesosphere.marathon.Protos.ResourceRoles parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(mesosphere.marathon.Protos.ResourceRoles prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code mesosphere.marathon.ResourceRoles}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements mesosphere.marathon.Protos.ResourceRolesOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ResourceRoles_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ResourceRoles_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                mesosphere.marathon.Protos.ResourceRoles.class, mesosphere.marathon.Protos.ResourceRoles.Builder.class);
+      }
+
+      // Construct using mesosphere.marathon.Protos.ResourceRoles.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        role_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ResourceRoles_descriptor;
+      }
+
+      public mesosphere.marathon.Protos.ResourceRoles getDefaultInstanceForType() {
+        return mesosphere.marathon.Protos.ResourceRoles.getDefaultInstance();
+      }
+
+      public mesosphere.marathon.Protos.ResourceRoles build() {
+        mesosphere.marathon.Protos.ResourceRoles result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public mesosphere.marathon.Protos.ResourceRoles buildPartial() {
+        mesosphere.marathon.Protos.ResourceRoles result = new mesosphere.marathon.Protos.ResourceRoles(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          role_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              role_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.role_ = role_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof mesosphere.marathon.Protos.ResourceRoles) {
+          return mergeFrom((mesosphere.marathon.Protos.ResourceRoles)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(mesosphere.marathon.Protos.ResourceRoles other) {
+        if (other == mesosphere.marathon.Protos.ResourceRoles.getDefaultInstance()) return this;
+        if (!other.role_.isEmpty()) {
+          if (role_.isEmpty()) {
+            role_ = other.role_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureRoleIsMutable();
+            role_.addAll(other.role_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        mesosphere.marathon.Protos.ResourceRoles parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (mesosphere.marathon.Protos.ResourceRoles) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // repeated string role = 1;
+      private com.google.protobuf.LazyStringList role_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureRoleIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          role_ = new com.google.protobuf.LazyStringArrayList(role_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      /**
+       * <code>repeated string role = 1;</code>
+       */
+      public java.util.List<java.lang.String>
+          getRoleList() {
+        return java.util.Collections.unmodifiableList(role_);
+      }
+      /**
+       * <code>repeated string role = 1;</code>
+       */
+      public int getRoleCount() {
+        return role_.size();
+      }
+      /**
+       * <code>repeated string role = 1;</code>
+       */
+      public java.lang.String getRole(int index) {
+        return role_.get(index);
+      }
+      /**
+       * <code>repeated string role = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getRoleBytes(int index) {
+        return role_.getByteString(index);
+      }
+      /**
+       * <code>repeated string role = 1;</code>
+       */
+      public Builder setRole(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureRoleIsMutable();
+        role_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string role = 1;</code>
+       */
+      public Builder addRole(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureRoleIsMutable();
+        role_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string role = 1;</code>
+       */
+      public Builder addAllRole(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureRoleIsMutable();
+        super.addAll(values, role_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string role = 1;</code>
+       */
+      public Builder clearRole() {
+        role_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string role = 1;</code>
+       */
+      public Builder addRoleBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureRoleIsMutable();
+        role_.add(value);
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ResourceRoles)
+    }
+
+    static {
+      defaultInstance = new ResourceRoles(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.ResourceRoles)
   }
 
   public interface MarathonTaskOrBuilder
@@ -19296,6 +19985,11 @@ public final class Protos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_mesosphere_marathon_ResourceRoles_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_mesosphere_marathon_ResourceRoles_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_MarathonTask_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -19379,7 +20073,7 @@ public final class Protos {
       "lures\030\007 \001(\r:\0013\022#\n\007command\030\010 \001(\0132\022.mesos." +
       "CommandInfo\022\034\n\rignoreHttp1xx\030\t \001(\010:\005fals" +
       "e\"5\n\010Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMM" +
-      "AND\020\002\022\t\n\005HTTPS\020\003\"\330\005\n\021ServiceDefinition\022\n" +
+      "AND\020\002\022\t\n\005HTTPS\020\003\"\233\006\n\021ServiceDefinition\022\n" +
       "\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandI" +
       "nfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(" +
       "\0132\017.mesos.Resource\022\023\n\013description\030\005 \001(\t\022" +
@@ -19397,49 +20091,52 @@ public final class Protos {
       "orts\030\022 \001(\010:\005false\022=\n\tcontainer\030\023 \001(\0132*.m" +
       "esosphere.marathon.ExtendedContainerInfo" +
       "\022 \n\006labels\030\024 \003(\0132\020.mesos.Parameter\022\037\n\016ma" +
-      "xLaunchDelay\030\025 \001(\003:\0073600000\"\200\002\n\014Marathon" +
-      "Task\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030" +
-      "\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos.Attrib" +
-      "ute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001" +
-      "(\003\022,\n\021OBSOLETE_statuses\030\007 \003(\0132\021.mesos.Ta" +
-      "skStatus\022)\n\007version\030\010 \001(\t:\0301970-01-01T00" +
-      ":00:00.000Z\022!\n\006status\030\t \001(\0132\021.mesos.Task",
-      "Status\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005t" +
-      "asks\030\002 \003(\0132!.mesosphere.marathon.Maratho" +
-      "nTask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022" +
-      "\017\n\007options\030\002 \003(\014\"\237\004\n\025ExtendedContainerIn" +
-      "fo\022\'\n\004type\030\001 \002(\0162\031.mesos.ContainerInfo.T" +
-      "ype\022\036\n\007volumes\030\002 \003(\0132\r.mesos.Volume\022E\n\006d" +
-      "ocker\030\003 \001(\01325.mesosphere.marathon.Extend" +
-      "edContainerInfo.DockerInfo\032\365\002\n\nDockerInf" +
-      "o\022\r\n\005image\030\001 \002(\t\022>\n\007network\030\002 \001(\0162\'.meso" +
-      "s.ContainerInfo.DockerInfo.Network:\004HOST",
-      "\022X\n\rport_mappings\030\003 \003(\0132A.mesosphere.mar" +
-      "athon.ExtendedContainerInfo.DockerInfo.P" +
-      "ortMapping\022\031\n\nprivileged\030\004 \001(\010:\005false\022$\n" +
-      "\nparameters\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020f" +
-      "orce_pull_image\030\006 \001(\010\032c\n\013PortMapping\022\021\n\t" +
-      "host_port\030\001 \002(\r\022\026\n\016container_port\030\002 \002(\r\022" +
-      "\020\n\010protocol\030\003 \001(\t\022\027\n\014service_port\030d \001(\r:" +
-      "\0010\")\n\020EventSubscribers\022\025\n\rcallback_urls\030" +
-      "\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022\r" +
-      "\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"Z\n\031UpgradeS",
-      "trategyDefinition\022\035\n\025minimumHealthCapaci" +
-      "ty\030\001 \002(\001\022\036\n\023maximumOverCapacity\030\002 \001(\001:\0011" +
-      "\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007vers" +
-      "ion\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere.mar" +
-      "athon.ServiceDefinition\0224\n\006groups\030\004 \003(\0132" +
-      "$.mesosphere.marathon.GroupDefinition\022\024\n" +
-      "\014dependencies\030\005 \003(\t\"\245\001\n\030DeploymentPlanDe" +
-      "finition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n" +
-      "\010original\030\004 \002(\0132$.mesosphere.marathon.Gr" +
-      "oupDefinition\0224\n\006target\030\005 \002(\0132$.mesosphe",
-      "re.marathon.GroupDefinition\"\245\001\n\013TaskFail" +
-      "ure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.m" +
-      "esos.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.TaskS" +
-      "tate\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022" +
-      "\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\tB\035\n\023m" +
-      "esosphere.marathonB\006Protos"
+      "xLaunchDelay\030\025 \001(\003:\0073600000\022A\n\025acceptedR" +
+      "esourceRoles\030\026 \001(\0132\".mesosphere.marathon" +
+      ".ResourceRoles\"\035\n\rResourceRoles\022\014\n\004role\030" +
+      "\001 \003(\t\"\200\002\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004ho" +
+      "st\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004 " +
+      "\003(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001(\003" +
+      "\022\022\n\nstarted_at\030\006 \001(\003\022,\n\021OBSOLETE_statuse",
+      "s\030\007 \003(\0132\021.mesos.TaskStatus\022)\n\007version\030\010 " +
+      "\001(\t:\0301970-01-01T00:00:00.000Z\022!\n\006status\030" +
+      "\t \001(\0132\021.mesos.TaskStatus\"M\n\013MarathonApp\022" +
+      "\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesospher" +
+      "e.marathon.MarathonTask\"1\n\rContainerInfo" +
+      "\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\237\004\n\025E" +
+      "xtendedContainerInfo\022\'\n\004type\030\001 \002(\0162\031.mes" +
+      "os.ContainerInfo.Type\022\036\n\007volumes\030\002 \003(\0132\r" +
+      ".mesos.Volume\022E\n\006docker\030\003 \001(\01325.mesosphe" +
+      "re.marathon.ExtendedContainerInfo.Docker",
+      "Info\032\365\002\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022>\n\007ne" +
+      "twork\030\002 \001(\0162\'.mesos.ContainerInfo.Docker" +
+      "Info.Network:\004HOST\022X\n\rport_mappings\030\003 \003(" +
+      "\0132A.mesosphere.marathon.ExtendedContaine" +
+      "rInfo.DockerInfo.PortMapping\022\031\n\nprivileg" +
+      "ed\030\004 \001(\010:\005false\022$\n\nparameters\030\005 \003(\0132\020.me" +
+      "sos.Parameter\022\030\n\020force_pull_image\030\006 \001(\010\032" +
+      "c\n\013PortMapping\022\021\n\thost_port\030\001 \002(\r\022\026\n\016con" +
+      "tainer_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\027\n\014s" +
+      "ervice_port\030d \001(\r:\0010\")\n\020EventSubscribers",
+      "\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016StorageVersio" +
+      "n\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch" +
+      "\030\003 \002(\r\"Z\n\031UpgradeStrategyDefinition\022\035\n\025m" +
+      "inimumHealthCapacity\030\001 \002(\001\022\036\n\023maximumOve" +
+      "rCapacity\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition\022\n" +
+      "\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(" +
+      "\0132&.mesosphere.marathon.ServiceDefinitio" +
+      "n\0224\n\006groups\030\004 \003(\0132$.mesosphere.marathon." +
+      "GroupDefinition\022\024\n\014dependencies\030\005 \003(\t\"\245\001" +
+      "\n\030DeploymentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017",
+      "\n\007version\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.meso" +
+      "sphere.marathon.GroupDefinition\0224\n\006targe" +
+      "t\030\005 \002(\0132$.mesosphere.marathon.GroupDefin" +
+      "ition\"\245\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n" +
+      "\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003" +
+      " \002(\0162\020.mesos.TaskState\022\021\n\007message\030\004 \001(\t:" +
+      "\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\tti" +
+      "mestamp\030\007 \002(\tB\035\n\023mesosphere.marathonB\006Pr" +
+      "otos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -19463,27 +20160,33 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", });
-          internal_static_mesosphere_marathon_MarathonTask_descriptor =
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", });
+          internal_static_mesosphere_marathon_ResourceRoles_descriptor =
             getDescriptor().getMessageTypes().get(3);
+          internal_static_mesosphere_marathon_ResourceRoles_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_mesosphere_marathon_ResourceRoles_descriptor,
+              new java.lang.String[] { "Role", });
+          internal_static_mesosphere_marathon_MarathonTask_descriptor =
+            getDescriptor().getMessageTypes().get(4);
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
               new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "OBSOLETEStatuses", "Version", "Status", });
           internal_static_mesosphere_marathon_MarathonApp_descriptor =
-            getDescriptor().getMessageTypes().get(4);
+            getDescriptor().getMessageTypes().get(5);
           internal_static_mesosphere_marathon_MarathonApp_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonApp_descriptor,
               new java.lang.String[] { "Name", "Tasks", });
           internal_static_mesosphere_marathon_ContainerInfo_descriptor =
-            getDescriptor().getMessageTypes().get(5);
+            getDescriptor().getMessageTypes().get(6);
           internal_static_mesosphere_marathon_ContainerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ContainerInfo_descriptor,
               new java.lang.String[] { "Image", "Options", });
           internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor =
-            getDescriptor().getMessageTypes().get(6);
+            getDescriptor().getMessageTypes().get(7);
           internal_static_mesosphere_marathon_ExtendedContainerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor,
@@ -19501,37 +20204,37 @@ public final class Protos {
               internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_descriptor,
               new java.lang.String[] { "HostPort", "ContainerPort", "Protocol", "ServicePort", });
           internal_static_mesosphere_marathon_EventSubscribers_descriptor =
-            getDescriptor().getMessageTypes().get(7);
+            getDescriptor().getMessageTypes().get(8);
           internal_static_mesosphere_marathon_EventSubscribers_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_EventSubscribers_descriptor,
               new java.lang.String[] { "CallbackUrls", });
           internal_static_mesosphere_marathon_StorageVersion_descriptor =
-            getDescriptor().getMessageTypes().get(8);
+            getDescriptor().getMessageTypes().get(9);
           internal_static_mesosphere_marathon_StorageVersion_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_StorageVersion_descriptor,
               new java.lang.String[] { "Major", "Minor", "Patch", });
           internal_static_mesosphere_marathon_UpgradeStrategyDefinition_descriptor =
-            getDescriptor().getMessageTypes().get(9);
+            getDescriptor().getMessageTypes().get(10);
           internal_static_mesosphere_marathon_UpgradeStrategyDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_UpgradeStrategyDefinition_descriptor,
               new java.lang.String[] { "MinimumHealthCapacity", "MaximumOverCapacity", });
           internal_static_mesosphere_marathon_GroupDefinition_descriptor =
-            getDescriptor().getMessageTypes().get(10);
+            getDescriptor().getMessageTypes().get(11);
           internal_static_mesosphere_marathon_GroupDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_GroupDefinition_descriptor,
               new java.lang.String[] { "Id", "Version", "Apps", "Groups", "Dependencies", });
           internal_static_mesosphere_marathon_DeploymentPlanDefinition_descriptor =
-            getDescriptor().getMessageTypes().get(11);
+            getDescriptor().getMessageTypes().get(12);
           internal_static_mesosphere_marathon_DeploymentPlanDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_DeploymentPlanDefinition_descriptor,
               new java.lang.String[] { "Id", "Version", "Original", "Target", });
           internal_static_mesosphere_marathon_TaskFailure_descriptor =
-            getDescriptor().getMessageTypes().get(12);
+            getDescriptor().getMessageTypes().get(13);
           internal_static_mesosphere_marathon_TaskFailure_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_TaskFailure_descriptor,

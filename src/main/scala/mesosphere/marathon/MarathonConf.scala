@@ -61,8 +61,40 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
   def executor: Executor = Executor.dispatch(defaultExecutor())
 
   lazy val mesosRole = opt[String]("mesos_role",
-    descr = "Mesos role for this framework",
+    descr = "Mesos role for this framework. " +
+      "If set, Marathon receives resource offers for the specified role in addition to " +
+      "resources with the role designation '*'.",
     default = None)
+
+  def expectedResourceRoles: Set[String] = mesosRole.get match {
+    case Some(role) => Set(role, "*")
+    case None       => Set("*")
+  }
+
+  lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.get.get
+
+  lazy val defaultAcceptedResourceRoles = opt[String]("default_accepted_resource_roles",
+    descr =
+      "Default for the defaultAcceptedResourceRoles attribute of all app definitions" +
+        " as a comma-separated list of strings." +
+        "This defaults to all roles for which this Marathon instance is configured to receive offers.",
+    default = Some(expectedResourceRoles.mkString(",")),
+    validate = validateDefaultAcceptedResourceRoles).map(parseDefaultAcceptedResourceRoles)
+
+  private[this] def parseDefaultAcceptedResourceRoles(str: String): Set[String] =
+    str.split(',').map(_.trim).toSet
+
+  private[this] def validateDefaultAcceptedResourceRoles(str: String): Boolean = {
+    val parsed = parseDefaultAcceptedResourceRoles(str)
+
+    // throw exceptions for better error messages
+    require(parsed.nonEmpty, "--default_accepted_resource_roles must not be empty")
+    require(parsed.forall(expectedResourceRoles),
+      "--default_accepted_resource_roles contains roles for which we will not receive offers: " +
+        (parsed -- expectedResourceRoles).mkString(", "))
+
+    true
+  }
 
   lazy val taskLaunchTimeout = opt[Long]("task_launch_timeout",
     descr = "(deprecated) Time, in milliseconds, to wait for a task to enter " +

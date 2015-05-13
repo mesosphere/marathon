@@ -1,5 +1,7 @@
 package mesosphere.marathon
 
+import scala.util.{ Failure, Try }
+
 class MarathonConfTest extends MarathonSpec {
 
   private[this] val principal = "foo"
@@ -43,6 +45,54 @@ class MarathonConfTest extends MarathonSpec {
     )
     assert(conf.marathonStoreTimeout.isDefined)
     assert(conf.marathonStoreTimeout.get == Some(5000))
+  }
+
+  test("--default_accepted_resource_roles *,marathon will fail without --mesos_role marathon") {
+    val triedConfig = Try(makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--default_accepted_resource_roles", "*,marathon"
+    ))
+    assert(triedConfig.isFailure)
+    triedConfig match {
+      case Failure(e) if e.getMessage ==
+        "requirement failed: " +
+        "--default_accepted_resource_roles contains roles for which we will not receive offers: marathon" =>
+      case other =>
+        fail(s"unexpected triedConfig: $other")
+    }
+  }
+
+  test("--default_accepted_resource_roles *,marathon with --mesos_role marathon") {
+    val conf = makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--mesos_role", "marathon",
+      "--default_accepted_resource_roles", "*,marathon"
+    )
+
+    assert(conf.defaultAcceptedResourceRolesSet == Set("*", "marathon"))
+  }
+
+  test("--default_accepted_resource_roles *") {
+    val conf = makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--default_accepted_resource_roles", "*"
+    )
+    assert(conf.defaultAcceptedResourceRolesSet == Set("*"))
+  }
+
+  test("--default_accepted_resource_roles default without --mesos_role") {
+    val conf = makeConfig(
+      "--master", "127.0.0.1:5050"
+    )
+    assert(conf.defaultAcceptedResourceRolesSet == Set("*"))
+  }
+
+  test("--default_accepted_resource_roles default with --mesos_role") {
+    val conf = makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--mesos_role", "marathon"
+    )
+    assert(conf.defaultAcceptedResourceRolesSet == Set("*", "marathon"))
   }
 }
 
