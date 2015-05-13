@@ -37,7 +37,10 @@ object ModelValidation {
     needsId: Boolean,
     path: String = "",
     parent: PathId = PathId.empty): Iterable[ConstraintViolation[GroupUpdate]] = {
-    if ((group.version orElse group.scaleBy).isDefined) {
+    if (group == null) {
+      Seq(violation(group, null, "", "Given group is empty!"))
+    }
+    else if ((group.version orElse group.scaleBy).isDefined) {
       validate(group,
         defined(
           group,
