@@ -1,11 +1,23 @@
 # docker related files
 .dockerignore
-Dockerfile
+Dockerfile*
 
 # source repository history
 .git
 
+# unneeded
+.travis.yml
+
+# tool configuration
+.idea
+*.iml
+.classpath
+.settings
+.Rproj.user
+.reviewboardrc
+
 # build directories
+docker-volumes
 target
 */target
 */*/target

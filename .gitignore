@@ -1,5 +1,7 @@
+bin/run-tests-config.sh
 .idea
 *.iml
+docker-volumes
 target
 .reviewboardrc
 dependency-reduced-pom.xml
