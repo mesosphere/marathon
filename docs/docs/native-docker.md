@@ -42,9 +42,9 @@ Docker version 1.0.0 or later installed on each slave node.
 
 3. Restart `mesos-slave` process to load the new configuration
 
-### Configure marathon
+### Configure Marathon
 
-1. Increase the marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html)
+1. Increase the Marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html)
 `--task_launch_timeout` to at least the executor timeout, in milliseconds, 
 you set on your slaves in the previous step.
 
@@ -165,7 +165,7 @@ default. This can be overridden; for example to also expose ports in the range
 See the [network configuration](https://docs.docker.com/articles/networking/)
 documentation for more details on how Docker handles networking.
 
-### Using a private Docker Repository
+### Using a Private Docker Repository
 
 To supply credentials to pull from a private repository, add a `.dockercfg` to
 the `uris` field of your app. The `$HOME` environment variable will then be set
