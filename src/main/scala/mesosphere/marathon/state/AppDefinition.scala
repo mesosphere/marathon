@@ -72,6 +72,8 @@ case class AppDefinition(
 
   labels: Map[String, String] = AppDefinition.DefaultLabels,
 
+  resources: Option[Seq[Resource]] = AppDefinition.DefaultResources,
+
   version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
     with Timestamped {
 
@@ -95,7 +97,7 @@ case class AppDefinition(
   }
 
   def toProto: Protos.ServiceDefinition = {
-    val commandInfo = TaskBuilder.commandInfo(this, None, None, Seq.empty)
+    val commandInfo = TaskBuilder.commandInfo(this, resources.getOrElse(Seq()), None, None, Seq.empty)
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
@@ -127,6 +129,10 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
+
+    for (rs <- resources)
+      for (r <- rs)
+        builder.addResources(r)
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
@@ -247,6 +253,56 @@ case class AppDefinition(
 
   def isUpgrade(to: AppDefinition): Boolean =
     this != to.copy(instances = instances, version = version)
+
+  def resourcesToSeq(): Seq[Resource] = {
+    import mesosphere.mesos.protos.{ RangesResource, Range }
+
+    def portToResource(a: Seq[JInt]): Option[RangesResource] = {
+      import mesosphere.mesos.protos._
+      @annotation.tailrec
+      def splitRange(lst: Seq[JInt], rangeBegin: Int, lastElem: Int,
+                     resolved: Seq[Range]): Seq[Range] = {
+        lst match {
+          case hd :: tl =>
+            if (hd == lastElem + 1)
+              splitRange(tl, rangeBegin, hd, resolved)
+            else
+              splitRange(tl, hd, hd,
+                resolved ++ Seq(Range(rangeBegin.toLong, lastElem.toLong)))
+          case Nil =>
+            resolved ++ Seq(Range(rangeBegin.toLong, lastElem.toLong))
+        }
+      }
+
+      val req = a.toSet.toSeq.sorted
+      if (req.isEmpty) None
+      else Some(RangesResource(Resource.PORTS, req match {
+        case hd :: tl => splitRange(tl, hd, hd, Seq())
+        case _        => Nil
+      }))
+    }
+
+    import mesosphere.mesos.protos.Implicits._
+    import org.apache.mesos.Protos.{ Resource => ProtoResource }
+
+    val portResource = portToResource(ports) match {
+      case Some(x) => List(x)
+      case None    => Nil
+    }
+
+    val resMap = (for (r <- resources.getOrElse(Seq())) yield {
+      val pr = implicitly[ProtoResource](r)
+      pr.getName() -> r
+    }).toMap
+
+    // removing CPUS/MEM/DISK/PORTS from resMap, then add CPUS/MEM/DISK resources,
+    // then, add PORTS if it is not empty
+    (resMap - Resource.PORTS ++ Map[String, Resource](Resource.CPUS -> ScalarResource(Resource.CPUS, cpus),
+      Resource.MEM -> ScalarResource(Resource.MEM, mem),
+      Resource.DISK -> ScalarResource(Resource.DISK, disk)
+    // ,Resource.PORTS -> portToResource(ports)
+    )).values.toList ++ portResource
+  }
 }
 
 object AppDefinition {
@@ -271,6 +327,8 @@ object AppDefinition {
   val DefaultMem: Double = 128.0
 
   val DefaultDisk: Double = 0.0
+
+  val DefaultResources: Option[Seq[Resource]] = Some(Seq.empty)
 
   val DefaultExecutor: String = ""
 
@@ -314,7 +372,7 @@ object AppDefinition {
         app.storeUrls, app.ports, app.requirePorts, app.backoff,
         app.backoffFactor, app.maxLaunchDelay, app.container,
         app.healthChecks, app.dependencies, app.upgradeStrategy,
-        app.labels, app.version) {
+        app.labels, app.resources, app.version) {
 
     /**
       * Snapshot of the number of staged (but not running) tasks

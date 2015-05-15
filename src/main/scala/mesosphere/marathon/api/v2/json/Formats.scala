@@ -2,6 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble }
 
+import mesosphere.mesos.protos._
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
@@ -321,6 +322,63 @@ trait AppDefinitionFormats {
     )(UpgradeStrategy(_, _))
   }
 
+  implicit lazy val ResourceFormat: Format[Resource] = {
+    val reads = new Reads[Resource] {
+      def reads(json: JsValue): JsResult[Resource] = json match {
+        case JsObject(pairs) =>
+          val name = (json \ "name").as[String]
+          val role = (json \ "role").asOpt[JsString].getOrElse(JsString("*")).as[String]
+          val value = (json \ "value")
+          value match {
+            case JsNumber(num) if (num >= 0) => name match {
+              case Resource.CPUS if num == 0 => JsError("cpus must be larger than zero.")
+              case Resource.MEM if num == 0  => JsError("mem must be larger than zero.")
+              case _                         => JsSuccess(ScalarResource(name, num.toDouble, role))
+            }
+            case JsArray(arr) if !arr.isEmpty =>
+              try {
+                val s: Seq[String] = value.as[Seq[String]]
+                JsSuccess(SetResource(name, s.toSet, role))
+              }
+              catch {
+                case e @ JsResultException(_) =>
+                  try {
+                    JsSuccess(RangesResource(name,
+                      (for (o <- arr)
+                        yield o match {
+                        case obj @ JsObject(_) => Range((obj \ "begin").as[Long], (obj \ "end").as[Long])
+                        case _                 => throw e
+                      }).toSeq,
+                      role))
+                  }
+                  catch {
+                    case JsResultException(msg) => JsError(msg)
+                  }
+              }
+            case _ => JsError("Not supported yet")
+          }
+        case _ => JsError("Not supported yet")
+      }
+    }
+    val writes = Writes[Resource] {
+      case ScalarResource(name, value, role) =>
+        Json.toJson(Map("name" -> JsString(name),
+          "value" -> JsNumber(value),
+          "role" -> JsString(role)))
+      case SetResource(name, items, role) =>
+        Json.toJson(Map("name" -> JsString(name),
+          "role" -> JsString(role),
+          "value" -> Json.toJson(items.toList)))
+      case RangesResource(name, ranges, role) =>
+        // ranges: Seq[Range]
+        Json.toJson(Map("name" -> JsString(name),
+          "role" -> JsString(role),
+          "value" -> Json.toJson(for (r <- ranges)
+            yield JsArray(Seq(JsNumber(r.begin), JsNumber(r.end))))))
+    }
+    Format(reads, writes)
+  }
+
   implicit lazy val ConstraintFormat: Format[Constraint] = Format(
     Reads.of[Seq[String]].map { seq =>
       val builder = Constraint
@@ -421,6 +479,7 @@ trait AppDefinitionFormats {
           "dependencies" -> app.dependencies,
           "upgradeStrategy" -> app.upgradeStrategy,
           "labels" -> app.labels,
+          "resources" -> app.resources,
           "version" -> app.version
         )
       }
@@ -460,19 +519,22 @@ trait AppDefinitionFormats {
         case class ExtraFields(
           upgradeStrategy: Option[UpgradeStrategy],
           labels: Option[Map[String, String]],
+          resources: Option[Seq[Resource]],
           version: Option[Timestamp])
 
         val extraReads: Reads[ExtraFields] =
           (
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]] ~
+            (__ \ "resources").readNullable[Seq[Resource]] ~
             (__ \ "version").readNullable[Timestamp]
-          )(ExtraFields(_, _, _))
+          )(ExtraFields(_, _, _, _))
 
         extraReads.map { extraFields =>
           update.copy(
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
+            resources = extraFields.resources,
             version = extraFields.version
           )
         }

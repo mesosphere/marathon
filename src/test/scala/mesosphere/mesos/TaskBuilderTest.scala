@@ -450,6 +450,7 @@ class TaskBuilderTest extends MarathonSpec {
           ports = Seq(8080, 8081),
           version = Timestamp(0)
         ),
+        Seq(),
         Some(TaskID("task-123")),
         Some ("host.mega.corp"),
         Seq(1000, 1001)
@@ -481,6 +482,7 @@ class TaskBuilderTest extends MarathonSpec {
             "PORT_8081" -> "port8081"
           )
         ),
+        Seq(),
         Some(TaskID("task-123")),
         Some ("host.mega.corp"),
         Seq(1000, 1001)
@@ -502,6 +504,7 @@ class TaskBuilderTest extends MarathonSpec {
         AppDefinition(
           ports = Seq(8080, 8081)
         ),
+        Seq(),
         Some(TaskID("task-123")),
         Some ("host.mega.corp"),
         Seq(1000, 1001)
@@ -527,6 +530,7 @@ class TaskBuilderTest extends MarathonSpec {
             ))
           ))
         ),
+        Seq(),
         Some(TaskID("task-123")),
         Some("host.mega.corp"),
         Seq(1000, 1001)
@@ -553,6 +557,7 @@ class TaskBuilderTest extends MarathonSpec {
             ))
           ))
         ),
+        Seq(),
         Some(TaskID("task-123")),
         Some("host.mega.corp"),
         Seq(1000, 1001)
@@ -581,6 +586,7 @@ class TaskBuilderTest extends MarathonSpec {
             "example.tar.gz"),
           ports = Seq(8080, 8081)
         ),
+        Seq(),
         Some(TaskID("task-123")),
         Some("host.mega.corp"),
         Seq(1000, 1001)

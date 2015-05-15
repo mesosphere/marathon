@@ -4,6 +4,7 @@ import java.lang.{ Integer => JInt, Double => JDouble }
 
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.mesos.protos.Resource
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.state.{
   AppDefinition,
@@ -69,6 +70,8 @@ case class AppUpdate(
 
     labels: Option[Map[String, String]] = None,
 
+    resources: Option[Seq[Resource]] = None,
+
     version: Option[Timestamp] = None) {
 
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
@@ -106,6 +109,7 @@ case class AppUpdate(
     dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels.getOrElse(app.labels),
+    resources.orElse(app.resources),
     version.getOrElse(Timestamp.now())
   )
 
