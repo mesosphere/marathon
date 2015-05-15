@@ -171,6 +171,7 @@ object Dependencies {
     beanUtils % "compile",
     scallop % "compile",
     playJson % "compile",
+    jsonSchemaValidator % "compile",
 
     // test
     Test.scalatest % "test",
@@ -196,6 +197,7 @@ object Dependency {
     val Hadoop = "2.4.1"
     val Scallop = "0.9.5"
     val PlayJson = "2.3.7"
+    val JsonSchemaValidator = "2.2.6"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -224,6 +226,7 @@ object Dependency {
   val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.2"
   val scallop = "org.rogach" %% "scallop" % V.Scallop
+  val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
