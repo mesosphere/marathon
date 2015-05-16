@@ -1,11 +1,16 @@
 package mesosphere.marathon
 
-import mesosphere.marathon.tasks.IterativeOfferMatcher
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.fge.jackson.JsonLoader
+import com.github.fge.jsonschema.main.{ JsonSchema, JsonSchemaFactory }
+
 import org.apache.mesos.Protos.Offer
 import org.rogach.scallop.ScallopConf
+
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.mesos.protos._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.tasks.IterativeOfferMatcher
+import mesosphere.mesos.protos._
 
 trait MarathonTestHelper {
 
@@ -94,6 +99,36 @@ trait MarathonTestHelper {
     disk = 1,
     executor = "//cmd"
   )
+
+  def getSchemaMapper() = {
+    import com.fasterxml.jackson.module.scala.DefaultScalaModule
+    import com.fasterxml.jackson.annotation.JsonInclude
+
+    import mesosphere.jackson.CaseClassModule
+    import mesosphere.marathon.api.v2.json.MarathonModule
+
+    val schemaMapper = new ObjectMapper
+    schemaMapper.registerModule(DefaultScalaModule)
+    schemaMapper.registerModule(new MarathonModule)
+    schemaMapper.registerModule(CaseClassModule)
+    schemaMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+    schemaMapper
+  }
+  val schemaMapper = getSchemaMapper()
+
+  def getAppSchema() = {
+    val appJson = "/mesosphere/marathon/api/v2/AppDefinition.json"
+    val appDefinition = JsonLoader.fromResource(appJson)
+    val factory = JsonSchemaFactory.byDefault()
+    factory.getJsonSchema(appDefinition)
+  }
+  val appSchema = getAppSchema()
+
+  def validateJsonSchema(app: AppDefinition, valid: Boolean = true) {
+    val appStr = schemaMapper.writeValueAsString(app)
+    val appJson = JsonLoader.fromString(appStr)
+    assert(appSchema.validate(appJson).isSuccess == valid)
+  }
 }
 
 object MarathonTestHelper extends MarathonTestHelper

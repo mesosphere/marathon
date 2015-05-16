@@ -2,18 +2,24 @@ package mesosphere.marathon.state
 
 import javax.validation.Validation
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.google.common.collect.Lists
+
+import mesosphere.jackson.CaseClassModule
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ Protos, MarathonSpec }
 import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.ModelValidation
-import mesosphere.marathon.api.v2.json.EnrichedTask
+import mesosphere.marathon.api.v2.json.{ EnrichedTask, MarathonModule }
 import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
+
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
+
 import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
@@ -34,6 +40,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       acceptedResourceRoles = Some(Set("a", "b"))
     )
 
+    validateJsonSchema(app1)
     val proto1 = app1.toProto
     assert("play" == proto1.getId)
     assert(proto1.getCmd.hasValue)
@@ -66,6 +73,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       upgradeStrategy = UpgradeStrategy(0.7, 0.4)
     )
 
+    validateJsonSchema(app2)
     val proto2 = app2.toProto
     assert("play" == proto2.getId)
     assert(!proto2.getCmd.hasValue)
@@ -96,6 +104,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     val app1 = AppDefinition().mergeFromProto(proto1)
 
+    validateJsonSchema(app1)
     assert("play" == app1.id.toString)
     assert(3 == app1.instances)
     assert("//cmd" == app1.executor)
@@ -119,10 +128,12 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     val result1 = AppDefinition().mergeFromProto(app1.toProto)
     assert(result1 == app1)
+    validateJsonSchema(app1)
 
     val app2 = AppDefinition(cmd = None, args = Some(Seq("a", "b", "c")))
     val result2 = AppDefinition().mergeFromProto(app2.toProto)
     assert(result2 == app2)
+    validateJsonSchema(app2, false) // no id
   }
 
   test("Validation") {
@@ -149,102 +160,141 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     }
 
     val idError = "path contains invalid characters (allowed: lowercase letters, digits, hyphens, \".\", \"..\")"
-    val app = AppDefinition(id = "a b".toRootPath)
-
+    var app = AppDefinition(id = "a b".toRootPath)
+    validateJsonSchema(app, false)
     shouldViolate(app, "id", idError)
-    shouldViolate(app.copy(id = "a#$%^&*b".toRootPath), "id", idError)
-    shouldViolate(app.copy(id = "-dash-disallowed-at-start".toRootPath), "id", idError)
-    shouldViolate(app.copy(id = "dash-disallowed-at-end-".toRootPath), "id", idError)
-    shouldViolate(app.copy(id = "uppercaseLettersNoGood".toRootPath), "id", idError)
-    shouldNotViolate(app.copy(id = "ab".toRootPath), "id", idError)
 
+    app = app.copy(id = "a#$%^&*b".toRootPath)
+    validateJsonSchema(app, false)
+    shouldViolate(app, "id", idError)
+
+    app = app.copy(id = "-dash-disallowed-at-start".toRootPath)
+    validateJsonSchema(app, false)
+    shouldViolate(app, "id", idError)
+
+    app = app.copy(id = "dash-disallowed-at-end-".toRootPath)
+    validateJsonSchema(app, false)
+    shouldViolate(app, "id", idError)
+
+    app = app.copy(id = "uppercaseLettersNoGood".toRootPath)
+    validateJsonSchema(app, false)
+    shouldViolate(app, "id", idError)
+
+    val app2 = AppDefinition(id = "test".toPath, instances = -3, ports = Seq(9000, 8080, 9000))
     shouldViolate(
-      AppDefinition(id = "test".toPath, instances = -3, ports = Seq(9000, 8080, 9000)),
+      app2,
       "ports",
       "Elements must be unique"
     )
+    validateJsonSchema(app2, false)
 
+    val app3 = AppDefinition(id = "test".toPath, ports = Seq(0, 0, 8080))
     shouldNotViolate(
-      AppDefinition(id = "test".toPath, ports = Seq(0, 0, 8080)),
+      app3,
       "ports",
       "Elements must be unique"
     )
+    validateJsonSchema(app3, false)
 
     val correct = AppDefinition(id = "test".toPath)
 
+    var appX = correct.copy(executor = "//cmd")
     shouldNotViolate(
-      correct.copy(executor = "//cmd"),
+      appX,
       "executor",
       "{javax.validation.constraints.Pattern.message}"
     )
+    validateJsonSchema(appX)
 
+    appX = correct.copy(executor = "some/relative/path.mte")
     shouldNotViolate(
-      correct.copy(executor = "some/relative/path.mte"),
+      appX,
       "executor",
       "{javax.validation.constraints.Pattern.message}"
     )
+    validateJsonSchema(appX)
 
+    appX = correct.copy(executor = "/some/absolute/path")
     shouldNotViolate(
-      correct.copy(executor = "/some/absolute/path"),
+      appX,
       "executor",
       "{javax.validation.constraints.Pattern.message}"
     )
+    validateJsonSchema(appX)
 
+    appX = correct.copy(executor = "")
     shouldNotViolate(
-      correct.copy(executor = ""),
+      appX,
       "executor",
       "{javax.validation.constraints.Pattern.message}"
     )
+    validateJsonSchema(appX)
 
+    appX = correct.copy(executor = "/test/")
     shouldViolate(
-      correct.copy(executor = "/test/"),
+      appX,
       "executor",
       "{javax.validation.constraints.Pattern.message}"
     )
+    validateJsonSchema(appX, false)
 
+    appX = correct.copy(executor = "/test//path")
     shouldViolate(
-      correct.copy(executor = "/test//path"),
+      appX,
       "executor",
       "{javax.validation.constraints.Pattern.message}"
     )
+    validateJsonSchema(appX, false)
 
+    appX = correct.copy(cmd = Some("command"), args = Some(Seq("a", "b", "c")))
     shouldViolate(
-      correct.copy(cmd = Some("command"), args = Some(Seq("a", "b", "c"))),
+      appX,
       "",
       "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
+    validateJsonSchema(appX, false)
 
+    appX = correct.copy(cmd = None, args = Some(Seq("a", "b", "c")))
     shouldNotViolate(
-      correct.copy(cmd = None, args = Some(Seq("a", "b", "c"))),
+      appX,
       "",
       "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
+    validateJsonSchema(appX)
 
+    appX = correct.copy(upgradeStrategy = UpgradeStrategy(1.2))
     shouldViolate(
-      correct.copy(upgradeStrategy = UpgradeStrategy(1.2)),
+      appX,
       "upgradeStrategy.minimumHealthCapacity",
       "is greater than 1"
     )
+    validateJsonSchema(appX, false)
 
+    appX = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, 1.2))
     shouldViolate(
-      correct.copy(upgradeStrategy = UpgradeStrategy(0.5, 1.2)),
+      appX,
       "upgradeStrategy.maximumOverCapacity",
       "is greater than 1"
     )
+    validateJsonSchema(appX, false)
 
+    appX = correct.copy(upgradeStrategy = UpgradeStrategy(-1.2))
     shouldViolate(
-      correct.copy(upgradeStrategy = UpgradeStrategy(-1.2)),
+      appX,
       "upgradeStrategy.minimumHealthCapacity",
       "is less than 0"
     )
+    validateJsonSchema(appX, false)
 
+    appX = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, -1.2))
     shouldViolate(
-      correct.copy(upgradeStrategy = UpgradeStrategy(0.5, -1.2)),
+      appX,
       "upgradeStrategy.maximumOverCapacity",
       "is less than 0"
     )
+    validateJsonSchema(appX, false)
 
-    shouldNotViolate(
+    appX =
       correct.copy(
         container = Some(Container(
           docker = Some(Docker(
@@ -257,12 +307,15 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         )),
         ports = Nil,
         healthChecks = Set(HealthCheck(portIndex = 1))
-      ),
+      )
+    shouldNotViolate(
+      appX,
       "",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
+    validateJsonSchema(appX, false) // missing image
 
-    shouldNotViolate(
+    appX =
       correct.copy(
         container = Some(Container(
           docker = Some(Docker(
@@ -272,28 +325,22 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         )),
         ports = Nil,
         healthChecks = Set(HealthCheck(protocol = Protocol.COMMAND))
-      ),
+      )
+    shouldNotViolate(
+      appX,
       "",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
+    validateJsonSchema(appX, false) // missing image
   }
 
   test("SerializationRoundtrip") {
-    import com.fasterxml.jackson.databind.ObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
-
-    val mapper = new ObjectMapper
-    mapper.registerModule(DefaultScalaModule)
-    mapper.registerModule(new MarathonModule)
-    mapper.registerModule(CaseClassModule)
 
     val app1 = AppDefinition()
     assert(app1.cmd.isEmpty)
     assert(app1.args.isEmpty)
-    val json1 = mapper.writeValueAsString(app1)
-    val readResult1 = mapper.readValue(json1, classOf[AppDefinition])
+    val json1 = schemaMapper.writeValueAsString(app1)
+    val readResult1 = schemaMapper.readValue(json1, classOf[AppDefinition])
     assert(readResult1 == app1)
 
     val json2 = """
@@ -314,7 +361,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
       }
     """
-    val readResult2 = mapper.readValue(json2, classOf[AppDefinition])
+    val readResult2 = schemaMapper.readValue(json2, classOf[AppDefinition])
     assert(readResult2.healthChecks.head.command.isDefined)
 
     val app3 = AppDefinition(
@@ -348,8 +395,9 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       dependencies = Set(PathId("/prod/product/backend")),
       upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.75)
     )
-    val json3 = mapper.writeValueAsString(app3)
-    val readResult3 = mapper.readValue(json3, classOf[AppDefinition])
+    validateJsonSchema(app3, false) // id not valid
+    val json3 = schemaMapper.writeValueAsString(app3)
+    val readResult3 = schemaMapper.readValue(json3, classOf[AppDefinition])
     assert(readResult3 == app3)
 
     import java.lang.{ Integer => JInt }
@@ -370,6 +418,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         ))
       ))
     )
+    validateJsonSchema(app4)
 
     val json4 = """
       {
@@ -387,7 +436,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         }
       }
     """
-    val readResult4 = mapper.readValue(json4, classOf[AppDefinition])
+    val readResult4 = schemaMapper.readValue(json4, classOf[AppDefinition])
     assert(readResult4.copy(version = app4.version) == app4)
   }
 
@@ -492,18 +541,9 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         "version": "2014-03-01T23:29:30.158Z"
     }"""
 
-    import com.fasterxml.jackson.databind.ObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.jackson.CaseClassModule
     import mesosphere.marathon.api.v2.json.Formats.AppDefinitionReads
-    import mesosphere.marathon.api.v2.json.MarathonModule
 
-    val mapper = new ObjectMapper
-    mapper.registerModule(DefaultScalaModule)
-    mapper.registerModule(new MarathonModule)
-    mapper.registerModule(CaseClassModule)
-
-    assert(mapper.readValue(fullAppJson, classOf[AppDefinition]) == Json.parse(fullAppJson).as[AppDefinition])
+    assert(schemaMapper.readValue(fullAppJson, classOf[AppDefinition]) == Json.parse(fullAppJson).as[AppDefinition])
   }
 
   test("AppDefinition.WithTaskCountsAndDeploymentsWrites output of play-json matches jackson") {
@@ -522,11 +562,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val appGroup = Group(PathId("/foo"), Set(app))
     val enrichedApp = app.withTaskCountsAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
 
-    import com.fasterxml.jackson.databind.ObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.jackson.CaseClassModule
     import mesosphere.marathon.api.v2.AppsResource.WithTaskCountsAndDeploymentsWrites
-    import mesosphere.marathon.api.v2.json.MarathonModule
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
@@ -555,11 +591,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     val enrichedApp = app.withTasksAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
 
-    import com.fasterxml.jackson.databind.ObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.jackson.CaseClassModule
     import mesosphere.marathon.api.v2.AppsResource.WithTasksAndDeploymentsWrites
-    import mesosphere.marathon.api.v2.json.MarathonModule
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
@@ -594,11 +626,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     val enrichedApp = app.withTasksAndDeploymentsAndFailures(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)), Some(failure))
 
-    import com.fasterxml.jackson.databind.ObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.jackson.CaseClassModule
     import mesosphere.marathon.api.v2.AppsResource.WithTasksAndDeploymentsAndFailuresWrites
-    import mesosphere.marathon.api.v2.json.MarathonModule
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
