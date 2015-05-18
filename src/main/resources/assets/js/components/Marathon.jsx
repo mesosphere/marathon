@@ -7,6 +7,7 @@ var States = require("../constants/States");
 var AppCollection = require("../models/AppCollection");
 var DeploymentCollection = require("../models/DeploymentCollection");
 var AppListComponent = require("../components/AppListComponent");
+var AppListFilterComponent = require("../components/AppListFilterComponent");
 var AboutModalComponent = require("../components/modals/AboutModalComponent");
 var AppPageComponent = require("../components/AppPageComponent");
 var DeploymentsListComponent =
@@ -37,6 +38,8 @@ var Marathon = React.createClass({
       activeAppView: null,
       activeTabId: tabs[0].id,
       appVersionsFetchState: States.STATE_LOADING,
+      appListFilter: null,
+      appListFilterFiltered: null,
       collection: new AppCollection(),
       deployments: new DeploymentCollection(),
       deploymentsFetchState: States.STATE_LOADING,
@@ -461,6 +464,16 @@ var Marathon = React.createClass({
     /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   },
 
+  handleFilterChange: function (filterValue) {
+    this.setState({appListFilter: filterValue});
+  },
+
+  handleFilterApply: function (filtered) {
+    // this.setState({
+    //   appListFilterFiltered: filtered.length
+    // });
+  },
+
   getTabPane: function () {
     /* jshint trailing:false, quotmark:false, newcap:false */
     /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
@@ -468,11 +481,25 @@ var Marathon = React.createClass({
       <TogglableTabsComponent activeTabId={this.state.activeTabId}
         className="container-fluid">
         <TabPaneComponent id="apps">
-          <a href="#newapp" className="btn btn-success navbar-btn" >
-            + New App
-          </a>
+
+        <div className="row">
+          <div className="col-xs-6">
+            <AppListFilterComponent
+              value={this.state.appListFilter}
+              size={this.state.collection.length}
+              numFiltered={this.state.appListFilterFiltered}
+              onChange={this.handleFilterChange} />
+          </div>
+          <div className="col-xs-6">
+            <a href="#newapp" className="btn btn-success navbar-btn pull-right" >
+              + New App
+            </a>
+            </div>
+          </div>
           <AppListComponent
             collection={this.state.collection}
+            filter={this.state.appListFilter}
+            onFilter={this.handleFilterApply}
             fetchState={this.state.fetchState}
             router={this.props.router} />
         </TabPaneComponent>
