@@ -24,5 +24,6 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
     details should have size 1
     details.head("path") should be("/id")
     details.head("errors") should have size 1
+    details.head("errors").head should be("error.expected.jsstring")
   }
 }
