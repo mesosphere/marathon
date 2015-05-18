@@ -48,7 +48,7 @@ $ ./bin/haproxy-marathon-bridge install_haproxy_system localhost:8080
 ```
 
 - The list of Marathons to ping is stored one per line in
-  `/etc/haproxy_marathon_bridge/marathons`
+  `/etc/haproxy-marathon-bridge/marathons`
 - The script is installed as `/usr/local/bin/haproxy-marathon-bridge`
 - The cronjob is installed as `/etc/cron.d/haproxy-marathon-bridge`
   and run as root.
