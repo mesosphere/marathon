@@ -34,7 +34,7 @@ class TaskBuilder(app: AppDefinition,
         build(offer, cpu, mem, disk, ranges)
 
       case _ =>
-        log.info(
+        log.debug(
           s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, " +
             s"disk=${app.disk}, ports=${app.hostPorts()}) : " + offer
         )
