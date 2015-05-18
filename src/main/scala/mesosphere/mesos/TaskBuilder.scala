@@ -7,10 +7,10 @@ import com.google.protobuf.ByteString
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
-import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
+import mesosphere.mesos.protos.{RangesResource, Resource, ScalarResource}
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
@@ -83,7 +83,7 @@ class TaskBuilder(app: AppDefinition,
               case (mapping, port) => {
                 //For softwares that have their own service registry and require p2p communication, they will need to advertise
                 //the ports that their components come up on. This would need both container and host ports to be the same
-                if(mapping.containerPort == 0) {
+                if (mapping.containerPort == 0) {
                   mapping.copy(hostPort = port.toInt, containerPort = port.toInt)
                 } else {
                   mapping.copy(hostPort = port.toInt)
@@ -95,7 +95,9 @@ class TaskBuilder(app: AppDefinition,
         val containerWithPortMappings = portMappings match {
           case None => c
           case Some(newMappings) => c.copy(
-            docker = c.docker.map { _.copy(portMappings = newMappings) }
+            docker = c.docker.map {
+              _.copy(portMappings = newMappings)
+            }
           )
         }
         containerWithPortMappings.toMesos
@@ -108,8 +110,8 @@ class TaskBuilder(app: AppDefinition,
 
       case PathExecutor(path) =>
         val executorId = f"marathon-${taskId.getValue}" // Fresh executor
-        val executorPath = s"'$path'" // TODO: Really escape this.
-        val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
+      val executorPath = s"'$path'" // TODO: Really escape this.
+      val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
         val command = TaskBuilder.commandInfo(app, Some(taskId), host, ports).toBuilder.setValue(shell)
 
