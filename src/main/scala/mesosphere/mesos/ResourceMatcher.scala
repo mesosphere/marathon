@@ -8,28 +8,34 @@ import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Offer
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 
 object ResourceMatcher {
   type Role = String
 
   private[this] val log = Logger.getLogger(getClass)
 
-  case class ResourceMatch(cpuRole: Role, memRole: Role, diskRole: Role, ports: RangesResource)
+  case class ResourceMatch(cpuRole: Role, memRole: Role, diskRole: Role, ports: Seq[RangesResource])
 
-  def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Set[MarathonTask]): Option[ResourceMatch] = {
+  def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Set[MarathonTask],
+                     acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {
+
     val groupedResources = offer.getResourcesList.asScala.groupBy(_.getName)
 
-    def findScalarResourceRole(tpe: String, value: Double): Option[Role] = groupedResources.get(tpe).flatMap {
-      _.find { resource =>
-        resource.getScalar.getValue >= value
-      }.map(_.getRole)
-    }
+    def findScalarResourceRole(tpe: String, value: Double): Option[Role] =
+      groupedResources.get(tpe).flatMap {
+        _
+          .filter(resource => acceptedResourceRoles(resource.getRole))
+          .find { resource =>
+            resource.getScalar.getValue >= value
+          }.map(_.getRole)
+      }
 
-    val cpuRoleOpt = findScalarResourceRole(Resource.CPUS, app.cpus)
-    val memRoleOpt = findScalarResourceRole(Resource.MEM, app.mem)
-    val diskRoleOpt = findScalarResourceRole(Resource.DISK, app.disk)
+    def cpuRoleOpt: Option[Role] = findScalarResourceRole(Resource.CPUS, app.cpus)
+    def memRoleOpt: Option[Role] = findScalarResourceRole(Resource.MEM, app.mem)
+    def diskRoleOpt: Option[Role] = findScalarResourceRole(Resource.DISK, app.disk)
 
-    val meetsAllConstraints: Boolean = {
+    def meetsAllConstraints: Boolean = {
       lazy val tasks = runningTasks
       val badConstraints = app.constraints.filterNot { constraint =>
         Constraints.meetsConstraint(tasks, offer, constraint)
@@ -45,7 +51,7 @@ object ResourceMatcher {
       badConstraints.isEmpty
     }
 
-    val portsOpt = new PortsMatcher(app, offer).portRanges match {
+    def portsOpt: Option[Seq[RangesResource]] = new PortsMatcher(app, offer, acceptedResourceRoles).portRanges match {
       case None =>
         log.warn("App ports are not available in the offer.")
         None

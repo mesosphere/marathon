@@ -129,6 +129,9 @@ trait Formats
     withoutRandom.distinct.size == withoutRandom.size
   }
 
+  def nonEmpty[C <: Iterable[_]](implicit reads: Reads[C]): Reads[C] =
+    Reads.filterNot[C](ValidationError(s"set must not be empty"))(_.isEmpty)(reads)
+
   def minValue[A](min: A)(implicit O: Ordering[A], reads: Reads[A]): Reads[A] =
     Reads.filterNot[A](ValidationError(s"value must not be less than $min"))(x => O.lt(x, min))(reads)
 
@@ -371,20 +374,23 @@ trait AppDefinitionFormats {
         case class ExtraFields(
           upgradeStrategy: UpgradeStrategy,
           labels: Map[String, String],
-          version: Timestamp)
+          version: Timestamp,
+          acceptedResourceRoles: Option[Set[String]])
 
         val extraReads: Reads[ExtraFields] =
           (
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(DefaultUpgradeStrategy) ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(DefaultLabels) ~
-            (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now())
-          )(ExtraFields(_, _, _))
+            (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
+            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty)
+          )(ExtraFields)
 
         extraReads.map { extraFields =>
           app.copy(
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
-            version = extraFields.version
+            version = extraFields.version,
+            acceptedResourceRoles = extraFields.acceptedResourceRoles
           )
         }
       }
@@ -421,6 +427,7 @@ trait AppDefinitionFormats {
           "dependencies" -> app.dependencies,
           "upgradeStrategy" -> app.upgradeStrategy,
           "labels" -> app.labels,
+          "acceptedResourceRoles" -> app.acceptedResourceRoles,
           "version" -> app.version
         )
       }
@@ -460,20 +467,23 @@ trait AppDefinitionFormats {
         case class ExtraFields(
           upgradeStrategy: Option[UpgradeStrategy],
           labels: Option[Map[String, String]],
-          version: Option[Timestamp])
+          version: Option[Timestamp],
+          acceptedResourceRoles: Option[Set[String]])
 
         val extraReads: Reads[ExtraFields] =
           (
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]] ~
-            (__ \ "version").readNullable[Timestamp]
-          )(ExtraFields(_, _, _))
+            (__ \ "version").readNullable[Timestamp] ~
+            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty)
+          )(ExtraFields)
 
         extraReads.map { extraFields =>
           update.copy(
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
-            version = extraFields.version
+            version = extraFields.version,
+            acceptedResourceRoles = extraFields.acceptedResourceRoles
           )
         }
 

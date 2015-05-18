@@ -30,8 +30,47 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     res.diskRole should be("*")
 
     // check if we got 2 ports
-    val range = res.ports.ranges.head
+    val range = res.ports.head.ranges.head
     (range.end - range.begin) should be (1)
+  }
+
+  test("match resources success with preserved roles") {
+    val offer = makeBasicOffer(role = "marathon").build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      cpus = 1.0,
+      mem = 128.0,
+      disk = 0.0,
+      ports = Seq(0, 0)
+    )
+
+    val resOpt = ResourceMatcher.matchResources(
+      offer, app,
+      runningTasks = Set(), acceptedResourceRoles = Set("marathon"))
+
+    resOpt should not be empty
+    val res = resOpt.get
+
+    res.cpuRole should be("marathon")
+    res.memRole should be("marathon")
+    res.diskRole should be("marathon")
+  }
+
+  test("match resources failure because of incorrect roles") {
+    val offer = makeBasicOffer(role = "marathon").build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      cpus = 1.0,
+      mem = 128.0,
+      disk = 0.0,
+      ports = Seq(0, 0)
+    )
+
+    val resOpt = ResourceMatcher.matchResources(
+      offer, app,
+      runningTasks = Set(), acceptedResourceRoles = Set("*"))
+
+    resOpt should be ('empty)
   }
 
   test("match resources success with constraints") {

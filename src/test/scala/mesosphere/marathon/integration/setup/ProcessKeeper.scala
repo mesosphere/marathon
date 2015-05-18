@@ -60,7 +60,10 @@ object ProcessKeeper {
       upWhen = _.toLowerCase.contains("registered with master"))
   }
 
-  def startMarathon(cwd: File, env: Map[String, String], arguments: List[String], mainClass: String = "mesosphere.marathon.Main"): Process = {
+  def startMarathon(cwd: File, env: Map[String, String], arguments: List[String],
+                    mainClass: String = "mesosphere.marathon.Main",
+                    startupLine: String = "Started SelectChannelConnector"): Process = {
+
     val argsWithMain = mainClass :: arguments
 
     val mesosWorkDir: String = "/tmp/marathon-itest-marathon"
@@ -71,7 +74,7 @@ object ProcessKeeper {
     startJavaProcess(
       "marathon", argsWithMain, cwd,
       env + (ENV_MESOS_WORK_DIR -> mesosWorkDir),
-      upWhen = _.contains("Started SelectChannelConnector"))
+      upWhen = _.contains(startupLine))
   }
 
   def startJavaProcess(name: String, arguments: List[String], cwd: File, env: Map[String, String], upWhen: String => Boolean): Process = {

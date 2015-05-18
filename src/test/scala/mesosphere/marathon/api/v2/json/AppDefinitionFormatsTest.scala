@@ -1,9 +1,8 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
+import mesosphere.marathon.state.{ PathId, AppDefinition, UpgradeStrategy, Timestamp }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.Timestamp
 
 import org.scalatest.Matchers
 import play.api.libs.json._
@@ -94,6 +93,7 @@ class AppDefinitionFormatsTest
     r1.healthChecks should equal (DefaultHealthChecks)
     r1.dependencies should equal (DefaultDependencies)
     r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
+    r1.acceptedResourceRoles should not be ('defined)
   }
 
   test("FromJSON should fail for empty id") {
@@ -106,12 +106,48 @@ class AppDefinitionFormatsTest
     a[JsResultException] shouldBe thrownBy { json.as[AppDefinition] }
   }
 
+  test("FromJSON should not fail when 'cpus' is greater than 0") {
+    val json = Json.parse(""" { "id": "test", "cpus": 0.0001 }""")
+    noException should be thrownBy {
+      json.as[AppDefinition]
+    }
+  }
+
   test("FromJSON should fail when 'cpus' is less than or equal to 0") {
-    var json1 = Json.parse(""" { "id": "test", "cpus": 0.0 }""")
+    val json1 = Json.parse(""" { "id": "test", "cpus": 0.0 }""")
     a[JsResultException] shouldBe thrownBy { json1.as[AppDefinition] }
 
     val json2 = Json.parse(""" { "id": "test", "cpus": -1.0 }""")
     a[JsResultException] shouldBe thrownBy { json2.as[AppDefinition] }
+  }
+
+  test("""ToJSON should correctly handle missing acceptedResourceRoles""") {
+    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = None)
+    val json = Json.toJson(appDefinition)
+    (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(None)
+  }
+
+  test("""ToJSON should correctly handle acceptedResourceRoles""") {
+    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Some(Set("a")))
+    val json = Json.toJson(appDefinition)
+    (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(Some(Set("a")))
+  }
+
+  test("""FromJSON should parse "acceptedResourceRoles": ["production", "*"] """) {
+    val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["production", "*"] }""")
+    val appDef = json.as[AppDefinition]
+    appDef.acceptedResourceRoles should equal(Some(Set("production", "*")))
+  }
+
+  test("""FromJSON should parse "acceptedResourceRoles": ["*"] """) {
+    val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["*"] }""")
+    val appDef = json.as[AppDefinition]
+    appDef.acceptedResourceRoles should equal(Some(Set("*")))
+  }
+
+  test("FromJSON should fail when 'acceptedResourceRoles' is defined but empty") {
+    val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": [] }""")
+    a[JsResultException] shouldBe thrownBy { json.as[AppDefinition] }
   }
 }
 

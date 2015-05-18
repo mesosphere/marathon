@@ -29,20 +29,31 @@ class TaskBuilder(app: AppDefinition,
 
   def buildIfMatches(offer: Offer): Option[(TaskInfo, Seq[Long])] = {
 
-    ResourceMatcher.matchResources(offer, app, taskTracker.get(app.id)) match {
-      case Some(ResourceMatch(cpu, mem, disk, ranges)) =>
-        build(offer, cpu, mem, disk, ranges)
+    val acceptedResourceRoles: Set[String] = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
 
-      case _ =>
-        log.debug(
-          s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, " +
-            s"disk=${app.disk}, ports=${app.hostPorts()}) : " + offer
-        )
-        None
+    if (log.isDebugEnabled) {
+      log.debug(s"acceptedResourceRoles $acceptedResourceRoles")
     }
+
+    ResourceMatcher.matchResources(
+      offer, app, taskTracker.get(app.id),
+      acceptedResourceRoles = acceptedResourceRoles) match {
+
+        case Some(ResourceMatch(cpu, mem, disk, ranges)) =>
+          build(offer, cpu, mem, disk, ranges)
+
+        case _ =>
+          log.debug(
+            s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, " +
+              s"disk=${app.disk}, ports=${app.hostPorts()}) : " + offer
+          )
+          None
+      }
   }
 
-  private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String, portsResource: RangesResource) = {
+  private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String,
+                    portsResources: Seq[RangesResource]) = {
+
     val executor: Executor = if (app.executor == "") {
       config.executor
     }
@@ -52,7 +63,7 @@ class TaskBuilder(app: AppDefinition,
 
     val host: Option[String] = Some(offer.getHostname)
 
-    val ports = portsResource.ranges.flatMap(_.asScala()).to[Seq]
+    val ports = portsResources.flatMap(_.ranges.flatMap(_.asScala()).to[Seq])
 
     val labels = app.labels.map {
       case (key, value) =>
@@ -67,12 +78,13 @@ class TaskBuilder(app: AppDefinition,
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
+    // FIXME (#1522): Can we add this without breaking setups that depend on the default disk limit
+    //      .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
 
-    if (portsResource.ranges.nonEmpty)
-      builder.addResources(portsResource)
+    portsResources.foreach(builder.addResources(_))
 
     val containerProto: Option[ContainerInfo] =
       app.container.map { c =>
