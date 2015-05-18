@@ -81,6 +81,8 @@ class TaskBuilder(app: AppDefinition,
           d.portMappings.map { pms =>
             pms zip ports map {
               case (mapping, port) => {
+                //For softwares that have their own service registry and require p2p communication, they will need to advertise
+                //the ports that their components come up on. This would need both container and host ports to be the same
                 if(mapping.containerPort == 0) {
                   mapping.copy(hostPort = port.toInt, containerPort = port.toInt)
                 } else {

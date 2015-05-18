@@ -293,7 +293,6 @@ class TaskBuilderTest extends MarathonSpec {
         mem = 64,
         disk = 1,
         executor = "//cmd",
-        ports = Seq(8080, 8081),
         container = Some(Container(
           docker = Some(Docker(
             network = Some(Network.BRIDGE),
