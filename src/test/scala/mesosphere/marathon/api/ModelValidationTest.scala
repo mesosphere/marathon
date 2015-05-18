@@ -61,6 +61,12 @@ class ModelValidationTest
     validations should not be Nil
   }
 
+  test("Null groups should be validated correctly") {
+    val result = ModelValidation.checkGroupUpdate(null, needsId = true)
+    result should have size 1
+    result.head.getMessage should be("Given group is empty!")
+  }
+
   private def createServicePortApp(id: PathId, servicePort: Int) = {
     AppDefinition(
       id,
