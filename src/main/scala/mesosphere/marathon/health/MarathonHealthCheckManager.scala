@@ -160,7 +160,7 @@ class MarathonHealthCheckManager @Inject() (
         }
 
       // compute the app ID for the incoming task status
-      val appId = TaskIdUtil.appId(taskStatus.getTaskId)
+      val appId = TaskIdUtil.appId(taskStatus.getTaskId).get
 
       // collect health check actors for the associated app's command checks.
       val healthCheckActors: Iterable[ActorRef] = listActive(appId, version).collect {
