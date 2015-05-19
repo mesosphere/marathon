@@ -6,9 +6,15 @@ import org.apache.mesos.Protos.{ TaskInfo, Offer }
 
 /** Create tasks from app definitions and offers. */
 trait TaskFactory {
+  import TaskFactory.CreatedTask
+
   /**
     * Return the corresponding task if and only if the offer matches the app.
     */
-  def newTask(app: AppDefinition, offer: Offer): Option[(TaskInfo, MarathonTask)]
+  def newTask(app: AppDefinition, offer: Offer): Option[CreatedTask]
+}
+
+object TaskFactory {
+  case class CreatedTask(mesosTask: TaskInfo, marathonTask: MarathonTask)
 }
 

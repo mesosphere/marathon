@@ -182,7 +182,7 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
 
     Given("one unused offer")
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 10).build()
-    val taskInfo: TaskInfo = taskFactory.newTask(app, offer).get._1
+    val taskInfo: TaskInfo = taskFactory.newTask(app, offer).get.mesosTask
     val usages = OfferUsages(
       depleted = Vector(
         OfferUsage(
@@ -213,7 +213,7 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     Given("one unused offer")
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 10).build()
     val offer2: Offer = offer.toBuilder.setId(OfferID.newBuilder().setValue("123")).build()
-    val taskInfo: TaskInfo = taskFactory.newTask(app, offer).get._1
+    val taskInfo: TaskInfo = taskFactory.newTask(app, offer).get.mesosTask
     val usages = OfferUsages(
       depleted = Vector(
         OfferUsage(
