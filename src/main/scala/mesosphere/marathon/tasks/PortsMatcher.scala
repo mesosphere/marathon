@@ -21,8 +21,8 @@ object PortsMatcher {
 }
 
 /**
-  * Utility class for checking if the ports resource in an offer matches the requirements of an app.
-  */
+ * Utility class for checking if the ports resource in an offer matches the requirements of an app.
+ */
 class PortsMatcher(app: AppDefinition, offer: Offer, acceptedResourceRoles: Set[String] = Set("*")) extends Logging {
   import PortsMatcher._
 
@@ -35,9 +35,9 @@ class PortsMatcher(app: AppDefinition, offer: Offer, acceptedResourceRoles: Set[
     .flatMap(resource => resource.getRanges.getRangeList.asScala.map(PortRange(resource.getRole, _)))
 
   /**
-    * The resulting port matches which should be consumed from the offer. If no matching port ranges could
-    * be generated from the offer, return `None`.
-    */
+   * The resulting port matches which should be consumed from the offer. If no matching port ranges could
+   * be generated from the offer, return `None`.
+   */
   lazy val portRanges: Option[Seq[RangesResource]] = {
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
       for {
@@ -69,19 +69,19 @@ class PortsMatcher(app: AppDefinition, offer: Offer, acceptedResourceRoles: Set[
   }
 
   /**
-    * @return true if and only if the port requirements could be fulfilled by the given offer.
-    */
+   * @return true if and only if the port requirements could be fulfilled by the given offer.
+   */
   def matches: Boolean = portRanges.isDefined
 
   /**
-    * @return the resulting assigned ports.
-    */
+   * @return the resulting assigned ports.
+   */
   def ports: Seq[Long] = portRanges.map(_.flatMap(_.ranges.flatMap(_.asScala()))).getOrElse(Nil)
 
   /**
-    * Try to satisfy all app.ports exactly (not dynamically) if that's possible to do with one of the offered
-    * ranges.
-    */
+   * Try to satisfy all app.ports exactly (not dynamically) if that's possible to do with one of the offered
+   * ranges.
+   */
   // TODO use multiple ranges if one is not enough
   private def appPortRanges: Option[RangesResource] = {
     val sortedPorts = app.ports.sorted
@@ -103,8 +103,8 @@ class PortsMatcher(app: AppDefinition, offer: Offer, acceptedResourceRoles: Set[
       val suitablePortRangeOpt = offeredPortRanges
         .iterator
         .find {
-          case PortRange(_, range) => app.ports.forall(p => range.getBegin <= p && range.getEnd >= p)
-        }
+        case PortRange(_, range) => app.ports.forall(p => range.getBegin <= p && range.getEnd >= p)
+      }
       suitablePortRangeOpt.map {
         case PortRange(role, range) =>
           val portRanges = app.ports.map(p => protos.Range(p.longValue, p.longValue))
@@ -114,9 +114,9 @@ class PortsMatcher(app: AppDefinition, offer: Offer, acceptedResourceRoles: Set[
   }
 
   /**
-    * @return dynamically assign ports if that's possible to do with one of the offered
-    * ranges.
-    */
+   * @return dynamically assign ports if that's possible to do with one of the offered
+   * ranges.
+   */
   // TODO use multiple ranges if one is not enough
   private def randomPortRanges: Option[RangesResource] = {
     for (PortRange(role, range) <- offeredPortRanges) {
@@ -133,10 +133,10 @@ class PortsMatcher(app: AppDefinition, offer: Offer, acceptedResourceRoles: Set[
   }
 
   /**
-    * Returns Some(rangesResources) if the zero-valued docker host-ports
-    * can be assigned to ANY port from the resource offer, AND all other
-    * (non-zero-valued) docker host-ports are available in the resource offer.
-    */
+   * Returns Some(rangesResources) if the zero-valued docker host-ports
+   * can be assigned to ANY port from the resource offer, AND all other
+   * (non-zero-valued) docker host-ports are available in the resource offer.
+   */
   private def mappedPortRanges(mappings: Seq[PortMapping]): Try[Seq[RangesResource]] =
     Try {
       case class PortWithRole(role: String, port: Int)

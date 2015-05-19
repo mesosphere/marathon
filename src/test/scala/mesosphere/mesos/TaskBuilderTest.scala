@@ -2,14 +2,14 @@ package mesosphere.mesos
 
 import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
+import mesosphere.marathon.Protos.{Constraint, MarathonTask}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp}
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
+import mesosphere.marathon.tasks.{MarathonTasks, TaskTracker}
 import mesosphere.mesos.protos._
-import org.apache.mesos.Protos.{ Label, Labels, Offer, TaskInfo }
+import org.apache.mesos.Protos.{Label, Labels, Offer, TaskInfo}
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
@@ -279,6 +279,39 @@ class TaskBuilderTest extends MarathonSpec {
     // TODO test for resources etc.
   }
 
+  test("PortMappingsWithZeroContainerPort") {
+    val offer = makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = "*")
+      .addResources(ScalarResource("cpus", 1, "*"))
+      .addResources(ScalarResource("mem", 128, "*"))
+      .addResources(ScalarResource("disk", 1000, "*"))
+      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+      .build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer, AppDefinition(
+        id = "testApp".toPath,
+        cpus = 1,
+        mem = 64,
+        disk = 1,
+        executor = "//cmd",
+        container = Some(Container(
+          docker = Some(Docker(
+            network = Some(Network.BRIDGE),
+            portMappings = Some(Seq(
+              PortMapping(containerPort = 0, hostPort = 0, servicePort = 9000, protocol = "tcp")
+            ))
+          ))
+        ))
+      )
+    )
+    assert(task.isDefined)
+    val (taskInfo, taskPorts) = task.get
+    val hostPort = taskInfo.getContainer.getDocker.getPortMappings(0).getHostPort
+    assert(hostPort == 31000)
+    val containerPort = taskInfo.getContainer.getDocker.getPortMappings(0).getContainerPort
+    assert(containerPort == hostPort)
+  }
+
   test("BuildIfMatchesWithRackIdConstraint") {
     val taskTracker = mock[TaskTracker]
 
@@ -452,7 +485,7 @@ class TaskBuilderTest extends MarathonSpec {
           version = Timestamp(0)
         ),
         Some(TaskID("task-123")),
-        Some ("host.mega.corp"),
+        Some("host.mega.corp"),
         Seq(1000, 1001)
       )
     val env: Map[String, String] =
@@ -483,7 +516,7 @@ class TaskBuilderTest extends MarathonSpec {
           )
         ),
         Some(TaskID("task-123")),
-        Some ("host.mega.corp"),
+        Some("host.mega.corp"),
         Seq(1000, 1001)
       )
     val env: Map[String, String] =
@@ -504,7 +537,7 @@ class TaskBuilderTest extends MarathonSpec {
           ports = Seq(8080, 8081)
         ),
         Some(TaskID("task-123")),
-        Some ("host.mega.corp"),
+        Some("host.mega.corp"),
         Seq(1000, 1001)
       )
     val env: Map[String, String] =

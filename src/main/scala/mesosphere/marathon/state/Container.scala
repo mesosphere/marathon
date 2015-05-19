@@ -167,7 +167,7 @@ object Container {
       * @param protocol      Layer 4 protocol to expose (i.e. tcp, udp).
       */
     case class PortMapping(
-        containerPort: JInt,
+        containerPort: JInt = 0,
         hostPort: JInt = 0,
         servicePort: JInt = 0,
         protocol: String = "tcp") {
