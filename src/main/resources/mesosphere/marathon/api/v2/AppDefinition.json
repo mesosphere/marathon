@@ -1,6 +1,12 @@
 {
     "$schema": "http://json-schema.org/schema#",
     "additionalProperties": false,
+    "definitions": {
+        "pathType": {
+            "pattern": "^(\\/?((\\.{2})|([a-z0-9\\-]*))($|\\/))*$",
+            "type": "string"
+        }
+    },
     "not": {
         "allOf": [
             {
@@ -16,6 +22,12 @@
         ]
     },
     "properties": {
+        "acceptedResourceRoles": {
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
         "args": {
             "items": {
                 "type": "string"
@@ -34,12 +46,6 @@
             "type": "string"
         },
         "constraints": {},
-        "acceptedResourceRoles": {
-            "items": {
-                "type": "string"
-            },
-            "type": "array"
-        },
         "container": {
             "additionalProperties": false,
             "properties": {
@@ -140,8 +146,7 @@
         },
         "dependencies": {
             "items": {
-                "pattern": "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$",
-                "type": "string"
+                "$ref": "#/definitions/pathType"
             },
             "type": "array"
         },
@@ -158,6 +163,7 @@
             "type": "object"
         },
         "executor": {
+            "pattern": "^(|\\/\\/cmd|\\/?[^\\/]+(\\/[^\\/]+)*)$",
             "type": "string"
         },
         "healthChecks": {
@@ -170,6 +176,9 @@
                     "gracePeriodSeconds": {
                         "minimum": 0,
                         "type": "integer"
+                    },
+                    "ignoreHttp1xx": {
+                        "type": "boolean"
                     },
                     "intervalSeconds": {
                         "minimum": 0,
@@ -226,7 +235,8 @@
                 "minimum": 0,
                 "type": "integer"
             },
-            "type": "array"
+            "type": "array",
+            "uniqueItems": true
         },
         "requirePorts": {
             "type": "boolean"
