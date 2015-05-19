@@ -7,6 +7,7 @@ import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.mesos.TaskBuilder
 import org.apache.mesos.Protos.{ TaskInfo, Offer }
 import org.slf4j.LoggerFactory
@@ -21,14 +22,18 @@ class DefaultTaskFactory @Inject() (
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  def newTask(app: AppDefinition, offer: Offer): Option[(TaskInfo, MarathonTask)] = {
+  def newTask(app: AppDefinition, offer: Offer): Option[CreatedTask] = {
     log.debug("newTask")
 
     new TaskBuilder(app, taskIdUtil.newTaskId, taskTracker, config, mapper).buildIfMatches(offer).map {
       case (taskInfo, ports) =>
-        taskInfo -> MarathonTasks.makeTask(
-          taskInfo.getTaskId.getValue, offer.getHostname, ports,
-          offer.getAttributesList.asScala, app.version)
+        CreatedTask(
+          taskInfo,
+          MarathonTasks.makeTask(
+            taskInfo.getTaskId.getValue, offer.getHostname, ports,
+            offer.getAttributesList.asScala, app.version
+          )
+        )
     }
   }
 }

@@ -6,6 +6,7 @@ import com.codahale.metrics.{ Histogram, Meter, MetricRegistry }
 import com.google.inject.Inject
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.util.TimerUtils
 import mesosphere.util.TimerUtils.ScalaTimer
 import org.apache.mesos.Protos._
@@ -141,7 +142,7 @@ class IterativeOfferMatcher @Inject() (
         }
 
         offerMatch match {
-          case Some((app: AppDefinition, (taskInfo: TaskInfo, marathonTask: MarathonTask))) =>
+          case Some((app: AppDefinition, CreatedTask(taskInfo: TaskInfo, marathonTask: MarathonTask))) =>
 
             allowedTaskLaunches -= 1
             log.debug("Adding task for launching ({} tasks left in cycle): {}", allowedTaskLaunches, taskInfo)
