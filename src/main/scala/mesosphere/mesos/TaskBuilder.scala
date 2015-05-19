@@ -78,8 +78,8 @@ class TaskBuilder(app: AppDefinition,
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
-    // FIXME (#1522): Can we add this without breaking setups that depend on the default disk limit
-    //      .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
+      // this is not enforced in Mesos without specifically configuring the appropriate enforcer
+      .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
