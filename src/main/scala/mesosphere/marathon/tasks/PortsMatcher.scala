@@ -1,30 +1,142 @@
 package mesosphere.marathon.tasks
 
-import org.apache.mesos.Protos
-
-import scala.util.{ Try, Random }
-import org.apache.mesos.Protos.{ Value, Offer }
+import mesosphere.marathon.state.{ AppDefinition, Container }
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{ RangesResource, Resource }
-import mesosphere.marathon.PortResourceException
-import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.state.Container
-import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.util.Logging
+import org.apache.mesos.Protos
+import org.apache.mesos.Protos.Offer
+
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-
-object PortsMatcher {
-  case class PortRange(role: String, range: Protos.Value.Range) {
-    lazy val scalaRange: Range = range.getBegin.toInt to range.getEnd.toInt
-  }
-}
+import scala.util.Random
 
 /**
   * Utility class for checking if the ports resource in an offer matches the requirements of an app.
   */
-class PortsMatcher(app: AppDefinition, offer: Offer, acceptedResourceRoles: Set[String] = Set("*")) extends Logging {
+class PortsMatcher(
+  app: AppDefinition,
+  offer: Offer,
+  acceptedResourceRoles: Set[String] = Set("*"),
+  random: Random = Random)
+    extends Logging {
+
   import PortsMatcher._
+
+  /**
+    * The resulting port matches which should be consumed from the offer. If no matching port ranges could
+    * be generated from the offer, return `None`.
+    */
+  lazy val portRanges: Option[Seq[RangesResource]] = portsWithRoles.map(PortWithRole.createPortsResources)
+
+  /**
+    * @return true if and only if the port requirements could be fulfilled by the given offer.
+    */
+  def matches: Boolean = portRanges.isDefined
+
+  /**
+    * @return the resulting assigned (host) ports.
+    */
+  def ports: Seq[Long] = portRanges.map(_.flatMap(_.ranges.flatMap(_.asScala()))).getOrElse(Nil)
+
+  private[this] def portsWithRoles: Option[Seq[PortWithRole]] = {
+    val portMappings: Option[Seq[Container.Docker.PortMapping]] =
+      for {
+        c <- app.container
+        d <- c.docker
+        pms <- d.portMappings if pms.nonEmpty
+      } yield pms
+
+    (app.ports, portMappings) match {
+      case (Nil, None) => // optimization for empty special case
+        Some(Seq.empty)
+
+      case (appPortSpec, Some(mappings)) =>
+        // We use the mappings from the containers if they are available and ignore any other port specification.
+        // We cannot warn about this because we autofill the ports field.
+        mappedPortRanges(mappings)
+
+      case (appPorts, None) if app.requirePorts =>
+        findPortsInOfferer(appPorts, failLog = true)
+
+      case (appPorts, None) if !app.ports.contains(Integer.valueOf(0)) =>
+        // we try to use the user supplied ports if possible, fallback to dynamically assigned ports
+        findPortsInOfferer(appPorts, failLog = false).orElse(randomPorts(appPorts.size))
+
+      case (appPorts, None) =>
+        randomPorts(appPorts.size)
+    }
+  }
+
+  /**
+    * Try to satisfy all app.ports exactly (not dynamically) if that's possible to do with one of the offered
+    * ranges.
+    */
+  private[this] def findPortsInOfferer(requiredPorts: Seq[Integer], failLog: Boolean): Option[Seq[PortWithRole]] = {
+    hasExpectedSizeOpt(expectedSize = requiredPorts.size) {
+      requiredPorts.sorted.iterator.map { port =>
+        offeredPortRanges.find(_.scalaRange.contains(port)).map { offeredRange =>
+          PortWithRole(offeredRange.role, port)
+        } orElse {
+          if (failLog) log.info(s"Couldn't find host port $port in any offered range for app [${app.id}]")
+          None
+        }
+      }.takeWhile(_.isDefined).flatten.to[Seq]
+    }
+  }
+
+  /**
+    * Choose ports from the available ports randomly.
+    */
+  private[this] def randomPorts(numberOfPorts: Int): Option[Seq[PortWithRole]] = {
+    hasExpectedSizeOpt(expectedSize = numberOfPorts) {
+      shuffledAvailablePorts.take(numberOfPorts).to[Seq]
+    } orElse {
+      log.info(s"Couldn't find $numberOfPorts ports in offer for app [${app.id}]")
+      None
+    }
+  }
+
+  /**
+    * Returns Some(ports) if all zero-valued docker host-ports
+    * can be assigned to some port from the resource offer, AND all other
+    * (non-zero-valued) docker host-ports are available in the resource offer.
+    */
+  private[this] def mappedPortRanges(mappings: Seq[PortMapping]): Option[Seq[PortWithRole]] = {
+    hasExpectedSizeOpt(expectedSize = mappings.size) {
+      // non-dynamic hostPorts from port mappings
+      val hostPortsFromMappings: Set[Integer] = mappings.iterator.map(_.hostPort).filter(_ != 0).toSet
+
+      // available ports without the ports that have been preset in the port mappings
+      val availablePortsWithoutStaticHostPorts: Iterator[PortWithRole] =
+        shuffledAvailablePorts.filter(portWithRole => !hostPortsFromMappings(portWithRole.port))
+
+      mappings.iterator.map {
+        case PortMapping(containerPort, hostPort, servicePort, protocol) if hostPort == 0 =>
+          if (!availablePortsWithoutStaticHostPorts.hasNext) {
+            log.info(s"Insufficient ports in offer for app [${app.id}]")
+            None
+          }
+          else {
+            Option(availablePortsWithoutStaticHostPorts.next())
+          }
+        case pm: PortMapping =>
+          offeredPortRanges.find(_.scalaRange.contains(pm.hostPort)) match {
+            case Some(PortRange(role, _)) =>
+              Some(PortWithRole(role, pm.hostPort))
+            case None =>
+              log.info(s"Cannot find range with host port ${pm.hostPort} for app [${app.id}]")
+              None
+          }
+      }.takeWhile(_.isDefined).flatten.to[Seq]
+    }
+  }
+
+  private[this] def hasExpectedSizeOpt[T](expectedSize: Int)(ports: Seq[T]): Option[Seq[T]] = {
+    if (ports.size == expectedSize) Some(ports) else None
+  }
 
   private[this] lazy val offeredPortsResources: Seq[Protos.Resource] = offer.getResourcesList.asScala
     .filter(resource => acceptedResourceRoles(resource.getRole))
@@ -34,158 +146,117 @@ class PortsMatcher(app: AppDefinition, offer: Offer, acceptedResourceRoles: Set[
   private[this] lazy val offeredPortRanges: Seq[PortRange] = offeredPortsResources
     .flatMap(resource => resource.getRanges.getRangeList.asScala.map(PortRange(resource.getRole, _)))
 
-  /**
-    * The resulting port matches which should be consumed from the offer. If no matching port ranges could
-    * be generated from the offer, return `None`.
-    */
-  lazy val portRanges: Option[Seq[RangesResource]] = {
-    val portMappings: Option[Seq[Container.Docker.PortMapping]] =
-      for {
-        c <- app.container
-        d <- c.docker
-        pms <- d.portMappings if pms.nonEmpty
-      } yield pms
+  private[this] def shuffledAvailablePorts: Iterator[PortWithRole] =
+    PortWithRole.randomPortsFromRanges(random)(offeredPortRanges)
+}
 
-    (app.ports, portMappings) match {
-      case (Nil, None) =>
-        Some(Seq.empty)
+object PortsMatcher {
 
-      case (appPorts, None) if app.requirePorts =>
-        appPortRanges.map(Seq(_))
-
-      case (appPorts, None) if app.ports.forall(_ != 0) =>
-        appPortRanges.orElse(randomPortRanges).map(Seq(_))
-
-      case (appPorts, None) =>
-        randomPortRanges.map(Seq(_))
-
-      case (_, Some(mappings)) =>
-        val assigned: Try[Seq[RangesResource]] = mappedPortRanges(mappings)
-        assigned.recover {
-          case PortResourceException(msg) => log.info(msg)
-        }: Any
-        assigned.toOption
+  case class PortWithRole(role: String, port: Int) {
+    def toRange: protos.Range = {
+      protos.Range(port.toLong, port.toLong)
     }
   }
 
-  /**
-    * @return true if and only if the port requirements could be fulfilled by the given offer.
-    */
-  def matches: Boolean = portRanges.isDefined
+  object PortWithRole {
+    /**
+      * Return RangesResources covering all given ports with the given roles.
+      *
+      * Creates as few RangesResources as possible while
+      * preserving the order of the ports.
+      */
+    def createPortsResources(resources: Seq[PortWithRole]): Seq[RangesResource] = {
+      val builder = Seq.newBuilder[RangesResource]
+      @tailrec
+      def process(resources: Seq[PortWithRole]): Unit = resources.headOption match {
+        case None =>
+        case Some(PortWithRole(role, _)) =>
+          val portsForResource: Seq[PortWithRole] = resources.takeWhile(_.role == role)
+          builder += RangesResource(name = Resource.PORTS, createRanges(portsForResource), role = role)
+          process(resources.drop(portsForResource.size))
+      }
+      process(resources)
 
-  /**
-    * @return the resulting assigned ports.
-    */
-  def ports: Seq[Long] = portRanges.map(_.flatMap(_.ranges.flatMap(_.asScala()))).getOrElse(Nil)
-
-  /**
-    * Try to satisfy all app.ports exactly (not dynamically) if that's possible to do with one of the offered
-    * ranges.
-    */
-  // TODO use multiple ranges if one is not enough
-  private def appPortRanges: Option[RangesResource] = {
-    val sortedPorts = app.ports.sorted
-    val firstPort = sortedPorts.head
-    val lastPort = sortedPorts.last
-
-    lazy val matchingRange: Option[PortRange] = offeredPortRanges.find {
-      case PortRange(_, range) => range.getBegin <= firstPort && range.getEnd >= lastPort
-      case _                   => false
+      builder.result()
     }
 
-    // Monotonically increasing ports
-    if (firstPort + sortedPorts.size - 1 == lastPort && matchingRange.isDefined) {
-      Some(RangesResource(
-        Resource.PORTS, Seq(protos.Range(firstPort.longValue, lastPort.longValue)),
-        matchingRange.get.role))
-    }
-    else {
-      val suitablePortRangeOpt = offeredPortRanges
-        .iterator
-        .find {
-          case PortRange(_, range) => app.ports.forall(p => range.getBegin <= p && range.getEnd >= p)
+    /**
+      * Create as few ranges as possible from the given ports while preserving the order of the ports.
+      *
+      * It does not check if the given ports have different roles.
+      */
+    private[this] def createRanges(ranges: Seq[PortWithRole]): Seq[protos.Range] = {
+      val builder = Seq.newBuilder[protos.Range]
+
+      @tailrec
+      def process(lastRangeOpt: Option[protos.Range], next: Seq[PortWithRole]): Unit = {
+        (lastRangeOpt, next.headOption) match {
+          case (None, _) =>
+          case (Some(lastRange), None) =>
+            builder += lastRange
+          case (Some(lastRange), Some(nextPort)) if lastRange.end == nextPort.port - 1 =>
+            process(Some(lastRange.copy(end = nextPort.port.toLong)), next.tail)
+          case (Some(lastRange), Some(nextPort)) =>
+            builder += lastRange
+            process(Some(nextPort.toRange), next.tail)
         }
-      suitablePortRangeOpt.map {
-        case PortRange(role, range) =>
-          val portRanges = app.ports.map(p => protos.Range(p.longValue, p.longValue))
-          RangesResource(Resource.PORTS, portRanges, role)
       }
+      process(ranges.headOption.map(_.toRange), ranges.tail)
+
+      builder.result()
+    }
+
+    /**
+      * We want to avoid reusing the same dynamic ports. Thus we shuffle the ports to make it less likely.
+      *
+      * The implementation idea:
+      *
+      * * Randomize the order of the offered ranges.
+      * * Now treat the ports contained in the ranges as one long sequence of ports.
+      * * We randomly choose an index where we want to start assigning dynamic ports in that sequence. When
+      *   we hit the last offered port with wrap around and start offering the ports at the beginning
+      *   of the sequence up to (excluding) the port index we started at.
+      */
+    def randomPortsFromRanges(random: Random = Random)(offeredPortRanges: Seq[PortRange]): Iterator[PortWithRole] = {
+      val numberOfOfferedPorts = offeredPortRanges.map(_.scalaRange.size).sum
+
+      if (numberOfOfferedPorts == 0) {
+        return Iterator.empty
+      }
+
+      def findStartPort(shuffled: Vector[PortRange], startPortIdx: Int): (Int, Int) = {
+        var startPortIdxOfCurrentRange = 0
+        val rangeIdx = shuffled.indexWhere {
+          case range: PortRange if startPortIdxOfCurrentRange + range.scalaRange.size > startPortIdx =>
+            true
+          case range: PortRange =>
+            startPortIdxOfCurrentRange += range.scalaRange.size
+            false
+        }
+
+        (rangeIdx, startPortIdx - startPortIdxOfCurrentRange)
+      }
+
+      val shuffled = Random.shuffle(offeredPortRanges).toVector
+      val startPortIdx = Random.nextInt(numberOfOfferedPorts)
+
+      val (rangeIdx, portInRangeIdx) = findStartPort(shuffled, startPortIdx)
+      val startRangeOrig = shuffled(rangeIdx)
+
+      val startRange = startRangeOrig.withoutNPorts(portInRangeIdx)
+      val afterStartRange = shuffled.slice(rangeIdx + 1, shuffled.length).flatMap(_.portsWithRolesIterator)
+      val beforeStartRange = shuffled.slice(0, rangeIdx).flatMap(_.portsWithRolesIterator)
+      val endRange = startRangeOrig.firstNPorts(portInRangeIdx)
+
+      startRange ++ afterStartRange ++ beforeStartRange ++ endRange
     }
   }
 
-  /**
-    * @return dynamically assign ports if that's possible to do with one of the offered
-    * ranges.
-    */
-  // TODO use multiple ranges if one is not enough
-  private def randomPortRanges: Option[RangesResource] = {
-    for (PortRange(role, range) <- offeredPortRanges) {
-      if (range.getEnd - range.getBegin + 1 >= app.ports.length) {
-        val maxOffset = (range.getEnd - range.getBegin - app.ports.length + 2).toInt
-        val firstPort = range.getBegin + Random.nextInt(maxOffset)
-        val rangeProto = protos.Range(firstPort, firstPort + app.ports.length - 1)
-        return Some(
-          RangesResource(Resource.PORTS, Seq(rangeProto), role)
-        )
-      }
-    }
-    None
+  case class PortRange(role: String, range: Protos.Value.Range) {
+    lazy val scalaRange: Range = range.getBegin.toInt to range.getEnd.toInt
+
+    def portsWithRolesIterator: Iterator[PortWithRole] = scalaRange.iterator.map(PortWithRole(role, _))
+    def firstNPorts(n: Int): Iterator[PortWithRole] = scalaRange.take(n).iterator.map(PortWithRole(role, _))
+    def withoutNPorts(n: Int): Iterator[PortWithRole] = scalaRange.drop(n).iterator.map(PortWithRole(role, _))
   }
-
-  /**
-    * Returns Some(rangesResources) if the zero-valued docker host-ports
-    * can be assigned to ANY port from the resource offer, AND all other
-    * (non-zero-valued) docker host-ports are available in the resource offer.
-    */
-  private def mappedPortRanges(mappings: Seq[PortMapping]): Try[Seq[RangesResource]] =
-    Try {
-      case class PortWithRole(role: String, port: Int)
-
-      // non-dynamic hostPorts from app definitions
-      val hostPortsFromMappings: Set[Integer] = mappings.iterator.map(_.hostPort).filter(_ != 0).toSet
-
-      // available ports without the ports that have been preset in the port mappings
-      val availablePorts: Iterator[PortWithRole] =
-        offeredPortRanges.foldLeft(Iterator.apply[PortWithRole]()) {
-          case (acc, PortRange(role, r)) =>
-            acc ++ Iterator.range(r.getBegin.toInt, r.getEnd.toInt + 1).map(PortWithRole(role, _))
-        }.filter(portWithRole => !hostPortsFromMappings(portWithRole.port))
-
-      case class PortMappingWithRole(role: String, mapping: PortMapping)
-
-      val mappingsWithAssignedRandoms: Seq[PortMappingWithRole] = mappings.map {
-        case PortMapping(containerPort, hostPort, servicePort, protocol) if hostPort == 0 =>
-          if (!availablePorts.hasNext) throw PortResourceException(
-            s"Insufficient ports in offer for app [${app.id}]"
-          )
-          val portWithRole = availablePorts.next()
-          PortMappingWithRole(
-            portWithRole.role,
-            PortMapping(containerPort, portWithRole.port, servicePort, protocol)
-          )
-        case pm: PortMapping =>
-          val role = offeredPortRanges.find(_.scalaRange.contains(pm.hostPort)) match {
-            case Some(PortRange(role, _)) => role
-            case None =>
-              throw PortResourceException(
-                s"Cannot find range with port ${pm.hostPort}"
-              )
-          }
-          PortMappingWithRole(role, pm)
-      }
-
-      val byRole: Map[String, Seq[PortMapping]] =
-        mappingsWithAssignedRandoms.groupBy(_.role).mapValues(_.map(_.mapping))
-
-      byRole.map {
-        case (role, portMappings) =>
-          val portRanges = portMappings.map {
-            case PortMapping(containerPort, hostPort, servicePort, protocol) =>
-              protos.Range(hostPort.longValue, hostPort.longValue)
-          }
-
-          RangesResource(Resource.PORTS, portRanges, role)
-      }.to[Seq]
-    }
-
 }

@@ -344,7 +344,9 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("PortMappingsWithZeroContainerPort") {
-    val offer = makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = "*")
+    val offer = makeBasicOfferWithRole(
+      cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31000, role = "*"
+    )
       .addResources(ScalarResource("cpus", 1, "*"))
       .addResources(ScalarResource("mem", 128, "*"))
       .addResources(ScalarResource("disk", 1000, "*"))
