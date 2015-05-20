@@ -1,7 +1,10 @@
 package mesosphere.mesos.scale
 
-import java.io.File
-import MetricsFormat._
+import java.net.URL
+
+import mesosphere.mesos.scale.MetricsFormat._
+
+import scala.collection.immutable.Iterable
 
 /**
   * Compare Metrics Samples and find all metrics, that get deteriorated by given factor.
@@ -25,30 +28,36 @@ object FindDeterioratedMetrics {
     } yield metricBase -> metricSample
   }
 
-  def filterDeteriorated(beforeFile: File, afterFile: File, deterioration: Double): Map[Metric, Metric] = {
+  def filterDeteriorated(before: URL, after: URL, deterioration: Double): Map[Metric, Metric] = {
     //only compare last
-    filterDeteriorated(readMetrics(beforeFile).last, readMetrics(afterFile).last, deterioration)
+    filterDeteriorated(readMetrics(before).last, readMetrics(after).last, deterioration)
   }
-
   /**
     * FindDeterioratedMetrics <file_base> <file_sample> <deterioration_factor>
-    *  file_base: the file with the base metrics
-    *  file_sample: the file with the actual sampled metrics
+    *  url_base: the file with the base metrics
+    *  url_sample: the file with the actual sampled metrics
     *  deterioration_factor: number [0..] where 1 means the same as the base line
     *
     * @param args three args expected: baseFile sampleFile factor
     */
   def main(args: Array[String]) {
-    def slope(a: Metric, b: Metric): String = s"${a.name}: ${a.mean} -> ${b.mean} [${(b.mean / a.mean * 100).toInt}%]"
+    def printSlope(metrics: Map[Metric, Metric]): Unit = {
+      import DisplayHelpers._
+      val header = Vector("Metric", "Base", "Sample", "Increase in %")
+      val rows: Iterable[Vector[String]] = metrics.map {
+        case (a, b) => Vector(a.name, a.mean, b.mean, (b.mean / a.mean * 100).toInt - 100).map(_.toString)
+      }
+      printTable(Seq(left, right, right, right), withUnderline(header) ++ rows.toSeq)
+    }
+
     if (args.length == 3) {
-      println("Metrics that got worse (deterioration factor == 1):")
-      println(filterDeteriorated(new File(args(0)), new File(args(1)), 1).map(w => slope(w._1, w._2)).mkString("\n"))
-      println(s"Metrics that got deteriorated (deterioration factor == ${args(2)}):")
-      val deteriorated = filterDeteriorated(new File(args(0)), new File(args(1)), args(2).toDouble)
+      println("\n\nMetrics that got worse (deterioration factor == 1):")
+      printSlope(filterDeteriorated(new URL(args(0)), new URL(args(1)), 1))
+      println(s"\n\nMetrics that got deteriorated (deterioration factor == ${args(2)}):")
+      val deteriorated = filterDeteriorated(new URL(args(0)), new URL(args(1)), args(2).toDouble)
       if (deteriorated.nonEmpty) {
-        val message = deteriorated.map(w => slope(w._1, w._2)).mkString("\n")
-        println(message)
-        throw new IllegalStateException(message)
+        printSlope(deteriorated)
+        throw new IllegalStateException(s"Sample is deteriorated according to deterioration factor")
       }
     }
     else {

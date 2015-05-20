@@ -1,9 +1,10 @@
 package mesosphere.mesos.scale
 
-import java.io.File
+import java.net.URL
 
-import org.apache.commons.io.FileUtils
 import play.api.libs.json._
+
+import scala.io.Source
 
 /**
   * Base trait for all metrics
@@ -107,8 +108,8 @@ object MetricsFormat {
   implicit val timerReads = objectRead(Json.reads[Timer])
   implicit val sampleReads: Reads[MetricsSample] = Json.reads[MetricsSample]
 
-  def readMetrics(file: File): Seq[MetricsSample] = {
-    val jsonString = FileUtils.readFileToString(file)
+  def readMetrics(url: URL): Seq[MetricsSample] = {
+    val jsonString = Source.fromURL(url, "UTF-8").mkString
     Json.parse(jsonString).as[Seq[MetricsSample]]
   }
 }
