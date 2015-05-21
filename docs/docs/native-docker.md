@@ -139,7 +139,7 @@ the Marathon web UI. `"hostPort"` is optional and defaults to `0`.
 `"servicePort"` is a helper port intended for doing service discovery using
 a well-known port per service.  The assigned `servicePort` value is not used/interpreted by Marathon itself but
 supposed to used by load balancer infrastructure.
-See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.md).
+See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing).
 The `servicePort` parameter is optional
 and defaults to `0`.  Like `hostPort`, If the value is `0`, a random port will
 be assigned.  If a `servicePort` value is assigned by Marathon then Marathon guarantees that its value
