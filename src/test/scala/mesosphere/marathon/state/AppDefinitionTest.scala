@@ -136,6 +136,14 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     validateJsonSchema(app2, false) // no id
   }
 
+  test("Validation: empty cmd should fail") {
+    val app1 = AppDefinition(
+      id = "play".toPath,
+      cmd = Some("")
+    )
+    validateJsonSchema(app1, valid = false)
+  }
+
   test("Validation") {
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 

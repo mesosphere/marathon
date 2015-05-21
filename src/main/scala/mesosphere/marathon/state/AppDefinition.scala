@@ -158,7 +158,7 @@ case class AppDefinition(
       else None
 
     val argsOption =
-      if (commandOption.isEmpty)
+      if (commandOption.isEmpty && proto.getCmd.getArgumentsCount != 0)
         Some(proto.getCmd.getArgumentsList.asScala.to[Seq])
       else None
 
