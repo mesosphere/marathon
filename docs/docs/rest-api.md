@@ -56,7 +56,7 @@ Create and start a new application.
 
 The full JSON format of an application resource is as follows:
 
-{% highlight json %}
+{% highlight javascript %}
 {
     "id": "/product/service/my-app",
     "cmd": "env && sleep 300",
@@ -112,7 +112,7 @@ The full JSON format of an application resource is as follows:
     "constraints": [
         ["attribute", "OPERATOR", "value"]
     ],
-    "acceptedResourceRoles": [
+    "acceptedResourceRoles": [ /* since 0.9.0 */
         "role1", "*"
     ],
     "labels": {
@@ -198,7 +198,7 @@ Valid constraint operators are one of ["UNIQUE", "CLUSTER",
 "GROUP_BY"]. For additional information on using placement constraints see
 the [Constraints doc page]({{ site.baseurl }}/docs/constraints.html).
 
-##### acceptedResourceRoles
+##### acceptedResourceRoles <span class="label label-default">v0.9.0</span>
 
 Optional. A list of resource roles. Marathon considers only resource offers with roles in this list for launching
 tasks of this app. If you do not specify this, Marathon considers all resource offers with roles that have been
