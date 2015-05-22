@@ -3,20 +3,20 @@ package mesosphere.mesos
 import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
-import mesosphere.mesos.protos._
-import org.apache.mesos.Protos.{ Label, Labels, Offer, TaskInfo }
+import mesosphere.mesos.protos.{ Resource, TaskID, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+import org.apache.mesos.Protos.{ Offer, _ }
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 
-import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 
 class TaskBuilderTest extends MarathonSpec {
 
@@ -48,6 +48,70 @@ class TaskBuilderTest extends MarathonSpec {
     assertTaskInfo(taskInfo, taskPorts, offer)
 
     assert(!taskInfo.hasLabels)
+  }
+
+  test("build creates task with appropriate resource share") {
+    val offer = makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1,
+        mem = 64,
+        disk = 1,
+        executor = "//cmd",
+        ports = Seq(8080, 8081)
+      )
+    )
+
+    val Some((taskInfo, _)) = task
+
+    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+
+    assert(resource("cpus") == ScalarResource("cpus", 1))
+    assert(resource("mem") == ScalarResource("mem", 64))
+    assert(resource("disk") == ScalarResource("disk", 1))
+    val portsResource: Resource = resource("ports")
+    assert(portsResource.getRanges.getRangeCount == 1)
+    val range: Value.Range = portsResource.getRanges.getRange(0)
+    assert(range.getEnd - range.getBegin == 1) // inclusive range contains two ports
+    assert(portsResource.getRole() == "*")
+  }
+
+  test("build creates task with appropriate resource share also preserves role") {
+    val offer = makeBasicOffer(
+      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000, role = "marathon"
+    ).build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1,
+        mem = 64,
+        disk = 1,
+        executor = "//cmd",
+        ports = Seq(8080, 8081)
+      ),
+      mesosRole = Some("marathon"),
+      acceptedResourceRoles = Some(Set("*", "marathon"))
+    )
+
+    val Some((taskInfo, _)) = task
+
+    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+
+    assert(resource("cpus") == ScalarResource("cpus", 1, "marathon"))
+    assert(resource("mem") == ScalarResource("mem", 64, "marathon"))
+    assert(resource("disk") == ScalarResource("disk", 1, "marathon"))
+    val portsResource: Resource = resource("ports")
+    assert(portsResource.getRanges.getRangeCount == 1)
+    val range: Value.Range = portsResource.getRanges.getRange(0)
+    assert(range.getEnd - range.getBegin == 1) // inclusive range contains two ports
+    assert(portsResource.getRole() == "marathon")
   }
 
   test("BuildIfMatchesWithLabels") {
