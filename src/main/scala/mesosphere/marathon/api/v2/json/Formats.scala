@@ -349,7 +349,7 @@ trait AppDefinitionFormats {
 
     (
       (__ \ "id").read[PathId].filterNot(_.isRoot) ~
-      (__ \ "cmd").readNullable[String] ~
+      (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
       (__ \ "args").readNullable[Seq[String]] ~
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, String]].withDefault(DefaultEnv) ~
@@ -442,7 +442,7 @@ trait AppDefinitionFormats {
 
     (
       (__ \ "id").readNullable[PathId].filterNot(_.exists(_.isRoot)) ~
-      (__ \ "cmd").readNullable[String] ~
+      (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
       (__ \ "args").readNullable[Seq[String]] ~
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, String]] ~

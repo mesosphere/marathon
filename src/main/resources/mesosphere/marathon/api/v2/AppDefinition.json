@@ -43,7 +43,8 @@
             "type": "integer"
         },
         "cmd": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
         },
         "constraints": {},
         "container": {
