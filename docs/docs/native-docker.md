@@ -136,6 +136,15 @@ random port from the range included in the Mesos resource offer". The resulting
 host ports for each task are exposed via the task details in the REST API and
 the Marathon web UI. `"hostPort"` is optional and defaults to `0`.
 
+"containerPort" refers to the port the application listens to inside of the container.
+
+Since <span class="label label-default">v0.9.0</span>: `"containerPort"` is optional and now defaults to `0`.
+When `"containerPort": 0`, Marathon assigns
+the container port the same value as the assigned `hostPort`. This is especially useful for apps that
+advertise the port they are listening on to the outside world for P2P communication. Without "containerPort": 0 they
+would erroneously advertise their private container port which is usually not the same as the externally visible host
+port.
+
 `"servicePort"` is a helper port intended for doing service discovery using
 a well-known port per service.  The assigned `servicePort` value is not used/interpreted by Marathon itself but
 supposed to used by load balancer infrastructure.

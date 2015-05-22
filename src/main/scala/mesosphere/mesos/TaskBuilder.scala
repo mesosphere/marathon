@@ -91,14 +91,31 @@ class TaskBuilder(app: AppDefinition,
         val portMappings = c.docker.map { d =>
           d.portMappings.map { pms =>
             pms zip ports map {
-              case (mapping, port) => mapping.copy(hostPort = port.toInt)
+              case (mapping, port) => {
+                // Use case: containerPort = 0 and hostPort = 0
+                //
+                // For apps that have their own service registry and require p2p communication,
+                // they will need to advertise
+                // the externally visible ports that their components come up on.
+                // Since they generally know there container port and advertise that, this is
+                // fixed most easily if the container port is the same as the externally visible host
+                // port.
+                if (mapping.containerPort == 0) {
+                  mapping.copy(hostPort = port.toInt, containerPort = port.toInt)
+                }
+                else {
+                  mapping.copy(hostPort = port.toInt)
+                }
+              }
             }
           }
         }
         val containerWithPortMappings = portMappings match {
           case None => c
           case Some(newMappings) => c.copy(
-            docker = c.docker.map { _.copy(portMappings = newMappings) }
+            docker = c.docker.map {
+              _.copy(portMappings = newMappings)
+            }
           )
         }
         containerWithPortMappings.toMesos
