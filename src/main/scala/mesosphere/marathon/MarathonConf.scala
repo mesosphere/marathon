@@ -30,11 +30,11 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
     noshort = true, default = Some(true))
 
   lazy val localPortMin = opt[Int]("local_port_min",
-    descr = "Min port number to use when assigning ports to apps",
+    descr = "Min port number to use when assigning globally unique service ports to apps",
     default = Some(10000))
 
   lazy val localPortMax = opt[Int]("local_port_max",
-    descr = "Max port number to use when assigning ports to apps",
+    descr = "Max port number to use when assigning globally unique service ports to apps",
     default = Some(20000))
 
   lazy val defaultExecutor = opt[String]("executor",

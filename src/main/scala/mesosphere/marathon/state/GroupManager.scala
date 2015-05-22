@@ -132,7 +132,7 @@ class GroupManager @Singleton @Inject() (
 
     val deployment = for {
       from <- rootGroup //ignore the state of the scheduler
-      (to, resolve) <- resolveStoreUrls(assignDynamicAppPort(from, change(from)))
+      (to, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
       _ = BeanValidation.requireValid(ModelValidation.checkGroup(to))
       plan <- deploy(from, to, resolve)
       _ <- groupRepo.store(zkName, to)
@@ -173,7 +173,7 @@ class GroupManager @Singleton @Inject() (
       }
   }
 
-  private[state] def assignDynamicAppPort(from: Group, to: Group): Group = {
+  private[state] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.ports)
 
@@ -225,7 +225,12 @@ class GroupManager @Singleton @Inject() (
     }
 
     val dynamicApps: Set[AppDefinition] =
-      to.transitiveApps.filter(_.hasDynamicPort).map(assignPorts)
+      to.transitiveApps.map {
+        case app if app.hasDynamicPort => assignPorts(app)
+        case app =>
+          // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
+          app.copy(ports = app.servicePorts.map(Integer.valueOf))
+      }
 
     dynamicApps.foldLeft(to) { (group, app) =>
       group.updateApp(app.id, _ => app, app.version)

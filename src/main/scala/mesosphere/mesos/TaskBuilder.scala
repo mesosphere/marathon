@@ -45,7 +45,7 @@ class TaskBuilder(app: AppDefinition,
         case _ =>
           log.debug(
             s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, " +
-              s"disk=${app.disk}, ports=${app.hostPorts()}) : " + offer
+              s"disk=${app.disk}, ports=${app.hostPorts}) : " + offer
           )
           None
       }
@@ -169,7 +169,7 @@ class TaskBuilder(app: AppDefinition,
 object TaskBuilder {
 
   def commandInfo(app: AppDefinition, taskId: Option[TaskID], host: Option[String], ports: Seq[Long]): CommandInfo = {
-    val containerPorts = for (pms <- app.portMappings()) yield pms.map(_.containerPort)
+    val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(app.ports)
     val envMap: Map[String, String] =
       taskContextEnv(app, taskId) ++

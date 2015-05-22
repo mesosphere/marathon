@@ -2,7 +2,7 @@ package mesosphere.marathon.state
 
 import java.lang.{ Double => JDouble, Integer => JInt }
 
-import com.fasterxml.jackson.annotation.{ JsonIgnoreProperties, JsonProperty }
+import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.validation.FieldConstraints._
@@ -208,7 +208,8 @@ case class AppDefinition(
     )
   }
 
-  def portMappings(): Option[Seq[PortMapping]] =
+  @JsonIgnore
+  def portMappings: Option[Seq[PortMapping]] =
     for {
       c <- container
       d <- c.docker
@@ -216,19 +217,24 @@ case class AppDefinition(
       pms <- d.portMappings
     } yield pms
 
-  def containerHostPorts(): Option[Seq[Int]] =
+  @JsonIgnore
+  def containerHostPorts: Option[Seq[Int]] =
     for (pms <- portMappings) yield pms.map(_.hostPort.toInt)
 
-  def containerServicePorts(): Option[Seq[Int]] =
+  @JsonIgnore
+  def containerServicePorts: Option[Seq[Int]] =
     for (pms <- portMappings) yield pms.map(_.servicePort.toInt)
 
-  def hostPorts(): Seq[Int] =
+  @JsonIgnore
+  def hostPorts: Seq[Int] =
     containerHostPorts.getOrElse(ports.map(_.toInt))
 
-  def servicePorts(): Seq[Int] =
+  @JsonIgnore
+  def servicePorts: Seq[Int] =
     containerServicePorts.getOrElse(ports.map(_.toInt))
 
-  def hasDynamicPort(): Boolean = servicePorts.contains(0)
+  @JsonIgnore
+  def hasDynamicPort: Boolean = servicePorts.contains(0)
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)

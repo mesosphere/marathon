@@ -402,39 +402,35 @@ trait AppDefinitionFormats {
     }
 
     Writes[AppDefinition] { app =>
-      try {
-        Json.obj(
-          "id" -> app.id.toString,
-          "cmd" -> app.cmd,
-          "args" -> app.args,
-          "user" -> app.user,
-          "env" -> app.env,
-          "instances" -> app.instances,
-          "cpus" -> app.cpus,
-          "mem" -> app.mem,
-          "disk" -> app.disk,
-          "executor" -> app.executor,
-          "constraints" -> app.constraints,
-          "uris" -> app.uris,
-          "storeUrls" -> app.storeUrls,
-          "ports" -> app.ports,
-          "requirePorts" -> app.requirePorts,
-          "backoffSeconds" -> app.backoff,
-          "backoffFactor" -> app.backoffFactor,
-          "maxLaunchDelaySeconds" -> app.maxLaunchDelay,
-          "container" -> app.container,
-          "healthChecks" -> app.healthChecks,
-          "dependencies" -> app.dependencies,
-          "upgradeStrategy" -> app.upgradeStrategy,
-          "labels" -> app.labels,
-          "acceptedResourceRoles" -> app.acceptedResourceRoles,
-          "version" -> app.version
-        )
-      }
-      catch {
-        case NonFatal(e) =>
-          throw e
-      }
+      Json.obj(
+        "id" -> app.id.toString,
+        "cmd" -> app.cmd,
+        "args" -> app.args,
+        "user" -> app.user,
+        "env" -> app.env,
+        "instances" -> app.instances,
+        "cpus" -> app.cpus,
+        "mem" -> app.mem,
+        "disk" -> app.disk,
+        "executor" -> app.executor,
+        "constraints" -> app.constraints,
+        "uris" -> app.uris,
+        "storeUrls" -> app.storeUrls,
+        // the ports field was written incorrectly in old code if a container was specified
+        // it should contain the service ports
+        "ports" -> app.servicePorts,
+        "requirePorts" -> app.requirePorts,
+        "backoffSeconds" -> app.backoff,
+        "backoffFactor" -> app.backoffFactor,
+        "maxLaunchDelaySeconds" -> app.maxLaunchDelay,
+        "container" -> app.container,
+        "healthChecks" -> app.healthChecks,
+        "dependencies" -> app.dependencies,
+        "upgradeStrategy" -> app.upgradeStrategy,
+        "labels" -> app.labels,
+        "acceptedResourceRoles" -> app.acceptedResourceRoles,
+        "version" -> app.version
+      )
     }
   }
 

@@ -60,10 +60,10 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--webui_url` (Optional. Default: None): The url of the Marathon web ui. It
     is passed to Mesos to be used in links back to the Marathon UI. If not set,
     the url to the leading instance will be sent to Mesos.
-* `--local_port_max` (Optional. Default: 20000): Max port number to use when
-    assigning ports to apps.
-* `--local_port_min` (Optional. Default: 10000): Min port number to use when
-    assigning ports to apps.
+* `--local_port_max` (Optional. Default: 20000): Max port number to use when assigning globally unique service ports
+    to apps.
+* `--local_port_min` (Optional. Default: 10000): Min port number to use when assigning globally unique service ports
+    to apps.
 * <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
     number of tasks per Mesos offer. Usually,
     there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.

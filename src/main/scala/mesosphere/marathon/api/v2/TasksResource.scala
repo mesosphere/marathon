@@ -47,7 +47,7 @@ class TasksResource @Inject() (
     val appIds = taskTracker.list.keySet
 
     val appToPorts = appIds.map { appId =>
-      appId -> service.getApp(appId).map(_.servicePorts()).getOrElse(Nil)
+      appId -> service.getApp(appId).map(_.servicePorts).getOrElse(Nil)
     }.toMap
 
     val health = appIds.flatMap { appId =>
