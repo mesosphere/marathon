@@ -64,14 +64,17 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     assigning ports to apps.
 * `--local_port_min` (Optional. Default: 10000): Min port number to use when
     assigning ports to apps.
-* `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this number of tasks per Mesos offer. Usually,
-  there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
-* `--max_tasks_per_offer_cycle` (Optional. Default: 1000): Launch at most this number of tasks per Mesos offer cycle.
-  A larger value speeds up launching new tasks.
-  Yet, choosing a too large value might overwhelm Mesos/Marathon with processing task updates.
+* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
+    number of tasks per Mesos offer. Usually,
+    there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
+* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer_cycle` (Optional. Default: 1000): Launch at
+    most this number of tasks per Mesos offer cycle.
+    A larger value speeds up launching new tasks.
+    Yet, choosing a too large value might overwhelm Mesos/Marathon with processing task updates.
 * `--mesos_role` (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
     for the specified role in addition to resources with the role designation '*'.
-* `--default_accepted_resource_roles` (Optional. Default: all roles): Default for the `"acceptedResourceRoles"`
+* <span class="label label-default">v0.9.0</span> `--default_accepted_resource_roles` (Optional. Default: all roles):
+    Default for the `"acceptedResourceRoles"`
     attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
     use this value for launching new tasks. Examples: `*`, `production,*`, `production`
 * `--mesos_user` (Optional. Default: current user): Mesos user for
@@ -149,10 +152,13 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 Note: all debug flags are for debugging purposes only and should not be used in production settings.
 All debug flags are experimental and subject of change.
 
-* `--logging-level` (Optional.): Set the logging level of the application. 
+* <span class="label label-default">v0.8.2</span> `--logging_level` (Optional.):
+    Set the logging level of the application.
     Use one of `off`, `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `all`.
-* `--enable_metrics` (Optional.): Enable metrics for all service method calls.
+* <span class="label label-default">v0.8.2</span> `--enable_metrics` (Optional.):
+    Enable metrics for all service method calls.
     The execution time per method is available via the metrics endpoint.
-* `--enable_tracing` (Optional.): Enable tracing for all service method calls.
+* <span class="label label-default">v0.8.2</span> `--enable_tracing` (Optional.):
+    Enable tracing for all service method calls.
     Around the execution of every service method a trace log message is issued.
     
