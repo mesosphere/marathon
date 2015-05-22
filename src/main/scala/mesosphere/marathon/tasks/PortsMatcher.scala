@@ -39,7 +39,11 @@ class PortsMatcher(
   /**
     * @return the resulting assigned (host) ports.
     */
-  def ports: Seq[Long] = portRanges.map(_.flatMap(_.ranges.flatMap(_.asScala()))).getOrElse(Nil)
+  def ports: Seq[Long] = for {
+    resource <- portRanges.getOrElse(Nil)
+    range <- resource.ranges
+    port <- range.asScala()
+  } yield port
 
   private[this] def portsWithRoles: Option[Seq[PortWithRole]] = {
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
@@ -59,11 +63,11 @@ class PortsMatcher(
         mappedPortRanges(mappings)
 
       case (appPorts, None) if app.requirePorts =>
-        findPortsInOfferer(appPorts, failLog = true)
+        findPortsInOffer(appPorts, failLog = true)
 
       case (appPorts, None) if !app.ports.contains(Integer.valueOf(0)) =>
-        // we try to use the user supplied ports if possible, fallback to dynamically assigned ports
-        findPortsInOfferer(appPorts, failLog = false).orElse(randomPorts(appPorts.size))
+        // We try to use the user supplied ports as host ports if possible, fallback to dynamically assigned ports.
+        findPortsInOffer(appPorts, failLog = false).orElse(randomPorts(appPorts.size))
 
       case (appPorts, None) =>
         randomPorts(appPorts.size)
@@ -71,10 +75,9 @@ class PortsMatcher(
   }
 
   /**
-    * Try to satisfy all app.ports exactly (not dynamically) if that's possible to do with one of the offered
-    * ranges.
-    */
-  private[this] def findPortsInOfferer(requiredPorts: Seq[Integer], failLog: Boolean): Option[Seq[PortWithRole]] = {
+   * Try to find supplied ports in offer. Returns `None` if not all ports were found.
+   */
+  private[this] def findPortsInOffer(requiredPorts: Seq[Integer], failLog: Boolean): Option[Seq[PortWithRole]] = {
     hasExpectedSizeOpt(expectedSize = requiredPorts.size) {
       requiredPorts.sorted.iterator.map { port =>
         offeredPortRanges.find(_.scalaRange.contains(port)).map { offeredRange =>
@@ -88,7 +91,7 @@ class PortsMatcher(
   }
 
   /**
-    * Choose ports from the available ports randomly.
+    * Choose random ports from offer.
     */
   private[this] def randomPorts(numberOfPorts: Int): Option[Seq[PortWithRole]] = {
     hasExpectedSizeOpt(expectedSize = numberOfPorts) {
@@ -100,9 +103,8 @@ class PortsMatcher(
   }
 
   /**
-    * Returns Some(ports) if all zero-valued docker host-ports
-    * can be assigned to some port from the resource offer, AND all other
-    * (non-zero-valued) docker host-ports are available in the resource offer.
+    * Try to find all non-zero host ports in offer and use random ports from the offer for dynamic host ports (=0).
+    * Return `None` if not all host ports could be assigned this way.
     */
   private[this] def mappedPortRanges(mappings: Seq[PortMapping]): Option[Seq[PortWithRole]] = {
     hasExpectedSizeOpt(expectedSize = mappings.size) {
