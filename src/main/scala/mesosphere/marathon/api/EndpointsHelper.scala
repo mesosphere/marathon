@@ -21,7 +21,7 @@ object EndpointsHelper {
       val cleanId = app.id.safePath.replaceAll("\\s+", "_")
       val tasks = taskTracker.get(app.id)
 
-      val servicePorts = app.servicePorts()
+      val servicePorts = app.servicePorts
 
       if (servicePorts.isEmpty) {
         sb.append(s"${cleanId}$delimiter $delimiter")
