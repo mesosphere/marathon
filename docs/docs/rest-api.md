@@ -32,6 +32,8 @@ title: REST API
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
   * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Revert or cancel the deployment with `deploymentId`
+* [Event Stream](#event-stream)
+  * [GET /v2/events](#get-/v2/events): Attach to the event stream
 * [Event Subscriptions](#event-subscriptions)
   * [POST /v2/eventSubscriptions](#post-/v2/eventsubscriptions): Register a callback URL as an event subscriber
   * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
@@ -2208,6 +2210,52 @@ Content-Length: 0
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 {% endhighlight %}
+
+
+### Event Stream
+
+#### GET `/v2/events`
+
+<span class="label label-default">v0.9.0</span>
+
+Attach to the marathon event stream.
+
+To use this endpoint, the client has to accept the text/event-stream content type.
+Please note: a request to this endpoint will not be closed by the server.
+If an event happens on the server side, this event will be propagated to the client immediately.
+See [Server Sent Events](http://www.w3schools.com/html/html5_serversentevents.asp) for a more detailed explanation.
+
+**Request:**
+
+```
+GET /v2/events HTTP/1.1
+Accept: text/event-stream
+Accept-Encoding: gzip, deflate
+Host: localhost:8080
+User-Agent: HTTPie/0.8.0
+```
+
+**Response:**
+
+```
+HTTP/1.1 200 OK
+Cache-Control: no-cache, no-store, must-revalidate
+Connection: close
+Content-Type: text/event-stream;charset=UTF-8
+Expires: 0
+Pragma: no-cache
+Server: Jetty(8.1.15.v20140411)
+
+```
+
+If an event happens on the server side, it is sent as plain json prepended with the mandatory `data:` field.
+
+**Response:**
+```
+data: {"remoteAddress":"96.23.11.158","eventType":"event_stream_attached","timestamp":"2015-04-28T12:14:57.812Z"}
+
+data: {"groupId":"/","version":"2015-04-28T12:24:12.098Z","eventType":"group_change_success","timestamp":"2015-04-28T12:24:12.224Z"}
+```
 
 ### Event Subscriptions
 

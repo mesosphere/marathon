@@ -82,7 +82,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   def provideHttpEventStreamActor(system: ActorSystem,
                                   @Named(EventModule.busName) eventBus: EventStream): ActorRef = {
-    val outstanding = 50 //yet another command line parameter??
+    val outstanding = conf.eventStreamMaxOutstandingMessages.get.getOrElse(50)
     system.actorOf(Props(classOf[HttpEventStreamActor], eventBus, outstanding), "HttpEventStream")
   }
 

@@ -4,11 +4,10 @@ import akka.actor.{ ActorSystem, Props }
 import akka.event.EventStream
 import akka.testkit._
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.event.http.HttpEventStreamActor.{ HttpEventStreamConnectionClosed, HttpEventStreamConnectionOpen, HttpEventStreamIncomingMessage }
-import org.mockito.Mockito.{ when => call, verify }
+import mesosphere.marathon.event.http.HttpEventStreamActor.{ HttpEventStreamConnectionClosed, HttpEventStreamConnectionOpen }
+import org.mockito.Mockito.{ when => call }
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
-import play.api.libs.json.Json
 
 class HttpEventStreamActorTest extends TestKit(ActorSystem())
     with MarathonSpec with Matchers with GivenWhenThen with MockitoSugar with ImplicitSender with BeforeAndAfter {
@@ -38,21 +37,6 @@ class HttpEventStreamActorTest extends TestKit(ActorSystem())
 
     Then("The actor is unsubscribed from the event stream")
     streamActor.underlyingActor.clients should have size 0
-  }
-
-  test("An incoming message will be replied") {
-    Given("A registered handler")
-    val handle = mock[HttpEventStreamHandle]
-    call(handle.id).thenReturn("1")
-    streamActor ! HttpEventStreamConnectionOpen(handle)
-    streamActor.underlyingActor.clients should have size 1
-    val message = "Hello"
-
-    When("An incoming message is send")
-    streamActor ! HttpEventStreamIncomingMessage(handle, message)
-
-    Then("A response is send to the handle")
-    verify(handle).sendMessage(Json.stringify(Json.obj("received" -> message)))
   }
 
   var streamActor: TestActorRef[HttpEventStreamActor] = _

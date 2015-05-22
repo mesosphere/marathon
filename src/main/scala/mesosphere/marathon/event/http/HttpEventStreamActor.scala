@@ -27,10 +27,9 @@ class HttpEventStreamActor(eventStream: EventStream, maxOutstandingMessages: Int
   private[this] val log = Logger.getLogger(getClass)
 
   override def receive: Receive = {
-    case HttpEventStreamConnectionOpen(handle)           => addHandler(handle)
-    case HttpEventStreamConnectionClosed(handle)         => removeHandler(handle)
-    case HttpEventStreamIncomingMessage(handle, message) => sendReply(handle, message)
-    case Terminated(actor)                               => removeActor(actor)
+    case HttpEventStreamConnectionOpen(handle)   => addHandler(handle)
+    case HttpEventStreamConnectionClosed(handle) => removeHandler(handle)
+    case Terminated(actor)                       => removeActor(actor)
   }
 
   def addHandler(handle: HttpEventStreamHandle): Unit = {
@@ -60,14 +59,9 @@ class HttpEventStreamActor(eventStream: EventStream, maxOutstandingMessages: Int
         clients -= handle
     }
   }
-
-  def sendReply(handle: HttpEventStreamHandle, message: String): Unit = {
-    handle.sendMessage(Json.stringify(Json.obj("received" -> message)))
-  }
 }
 
 object HttpEventStreamActor {
   case class HttpEventStreamConnectionOpen(handler: HttpEventStreamHandle)
   case class HttpEventStreamConnectionClosed(handle: HttpEventStreamHandle)
-  case class HttpEventStreamIncomingMessage(handle: HttpEventStreamHandle, message: String)
 }
