@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.tasks.TaskTracker.{ InternalApp, App }
+import mesosphere.marathon.tasks.TaskTracker.{InternalApp, App}
 import mesosphere.marathon.{ BuildInfo, MarathonConf, StorageException }
 import mesosphere.util.BackToTheFuture.futureToFutureOption
 import mesosphere.util.ThreadPoolContext.context
@@ -41,9 +41,11 @@ class Migration @Inject() (
     },
     StorageVersions(0, 7, 0) -> {
       () =>
-        changeTasks(app => new InternalApp(app.appName.canonicalPath(), app.tasks, app.shutdown))
-        changeApps(app => app.copy(id = app.id.canonicalPath()))
-        putAppsIntoGroup()
+        for {
+          _ <- changeTasks(app => new InternalApp(app.appName.canonicalPath(), app.tasks, app.shutdown))
+          _ <- changeApps(app => app.copy(id = app.id.canonicalPath()))
+          _ <- putAppsIntoGroup()
+        } yield ()
     }
   )
 
