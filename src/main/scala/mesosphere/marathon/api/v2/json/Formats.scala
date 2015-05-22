@@ -250,6 +250,8 @@ trait EventFormats {
   implicit lazy val ApiPostEventWrites: Writes[ApiPostEvent] = Json.writes[ApiPostEvent]
   implicit lazy val SubscribeWrites: Writes[Subscribe] = Json.writes[Subscribe]
   implicit lazy val UnsubscribeWrites: Writes[Unsubscribe] = Json.writes[Unsubscribe]
+  implicit lazy val EventStreamAttachedWrites: Writes[EventStreamAttached] = Json.writes[EventStreamAttached]
+  implicit lazy val EventStreamDetachedWrites: Writes[EventStreamDetached] = Json.writes[EventStreamDetached]
   implicit lazy val AddHealthCheckWrites: Writes[AddHealthCheck] = Json.writes[AddHealthCheck]
   implicit lazy val RemoveHealthCheckWrites: Writes[RemoveHealthCheck] = Json.writes[RemoveHealthCheck]
   implicit lazy val FailedHealthCheckWrites: Writes[FailedHealthCheck] = Json.writes[FailedHealthCheck]
@@ -270,6 +272,31 @@ trait EventFormats {
     Json.writes[SchedulerRegisteredEvent]
   implicit lazy val SchedulerReregisteredEventWritesWrites: Writes[SchedulerReregisteredEvent] =
     Json.writes[SchedulerReregisteredEvent]
+
+  def eventToJson(event: MarathonEvent): JsValue = event match {
+    case event: AppTerminatedEvent         => Json.toJson(event)
+    case event: ApiPostEvent               => Json.toJson(event)
+    case event: Subscribe                  => Json.toJson(event)
+    case event: Unsubscribe                => Json.toJson(event)
+    case event: EventStreamAttached        => Json.toJson(event)
+    case event: EventStreamDetached        => Json.toJson(event)
+    case event: AddHealthCheck             => Json.toJson(event)
+    case event: RemoveHealthCheck          => Json.toJson(event)
+    case event: FailedHealthCheck          => Json.toJson(event)
+    case event: HealthStatusChanged        => Json.toJson(event)
+    case event: GroupChangeSuccess         => Json.toJson(event)
+    case event: GroupChangeFailed          => Json.toJson(event)
+    case event: DeploymentSuccess          => Json.toJson(event)
+    case event: DeploymentFailed           => Json.toJson(event)
+    case event: DeploymentStatus           => Json.toJson(event)
+    case event: DeploymentStepSuccess      => Json.toJson(event)
+    case event: DeploymentStepFailure      => Json.toJson(event)
+    case event: MesosStatusUpdateEvent     => Json.toJson(event)
+    case event: MesosFrameworkMessageEvent => Json.toJson(event)
+    case event: SchedulerDisconnectedEvent => Json.toJson(event)
+    case event: SchedulerRegisteredEvent   => Json.toJson(event)
+    case event: SchedulerReregisteredEvent => Json.toJson(event)
+  }
 }
 
 trait HealthCheckFormats {

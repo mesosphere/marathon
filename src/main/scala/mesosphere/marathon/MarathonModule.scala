@@ -16,6 +16,7 @@ import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup, ZooKeeperClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.event.EventModule
+import mesosphere.marathon.event.http.HttpEventStreamActor
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
@@ -34,6 +35,7 @@ object ModuleNames {
   final val NAMED_LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
   final val NAMED_SERIALIZE_GROUP_UPDATES = "SERIALIZE_GROUP_UPDATES"
+  final val NAMED_HTTP_EVENT_STREAM = "HTTP_EVENT_STREAM"
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
@@ -73,6 +75,15 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
 
+  }
+
+  @Named(ModuleNames.NAMED_HTTP_EVENT_STREAM)
+  @Provides
+  @Singleton
+  def provideHttpEventStreamActor(system: ActorSystem,
+                                  @Named(EventModule.busName) eventBus: EventStream): ActorRef = {
+    val outstanding = 50 //yet another command line parameter??
+    system.actorOf(Props(classOf[HttpEventStreamActor], eventBus, outstanding), "HttpEventStream")
   }
 
   @Provides

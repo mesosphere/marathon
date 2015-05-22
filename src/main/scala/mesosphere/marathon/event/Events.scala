@@ -77,10 +77,7 @@ final case class SchedulerDisconnectedEvent(
 
 // event subscriptions
 
-sealed trait MarathonSubscriptionEvent extends MarathonEvent {
-  def clientIp: String
-  def callbackUrl: String
-}
+sealed trait MarathonSubscriptionEvent extends MarathonEvent
 
 case class Subscribe(
   clientIp: String,
@@ -95,6 +92,16 @@ case class Unsubscribe(
   eventType: String = "unsubscribe_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSubscriptionEvent
+
+case class EventStreamAttached(
+  remoteAddress: String,
+  eventType: String = "event_stream_attached",
+  timestamp: String = Timestamp.now().toString) extends MarathonSubscriptionEvent
+
+case class EventStreamDetached(
+  remoteAddress: String,
+  eventType: String = "event_stream_detached",
+  timestamp: String = Timestamp.now().toString) extends MarathonSubscriptionEvent
 
 // health checks
 
