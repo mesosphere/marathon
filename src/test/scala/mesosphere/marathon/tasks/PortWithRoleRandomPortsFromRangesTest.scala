@@ -12,8 +12,7 @@ import scala.util.Random
 class PortWithRoleRandomPortsFromRangesTest extends MarathonSpec {
 
   private[this] def portRange(role: String, begin: Long, end: Long): PortRange = {
-    val range = Protos.Value.Range.newBuilder().setBegin(begin).setEnd(end).build()
-    PortRange(role, range)
+    PortRange(role, Range.inclusive(begin.toInt, end.toInt))
   }
 
   private[this] def withRandomSeeds(input: Seq[PortRange], expectedOutput: Iterable[PortWithRole]): Unit = {

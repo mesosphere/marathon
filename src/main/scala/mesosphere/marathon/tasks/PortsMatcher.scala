@@ -75,12 +75,12 @@ class PortsMatcher(
   }
 
   /**
-   * Try to find supplied ports in offer. Returns `None` if not all ports were found.
-   */
+    * Try to find supplied ports in offer. Returns `None` if not all ports were found.
+    */
   private[this] def findPortsInOffer(requiredPorts: Seq[Integer], failLog: Boolean): Option[Seq[PortWithRole]] = {
     hasExpectedSizeOpt(expectedSize = requiredPorts.size) {
       requiredPorts.sorted.iterator.map { port =>
-        offeredPortRanges.find(_.scalaRange.contains(port)).map { offeredRange =>
+        offeredPortRanges.find(_.range.contains(port)).map { offeredRange =>
           PortWithRole(offeredRange.role, port)
         } orElse {
           if (failLog) log.info(s"Couldn't find host port $port in any offered range for app [${app.id}]")
@@ -125,7 +125,7 @@ class PortsMatcher(
             Option(availablePortsWithoutStaticHostPorts.next())
           }
         case pm: PortMapping =>
-          offeredPortRanges.find(_.scalaRange.contains(pm.hostPort)) match {
+          offeredPortRanges.find(_.range.contains(pm.hostPort)) match {
             case Some(PortRange(role, _)) =>
               Some(PortWithRole(role, pm.hostPort))
             case None =>
@@ -145,8 +145,12 @@ class PortsMatcher(
     .filter(_.getName == Resource.PORTS)
     .to[Seq]
 
-  private[this] lazy val offeredPortRanges: Seq[PortRange] = offeredPortsResources
-    .flatMap(resource => resource.getRanges.getRangeList.asScala.map(PortRange(resource.getRole, _)))
+  private[this] lazy val offeredPortRanges: Seq[PortRange] =
+    for {
+      resource <- offeredPortsResources
+      rangeInResource <- resource.getRanges.getRangeList.asScala
+      range = Range.inclusive(rangeInResource.getBegin.toInt, rangeInResource.getEnd.toInt)
+    } yield PortRange(resource.getRole, range)
 
   private[this] def shuffledAvailablePorts: Iterator[PortWithRole] =
     PortWithRole.randomPortsFromRanges(random)(offeredPortRanges)
@@ -220,7 +224,7 @@ object PortsMatcher {
       *   of the sequence up to (excluding) the port index we started at.
       */
     def randomPortsFromRanges(random: Random = Random)(offeredPortRanges: Seq[PortRange]): Iterator[PortWithRole] = {
-      val numberOfOfferedPorts = offeredPortRanges.map(_.scalaRange.size).sum
+      val numberOfOfferedPorts = offeredPortRanges.map(_.range.size).sum
 
       if (numberOfOfferedPorts == 0) {
         return Iterator.empty
@@ -229,10 +233,10 @@ object PortsMatcher {
       def findStartPort(shuffled: Vector[PortRange], startPortIdx: Int): (Int, Int) = {
         var startPortIdxOfCurrentRange = 0
         val rangeIdx = shuffled.indexWhere {
-          case range: PortRange if startPortIdxOfCurrentRange + range.scalaRange.size > startPortIdx =>
+          case range: PortRange if startPortIdxOfCurrentRange + range.range.size > startPortIdx =>
             true
           case range: PortRange =>
-            startPortIdxOfCurrentRange += range.scalaRange.size
+            startPortIdxOfCurrentRange += range.range.size
             false
         }
 
@@ -254,11 +258,11 @@ object PortsMatcher {
     }
   }
 
-  case class PortRange(role: String, range: Protos.Value.Range) {
-    lazy val scalaRange: Range = range.getBegin.toInt to range.getEnd.toInt
+  case class PortRange(role: String, range: Range) {
+    lazy val protoRange: protos.Range = protos.Range(range.start.toLong, range.end.toLong)
 
-    def portsWithRolesIterator: Iterator[PortWithRole] = scalaRange.iterator.map(PortWithRole(role, _))
-    def firstNPorts(n: Int): Iterator[PortWithRole] = scalaRange.take(n).iterator.map(PortWithRole(role, _))
-    def withoutNPorts(n: Int): Iterator[PortWithRole] = scalaRange.drop(n).iterator.map(PortWithRole(role, _))
+    def portsWithRolesIterator: Iterator[PortWithRole] = range.iterator.map(PortWithRole(role, _))
+    def firstNPorts(n: Int): Iterator[PortWithRole] = range.take(n).iterator.map(PortWithRole(role, _))
+    def withoutNPorts(n: Int): Iterator[PortWithRole] = range.drop(n).iterator.map(PortWithRole(role, _))
   }
 }
