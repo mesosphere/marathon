@@ -5,7 +5,6 @@ import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{ RangesResource, Resource }
 import mesosphere.util.Logging
-import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Offer
 
 import scala.annotation.tailrec
@@ -140,17 +139,15 @@ class PortsMatcher(
     if (ports.size == expectedSize) Some(ports) else None
   }
 
-  private[this] lazy val offeredPortsResources: Seq[Protos.Resource] = offer.getResourcesList.asScala
-    .filter(resource => acceptedResourceRoles(resource.getRole))
-    .filter(_.getName == Resource.PORTS)
-    .to[Seq]
-
-  private[this] lazy val offeredPortRanges: Seq[PortRange] =
-    for {
-      resource <- offeredPortsResources
+  private[this] lazy val offeredPortRanges: Seq[PortRange] = {
+    val portRangeIter = for {
+      resource <- offer.getResourcesList.asScala.iterator
+      if acceptedResourceRoles(resource.getRole) && resource.getName == Resource.PORTS
       rangeInResource <- resource.getRanges.getRangeList.asScala
       range = Range.inclusive(rangeInResource.getBegin.toInt, rangeInResource.getEnd.toInt)
     } yield PortRange(resource.getRole, range)
+    portRangeIter.to[Seq]
+  }
 
   private[this] def shuffledAvailablePorts: Iterator[PortWithRole] =
     PortWithRole.randomPortsFromRanges(random)(offeredPortRanges)
@@ -243,15 +240,15 @@ object PortsMatcher {
         (rangeIdx, startPortIdx - startPortIdxOfCurrentRange)
       }
 
-      val shuffled = Random.shuffle(offeredPortRanges).toVector
-      val startPortIdx = Random.nextInt(numberOfOfferedPorts)
+      val shuffled = random.shuffle(offeredPortRanges).toVector
+      val startPortIdx = random.nextInt(numberOfOfferedPorts)
 
       val (rangeIdx, portInRangeIdx) = findStartPort(shuffled, startPortIdx)
       val startRangeOrig = shuffled(rangeIdx)
 
       val startRange = startRangeOrig.withoutNPorts(portInRangeIdx)
-      val afterStartRange = shuffled.slice(rangeIdx + 1, shuffled.length).flatMap(_.portsWithRolesIterator)
-      val beforeStartRange = shuffled.slice(0, rangeIdx).flatMap(_.portsWithRolesIterator)
+      val afterStartRange = shuffled.slice(rangeIdx + 1, shuffled.length).iterator.flatMap(_.portsWithRolesIterator)
+      val beforeStartRange = shuffled.slice(0, rangeIdx).iterator.flatMap(_.portsWithRolesIterator)
       val endRange = startRangeOrig.firstNPorts(portInRangeIdx)
 
       startRange ++ afterStartRange ++ beforeStartRange ++ endRange
