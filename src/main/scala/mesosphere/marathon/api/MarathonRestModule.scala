@@ -1,10 +1,11 @@
 package mesosphere.marathon.api
 
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.google.inject.Scopes
 import mesosphere.chaos.http.RestModule
 import mesosphere.jackson.CaseClassModule
 import mesosphere.marathon.api.v2.json.MarathonModule
-import com.google.inject.Scopes
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import mesosphere.marathon.event.http.HttpEventStreamServlet
 
 class MarathonRestModule extends RestModule {
 
@@ -14,7 +15,6 @@ class MarathonRestModule extends RestModule {
   )
 
   protected override def configureServlets() {
-    super.configureServlets()
 
     // Map some exceptions to HTTP responses
     bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
@@ -40,6 +40,10 @@ class MarathonRestModule extends RestModule {
 
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
     filter("/*").through(classOf[CacheDisablingFilter])
-  }
 
+    bind(classOf[HttpEventStreamServlet]).asEagerSingleton()
+    serve("/v2/events").`with`(classOf[HttpEventStreamServlet])
+
+    super.configureServlets()
+  }
 }

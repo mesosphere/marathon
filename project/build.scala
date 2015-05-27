@@ -164,6 +164,7 @@ object Dependencies {
     jodaConvert % "compile",
     jerseyServlet % "compile",
     jerseyMultiPart % "compile",
+    jettyEventSource % "compile",
     uuidGenerator % "compile",
     jGraphT % "compile",
     hadoopHdfs % "compile",
@@ -190,6 +191,7 @@ object Dependency {
     val Spray = "1.3.2"
     val TwitterCommons = "0.0.76"
     val Jersey = "1.18.1"
+    val JettyEventSource = "1.0.0"
     val JodaTime = "2.3"
     val JodaConvert = "1.6"
     val UUIDGenerator = "3.1.3"
@@ -216,6 +218,7 @@ object Dependency {
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
+  val jettyEventSource = "org.eclipse.jetty" % "jetty-eventsource-servlet" % V.JettyEventSource
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert

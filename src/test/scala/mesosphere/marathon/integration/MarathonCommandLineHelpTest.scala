@@ -19,8 +19,7 @@ class MarathonCommandLineHelpTest
     val cwd = new File(".")
     val process = ProcessKeeper.startMarathon(
       cwd, env = Map.empty, arguments = List("--help"),
-      startupLine = "--help                                      Show help message")
+      startupLine = "Show help message")
     assert(process.exitValue() == 0)
   }
-
 }

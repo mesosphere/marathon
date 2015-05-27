@@ -128,7 +128,7 @@ class MarathonStore[S <: MarathonState[_, S]](
         // the native mesos code returns an ExecutionException without cause. Therefore, we cannot robustly
         // differentiate between exceptions which are "normal" and exceptions which indicate real errors
         // and we have to log them all.
-        log.warn(s"error while calling $getClass.names() for prefix $prefix", e)
+        log.warn(s"exception while calling $getClass.names() for prefix $prefix", e)
         Iterator.empty
     }
   }
