@@ -77,7 +77,7 @@ class PortsMatcher(
     * Try to find supplied ports in offer. Returns `None` if not all ports were found.
     */
   private[this] def findPortsInOffer(requiredPorts: Seq[Integer], failLog: Boolean): Option[Seq[PortWithRole]] = {
-    hasExpectedSizeOpt(expectedSize = requiredPorts.size) {
+    takeEnoughPortsOrNone(expectedSize = requiredPorts.size) {
       requiredPorts.sorted.iterator.map { port =>
         offeredPortRanges.find(_.range.contains(port)).map { offeredRange =>
           PortWithRole(offeredRange.role, port)
@@ -85,7 +85,7 @@ class PortsMatcher(
           if (failLog) log.info(s"Couldn't find host port $port in any offered range for app [${app.id}]")
           None
         }
-      }.takeWhile(_.isDefined).flatten.to[Seq]
+      }
     }
   }
 
@@ -93,8 +93,8 @@ class PortsMatcher(
     * Choose random ports from offer.
     */
   private[this] def randomPorts(numberOfPorts: Int): Option[Seq[PortWithRole]] = {
-    hasExpectedSizeOpt(expectedSize = numberOfPorts) {
-      shuffledAvailablePorts.take(numberOfPorts).to[Seq]
+    takeEnoughPortsOrNone(expectedSize = numberOfPorts) {
+      shuffledAvailablePorts.map(Some(_))
     } orElse {
       log.info(s"Couldn't find $numberOfPorts ports in offer for app [${app.id}]")
       None
@@ -106,7 +106,7 @@ class PortsMatcher(
     * Return `None` if not all host ports could be assigned this way.
     */
   private[this] def mappedPortRanges(mappings: Seq[PortMapping]): Option[Seq[PortWithRole]] = {
-    hasExpectedSizeOpt(expectedSize = mappings.size) {
+    takeEnoughPortsOrNone(expectedSize = mappings.size) {
       // non-dynamic hostPorts from port mappings
       val hostPortsFromMappings: Set[Integer] = mappings.iterator.map(_.hostPort).filter(_ != 0).toSet
 
@@ -131,12 +131,16 @@ class PortsMatcher(
               log.info(s"Cannot find range with host port ${pm.hostPort} for app [${app.id}]")
               None
           }
-      }.takeWhile(_.isDefined).flatten.to[Seq]
+      }
     }
   }
 
-  private[this] def hasExpectedSizeOpt[T](expectedSize: Int)(ports: Seq[T]): Option[Seq[T]] = {
-    if (ports.size == expectedSize) Some(ports) else None
+  /**
+    * Takes `expectedSize` ports from the given iterator if possible. Stops when encountering the first `None` port.
+    */
+  private[this] def takeEnoughPortsOrNone[T](expectedSize: Int)(ports: Iterator[Option[T]]): Option[Seq[T]] = {
+    val allocatedPorts = ports.takeWhile(_.isDefined).take(expectedSize).flatten.toVector
+    if (allocatedPorts.size == expectedSize) Some(allocatedPorts) else None
   }
 
   private[this] lazy val offeredPortRanges: Seq[PortRange] = {
@@ -150,7 +154,7 @@ class PortsMatcher(
   }
 
   private[this] def shuffledAvailablePorts: Iterator[PortWithRole] =
-    PortWithRole.randomPortsFromRanges(random)(offeredPortRanges)
+    PortWithRole.lazyRandomPortsFromRanges(random)(offeredPortRanges)
 }
 
 object PortsMatcher {
@@ -169,6 +173,32 @@ object PortsMatcher {
       * preserving the order of the ports.
       */
     def createPortsResources(resources: Seq[PortWithRole]): Seq[RangesResource] = {
+      /*
+       * Create as few ranges as possible from the given ports while preserving the order of the ports.
+       *
+       * It does not check if the given ports have different roles.
+       */
+      def createRanges(ranges: Seq[PortWithRole]): Seq[protos.Range] = {
+        val builder = Seq.newBuilder[protos.Range]
+
+        @tailrec
+        def process(lastRangeOpt: Option[protos.Range], next: Seq[PortWithRole]): Unit = {
+          (lastRangeOpt, next.headOption) match {
+            case (None, _) =>
+            case (Some(lastRange), None) =>
+              builder += lastRange
+            case (Some(lastRange), Some(nextPort)) if lastRange.end == nextPort.port - 1 =>
+              process(Some(lastRange.copy(end = nextPort.port.toLong)), next.tail)
+            case (Some(lastRange), Some(nextPort)) =>
+              builder += lastRange
+              process(Some(nextPort.toRange), next.tail)
+          }
+        }
+        process(ranges.headOption.map(_.toRange), ranges.tail)
+
+        builder.result()
+      }
+
       val builder = Seq.newBuilder[RangesResource]
       @tailrec
       def process(resources: Seq[PortWithRole]): Unit = resources.headOption match {
@@ -184,33 +214,11 @@ object PortsMatcher {
     }
 
     /**
-      * Create as few ranges as possible from the given ports while preserving the order of the ports.
+      * We want to make it less likely that we are reusing the same dynamic port for tasks of different apps.
+      * This way we allow load balancers to reconfigure before reusing the same ports.
       *
-      * It does not check if the given ports have different roles.
-      */
-    private[this] def createRanges(ranges: Seq[PortWithRole]): Seq[protos.Range] = {
-      val builder = Seq.newBuilder[protos.Range]
-
-      @tailrec
-      def process(lastRangeOpt: Option[protos.Range], next: Seq[PortWithRole]): Unit = {
-        (lastRangeOpt, next.headOption) match {
-          case (None, _) =>
-          case (Some(lastRange), None) =>
-            builder += lastRange
-          case (Some(lastRange), Some(nextPort)) if lastRange.end == nextPort.port - 1 =>
-            process(Some(lastRange.copy(end = nextPort.port.toLong)), next.tail)
-          case (Some(lastRange), Some(nextPort)) =>
-            builder += lastRange
-            process(Some(nextPort.toRange), next.tail)
-        }
-      }
-      process(ranges.headOption.map(_.toRange), ranges.tail)
-
-      builder.result()
-    }
-
-    /**
-      * We want to avoid reusing the same dynamic ports. Thus we shuffle the ports to make it less likely.
+      * Therefore we want to choose dynamic ports randomly from all the offered port ranges.
+      * We want to use consecutive ports to avoid excessive range fragmentation.
       *
       * The implementation idea:
       *
@@ -220,7 +228,7 @@ object PortsMatcher {
       *   we hit the last offered port with wrap around and start offering the ports at the beginning
       *   of the sequence up to (excluding) the port index we started at.
       */
-    def randomPortsFromRanges(random: Random = Random)(offeredPortRanges: Seq[PortRange]): Iterator[PortWithRole] = {
+    def lazyRandomPortsFromRanges(rand: Random = Random)(offeredPortRanges: Seq[PortRange]): Iterator[PortWithRole] = {
       val numberOfOfferedPorts = offeredPortRanges.map(_.range.size).sum
 
       if (numberOfOfferedPorts == 0) {
@@ -240,16 +248,19 @@ object PortsMatcher {
         (rangeIdx, startPortIdx - startPortIdxOfCurrentRange)
       }
 
-      val shuffled = random.shuffle(offeredPortRanges).toVector
-      val startPortIdx = random.nextInt(numberOfOfferedPorts)
-
+      val shuffled = rand.shuffle(offeredPortRanges).toVector
+      val startPortIdx = rand.nextInt(numberOfOfferedPorts)
       val (rangeIdx, portInRangeIdx) = findStartPort(shuffled, startPortIdx)
       val startRangeOrig = shuffled(rangeIdx)
 
       val startRange = startRangeOrig.withoutNPorts(portInRangeIdx)
-      val afterStartRange = shuffled.slice(rangeIdx + 1, shuffled.length).iterator.flatMap(_.portsWithRolesIterator)
-      val beforeStartRange = shuffled.slice(0, rangeIdx).iterator.flatMap(_.portsWithRolesIterator)
-      val endRange = startRangeOrig.firstNPorts(portInRangeIdx)
+
+      // These are created on demand if necessary
+      def afterStartRange: Iterator[PortWithRole] =
+        shuffled.slice(rangeIdx + 1, shuffled.length).iterator.flatMap(_.portsWithRolesIterator)
+      def beforeStartRange: Iterator[PortWithRole] =
+        shuffled.slice(0, rangeIdx).iterator.flatMap(_.portsWithRolesIterator)
+      def endRange: Iterator[PortWithRole] = startRangeOrig.firstNPorts(portInRangeIdx)
 
       startRange ++ afterStartRange ++ beforeStartRange ++ endRange
     }

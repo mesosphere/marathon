@@ -204,13 +204,21 @@ class PortsMatcherTest extends MarathonSpec {
     assert(matcher.matches)
     val firstPort = matcher.ports.head
 
-    val differentMatch = (1 to 1000).find { seed =>
+    val differentMatchWithSameSeed = (1 to 10).find { _ =>
       val rand = new Random(new util.Random(0))
       val matcher = new PortsMatcher(app, offer, random = rand)
       matcher.ports.head != firstPort
     }
 
-    assert(differentMatch.isDefined)
+    assert(differentMatchWithSameSeed.isEmpty)
+
+    val differentMatchWithDifferentSeed = (1 to 1000).find { seed =>
+      val rand = new Random(new util.Random(seed.toLong))
+      val matcher = new PortsMatcher(app, offer, random = rand)
+      matcher.ports.head != firstPort
+    }
+
+    assert(differentMatchWithDifferentSeed.isDefined)
   }
 
   test("fail if fixed mapped port from container cannot be satisfied") {
