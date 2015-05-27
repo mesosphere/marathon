@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.tasks.TaskTracker.{InternalApp, App}
+import mesosphere.marathon.tasks.TaskTracker.{ InternalApp, App }
 import mesosphere.marathon.{ BuildInfo, MarathonConf, StorageException }
 import mesosphere.util.BackToTheFuture.futureToFutureOption
 import mesosphere.util.ThreadPoolContext.context
