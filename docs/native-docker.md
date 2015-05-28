@@ -42,9 +42,9 @@ Docker version 1.0.0 or later installed on each slave node.
 
 3. Restart `mesos-slave` process to load the new configuration
 
-### Configure marathon
+### Configure Marathon
 
-1. Increase the marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html)
+1. Increase the Marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html)
 `--task_launch_timeout` to at least the executor timeout, in milliseconds, 
 you set on your slaves in the previous step.
 
@@ -136,10 +136,19 @@ random port from the range included in the Mesos resource offer". The resulting
 host ports for each task are exposed via the task details in the REST API and
 the Marathon web UI. `"hostPort"` is optional and defaults to `0`.
 
+"containerPort" refers to the port the application listens to inside of the container.
+
+Since <span class="label label-default">v0.9.0</span>: `"containerPort"` is optional and now defaults to `0`.
+When `"containerPort": 0`, Marathon assigns
+the container port the same value as the assigned `hostPort`. This is especially useful for apps that
+advertise the port they are listening on to the outside world for P2P communication. Without "containerPort": 0 they
+would erroneously advertise their private container port which is usually not the same as the externally visible host
+port.
+
 `"servicePort"` is a helper port intended for doing service discovery using
 a well-known port per service.  The assigned `servicePort` value is not used/interpreted by Marathon itself but
 supposed to used by load balancer infrastructure.
-See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.md).
+See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing).
 The `servicePort` parameter is optional
 and defaults to `0`.  Like `hostPort`, If the value is `0`, a random port will
 be assigned.  If a `servicePort` value is assigned by Marathon then Marathon guarantees that its value
@@ -165,7 +174,7 @@ default. This can be overridden; for example to also expose ports in the range
 See the [network configuration](https://docs.docker.com/articles/networking/)
 documentation for more details on how Docker handles networking.
 
-### Using a private Docker Repository
+### Using a Private Docker Repository
 
 To supply credentials to pull from a private repository, add a `.dockercfg` to
 the `uris` field of your app. The `$HOME` environment variable will then be set

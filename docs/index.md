@@ -21,9 +21,7 @@ An easy way to try out Marathon locally is using the [playa-mesos](https://githu
 #### Install Mesos
 
 One easy way is via your system's package manager.
-Current builds for major Linux distributions and Mac OS X are available
-from on the Mesosphere [downloads page](http://mesosphere.com/downloads/)
-or from Mesosphere's [repositories](http://mesosphere.com/2014/07/17/mesosphere-package-repositories/).
+Current builds and instructions on how to set up repositories for major Linux distributions and Mac OS X are available on the Mesosphere [downloads page](http://mesosphere.com/downloads/).
 
 If building from source, see the
 Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
@@ -41,11 +39,11 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
 
 1.  Download and unpack the latest Marathon release.
 
-    **For Mesos 0.20.0:**
+    **For Mesos 0.20.0+:**
 
     ``` bash
-    $ curl -O http://downloads.mesosphere.com/marathon/v0.7.5/marathon-0.7.5.tgz
-    $ tar xzf marathon-0.7.5.tgz
+    $ curl -O http://downloads.mesosphere.com/marathon/v0.8.1/marathon-0.8.1.tgz
+    $ tar xzf marathon-0.8.1.tgz
     ```
 
     **For Mesos 0.19.0:**
@@ -71,6 +69,17 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
 
     SHA-256 checksums are available by appending `.sha256` to the URLs.
 
+### Versioning
+
+Starting with version 0.9.0 Marathon will adhere to [semantic versioning](http://semver.org).
+That means we are committed to keep our documented REST API compatible across releases unless we change the MAJOR version
+(the first number in the version tuple). If you depend on undocumented features, please tell us about them by [raising a GitHub issue](https://github.com/mesosphere/marathon/issues/new). API parts which we explicitly marked as EXPERIMENTAL are exempted from this rule. We will not introduce new features in PATCH version increments (the last number in the version tuple).
+
+We might change the command line interfaces of the Marathon server process in rare cases in a MINOR version upgrade.
+Please check the release notes for these.
+
+Furthermore, we will provide release candidates for all new MAJOR/MINOR versions and invite our users to test them and
+give us feedback (particularly on violations of the versioning policy).
 
 ### Upgrading to a Newer Version
 
