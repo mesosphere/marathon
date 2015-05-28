@@ -68,7 +68,7 @@ class PortWithRoleRandomPortsFromRangesTest extends MarathonSpec {
     val start = System.nanoTime()
 
     val ports = PortWithRole.lazyRandomPortsFromRanges()(Seq(portRange("role", 1, Integer.MAX_VALUE)))
-    ports.take(3)
+    ports.take(3).toSeq
 
     val duration = FiniteDuration(System.nanoTime() - start, TimeUnit.NANOSECONDS)
     log.info(s"duration = ${duration.toMillis}ms")
@@ -79,14 +79,23 @@ class PortWithRoleRandomPortsFromRangesTest extends MarathonSpec {
     // otherwise this will be really really slow
     val start = System.nanoTime()
 
-    val ports = PortWithRole.lazyRandomPortsFromRanges()(
-      (0 to 500).map { _ => portRange("role", 1, Integer.MAX_VALUE) }
-    )
-    ports.take(3)
+    val iterations = 100
+    val numberOfRanges = 500
+    for (seed <- 1 to iterations) {
+      val rand = new Random(new util.Random(seed.toLong))
+      val ports = PortWithRole.lazyRandomPortsFromRanges(rand)(
+        (0 to numberOfRanges).map { i =>
+          val rangeSize: Long = Integer.MAX_VALUE.toLong / numberOfRanges.toLong
+          portRange("role", i * rangeSize, (i + 1) * rangeSize - 1)
+        }
+      )
+
+      val takenPorts = ports.take(3).toSet
+      assert(takenPorts.size == 3, s"unexpected taken ports: $takenPorts")
+    }
 
     val duration = FiniteDuration(System.nanoTime() - start, TimeUnit.NANOSECONDS)
-    log.info(s"duration = ${duration.toMillis}ms")
-    assert(duration.toMillis < 500)
+    log.info(s"duration = ${duration.toMillis}ms for $iterations iterations and $numberOfRanges ranges")
+    assert(duration.toMillis < 1000)
   }
-
 }
