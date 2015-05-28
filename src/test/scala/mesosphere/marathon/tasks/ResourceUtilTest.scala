@@ -21,6 +21,22 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions {
     assert(leftOvers == Seq(scalar("cpus", 1), ports("ports", 13 to 20), set("labels", Set("b"))))
   }
 
+  test("resource repeated consumed resources with the same name/role") {
+    val leftOvers = ResourceUtil.consumeResources(
+      Seq(scalar("cpus", 3)),
+      Seq(scalar("cpus", 2), scalar("cpus", 1))
+    )
+    assert(leftOvers == Seq())
+  }
+
+  test("resource consumption considers roles") {
+    val leftOvers = ResourceUtil.consumeResources(
+      Seq(scalar("cpus", 2), scalar("cpus", 2, role = "marathon")),
+      Seq(scalar("cpus", 0.5), scalar("cpus", 1, role = "marathon"), scalar("cpus", 0.5, role = "marathon"))
+    )
+    assert(leftOvers == Seq(scalar("cpus", 1.5), scalar("cpus", 0.5, role = "marathon")))
+  }
+
   // in the middle
   portsTest(consumedResource = Seq(10 to 10), baseResource = Seq(5 to 15), expectedResult = Some(Seq(5 to 9, 11 to 15)))
   portsTest(consumedResource = Seq(10 to 11), baseResource = Seq(5 to 15), expectedResult = Some(Seq(5 to 9, 12 to 15)))
@@ -113,12 +129,13 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions {
     }
   }
 
-  private[this] def scalar(name: String, d: Double): Resource = {
+  private[this] def scalar(name: String, d: Double, role: String = "*"): Resource = {
     Resource
       .newBuilder()
       .setName(name)
       .setType(Value.Type.SCALAR)
       .setScalar(Value.Scalar.newBuilder().setValue(d))
+      .setRole(role)
       .build()
   }
 }

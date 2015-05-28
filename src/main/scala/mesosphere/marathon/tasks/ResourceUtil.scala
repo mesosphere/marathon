@@ -118,18 +118,23 @@ object ResourceUtil {
     * Deduct usedResources from resources by matching them by name.
     */
   def consumeResources(resources: Iterable[Resource], usedResources: Iterable[Resource]): Iterable[Resource] = {
-    val usedResourceMap = usedResources.map(resource => ResourceMatchKey(resource) -> resource).toMap
+    val usedResourceMap: Map[ResourceMatchKey, Seq[Resource]] =
+      usedResources.groupBy(ResourceMatchKey(_)).mapValues(_.to[Seq])
 
-    resources.flatMap { resource =>
+    resources.flatMap { resource: Resource =>
       usedResourceMap.get(ResourceMatchKey(resource)) match {
-        case Some(usedResource) =>
-          if (resource.getType != usedResource.getType) {
-            log.warn("Different resource types for resource {}: {} and {}",
-              resource.getName, resource.getType, usedResource.getType)
-            None
+        case Some(usedResources: Seq[Resource]) =>
+          usedResources.foldLeft(Some(resource): Option[Resource]) {
+            case (Some(resource), usedResource) =>
+              if (resource.getType != usedResource.getType) {
+                log.warn("Different resource types for resource {}: {} and {}",
+                  resource.getName, resource.getType, usedResource.getType)
+                None
+              }
+              else
+                ResourceUtil.consumeResource(resource, usedResource)
+            case (None, _) => None
           }
-          else
-            ResourceUtil.consumeResource(resource, usedResource)
         case None => // if the resource isn't used, we keep it
           Some(resource)
       }
