@@ -67,6 +67,7 @@ class MarathonScheduler @Inject() (
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
     // Check for any tasks which were started but never entered TASK_RUNNING
     // TODO resourceOffers() doesn't feel like the right place to run this
+    log.info(offers.asScala)
     val toKill = taskTracker.checkStagedTasks
 
     if (toKill.nonEmpty) {
