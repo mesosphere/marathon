@@ -147,6 +147,7 @@ Marathon is managing applications on more than 100,000 nodes at these companies,
 * [Sailthru](http://www.sailthru.com/)
 * [Strava](https://www.strava.com)
 * [Viadeo](http://www.viadeo.com)
+* [Wikia](http://www.wikia.com)
 * [WooRank](http://www.woorank.com)
 * [Yelp](http://www.yelp.com/)
 
