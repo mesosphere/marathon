@@ -81,7 +81,7 @@ options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 ## Developing Marathon
 
-See [the documentation](https://mesosphere.github.io/marathon/docs//developing-vm.html) on how to run Marathon locally inside a virtual machine.
+See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm.html) on how to run Marathon locally inside a virtual machine.
 
 ### Running the development Docker
 
