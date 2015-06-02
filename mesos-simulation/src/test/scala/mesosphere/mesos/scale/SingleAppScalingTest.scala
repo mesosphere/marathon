@@ -35,7 +35,12 @@ class SingleAppScalingTest
 
   override def startMarathon(port: Int, args: String*): Unit = {
     val cwd = new File(".")
-    ProcessKeeper.startMarathon(cwd, env, List("--http_port", port.toString, "--zk", config.zk, "--enable_metrics") ++ args.toList,
+
+    val maxTasksPerOffer = Option(System.getenv("MARATHON_MAX_TASKS_PER_OFFER")).getOrElse("1")
+
+    ProcessKeeper.startMarathon(cwd, env,
+      List("--http_port", port.toString, "--zk", config.zk, "--enable_metrics",
+        "--max_tasks_per_offer", maxTasksPerOffer) ++ args.toList,
       mainClass = "mesosphere.mesos.simulation.SimulateMesosMain")
   }
 

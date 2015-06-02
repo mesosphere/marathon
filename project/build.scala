@@ -47,12 +47,32 @@ object MarathonBuild extends Build {
       integrationTestSettings
     ).dependsOn(root % "compile->compile; test->test").configs(IntegrationTest)
 
+  lazy val withFormatting = System.getProperty("sbt.log.format", "true").toBoolean
+
+  /**
+   * Determine scala test runner output. `-e` for reporting on standard error.
+   *
+   * W - without color
+   * D - show all durations
+   * S - show short stack traces
+   * F - show full stack traces
+   * U - unformatted mode
+   * I - show reminder of failed and canceled tests without stack traces
+   * T - show reminder of failed and canceled tests with short stack traces
+   * G - show reminder of failed and canceled tests with full stack traces
+   * K - exclude TestCanceled events from reminder
+   *
+   * http://scalatest.org/user_guide/using_the_runner
+   */
+  lazy val formattingTestArg = Tests.Argument(if (withFormatting) "-eDST" else "-eWUDST")
+
   lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
     Seq(
-      testOptions in Test := Seq(Tests.Argument("-l", "integration")),
-      testOptions in IntegrationTest := Seq(Tests.Argument("-n", "integration")))
+      testOptions in IntegrationTest := Seq(formattingTestArg, Tests.Argument("-n", "integration"))
+    )
 
   lazy val testSettings = Seq(
+    testOptions in Test := Seq(formattingTestArg, Tests.Argument("-l", "integration")),
     parallelExecution in Test := false,
     fork in Test := true
   )
