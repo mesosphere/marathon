@@ -19,10 +19,13 @@ import mesosphere.marathon.MarathonConf
 
 trait HttpEventConfiguration extends ScallopConf {
 
-  lazy val httpEventEndpoints = opt[List[String]]("http_endpoints",
-    descr = "The URLs of the event endpoints master",
+  lazy val httpEventEndpoints = opt[String]("http_endpoints",
+    descr = "The URLs of the event endpoints",
     required = false,
-    noshort = true)
+    noshort = true).map(parseHttpEventEndpoints)
+
+  private[this] def parseHttpEventEndpoints(str: String): List[String] =
+    str.split(',').map(_.trim).toList
 }
 
 class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends AbstractModule {
