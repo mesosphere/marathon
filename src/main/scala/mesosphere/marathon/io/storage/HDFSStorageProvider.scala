@@ -3,6 +3,7 @@ package mesosphere.marathon.io.storage
 import java.io.{ InputStream, OutputStream }
 import java.net.URI
 
+import mesosphere.marathon.io.IO
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{ FileSystem, Path }
 
@@ -15,7 +16,7 @@ import org.apache.hadoop.fs.{ FileSystem, Path }
 case class HDFSStorageItem(fs: FileSystem, fsPath: Path, base: String, path: String) extends StorageItem {
 
   def store(fn: (OutputStream) => Unit): StorageItem = {
-    using(fs.create(fsPath, true)) { fn }
+    IO.using(fs.create(fsPath, true)) { fn }
     this
   }
 

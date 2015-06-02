@@ -6,13 +6,14 @@ import org.apache.commons.io.FileUtils
 
 import scala.sys.ShutdownHookThread
 import scala.sys.process._
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
 import com.google.inject.Guice
 import org.rogach.scallop.ScallopConf
 import com.google.common.util.concurrent.{ AbstractIdleService, Service }
 import mesosphere.chaos.http.{ HttpService, HttpConf, HttpModule }
 import mesosphere.chaos.metrics.MetricsModule
-import java.io.File
+import java.io.{ Closeable, File }
 import java.util.concurrent.{ Executor, TimeUnit }
 import org.apache.log4j.Logger
 import scala.concurrent.{ duration, Await, Promise }
@@ -32,13 +33,13 @@ object ProcessKeeper {
   private[this] val ENV_MESOS_WORK_DIR: String = "MESOS_WORK_DIR"
 
   def startHttpService(port: Int, assetPath: String) = {
-    log.info(s"Start Http Service on port $port")
-    val conf = new ScallopConf(Array("--http_port", port.toString, "--assets_path", assetPath)) with HttpConf
-    conf.afterInit()
-    val injector = Guice.createInjector(new MetricsModule, new HttpModule(conf), new IntegrationTestModule)
-    val http = injector.getInstance(classOf[HttpService])
-    services = http :: services
-    http.startAsync().awaitRunning()
+    startService {
+      log.info(s"Start Http Service on port $port")
+      val conf = new ScallopConf(Array("--http_port", port.toString, "--assets_path", assetPath)) with HttpConf
+      conf.afterInit()
+      val injector = Guice.createInjector(new MetricsModule, new HttpModule(conf), new IntegrationTestModule)
+      injector.getInstance(classOf[HttpService])
+    }
   }
 
   def startZooKeeper(port: Int, workDir: String) {
@@ -77,7 +78,8 @@ object ProcessKeeper {
       upWhen = _.contains(startupLine))
   }
 
-  def startJavaProcess(name: String, arguments: List[String], cwd: File, env: Map[String, String], upWhen: String => Boolean): Process = {
+  def startJavaProcess(name: String, arguments: List[String],
+                       cwd: File = new File("."), env: Map[String, String] = Map.empty, upWhen: String => Boolean): Process = {
     log.info(s"Start java process $name with args: $arguments")
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes")
@@ -92,7 +94,7 @@ object ProcessKeeper {
     val logger = new ProcessLogger {
       def checkUp(out: String) = {
         log.info(s"$name: $out")
-        if (!up.isCompleted && upWhen(out)) up.success(true)
+        if (!up.isCompleted && upWhen(out)) up.trySuccess(true)
       }
       override def buffer[T](f: => T): T = f
       override def out(s: => String) = checkUp(s)
@@ -125,8 +127,42 @@ object ProcessKeeper {
   }
 
   def stopAllProcesses(): Unit = {
-    processes.foreach(p => Try(p.destroy()))
+
+    def waitForProcessesToFinish(): Unit = {
+      processes.foreach(p => Try(p.destroy()))
+
+      // Unfortunately, there seem to be race conditions in Process.exitValue.
+      // Thus this ugly workaround.
+      val waitForExitInThread = new Thread() {
+        override def run(): Unit = {
+          processes.foreach(_.exitValue())
+        }
+      }
+      waitForExitInThread.start()
+      try {
+        waitForExitInThread.join(1000)
+      }
+      finally {
+        waitForExitInThread.interrupt()
+      }
+    }
+
+    try waitForProcessesToFinish()
+    catch {
+      case NonFatal(e) =>
+        log.error("while waiting for processes to finish", e)
+        try waitForProcessesToFinish()
+        catch {
+          case NonFatal(e) =>
+            log.error("giving up waiting for processes to finish", e)
+        }
+    }
     processes = Nil
+  }
+
+  def startService(service: Service): Unit = {
+    services ::= service
+    service.startAsync().awaitRunning()
   }
 
   def stopAllServices(): Unit = {
@@ -135,9 +171,13 @@ object ProcessKeeper {
     services = Nil
   }
 
-  val shutDownHook: ShutdownHookThread = sys.addShutdownHook {
+  def shutdown(): Unit = {
     stopAllProcesses()
     stopAllServices()
+  }
+
+  val shutDownHook: ShutdownHookThread = sys.addShutdownHook {
+    shutdown()
   }
 
   def main(args: Array[String]) {

@@ -60,6 +60,12 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--webui_url` (Optional. Default: None): The url of the Marathon web ui. It
     is passed to Mesos to be used in links back to the Marathon UI. If not set,
     the url to the leading instance will be sent to Mesos.
+* <span class="label label-default">v0.9.0</span> `--leader_proxy_connection_timeout` (Optional. Default: 5000):
+    Maximum time, in milliseconds, for connecting to the
+    current Marathon leader from this Marathon instance.
+* <span class="label label-default">v0.9.0</span> `--leader_proxy_read_timeout` (Optional. Default: 10000):
+    Maximum time, in milliseconds, for reading from the
+    current Marathon leader.
 * `--local_port_max` (Optional. Default: 20000): Max port number to use when dynamically assigning globally unique
     service ports to apps. If you assign your service port statically in your app definition, it does
     not have to be in this range.

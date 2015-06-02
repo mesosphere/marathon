@@ -63,6 +63,26 @@ on task launch.
 If you rely on disk limits, you also need to configure Mesos appropriately. This includes configuring the correct
 isolator and enabling disk quotas enforcement with `--enforce_container_disk_quota`.
 
+#### Improved proxying to current leader
+
+One of the Marathon instances is always elected as a leader and is the only instance processing your requests.
+For convenience, Marathon has long proxied all requests to non-leaders to the current leader so that
+you do not have to lookup the current leader yourself or are annoyed by redirects.
+
+This proxying has now been improved and gained additional configuration parameters:
+
+* `--leader_proxy_connection_timeout` (Optional. Default: 5000):
+    Maximum time, in milliseconds, for connecting to the
+    current Marathon leader from this Marathon instance.
+* `--leader_proxy_read_timeout` (Optional. Default: 10000):
+    Maximum time, in milliseconds, for reading from the
+    current Marathon leader.
+
+These bugs are now obsolete:
+
+- #1540 A marathon instance should never proxy to itself
+- #1541 Proxying Marathon requests should use timeouts
+
 #### Relative URL paths in the UI
 
 The UI now uses relative URL paths making it easier to run Marathon behind a reverse proxy.

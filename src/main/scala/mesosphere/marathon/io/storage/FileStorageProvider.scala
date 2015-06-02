@@ -2,6 +2,8 @@ package mesosphere.marathon.io.storage
 
 import java.io._
 
+import mesosphere.marathon.io.IO
+
 /**
   * The local file system implementation.
   *
@@ -11,14 +13,14 @@ import java.io._
 case class FileStorageItem(file: File, basePath: File, path: String, baseUrl: String) extends StorageItem {
 
   def store(fn: OutputStream => Unit): FileStorageItem = {
-    createDirectory(file.getParentFile)
-    using(new FileOutputStream(file)) { fn }
+    IO.createDirectory(file.getParentFile)
+    IO.using(new FileOutputStream(file)) { fn }
     this
   }
 
   def moveTo(path: String): FileStorageItem = {
     val to = new File(basePath, path)
-    moveFile(file, to)
+    IO.moveFile(file, to)
     cleanUpDir(file.getParentFile)
     FileStorageItem(to, basePath, path, url)
   }
