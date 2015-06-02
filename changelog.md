@@ -13,6 +13,16 @@ on task launch.
 If you rely on disk limits, you also need to configure Mesos appropriately. This includes configuring the correct
 isolator and enabling disk quotas enforcement with `--enforce_container_disk_quota`.
 
+#### New format for the `http_endpoints` parameter
+
+We changed the format of the `http_endpoints` parameters from a
+space-separated to a comma-separated list of endpoints, in order to be
+more consistent with the documentation and with the format used in other
+parameters.
+
+WARNING: If you use the `http_endpoints` parameter with multiple space
+separated URLs, you will need to migrate to the comma-separated format.
+
 ## Changes from 0.8.1 to 0.8.2
 
 #### New health check option `ignoreHttp1xx`
