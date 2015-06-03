@@ -5,7 +5,7 @@ import java.lang.{ Double => JDouble }
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
-import mesosphere.marathon.api.v2.AppUpdate
+import mesosphere.marathon.api.v2.{ GroupUpdate, AppUpdate }
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -20,7 +20,6 @@ import play.api.libs.json._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
 
 object Formats extends Formats {
 
@@ -215,6 +214,15 @@ trait DeploymentFormats {
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.DefaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.DefaultVersion)
   )(Group(_, _, _, _, _), unlift(Group.unapply))
+
+  implicit lazy val GroupUpdateFormat: Format[GroupUpdate] = (
+    (__ \ "id").formatNullable[PathId] ~
+    (__ \ "apps").formatNullable[Set[AppDefinition]] ~
+    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[GroupUpdate]]]) ~
+    (__ \ "dependencies").formatNullable[Set[PathId]] ~
+    (__ \ "scaleBy").formatNullable[Double] ~
+    (__ \ "version").formatNullable[Timestamp]
+  ) (GroupUpdate(_, _, _, _, _, _), unlift(GroupUpdate.unapply))
 
   implicit lazy val URLToStringMapFormat: Format[Map[java.net.URL, String]] = Format(
     Reads.of[Map[String, String]]
