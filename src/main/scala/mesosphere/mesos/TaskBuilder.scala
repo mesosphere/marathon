@@ -37,7 +37,7 @@ class TaskBuilder(app: AppDefinition,
 
     ResourceMatcher.matchResources(
       offer, app, taskTracker.get(app.id),
-      acceptedResourceRoles = acceptedResourceRoles) match {
+      acceptedResourceRoles = acceptedResourceRoles) match { // TODOC
 
         case Some(ResourceMatch(cpu, mem, disk, ranges)) =>
           build(offer, cpu, mem, disk, ranges)
@@ -78,13 +78,17 @@ class TaskBuilder(app: AppDefinition,
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
-      // this is not enforced in Mesos without specifically configuring the appropriate enforcer
-      .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
+      // this is not enforced in Mesos without specifically configuring the appropriate enforcer .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
 
+    log.info("TODOC portsResources")
+    log.info(portsResources)
+    log.info("TODOC CPU")
+    log.info(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
     portsResources.foreach(builder.addResources(_))
+    // TODOC customResources.foreach(builder.addResources(_))
 
     val containerProto: Option[ContainerInfo] =
       app.container.map { c =>
@@ -163,7 +167,6 @@ class TaskBuilder(app: AppDefinition,
 
     Some(builder.build -> ports)
   }
-
 }
 
 object TaskBuilder {

@@ -44,6 +44,9 @@ case class AppDefinition(
 
   disk: JDouble = AppDefinition.DefaultDisk,
 
+  // TODOC
+  customResources: Map[String, JDouble] = AppDefinition.DefaultCustomResources,
+
   @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = AppDefinition.DefaultExecutor,
 
   constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
@@ -101,6 +104,11 @@ case class AppDefinition(
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
+    //TODOC
+    val customResource = customResources.map {
+      case(resourceName, value) =>
+        ScalarResource(resourceName, value)
+    }
     val appLabels = labels.map {
       case (key, value) =>
         mesos.Parameter.newBuilder
@@ -130,6 +138,9 @@ case class AppDefinition(
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
 
+    // TODOC foreach custom resource builder.addResources
+    customResource.foreach(builder.addResources(_))
+
     container.foreach { c => builder.setContainer(c.toProto()) }
 
     acceptedResourceRoles.foreach { acceptedResourceRoles =>
@@ -151,6 +162,9 @@ case class AppDefinition(
       proto.getResourcesList.asScala.map {
         r => r.getName -> (r.getScalar.getValue: JDouble)
       }.toMap
+
+    val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
+    val customResourcesMap: Map[String, JDouble] = resourcesMap.filter(!standardResources.contains(_._1))
 
     val commandOption =
       if (proto.getCmd.hasValue && proto.getCmd.getValue.nonEmpty)
@@ -177,6 +191,7 @@ case class AppDefinition(
       else
         None
 
+
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -194,6 +209,7 @@ case class AppDefinition(
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
+      customResources = customResourcesMap, //TODOC
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
@@ -293,6 +309,8 @@ object AppDefinition {
 
   val DefaultDisk: Double = 0.0
 
+  var DefaultCustomResources: Map[String, JDouble] = Map
+
   val DefaultExecutor: String = ""
 
   val DefaultConstraints: Set[Constraint] = Set.empty
@@ -336,7 +354,7 @@ object AppDefinition {
     private val app: AppDefinition)
       extends AppDefinition(
         app.id, app.cmd, app.args, app.user, app.env, app.instances, app.cpus,
-        app.mem, app.disk, app.executor, app.constraints, app.uris,
+        app.mem, app.disk, app.customResources, app.executor, app.constraints, app.uris,
         app.storeUrls, app.ports, app.requirePorts, app.backoff,
         app.backoffFactor, app.maxLaunchDelay, app.container,
         app.healthChecks, app.dependencies, app.upgradeStrategy,
