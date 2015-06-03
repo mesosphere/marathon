@@ -268,7 +268,7 @@ An HTTP health check is considered passing if (1) its HTTP response code is betw
 200 and 399, inclusive, and (2) its response is received within the
 `timeoutSeconds` period.
 
-If a task fails more than `maxConseutiveFailures`
+If a task fails more than `maxConsecutiveFailures`
 health checks consecutively, that task is killed causing Marathon to start
 more instances. These restarts are modulated like any other failing app
 by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
