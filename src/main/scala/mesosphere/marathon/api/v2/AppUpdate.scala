@@ -41,6 +41,8 @@ case class AppUpdate(
 
     disk: Option[JDouble] = None,
 
+    customResources: Option[Map[String, JDouble]] = None,
+
     executor: Option[String] = None,
 
     constraints: Option[Set[Constraint]] = None,
@@ -94,6 +96,7 @@ case class AppUpdate(
     cpus.getOrElse(app.cpus),
     mem.getOrElse(app.mem),
     disk.getOrElse(app.disk),
+    customResources.getOrElse(app.customResources),
     executor.getOrElse(app.executor),
     constraints.getOrElse(app.constraints),
     uris.getOrElse(app.uris),

@@ -39,8 +39,8 @@ class TaskBuilder(app: AppDefinition,
       offer, app, taskTracker.get(app.id),
       acceptedResourceRoles = acceptedResourceRoles) match { // TODOC
 
-        case Some(ResourceMatch(cpu, mem, disk, ranges)) =>
-          build(offer, cpu, mem, disk, ranges)
+        case Some(ResourceMatch(cpu, mem, disk, ranges, customResources)) =>
+          build(offer, cpu, mem, disk, ranges, customResources)
 
         case _ =>
           log.debug(
@@ -52,7 +52,7 @@ class TaskBuilder(app: AppDefinition,
   }
 
   private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String,
-                    portsResources: Seq[RangesResource]) = {
+                    portsResources: Seq[RangesResource], customResources: Map[String, String]) = {
 
     val executor: Executor = if (app.executor == "") {
       config.executor
@@ -78,7 +78,15 @@ class TaskBuilder(app: AppDefinition,
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
-      // this is not enforced in Mesos without specifically configuring the appropriate enforcer .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
+    // this is not enforced in Mesos without specifically configuring the appropriate enforcer
+    // .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
+    customResources.foreach {
+      case (key, value) =>
+        builder.addResources(ScalarResource(key,
+          app.customResources(key),
+          customResources(key)))
+    }
+    // TODOC customResources.foreach(builder.addResources(_))
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
@@ -88,7 +96,6 @@ class TaskBuilder(app: AppDefinition,
     log.info("TODOC CPU")
     log.info(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
     portsResources.foreach(builder.addResources(_))
-    // TODOC customResources.foreach(builder.addResources(_))
 
     val containerProto: Option[ContainerInfo] =
       app.container.map { c =>

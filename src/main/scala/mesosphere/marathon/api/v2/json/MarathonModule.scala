@@ -236,6 +236,7 @@ object MarathonModule {
       cpus: Option[JDouble] = None,
       mem: Option[JDouble] = None,
       disk: Option[JDouble] = None,
+      customResources: Option[Map[String, JDouble]] = None,
       executor: Option[String] = None,
       constraints: Option[Set[Constraint]] = None,
       uris: Option[Seq[String]] = None,
@@ -253,7 +254,7 @@ object MarathonModule {
       acceptedResourceRoles: Option[Set[String]] = None,
       version: Option[Timestamp] = None) {
     def build(): AppUpdate = AppUpdate(
-      id, cmd, args, user, env, instances, cpus, mem, disk, executor, constraints,
+      id, cmd, args, user, env, instances, cpus, mem, disk, customResources, executor, constraints,
       uris, storeUrls, ports, requirePorts, backoff, backoffFactor, maxLaunchDelay,
       container, healthChecks, dependencies, upgradeStrategy, labels,
       acceptedResourceRoles,

@@ -106,7 +106,7 @@ case class AppDefinition(
     val diskResource = ScalarResource(Resource.DISK, disk)
     //TODOC
     val customResource = customResources.map {
-      case(resourceName, value) =>
+      case (resourceName, value) =>
         ScalarResource(resourceName, value)
     }
     val appLabels = labels.map {
@@ -164,7 +164,7 @@ case class AppDefinition(
       }.toMap
 
     val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
-    val customResourcesMap: Map[String, JDouble] = resourcesMap.filter(!standardResources.contains(_._1))
+    val customResourcesMap: Map[String, JDouble] = resourcesMap.filter(x => !standardResources.contains(x._1))
 
     val commandOption =
       if (proto.getCmd.hasValue && proto.getCmd.getValue.nonEmpty)
@@ -190,7 +190,6 @@ case class AppDefinition(
         Some(proto.getAcceptedResourceRoles.getRoleList.asScala.toSet)
       else
         None
-
 
     AppDefinition(
       id = proto.getId.toPath,
@@ -309,7 +308,7 @@ object AppDefinition {
 
   val DefaultDisk: Double = 0.0
 
-  var DefaultCustomResources: Map[String, JDouble] = Map
+  var DefaultCustomResources: Map[String, JDouble] = Map.empty
 
   val DefaultExecutor: String = ""
 

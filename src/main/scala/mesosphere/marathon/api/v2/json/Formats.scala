@@ -384,6 +384,7 @@ trait AppDefinitionFormats {
       (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)).withDefault(DefaultCpus) ~
       (__ \ "mem").readNullable[JDouble].withDefault(DefaultMem) ~
       (__ \ "disk").readNullable[JDouble].withDefault(DefaultDisk) ~
+      (__ \ "customResources").readNullable[Map[String, JDouble]].withDefault(DefaultCustomResources) ~
       (__ \ "executor").readNullable[String](Reads.pattern(executorPattern)).withDefault(DefaultExecutor) ~
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(DefaultConstraints) ~
       (__ \ "uris").readNullable[Seq[String]].withDefault(DefaultUris) ~
@@ -394,11 +395,11 @@ trait AppDefinitionFormats {
       (__ \ "backoffFactor").readNullable[Double].withDefault(DefaultBackoffFactor) ~
       (__ \ "maxLaunchDelaySeconds").readNullable[Long].withDefault(DefaultMaxLaunchDelay.toSeconds).asSeconds ~
       (__ \ "container").readNullable[Container] ~
-      (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(DefaultHealthChecks) ~
-      (__ \ "dependencies").readNullable[Set[PathId]].withDefault(DefaultDependencies)
+      (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(DefaultHealthChecks)
     )(AppDefinition(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { app =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
+          dependencies: Set[PathId],
           upgradeStrategy: UpgradeStrategy,
           labels: Map[String, String],
           version: Timestamp,
@@ -406,6 +407,7 @@ trait AppDefinitionFormats {
 
         val extraReads: Reads[ExtraFields] =
           (
+            (__ \ "dependencies").readNullable[Set[PathId]].withDefault(DefaultDependencies) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(DefaultUpgradeStrategy) ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(DefaultLabels) ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
@@ -414,6 +416,7 @@ trait AppDefinitionFormats {
 
         extraReads.map { extraFields =>
           app.copy(
+            dependencies = extraFields.dependencies,
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             version = extraFields.version,
@@ -439,6 +442,7 @@ trait AppDefinitionFormats {
         "cpus" -> app.cpus,
         "mem" -> app.mem,
         "disk" -> app.disk,
+        "customResources" -> app.customResources,
         "executor" -> app.executor,
         "constraints" -> app.constraints,
         "uris" -> app.uris,
@@ -473,6 +477,7 @@ trait AppDefinitionFormats {
       (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)) ~
       (__ \ "mem").readNullable[JDouble] ~
       (__ \ "disk").readNullable[JDouble] ~
+      (__ \ "customResources").readNullable[Map[String, JDouble]] ~
       (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)) ~
       (__ \ "constraints").readNullable[Set[Constraint]] ~
       (__ \ "uris").readNullable[Seq[String]] ~
@@ -483,11 +488,11 @@ trait AppDefinitionFormats {
       (__ \ "backoffFactor").readNullable[JDouble] ~
       (__ \ "maxLaunchDelaySeconds").readNullable[Long].map(_.map(_.seconds)) ~
       (__ \ "container").readNullable[Container] ~
-      (__ \ "healthChecks").readNullable[Set[HealthCheck]] ~
-      (__ \ "dependencies").readNullable[Set[PathId]]
+      (__ \ "healthChecks").readNullable[Set[HealthCheck]]
     )(AppUpdate(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { update =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
+          dependencies: Option[Set[PathId]],
           upgradeStrategy: Option[UpgradeStrategy],
           labels: Option[Map[String, String]],
           version: Option[Timestamp],
@@ -495,6 +500,7 @@ trait AppDefinitionFormats {
 
         val extraReads: Reads[ExtraFields] =
           (
+            (__ \ "dependencies").readNullable[Set[PathId]] ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]] ~
             (__ \ "version").readNullable[Timestamp] ~
@@ -503,6 +509,7 @@ trait AppDefinitionFormats {
 
         extraReads.map { extraFields =>
           update.copy(
+            dependencies = extraFields.dependencies,
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             version = extraFields.version,

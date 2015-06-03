@@ -17,19 +17,20 @@ object ResourceMatcher {
 
   private[this] val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
 
-  case class ResourceMatch(cpuRole: Role, memRole: Role, diskRole: Role, ports: Seq[RangesResource], customResources: Seq[Role])
+  case class ResourceMatch(cpuRole: Role, memRole: Role, diskRole: Role, ports: Seq[RangesResource],
+                           customResources: Map[String, Role])
 
   def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Set[MarathonTask],
                      acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {
     // TODOC ask if not supporting set resources is okay
     val groupedResources = offer.getResourcesList.asScala.groupBy(_.getName)
 
-//    log.info("TODOC Grouped Resources:")
-//    log.info(groupedResources)
-//    log.info("TODOC acceptedResourceRoles:")
-//    log.info(acceptedResourceRoles)
-//    log.info("TODOC app")
-//    log.info(app)
+    //    log.info("TODOC Grouped Resources:")
+    //    log.info(groupedResources)
+    //    log.info("TODOC acceptedResourceRoles:")
+    //    log.info(acceptedResourceRoles)
+    //    log.info("TODOC app")
+    //    log.info(app)
 
     def findScalarResourceRole(tpe: String, value: Double): Option[Role] =
       groupedResources.get(tpe).flatMap {
@@ -46,16 +47,13 @@ object ResourceMatcher {
     def cpuRoleOpt: Option[Role] = findScalarResourceRole(Resource.CPUS, app.cpus)
     def memRoleOpt: Option[Role] = findScalarResourceRole(Resource.MEM, app.mem)
     def diskRoleOpt: Option[Role] = findScalarResourceRole(Resource.DISK, app.disk)
-    def customRolesOpt: Option[Seq[Role]] = app.customResources
-      .filter(resource => findScalarResourceRole(resource._1, value._2))
-      .map(groupedResources.get(resource._1).map(_.getRole))
+    def customRolesOpt: Option[Map[String, Role]] = Some(app.customResources
+      .transform((key, value) => findScalarResourceRole(key, value).get)
+      .filter {
+        case (key, value) => value != None
+      })
 
-    def customResourcesFulfilled: Boolean = {
-      if (customRolesOpt.size != app.customResources.size)
-        false
-      else
-        true
-    }
+    def customResourcesFulfilled: Boolean = if (customRolesOpt.get.size == app.customResources.size) true else false
     log.info("TODOC customRolesOpt")
     log.info(customRolesOpt)
 
@@ -92,6 +90,6 @@ object ResourceMatcher {
       diskRole <- diskRoleOpt
       portRanges <- portsOpt
       if meetsAllConstraints && customResourcesFulfilled
-    } yield ResourceMatch(cpuRole, memRole, diskRole, portRanges, customRolesOpt)
+    } yield ResourceMatch(cpuRole, memRole, diskRole, portRanges, customRolesOpt.get)
   }
 }
