@@ -56,9 +56,9 @@ Instructions on how to install prepackaged releases are available [in the Marath
 
 ##### Building from Source
 
-1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
+1.  To build Marathon from source, check out this repo and submodules and use sbt to build a JAR:
 
-        git clone https://github.com/mesosphere/marathon.git
+        git clone --recursive https://github.com/mesosphere/marathon.git
         cd marathon
         sbt assembly
 
@@ -81,7 +81,7 @@ options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 ## Developing Marathon
 
-See [the documentation](https://mesosphere.github.io/marathon/docs//developing-vm.html) on how to run Marathon locally inside a virtual machine.
+See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm.html) on how to run Marathon locally inside a virtual machine.
 
 ### Running the development Docker
 

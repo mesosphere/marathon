@@ -78,8 +78,16 @@ class TaskBuilder(app: AppDefinition,
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
-      // this is not enforced in Mesos without specifically configuring the appropriate enforcer
-      .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
+
+    if (app.disk != 0) {
+      // This is only supported since Mesos 0.22.0 and will result in TASK_LOST messages in combination
+      // with older mesos versions. So if the user leaves this untouched, we will NOT pass it to
+      // Mesos. If the user chooses a value != 0, we assume that they rely on this value and we DO pass it to Mesos
+      // irrespective of the version.
+      //
+      // This is not enforced in Mesos without specifically configuring the appropriate enforcer.
+      builder.addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
+    }
     customResources.foreach {
       case (key, value) =>
         builder.addResources(ScalarResource(key, app.customResources(key), customResources(key)))

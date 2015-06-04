@@ -1,8 +1,0 @@
-tmp/
-
-!dist/
-
-dist/*
-!dist/img/
-!dist/main.css*
-!dist/main.js*

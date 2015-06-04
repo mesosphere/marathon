@@ -80,6 +80,26 @@ class TaskBuilderTest extends MarathonSpec {
     assert(portsResource.getRole() == "*")
   }
 
+  // #1583 Do not pass zero disk resource shares to Mesos
+  test("build does set disk resource to zero in TaskInfo") {
+    val offer = makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        disk = 0
+      )
+    )
+
+    val Some((taskInfo, _)) = task
+
+    def resourceOpt(name: String) = taskInfo.getResourcesList.asScala.find(_.getName == name)
+
+    assert(resourceOpt("disk") == None)
+  }
+
   test("build creates task with appropriate resource share also preserves role") {
     val offer = makeBasicOffer(
       cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000, role = "marathon"
