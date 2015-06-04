@@ -1,0 +1,3 @@
+[submodule "src/main/resources/assets"]
+	path = src/main/resources/assets
+	url = https://github.com/mesosphere/marathon-ui.git
