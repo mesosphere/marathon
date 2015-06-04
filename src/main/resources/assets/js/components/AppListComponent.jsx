@@ -19,6 +19,26 @@ var AppListComponent = React.createClass({
     return this.props.collection;
   },
 
+  getCollection: function () {
+    var collection = this.props.collection;
+    var filter = this.props.filter;
+
+    // Apply filter
+    if (this.props.filter) {
+      collection = collection.filter(function (model) {
+        if (model.id && model.id.indexOf(filter) > -1) {
+          return model;
+        }
+      });
+
+      if (this.props.onFilter) {
+        this.props.onFilter(collection);
+      }
+    }
+
+    return collection;
+  },
+
   sortCollectionBy: function (comparator) {
     var collection = this.props.collection;
     comparator =
@@ -30,8 +50,10 @@ var AppListComponent = React.createClass({
   },
 
   getAppNodes: function () {
+    var collection = this.getCollection();
+
     return (
-      this.props.collection.map(function (model) {
+      collection.map(function (model) {
         /* jshint trailing:false, quotmark:false, newcap:false */
         /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
         return (
@@ -126,7 +148,9 @@ var AppListComponent = React.createClass({
             </td>
           </tr>
           <tr className={noAppsClassSet}>
-            <td className="text-center" colSpan="6">No running apps.</td>
+            <td className="text-center" colSpan="6">
+              No running apps.
+            </td>
           </tr>
           <tr className={errorClassSet}>
             <td className="text-center text-danger" colSpan="6">
