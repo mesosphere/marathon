@@ -82,9 +82,7 @@ class TaskBuilder(app: AppDefinition,
       .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
     customResources.foreach {
       case (key, value) =>
-        builder.addResources(ScalarResource(key,
-          app.customResources(key),
-          customResources(key)))
+        builder.addResources(ScalarResource(key, app.customResources(key), customResources(key)))
     }
     // TODOC customResources.foreach(builder.addResources(_))
 
