@@ -37,7 +37,7 @@ class TaskBuilder(app: AppDefinition,
 
     ResourceMatcher.matchResources(
       offer, app, taskTracker.get(app.id),
-      acceptedResourceRoles = acceptedResourceRoles) match { // TODOC
+      acceptedResourceRoles = acceptedResourceRoles) match {
 
         case Some(ResourceMatch(cpu, mem, disk, ranges, customResources)) =>
           build(offer, cpu, mem, disk, ranges, customResources)
@@ -92,7 +92,6 @@ class TaskBuilder(app: AppDefinition,
       case (key, value) =>
         builder.addResources(ScalarResource(key, app.customResources(key), customResources(key)))
     }
-    // TODOC customResources.foreach(builder.addResources(_))
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
@@ -175,7 +174,6 @@ class TaskBuilder(app: AppDefinition,
           s"$numUnusedChecks of its defined health checks."
       )
     }
-    // TODOC test fail because can't find disk
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
     log.info("TODOC builder")
     log.info(builder.build.getResourcesList)

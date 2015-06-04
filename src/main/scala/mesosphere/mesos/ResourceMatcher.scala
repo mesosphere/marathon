@@ -15,8 +15,6 @@ object ResourceMatcher {
 
   private[this] val log = Logger.getLogger(getClass)
 
-  private[this] val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
-
   case class ResourceMatch(cpuRole: Role, memRole: Role, diskRole: Role, ports: Seq[RangesResource],
                            customResources: Map[String, Role])
 
@@ -48,7 +46,7 @@ object ResourceMatcher {
     def memRoleOpt: Option[Role] = findScalarResourceRole(Resource.MEM, app.mem)
     def diskRoleOpt: Option[Role] = findScalarResourceRole(Resource.DISK, app.disk)
     def customRolesOpt: Option[Map[String, Role]] = Some(app.customResources
-      .transform((key, value) => findScalarResourceRole(key, value).get)
+      .transform((key, value) => findScalarResourceRole(key, value).getOrElse(None))
       .filter {
         case (key, value) => value != None
       })

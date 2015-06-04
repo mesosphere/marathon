@@ -164,7 +164,8 @@ case class AppDefinition(
       }.toMap
 
     val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
-    val customResourcesMap: Map[String, JDouble] = resourcesMap.filter(x => !standardResources.contains(x._1))
+    val customResourcesMap: Map[String, JDouble] = resourcesMap.filter(
+      x => !standardResources.contains(x._1))
 
     val commandOption =
       if (proto.getCmd.hasValue && proto.getCmd.getValue.nonEmpty)
