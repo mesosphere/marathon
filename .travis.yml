@@ -1,4 +1,6 @@
 language: scala
+before_install:
+  - git submodule update --init --recursive
 before_script:
   - npm install -g npm@2.0.2
   - npm cache clear
