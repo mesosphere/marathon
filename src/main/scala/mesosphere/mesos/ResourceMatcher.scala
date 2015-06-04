@@ -20,15 +20,7 @@ object ResourceMatcher {
 
   def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Set[MarathonTask],
                      acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {
-    // TODOC ask if not supporting set resources is okay
     val groupedResources = offer.getResourcesList.asScala.groupBy(_.getName)
-
-    log.info("TODOC Grouped Resources:")
-    log.info(groupedResources)
-    //    log.info("TODOC acceptedResourceRoles:")
-    //    log.info(acceptedResourceRoles)
-    //    log.info("TODOC app")
-    //    log.info(app)
 
     def findScalarResourceRole(tpe: String, value: Double): Option[Role] =
       groupedResources.get(tpe).flatMap {
@@ -38,10 +30,7 @@ object ResourceMatcher {
             resource.getScalar.getValue >= value
           }.map(_.getRole)
       }
-    log.info("TODOC findScalarResourceRole Resource.CPUS")
-    log.info(findScalarResourceRole(Resource.CPUS, app.cpus))
 
-    // TODOC Resource.CPUS is just string "cpus", etc.
     def cpuRoleOpt: Option[Role] = findScalarResourceRole(Resource.CPUS, app.cpus)
     def memRoleOpt: Option[Role] = findScalarResourceRole(Resource.MEM, app.mem)
     def diskRoleOpt: Option[Role] = findScalarResourceRole(Resource.DISK, app.disk)
@@ -52,8 +41,6 @@ object ResourceMatcher {
       })
 
     def customResourcesFulfilled: Boolean = if (customRolesOpt.get.size == app.customResources.size) true else false
-    log.info("TODOC customRolesOpt")
-    log.info(customRolesOpt)
 
     def meetsAllConstraints: Boolean = {
       lazy val tasks = runningTasks
@@ -81,7 +68,6 @@ object ResourceMatcher {
         x
     }
 
-    //TODOC
     for {
       cpuRole <- cpuRoleOpt
       memRole <- memRoleOpt

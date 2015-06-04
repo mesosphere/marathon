@@ -96,10 +96,6 @@ class TaskBuilder(app: AppDefinition,
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
 
-    log.info("TODOC portsResources")
-    log.info(portsResources)
-    log.info("TODOC CPU")
-    log.info(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
     portsResources.foreach(builder.addResources(_))
 
     val containerProto: Option[ContainerInfo] =

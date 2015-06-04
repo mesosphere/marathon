@@ -44,7 +44,6 @@ case class AppDefinition(
 
   disk: JDouble = AppDefinition.DefaultDisk,
 
-  // TODOC
   customResources: Map[String, JDouble] = AppDefinition.DefaultCustomResources,
 
   @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = AppDefinition.DefaultExecutor,
@@ -104,7 +103,6 @@ case class AppDefinition(
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
-    //TODOC
     val customResource = customResources.map {
       case (resourceName, value) =>
         ScalarResource(resourceName, value)
@@ -138,7 +136,6 @@ case class AppDefinition(
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
 
-    // TODOC foreach custom resource builder.addResources
     customResource.foreach(builder.addResources(_))
 
     container.foreach { c => builder.setContainer(c.toProto()) }
@@ -209,7 +206,7 @@ case class AppDefinition(
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
-      customResources = customResourcesMap, //TODOC
+      customResources = customResourcesMap,
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
