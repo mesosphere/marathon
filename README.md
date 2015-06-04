@@ -97,6 +97,10 @@ If you want to inspect the contents of the Docker:
 
     docker run -i -t --entrypoint=/bin/bash marathon-head -s
 
+### Marathon UI
+
+To develop on the web UI look into the instructions of the [Marathon UI](https://github.com/mesosphere/marathon-ui) repository.
+
 ## Marathon Clients
 
 * [marathonctl](https://github.com/shoenig/marathonctl) A handy CLI tool for controlling Marathon
