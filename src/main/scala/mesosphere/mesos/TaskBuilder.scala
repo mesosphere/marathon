@@ -78,8 +78,8 @@ class TaskBuilder(app: AppDefinition,
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
-    // this is not enforced in Mesos without specifically configuring the appropriate enforcer
-    // .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
+      // this is not enforced in Mesos without specifically configuring the appropriate enforcer
+      .addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
     customResources.foreach {
       case (key, value) =>
         builder.addResources(ScalarResource(key,
@@ -169,9 +169,10 @@ class TaskBuilder(app: AppDefinition,
           s"$numUnusedChecks of its defined health checks."
       )
     }
-
+    // TODOC test fail because can't find disk
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
-
+    log.info("TODOC builder")
+    log.info(builder.build.getResourcesList)
     Some(builder.build -> ports)
   }
 }

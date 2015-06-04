@@ -25,8 +25,8 @@ object ResourceMatcher {
     // TODOC ask if not supporting set resources is okay
     val groupedResources = offer.getResourcesList.asScala.groupBy(_.getName)
 
-    //    log.info("TODOC Grouped Resources:")
-    //    log.info(groupedResources)
+    log.info("TODOC Grouped Resources:")
+    log.info(groupedResources)
     //    log.info("TODOC acceptedResourceRoles:")
     //    log.info(acceptedResourceRoles)
     //    log.info("TODOC app")
