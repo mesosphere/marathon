@@ -19,7 +19,8 @@ _TODO_: Do we need a CLA?
 
 ## Submitting Changes to Marathon
 
-- A GitHub pull request is the preferred way of submitting patch sets.
+- A GitHub pull request is the preferred way of submitting patch sets. Please rebase your
+  pull requests on top of the current master and squash your changes to a single commit.
 
 - Any changes in the public API or behavior must be reflected in the project
   documentation.
@@ -28,6 +29,8 @@ _TODO_: Do we need a CLA?
 
 - If the change is a bugfix, then the added tests must fail without the patch
   as a safeguard against future regressions.
+
+- Run all tests via the supplied `./bin/run-tests.sh` script (requires docker).
 
 ## Source Files
 
