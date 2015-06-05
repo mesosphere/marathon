@@ -2,7 +2,7 @@
 
 #### Recommended Mesos version is 0.22.1
 
-We tested this release against Mesos version 0.22.1. Thus this is the recommended
+We tested this release against Mesos version 0.22.1. Thus, this is the recommended
 Mesos version for this release.
 
 ### Breaking changes
@@ -23,7 +23,7 @@ Marathon would use resources of any role for tasks of any app.
 
 Now you can specify which roles Marathon should consider for launching apps per default via the
 `--default_accepted_resource_roles` configuration argument. You can override the default by specifying
-a list of accepted roles for you app via the `"acceptedResourceRoles"` attribute of the app definition.
+a list of accepted roles for your app via the `"acceptedResourceRoles"` attribute of the app definition.
 
 #### Event stream as server sent events
 
@@ -72,7 +72,7 @@ The UI now uses relative URL paths making it easier to run Marathon behind a rev
 In Marathon, most state is versioned. This includes app definitions and group definitions. Marathon already allowed
 restricting the number of versions that are kept by `--zk_max_versions` but you had to specify that explicitly.
 
-Since some of our users where running into problems with too many versions, we decided to restrict to
+Since some of our users were running into problems with too many versions, we decided to restrict to
 a maximum number of `25` versions by default. We recommend to set this to an even lower number, e.g. `3`, since
 higher numbers impact performance negatively.
 
