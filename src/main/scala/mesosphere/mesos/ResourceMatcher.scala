@@ -35,7 +35,7 @@ object ResourceMatcher {
     def memRoleOpt: Option[Role] = findScalarResourceRole(Resource.MEM, app.mem)
     def diskRoleOpt: Option[Role] = findScalarResourceRole(Resource.DISK, app.disk)
     def customRolesOpt: Option[Map[String, Role]] = Some(app.customResources
-      .transform((key, value) => findScalarResourceRole(key, value).getOrElse(None))
+      .transform((key, value) => findScalarResourceRole(key, value).get) // TODOC get
       .filter {
         case (key, value) => value != None
       })

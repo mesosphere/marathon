@@ -14,12 +14,14 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.TaskBuilder
-import mesosphere.mesos.protos.{ Resource, ScalarResource }
+import mesosphere.mesos.protos.{ Resource, ScalarResource, RangesResource, SetResource }
+import org.apache.mesos.Protos.Value
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.apache.mesos.{ Protos => mesos }
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
+import org.apache.log4j.Logger // TODOC remove this
 
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -44,7 +46,8 @@ case class AppDefinition(
 
   disk: JDouble = AppDefinition.DefaultDisk,
 
-  customResources: Map[String, JDouble] = AppDefinition.DefaultCustomResources,
+  //customResources: Map[String, JDouble] = AppDefinition.DefaultCustomResources,
+  customResources: Seq[CustomResource] = AppDefinition.DefaultCustomResources,
 
   @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = AppDefinition.DefaultExecutor,
 
@@ -103,9 +106,12 @@ case class AppDefinition(
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
-    val customResource = customResources.map {
-      case (resourceName, value) =>
-        ScalarResource(resourceName, value)
+    val customResourcesList = customResources.map { resource =>
+      resource.getType match {
+        case Value.Type.SCALAR => ScalarResource(resource.name, resource.scalar.get)
+        case Value.Type.RANGES => RangesResource(resource.name, resource.ranges.get)
+        case Value.Type.SET    => SetResource(resource.name, resource.set.get)
+      }
     }
     val appLabels = labels.map {
       case (key, value) =>
@@ -136,7 +142,7 @@ case class AppDefinition(
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
 
-    customResource.foreach(builder.addResources(_))
+    customResourcesList.foreach(builder.addResources(_))
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
@@ -160,9 +166,18 @@ case class AppDefinition(
         r => r.getName -> (r.getScalar.getValue: JDouble)
       }.toMap
 
+    val log = Logger.getLogger(getClass.getName)
+    log.info("TODOC resourcesMAP")
+    log.info(proto.getResourcesList.asScala)
+
     val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
-    val customResourcesMap: Map[String, JDouble] = resourcesMap.filter(
-      x => !standardResources.contains(x._1))
+    //val customResourcesMap: Map[String, JDouble] = resourcesMap
+    //  .filter(r => !standardResources.contains(r._1))
+    val customResourcesList: Seq[CustomResource] = proto.getResourcesList.asScala
+      .map(r => CustomResource.create(r).get)
+    //  TODOC I wanted to try printing out .getScalar, .getRanges, .getItem etc to see what happens
+    log.info("TODOC get")
+    proto.getResourcesList.asScala.foreach(r => println(r.getSet))
 
     val commandOption =
       if (proto.getCmd.hasValue && proto.getCmd.getValue.nonEmpty)
@@ -206,7 +221,8 @@ case class AppDefinition(
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
-      customResources = customResourcesMap,
+      //customResources = customResourcesMap,
+      customResources = customResourcesList,
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
@@ -306,7 +322,8 @@ object AppDefinition {
 
   val DefaultDisk: Double = 0.0
 
-  var DefaultCustomResources: Map[String, JDouble] = Map.empty
+  //var DefaultCustomResources: Map[String, JDouble] = Map.empty
+  var DefaultCustomResources: Seq[CustomResource] = Seq.empty
 
   val DefaultExecutor: String = ""
 
