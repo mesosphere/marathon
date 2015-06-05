@@ -5,6 +5,56 @@
 We tested this release against Mesos version 0.22.1. Thus this is the recommended
 Mesos version for this release.
 
+### Breaking changes
+
+Please look at the following changes to check whether you have to verify your setup before upgrading:
+
+* Disk resource limits are passed to Mesos
+* New format for the `http_endpoints` command line parameter
+* Restrict the number of versions by default
+
+### Overview
+
+#### Restrict applications to certain Mesos roles
+
+Prior Marathon versions already support registering with a `--mesos_role`. This causes Mesos to offer resources
+of the specified role to Marathon in addition to resources without any role designation ("*").
+Marathon would use resources of any role for tasks of any app.
+
+Now you can specify which roles Marathon should consider for launching apps per default via the
+`--default_accepted_resource_roles` configuration argument. You can override the default by specifying
+a list of accepted roles for you app via the `"acceptedResourceRoles"` attribute of the app definition.
+
+#### Event stream as server sent events
+
+Prior Marathon versions already notified other services of events via
+[event subscriptions](https://mesosphere.github.io/marathon/docs/rest-api.html#event-subscriptions).
+Services could register an HTTP endpoint at which they received all events.
+
+The new Marathon now provides an
+[event stream](https://mesosphere.github.io/marathon/docs/rest-api.html#event-stream) endpoint
+where you receive all events conveniently as
+[Server Sent Events](http://www.w3schools.com/html/html5_serversentevents.asp).
+
+#### Satisfy ports from any offered port range
+
+In prior Marathon versions, matching port resources to the demands of a task had various restrictions:
+
+* Marathon could not launch a task if it required port resources with different Mesos roles.
+* Dynamically assigned non-docker host ports had to come from a single port range.
+
+Now the port resources of a task can be satisfied by any combination of port ranges with any matching offered
+role.
+
+#### Randomize dynamic docker host ports
+
+If a task reuses recently freed port resources, it can happen that dependencies of old tasks still expect
+the old task to be reachable at the old port for a limited time span. For this reason, Marathon has already
+randomized assignment of dynamic non-docker host ports to minimize the risk of launching a new task on ports recently
+used by other tasks.
+
+Now Marathon also randomly assigns dynamic docker host ports.
+
 #### Disk resource limits are passed to Mesos
 
 If you specify a non-zero disk resource limit, this limit is now passed to Mesos
@@ -13,15 +63,51 @@ on task launch.
 If you rely on disk limits, you also need to configure Mesos appropriately. This includes configuring the correct
 isolator and enabling disk quotas enforcement with `--enforce_container_disk_quota`.
 
-#### New format for the `http_endpoints` parameter
+#### Relative URL paths in the UI
 
-We changed the format of the `http_endpoints` parameters from a
+The UI now uses relative URL paths making it easier to run Marathon behind a reverse proxy.
+
+#### Restrict the number of versions by default
+
+In Marathon, most state is versioned. This includes app definitions and group definitions. Marathon already allowed
+restricting the number of versions that are kept by `--zk_max_versions` but you had to specify that explicitly.
+
+Since some of our users where running into problems with too many versions, we decided to restrict to
+a maximum number of `25` versions by default. We recommend to set this to an even lower number, e.g. `3`, since
+higher numbers impact performance negatively.
+
+#### New format for the `http_endpoints` command line parameter
+
+We changed the format of the `http_endpoints` command line parameter from a
 space-separated to a comma-separated list of endpoints, in order to be
 more consistent with the documentation and with the format used in other
 parameters.
 
 WARNING: If you use the `http_endpoints` parameter with multiple space
 separated URLs, you will need to migrate to the comma-separated format.
+
+#### Do not delay task launches anymore as a result of failed health checks
+
+Marathon uses an exponential back off strategy to delay further task launches after task failures. This should
+prevent keeping the cluster busy with task launches which are set up to fail anyway. The delay was also increased
+when health checks failed leading to delayed recovery.
+
+Since health checks typically (depending on configuration) take a while to determine that a task is unhealthy,
+this already delays restarting sufficiently.
+
+#### servicerouter.py
+
+TODO
+
+#### Be more careful about using `ulimit` in startup script
+
+The startup script now only increases the maximum number of open files if the limit is too low and if the
+script is started as `root`.
+
+
+### Fixed Bugs
+
+TODO
 
 ## Changes from 0.8.1 to 0.8.2
 

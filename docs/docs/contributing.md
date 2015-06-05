@@ -25,6 +25,8 @@ _TODO_: Do we need a CLA?
 - Any changes in the public API or behavior must be reflected in the project
   documentation.
 
+- Any changes in the public API or behavior must be reflected in the changelog.md.
+
 - Pull requests should include appropriate additions to the unit test suite.
 
 - If the change is a bugfix, then the added tests must fail without the patch
