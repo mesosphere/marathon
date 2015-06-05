@@ -2,13 +2,12 @@ package mesosphere.marathon.tasks
 
 import java.util
 
-import com.codahale.metrics.{ Histogram, Meter, MetricRegistry }
-import com.google.inject.Inject
+import com.google.inject.{ Inject }
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.Metrics.{ Timer, Histogram, Meter }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
-import mesosphere.util.TimerUtils
-import mesosphere.util.TimerUtils.ScalaTimer
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
@@ -37,17 +36,17 @@ trait IterativeOfferMatcherConfig extends ScallopConf {
     noshort = true)
 }
 
-class IterativeOfferMatcherMetrics @Inject() (metrics: MetricRegistry) {
-  val tasksLaunched: Meter = metrics.meter(MetricRegistry.name(getClass, "tasks-launched"))
-  val tasksLaunchedPerOffer: Histogram = metrics.histogram(MetricRegistry.name(getClass, "tasks-launched-per-offer"))
-  val offersDeclined: Meter = metrics.meter(MetricRegistry.name(getClass, "offers-declined"))
+class IterativeOfferMatcherMetrics @Inject() (metrics: Metrics) {
+  val prefix: String = "service"
 
-  val calculateOfferUsageTimer: ScalaTimer =
-    TimerUtils.timer(metrics, getClass, "calculate-offer-usages")
-  val commitOfferUsagesToDriverTimer: ScalaTimer =
-    TimerUtils.timer(metrics, getClass, "commit-offer-usages-to-driver")
-  val matchingOfferTimer: ScalaTimer =
-    TimerUtils.timer(metrics, getClass, "matching-offer")
+  val tasksLaunched: Meter = metrics.meter(metrics.name(prefix, getClass, "tasks-launched"))
+  val tasksLaunchedPerOffer: Histogram = metrics.histogram(metrics.name(prefix, getClass, "tasks-launched-per-offer"))
+  val offersDeclined: Meter = metrics.meter(metrics.name(prefix, getClass, "offers-declined"))
+
+  val calculateOfferUsageTimer: Timer = metrics.timer(metrics.name(prefix, getClass, "calculate-offer-usages"))
+  val commitOfferUsagesToDriverTimer: Timer =
+    metrics.timer(metrics.name(prefix, getClass, "commit-offer-usages-to-driver"))
+  val matchingOfferTimer: Timer = metrics.timer(metrics.name(prefix, getClass, "matching-offer"))
 }
 
 object IterativeOfferMatcher {

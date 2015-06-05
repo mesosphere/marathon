@@ -2,6 +2,7 @@ package mesosphere.marathon.tasks
 
 import com.codahale.metrics.MetricRegistry
 import com.fasterxml.jackson.databind.ObjectMapper
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.tasks.IterativeOfferMatcher.{ OfferUsage, OfferUsages }
 import mesosphere.marathon.{ MarathonConf, MarathonTestHelper }
 import mesosphere.marathon.state.PathId._
@@ -20,22 +21,22 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
   var config: MarathonConf = _
   var taskQueue: TaskQueue = _
   var state: State = _
-  var metricRegistry: MetricRegistry = _
   var taskTracker: TaskTracker = _
   var taskFactory: TaskFactory = _
-  var metrics: IterativeOfferMatcherMetrics = _
+  var iterativeOfferMatcherMetrics: IterativeOfferMatcherMetrics = _
   var matcher: IterativeOfferMatcher = _
+  var metrics: Metrics = _
 
   def createEnv(maxTasksPerOffer: Int, maxTasksPerOfferCycle: Int = 1000): Unit = {
     config = MarathonTestHelper.defaultConfig(
       maxTasksPerOffer = maxTasksPerOffer, maxTasksPerOfferCycle = maxTasksPerOfferCycle)
     taskQueue = new TaskQueue
     state = new InMemoryState
-    metricRegistry = new MetricRegistry
-    taskTracker = new TaskTracker(state, config, metricRegistry)
+    metrics = new Metrics(new MetricRegistry)
+    iterativeOfferMatcherMetrics = new IterativeOfferMatcherMetrics(metrics)
+    taskTracker = new TaskTracker(state, config, metrics)
     taskFactory = new DefaultTaskFactory(TaskIdUtil, taskTracker, config, new ObjectMapper())
-    metrics = new IterativeOfferMatcherMetrics(metricRegistry)
-    matcher = new IterativeOfferMatcher(config, taskQueue, taskTracker, taskFactory, metrics)
+    matcher = new IterativeOfferMatcher(config, taskQueue, taskTracker, taskFactory, iterativeOfferMatcherMetrics)
   }
 
   val now = Timestamp.now()

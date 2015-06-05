@@ -1,7 +1,6 @@
 package mesosphere.marathon.event.http
 
 import scala.language.postfixOps
-import com.codahale.metrics.MetricRegistry
 import com.google.inject.{ Scopes, Singleton, Provides, AbstractModule }
 import akka.actor.{ Props, ActorRef, ActorSystem }
 import akka.pattern.ask
@@ -13,6 +12,7 @@ import org.apache.log4j.Logger
 import scala.concurrent.duration._
 import akka.util.Timeout
 import org.apache.mesos.state.State
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonStore
 import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe }
 import mesosphere.marathon.MarathonConf
@@ -72,8 +72,8 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
   @Provides
   @Singleton
   def provideCallbackUrlsStore(conf: MarathonConf,
-                               state: State, registry: MetricRegistry): MarathonStore[EventSubscribers] =
-    new MarathonStore[EventSubscribers](conf, state, registry, () => new EventSubscribers(Set.empty[String]), "events:")
+                               state: State, metrics: Metrics): MarathonStore[EventSubscribers] =
+    new MarathonStore[EventSubscribers](conf, state, metrics, () => new EventSubscribers(Set.empty[String]), "events:")
 }
 
 object HttpEventModule {

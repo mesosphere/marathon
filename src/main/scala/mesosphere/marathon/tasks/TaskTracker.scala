@@ -4,9 +4,9 @@ import java.io._
 import javax.inject.Inject
 
 import mesosphere.marathon.Protos._
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, StateMetrics, Timestamp }
 import mesosphere.marathon.MarathonConf
-import com.codahale.metrics.MetricRegistry
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.state.{ State, Variable }
@@ -20,7 +20,7 @@ import scala.concurrent.Future
 class TaskTracker @Inject() (
   state: State,
   config: MarathonConf,
-  val registry: MetricRegistry)
+  val metrics: Metrics)
     extends StateMetrics {
 
   import mesosphere.marathon.tasks.TaskTracker._

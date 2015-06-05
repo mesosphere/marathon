@@ -6,6 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
@@ -32,15 +33,14 @@ class TaskStartActorTest
   var scheduler: SchedulerActions = _
   var taskQueue: TaskQueue = _
   var taskTracker: TaskTracker = _
-  var registry: MetricRegistry = _
+  var metrics: Metrics = _
 
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
-    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new MetricRegistry)
     taskQueue = spy(new TaskQueue)
-    registry = new MetricRegistry
-    taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], registry))
+    metrics = new Metrics(new MetricRegistry)
+    taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], metrics))
   }
 
   override protected def afterAll(): Unit = {

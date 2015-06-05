@@ -6,6 +6,7 @@ import java.util.concurrent.{ Future => JFuture }
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.Futures
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.{ MarathonConf, MarathonSpec, StorageException }
 import org.apache.mesos.state.{ InMemoryState, State, Variable }
@@ -20,12 +21,17 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class MarathonStoreTest extends MarathonSpec with Matchers {
+  var metrics: Metrics = _
+
+  before {
+    metrics = new Metrics(new MetricRegistry)
+  }
+
   test("Fetch") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
     val appDef = AppDefinition(id = "testApp".toPath, args = Some(Seq("arg")))
-    val registry = new MetricRegistry
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
@@ -34,7 +40,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     when(state.fetch("app:testApp")).thenReturn(future)
     when(state.fetch("__internal__:app:storage:version")).thenReturn(currentVersionFuture)
     when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
-    val store = new MarathonStore[AppDefinition](config, state, registry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
     val res = store.fetch("testApp")
 
     verify(state).fetch("app:testApp")
@@ -44,7 +50,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
   test("FetchFail") {
     val state = mock[State]
     val future = mock[JFuture[Variable]]
-    val registry = new MetricRegistry
 
     when(future.get(anyLong, any[TimeUnit])).thenReturn(null)
     when(state.fetch("app:testApp")).thenReturn(future)
@@ -53,7 +58,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
-    val store = new MarathonStore[AppDefinition](config, state, registry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
     val res = store.fetch("testApp")
 
     verify(state).fetch("app:testApp")
@@ -68,7 +73,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
     val appDef = AppDefinition(id = "testApp".toPath, args = Some(Seq("arg")))
-    val registry = new MetricRegistry
 
     val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[Variable]
@@ -86,7 +90,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     when(state.fetch("__internal__:app:storage:version")).thenReturn(currentVersionFuture)
     when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
-    val store = new MarathonStore[AppDefinition](config, state, registry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
     val res = store.modify("testApp") { _ =>
       newAppDef
     }
@@ -101,7 +105,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
     val appDef = AppDefinition(id = "testApp".toPath, args = Some(Seq("arg")))
-    val registry = new MetricRegistry
 
     val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[Variable]
@@ -119,7 +122,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     when(state.fetch("__internal__:app:storage:version")).thenReturn(currentVersionFuture)
     when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
-    val store = new MarathonStore[AppDefinition](config, state, registry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
     val res = store.modify("testApp") { _ =>
       newAppDef
     }
@@ -134,7 +137,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
     val resultFuture = mock[JFuture[JBoolean]]
-    val registry = new MetricRegistry
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
@@ -145,7 +147,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     when(state.fetch("__internal__:app:storage:version")).thenReturn(currentVersionFuture)
     when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
-    val store = new MarathonStore[AppDefinition](config, state, registry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
 
     val res = store.expunge("testApp")
 
@@ -159,7 +161,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val future = mock[JFuture[Variable]]
     val variable = mock[Variable]
     val resultFuture = mock[JFuture[JBoolean]]
-    val registry = new MetricRegistry
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
@@ -170,7 +171,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     when(state.fetch("__internal__:app:storage:version")).thenReturn(currentVersionFuture)
     when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
-    val store = new MarathonStore[AppDefinition](config, state, registry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
 
     val res = store.expunge("testApp")
 
@@ -181,7 +182,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("Names") {
     val state = new InMemoryState
-    val registry = new MetricRegistry
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
@@ -195,7 +195,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     populate("no_match", Array())
     populate("__internal__:app:storage:version", StorageVersions.current.toByteArray)
 
-    val store = new MarathonStore[AppDefinition](config, state, registry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
     val res = store.names()
 
     assert(Set("foo", "bar") == Await.result(res, 5.seconds).toSet, "Should return all application keys")
@@ -203,7 +203,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("NamesFail") {
     val state = mock[State]
-    val registry = new MetricRegistry
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
@@ -214,7 +213,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     when(state.fetch("__internal__:app:storage:version")).thenReturn(currentVersionFuture)
     when(state.store(currentVersionVariable)).thenReturn(currentVersionFuture)
 
-    val store = new MarathonStore[AppDefinition](config, state, registry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
     val res = store.names()
 
     assert(Await.result(res, 5.seconds).isEmpty, "Should return empty iterator")
@@ -223,14 +222,13 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
   test("ConcurrentModifications") {
     import mesosphere.util.ThreadPoolContext.context
     val state = new InMemoryState
-    val registry = new MetricRegistry
     val variable = state.fetch("__internal__:app:storage:version").get().mutate(StorageVersions.current.toByteArray)
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
     state.store(variable)
 
-    val store = new MarathonStore[AppDefinition](config, state, registry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
 
     Await.ready(store.store("foo", AppDefinition(id = "foo".toPath, instances = 0)), 2.seconds)
 
@@ -273,7 +271,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val config = new ScallopConf(Seq("--master", "foo", "--marathon_store_timeout", "1")) with MarathonConf
     config.afterInit()
 
-    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
 
     noException should be thrownBy {
       Await.result(store.names(), 1.second)
@@ -297,7 +295,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
-    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
 
     noException should be thrownBy {
       Await.result(store.names(), 1.second)
@@ -314,7 +312,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
-    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
 
     noException should be thrownBy {
       Await.result(store.names(), 1.second)
@@ -328,7 +326,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
-    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
 
     noException should be thrownBy {
       Await.result(store.names(), 1.second)
@@ -343,7 +341,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
 
-    val store = new MarathonStore[AppDefinition](config, state, new MetricRegistry, () => AppDefinition())
+    val store = new MarathonStore[AppDefinition](config, state, metrics, () => AppDefinition())
 
     noException should be thrownBy {
       Await.result(store.names(), 1.second)

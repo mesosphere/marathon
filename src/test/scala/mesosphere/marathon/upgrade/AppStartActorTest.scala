@@ -13,6 +13,7 @@ import mesosphere.marathon.state.{ AppDefinition, PathId }
 import scala.concurrent.{ Await, Promise }
 import org.mockito.Mockito.verify
 import mesosphere.marathon.event.{ MesosStatusUpdateEvent, HealthStatusChanged }
+import mesosphere.marathon.metrics.Metrics
 import scala.concurrent.duration._
 import mesosphere.marathon.health.HealthCheck
 
@@ -32,7 +33,7 @@ class AppStartActorTest
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
     taskQueue = new TaskQueue
-    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new MetricRegistry)
+    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new Metrics(new MetricRegistry))
   }
 
   test("Without Health Checks") {
