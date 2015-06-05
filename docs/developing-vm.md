@@ -12,7 +12,9 @@ This will enable you to run a local version of Marathon, for development purpose
     sbt assembly
     ```
 
-2. Does your local Marathon have custom Javascript changes that you expect to see? If so you'll need to compile the assets. Here is a guide to working on assets: [Compiling Assets](https://github.com/mesosphere/marathon/tree/master/src/main/resources/assets#compiling-assets).
+2. Does your local Marathon have custom Javascript changes that you expect to see? 
+   If so you'll need to compile the assets. Here is a guide to working on assets: 
+   [Compiling Assets](https://github.com/mesosphere/marathon-ui#compiling-assets).
 
 3.  Clone the [playa-mesos repository](https://github.com/mesosphere/playa-mesos). Note that playa-mesos ships with a version of Mesos, Marathon, and ZooKeeper pre-configured.
 
