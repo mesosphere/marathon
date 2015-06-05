@@ -14,7 +14,7 @@ import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, Marathon
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, CancelDeployment, PerformDeployment }
-import mesosphere.marathon.{ DeploymentCanceledException, MarathonConf, SchedulerActions }
+import mesosphere.marathon.{ MarathonConf, SchedulerActions }
 import org.rogach.scallop.ScallopConf
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.InMemoryState

@@ -4,7 +4,6 @@ import org.mockito.Mockito._
 import org.mockito.Matchers._
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
-import org.joda.time.DateTime
 import mesosphere.marathon.MarathonSpec
 import scala.language.postfixOps
 import PathId._

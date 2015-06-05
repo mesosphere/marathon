@@ -14,7 +14,6 @@ import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.util.Logging
 import org.apache.mesos.state.InMemoryState
 import org.apache.mesos.{ Protos => mesos }
-import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf
 
 import scala.concurrent.Await
