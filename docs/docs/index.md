@@ -10,7 +10,7 @@ An easy way to try out Marathon locally is using the [playa-mesos](https://githu
 
 ### Requirements
 
-* [Apache Mesos][Mesos] 0.20.0+
+* [Apache Mesos][Mesos] 0.20.1+
 * [Apache ZooKeeper][ZooKeeper]
 * JDK 1.6+
 * Scala 2.11+
@@ -39,7 +39,16 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
 
 1.  Download and unpack the latest Marathon release.
 
-    **For Mesos 0.20.0+:**
+    **For Mesos 0.20.1+:**
+
+    ``` bash
+    $ curl -O http://downloads.mesosphere.com/marathon/v0.8.2/marathon-0.8.2.tgz
+    $ tar xzf marathon-0.8.2.tgz
+    ```
+
+    **For Mesos 0.20.0:**
+
+    Please consider migrating to 0.21.1!
 
     ``` bash
     $ curl -O http://downloads.mesosphere.com/marathon/v0.8.1/marathon-0.8.1.tgz
