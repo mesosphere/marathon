@@ -37,21 +37,43 @@ Health checks now work with HTTPS.
 
 #### Faster (configurable) task distribution
 
-In order to speed up task launching and use the resource offers Marathon receives from Mesos more efficiently,
-we added a new offer matching algorithm, that tries to start as many tasks as possible per task offer cycle.
-The maximum numbers of tasks to start are configurable with the follwing startup parameters:
+Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the available resources of a single node in the cluster. Until now, Marathon would only start a single task per resource offer, which led to slow task launching in smaller clusters. In order to speed up task launching and use the resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm, that tries to start as many tasks as possible per task offer cycle. The maximum numbers of tasks to start are configurable with the following startup parameters:
 
 `--max_tasks_per_offer` (default 1): The maximum number of tasks to start on a single offer per cycle
 
 `--max_tasks_per_offer_cycle` (default 1000): The maximum number of tasks to start in total per cycle
 
+**Example**
+
+Given a cluster with 200 nodes and the default settings for task launching. If we want to start 2000 tasks, it would take at least 10 cycles, because we are only starting 1 task per offer, leading to a total maximum of 200. If we change the `max_tasks_per_offer` setting to 10, we could start 1000 tasks per offer (the default setting for `max_tasks_per_offer_cycle`), reducing the necessary cycles to 2. If we also adjust the `max_tasks_per_offer_cycle ` to 2000, we could start all tasks in a single cycle (given we receive offers for all nodes).
+
+**Important**
+
+Starting too many tasks at once can lead to a higher number of status updates being sent to Marathon than it can currently handle. We will improve the number of events Marathon can handle in a future version. A maximum of 1000 tasks has proven to be a good default for now. `max_tasks_per_offer ` should be adjusted so that `NUM_MESOS_SLAVES * max_tasks_per_offer == max_tasks_per_offer_cycle `. E.g. in a cluster of 200 nodes it should be set to 5.
+
 #### Security settings configurable through env variables
 
 Security settings are now configurable through the following environment variables:
 
-`$MESOSPHERE_HTTP_CREDENTIALS` for HTTP authentication
+`$MESOSPHERE_HTTP_CREDENTIALS` for HTTP authentication (e.g. `export MESOSPHERE_HTTP_CREDENTIALS=user:password`)
 
 `$MESOSPHERE_KEYSTORE_PATH` + `$MESOSPHERE_KEYSTORE_PASS` for SSL settings
+
+#### Isolated deployment rollbacks
+
+Marathon allows rolling back running deployments via the [DELETE /v2/deployments/{deploymentId}](https://mesosphere.github.io/marathon/docs/rest-api.html#delete-/v2/deployments/%7Bdeploymentid%7D) command or the "rollback" button in the GUI.
+
+In prior Marathon versions, deployment rollbacks reverted all applications to the state before the selected deployment. If you performed concurrent deployments, these would also be reverted.
+
+Now Marathon isolates the changes of the selected deployment and calculates a deployment plan which prevents changing unrelated apps.
+
+#### Empty groups can be overwritten by apps
+
+Instead of declining the creation of an app with the same name as a previously existing group, the group will now be removed if empty and replaced with the app.
+
+#### Performance improvements
+
+App and task related API calls should be considerably faster with large amounts of tasks now.
 
 ## Changes from 0.8.0 to 0.8.1
 
