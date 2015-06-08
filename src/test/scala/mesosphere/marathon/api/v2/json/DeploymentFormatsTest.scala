@@ -4,12 +4,16 @@ import java.util.UUID
 
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.v2.GroupUpdate
-import mesosphere.marathon.state.{ Timestamp, AppDefinition, Group }
-import play.api.libs.json.{ JsNull, JsValue, Format, Json }
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
+import mesosphere.marathon.upgrade._
 import org.scalatest.Matchers._
+import play.api.libs.json._
+import scala.collection.immutable.Seq
 
-class FormatsTest extends MarathonSpec {
+import scala.util.Random
+
+class DeploymentFormatsTest extends MarathonSpec {
   import Formats._
 
   test("Can read GroupUpdate json") {
@@ -85,6 +89,23 @@ class FormatsTest extends MarathonSpec {
     marshalUnmarshal(genGroup(Set(genGroup(), genGroup(Set(genGroup())))))
   }
 
+  test("Can write/read byte arrays") {
+    marshalUnmarshal("Hello".getBytes)
+  }
+
+  test("DeploymentPlan can be serialized") {
+    val plan = DeploymentPlan(
+      genId.toString,
+      genGroup(),
+      genGroup(Set(genGroup(), genGroup())),
+      Seq(genStep),
+      Timestamp.now()
+    )
+    val json = Json.toJson(plan)
+    val fieldMap = json.as[JsObject].fields.toMap
+    fieldMap.keySet should be(Set("version", "id", "target", "original", "steps"))
+  }
+
   // regression test for #1176
   test("allow / as id") {
     val json = """{"id": "/"}"""
@@ -98,9 +119,17 @@ class FormatsTest extends MarathonSpec {
     json
   }
 
+  def genInt = Random.nextInt(1000)
   def genId = UUID.randomUUID().toString.toPath
   def genTimestamp = Timestamp.now()
   def genApp = AppDefinition(id = genId)
+  def genStep = DeploymentStep(actions = Seq(
+    StartApplication(genApp, genInt),
+    ScaleApplication(genApp, genInt),
+    StopApplication(genApp),
+    RestartApplication(genApp),
+    ResolveArtifacts(genApp, Map.empty)
+  ))
   def genGroup(children: Set[Group] = Set.empty) = {
     Group(genId, Set(genApp, genApp), children, Set(genId), genTimestamp)
   }
