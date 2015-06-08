@@ -2,6 +2,8 @@ package mesosphere.marathon.api
 
 import javax.ws.rs.ext.{ Provider, ExceptionMapper }
 import javax.ws.rs.core.{ MediaType, Response }
+import com.fasterxml.jackson.databind.JsonMappingException
+
 import scala.concurrent.TimeoutException
 import mesosphere.marathon.{
   AppLockedException,
@@ -44,6 +46,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: BadRequestException        => 400 // Bad Request
     case e: JsonParseException         => 400 // Bad Request
     case e: JsResultException          => 400 // Bad Request
+    case e: JsonMappingException       => 400 // Bad Request
     case e: WebApplicationException    => e.getResponse.getStatus
     case _                             => 500 // Internal server error
   }
