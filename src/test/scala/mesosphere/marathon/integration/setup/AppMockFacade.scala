@@ -25,9 +25,11 @@ class AppMockFacade(waitTime: Duration = 30.seconds)(implicit system: ActorSyste
   }
 
   val pipeline = sendReceive
-  def ping(host: String, port: Int): RestResult[String] = {
+  def ping(host: String, port: Int): RestResult[String] = custom("/ping")(host, port)
+
+  def custom(uri: String)(host: String, port: Int): RestResult[String] = {
     retry() {
-      RestResult.await(pipeline(Get(s"http://$host:$port/ping")), waitTime).map(_.entity.asString)
+      RestResult.await(pipeline(Get(s"http://$host:$port$uri")), waitTime).map(_.entity.asString)
     }
   }
 }

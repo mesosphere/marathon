@@ -1,14 +1,13 @@
 package mesosphere.marathon
 
-import java.util.{ TimerTask, Timer }
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.{ Timer, TimerTask }
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestKit, TestProbe }
-import com.google.inject.Provider
 import com.twitter.common.base.ExceptionalCommand
-import com.twitter.common.zookeeper.{ Group, Candidate }
 import com.twitter.common.zookeeper.Group.JoinException
+import com.twitter.common.zookeeper.{ Candidate, Group }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.health.HealthCheckManager
@@ -16,16 +15,15 @@ import mesosphere.marathon.state.{ AppRepository, Migration }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.BackToTheFuture.Timeout
-import org.apache.mesos.SchedulerDriver
-import org.apache.mesos.{ Protos => mesos }
 import org.apache.mesos.state.InMemoryState
+import org.apache.mesos.{ Protos => mesos, SchedulerDriver }
 import org.mockito.Matchers.{ any, eq => mockEq }
 import org.mockito.Mockito
 import org.mockito.Mockito.{ times, verify, when }
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.rogach.scallop.ScallopOption
-import org.scalatest.{ Matchers, BeforeAndAfterAll }
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.duration._
 
@@ -254,6 +252,6 @@ class MarathonSchedulerServiceTest
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
     awaitAssert { verify(candidate.get).offerLeadership(schedulerService) }
-    assert(schedulerService.isLeader == false)
+    assert(leader.get() == false)
   }
 }

@@ -1,7 +1,6 @@
 package mesosphere.marathon.upgrade
 
 import java.net.URL
-import scala.concurrent.Promise
 
 import akka.actor.Actor
 import akka.actor.Status.Failure
@@ -9,9 +8,11 @@ import akka.pattern.pipe
 
 import mesosphere.marathon.ResolveArtifactsCanceledException
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.io.{ CancelableDownload, IO, PathFun }
+import mesosphere.marathon.io.{ CancelableDownload, PathFun }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.util.Logging
+
+import scala.concurrent.Promise
 
 class ResolveArtifactsActor(
   app: AppDefinition,
@@ -19,7 +20,6 @@ class ResolveArtifactsActor(
   promise: Promise[Boolean],
   storage: StorageProvider)
     extends Actor
-    with IO
     with PathFun
     with Logging {
 

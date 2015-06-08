@@ -73,7 +73,7 @@ object MarathonSchedulerDriver {
         new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster())
     }
 
-    log.debug("Finished creating new driver")
+    log.debug("Finished creating new driver", newDriver)
 
     newDriver
   }

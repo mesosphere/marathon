@@ -15,6 +15,7 @@ import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup, ZooKeeperClient }
 import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.event.http.HttpEventStreamActor
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
@@ -32,6 +33,8 @@ import scala.util.control.NonFatal
 
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
+  final val NAMED_HOST_PORT = "HOST_PORT"
+
   final val NAMED_LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
   final val NAMED_SERIALIZE_GROUP_UPDATES = "SERIALIZE_GROUP_UPDATES"
@@ -48,14 +51,17 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[ZooKeeperClient]).toInstance(zk)
+    bind(classOf[LeaderProxyConf]).toInstance(conf)
 
     // needs to be eager to break circular dependencies
     bind(classOf[SchedulerCallbacks]).to(classOf[SchedulerCallbacksServiceAdapter]).asEagerSingleton()
 
     bind(classOf[MarathonSchedulerDriverHolder]).in(Scopes.SINGLETON)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
+    bind(classOf[MarathonLeaderInfoMetrics]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
+    bind(classOf[LeaderInfo]).to(classOf[MarathonLeaderInfo]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
     bind(classOf[TaskFactory]).to(classOf[DefaultTaskFactory]).in(Scopes.SINGLETON)
@@ -143,20 +149,23 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       "MarathonScheduler")
   }
 
+  @Named(ModuleNames.NAMED_HOST_PORT)
+  @Provides
+  @Singleton
+  def provideHostPort: String = {
+    "%s:%d".format(conf.hostname(), http.httpPort())
+  }
+
   @Named(ModuleNames.NAMED_CANDIDATE)
   @Provides
   @Singleton
-  def provideCandidate(zk: ZooKeeperClient): Option[Candidate] = {
+  def provideCandidate(zk: ZooKeeperClient, @Named(ModuleNames.NAMED_HOST_PORT) hostPort: String): Option[Candidate] = {
     if (conf.highlyAvailable()) {
-      log.info("Registering in Zookeeper with hostname:"
-        + conf.hostname())
-      val candidate = new CandidateImpl(new ZGroup(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE,
-        conf.zooKeeperLeaderPath),
+      log.info("Registering in Zookeeper with hostPort:" + hostPort)
+      val candidate = new CandidateImpl(new ZGroup(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE, conf.zooKeeperLeaderPath),
         new Supplier[Array[Byte]] {
           def get(): Array[Byte] = {
-            //host:port
-            "%s:%d".format(conf.hostname(),
-              http.httpPort()).getBytes
+            hostPort.getBytes("UTF-8")
           }
         })
       return Some(candidate)

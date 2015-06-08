@@ -41,9 +41,9 @@ trait ZookeeperConf extends ScallopConf {
   conflicts(zooKeeperPath, List(zooKeeperUrl))
   conflicts(zooKeeperUrl, List(zooKeeperHostString, zooKeeperPath))
 
-  def zooKeeperStatePath(): String = "%s/state".format(zkPath)
-  def zooKeeperLeaderPath(): String = "%s/leader".format(zkPath)
-  def zooKeeperServerSetPath(): String = "%s/apps".format(zkPath)
+  def zooKeeperStatePath: String = "%s/state".format(zkPath)
+  def zooKeeperLeaderPath: String = "%s/leader".format(zkPath)
+  def zooKeeperServerSetPath: String = "%s/apps".format(zkPath)
 
   def zooKeeperHostAddresses: Seq[InetSocketAddress] =
     for (s <- zkHosts.split(",")) yield {

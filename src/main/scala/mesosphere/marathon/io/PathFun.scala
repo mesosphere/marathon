@@ -10,7 +10,7 @@ import org.apache.commons.io.FilenameUtils.getName
 
 import mesosphere.util.ThreadPoolContext.context
 
-trait PathFun extends IO {
+trait PathFun {
 
   private[this] def md = MessageDigest.getInstance("SHA-1")
 
@@ -27,7 +27,7 @@ trait PathFun extends IO {
     val eTag: Option[String] = header.get("ETag")
       .flatMap(_.filterNot(_.startsWith("W/")).headOption)
       .map(_.replaceAll("[^A-z0-9\\-]", ""))
-    val contentPart = eTag.getOrElse(mdSum(url.openStream()))
+    val contentPart = eTag.getOrElse(IO.mdSum(url.openStream()))
     s"$contentPart/${fileName(url)}"
   }
 

@@ -6,7 +6,7 @@ import scala.sys.SystemProperties
 
 import mesosphere.marathon.io.storage.StorageProvider
 
-trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMatcherConfig {
+trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMatcherConfig with LeaderProxyConf {
 
   lazy val mesosMaster = opt[String]("master",
     descr = "The URL of the Mesos master",

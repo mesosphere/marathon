@@ -32,6 +32,7 @@ class MarathonRestModule extends RestModule {
     bind(classOf[v2.SchemaResource]).in(Scopes.SINGLETON)
 
     // This filter will redirect to the master if running in HA mode.
+    bind(classOf[RequestForwarder]).to(classOf[JavaUrlConnectionRequestForwarder]).in(Scopes.SINGLETON)
     bind(classOf[LeaderProxyFilter]).asEagerSingleton()
     filter("/*").through(classOf[LeaderProxyFilter])
 
