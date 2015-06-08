@@ -1,6 +1,5 @@
 package mesosphere.marathon.api
 
-import java.lang.{ Double => JDouble }
 import java.net.{ HttpURLConnection, URL }
 import javax.validation.ConstraintViolation
 import mesosphere.marathon.MarathonSchedulerService
@@ -40,7 +39,7 @@ object ModelValidation {
     if (group == null) {
       Seq(violation(group, null, "", "Given group is empty!"))
     }
-    else if ((group.version orElse group.scaleBy).isDefined) {
+    else if (group.version.isDefined || group.scaleBy.isDefined) {
       validate(group,
         defined(
           group,
@@ -53,7 +52,7 @@ object ModelValidation {
           group,
           group.scaleBy,
           "scaleBy",
-          (b: GroupUpdate, t: JDouble, i: String) => hasOnlyOneDefinedOption(b, t, i),
+          (b: GroupUpdate, t: Double, i: String) => hasOnlyOneDefinedOption(b, t, i),
           mandatory = false
         )
       )
