@@ -21,3 +21,12 @@ docker-volumes
 target
 */target
 */*/target
+
+# assets (keep dist/img directory)
+src/main/resource/assets/css
+src/main/resource/assets/js
+src/main/resource/assets/test
+src/main/resource/assets/.git
+src/main/resource/assets/.gitattributes
+src/main/resource/assets/.gitignore
+
