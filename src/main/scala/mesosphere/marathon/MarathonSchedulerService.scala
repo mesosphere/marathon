@@ -227,16 +227,6 @@ class MarathonSchedulerService @Inject() (
     driver = None
   }
 
-  def isLeader: Boolean = leader.get()
-
-  def getLeader: Option[String] = {
-    candidate.flatMap { c =>
-      if (c.getLeaderData.isPresent)
-        Some(new String(c.getLeaderData.get))
-      else
-        None
-    }
-  }
   //End Service interface
 
   //Begin Leader interface, which is required for CandidateImpl.
@@ -354,7 +344,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (isLeader) {
+          if (leader.get()) {
             schedulerActor ! ScaleApps
           }
           else log.info("Not leader therefore not scaling apps")
@@ -367,7 +357,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (isLeader) {
+          if (leader.get()) {
             schedulerActor ! ReconcileTasks
             schedulerActor ! ReconcileHealthChecks
           }
@@ -384,7 +374,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (isLeader) {
+          if (leader.get()) {
             taskTracker.expungeOrphanedTasks()
           }
         }

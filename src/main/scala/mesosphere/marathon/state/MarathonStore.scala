@@ -37,7 +37,7 @@ class MarathonStore[S <: MarathonState[_, S]](
       .recover(exceptionTransform(s"Could not fetch ${ct.runtimeClass.getSimpleName} with key: $key"))
   }
 
-  def modify(key: String)(f: Update): Future[S] = lockManager.executeSequential(key) {
+  def modify(key: String)(f: Update): Future[S] = lockManager.executeSequentially(key) {
     val res = store.load(prefix + key).flatMap {
       case Some(entity) =>
         bytesRead.update(entity.bytes.length)
@@ -55,7 +55,7 @@ class MarathonStore[S <: MarathonState[_, S]](
       .recover(exceptionTransform(s"Could not modify ${ct.runtimeClass.getSimpleName} with key: $key"))
   }
 
-  def expunge(key: String): Future[Boolean] = lockManager.executeSequential(key) {
+  def expunge(key: String): Future[Boolean] = lockManager.executeSequentially(key) {
     store.delete(prefix + key)
       .recover(exceptionTransform(s"Could not expunge ${ct.runtimeClass.getSimpleName} with key: $key"))
   }

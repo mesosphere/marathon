@@ -18,14 +18,14 @@ trait LockManager {
     * @tparam T the resulting type of the future.
     * @return A new future, that gets executed, once the lock is available.
     */
-  def executeSequential[T](key: String)(future: => Future[T])(implicit ec: ExecutionContext): Future[T]
+  def executeSequentially[T](key: String)(future: => Future[T])(implicit ec: ExecutionContext): Future[T]
 }
 
 object LockManager {
 
   def create(): LockManager = new LockManager {
     val locks = loadingCache[String]()
-    override def executeSequential[T](key: String)(future: => Future[T])(implicit ec: ExecutionContext): Future[T] = {
+    override def executeSequentially[T](key: String)(future: => Future[T])(implicit ec: ExecutionContext): Future[T] = {
       val lock = locks.get(key)
       lock.acquire()
       val result = future

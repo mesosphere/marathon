@@ -255,6 +255,6 @@ class MarathonSchedulerServiceTest
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
     awaitAssert { verify(candidate.get).offerLeadership(schedulerService) }
-    assert(schedulerService.isLeader == false)
+    assert(leader.get() == false)
   }
 }
