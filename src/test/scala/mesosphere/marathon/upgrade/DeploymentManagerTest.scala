@@ -14,7 +14,8 @@ import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, Marathon
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, CancelDeployment, PerformDeployment }
-import mesosphere.marathon.{ DeploymentCanceledException, MarathonConf, SchedulerActions }
+import mesosphere.marathon.{ MarathonConf, SchedulerActions }
+import mesosphere.marathon.metrics.Metrics
 import org.rogach.scallop.ScallopConf
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.state.InMemoryState
@@ -42,7 +43,7 @@ class DeploymentManagerTest
   var eventBus: EventStream = _
   var taskQueue: TaskQueue = _
   var config: MarathonConf = _
-  var registry: MetricRegistry = _
+  var metrics: Metrics = _
   var taskTracker: TaskTracker = _
   var scheduler: SchedulerActions = _
   var appRepo: AppRepository = _
@@ -55,14 +56,14 @@ class DeploymentManagerTest
     taskQueue = mock[TaskQueue]
     config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
-    registry = new com.codahale.metrics.MetricRegistry
-    taskTracker = new TaskTracker(new InMemoryState, config, registry)
+    metrics = new Metrics(new MetricRegistry)
+    taskTracker = new TaskTracker(new InMemoryState, config, metrics)
     scheduler = mock[SchedulerActions]
     storage = mock[StorageProvider]
     appRepo = new AppRepository(
-      new MarathonStore[AppDefinition](config, new InMemoryState, registry, () => AppDefinition()),
+      new MarathonStore[AppDefinition](config, new InMemoryState, metrics, () => AppDefinition()),
       None,
-      registry
+      metrics
     )
     hcManager = mock[HealthCheckManager]
   }

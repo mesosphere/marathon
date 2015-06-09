@@ -1,13 +1,13 @@
 package mesosphere.marathon.state
 
-import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.util.ThreadPoolContext.context
 import scala.concurrent.Future
 
 class AppRepository(
   val store: PersistenceStore[AppDefinition],
   val maxVersions: Option[Int] = None,
-  val registry: MetricRegistry)
+  val metrics: Metrics)
     extends EntityRepository[AppDefinition] with StateMetrics {
 
   def allPathIds(): Future[Iterable[PathId]] = allIds().map(_.map(PathId.fromSafePath))

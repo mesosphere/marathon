@@ -5,6 +5,7 @@ import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream,
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.MarathonSpec
 import mesosphere.mesos.protos.Implicits._
@@ -29,11 +30,11 @@ class TaskTrackerTest extends MarathonSpec {
   var state: State = null
   val config = defaultConfig()
   val taskIdUtil = new TaskIdUtil
-  val registry = new MetricRegistry
+  val metrics = new Metrics(new MetricRegistry)
 
   before {
     state = spy(new InMemoryState)
-    taskTracker = new TaskTracker(state, config, registry)
+    taskTracker = new TaskTracker(state, config, metrics)
   }
 
   def makeSampleTask(id: String) = {

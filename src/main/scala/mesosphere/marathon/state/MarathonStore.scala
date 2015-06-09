@@ -1,9 +1,9 @@
 package mesosphere.marathon.state
 
-import com.codahale.metrics.MetricRegistry.name
-import com.codahale.metrics.{ Histogram, MetricRegistry }
 import com.google.protobuf.InvalidProtocolBufferException
 import mesosphere.marathon.{ MarathonConf, StorageException }
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.Metrics.Histogram
 import mesosphere.util.{ BackToTheFuture, LockManager, ThreadPoolContext }
 import org.apache.mesos.state.State
 import org.slf4j.LoggerFactory
@@ -16,7 +16,7 @@ import scala.util.control.NonFatal
 class MarathonStore[S <: MarathonState[_, S]](
   conf: MarathonConf,
   state: State,
-  registry: MetricRegistry,
+  metrics: Metrics,
   newState: () => S,
   prefix: String = "app:")(
     implicit val timeout: BackToTheFuture.Timeout = BackToTheFuture.Timeout(Duration(conf.marathonStoreTimeout(),
@@ -31,8 +31,10 @@ class MarathonStore[S <: MarathonState[_, S]](
 
   def contentClassName: String = newState().getClass.getSimpleName
 
-  protected[this] val bytesRead: Histogram = registry.histogram(name(getClass, contentClassName, "read-data-size"))
-  protected[this] val bytesWritten: Histogram = registry.histogram(name(getClass, contentClassName, "write-data-size"))
+  protected[this] val bytesRead: Histogram =
+    metrics.histogram(metrics.name("service", getClass, s"${contentClassName}.read-data-size"))
+  protected[this] val bytesWritten: Histogram =
+    metrics.histogram(metrics.name("service", getClass, s"${contentClassName}.write-data-size"))
 
   def fetch(key: String): Future[Option[S]] = {
     state.fetch(prefix + key) map {

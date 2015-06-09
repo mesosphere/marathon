@@ -3,11 +3,10 @@ package mesosphere.marathon
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.{ Named, Inject }
 
-import com.codahale.metrics.MetricRegistry
 import com.twitter.common.zookeeper.Candidate
 import mesosphere.marathon.api.LeaderInfo
-import mesosphere.util.TimerUtils
-import mesosphere.util.TimerUtils.ScalaTimer
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.Metrics.Timer
 
 class MarathonLeaderInfo @Inject() (
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
@@ -26,8 +25,8 @@ class MarathonLeaderInfo @Inject() (
   }
 }
 
-class MarathonLeaderInfoMetrics @Inject() (metrics: MetricRegistry) {
-  val getLeaderDataTimer: ScalaTimer =
-    TimerUtils.timer(metrics, getClass, "current-leader-host-port")
+class MarathonLeaderInfoMetrics @Inject() (metrics: Metrics) {
+  val getLeaderDataTimer: Timer =
+    metrics.timer(metrics.name("service", getClass, "current-leader-host-port"))
 }
 
