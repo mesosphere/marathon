@@ -1,11 +1,39 @@
 package mesosphere.marathon.api
 
+import javax.inject.Named
+import javax.net.ssl.SSLContext
+
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.google.inject.Scopes
-import mesosphere.chaos.http.RestModule
+import com.google.inject.servlet.ServletModule
+import com.google.inject.{ Singleton, Provides, Scopes }
+import mesosphere.chaos.http.{ HttpConf, RestModule }
 import mesosphere.jackson.CaseClassModule
 import mesosphere.marathon.api.v2.json.MarathonModule
 import mesosphere.marathon.event.http.HttpEventStreamServlet
+import mesosphere.marathon.io.SSLContextUtil
+
+/**
+  * Setup the dependencies for the LeaderProxyFilter.
+  * This filter will redirect to the master if running in HA mode.
+  */
+class LeaderProxyFilterModule extends ServletModule {
+  protected override def configureServlets() {
+    bind(classOf[RequestForwarder]).to(classOf[JavaUrlConnectionRequestForwarder]).in(Scopes.SINGLETON)
+    bind(classOf[LeaderProxyFilter]).asEagerSingleton()
+    filter("/*").through(classOf[LeaderProxyFilter])
+  }
+
+  /**
+    * Configure ssl using the key store so that our own certificate is accepted
+    * in any case, even if it is not signed by a public certification entity.
+    */
+  @Provides
+  @Singleton
+  @Named(JavaUrlConnectionRequestForwarder.NAMED_LEADER_PROXY_SSL_CONTEXT)
+  def provideSSLContext(httpConf: HttpConf): SSLContext = {
+    SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
+  }
+}
 
 class MarathonRestModule extends RestModule {
 
@@ -15,7 +43,6 @@ class MarathonRestModule extends RestModule {
   )
 
   protected override def configureServlets() {
-
     // Map some exceptions to HTTP responses
     bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
 
@@ -31,10 +58,7 @@ class MarathonRestModule extends RestModule {
     bind(classOf[v2.ArtifactsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.SchemaResource]).in(Scopes.SINGLETON)
 
-    // This filter will redirect to the master if running in HA mode.
-    bind(classOf[RequestForwarder]).to(classOf[JavaUrlConnectionRequestForwarder]).in(Scopes.SINGLETON)
-    bind(classOf[LeaderProxyFilter]).asEagerSingleton()
-    filter("/*").through(classOf[LeaderProxyFilter])
+    install(new LeaderProxyFilterModule)
 
     bind(classOf[CORSFilter]).asEagerSingleton()
     filter("/*").through(classOf[CORSFilter])

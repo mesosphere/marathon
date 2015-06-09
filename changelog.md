@@ -88,10 +88,13 @@ This proxying has now been improved and gained additional configuration paramete
     Maximum time, in milliseconds, for reading from the
     current Marathon leader.
 
+Furthermore, leader proxying now uses HTTPS to talk to the leader if `--http_disable` was specified.
+
 These bugs are now obsolete:
 
 - #1540 A marathon instance should never proxy to itself
 - #1541 Proxying Marathon requests should use timeouts
+- #1556 Proxying doesn't work for HTTPS
 
 #### Relative URL paths in the UI
 
@@ -141,6 +144,10 @@ script is started as `root`.
 
 
 ### Fixed Bugs
+
+- #1540 A marathon instance should never proxy to itself
+- #1541 Proxying Marathon requests should use timeouts
+- #1556 Proxying doesn't work for HTTPS
 
 TODO
 
