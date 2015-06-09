@@ -10,30 +10,31 @@ import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.MarathonSpec
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
+import mesosphere.util.state.PersistentStore
+import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
-import org.apache.mesos.state.{ InMemoryState, State }
 import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.mockito.Matchers.any
 import org.scalatest.concurrent.ScalaFutures
 
-import scala.collection.JavaConverters._
 import scala.collection._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import org.scalatest.concurrent.ScalaFutures._
 
 class TaskTrackerTest extends MarathonSpec {
 
   val TEST_APP_NAME = "foo".toRootPath
   val TEST_TASK_ID = "sampleTask"
   var taskTracker: TaskTracker = null
-  var state: State = null
+  var state: PersistentStore = null
   val config = defaultConfig()
   val taskIdUtil = new TaskIdUtil
   val metrics = new Metrics(new MetricRegistry)
 
   before {
-    state = spy(new InMemoryState)
+    state = spy(new InMemoryStore)
     taskTracker = new TaskTracker(state, config, metrics)
   }
 
@@ -74,12 +75,12 @@ class TaskTrackerTest extends MarathonSpec {
     )
   }
 
-  def stateShouldNotContainKey(state: State, key: String) {
-    assert(!state.names().get().asScala.toSet.contains(key), s"Key ${key} was found in state")
+  def stateShouldNotContainKey(state: PersistentStore, key: String) {
+    assert(!state.allIds().futureValue.toSet.contains(key), s"Key $key was found in state")
   }
 
-  def stateShouldContainKey(state: State, key: String) {
-    assert(state.names().get().asScala.toSet.contains(key), s"Key ${key} was not found in state")
+  def stateShouldContainKey(state: PersistentStore, key: String) {
+    assert(state.allIds().futureValue.toSet.contains(key), s"Key $key was not found in state")
   }
 
   test("SerializeAndDeserialize") {
@@ -100,7 +101,7 @@ class TaskTrackerTest extends MarathonSpec {
   test("StoreAndFetchTask") {
     val sampleTask = makeSampleTask(TEST_TASK_ID)
 
-    taskTracker.store(TEST_APP_NAME, sampleTask)
+    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
 
     val fetchedTask = taskTracker.fetchTask(taskTracker.getKey(TEST_APP_NAME, TEST_TASK_ID))
 
@@ -237,7 +238,7 @@ class TaskTrackerTest extends MarathonSpec {
     taskTracker.created(appName3, task6)
     taskTracker.running(appName3, makeTaskStatus(taskId6))
 
-    assert(state.names.get.asScala.toSet.size == 6, "Incorrect number of tasks in state")
+    assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
 
     val app1Tasks = taskTracker.fetchApp(appName1).tasks
 
@@ -292,7 +293,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     taskTracker.expungeOrphanedTasks()
 
-    val names = state.names.get.asScala.toSet
+    val names = state.allIds().futureValue
 
     assert(names.size == 3, "Orphaned tasks were not correctly expunged")
     assert(!taskTracker.contains(ORPHANED_APP_NAME), "Orphaned app should not exist in TaskTracker")
@@ -321,7 +322,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     taskTracker.statusUpdate(TEST_APP_NAME, status)
 
-    verify(state, times(0)).store(any())
+    verify(state, times(0)).update(any())
   }
 
   test("Should not store if state and health did not change") {
@@ -342,7 +343,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     taskTracker.statusUpdate(TEST_APP_NAME, status)
 
-    verify(state, times(0)).store(any())
+    verify(state, times(0)).update(any())
   }
 
   test("Should store if state changed") {
@@ -366,7 +367,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
 
-    verify(state, times(1)).store(any())
+    verify(state, times(1)).update(any())
   }
 
   test("Should store if health changed") {
@@ -391,7 +392,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
 
-    verify(state, times(1)).store(any())
+    verify(state, times(1)).update(any())
   }
 
   test("Should store if state and health changed") {
@@ -417,7 +418,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
 
-    verify(state, times(1)).store(any())
+    verify(state, times(1)).update(any())
   }
 
   test("Should store if health changed (no health present at first)") {
@@ -441,7 +442,7 @@ class TaskTrackerTest extends MarathonSpec {
 
     taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
 
-    verify(state, times(1)).store(any())
+    verify(state, times(1)).update(any())
   }
 
   test("Should store if state and health changed (no health present at first)") {
@@ -466,6 +467,6 @@ class TaskTrackerTest extends MarathonSpec {
 
     taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
 
-    verify(state, times(1)).store(any())
+    verify(state, times(1)).update(any())
   }
 }

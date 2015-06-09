@@ -1,21 +1,22 @@
 package mesosphere.marathon.upgrade
 
+import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
-import akka.actor.{ Props, ActorSystem }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
-import mesosphere.marathon.{ MarathonConf, AppStartCanceledException, SchedulerActions, MarathonSpec }
-import org.apache.mesos.state.InMemoryState
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
-import org.scalatest.mock.MockitoSugar
-import org.apache.mesos.SchedulerDriver
-import mesosphere.marathon.state.{ AppDefinition, PathId }
-import scala.concurrent.{ Await, Promise }
-import org.mockito.Mockito.verify
-import mesosphere.marathon.event.{ MesosStatusUpdateEvent, HealthStatusChanged }
-import mesosphere.marathon.metrics.Metrics
-import scala.concurrent.duration._
+import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.{ AppStartCanceledException, MarathonConf, MarathonSpec, SchedulerActions }
+import mesosphere.util.state.memory.InMemoryStore
+import org.apache.mesos.SchedulerDriver
+import org.mockito.Mockito.verify
+import org.scalatest.mock.MockitoSugar
+import mesosphere.marathon.metrics.Metrics
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
+
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Promise }
 
 class AppStartActorTest
     extends TestKit(ActorSystem("System"))
@@ -33,7 +34,7 @@ class AppStartActorTest
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
     taskQueue = new TaskQueue
-    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new Metrics(new MetricRegistry))
+    taskTracker = new TaskTracker(new InMemoryStore, mock[MarathonConf], new Metrics(new MetricRegistry))
   }
 
   test("Without Health Checks") {

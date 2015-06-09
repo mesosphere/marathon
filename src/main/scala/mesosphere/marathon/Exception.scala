@@ -4,8 +4,6 @@ import mesosphere.marathon.state.PathId
 
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
-class StorageException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
-
 class UnknownAppException(id: PathId) extends Exception(s"App '$id' does not exist")
 
 class BadRequestException(msg: String) extends Exception(msg)
@@ -50,3 +48,8 @@ class DeploymentCanceledException(msg: String) extends DeploymentFailedException
 class AppStartCanceledException(msg: String) extends DeploymentFailedException(msg)
 class AppStopCanceledException(msg: String) extends DeploymentFailedException(msg)
 class ResolveArtifactsCanceledException(msg: String) extends DeploymentFailedException(msg)
+
+/*
+ * Store specific exceptions
+ */
+class StoreCommandFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)

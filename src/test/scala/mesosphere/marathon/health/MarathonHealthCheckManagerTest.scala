@@ -13,7 +13,7 @@ import mesosphere.marathon.state.{ AppDefinition, AppRepository, MarathonStore, 
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.util.Logging
-import org.apache.mesos.state.InMemoryState
+import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.{ Protos => mesos }
 import org.rogach.scallop.ScallopConf
 
@@ -40,9 +40,9 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
-    taskTracker = new TaskTracker(new InMemoryState, defaultConfig(), metrics)
+    taskTracker = new TaskTracker(new InMemoryStore, defaultConfig(), metrics)
     appRepository = new AppRepository(
-      new MarathonStore[AppDefinition](config, new InMemoryState, metrics, () => AppDefinition()),
+      new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition()),
       None,
       metrics)
 

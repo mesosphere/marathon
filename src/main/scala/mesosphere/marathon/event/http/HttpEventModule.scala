@@ -1,21 +1,23 @@
 package mesosphere.marathon.event.http
 
-import scala.language.postfixOps
-import com.google.inject.{ Scopes, Singleton, Provides, AbstractModule }
-import akka.actor.{ Props, ActorRef, ActorSystem }
-import akka.pattern.ask
-import com.google.inject.name.Named
 import java.util.concurrent.Executors
-import scala.concurrent.ExecutionContext
-import org.rogach.scallop.ScallopConf
-import org.apache.log4j.Logger
-import scala.concurrent.duration._
+
+import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.pattern.ask
 import akka.util.Timeout
-import org.apache.mesos.state.State
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.MarathonStore
+import com.codahale.metrics.MetricRegistry
+import com.google.inject.name.Named
+import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
 import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe }
-import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.state.{ EntityStore, MarathonStore }
+import mesosphere.util.state.PersistentStore
+import org.apache.log4j.Logger
+import org.rogach.scallop.ScallopConf
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import mesosphere.marathon.metrics.Metrics
 
 trait HttpEventConfiguration extends ScallopConf {
 
@@ -49,7 +51,7 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
   @Named(HttpEventModule.SubscribersKeeperActor)
   def provideSubscribersKeeperActor(conf: HttpEventConfiguration,
                                     system: ActorSystem,
-                                    store: MarathonStore[EventSubscribers]): ActorRef = {
+                                    store: EntityStore[EventSubscribers]): ActorRef = {
     implicit val timeout = HttpEventModule.timeout
     implicit val ec = HttpEventModule.executionContext
     val local_ip = java.net.InetAddress.getLocalHost.getHostAddress
@@ -71,9 +73,9 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
 
   @Provides
   @Singleton
-  def provideCallbackUrlsStore(conf: MarathonConf,
-                               state: State, metrics: Metrics): MarathonStore[EventSubscribers] =
-    new MarathonStore[EventSubscribers](conf, state, metrics, () => new EventSubscribers(Set.empty[String]), "events:")
+  def provideCallbackUrlsStore(store: PersistentStore, metrics: Metrics): EntityStore[EventSubscribers] = {
+    new MarathonStore[EventSubscribers](store, metrics, () => new EventSubscribers(Set.empty[String]), "events:")
+  }
 }
 
 object HttpEventModule {

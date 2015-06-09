@@ -3,31 +3,31 @@ package mesosphere.marathon.tasks
 import java.io._
 import javax.inject.Inject
 
+import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, StateMetrics, Timestamp }
-import mesosphere.marathon.MarathonConf
+import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskStatus
-import org.apache.mesos.state.{ State, Variable }
 
 import scala.collection.JavaConverters._
 import scala.collection._
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Set
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 
 class TaskTracker @Inject() (
-  state: State,
+  store: PersistentStore,
   config: MarathonConf,
   val metrics: Metrics)
     extends StateMetrics {
 
   import mesosphere.marathon.tasks.TaskTracker._
-  import mesosphere.util.BackToTheFuture.futureToFuture
   import mesosphere.util.ThreadPoolContext.context
 
-  implicit val timeout = config.zkFutureTimeout
+  implicit val timeout = config.zkTimeoutDuration
 
   private[this] val log = Logger.getLogger(getClass.getName)
 
@@ -36,8 +36,8 @@ class TaskTracker @Inject() (
 
   private[this] val apps = TrieMap[PathId, InternalApp]()
 
-  private[tasks] def fetchFromState(id: String): Variable = timedRead {
-    state.fetch(id).get(timeout.duration.length, timeout.duration.unit)
+  private[tasks] def fetchFromState(id: String): Option[PersistentEntity] = timedRead {
+    Await.result(store.load(id), timeout)
   }
 
   private[tasks] def getKey(appId: PathId, taskId: String): String = {
@@ -101,8 +101,7 @@ class TaskTracker @Inject() (
       case Some(task) =>
         app.tasks.remove(task.getId)
 
-        val variable = fetchFromState(getKey(appId, taskId))
-        timedWrite { state.expunge(variable) }
+        timedWrite { Await.result(store.delete(getKey(appId, taskId)), timeout) }
 
         log.info(s"Task $taskId expunged and removed from TaskTracker")
 
@@ -157,7 +156,7 @@ class TaskTracker @Inject() (
     // stagedAt is set when the task is created by the scheduler
     val now = System.currentTimeMillis
     val expires = now - config.taskLaunchTimeout()
-    val toKill = stagedTasks.filter(_.getStagedAt < expires)
+    val toKill = stagedTasks().filter(_.getStagedAt < expires)
 
     toKill.foreach(t => {
       log.warn(s"Task '${t.getId}' was staged ${(now - t.getStagedAt) / 1000}s ago and has not yet started")
@@ -168,7 +167,7 @@ class TaskTracker @Inject() (
   def expungeOrphanedTasks(): Unit = {
     // Remove tasks that don't have any tasks associated with them. Expensive!
     log.info("Expunging orphaned tasks from store")
-    val stateTaskKeys = timedRead { state.names.get.asScala.filter(_.startsWith(PREFIX)) }
+    val stateTaskKeys = timedRead { Await.result(store.allIds(), timeout).filter(_.startsWith(PREFIX)) }
     val appsTaskKeys = apps.values.flatMap { app =>
       app.tasks.keys.map(taskId => getKey(app.appName, taskId))
     }.toSet
@@ -176,17 +175,16 @@ class TaskTracker @Inject() (
     for (stateTaskKey <- stateTaskKeys) {
       if (!appsTaskKeys.contains(stateTaskKey)) {
         log.info(s"Expunging orphaned task with key $stateTaskKey")
-        val variable = timedRead {
-          state.fetch(stateTaskKey).get(timeout.duration.length, timeout.duration.unit)
+        timedWrite {
+          Await.result(store.delete(stateTaskKey), timeout)
         }
-        timedWrite { state.expunge(variable) }
       }
     }
   }
 
   private[tasks] def fetchApp(appId: PathId): InternalApp = {
     log.debug(s"Fetching app from store $appId")
-    val names = timedRead { state.names().get.asScala.toSet }
+    val names = timedRead { Await.result(store.allIds(), timeout).toSet }
     val tasks = TrieMap[String, MarathonTask]()
     val taskKeys = names.filter(name => name.startsWith(PREFIX + appId.safePath + ID_DELIMITER))
     for {
@@ -201,12 +199,10 @@ class TaskTracker @Inject() (
     fetchTask(getKey(appId, taskId))
 
   private[tasks] def fetchTask(taskKey: String): Option[MarathonTask] = {
-    val bytes = fetchFromState(taskKey).value
-    if (bytes.length > 0) {
-      val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
+    fetchFromState(taskKey).flatMap { entity =>
+      val source = new ObjectInputStream(new ByteArrayInputStream(entity.bytes.toArray))
       deserialize(taskKey, source)
     }
-    else None
   }
 
   def deserialize(taskKey: String, source: ObjectInputStream): Option[MarathonTask] = {
@@ -261,13 +257,16 @@ class TaskTracker @Inject() (
     sink.flush()
   }
 
-  def store(appId: PathId, task: MarathonTask): Future[Variable] = {
-    val oldVar = fetchFromState(getKey(appId, task.getId))
-    val bytes = new ByteArrayOutputStream()
-    val output = new ObjectOutputStream(bytes)
+  def store(appId: PathId, task: MarathonTask): Future[PersistentEntity] = {
+    val byteStream = new ByteArrayOutputStream()
+    val output = new ObjectOutputStream(byteStream)
     serialize(task, output)
-    val newVar = oldVar.mutate(bytes.toByteArray)
-    timedWrite { state.store(newVar) }
+    val bytes = byteStream.toByteArray
+    val key: String = getKey(appId, task.getId)
+    timedWrite(fetchFromState(key) match {
+      case Some(entity) => store.update(entity.withNewContent(bytes))
+      case None         => store.create(key, bytes)
+    })
   }
 
   private[tasks] def statusDidChange(statusA: TaskStatus, statusB: TaskStatus): Boolean = {

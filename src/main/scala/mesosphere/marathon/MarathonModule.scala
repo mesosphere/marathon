@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Named
@@ -8,12 +9,12 @@ import akka.actor.SupervisorStrategy.Restart
 import akka.actor.{ ActorRef, ActorRefFactory, ActorSystem, OneForOneStrategy, Props }
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
-import com.codahale.metrics.MetricRegistry
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup, ZooKeeperClient }
+import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.event.EventModule
@@ -24,12 +25,17 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker, _ }
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.SerializeExecution
+import mesosphere.util.state.memory.InMemoryStore
+import mesosphere.util.state.mesos.MesosStateStore
+import mesosphere.util.state.zk.ZKStore
+import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore }
 import org.apache.log4j.Logger
-import org.apache.mesos.state.{ State, ZooKeeperState }
+import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
+import org.apache.zookeeper.ZooDefs.Ids
 
+import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
 object ModuleNames {
@@ -101,13 +107,32 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideMesosState(): State = {
-    new ZooKeeperState(
-      conf.zkHosts,
-      conf.zkTimeoutDuration.toMillis,
-      TimeUnit.MILLISECONDS,
-      conf.zooKeeperStatePath
-    )
+  def provideStore(): PersistentStore = {
+    def directZK(): PersistentStore = {
+      implicit val timer = com.twitter.util.Timer.Nil
+      import com.twitter.util.TimeConversions._
+      val sessionTimeout = conf.zooKeeperSessionTimeout.get.map(_.millis).getOrElse(30.minutes)
+      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, timer)
+      val client = ZkClient(connector)
+        .withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
+        .withRetries(3)
+      new ZKStore(client, client(conf.zooKeeperStatePath))
+    }
+    def mesosZK(): PersistentStore = {
+      val state = new ZooKeeperState(
+        conf.zkHosts,
+        conf.zkTimeoutDuration.toMillis,
+        TimeUnit.MILLISECONDS,
+        conf.zooKeeperStatePath
+      )
+      new MesosStateStore(state, conf.zkTimeoutDuration)
+    }
+    conf.internalStoreBackend.get match {
+      case Some("zk")       => directZK()
+      case Some("mesos_zk") => mesosZK()
+      case Some("mem")      => new InMemoryStore()
+      case backend          => throw new IllegalArgumentException(s"Storage backend $backend not known!")
+    }
   }
 
   @Named("schedulerActor")
@@ -179,15 +204,14 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideTaskFailureRepository(
-    state: State,
+    store: PersistentStore,
     conf: MarathonConf,
     metrics: Metrics): TaskFailureRepository = {
     import mesosphere.marathon.state.PathId
     import org.apache.mesos.{ Protos => mesos }
     new TaskFailureRepository(
       new MarathonStore[TaskFailure](
-        conf,
-        state,
+        store,
         metrics,
         () => TaskFailure(
           PathId.empty,
@@ -202,39 +226,42 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideAppRepository(
-    state: State,
+    store: PersistentStore,
     conf: MarathonConf,
-    metrics: Metrics): AppRepository =
+    metrics: Metrics): AppRepository = {
     new AppRepository(
-      new MarathonStore[AppDefinition](conf, state, metrics, () => AppDefinition.apply()),
+      new MarathonStore[AppDefinition](store, metrics, () => AppDefinition.apply()),
       maxVersions = conf.zooKeeperMaxVersions.get,
       metrics
     )
+  }
 
   @Provides
   @Singleton
   def provideGroupRepository(
-    state: State,
+    store: PersistentStore,
     appRepository: AppRepository,
     conf: MarathonConf,
-    metrics: Metrics): GroupRepository =
+    metrics: Metrics): GroupRepository = {
     new GroupRepository(
-      new MarathonStore[Group](conf, state, metrics, () => Group.empty, "group:"),
+      new MarathonStore[Group](store, metrics, () => Group.empty, "group:"),
       appRepository, conf.zooKeeperMaxVersions.get,
       metrics
     )
+  }
 
   @Provides
   @Singleton
   def provideDeploymentRepository(
-    state: State,
+    store: PersistentStore,
     conf: MarathonConf,
-    metrics: Metrics): DeploymentRepository =
+    metrics: Metrics): DeploymentRepository = {
     new DeploymentRepository(
-      new MarathonStore[DeploymentPlan](conf, state, metrics, () => DeploymentPlan.empty, "deployment:"),
+      new MarathonStore[DeploymentPlan](store, metrics, () => DeploymentPlan.empty, "deployment:"),
       conf.zooKeeperMaxVersions.get,
       metrics
     )
+  }
 
   @Provides
   @Singleton
@@ -247,18 +274,22 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideFrameworkIdUtil(state: State): FrameworkIdUtil =
-    new FrameworkIdUtil(state)
+  def provideFrameworkIdUtil(store: PersistentStore, metrics: Metrics, conf: MarathonConf): FrameworkIdUtil = {
+    new FrameworkIdUtil(
+      new MarathonStore[FrameworkId](store, metrics, () => new FrameworkId(UUID.randomUUID().toString), ""),
+      conf.zkTimeoutDuration)
+  }
 
   @Provides
   @Singleton
   def provideMigration(
-    state: State,
+    store: PersistentStore,
     appRepo: AppRepository,
     groupRepo: GroupRepository,
     metrics: Metrics,
-    config: MarathonConf): Migration =
-    new Migration(state, appRepo, groupRepo, config, metrics)
+    config: MarathonConf): Migration = {
+    new Migration(store, appRepo, groupRepo, config, metrics)
+  }
 
   @Provides
   @Singleton

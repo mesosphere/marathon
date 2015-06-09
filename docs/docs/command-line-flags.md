@@ -113,6 +113,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
     in milliseconds.
+*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 1.800.000 (30 minutes)): Timeout for ZooKeeper
+    sessions in milliseconds.
 * `--mesos_authentication_principal` (Optional.): The Mesos principal used for
     authentication
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret

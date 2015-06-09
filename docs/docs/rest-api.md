@@ -2526,13 +2526,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
     "version": "0.7.0-SNAPSHOT",
     "zookeeper_config": {
         "zk": "zk://localhost:2181/marathon",
-        "zk_future_timeout": {
-            "duration": 10
-        },
-        "zk_hosts": "localhost:2181",
-        "zk_path": "/marathon",
-        "zk_state": "/marathon",
-        "zk_timeout": 10
+        "zk_timeout": 10000,
+        "zk_session_timeout": 1800000,
+        "zk_max_version": 5
     }
 }
 {% endhighlight %}
