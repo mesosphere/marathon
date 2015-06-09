@@ -6,7 +6,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 class DeploymentRepository(
-  val store: PersistenceStore[DeploymentPlan],
+  val store: EntityStore[DeploymentPlan],
   val maxVersions: Option[Int] = None,
   val metrics: Metrics)
     extends EntityRepository[DeploymentPlan] with StateMetrics {

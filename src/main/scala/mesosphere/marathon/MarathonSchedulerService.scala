@@ -8,7 +8,6 @@ import javax.inject.{ Inject, Named }
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.pattern.{ after, ask }
 import akka.util.Timeout
-import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Candidate
@@ -21,8 +20,8 @@ import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, Path
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.{ PromiseActor }
+import mesosphere.util.PromiseActor
+import mesosphere.util.state.FrameworkIdUtil
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
@@ -51,7 +50,7 @@ class MarathonSchedulerService @Inject() (
 
   import mesosphere.util.ThreadPoolContext.context
 
-  implicit val zkTimeout = config.zkFutureTimeout
+  implicit val zkTimeout = config.zkTimeoutDuration
 
   val latch = new CountDownLatch(1)
 
@@ -228,6 +227,16 @@ class MarathonSchedulerService @Inject() (
     driver = None
   }
 
+  def isLeader: Boolean = leader.get()
+
+  def getLeader: Option[String] = {
+    candidate.flatMap { c =>
+      if (c.getLeaderData.isPresent)
+        Some(new String(c.getLeaderData.get))
+      else
+        None
+    }
+  }
   //End Service interface
 
   //Begin Leader interface, which is required for CandidateImpl.
@@ -251,7 +260,7 @@ class MarathonSchedulerService @Inject() (
       electLeadership(Some(abdicateCmd))
 
       // We successfully took over leadership. Time to reset backoff
-      resetOfferLeadershipBackOff
+      resetOfferLeadershipBackOff()
     }
     catch {
       case NonFatal(e) => // catch Scala and Java exceptions
@@ -345,7 +354,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (leader.get()) {
+          if (isLeader) {
             schedulerActor ! ScaleApps
           }
           else log.info("Not leader therefore not scaling apps")
@@ -358,7 +367,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (leader.get()) {
+          if (isLeader) {
             schedulerActor ! ReconcileTasks
             schedulerActor ! ReconcileHealthChecks
           }
@@ -375,7 +384,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (leader.get()) {
+          if (isLeader) {
             taskTracker.expungeOrphanedTasks()
           }
         }

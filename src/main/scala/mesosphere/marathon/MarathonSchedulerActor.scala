@@ -15,10 +15,9 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
-import mesosphere.mesos.protos.Offer
-import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.mesos.{ TaskBuilder, protos }
-import org.apache.mesos.Protos.{ TaskID, TaskInfo, TaskState, TaskStatus }
+import mesosphere.mesos.protos
+import mesosphere.util.state.FrameworkIdUtil
+import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
@@ -153,7 +152,7 @@ class MarathonSchedulerActor(
       val origSender = sender()
       withLockFor(appId) {
         val promise = Promise[Unit]()
-        val tasksToKill = taskIds.flatMap(taskTracker.fetchTask(appId, _)).toSet
+        val tasksToKill = taskIds.flatMap(taskTracker.fetchTask(appId, _))
         context.actorOf(Props(classOf[TaskKillActor], driver, appId, taskTracker, eventBus, tasksToKill, promise))
         val res = if (scale) {
           for {
@@ -414,10 +413,7 @@ class SchedulerActions(
   }
 
   def stopApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
-    appRepository.expunge(app.id).map { successes =>
-      if (!successes.forall(_ == true)) {
-        throw new StorageException(s"Error expunging ${app.id}")
-      }
+    appRepository.expunge(app.id).map { _ =>
 
       healthCheckManager.removeAllFor(app.id)
 
@@ -439,7 +435,7 @@ class SchedulerActions(
 
   def scaleApps(): Future[Unit] = {
     appRepository.allPathIds().map(_.toSet).andThen {
-      case Success(appIds) => { for (appId <- appIds) schedulerActor ! ScaleApp(appId) }
+      case Success(appIds) => for (appId <- appIds) schedulerActor ! ScaleApp(appId)
       case Failure(t)      => log.warn("Failed to get task names", t)
     }.map(_ => ())
   }

@@ -17,7 +17,7 @@ import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, StopApplication }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
-import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any

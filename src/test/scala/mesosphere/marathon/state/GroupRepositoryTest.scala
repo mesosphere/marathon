@@ -15,7 +15,7 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
   test("Store canary strategy") {
     val store = mock[MarathonStore[Group]]
     val group = Group("g1".toPath, Set.empty)
-    val future = Future.successful(Some(group))
+    val future = Future.successful(group)
     val versionedKey = s"root:${group.version}"
     val appRepo = mock[AppRepository]
 

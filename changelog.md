@@ -36,6 +36,16 @@ The new Marathon now provides an
 where you receive all events conveniently as
 [Server Sent Events](http://www.w3schools.com/html/html5_serversentevents.asp).
 
+#### Abstraction for Persistent Storage added with Zookeeper access directly in the JVM 
+
+A new storage abstraction has been created, which allows for different storage providers,
+is completely non-blocking and provides consistent usage patterns.
+A ZooKeeper Storage Provider is implemented in a backward compatible fashion.
+The same data format and storage layout is used as prior versions of Marathon.
+You can use this version of Marathon without migrating data while it is also possible to switch back to an older version.
+The new persistent storage layer is enabled by default, no further action is needed.
+
+
 #### Satisfy ports from any offered port range
 
 In prior Marathon versions, matching port resources to the demands of a task had various restrictions:
@@ -106,11 +116,16 @@ parameters.
 WARNING: If you use the `http_endpoints` parameter with multiple space
 separated URLs, you will need to migrate to the comma-separated format.
 
-#### Do not delay task launches anymore as a result of failed health checks
-
+####
+ Do not delay task launches anymore as a result of failed health checks
 Marathon uses an exponential back off strategy to delay further task launches after task failures. This should
 prevent keeping the cluster busy with task launches which are set up to fail anyway. The delay was also increased
 when health checks failed leading to delayed recovery.
+
+#### Removed deprecated command line arguments `zk_hosts` and `zk_state`
+
+The command line arguments `zk_hosts` and `zk_state` were deprecated for some time and got removed in this version.
+Use the `--zk` command line argument to define the zookeeper connection string. 
 
 Since health checks typically (depending on configuration) take a while to determine that a task is unhealthy,
 this already delays restarting sufficiently.

@@ -3,24 +3,25 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.tasks.IterativeOfferMatcher.{ OfferUsage, OfferUsages }
-import mesosphere.marathon.{ MarathonConf, MarathonTestHelper }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.tasks.IterativeOfferMatcher.{ OfferUsage, OfferUsages }
+import mesosphere.marathon.{ MarathonConf, MarathonTestHelper }
+import mesosphere.util.state.PersistentStore
+import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.Protos.{ Offer, OfferID, TaskInfo }
 import org.apache.mesos.SchedulerDriver
-import org.apache.mesos.state.{ State, InMemoryState }
 import org.mockito.{ ArgumentCaptor, Mockito }
-import org.scalatest.{ BeforeAndAfter, ShouldMatchers, FunSuite, GivenWhenThen }
-import scala.collection.JavaConverters._
+import org.scalatest.{ FunSuite, GivenWhenThen, ShouldMatchers }
 
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldMatchers {
 
   var config: MarathonConf = _
   var taskQueue: TaskQueue = _
-  var state: State = _
+  var state: PersistentStore = _
   var taskTracker: TaskTracker = _
   var taskFactory: TaskFactory = _
   var iterativeOfferMatcherMetrics: IterativeOfferMatcherMetrics = _
@@ -31,7 +32,7 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     config = MarathonTestHelper.defaultConfig(
       maxTasksPerOffer = maxTasksPerOffer, maxTasksPerOfferCycle = maxTasksPerOfferCycle)
     taskQueue = new TaskQueue
-    state = new InMemoryState
+    state = new InMemoryStore
     metrics = new Metrics(new MetricRegistry)
     iterativeOfferMatcherMetrics = new IterativeOfferMatcherMetrics(metrics)
     taskTracker = new TaskTracker(state, config, metrics)
@@ -59,8 +60,8 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     val usages = matcher.calculateOfferUsage(offers)
 
     Then("the offer gets used for one task")
-    usages.usages should have size (1)
-    usages.usages.head.scheduledTasks should have size (1)
+    usages.usages should have size 1
+    usages.usages.head.scheduledTasks should have size 1
   }
 
   test("Calculate offer usages for three tasks and three offers") {
@@ -75,10 +76,10 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     val usages = matcher.calculateOfferUsage(offers)
 
     Then("each offer gets used for one task")
-    usages.usages should have size (3)
+    usages.usages should have size 3
     for ((usage, idx) <- usages.usages.zipWithIndex) {
       withClue(s"at index $idx, offer ${usage.remainingOffer.getId.getValue}") {
-        usage.scheduledTasks should have size (1)
+        usage.scheduledTasks should have size 1
       }
     }
   }
@@ -95,13 +96,13 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     val usages = matcher.calculateOfferUsage(offers)
 
     Then("the offers get used for two tasks (== maxTasksPerOfferCycle)")
-    usages.usages should have size (3)
+    usages.usages should have size 3
     for ((usage, idx) <- usages.usages.take(2).zipWithIndex) {
       withClue(s"at index $idx, offer ${usage.remainingOffer.getId.getValue}") {
-        usage.scheduledTasks should have size (1)
+        usage.scheduledTasks should have size 1
       }
     }
-    usages.usages.last.scheduledTasks should have size (0)
+    usages.usages.last.scheduledTasks should have size 0
   }
 
   test("Calculate offer usages for ten tasks") {
@@ -116,8 +117,8 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     val usages = matcher.calculateOfferUsage(offers)
 
     Then("the one offer gets used for ten tasks (== maxTasksPerOffer)")
-    usages.usages should have size (1)
-    usages.usages.head.scheduledTasks should have size (10)
+    usages.usages should have size 1
+    usages.usages.head.scheduledTasks should have size 10
   }
 
   test("Calculate offer usages for ten tasks, with overall cycle limit 9") {
@@ -132,8 +133,8 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     val usages = matcher.calculateOfferUsage(offers)
 
     Then("the one offer gets used for nine tasks")
-    usages.usages should have size (1)
-    usages.usages.head.scheduledTasks should have size (9)
+    usages.usages should have size 1
+    usages.usages.head.scheduledTasks should have size 9
   }
 
   test("Calculate offer usages for 11 tasks, leave one unscheduled") {
@@ -148,8 +149,8 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     val usages = matcher.calculateOfferUsage(offers)
 
     Then("the one offer gets used for ten tasks (== maxTasksPerOffer)")
-    usages.usages should have size (1)
-    usages.usages.head.scheduledTasks should have size (10)
+    usages.usages should have size 1
+    usages.usages.head.scheduledTasks should have size 10
   }
 
   test("Committing decline to driver") {

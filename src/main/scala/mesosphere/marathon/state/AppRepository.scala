@@ -5,7 +5,7 @@ import mesosphere.util.ThreadPoolContext.context
 import scala.concurrent.Future
 
 class AppRepository(
-  val store: PersistenceStore[AppDefinition],
+  val store: EntityStore[AppDefinition],
   val maxVersions: Option[Int] = None,
   val metrics: Metrics)
     extends EntityRepository[AppDefinition] with StateMetrics {

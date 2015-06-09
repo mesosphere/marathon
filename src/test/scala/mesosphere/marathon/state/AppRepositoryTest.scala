@@ -1,14 +1,15 @@
 package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.metrics.Metrics
-import org.mockito.Mockito._
-import org.mockito.Matchers._
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration._
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.PathId._
+import org.mockito.Matchers._
+import org.mockito.Mockito._
+
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
-import PathId._
 
 class AppRepositoryTest extends MarathonSpec {
   var metrics: Metrics = _
@@ -20,7 +21,7 @@ class AppRepositoryTest extends MarathonSpec {
   test("App") {
     val path = "testApp".toRootPath
     val store = mock[MarathonStore[AppDefinition]]
-    val timestamp = Timestamp.now
+    val timestamp = Timestamp.now()
     val appDef = AppDefinition(id = path, version = timestamp)
     val future = Future.successful(Some(appDef))
 
@@ -37,7 +38,7 @@ class AppRepositoryTest extends MarathonSpec {
     val path = "testApp".toRootPath
     val store = mock[MarathonStore[AppDefinition]]
     val appDef = AppDefinition(id = path)
-    val future = Future.successful(Some(appDef))
+    val future = Future.successful(appDef)
     val versionedKey = s"testApp:${appDef.version}"
 
     when(store.store(versionedKey, appDef)).thenReturn(future)
@@ -53,7 +54,7 @@ class AppRepositoryTest extends MarathonSpec {
 
   test("AppIds") {
     val store = mock[MarathonStore[AppDefinition]]
-    val future = Future.successful(Seq("app1", "app2", "app1:version", "app2:version").iterator)
+    val future = Future.successful(Seq("app1", "app2", "app1:version", "app2:version"))
 
     when(store.names()).thenReturn(future)
 
@@ -72,7 +73,7 @@ class AppRepositoryTest extends MarathonSpec {
     val appDef2Old = appDef2.copy(version = Timestamp(appDef2.version.toDateTime.minusDays(1)))
     val allApps = Seq(appDef1, appDef2, appDef1Old, appDef2Old)
 
-    val future = Future.successful((Seq("app1", "app2") ++ allApps.map(x => s"${x.id}:${x.version}")).toIterator)
+    val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id}:${x.version}"))
 
     when(store.names()).thenReturn(future)
     when(store.fetch(appDef1.id.toString)).thenReturn(Future.successful(Some(appDef1)))
@@ -96,7 +97,7 @@ class AppRepositoryTest extends MarathonSpec {
     val appDef2 = AppDefinition("app2".toRootPath)
     val allApps = Seq(appDef1, version1, version2, version3, appDef2)
 
-    val future = Future.successful((Seq("app1", "app2") ++ allApps.map(x => s"${x.id.safePath}:${x.version}")).toIterator)
+    val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id.safePath}:${x.version}"))
 
     when(store.names()).thenReturn(future)
 
@@ -117,7 +118,7 @@ class AppRepositoryTest extends MarathonSpec {
     val appDef2 = AppDefinition("app2".toRootPath)
     val allApps = Seq(appDef1, version1, version2, version3, appDef2)
 
-    val future = Future.successful((Seq("app1", "app2") ++ allApps.map(x => s"${x.id.safePath}:${x.version}")).toIterator)
+    val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id.safePath}:${x.version}"))
 
     when(store.names()).thenReturn(future)
     when(store.expunge(any())).thenReturn(Future.successful(true))

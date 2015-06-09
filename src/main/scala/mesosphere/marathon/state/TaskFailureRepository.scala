@@ -2,7 +2,7 @@ package mesosphere.marathon.state
 
 import scala.collection.mutable
 
-class TaskFailureRepository(store: PersistenceStore[TaskFailure], maxVersions: Option[Int] = Some(1)) {
+class TaskFailureRepository(store: EntityStore[TaskFailure], maxVersions: Option[Int] = Some(1)) {
 
   protected[this] val taskFailures = mutable.Map[PathId, TaskFailure]()
 

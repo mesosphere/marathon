@@ -64,7 +64,7 @@ trait SingleMarathonIntegrationTest
     if (!config.useExternalSetup) {
       log.info("Setting up local mesos/marathon infrastructure...")
 
-      ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo")
+      ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo/single")
       ProcessKeeper.startMesosLocal()
       cleanMarathonState()
 

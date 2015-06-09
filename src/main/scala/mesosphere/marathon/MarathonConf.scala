@@ -159,4 +159,12 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
     descr = "Mesos Authentication Secret",
     noshort = true
   )
+
+  //Internal settings, that are not intended for external use
+  lazy val internalStoreBackend = opt[String]("internal_store_backend",
+    descr = "The backend storage system to use. One of zk, mesos_zk, mem",
+    hidden = true,
+    validate = Set("zk", "mesos_zk", "mem").contains,
+    default = Some("zk")
+  )
 }
