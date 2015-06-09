@@ -68,6 +68,7 @@ message ServiceDefinition {
   repeated mesos.Parameter labels = 20;
   optional int64 maxLaunchDelay = 21 [default = 3600000]; // stored as Millis
   optional ResourceRoles acceptedResourceRoles = 22;
+  repeated CustomResourceDefinition customResources = 23;
 }
 
 message ResourceRoles {
@@ -173,4 +174,27 @@ message TaskFailure {
   optional string host = 5 [default = ""];
   required string version = 6;
   required string timestamp = 7;
+}
+
+message CustomResourceDefinition {
+    message CustomScalar {
+        required double value = 1;
+    }
+    optional CustomScalar scalar = 1;
+
+    message CustomRanges {
+        message CustomRange {
+            required uint64 numberRequired = 1;
+            optional uint64 begin = 2;
+            optional uint64 end = 3;
+        }
+        repeated CustomRange value = 1;
+    }
+    optional CustomRanges range = 2;
+
+    message CustomSet {
+        repeated string value = 1;
+        required uint32 numberRequired = 2;
+    }
+    optional CustomSet set = 3;
 }

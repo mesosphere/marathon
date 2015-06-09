@@ -10,7 +10,8 @@ import mesosphere.marathon.state.{
   Container,
   PathId,
   UpgradeStrategy,
-  Timestamp
+  Timestamp,
+  CustomResource
 }
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
@@ -41,7 +42,8 @@ case class AppUpdate(
 
     disk: Option[JDouble] = None,
 
-    customResources: Option[Map[String, JDouble]] = None,
+    customResources: Option[Map[String, CustomResource]] = None,
+    //customResources: Option[Map[String, JDouble]] = None,
 
     executor: Option[String] = None,
 

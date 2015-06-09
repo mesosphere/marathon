@@ -50,7 +50,8 @@ trait Formats
     with HealthCheckFormats
     with ContainerFormats
     with DeploymentFormats
-    with EventFormats {
+    with EventFormats
+    with CustomResourceFormats {
   import scala.collection.JavaConverters._
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
@@ -196,6 +197,35 @@ trait ContainerFormats {
     (__ \ "volumes").formatNullable[Seq[Volume]].withDefault(Nil) ~
     (__ \ "docker").formatNullable[Docker]
   )(Container(_, _, _), unlift(Container.unapply))
+}
+
+trait CustomResourceFormats {
+  import Formats._
+
+  implicit lazy val CustomScalarResource: Format[CustomResource.CustomScalarResource] = (
+    (__ \ "value").format[Double]
+  )(CustomScalarResource(_), unlift(CustomScalarResource.unapply))
+
+  implicit lazy val CustomSetResource: Format[CustomResource.CustomSetResource] = (
+    (__ \ "value").format[Seq[String]] ~
+    (__ \ "numberRequired").format[Int]
+  )(CustomSetResource(_, _), unlift(CustomSetResource.unapply))
+
+  implicit lazy val CustomRange: Format[CustomRangeResource.CustomRange] = (
+    (__ \ "begin").formatNullable[Option[Int]].withDefault(0) ~
+    (__ \ "end").formatNullable[Option[Int]].withDefault(Int.MaxValue) ~
+    (__ \ "numberRequired").format[Int]
+  )(CustomRange(_, _, _), unlift(CustomRange.unapply))
+
+  implicit lazy val CustomRangeResource: Format[CustomResource.CustomRangeResource] = (
+    (__ \ "value").format[Seq[CustomRange]]
+  )(CustomRangeResource(_), unlift(CustomRangeResource.unapply))
+
+  implicit lazy val CustomResourceFormat: Format[CustomResource] = (
+    (__ \ "scalar").formatNullable[Option[CustomScalarResource]] ~
+    (__ \ "range").formatNullable[Option[CustomRangeResource]] ~
+    (__ \ "set").formatNullable[Option[CustomSetResource]]
+  )(CustomResource(_, _, _), unlift(CustomResource.unapply))
 }
 
 trait DeploymentFormats {
@@ -384,7 +414,7 @@ trait AppDefinitionFormats {
       (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)).withDefault(DefaultCpus) ~
       (__ \ "mem").readNullable[JDouble].withDefault(DefaultMem) ~
       (__ \ "disk").readNullable[JDouble].withDefault(DefaultDisk) ~
-      (__ \ "customResources").readNullable[Map[String, JDouble]].withDefault(DefaultCustomResources) ~
+      (__ \ "customResources").readNullable[Seq[CustomResource]].withDefault(DefaultCustomResources) ~
       (__ \ "executor").readNullable[String](Reads.pattern(executorPattern)).withDefault(DefaultExecutor) ~
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(DefaultConstraints) ~
       (__ \ "uris").readNullable[Seq[String]].withDefault(DefaultUris) ~
@@ -477,7 +507,7 @@ trait AppDefinitionFormats {
       (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)) ~
       (__ \ "mem").readNullable[JDouble] ~
       (__ \ "disk").readNullable[JDouble] ~
-      (__ \ "customResources").readNullable[Map[String, JDouble]] ~
+      (__ \ "customResources").readNullable[Map[String, CustomResource]] ~
       (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)) ~
       (__ \ "constraints").readNullable[Set[Constraint]] ~
       (__ \ "uris").readNullable[Seq[String]] ~
