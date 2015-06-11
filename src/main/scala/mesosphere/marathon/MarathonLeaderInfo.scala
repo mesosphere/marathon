@@ -5,7 +5,7 @@ import javax.inject.{ Named, Inject }
 
 import com.twitter.common.zookeeper.Candidate
 import mesosphere.marathon.api.LeaderInfo
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.Timer
 
 class MarathonLeaderInfo @Inject() (
@@ -27,6 +27,6 @@ class MarathonLeaderInfo @Inject() (
 
 class MarathonLeaderInfoMetrics @Inject() (metrics: Metrics) {
   val getLeaderDataTimer: Timer =
-    metrics.timer(metrics.name("service", getClass, "current-leader-host-port"))
+    metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "current-leader-host-port"))
 }
 

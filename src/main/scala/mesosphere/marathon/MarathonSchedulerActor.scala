@@ -8,7 +8,13 @@ import akka.pattern.ask
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, HistoryActor }
+import mesosphere.marathon.event.{
+  LocalLeadershipEvent,
+  AppTerminatedEvent,
+  DeploymentFailed,
+  DeploymentSuccess,
+  HistoryActor
+}
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
@@ -82,12 +88,18 @@ class MarathonSchedulerActor(
 
     historyActor = context.actorOf(
       Props(classOf[HistoryActor], eventBus, taskFailureRepository), "HistoryActor")
+
+    eventBus.subscribe(self, classOf[LocalLeadershipEvent])
+  }
+
+  override def postStop(): Unit = {
+    eventBus.unsubscribe(self)
   }
 
   def receive: Receive = suspended
 
   def suspended: Receive = {
-    case Start =>
+    case LocalLeadershipEvent.ElectedAsLeader =>
       log.info("Starting scheduler actor")
       deploymentRepository.all() onComplete {
         case Success(deployments) => self ! RecoverDeployments(deployments)
@@ -105,20 +117,20 @@ class MarathonSchedulerActor(
       context.become(started)
       self ! ReconcileHealthChecks
 
-    case Suspend(_) => // ignore
+    case LocalLeadershipEvent.Standby => // ignore
 
-    case _          => stash()
+    case _                            => stash()
   }
 
   def started: Receive = sharedHandlers orElse {
-    case Suspend(t) =>
+    case LocalLeadershipEvent.Standby =>
       log.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
       deploymentManager ! CancelAllDeployments
       lockedApps = Set.empty
       context.become(suspended)
 
-    case Start => // ignore
+    case LocalLeadershipEvent.ElectedAsLeader => // ignore
 
     case ReconcileTasks =>
       scheduler.reconcileTasks(driver)
@@ -327,9 +339,6 @@ class MarathonSchedulerActor(
 }
 
 object MarathonSchedulerActor {
-  case object Start
-  case class Suspend(reason: Throwable)
-
   case class RecoverDeployments(deployments: Seq[DeploymentPlan])
 
   sealed trait Command {

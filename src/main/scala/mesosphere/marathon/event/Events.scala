@@ -40,6 +40,14 @@ object EventModule {
   final val busName = "events"
 }
 
+/** Local leadership events. They are not delivered via the event endpoints. */
+sealed trait LocalLeadershipEvent
+
+object LocalLeadershipEvent {
+  case object ElectedAsLeader
+  case object Standby
+}
+
 sealed trait MarathonEvent {
   val eventType: String
   val timestamp: String

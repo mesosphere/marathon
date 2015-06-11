@@ -4,7 +4,7 @@ import javax.inject.Provider
 
 import com.google.inject.{ Scopes, AbstractModule }
 import com.google.inject.matcher.{ AbstractMatcher, Matchers }
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
 import org.apache.log4j.{ Level, Logger }
 import org.rogach.scallop.ScallopConf
@@ -39,7 +39,7 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
     override def invoke(in: MethodInvocation): AnyRef = {
       val metrics: Metrics = metricsProvider.get
 
-      metrics.timed(metrics.name("service", in)) {
+      metrics.timed(metrics.name(MetricPrefixes.SERVICE, in)) {
         in.proceed
       }
     }

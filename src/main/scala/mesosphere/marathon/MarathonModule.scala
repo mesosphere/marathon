@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Named
 
 import akka.actor.SupervisorStrategy.Restart
-import akka.actor.{ ActorRef, ActorRefFactory, ActorSystem, OneForOneStrategy, Props }
+import akka.actor.{ Props, ActorRef, ActorRefFactory, ActorSystem, OneForOneStrategy }
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -18,7 +18,7 @@ import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.event.EventModule
-import mesosphere.marathon.event.http.HttpEventStreamActor
+import mesosphere.marathon.event.http.{ HttpEventStreamHandleActor, HttpEventStreamHandle, HttpEventStreamActor }
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
@@ -98,7 +98,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   def provideHttpEventStreamActor(system: ActorSystem,
                                   @Named(EventModule.busName) eventBus: EventStream): ActorRef = {
     val outstanding = conf.eventStreamMaxOutstandingMessages.get.getOrElse(50)
-    system.actorOf(Props(classOf[HttpEventStreamActor], eventBus, outstanding), "HttpEventStream")
+    def handleStreamProps(handle: HttpEventStreamHandle): Props =
+      Props(new HttpEventStreamHandleActor(handle, eventBus, outstanding))
+
+    system.actorOf(Props(classOf[HttpEventStreamActor], eventBus, handleStreamProps _), "HttpEventStream")
   }
 
   @Provides

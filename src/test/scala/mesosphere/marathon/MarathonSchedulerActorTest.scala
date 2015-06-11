@@ -8,7 +8,7 @@ import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.event.{ DeploymentSuccess, MesosStatusUpdateEvent, UpgradeEvent }
+import mesosphere.marathon.event.{ LocalLeadershipEvent, DeploymentSuccess, MesosStatusUpdateEvent, UpgradeEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
@@ -113,7 +113,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       awaitAssert({
         verify(hcManager).reconcileWith(app.id)
       }, 5.seconds, 10.millis)
@@ -142,7 +142,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! ReconcileTasks
 
       expectMsg(5.seconds, TasksReconciled)
@@ -175,7 +175,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! ScaleApps
 
       awaitAssert({
@@ -198,7 +198,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! ScaleApp("test-app".toPath)
 
       awaitAssert({
@@ -239,7 +239,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
 
       expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
@@ -284,7 +284,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = false)
 
       expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
@@ -311,7 +311,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -345,7 +345,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -386,7 +386,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -413,7 +413,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
 
       expectMsgType[DeploymentStarted]
@@ -461,7 +461,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     ))
 
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
 
       // This indicates that the deployment is already running,
@@ -488,7 +488,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = createActor()
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
 
       expectMsgType[DeploymentStarted]
@@ -533,7 +533,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       }
     ))
     try {
-      schedulerActor ! Start
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
 
       expectMsgType[DeploymentStarted]

@@ -1,6 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.{ Histogram, Meter }
 
 trait StateMetrics {
@@ -8,7 +8,7 @@ trait StateMetrics {
   // metrics!
   protected val metrics: Metrics
 
-  private[this] val prefix: String = "service"
+  private[this] def prefix: String = MetricPrefixes.SERVICE
 
   private[this] val readRequests: Meter = metrics.meter(metrics.name(prefix, getClass, "read-requests"))
   private[this] val readRequestErrors: Meter = metrics.meter(metrics.name(prefix, getClass, "read-request-errors"))
