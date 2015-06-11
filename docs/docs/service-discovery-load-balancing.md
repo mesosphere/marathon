@@ -21,11 +21,16 @@ Port information for each running task can be queried via the
 at `<marathon host>:<port>/v2/tasks`
 
 ## Using HAProxy
-Marathon ships with a simple shell script called `haproxy-marathon-bridge` that turns the Marathon's REST API's list of running tasks into a config file for HAProxy, a lightweight TCP/HTTP proxy.
-To generate an HAProxy configuration from Marathon running at `localhost:8080`, use the `haproxy-marathon-bridge` script:
+Marathon ships with a simple shell script called `haproxy-marathon-bridge` as well as a more advanced Python script 'servicerouter.py'.
+Both can turn the Marathon's REST API's list of running tasks into a config file for HAProxy, a lightweight TCP/HTTP proxy.
+The `haproxy-marathon-bridge` provides a minimum set of functionality and is easier to understand for beginners. `servicerouter.py`
+on the other hand supports more advanced functionality like SSL offloading, sticky connections and VHost based load balancing.
+
+### haproxy-marathon-bridge
+To generate an HAProxy configuration from Marathon running at `localhost:8080` with the `haproxy-marathon-bridge` script:
 
 ``` console
-$ ./bin/haproxy-marathon-bridge localhost:8080 > haproxy.cfg
+$ ./bin/haproxy-marathon-bridge localhost:8080 > /etc/haproxy/haproxy.cfg
 ```
 
 To reload the HAProxy configuration without interrupting existing connections:
@@ -55,3 +60,20 @@ $ ./bin/haproxy-marathon-bridge install_haproxy_system localhost:8080
 
 The provided script is just a basic example. For a full list of options, check the
 [HAProxy configuration docs](http://cbonte.github.io/haproxy-dconv/configuration-1.5.html).
+
+### servicerouter.py
+To generate an HAProxy configuration from Marathon running at `localhost:8080` with the `servicerouter.py` script:
+
+``` console
+$ ./bin/servicerouter.py --marathon http://localhost:8080 --haproxy-config /etc/haproxy/haproxy.cfg
+```
+
+This will generate a new haproxy.cfg and if it changed automatically reload a running haproxy.
+
+Servicerouter has a lot of additional functionality like sticky sessions, http to https redirection, SSL offloading,
+VHost support and templating capabilities.
+
+To get the full servicerouter documentation run:
+``` console
+$ ./bin/servicerouter.py --help
+```
