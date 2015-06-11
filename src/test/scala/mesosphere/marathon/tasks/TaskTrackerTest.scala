@@ -4,24 +4,22 @@ import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream,
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
+import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.MarathonSpec
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
-import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.mockito.Matchers.any
+import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.ScalaFutures._
 
 import scala.collection._
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import org.scalatest.concurrent.ScalaFutures._
 
 class TaskTrackerTest extends MarathonSpec {
 
@@ -117,9 +115,9 @@ class TaskTrackerTest extends MarathonSpec {
     val task2 = makeSampleTask(taskId2)
     val task3 = makeSampleTask(taskId3)
 
-    taskTracker.store(TEST_APP_NAME, task1)
-    taskTracker.store(TEST_APP_NAME, task2)
-    taskTracker.store(TEST_APP_NAME, task3)
+    taskTracker.store(TEST_APP_NAME, task1).futureValue
+    taskTracker.store(TEST_APP_NAME, task2).futureValue
+    taskTracker.store(TEST_APP_NAME, task3).futureValue
 
     val testAppTasks = taskTracker.fetchApp(TEST_APP_NAME).tasks
 
@@ -142,7 +140,7 @@ class TaskTrackerTest extends MarathonSpec {
     // TASK STATUS UPDATE
     val startingTaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_STARTING)
 
-    taskTracker.statusUpdate(TEST_APP_NAME, startingTaskStatus)
+    taskTracker.statusUpdate(TEST_APP_NAME, startingTaskStatus).futureValue
 
     shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTaskKey)
@@ -151,7 +149,7 @@ class TaskTrackerTest extends MarathonSpec {
     // TASK RUNNING
     val runningTaskStatus: TaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_RUNNING)
 
-    taskTracker.running(TEST_APP_NAME, runningTaskStatus)
+    taskTracker.running(TEST_APP_NAME, runningTaskStatus).futureValue
 
     shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTaskKey)
@@ -166,7 +164,7 @@ class TaskTrackerTest extends MarathonSpec {
     // TASK TERMINATED
     val finishedTaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_FINISHED)
 
-    taskTracker.terminated(TEST_APP_NAME, finishedTaskStatus)
+    taskTracker.terminated(TEST_APP_NAME, finishedTaskStatus).futureValue
 
     assert(taskTracker.contains(TEST_APP_NAME), "App was not stored")
     stateShouldNotContainKey(state, sampleTaskKey)
@@ -179,9 +177,7 @@ class TaskTrackerTest extends MarathonSpec {
     // ERRONEOUS MESSAGE
     val erroneousStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_LOST)
 
-    val updatedTask = taskTracker.statusUpdate(TEST_APP_NAME, erroneousStatus)
-
-    val taskOption = Await.result(updatedTask, Duration.Inf)
+    val taskOption = taskTracker.statusUpdate(TEST_APP_NAME, erroneousStatus).futureValue
 
     // Empty option means this message was discarded since there was no matching task
     assert(taskOption.isEmpty, "Task was able to be updated and was not removed")
@@ -221,22 +217,22 @@ class TaskTrackerTest extends MarathonSpec {
     val task6 = makeSampleTask(taskId6)
 
     taskTracker.created(appName1, task1)
-    taskTracker.running(appName1, makeTaskStatus(taskId1))
+    taskTracker.running(appName1, makeTaskStatus(taskId1)).futureValue
 
     taskTracker.created(appName1, task2)
-    taskTracker.running(appName1, makeTaskStatus(taskId2))
+    taskTracker.running(appName1, makeTaskStatus(taskId2)).futureValue
 
     taskTracker.created(appName2, task3)
-    taskTracker.running(appName2, makeTaskStatus(taskId3))
+    taskTracker.running(appName2, makeTaskStatus(taskId3)).futureValue
 
     taskTracker.created(appName3, task4)
-    taskTracker.running(appName3, makeTaskStatus(taskId4))
+    taskTracker.running(appName3, makeTaskStatus(taskId4)).futureValue
 
     taskTracker.created(appName3, task5)
-    taskTracker.running(appName3, makeTaskStatus(taskId5))
+    taskTracker.running(appName3, makeTaskStatus(taskId5)).futureValue
 
     taskTracker.created(appName3, task6)
-    taskTracker.running(appName3, makeTaskStatus(taskId6))
+    taskTracker.running(appName3, makeTaskStatus(taskId6)).futureValue
 
     assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
 
@@ -270,9 +266,9 @@ class TaskTrackerTest extends MarathonSpec {
     val orphanedTask2 = makeSampleTask(orphanedTaskId2)
     val orphanedTask3 = makeSampleTask(orphanedTaskId3)
 
-    taskTracker.store(ORPHANED_APP_NAME, orphanedTask1)
-    taskTracker.store(ORPHANED_APP_NAME, orphanedTask2)
-    taskTracker.store(ORPHANED_APP_NAME, orphanedTask3)
+    taskTracker.store(ORPHANED_APP_NAME, orphanedTask1).futureValue
+    taskTracker.store(ORPHANED_APP_NAME, orphanedTask2).futureValue
+    taskTracker.store(ORPHANED_APP_NAME, orphanedTask3).futureValue
 
     val taskId1 = taskIdUtil.taskId(TEST_APP_NAME)
     val taskId2 = taskIdUtil.taskId(TEST_APP_NAME)
@@ -283,13 +279,13 @@ class TaskTrackerTest extends MarathonSpec {
     val task3 = makeSampleTask(taskId3)
 
     taskTracker.created(TEST_APP_NAME, task1)
-    taskTracker.running(TEST_APP_NAME, makeTaskStatus(taskId1))
+    taskTracker.running(TEST_APP_NAME, makeTaskStatus(taskId1)).futureValue
 
     taskTracker.created(TEST_APP_NAME, task2)
-    taskTracker.running(TEST_APP_NAME, makeTaskStatus(taskId2))
+    taskTracker.running(TEST_APP_NAME, makeTaskStatus(taskId2)).futureValue
 
     taskTracker.created(TEST_APP_NAME, task3)
-    taskTracker.running(TEST_APP_NAME, makeTaskStatus(taskId3))
+    taskTracker.running(TEST_APP_NAME, makeTaskStatus(taskId3)).futureValue
 
     taskTracker.expungeOrphanedTasks()
 
@@ -313,14 +309,14 @@ class TaskTrackerTest extends MarathonSpec {
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask)
-    taskTracker.running(TEST_APP_NAME, status)
+    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.running(TEST_APP_NAME, status).futureValue
 
-    taskTracker.statusUpdate(TEST_APP_NAME, status)
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     reset(state)
 
-    taskTracker.statusUpdate(TEST_APP_NAME, status)
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     verify(state, times(0)).update(any())
   }
@@ -334,14 +330,14 @@ class TaskTrackerTest extends MarathonSpec {
       .setHealthy(true)
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask)
-    taskTracker.running(TEST_APP_NAME, status)
+    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.running(TEST_APP_NAME, status).futureValue
 
-    taskTracker.statusUpdate(TEST_APP_NAME, status)
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     reset(state)
 
-    taskTracker.statusUpdate(TEST_APP_NAME, status)
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     verify(state, times(0)).update(any())
   }
@@ -354,10 +350,10 @@ class TaskTrackerTest extends MarathonSpec {
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask)
-    taskTracker.running(TEST_APP_NAME, status)
+    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.running(TEST_APP_NAME, status).futureValue
 
-    taskTracker.statusUpdate(TEST_APP_NAME, status)
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     reset(state)
 
@@ -365,7 +361,7 @@ class TaskTrackerTest extends MarathonSpec {
       .setState(Protos.TaskState.TASK_FAILED)
       .build()
 
-    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus).futureValue
 
     verify(state, times(1)).update(any())
   }
@@ -379,10 +375,10 @@ class TaskTrackerTest extends MarathonSpec {
       .setHealthy(true)
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask)
-    taskTracker.running(TEST_APP_NAME, status)
+    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.running(TEST_APP_NAME, status).futureValue
 
-    taskTracker.statusUpdate(TEST_APP_NAME, status)
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     reset(state)
 
@@ -390,7 +386,7 @@ class TaskTrackerTest extends MarathonSpec {
       .setHealthy(false)
       .build()
 
-    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus).futureValue
 
     verify(state, times(1)).update(any())
   }
@@ -404,10 +400,10 @@ class TaskTrackerTest extends MarathonSpec {
       .setHealthy(true)
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask)
-    taskTracker.running(TEST_APP_NAME, status)
+    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.running(TEST_APP_NAME, status).futureValue
 
-    taskTracker.statusUpdate(TEST_APP_NAME, status)
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     reset(state)
 
@@ -416,7 +412,7 @@ class TaskTrackerTest extends MarathonSpec {
       .setHealthy(false)
       .build()
 
-    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus).futureValue
 
     verify(state, times(1)).update(any())
   }
@@ -429,10 +425,10 @@ class TaskTrackerTest extends MarathonSpec {
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask)
-    taskTracker.running(TEST_APP_NAME, status)
+    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.running(TEST_APP_NAME, status).futureValue
 
-    taskTracker.statusUpdate(TEST_APP_NAME, status)
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     reset(state)
 
@@ -440,7 +436,7 @@ class TaskTrackerTest extends MarathonSpec {
       .setHealthy(true)
       .build()
 
-    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus).futureValue
 
     verify(state, times(1)).update(any())
   }
@@ -453,10 +449,10 @@ class TaskTrackerTest extends MarathonSpec {
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask)
-    taskTracker.running(TEST_APP_NAME, status)
+    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.running(TEST_APP_NAME, status).futureValue
 
-    taskTracker.statusUpdate(TEST_APP_NAME, status)
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     reset(state)
 
@@ -465,7 +461,7 @@ class TaskTrackerTest extends MarathonSpec {
       .setHealthy(false)
       .build()
 
-    taskTracker.statusUpdate(TEST_APP_NAME, newStatus)
+    taskTracker.statusUpdate(TEST_APP_NAME, newStatus).futureValue
 
     verify(state, times(1)).update(any())
   }
