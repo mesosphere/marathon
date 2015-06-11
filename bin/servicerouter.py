@@ -123,7 +123,8 @@ class ConfigTemplater(object):
     ''')
 
     HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS = '''\
-  redirect scheme https if !{ ssl_fc }
+  bind {bindAddr}:80
+  redirect scheme https if !{{ ssl_fc }}
 '''
 
     HAPROXY_HTTP_FRONTEND_ACL = '''\
@@ -240,32 +241,31 @@ class ConfigTemplater(object):
 def string_to_bool(s):
   return s.lower() in ["true", "t", "yes", "y"]
 
-
 def set_hostname(x, y):
     x.hostname = y
-
 
 def set_sticky(x, y):
     x.sticky = string_to_bool(y)
 
-
-def redirect_http_to_https(x, y):
+def set_redirect_http_to_https(x, y):
     x.redirectHttpToHttps = string_to_bool(y)
 
-
-def sslCert(x, y):
+def set_sslCert(x, y):
     x.sslCert = y
 
-
-def bindAddr(x, y):
+def set_bindAddr(x, y):
     x.bindAddr = y
+
+def set_mode(x, y):
+    x.mode = y
 
 env_keys = {
     'HAPROXY_{0}_VHOST': set_hostname,
     'HAPROXY_{0}_STICKY': set_sticky,
-    'HAPROXY_{0}_REDIRECT_TO_HTTPS': redirect_http_to_https,
-    'HAPROXY_{0}_SSL_CERT': sslCert,
-    'HAPROXY_{0}_BIND_ADDR': bindAddr
+    'HAPROXY_{0}_REDIRECT_TO_HTTPS': set_redirect_http_to_https,
+    'HAPROXY_{0}_SSL_CERT': set_sslCert,
+    'HAPROXY_{0}_BIND_ADDR': set_bindAddr,
+    'HAPROXY_{0}_MODE': set_mode
 }
 
 logger = logging.getLogger('servicerouter')
@@ -294,6 +294,7 @@ class MarathonService(object):
         self.redirectHttpToHttps = False
         self.sslCert = None
         self.bindAddr = '*'
+        self.mode = 'tcp'
         self.groups = frozenset()
 
     def add_backend(self, host, port):
@@ -420,18 +421,19 @@ def config(apps, groups):
             bindAddr=app.bindAddr,
             backend=backend,
             servicePort=app.servicePort,
-            mode='http' if app.hostname else 'tcp',
+            mode=app.mode,
             sslCertOptions=' ssl crt ' + app.sslCert if app.sslCert else ''
         )
 
         if app.redirectHttpToHttps:
             logger.debug("rule to redirect http to https traffic")
-            frontends += templater.haproxy_backend_redirect_http_to_https
+            haproxy_backend_redirect_http_to_https = templater.haproxy_backend_redirect_http_to_https
+            frontends += haproxy_backend_redirect_http_to_https.format(bindAddr=app.bindAddr)
 
         backend_head = templater.haproxy_backend_head
         backends += backend_head.format(
             backend=backend,
-            mode='http' if app.hostname else 'tcp'
+            mode=app.mode
         )
 
         # if a hostname is set we add the app to the vhost section
