@@ -1,15 +1,15 @@
 package mesosphere.marathon.integration.setup
 
-import javax.inject.{ Inject, Named }
+import javax.inject.{Inject, Named}
 import javax.ws.rs.core.Response
-import javax.ws.rs.{ GET, Path }
+import javax.ws.rs.{GET, Path}
 
 import com.google.common.util.concurrent.Service
 import com.google.inject._
-import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService, RestModule }
+import mesosphere.chaos.http.{HttpConf, HttpModule, HttpService, RestModule}
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api._
-import mesosphere.marathon.{ LeaderProxyConf, ModuleNames }
+import mesosphere.marathon.{LeaderProxyConf, ModuleNames}
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
 
@@ -60,55 +60,64 @@ object ForwarderService {
       bind(classOf[HttpConf]).toInstance(httpConf)
       bind(classOf[LeaderProxyConf]).toInstance(leaderProxyConf)
       bind(classOf[PingResource]).in(Scopes.SINGLETON)
-      bind(classOf[RequestForwarder]).to(classOf[JavaUrlConnectionRequestForwarder]).asEagerSingleton()
-      bind(classOf[LeaderProxyFilter]).asEagerSingleton()
-      filter("/*").through(classOf[LeaderProxyFilter])
+
+      install(new LeaderProxyFilterModule)
     }
+  }
+
+  class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf
+
+  def startHelloAppProcess(args: String*): Unit = {
+    val conf = createConf(args: _*)
+
+    ProcessKeeper.startJavaProcess(
+      s"app_${conf.httpPort()}",
+      arguments = List(ForwarderService.className, "helloApp") ++ args,
+      upWhen = _.contains("Started SelectChannelConnector"))
+  }
+
+  def startForwarderProcess(forwardToPort: Int, args: String*): Unit = {
+    val conf = createConf(args: _*)
+
+    ProcessKeeper.startJavaProcess(
+      s"forwarder_${conf.httpPort()}",
+      arguments = List(ForwarderService.className, "forwarder", forwardToPort.toString) ++ args,
+      upWhen = _.contains("SelectChannelConnector@"))
   }
 
   def main(args: Array[String]) {
     val service = args(0) match {
       case "helloApp" =>
-        createHelloApp(port = args(1).toInt)
+        createHelloApp(args.tail: _*)
       case "forwarder" =>
-        createForwarder(port = args(1).toInt, forwardToPort = args(2).toInt)
+        createForwarder(forwardToPort = args(1).toInt, args.drop(2): _*)
     }
     service.startAsync().awaitRunning()
     service.awaitTerminated()
   }
 
-  def startHelloAppProcess(port: Int): Unit = {
-    ProcessKeeper.startJavaProcess(
-      s"app_$port",
-      arguments = List(ForwarderService.className, "helloApp", port.toString),
-      upWhen = _.contains("Started SelectChannelConnector"))
+  def createHelloApp(args: String*): Service = {
+    val conf = createConf(args: _*)
+    log.info(s"Start hello app at ${conf.httpPort()}")
+    startImpl(conf, new LeaderInfoModule(elected = true, leaderHostPort = None))
   }
 
-  def startForwarderProcess(port: Int, forwardToPort: Int): Unit = {
-    ProcessKeeper.startJavaProcess(
-      s"forwarder_$port",
-      arguments = List(ForwarderService.className, "forwarder", port.toString, forwardToPort.toString),
-      upWhen = _.contains("Started SelectChannelConnector"))
+  def createForwarder(forwardToPort: Int, args: String*): Service = {
+    val conf = createConf(args: _*)
+    log.info(s"Start forwarder on port  ${conf.httpPort()}, forwarding to $forwardToPort")
+    startImpl(conf, new LeaderInfoModule(elected = false, leaderHostPort = Some(s"localhost:$forwardToPort")))
   }
 
-  def createHelloApp(port: Int): Service = {
-    log.info(s"Start hello app at $port")
-    startImpl(port, new LeaderInfoModule(elected = true, leaderHostPort = None))
-  }
-
-  def createForwarder(port: Int, forwardToPort: Int): Service = {
-    log.info(s"Start forwarder on port $port, forwarding to $forwardToPort")
-    startImpl(port, new LeaderInfoModule(elected = false, leaderHostPort = Some(s"localhost:$forwardToPort")))
-  }
-
-  private def startImpl(port: Int, leaderModule: Module, assetPath: String = "/tmp"): Service = {
-    val conf = new ScallopConf(Array(
-      "--http_port", port.toString,
-      "--assets_path", assetPath)) with HttpConf with LeaderProxyConf
+  private[this] def createConf(args: String*): ForwarderConf = {
+    val conf = new ForwarderConf(Array[String]("--assets_path", "/tmp") ++ args.map(_.toString))
     conf.afterInit()
+    conf
+  }
+
+  private def startImpl(conf: ForwarderConf, leaderModule: Module, assetPath: String = "/tmp"): Service = {
     val injector = Guice.createInjector(
       new MetricsModule, new HttpModule(conf),
-      new ForwarderAppModule(myHostPort = s"localhost:$port", conf, conf),
+      new ForwarderAppModule(myHostPort = s"localhost:${conf.httpPort()}", conf, conf),
       leaderModule
     )
     val http = injector.getInstance(classOf[HttpService])

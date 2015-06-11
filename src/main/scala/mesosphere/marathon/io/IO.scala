@@ -76,6 +76,12 @@ object IO {
     finally { if (close) Try(in.close()) }
   }
 
+  def copyInputStreamToString(in: InputStream): String = {
+    val out = new ByteArrayOutputStream()
+    transfer(in, out)
+    new String(out.toByteArray, "UTF-8")
+  }
+
   def using[A <: Closeable, B](closeable: A)(fn: (A) => B): B = {
     try {
       fn(closeable)

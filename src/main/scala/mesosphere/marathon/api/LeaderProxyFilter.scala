@@ -3,6 +3,7 @@ package mesosphere.marathon.api
 import java.io.{ IOException, InputStream, OutputStream }
 import java.net.{ UnknownServiceException, ConnectException, HttpURLConnection, URL }
 import javax.inject.Named
+import javax.net.ssl.{ HttpsURLConnection, SSLContext }
 import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
@@ -137,6 +138,7 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
 
 object LeaderProxyFilter {
   private val log = Logger.getLogger(getClass.getName)
+
   val ERROR_STATUS_NO_CURRENT_LEADER: String = "Could not determine the current leader"
 }
 
@@ -148,7 +150,9 @@ trait RequestForwarder {
 }
 
 class JavaUrlConnectionRequestForwarder @Inject() (
-  leaderProxyConf: LeaderProxyConf, @Named(ModuleNames.NAMED_HOST_PORT) myHostPort: String)
+  @Named(JavaUrlConnectionRequestForwarder.NAMED_LEADER_PROXY_SSL_CONTEXT) sslContext: SSLContext,
+  leaderProxyConf: LeaderProxyConf,
+  @Named(ModuleNames.NAMED_HOST_PORT) myHostPort: String)
     extends RequestForwarder {
 
   import JavaUrlConnectionRequestForwarder._
@@ -160,6 +164,23 @@ class JavaUrlConnectionRequestForwarder @Inject() (
     def hasProxyLoop: Boolean = {
       val viaOpt = Option(request.getHeaders(HEADER_VIA)).map(_.asScala.toVector)
       viaOpt.exists(_.contains(viaValue))
+    }
+
+    def createAndConfigureConnection(url: URL): HttpURLConnection = {
+      val connection = url.openConnection() match {
+        case httpsConnection: HttpsURLConnection =>
+          httpsConnection.setSSLSocketFactory(sslContext.getSocketFactory)
+          httpsConnection
+        case httpConnection: HttpURLConnection =>
+          httpConnection
+        case connection =>
+          throw new scala.RuntimeException(s"unexpected connection type: ${connection.getClass}")
+      }
+
+      connection.setConnectTimeout(leaderProxyConf.leaderProxyConnectionTimeout())
+      connection.setReadTimeout(leaderProxyConf.leaderProxyReadTimeout())
+
+      connection
     }
 
     def copyRequestHeadersToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Unit = {
@@ -243,11 +264,8 @@ class JavaUrlConnectionRequestForwarder @Inject() (
         response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_LOOP)
       }
       else {
-        val leaderConnection: HttpURLConnection = url.openConnection().asInstanceOf[HttpURLConnection]
+        val leaderConnection: HttpURLConnection = createAndConfigureConnection(url)
         try {
-          leaderConnection.setConnectTimeout(leaderProxyConf.leaderProxyConnectionTimeout())
-          leaderConnection.setReadTimeout(leaderProxyConf.leaderProxyReadTimeout())
-
           copyRequestToConnection(leaderConnection, request)
           copyConnectionResponse(leaderConnection, response)
         }
@@ -290,4 +308,5 @@ object JavaUrlConnectionRequestForwarder {
   val ERROR_STATUS_LOOP: String = "Detected proxying loop."
   val ERROR_STATUS_CONNECTION_REFUSED: String = "Connection to leader refused."
 
+  final val NAMED_LEADER_PROXY_SSL_CONTEXT = "JavaUrlConnectionRequestForwarder.SSLContext"
 }

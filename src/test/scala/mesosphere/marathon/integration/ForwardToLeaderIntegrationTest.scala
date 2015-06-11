@@ -1,9 +1,13 @@
 package mesosphere.marathon.integration
 
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
+
 import akka.actor.ActorSystem
-import mesosphere.marathon.integration.setup.{ AppMockFacade, ForwarderService, IntegrationFunSuite, ProcessKeeper }
+import mesosphere.marathon.integration.setup._
 import org.apache.commons.httpclient.HttpStatus
 import org.scalatest.BeforeAndAfter
+import mesosphere.marathon.io.IO
 
 /**
   * Tests forwarding requests.
@@ -25,7 +29,7 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
   }
 
   test("direct ping") {
-    ProcessKeeper.startService(ForwarderService.createHelloApp(ports.head))
+    ProcessKeeper.startService(ForwarderService.createHelloApp("--http_port", ports.head.toString))
     val appFacade = new AppMockFacade()
     val result = appFacade.ping("localhost", port = ports.head)
     assert(result.originalResponse.status.intValue == 200)
@@ -34,16 +38,54 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
 
   test("forwarding ping") {
     // We cannot start two service in one process because of static variables in GuiceFilter
-    ForwarderService.startHelloAppProcess(ports.head)
-    ProcessKeeper.startService(ForwarderService.createForwarder(port = ports(1), forwardToPort = ports.head))
+    ForwarderService.startHelloAppProcess("--http_port", ports.head.toString)
+    ProcessKeeper.startService(ForwarderService.createForwarder(
+      forwardToPort = ports.head, "--http_port", ports(1).toString))
     val appFacade = new AppMockFacade()
     val result = appFacade.ping("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == 200)
     assert(result.entityString == "pong\n")
   }
 
+  test("direct HTTPS ping") {
+    ProcessKeeper.startService(ForwarderService.createHelloApp(
+      "--disable_http",
+      "--ssl_keystore_path", SSLContextTestUtil.keyStorePath,
+      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+      "--https_address", "localhost",
+      "--https_port", ports.head.toString))
+
+    val pingURL = new URL(s"https://localhost:${ports.head}/ping")
+    val connection = SSLContextTestUtil.sslConnection(pingURL)
+    val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
+    assert(response == "pong\n")
+  }
+
+  test("forwarding HTTPS ping") {
+    // We cannot start two service in one process because of static variables in GuiceFilter
+    ProcessKeeper.startService(ForwarderService.createHelloApp(
+      "--disable_http",
+      "--ssl_keystore_path", SSLContextTestUtil.keyStorePath,
+      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+      "--https_address", "localhost",
+      "--https_port", ports.head.toString))
+
+    ForwarderService.startForwarderProcess(
+      forwardToPort = ports.head,
+      "--disable_http",
+      "--ssl_keystore_path", SSLContextTestUtil.keyStorePath,
+      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+      "--https_address", "localhost",
+      "--https_port", ports(1).toString)
+
+    val pingURL = new URL(s"https://localhost:${ports(1)}/ping")
+    val connection = SSLContextTestUtil.sslConnection(pingURL)
+    val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
+    assert(response == "pong\n")
+  }
+
   test("direct 404") {
-    ProcessKeeper.startService(ForwarderService.createHelloApp(ports.head))
+    ProcessKeeper.startService(ForwarderService.createHelloApp("--http_port", ports.head.toString))
     val appFacade = new AppMockFacade()
     val result = appFacade.custom("/notfound")("localhost", port = ports.head)
     assert(result.originalResponse.status.intValue == 404)
@@ -51,15 +93,16 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
 
   test("forwarding 404") {
     // We cannot start two service in one process because of static variables in GuiceFilter
-    ForwarderService.startHelloAppProcess(ports.head)
-    ProcessKeeper.startService(ForwarderService.createForwarder(port = ports(1), forwardToPort = ports.head))
+    ForwarderService.startHelloAppProcess("--http_port", ports.head.toString)
+    ProcessKeeper.startService(ForwarderService.createForwarder(forwardToPort = ports.head, "--http_port",
+      ports(1).toString))
     val appFacade = new AppMockFacade()
     val result = appFacade.custom("/notfound")("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == 404)
   }
 
   test("direct internal server error") {
-    ProcessKeeper.startService(ForwarderService.createHelloApp(ports.head))
+    ProcessKeeper.startService(ForwarderService.createHelloApp("--http_port", ports.head.toString))
     val appFacade = new AppMockFacade()
     val result = appFacade.custom("/hello/crash")("localhost", port = ports.head)
     assert(result.originalResponse.status.intValue == 500)
@@ -68,8 +111,9 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
 
   test("forwarding internal server error") {
     // We cannot start two service in one process because of static variables in GuiceFilter
-    ForwarderService.startHelloAppProcess(ports.head)
-    ProcessKeeper.startService(ForwarderService.createForwarder(port = ports(1), forwardToPort = ports.head))
+    ForwarderService.startHelloAppProcess("--http_port", ports.head.toString)
+    ProcessKeeper.startService(ForwarderService.createForwarder(forwardToPort = ports.head, "--http_port",
+      ports(1).toString))
     val appFacade = new AppMockFacade()
     val result = appFacade.custom("/hello/crash")("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == 500)
@@ -77,7 +121,8 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
   }
 
   test("forwarding connection failed") {
-    ProcessKeeper.startService(ForwarderService.createForwarder(port = ports(1), forwardToPort = ports.head))
+    ProcessKeeper.startService(ForwarderService.createForwarder(
+      forwardToPort = ports.head, "--http_port", ports(1).toString))
     val appFacade = new AppMockFacade()
     val result = appFacade.ping("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == HttpStatus.SC_BAD_GATEWAY)
@@ -85,8 +130,10 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
 
   test("forwarding loop") {
     // We cannot start two service in one process because of static variables in GuiceFilter
-    ForwarderService.startForwarderProcess(ports.head, forwardToPort = ports(1))
-    ProcessKeeper.startService(ForwarderService.createForwarder(port = ports(1), forwardToPort = ports.head))
+    ForwarderService.startForwarderProcess(
+      forwardToPort = ports(1), "--http_port", ports.head.toString)
+    ProcessKeeper.startService(ForwarderService.createForwarder(
+      forwardToPort = ports.head, "--http_port", ports(1).toString))
     val appFacade = new AppMockFacade()
     val result = appFacade.ping("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == HttpStatus.SC_BAD_GATEWAY)
