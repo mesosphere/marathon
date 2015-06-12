@@ -197,8 +197,8 @@ object TaskBuilder {
     app.args.foreach { argv =>
       builder.setShell(false)
       builder.addAllArguments(argv.asJava)
-      //mesos containerizer expects the cmd and arguments
-      app.container.getOrElse(builder.setValue(argv.head))
+      //mesos command executor expects cmd and arguments
+      if (app.container.isEmpty) builder.setValue(argv.head)
     }
 
     if (app.uris != null) {
