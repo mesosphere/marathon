@@ -8,7 +8,7 @@ Every step contains a list of actions with following types:
 
 * StartApplication: starts an application, which is currently not running.
 * StopApplication: stops an already running application. 
-* ScaleApplication: changes the number of instances of an application
+* ScaleApplication: changes the number of instances of an application and allows to kill specified instances while scaling.
 * RestartApplication: upgrades an already deployed application with a new version.
 * KillAllOldTasksOf: last step of a restart action.
 

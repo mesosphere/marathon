@@ -5,6 +5,7 @@ import javax.validation.ConstraintViolationException
 
 import akka.event.EventStream
 import mesosphere.marathon._
+import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
@@ -29,7 +30,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     val group = Group(PathId("/"), Set(app.toAppDefinition))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any) returns Future.successful(plan)
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
     When("The create request is made")
     val response = appsResource.create(req, body, false)
@@ -46,7 +47,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     val group = Group(PathId("/"), Set(app.toAppDefinition))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any) returns Future.successful(plan)
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
     Then("A constraint violation exception is thrown")
     intercept[ConstraintViolationException] { appsResource.create(req, body, false) }
@@ -59,7 +60,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     val group = Group(PathId("/"), Set(app))
     val plan = DeploymentPlan(group, group)
     val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any) returns Future.successful(plan)
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
     When("The application is updates")
     val response = appsResource.replace(req, app.id.toString, false, body)
@@ -74,14 +75,14 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     val plan = DeploymentPlan(group, group)
     service.deploy(any, any) returns Future.successful(())
 
-    groupManager.updateApp(any, any, any, any) returns Future.successful(plan)
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
     val response = appsResource.restart(app.id.toString, force = true)
     response.getStatus should be(200)
   }
 
   test("Restart a non existing app will fail") {
     val missing = PathId("/app")
-    groupManager.updateApp(any, any, any, any) returns Future.failed(new UnknownAppException(missing))
+    groupManager.updateApp(any, any, any, any, any) returns Future.failed(new UnknownAppException(missing))
     intercept[UnknownAppException] { appsResource.restart(missing.toString, force = true) }
   }
 
@@ -114,6 +115,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
   var eventBus: EventStream = _
   var service: MarathonSchedulerService = _
   var taskTracker: TaskTracker = _
+  var taskKiller: TaskKiller = _
   var healthCheckManager: HealthCheckManager = _
   var taskFailureRepo: TaskFailureRepository = _
   var config: MarathonConf = _
@@ -124,6 +126,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     eventBus = mock[EventStream]
     service = mock[MarathonSchedulerService]
     taskTracker = mock[TaskTracker]
+    taskKiller = mock[TaskKiller]
     healthCheckManager = mock[HealthCheckManager]
     taskFailureRepo = mock[TaskFailureRepository]
     config = mock[MarathonConf]
@@ -132,6 +135,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
       eventBus,
       service,
       taskTracker,
+      taskKiller,
       healthCheckManager,
       taskFailureRepo,
       config,

@@ -137,9 +137,8 @@ class MarathonSchedulerService @Inject() (
 
   def killTasks(
     appId: PathId,
-    tasks: Iterable[MarathonTask],
-    scale: Boolean): Iterable[MarathonTask] = {
-    schedulerActor ! KillTasks(appId, tasks.map(_.getId).toSet, scale)
+    tasks: Iterable[MarathonTask]): Iterable[MarathonTask] = {
+    schedulerActor ! KillTasks(appId, tasks.map(_.getId).toSet)
 
     tasks
   }

@@ -255,7 +255,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val schedulerActor = createActor()
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
-      schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = true)
+      schedulerActor ! KillTasks(app.id, Set(taskA.getId))
 
       expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
 
@@ -265,14 +265,15 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
         verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent)
       }
 
-      verify(repo, times(1)).store(app.copy(instances = 0))
+      // KillTasks does no longer scale
+      verify(repo, times(0)).store(any[AppDefinition]())
     }
     finally {
       stopActor(schedulerActor)
     }
   }
 
-  test("Kill tasks without scaling") {
+  test("Kill tasks") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
 
@@ -300,7 +301,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val schedulerActor = createActor()
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
-      schedulerActor ! KillTasks(app.id, Set(taskA.getId), scale = false)
+      schedulerActor ! KillTasks(app.id, Set(taskA.getId))
 
       expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
 
