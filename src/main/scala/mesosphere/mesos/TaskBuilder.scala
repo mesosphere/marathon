@@ -9,7 +9,7 @@ import mesosphere.marathon._
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
-import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
+import mesosphere.mesos.protos.{ SetResource, RangesResource, Resource, ScalarResource }
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
@@ -39,8 +39,8 @@ class TaskBuilder(app: AppDefinition,
       offer, app, taskTracker.get(app.id),
       acceptedResourceRoles = acceptedResourceRoles) match {
 
-        case Some(ResourceMatch(cpu, mem, disk, ranges, customResources)) =>
-          build(offer, cpu, mem, disk, ranges, customResources)
+        case Some(ResourceMatch(cpu, mem, disk, ranges, customScalars, customSets, customRanges)) =>
+          build(offer, cpu, mem, disk, ranges, customScalars, customSets, customRanges)
 
         case _ =>
           log.debug(
@@ -52,7 +52,8 @@ class TaskBuilder(app: AppDefinition,
   }
 
   private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String,
-                    portsResources: Seq[RangesResource], customResources: Map[String, String]) = {
+                    portsResources: Seq[RangesResource], customScalars: Seq[ScalarResource],
+                    customSets: Seq[SetResource], customRanges: Seq[RangesResource]) = {
 
     val executor: Executor = if (app.executor == "") {
       config.executor
@@ -88,15 +89,35 @@ class TaskBuilder(app: AppDefinition,
       // This is not enforced in Mesos without specifically configuring the appropriate enforcer.
       builder.addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
     }
+    /* TODOC
     customResources.foreach {
       case (key, value) =>
-        builder.addResources(ScalarResource(key, app.customResources(key), customResources(key)))
-    }
+        app.customResources(key).getType match {
+          case Value.Type.SCALAR =>
+            builder.addResources(ScalarResource(key, app.customResources(key).scalar.get.value,
+              customResources(key)))
+          case Value.Type.RANGES =>
+            builder.addResources(
+              RangesResource(key, app.customResources(key).ranges.get.value.map {
+                r => mesosphere.mesos.protos.Range(r.begin.get, r.end.get)
+              }.toSeq,
+                customResources(key))
+            )
+          case Value.Type.SET =>
+            builder.addResources(SetResource(key, app.customResources(key).set.get.value,
+              customResources(key)))
+          case _ => ;
+        }
+    }*/
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
 
     portsResources.foreach(builder.addResources(_))
+
+    customScalars.foreach(builder.addResources(_))
+    customSets.foreach(builder.addResources(_))
+    customRanges.foreach(builder.addResources(_))
 
     val containerProto: Option[ContainerInfo] =
       app.container.map { c =>

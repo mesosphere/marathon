@@ -7,11 +7,13 @@ import mesosphere.mesos.protos.Range
 import scala.collection.JavaConverters._
 
 case class CustomResource(
-    scalar: Option[CustomResource.CustomScalarResource] = None,
+    name: String,
 
-    ranges: Option[CustomResource.CustomRangeResource] = None,
+    scalar: Option[CustomResource.CustomScalar] = None,
 
-    set: Option[CustomResource.CustomSetResource] = None) {
+    ranges: Option[CustomResource.CustomRanges] = None,
+
+    set: Option[CustomResource.CustomSet] = None) {
 
   val log = Logger.getLogger(getClass.getName)
 
@@ -34,13 +36,13 @@ case class CustomResource(
 
   def getType: Value.Type = resourceType
 
-  def toProto: Protos.CustomResourceDefinition = {
-    val builder = Protos.CustomResourceDefinition.newBuilder
+  def toProto: Protos.CustomResource = {
+    val builder = Protos.CustomResource.newBuilder
 
     getType match {
-      case Value.Type.SCALAR => builder.setScalar(scalar.toProto)
-      case Value.Type.RANGES => builder.setRange(ranges.toProto)
-      case Value.Type.SET    => builder.setSet(set.toProto)
+      case Value.Type.SCALAR => builder.setScalar(scalar.get.toProto)
+      case Value.Type.RANGES => builder.setRange(ranges.get.toProto)
+      case Value.Type.SET    => builder.setSet(set.get.toProto)
       case _                 => ;
     }
 
@@ -71,23 +73,24 @@ object CustomResource {
   //TODOC throw error if standardResource?
   val log = Logger.getLogger(getClass.getName)
 
-  case class CustomScalarResource(
+  case class CustomScalar(
       value: Double = 0) {
-    def toProto(): Protos.CustomResourceDefinition.CustomScalar = {
-      val builder = Protos.CustomResourceDefinition.CustomScalar.newBuilder
+    def toProto(): Protos.CustomResource.CustomScalar = {
+      val builder = Protos.CustomResource.CustomScalar.newBuilder
         .setValue(value)
 
       builder.build
     }
   }
 
-  case class CustomSetResource(
+  case class CustomSet(
       value: Set[String] = Set.empty,
       numberRequired: Int = 0) {
-    def toProto(): Protos.CustomResourceDefinition.CustomSet = {
-      val builder = Protos.CustomResourceDefinition.CustomSet.newBuilder
-        .setValue(value)
+    def toProto(): Protos.CustomResource.CustomSet = {
+      val builder = Protos.CustomResource.CustomSet.newBuilder
         .setNumberRequired(numberRequired)
+
+      value.foreach { s => builder.addValue(s) }
 
       builder.build
     }
@@ -95,45 +98,47 @@ object CustomResource {
 
   case class CustomRange(
       numberRequired: Long = 0,
-      begin: Long = 0,
-      end: Long = Long.MaxValue) {
-    def toProto(): Protos.CustomResourceDefinition.CustomRanges.CustomRange = {
-      val builder = Protos.CustomResourceDefinition.CustomRanges.CustomRange.newBuilder
+      begin: Option[Long] = Some(0),
+      end: Option[Long] = Some(Long.MaxValue)) {
+    def toProto(): Protos.CustomResource.CustomRanges.CustomRange = {
+      val builder = Protos.CustomResource.CustomRanges.CustomRange.newBuilder
         .setNumberRequired(numberRequired)
-        .setBegin(begin)
-        .setEnd(end)
+        .setBegin(begin.get)
+        .setEnd(end.get)
 
       builder.build
     }
   }
 
-  case class CustomRangeResource(
+  case class CustomRanges(
       value: Seq[CustomRange]) {
-    def toProto(): Protos.CustomResourceDefinition.CustomRanges = {
-      val builder = Protos.CustomResourceDefinition.CustomRanges.newBuilder
+    def toProto(): Protos.CustomResource.CustomRanges = {
+      val builder = Protos.CustomResource.CustomRanges.newBuilder
 
-      value.foreach { r => builder.setValue(r.toProto) }
+      value.foreach { r => builder.addValue(r.toProto) }
 
       builder.build
     }
   }
 
-  def create(resource: Protos.CustomResourceDefinition): Option[CustomResource] = {
+  def create(resource: Protos.CustomResource): Option[CustomResource] = {
     if (resource.hasScalar) {
-      Some(CustomResource(scalar =
-        Some(CustomScalarResource(resource.getScalar.getValue: Double))))
+      Some(CustomResource(resource.getName,
+        scalar = Some(CustomScalar(resource.getScalar.getValue: Double))))
     }
     else if (resource.hasRange) {
-      Some(CustomResource(ranges =
-        Some(CustomRangeResource(
-          resource.getRange.getValueList.asScala.toSeq.map { range =>
-            CustomRange(range.getNumberRequired, begin = range.getBegin, end = range.getEnd)
+      Some(CustomResource(resource.getName,
+        ranges = Some(CustomRanges(
+          resource.getRange.getValueList.asScala.toSeq.map {
+            r: Protos.CustomResource.CustomRanges.CustomRange =>
+              CustomRange(r.getNumberRequired, begin = Some(r.getBegin), end = Some(r.getEnd))
           }))))
     }
     else if (resource.hasSet) {
-      Some(CustomResource(set = Some(CustomSetResource(
-        resource.getSet.getValueList.asScala.toSet: Set[String],
-        resource.getSet.getNumberRequired))))
+      Some(CustomResource(resource.getName,
+        set = Some(CustomSet(
+          resource.getSet.getValueList.asScala.toSet: Set[String],
+          resource.getSet.getNumberRequired))))
     }
     else {
       log.info("TODOC proto resource doesn't have any one of scalar, set, ranges")
@@ -142,18 +147,19 @@ object CustomResource {
     /*
     resource.getType match {
       case Value.Type.SCALAR =>
-        Some(CustomResource(scalar = Some(CustomScalarResource(resource.getScalar.getValue: Double))))
+        Some(CustomResource(scalar = Some(CustomScalar(resource.getScalar.getValue: Double))))
       case Value.Type.RANGES =>
         Some(CustomResource(
-          ranges = Some(CustomRangeResource(
+          ranges = Some(CustomRanges(
             resource.getRanges.getRangeList.asScala.toSeq.map { range =>
             CustomRange(0, begin = range.getBegin, end = range.getEnd)
           }))))
       case Value.Type.SET =>
         Some(CustomResource(set =
-          Some(CustomSetResource(resource.getSet.getItemList.asScala.toSet: Set[String]))))
+          Some(CustomSet(resource.getSet.getItemList.asScala.toSet: Set[String]))))
       case default =>
         None
     }*/
   }
 }
+

@@ -10,6 +10,7 @@ import mesosphere.marathon.event._
 import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container.{ Docker, Volume }
+import mesosphere.marathon.state.CustomResource.{ CustomSet, CustomScalar, CustomRange, CustomRanges }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
@@ -48,10 +49,10 @@ object Formats extends Formats {
 trait Formats
     extends AppDefinitionFormats
     with HealthCheckFormats
-    with ContainerFormats
+    with CustomResourceFormats
     with DeploymentFormats
     with EventFormats
-    with CustomResourceFormats {
+    with ContainerFormats {
   import scala.collection.JavaConverters._
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
@@ -202,30 +203,39 @@ trait ContainerFormats {
 trait CustomResourceFormats {
   import Formats._
 
-  implicit lazy val CustomScalarResource: Format[CustomResource.CustomScalarResource] = (
-    (__ \ "value").format[Double]
-  )(CustomScalarResource(_), unlift(CustomScalarResource.unapply))
+  //  implicit lazy val CustomScalarFormat: Format[CustomScalar] = (
+  //    (__ \ "value").format[Double]
+  //  )(CustomScalar.apply(_), unlift(CustomScalar.unapply))
 
-  implicit lazy val CustomSetResource: Format[CustomResource.CustomSetResource] = (
-    (__ \ "value").format[Seq[String]] ~
-    (__ \ "numberRequired").format[Int]
-  )(CustomSetResource(_, _), unlift(CustomSetResource.unapply))
+  implicit lazy val CustomScalarRead: Reads[CustomScalar] = (__ \ "value").read[Double].map(CustomScalar(_))
+  implicit lazy val CustomScalarWrite: Writes[CustomScalar] =
+    (__ \ "value").write[Double].contramap((f: CustomScalar) => f.value)
 
-  implicit lazy val CustomRange: Format[CustomRangeResource.CustomRange] = (
-    (__ \ "begin").formatNullable[Option[Int]].withDefault(0) ~
-    (__ \ "end").formatNullable[Option[Int]].withDefault(Int.MaxValue) ~
+  implicit lazy val CustomSetFormat: Format[CustomSet] = (
+    (__ \ "value").format[Set[String]] ~
     (__ \ "numberRequired").format[Int]
+  )(CustomSet(_, _), unlift(CustomSet.unapply))
+
+  implicit lazy val CustomRangeFormat: Format[CustomRange] = (
+    (__ \ "numberRequired").format[Long] ~
+    (__ \ "begin").formatNullable[Option[Long]].withDefault(Some(0)) ~
+    (__ \ "end").formatNullable[Option[Long]].withDefault(Some(Long.MaxValue))
   )(CustomRange(_, _, _), unlift(CustomRange.unapply))
 
-  implicit lazy val CustomRangeResource: Format[CustomResource.CustomRangeResource] = (
-    (__ \ "value").format[Seq[CustomRange]]
-  )(CustomRangeResource(_), unlift(CustomRangeResource.unapply))
+  //  implicit lazy val CustomRangesFormat: Format[CustomRanges] = (
+  //    (__ \ "value").format[Set[CustomRange]]
+  //  )(CustomRanges(_), unlift(CustomRanges.unapply))
+
+  implicit lazy val CustomRangesRead: Reads[CustomRanges] = (__ \ "value").read[Seq[CustomRange]].map(CustomRanges(_))
+  implicit lazy val CustomRangesWrite: Writes[CustomRanges] =
+    (__ \ "value").write[Seq[CustomRange]].contramap((f: CustomRanges) => f.value.toList)
 
   implicit lazy val CustomResourceFormat: Format[CustomResource] = (
-    (__ \ "scalar").formatNullable[Option[CustomScalarResource]] ~
-    (__ \ "range").formatNullable[Option[CustomRangeResource]] ~
-    (__ \ "set").formatNullable[Option[CustomSetResource]]
-  )(CustomResource(_, _, _), unlift(CustomResource.unapply))
+    (__ \ "name").format[String] ~
+    (__ \ "scalar").formatNullable[CustomScalar] ~
+    (__ \ "ranges").formatNullable[CustomRanges] ~
+    (__ \ "set").formatNullable[CustomSet]
+  )(CustomResource(_, _, _, _), unlift(CustomResource.unapply))
 }
 
 trait DeploymentFormats {
@@ -414,7 +424,7 @@ trait AppDefinitionFormats {
       (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)).withDefault(DefaultCpus) ~
       (__ \ "mem").readNullable[JDouble].withDefault(DefaultMem) ~
       (__ \ "disk").readNullable[JDouble].withDefault(DefaultDisk) ~
-      (__ \ "customResources").readNullable[Seq[CustomResource]].withDefault(DefaultCustomResources) ~
+      (__ \ "customResources").readNullable[Map[String, CustomResource]].withDefault(DefaultCustomResources) ~
       (__ \ "executor").readNullable[String](Reads.pattern(executorPattern)).withDefault(DefaultExecutor) ~
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(DefaultConstraints) ~
       (__ \ "uris").readNullable[Seq[String]].withDefault(DefaultUris) ~

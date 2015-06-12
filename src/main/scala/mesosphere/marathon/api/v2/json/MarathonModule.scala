@@ -15,7 +15,7 @@ import mesosphere.marathon.api.v2._
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy, CustomResource }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
@@ -236,7 +236,7 @@ object MarathonModule {
       cpus: Option[JDouble] = None,
       mem: Option[JDouble] = None,
       disk: Option[JDouble] = None,
-      customResources: Option[Map[String, JDouble]] = None,
+      customResources: Option[Map[String, CustomResource]] = None,
       executor: Option[String] = None,
       constraints: Option[Set[Constraint]] = None,
       uris: Option[Seq[String]] = None,

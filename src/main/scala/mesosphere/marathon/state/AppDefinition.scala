@@ -139,6 +139,14 @@ case class AppDefinition(
           .build
     }
 
+    val customResourcesMap = customResources.map {
+      case (key, value) =>
+        Protos.CustomResourceDefinition.newBuilder
+          .setKey(key)
+          .setValue(value.toProto)
+          .build
+    }
+
     val builder = Protos.ServiceDefinition.newBuilder
       .setId(id.toString)
       .setCmd(commandInfo)
@@ -159,7 +167,7 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
-      .addAllCustomResources(customResources.map(_.toProto).asJava) // TODOC
+      .addAllCustomResources(customResourcesMap.asJava) // TODOC
 
     //customResourcesList.foreach(builder.addResources(_))
 
@@ -189,10 +197,12 @@ case class AppDefinition(
     log.info(proto.getResourcesList.asScala)
 
     //val customResourcesMap: Map[String, JDouble] = resourcesMap
+    // TODOC maybe we don't need name?
     val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
-    val customResourcesMap: Map[String, CustomResource] = proto.getCustomResourcesList.asScala
-      .map(r => CustomResource.create(r).get).toList
-    //  TODOC I wanted to try printing out .getScalar, .getRanges, .getItem etc to see what happens
+
+    val customResourcesMap: Map[String, CustomResource] = proto.getCustomResourcesList.asScala // TODOC change name
+      .map { r => r.getKey -> CustomResource.create(r.getValue).get }.toMap
+
     log.info("TODOC get")
     proto.getResourcesList.asScala.foreach(r => println(r.getSet))
 
@@ -339,7 +349,7 @@ object AppDefinition {
   val DefaultDisk: Double = 0.0
 
   //var DefaultCustomResources: Map[String, JDouble] = Map.empty
-  var DefaultCustomResources: Seq[CustomResource] = Seq.empty
+  var DefaultCustomResources: Map[String, CustomResource] = Map.empty
 
   val DefaultExecutor: String = ""
 

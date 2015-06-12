@@ -3,9 +3,11 @@ package mesosphere.mesos
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.PortsMatcher
-import mesosphere.mesos.protos.{ RangesResource, Resource }
+import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
+import mesosphere.mesos.protos.{ ScalarResource, SetResource, RangesResource, Resource }
+import mesosphere.marathon.state.CustomResource.{ CustomRange }
 import org.apache.log4j.Logger
-import org.apache.mesos.Protos.Offer
+import org.apache.mesos.Protos.{ Offer, Value }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
@@ -16,7 +18,8 @@ object ResourceMatcher {
   private[this] val log = Logger.getLogger(getClass)
 
   case class ResourceMatch(cpuRole: Role, memRole: Role, diskRole: Role, ports: Seq[RangesResource],
-                           customResources: Map[String, Role])
+                           customScalars: Seq[ScalarResource], customSets: Seq[SetResource],
+                           customRanges: Seq[RangesResource])
 
   def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Set[MarathonTask],
                      acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {
@@ -31,16 +34,108 @@ object ResourceMatcher {
           }.map(_.getRole)
       }
 
+    def findCustomScalar(tpe: String, value: Double): Option[ScalarResource] =
+      groupedResources.get(tpe).flatMap {
+        _
+          .filter(resource => acceptedResourceRoles(resource.getRole))
+          .find { resource =>
+            resource.getScalar.getValue >= value
+          }.map { r =>
+            ScalarResource(tpe, value, r.getRole)
+          }
+      }
+
+    def findCustomSet(tpe: String, value: Set[String], numberRequired: Int): Option[SetResource] =
+      groupedResources.get(tpe).flatMap {
+        _
+          .filter(resource => acceptedResourceRoles(resource.getRole))
+          .map { resource =>
+            val subset = value & resource.getSet.getItemList.asScala.toSet
+            if (subset.size >= numberRequired) {
+              Some(SetResource(tpe, subset.take(numberRequired), resource.getRole))
+            }
+            else
+              None
+          }
+          .flatten
+          .headOption
+      }
+    def findCustomRanges(tpe: String, value: Seq[CustomRange]): Option[RangesResource] =
+      groupedResources.get(tpe).flatMap {
+        _
+          .filter(resource => acceptedResourceRoles(resource.getRole)) // TODOC test what you get at this stage
+          .map { resource =>
+            var availableRanges = collection.SortedSet(
+              resource.getRanges.getRangeList.asScala.flatMap(r => (r.getBegin to r.getEnd)): _*)
+            var totalRequired: Long = 0
+            var success = true
+            var resourcesTaken = value.flatMap { range =>
+              totalRequired += range.numberRequired
+              val subset = availableRanges.intersect((range.begin.get to range.end.get).toSet)
+              if (subset.size >= range.numberRequired) {
+                val taken = subset.take(range.numberRequired.toInt).toList // TODOC need to take Long ideally...
+                availableRanges --= taken
+                taken
+                // takes from the left of the TreeSet, ensuring ranges aren't modified too much
+              }
+              else {
+                success = false
+                List.empty
+              }
+            }.map { r => PortWithRole(resource.getRole, r.toInt) } // TODOC find out convert to double
+            if (success) {
+              Some(RangesResource(tpe, PortWithRole.createPortsResources(resourcesTaken).flatMap { r =>
+                r.ranges
+              }, resource.getRole))
+            }
+            else {
+              None
+            }
+          }
+          .flatten
+          .headOption
+      }
     def cpuRoleOpt: Option[Role] = findScalarResourceRole(Resource.CPUS, app.cpus)
     def memRoleOpt: Option[Role] = findScalarResourceRole(Resource.MEM, app.mem)
     def diskRoleOpt: Option[Role] = findScalarResourceRole(Resource.DISK, app.disk)
-    def customRolesOpt: Option[Map[String, Role]] = Some(app.customResources
-      .transform((key, value) => findScalarResourceRole(key, value).get) // TODOC get
-      .filter {
-        case (key, value) => value != None
-      })
 
-    def customResourcesFulfilled: Boolean = if (customRolesOpt.get.size == app.customResources.size) true else false
+    def customScalarRolesOpt: Option[Seq[ScalarResource]] = Some(app.customResources
+      .filter {
+        case (_, value) =>
+          value.getType == Value.Type.SCALAR
+      }
+      .map {
+        case (key, value) =>
+          findCustomScalar(key, value.scalar.get.value)
+      }.flatten.toList)
+
+    def customRangesRolesOpt: Option[Seq[RangesResource]] = Some(app.customResources
+      .filter {
+        case (_, value) =>
+          value.getType == Value.Type.RANGES
+      }
+      .map {
+        case (key, value) =>
+          findCustomRanges(key, value.ranges.get.value.toList)
+      }
+      .flatten.toList)
+
+    def customSetRolesOpt: Option[Seq[SetResource]] = Some(app.customResources
+      .filter {
+        case (_, value) =>
+          value.getType == Value.Type.SET
+      }
+      .map {
+        case (key, value) =>
+          findCustomSet(key, value.set.get.value, value.set.get.numberRequired)
+      }
+      .flatten.toList)
+
+    def customResourcesFulfilled: Boolean = if (customScalarRolesOpt.get.size + customSetRolesOpt.get.size +
+      customRangesRolesOpt.get.size == app.customResources.size)
+      true
+    else
+      false
 
     def meetsAllConstraints: Boolean = {
       lazy val tasks = runningTasks
@@ -74,6 +169,7 @@ object ResourceMatcher {
       diskRole <- diskRoleOpt
       portRanges <- portsOpt
       if meetsAllConstraints && customResourcesFulfilled
-    } yield ResourceMatch(cpuRole, memRole, diskRole, portRanges, customRolesOpt.get)
+    } yield ResourceMatch(cpuRole, memRole, diskRole, portRanges, customScalarRolesOpt.get, customSetRolesOpt.get,
+      customRangesRolesOpt.get)
   }
 }
