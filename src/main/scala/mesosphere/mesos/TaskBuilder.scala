@@ -52,7 +52,7 @@ class TaskBuilder(app: AppDefinition,
   }
 
   private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String,
-                    portsResources: Seq[RangesResource]) = {
+                    portsResources: Seq[RangesResource]): Some[(TaskInfo, Seq[Long])] = {
 
     val executor: Executor = if (app.executor == "") {
       config.executor
@@ -99,7 +99,7 @@ class TaskBuilder(app: AppDefinition,
         val portMappings = c.docker.map { d =>
           d.portMappings.map { pms =>
             pms zip ports map {
-              case (mapping, port) => {
+              case (mapping, port) =>
                 // Use case: containerPort = 0 and hostPort = 0
                 //
                 // For apps that have their own service registry and require p2p communication,
@@ -114,7 +114,6 @@ class TaskBuilder(app: AppDefinition,
                 else {
                   mapping.copy(hostPort = port.toInt)
                 }
-              }
             }
           }
         }
@@ -126,7 +125,7 @@ class TaskBuilder(app: AppDefinition,
             }
           )
         }
-        containerWithPortMappings.toMesos
+        containerWithPortMappings.toMesos()
       }
 
     executor match {
@@ -198,6 +197,8 @@ object TaskBuilder {
     app.args.foreach { argv =>
       builder.setShell(false)
       builder.addAllArguments(argv.asJava)
+      //mesos containerizer expects the cmd and arguments
+      app.container.getOrElse(builder.setValue(argv.head))
     }
 
     if (app.uris != null) {

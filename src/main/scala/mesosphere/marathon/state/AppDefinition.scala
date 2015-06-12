@@ -152,14 +152,15 @@ case class AppDefinition(
         r => r.getName -> (r.getScalar.getValue: JDouble)
       }.toMap
 
-    val commandOption =
-      if (proto.getCmd.hasValue && proto.getCmd.getValue.nonEmpty)
-        Some(proto.getCmd.getValue)
+    val argsOption =
+      if (proto.getCmd.getArgumentsCount > 0)
+        Some(proto.getCmd.getArgumentsList.asScala.to[Seq])
       else None
 
-    val argsOption =
-      if (commandOption.isEmpty && proto.getCmd.getArgumentsCount != 0)
-        Some(proto.getCmd.getArgumentsList.asScala.to[Seq])
+    //Precondition: either args or command is defined
+    val commandOption =
+      if (argsOption.isEmpty && proto.getCmd.hasValue && proto.getCmd.getValue.nonEmpty)
+        Some(proto.getCmd.getValue)
       else None
 
     val containerOption =
