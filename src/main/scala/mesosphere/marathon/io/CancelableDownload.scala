@@ -41,7 +41,7 @@ final class CancelableDownload(val url: URL, val provider: StorageProvider, val 
   }
 
   override def hashCode(): Int = url.hashCode()
-  override def equals(other: scala.Any): Boolean = other match {
+  override def equals(other: Any): Boolean = other match {
     case c: CancelableDownload => (c.url == this.url) && (c.path == path)
     case _                     => false
   }

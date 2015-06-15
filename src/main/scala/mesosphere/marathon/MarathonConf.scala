@@ -8,6 +8,8 @@ import mesosphere.marathon.io.storage.StorageProvider
 
 trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMatcherConfig with LeaderProxyConf {
 
+  //scalastyle:off magic.number
+
   lazy val mesosMaster = opt[String]("master",
     descr = "The URL of the Mesos master",
     required = true,

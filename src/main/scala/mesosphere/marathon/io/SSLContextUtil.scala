@@ -8,6 +8,9 @@ import javax.net.ssl.{ TrustManagerFactory, SSLContext }
   * Util for create SSLContext objects.
   */
 object SSLContextUtil {
+
+  //scalastyle:off null
+
   /**
     * Create an SSLContext which accepts the certificates in the given key store (if any).
     */

@@ -16,6 +16,8 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
+//scalastyle:off magic.number
+
 trait OfferMatcher {
   /**
     * Process the given offers. All offers should either be used for launching tasks or declined
@@ -120,6 +122,7 @@ class IterativeOfferMatcher @Inject() (
     * * new tasks are registered in the taskTracker
     * * scheduled tasks are removed from the taskQueue
     */
+  //scalastyle:off method.length
   private[tasks] def calculateOfferUsage(offersList: Iterable[Offer]): OfferUsages = {
     log.info("started processing {} offers, launching at most {} tasks per offer and {} tasks in total",
       Seq(offersList.size, maxTasksPerOffer, maxTasksPerCycle).map(_.asInstanceOf[AnyRef]): _*)

@@ -21,10 +21,12 @@ object BeanValidation {
     prop: Prop,
     path: String,
     msg: String): ConstraintViolation[Bean] = {
+    //scalastyle:off null
     ConstraintViolationImpl.forParameterValidation[Bean](
       msg, msg, classTag[Bean].runtimeClass.asInstanceOf[Class[Bean]], bean, prop, prop,
       PathImpl.createPathFromString(path),
       null, ElementType.FIELD, Array())
+    //scalastyle:on
   }
 
   def withPath[T: ClassTag](bean: T, e: ConstraintViolation[_], path: String): ConstraintViolation[T] =

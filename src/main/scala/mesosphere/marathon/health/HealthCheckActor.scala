@@ -81,7 +81,7 @@ class HealthCheckActor(
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
     taskTracker.get(appId).foreach { task =>
-      if (task.getVersion() == appVersion && task.hasStartedAt) {
+      if (task.getVersion == appVersion && task.hasStartedAt) {
         log.debug("Dispatching health check job for task [{}]", task.getId)
         val worker: ActorRef = context.actorOf(workerProps)
         worker ! HealthCheckJob(task, healthCheck)
@@ -115,6 +115,8 @@ class HealthCheckActor(
       task.getStartedAt + healthCheck.gracePeriod.toMillis > System.currentTimeMillis()
   }
 
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
   def receive: Receive = {
     case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
 

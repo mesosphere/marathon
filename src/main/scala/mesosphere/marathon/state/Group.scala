@@ -12,10 +12,10 @@ import scala.collection.JavaConversions._
 
 case class Group(
     id: PathId,
-    apps: Set[AppDefinition] = DefaultApps,
-    groups: Set[Group] = DefaultGroups,
-    dependencies: Set[PathId] = DefaultDependencies,
-    version: Timestamp = DefaultVersion) extends MarathonState[GroupDefinition, Group] {
+    apps: Set[AppDefinition] = defaultApps,
+    groups: Set[Group] = defaultGroups,
+    dependencies: Set[PathId] = defaultDependencies,
+    version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] {
 
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
@@ -200,9 +200,9 @@ object Group {
     )
   }
 
-  def DefaultApps: Set[AppDefinition] = Set.empty
-  def DefaultGroups: Set[Group] = Set.empty
-  def DefaultDependencies: Set[PathId] = Set.empty
-  def DefaultVersion: Timestamp = Timestamp.now()
+  def defaultApps: Set[AppDefinition] = Set.empty
+  def defaultGroups: Set[Group] = Set.empty
+  def defaultDependencies: Set[PathId] = Set.empty
+  def defaultVersion: Timestamp = Timestamp.now()
 }
 

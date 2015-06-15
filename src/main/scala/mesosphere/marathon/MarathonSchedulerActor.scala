@@ -125,6 +125,8 @@ class MarathonSchedulerActor(
     case _                            => stash()
   }
 
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
   def started: Receive = sharedHandlers orElse {
     case LocalLeadershipEvent.Standby =>
       log.info("Suspending scheduler actor")
@@ -466,8 +468,8 @@ class SchedulerActions(
 
         val knownTaskStatuses = appIds.flatMap { appId =>
           taskTracker.get(appId).collect {
-            case task if task.hasStatus => task.getStatus
-            case task => // staged tasks, which have no status yet
+            case task: Protos.MarathonTask if task.hasStatus => task.getStatus
+            case task: Protos.MarathonTask => // staged tasks, which have no status yet
               TaskStatus.newBuilder
                 .setState(TaskState.TASK_STAGING)
                 .setTaskId(TaskID.newBuilder.setValue(task.getId))

@@ -8,6 +8,8 @@ import scala.concurrent.duration._
 
 trait ZookeeperConf extends ScallopConf {
 
+  //scalastyle:off magic.number
+
   private val userAndPass = """[^/@]+"""
   private val hostAndPort = """[A-z0-9-.]+(?::\d+)?"""
   private val zkNode = """[^/]+"""

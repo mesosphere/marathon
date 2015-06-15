@@ -14,7 +14,7 @@ import scala.concurrent.Future
   */
 class PromiseActor(promise: Promise[Any]) extends Actor {
   def receive: Receive = {
-    case x =>
+    case x: Any =>
       x match {
         case Status.Failure(t) => promise.failure(t)
         case Status.Success(x) => promise.success(x)
