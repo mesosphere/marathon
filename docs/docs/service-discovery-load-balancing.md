@@ -68,12 +68,12 @@ To generate an HAProxy configuration from Marathon running at `localhost:8080` w
 $ ./bin/servicerouter.py --marathon http://localhost:8080 --haproxy-config /etc/haproxy/haproxy.cfg
 ```
 
-This will generate a new haproxy.cfg and if it changed automatically reload a running haproxy.
+This will refresh haproxy.cfg, and if there were any changes, then it will automatically reload HAproxy.
 
-Servicerouter has a lot of additional functionality like sticky sessions, http to https redirection, SSL offloading,
+servicerouter.py has a lot of additional functionality like sticky sessions, HTTP to HTTPS redirection, SSL offloading,
 VHost support and templating capabilities.
 
-To get the full servicerouter documentation run:
+To get the full servicerouter.py documentation run:
 ``` console
 $ ./bin/servicerouter.py --help
 ```
