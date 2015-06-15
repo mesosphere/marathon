@@ -16,7 +16,7 @@ import mesosphere.chaos.metrics.MetricsModule
 import java.io.{ Closeable, File }
 import java.util.concurrent.{ Executor, TimeUnit }
 import org.apache.log4j.Logger
-import scala.concurrent.{ duration, Await, Promise }
+import scala.concurrent.{ ExecutionContext, Future, duration, Await, Promise }
 import scala.concurrent.duration._
 
 /**
@@ -90,22 +90,41 @@ object ProcessKeeper {
   }
 
   def startProcess(name: String, processBuilder: ProcessBuilder, upWhen: String => Boolean, timeout: Duration = 30.seconds): Process = {
-    val up = Promise[Boolean]()
+    sealed trait ProcessState
+    case object ProcessIsUp extends ProcessState
+    case object ProcessExited extends ProcessState
+
+    val up = Promise[ProcessIsUp.type]()
     val logger = new ProcessLogger {
       def checkUp(out: String) = {
         log.info(s"$name: $out")
-        if (!up.isCompleted && upWhen(out)) up.trySuccess(true)
+        if (!up.isCompleted && upWhen(out)) up.trySuccess(ProcessIsUp)
       }
       override def buffer[T](f: => T): T = f
       override def out(s: => String) = checkUp(s)
       override def err(s: => String) = checkUp(s)
     }
     val process = processBuilder.run(logger)
-    Try(Await.result(up.future, timeout)) match {
-      case Success(_) => processes = process :: processes
+    val processExitCode: Future[ProcessExited.type] = Future {
+      val exitCode = scala.concurrent.blocking {
+        process.exitValue()
+      }
+      log.info(s"Process $name finished with exit code $exitCode")
+      ProcessExited
+    }(ExecutionContext.global)
+    val upOrExited = Future.firstCompletedOf(Seq(up.future, processExitCode))(ExecutionContext.global)
+    Try(Await.result(upOrExited, timeout)) match {
+      case Success(result) =>
+        processes = process :: processes
+        result match {
+          case ProcessExited =>
+            throw new IllegalStateException(s"Process $name exited before coming up. Give up. $processBuilder")
+          case ProcessIsUp => log.info(s"Process $name is up and running.")
+        }
       case Failure(_) =>
         process.destroy()
-        throw new IllegalStateException(s"Process does not came up within time bounds ($timeout). Give up. $processBuilder")
+        throw new IllegalStateException(
+          s"Process $name does not came up within time bounds ($timeout). Give up. $processBuilder")
     }
     process
   }
