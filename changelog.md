@@ -155,37 +155,22 @@ script is started as `root`.
 
 ### Fixed Bugs
 
-- #929 - Marathon, docker, consul. containerPort = hostPort = 0 for udp and tcp
-- #937 - Refactor MarathonScheduler.newTask
 - #1259 - Reject null bodies in REST API
 - #1540 - A marathon instance should never proxy to itself
 - #1541 - Proxying Marathon requests should use timeouts
 - #1556 - Proxying doesn't work for HTTPS
-- #1637 - Need upgrade instructions for 0.7.x to 0.8.x?
-- #1491 - Update docs with Marathon releases
-- #1332 - Formalize adherence to semantic versioning
-- #1480 - Question: Health-Check Lifecycle Diagramm
-- #1565 - Instructions in README for running in a VM lead to 404
 - #1365 - servicePorts are not copied into ports
 - #1389 - Don't set ulimit in marathon-framework
 - #1452 - Remove ulimit changes from shell script
-- #1438 - AppDeployIntegrationTest is unstable because of event order
 - #1446 - Validation for app creation & update should not differ
 - #1456 - Marathon delaying app start by 70min after cluster reboot
-- #1460 - Let users specify the Mesos role for each Marathon app
-- #1527 - Fixes #1460 - Allow configuring resource roles per app
 - #1481 - App stays in locked state
-- #1497 - CPU usage increased dramatically 0.8.1-RC1 -> master
-- #1507 - Running marathon 0.8.2-RC2 in local development mode fails
 - #1520 - Marathon don't match correctly the resources for a defined role
 - #1522 - Disk resource quota not communicated to Mesos on task launch
 - #1583 - Task uses invalid resources: disk(*):0
-- #1545 - Make it easy to run integration/scale tests via Docker
-- #1560 - Versioning for recent additions in docs
 - #1564 - args[] does not work
 - #1569 - `http_endpoints` not being split on comma
 - #1572 - Remove `$$EnhancerByGuice$$...` from class names in metrics
-- #1624 - Add UI .git directory etc to .dockerignore
 
 ## Changes from 0.8.1 to 0.8.2
 
