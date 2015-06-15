@@ -179,7 +179,9 @@ object MarathonBuild extends Build {
         case None => // no-op
         case Some(teamcityVersion) =>
           def reportParameter(key: String, value: String): Unit = {
+            //env parameters will be made available as environment variables
             println(s"##teamcity[setParameter name='env.SBT_$key' value='$value']")
+            //system parameters will be made available as teamcity build parameters
             println(s"##teamcity[setParameter name='system.sbt.$key' value='$value']")
           }
           reportParameter("SCALA_VERSION", scalaVersion.value)
