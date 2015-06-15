@@ -6,6 +6,7 @@ import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem }
+import akka.event.EventStream
 import akka.pattern.{ after, ask }
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
@@ -15,6 +16,7 @@ import com.twitter.common.zookeeper.Candidate.Leader
 import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
@@ -46,7 +48,8 @@ class MarathonSchedulerService @Inject() (
     driverFactory: SchedulerDriverFactory,
     system: ActorSystem,
     migration: Migration,
-    @Named("schedulerActor") schedulerActor: ActorRef) extends AbstractExecutionThreadService with Leader {
+    @Named("schedulerActor") schedulerActor: ActorRef,
+    @Named(EventModule.busName) eventStream: EventStream) extends AbstractExecutionThreadService with Leader {
 
   import mesosphere.util.ThreadPoolContext.context
 
@@ -273,7 +276,7 @@ class MarathonSchedulerService @Inject() (
   private def defeatLeadership(): Unit = {
     log.info("Defeat leadership")
 
-    schedulerActor ! Suspend(LostLeadershipException("Leadership was defeated"))
+    eventStream.publish(LocalLeadershipEvent.Standby)
 
     timer.cancel()
     timer = newTimer()
@@ -291,7 +294,7 @@ class MarathonSchedulerService @Inject() (
     leader.set(true)
     runDriver(abdicateOption)
 
-    schedulerActor ! Start
+    eventStream.publish(LocalLeadershipEvent.ElectedAsLeader)
 
     // Start the timer
     schedulePeriodicOperations()

@@ -7,6 +7,7 @@ import javax.net.ssl.{ HttpsURLConnection, SSLContext }
 import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
+import akka.actor.ActorRef
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.io.IO
@@ -26,6 +27,17 @@ import scala.util.control.NonFatal
 trait LeaderInfo {
   /** Query whether we are elected as the current leader. This should be cheap. */
   def elected: Boolean
+
+  /**
+    * Subscribe to leadership change events.
+    *
+    * The given actorRef will initally get the current state via the appropriate
+    * [[mesosphere.marathon.event.LocalLeadershipEvent]] message and will
+    * be informed of changes after that.
+    */
+  def subscribe(self: ActorRef)
+  /** Unsubscribe to any leadership change events to this actor ref. */
+  def unsubscribe(self: ActorRef)
 
   /**
     * Query the host/port of the current leader if any. This might involve network round trips

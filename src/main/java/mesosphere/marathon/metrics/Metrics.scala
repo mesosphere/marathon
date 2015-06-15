@@ -1,8 +1,9 @@
 package mesosphere.marathon.metrics
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
-import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.{Gauge, MetricRegistry}
 import com.google.inject.Inject
 import mesosphere.marathon.metrics.Metrics.{Histogram, Meter, Timer}
 import org.aopalliance.intercept.MethodInvocation
@@ -37,6 +38,11 @@ class Metrics @Inject() (val registry: MetricRegistry) {
 
   def histogram(name: String): Histogram = {
     new Histogram(registry.histogram(name))
+  }
+
+  def gauge[G <: Gauge[_]](name: String, gauge: G): G = {
+    registry.register(name, gauge)
+    gauge
   }
 
   def name(prefix: String, clazz: Class[_], method: String): String = {
@@ -88,5 +94,12 @@ object Metrics {
     def mark(n: Long): Unit = {
       meter.mark(n)
     }
+  }
+
+  class AtomicIntGauge extends Gauge[Int] {
+    private[this] val value_ = new AtomicInteger(0)
+
+    def setValue(l: Int): Unit = value_.set(l)
+    override def getValue: Int = value_.get()
   }
 }

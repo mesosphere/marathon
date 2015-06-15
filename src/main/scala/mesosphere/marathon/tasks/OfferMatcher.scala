@@ -4,7 +4,7 @@ import java.util
 
 import com.google.inject.{ Inject }
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.{ Timer, Histogram, Meter }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
@@ -37,7 +37,7 @@ trait IterativeOfferMatcherConfig extends ScallopConf {
 }
 
 class IterativeOfferMatcherMetrics @Inject() (metrics: Metrics) {
-  val prefix: String = "service"
+  def prefix: String = MetricPrefixes.SERVICE
 
   val tasksLaunched: Meter = metrics.meter(metrics.name(prefix, getClass, "tasks-launched"))
   val tasksLaunchedPerOffer: Histogram = metrics.histogram(metrics.name(prefix, getClass, "tasks-launched-per-offer"))
