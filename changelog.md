@@ -9,9 +9,16 @@ Mesos version for this release.
 
 Please look at the following changes to check whether you have to verify your setup before upgrading:
 
-* Disk resource limits are passed to Mesos
-* New format for the `http_endpoints` command line parameter
-* Restrict the number of versions by default
+* Disk resource limits are passed to Mesos.
+* New format for the `http_endpoints` command line parameter.
+* New default for the `zk_max_versions` command line parameter. In Marathon, most state is versioned. This includes app
+  definitions and group definitions. Marathon already allowed restricting the number of versions that are kept by
+  `--zk_max_versions` but you had to specify that explicitly.
+
+  Starting with this version, Marathon will by default keep only 25 versions. That means that Marathon will start to
+  remove old versions in order to enforce the limit.
+* Removed the deprecated `zk_hosts` and `zk_state` command line parameters. Use the `zk` parameter instead.
+
 
 ### Overview
 
@@ -36,14 +43,16 @@ The new Marathon now provides an
 where you receive all events conveniently as
 [Server Sent Events](http://www.w3schools.com/html/html5_serversentevents.asp).
 
-#### Abstraction for persistent storage added with Zookeeper access directly in the JVM 
+#### Abstraction for persistent storage added with ZooKeeper access directly in the JVM
 
-A new storage abstraction has been created, which allows for different storage providers,
-is completely non-blocking and provides consistent usage patterns.
-A ZooKeeper Storage Provider is implemented in a backward compatible fashion.
-The same data format and storage layout is used as prior versions of Marathon.
-You can use this version of Marathon without migrating data while it is also possible to switch back to an older version.
-The new persistent storage layer is enabled by default, no further action is needed.
+A new storage abstraction has been created, which allows for different storage providers. It is completely non-blocking
+and provides consistent usage patterns.
+
+The new ZooKeeper Storage Provider is implemented in a backward compatible fashion - the same data format and storage
+layout is used as prior versions of Marathon.
+
+You can use this version of Marathon without migrating data while it is also possible to switch back to an older
+version. The new persistent storage layer is enabled by default, no further action is needed.
 
 
 #### Satisfy ports from any offered port range
@@ -67,8 +76,7 @@ Now Marathon also randomly assigns dynamic docker host ports.
 
 #### Disk resource limits are passed to Mesos
 
-If you specify a non-zero disk resource limit, this limit is now passed to Mesos
-on task launch.
+If you specify a non-zero disk resource limit, this limit is now passed to Mesos on task launch.
 
 If you rely on disk limits, you also need to configure Mesos appropriately. This includes configuring the correct
 isolator and enabling disk quotas enforcement with `--enforce_container_disk_quota`.
@@ -92,9 +100,9 @@ Furthermore, leader proxying now uses HTTPS to talk to the leader if `--http_dis
 
 These bugs are now obsolete:
 
-- #1540 A marathon instance should never proxy to itself
-- #1541 Proxying Marathon requests should use timeouts
-- #1556 Proxying doesn't work for HTTPS
+- #1540 A marathon instance should never proxy to itself.
+- #1541 Proxying Marathon requests should use timeouts.
+- #1556 Proxying doesn't work for HTTPS.
 
 #### Relative URL paths in the UI
 
@@ -130,12 +138,14 @@ this already delays restarting sufficiently.
 #### Removed deprecated command line arguments `zk_hosts` and `zk_state`
 
 The command line arguments `zk_hosts` and `zk_state` were deprecated for some time and got removed in this version.
-Use the `--zk` command line argument to define the zookeeper connection string. 
+Use the `--zk` command line argument to define the ZooKeeper connection string.
 
 
 #### servicerouter.py
 
-TODO
+Is a replacement for the haproxy-marathon-bridge. It reads Marathon task information and generates haproxy
+configuration. It supports advanced functions like sticky sessions, HTTP to HTTPS redirection, SSL offloading, VHost
+support and templating.
 
 #### Be more careful about using `ulimit` in startup script
 
@@ -145,11 +155,37 @@ script is started as `root`.
 
 ### Fixed Bugs
 
-- #1540 A marathon instance should never proxy to itself
-- #1541 Proxying Marathon requests should use timeouts
-- #1556 Proxying doesn't work for HTTPS
-
-TODO
+- #929 - Marathon, docker, consul. containerPort = hostPort = 0 for udp and tcp
+- #937 - Refactor MarathonScheduler.newTask
+- #1259 - Reject null bodies in REST API
+- #1540 - A marathon instance should never proxy to itself
+- #1541 - Proxying Marathon requests should use timeouts
+- #1556 - Proxying doesn't work for HTTPS
+- #1637 - Need upgrade instructions for 0.7.x to 0.8.x?
+- #1491 - Update docs with Marathon releases
+- #1332 - Formalize adherence to semantic versioning
+- #1480 - Question: Health-Check Lifecycle Diagramm
+- #1565 - Instructions in README for running in a VM lead to 404
+- #1365 - servicePorts are not copied into ports
+- #1389 - Don't set ulimit in marathon-framework
+- #1452 - Remove ulimit changes from shell script
+- #1438 - AppDeployIntegrationTest is unstable because of event order
+- #1446 - Validation for app creation & update should not differ
+- #1456 - Marathon delaying app start by 70min after cluster reboot
+- #1460 - Let users specify the Mesos role for each Marathon app
+- #1527 - Fixes #1460 - Allow configuring resource roles per app
+- #1481 - App stays in locked state
+- #1497 - CPU usage increased dramatically 0.8.1-RC1 -> master
+- #1507 - Running marathon 0.8.2-RC2 in local development mode fails
+- #1520 - Marathon don't match correctly the resources for a defined role
+- #1522 - Disk resource quota not communicated to Mesos on task launch
+- #1583 - Task uses invalid resources: disk(*):0
+- #1545 - Make it easy to run integration/scale tests via Docker
+- #1560 - Versioning for recent additions in docs
+- #1564 - args[] does not work
+- #1569 - `http_endpoints` not being split on comma
+- #1572 - Remove `$$EnhancerByGuice$$...` from class names in metrics
+- #1624 - Add UI .git directory etc to .dockerignore
 
 ## Changes from 0.8.1 to 0.8.2
 
