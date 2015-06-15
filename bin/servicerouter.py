@@ -21,6 +21,7 @@ Configuration:
   Service configuration lives in marathon via environment variables.
   The servicerouter just needs to know where to find marathon.
   To run in listening mode you must also specify the address + port at
+  which the servicerouter can be reached by marathon.
 
 
 Usage:
@@ -74,7 +75,7 @@ Templates:
     all Vhosts defined by the HAPROXY_{n}_VHOST variable.
 
   HAPROXY_HTTPS_FRONTEND_HEAD
-    The same the previous option just for https encrypted connections
+    Same as the previous option just for https encrypted connections
     coming in on *:443. This needs to be modified to include a different
     certificate.
 
