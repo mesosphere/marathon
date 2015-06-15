@@ -18,7 +18,12 @@ import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.event.EventModule
-import mesosphere.marathon.event.http.{ HttpEventStreamHandleActor, HttpEventStreamHandle, HttpEventStreamActor }
+import mesosphere.marathon.event.http.{
+  HttpEventStreamActorMetrics,
+  HttpEventStreamHandleActor,
+  HttpEventStreamHandle,
+  HttpEventStreamActor
+}
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
@@ -83,6 +88,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       .toInstance(conf.zooKeeperServerSetPath)
 
     bind(classOf[Metrics]).in(Scopes.SINGLETON)
+    bind(classOf[HttpEventStreamActorMetrics]).in(Scopes.SINGLETON)
 
     // If running in single scheduler mode, this node is the leader.
     val leader = new AtomicBoolean(!conf.highlyAvailable())
@@ -96,12 +102,14 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideHttpEventStreamActor(system: ActorSystem,
-                                  @Named(EventModule.busName) eventBus: EventStream): ActorRef = {
+                                  leaderInfo: LeaderInfo,
+                                  @Named(EventModule.busName) eventBus: EventStream,
+                                  metrics: HttpEventStreamActorMetrics): ActorRef = {
     val outstanding = conf.eventStreamMaxOutstandingMessages.get.getOrElse(50)
     def handleStreamProps(handle: HttpEventStreamHandle): Props =
       Props(new HttpEventStreamHandleActor(handle, eventBus, outstanding))
 
-    system.actorOf(Props(classOf[HttpEventStreamActor], eventBus, handleStreamProps _), "HttpEventStream")
+    system.actorOf(Props(new HttpEventStreamActor(leaderInfo, metrics, handleStreamProps)), "HttpEventStream")
   }
 
   @Provides
@@ -153,6 +161,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     frameworkIdUtil: FrameworkIdUtil,
     driverHolder: MarathonSchedulerDriverHolder,
     taskIdUtil: TaskIdUtil,
+    leaderInfo: LeaderInfo,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
     taskFailureRepository: TaskFailureRepository,
@@ -163,20 +172,22 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
     system.actorOf(
       Props(
-        classOf[MarathonSchedulerActor],
-        mapper,
-        appRepository,
-        deploymentRepository,
-        healthCheckManager,
-        taskTracker,
-        taskQueue,
-        frameworkIdUtil,
-        driverHolder,
-        taskIdUtil,
-        storage,
-        eventBus,
-        taskFailureRepository,
-        config).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
+        new MarathonSchedulerActor(
+          mapper,
+          appRepository,
+          deploymentRepository,
+          healthCheckManager,
+          taskTracker,
+          taskQueue,
+          frameworkIdUtil,
+          driverHolder,
+          taskIdUtil,
+          storage,
+          leaderInfo,
+          eventBus,
+          taskFailureRepository,
+          config)
+      ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }
 

@@ -1,11 +1,14 @@
 package mesosphere.marathon.event.http
 
+import javax.inject.Named
+
 import akka.actor._
 import akka.event.EventStream
 import com.google.inject.Inject
-import mesosphere.marathon.event.LocalLeadershipEvent
+import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.event.http.HttpEventStreamActor._
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import org.apache.log4j.Logger
 import play.api.libs.json.Json
@@ -24,16 +27,15 @@ trait HttpEventStreamHandle {
 
 class HttpEventStreamActorMetrics @Inject() (metrics: Metrics) {
   val numberOfStreams: AtomicIntGauge =
-    metrics.gauge(metrics.name("api", getClass, "number-of-streams"), new AtomicIntGauge)
+    metrics.gauge(metrics.name(MetricPrefixes.API, getClass, "number-of-streams"), new AtomicIntGauge)
 }
 
 /**
   * This actor handles subscriptions from event stream handler.
   * It subscribes to the event stream and pushes all marathon events to all listener.
-  * @param eventStream the marathon event stream
   */
 class HttpEventStreamActor(
-  eventStream: EventStream,
+  leaderInfo: LeaderInfo,
   metrics: HttpEventStreamActorMetrics,
   handleStreamProps: HttpEventStreamHandle => Props)
     extends Actor {
@@ -43,11 +45,11 @@ class HttpEventStreamActor(
 
   override def preStart(): Unit = {
     metrics.numberOfStreams.setValue(0)
-    eventStream.subscribe(self, classOf[LocalLeadershipEvent])
+    leaderInfo.subscribe(self)
   }
 
   override def postStop(): Unit = {
-    eventStream.unsubscribe(self)
+    leaderInfo.unsubscribe(self)
     metrics.numberOfStreams.setValue(0)
   }
 

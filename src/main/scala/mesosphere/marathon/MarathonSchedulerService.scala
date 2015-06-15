@@ -16,7 +16,7 @@ import com.twitter.common.zookeeper.Candidate.Leader
 import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.event.LocalLeadershipEvent
+import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
@@ -49,7 +49,7 @@ class MarathonSchedulerService @Inject() (
     system: ActorSystem,
     migration: Migration,
     @Named("schedulerActor") schedulerActor: ActorRef,
-    eventStream: EventStream) extends AbstractExecutionThreadService with Leader {
+    @Named(EventModule.busName) eventStream: EventStream) extends AbstractExecutionThreadService with Leader {
 
   import mesosphere.util.ThreadPoolContext.context
 

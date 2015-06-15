@@ -5,6 +5,7 @@ import akka.event.EventStream
 import akka.testkit._
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.event.http.HttpEventStreamActor.{ HttpEventStreamConnectionClosed, HttpEventStreamConnectionOpen }
 import mesosphere.marathon.metrics.Metrics
@@ -80,15 +81,17 @@ class HttpEventStreamActorTest extends TestKit(ActorSystem())
   }
 
   var streamActor: TestActorRef[HttpEventStreamActor] = _
+  var leaderInfo: LeaderInfo = _
   var stream: EventStream = _
   var metrics: HttpEventStreamActorMetrics = _
 
   before {
+    leaderInfo = mock[LeaderInfo]
     stream = mock[EventStream]
     metrics = new HttpEventStreamActorMetrics(new Metrics(new MetricRegistry))
     def handleStreamProps(handle: HttpEventStreamHandle) = Props(new HttpEventStreamHandleActor(handle, stream, 1))
     streamActor = TestActorRef(Props(
-      new HttpEventStreamActor(stream, metrics, handleStreamProps)
+      new HttpEventStreamActor(leaderInfo, metrics, handleStreamProps)
     ))
   }
 }

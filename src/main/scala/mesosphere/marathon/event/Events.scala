@@ -44,8 +44,8 @@ object EventModule {
 sealed trait LocalLeadershipEvent
 
 object LocalLeadershipEvent {
-  case object ElectedAsLeader
-  case object Standby
+  case object ElectedAsLeader extends LocalLeadershipEvent
+  case object Standby extends LocalLeadershipEvent
 }
 
 sealed trait MarathonEvent {

@@ -1,15 +1,16 @@
 package mesosphere.marathon.integration.setup
 
-import javax.inject.{Inject, Named}
+import javax.inject.{ Inject, Named }
 import javax.ws.rs.core.Response
-import javax.ws.rs.{GET, Path}
+import javax.ws.rs.{ GET, Path }
 
+import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.google.inject._
-import mesosphere.chaos.http.{HttpConf, HttpModule, HttpService, RestModule}
+import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService, RestModule }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api._
-import mesosphere.marathon.{LeaderProxyConf, ModuleNames}
+import mesosphere.marathon.{ LeaderProxyConf, ModuleNames }
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
 
@@ -42,6 +43,9 @@ object ForwarderService {
       val leaderInfo = new LeaderInfo {
         override def elected: Boolean = electedAlias
         override def currentLeaderHostPort(): Option[String] = leaderHostPort
+
+        override def subscribe(self: ActorRef): Unit = ???
+        override def unsubscribe(self: ActorRef): Unit = ???
       }
 
       bind(classOf[LeaderInfo]).toInstance(leaderInfo)

@@ -8,6 +8,7 @@ import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.event.{ LocalLeadershipEvent, DeploymentSuccess, MesosStatusUpdateEvent, UpgradeEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
@@ -48,6 +49,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var taskIdUtil: TaskIdUtil = _
   var storage: StorageProvider = _
   var taskFailureEventRepository: TaskFailureRepository = _
+  var leaderInfo: LeaderInfo = _
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -64,6 +66,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     taskIdUtil = new TaskIdUtil
     storage = mock[StorageProvider]
     taskFailureEventRepository = mock[TaskFailureRepository]
+    leaderInfo = mock[LeaderInfo]
 
     when(deploymentRepo.store(any())).thenAnswer(new Answer[Future[DeploymentPlan]] {
       override def answer(p1: InvocationOnMock): Future[DeploymentPlan] = {
@@ -91,6 +94,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       holder,
       taskIdUtil,
       storage,
+      leaderInfo,
       system.eventStream,
       taskFailureEventRepository,
       mock[MarathonConf]
@@ -455,6 +459,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       holder,
       taskIdUtil,
       storage,
+      leaderInfo,
       system.eventStream,
       taskFailureEventRepository,
       mock[MarathonConf]
@@ -526,6 +531,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
         holder,
         taskIdUtil,
         storage,
+        leaderInfo,
         system.eventStream,
         taskFailureEventRepository,
         mock[MarathonConf]) {

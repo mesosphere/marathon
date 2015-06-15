@@ -7,6 +7,7 @@ import akka.event.EventStream
 import akka.pattern.ask
 import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
+import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.event.{
   LocalLeadershipEvent,
@@ -46,6 +47,7 @@ class MarathonSchedulerActor(
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     taskIdUtil: TaskIdUtil,
     storage: StorageProvider,
+    leaderInfo: LeaderInfo,
     eventBus: EventStream,
     taskFailureRepository: TaskFailureRepository,
     config: MarathonConf) extends Actor with ActorLogging with Stash {
@@ -89,11 +91,11 @@ class MarathonSchedulerActor(
     historyActor = context.actorOf(
       Props(classOf[HistoryActor], eventBus, taskFailureRepository), "HistoryActor")
 
-    eventBus.subscribe(self, classOf[LocalLeadershipEvent])
+    leaderInfo.subscribe(self)
   }
 
   override def postStop(): Unit = {
-    eventBus.unsubscribe(self)
+    leaderInfo.unsubscribe(self)
   }
 
   def receive: Receive = suspended
@@ -117,7 +119,8 @@ class MarathonSchedulerActor(
       context.become(started)
       self ! ReconcileHealthChecks
 
-    case LocalLeadershipEvent.Standby => // ignore
+    case LocalLeadershipEvent.Standby =>
+      // ignore, FIXME: When we get this while recovering deployments, we become active
 
     case _                            => stash()
   }
