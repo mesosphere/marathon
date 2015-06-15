@@ -26,11 +26,12 @@ object MarathonBuild extends Build {
                graphSettings ++
                testSettings ++
                integrationTestSettings ++
-      Seq(
-        libraryDependencies ++= Dependencies.root,
-        parallelExecution in Test := false,
-        fork in Test := true
-      )
+               teamCitySetEnvSettings ++
+               Seq(
+                 libraryDependencies ++= Dependencies.root,
+                 parallelExecution in Test := false,
+                 fork in Test := true
+               )
     )
     .configs(IntegrationTest)
     // run mesos-simulation/test:test when running test
@@ -166,6 +167,27 @@ object MarathonBuild extends Build {
       .setPreference(SpacesWithinPatternBinders, true)
       .setPreference(FormatXml, true)
     )
+
+
+  /**
+   * This on load trigger is used to set parameters in teamcity.
+   * It is only executed within teamcity and can be ignored otherwise.
+   */
+  lazy val teamCitySetEnvSettings = Seq(
+    onLoad in Global := {
+      sys.env.get("TEAMCITY_VERSION") match {
+        case None => // no-op
+        case Some(teamcityVersion) =>
+          def reportParameter(key: String, value: String): Unit = {
+            println(s"##teamcity[setParameter name='env.SBT_$key' value='$value']")
+            println(s"##teamcity[setParameter name='system.sbt.$key' value='$value']")
+          }
+          reportParameter("SCALA_VERSION", scalaVersion.value)
+          reportParameter("PROJECT_VERSION", version.value)
+      }
+      (onLoad in Global).value
+    }
+  )
 }
 
 object Dependencies {
