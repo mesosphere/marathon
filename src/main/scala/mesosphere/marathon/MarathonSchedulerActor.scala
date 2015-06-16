@@ -5,25 +5,16 @@ import java.util.concurrent.TimeoutException
 import akka.actor._
 import akka.event.EventStream
 import akka.pattern.ask
-import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.api.v2.AppUpdate
-import mesosphere.marathon.event.{
-  LocalLeadershipEvent,
-  AppTerminatedEvent,
-  DeploymentFailed,
-  DeploymentSuccess,
-  HistoryActor
-}
+import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos
-import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
@@ -36,56 +27,32 @@ import scala.util.{ Failure, Success, Try }
 
 class LockingFailedException(msg: String) extends Exception(msg)
 
-class MarathonSchedulerActor(
+// scalastyle:off parameter.number
+class MarathonSchedulerActor private (
+    createSchedulerActions: ActorRef => SchedulerActions,
+    deploymentManagerProps: SchedulerActions => Props,
+    historyActorProps: Props,
     appRepository: AppRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
-    frameworkIdUtil: FrameworkIdUtil,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    storage: StorageProvider,
     leaderInfo: LeaderInfo,
     eventBus: EventStream,
-    taskFailureRepository: TaskFailureRepository,
-    config: MarathonConf) extends Actor with ActorLogging with Stash {
+    cancellationTimeout: FiniteDuration = 1.minute) extends Actor with ActorLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
 
   var lockedApps = Set.empty[PathId]
-  var scheduler: SchedulerActions = _
+  var schedulerActions: SchedulerActions = _
   var deploymentManager: ActorRef = _
   var historyActor: ActorRef = _
 
-  val cancellationTimeout: FiniteDuration = 1.minute
-
   override def preStart(): Unit = {
-
-    scheduler = new SchedulerActions(
-      appRepository,
-      healthCheckManager,
-      taskTracker,
-      taskQueue,
-      eventBus,
-      self,
-      config)
-
-    deploymentManager = context.actorOf(
-      Props(
-        classOf[DeploymentManager],
-        appRepository,
-        taskTracker,
-        taskQueue,
-        scheduler,
-        storage,
-        healthCheckManager,
-        eventBus
-      ),
-      "UpgradeManager"
-    )
-
-    historyActor = context.actorOf(
-      Props(classOf[HistoryActor], eventBus, taskFailureRepository), "HistoryActor")
+    schedulerActions = createSchedulerActions(self)
+    deploymentManager = context.actorOf(deploymentManagerProps(schedulerActions), "DeploymentManager")
+    historyActor = context.actorOf(historyActorProps, "HistoryActor")
 
     leaderInfo.subscribe(self)
   }
@@ -134,18 +101,18 @@ class MarathonSchedulerActor(
     case LocalLeadershipEvent.ElectedAsLeader => // ignore
 
     case ReconcileTasks =>
-      scheduler.reconcileTasks(driver)
+      schedulerActions.reconcileTasks(driver)
       sender ! ReconcileTasks.answer
 
     case ReconcileHealthChecks =>
-      scheduler.reconcileHealthChecks()
+      schedulerActions.reconcileHealthChecks()
 
-    case ScaleApps => scheduler.scaleApps()
+    case ScaleApps => schedulerActions.scaleApps()
 
     case cmd @ ScaleApp(appId) =>
       val origSender = sender()
       withLockFor(appId) {
-        val res = scheduler.scale(driver, appId)
+        val res = schedulerActions.scale(driver, appId)
 
         if (origSender != context.system.deadLetters)
           res.sendAnswer(origSender, cmd)
@@ -180,7 +147,7 @@ class MarathonSchedulerActor(
           for {
             _ <- promise.future
             Some(app) <- appRepository.currentVersion(appId)
-          } yield scheduler.scale(driver, app)
+          } yield schedulerActions.scale(driver, app)
         }
 
         res onComplete { _ =>
@@ -340,6 +307,34 @@ class MarathonSchedulerActor(
 }
 
 object MarathonSchedulerActor {
+  def props(
+    createSchedulerActions: ActorRef => SchedulerActions,
+    deploymentManagerProps: SchedulerActions => Props,
+    historyActorProps: Props,
+    appRepository: AppRepository,
+    deploymentRepository: DeploymentRepository,
+    healthCheckManager: HealthCheckManager,
+    taskTracker: TaskTracker,
+    taskQueue: TaskQueue,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+    leaderInfo: LeaderInfo,
+    eventBus: EventStream,
+    cancellationTimeout: FiniteDuration = 1.minute): Props = {
+    Props(new MarathonSchedulerActor(
+      createSchedulerActions,
+      deploymentManagerProps,
+      historyActorProps,
+      appRepository,
+      deploymentRepository,
+      healthCheckManager,
+      taskTracker,
+      taskQueue,
+      marathonSchedulerDriverHolder,
+      leaderInfo,
+      eventBus,
+      cancellationTimeout))
+  }
+
   case class RecoverDeployments(deployments: Seq[DeploymentPlan])
 
   sealed trait Command {
