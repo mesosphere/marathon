@@ -120,7 +120,7 @@ class MarathonSchedulerActor(
       self ! ReconcileHealthChecks
 
     case LocalLeadershipEvent.Standby =>
-      // ignore, FIXME: When we get this while recovering deployments, we become active
+    // ignore, FIXME: When we get this while recovering deployments, we become active
 
     case _                            => stash()
   }
