@@ -306,12 +306,12 @@ The port array currently serves multiple roles:
   for every task.
 * For every port that is zero, a globally unique (cluster-wide) port is assigned and
   provided as part of the app definition to be used in load balancing definitions.
-  See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.md)
+  See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.html)
   for details.
 
 Since this is confusing, we recommend to configure ports assignment for docker
 containers in `container.docker.portMappings` instead, see
-[Docker Containers doc page]({{ site.baseurl }}/docs/native-docker.md#bridged-networking-mode)).
+[Docker Containers doc page]({{ site.baseurl }}/docs/native-docker.html#bridged-networking-mode)).
 
 Alternatively or if you use the Mesos Containerizer, pass zeros as port values to generate one or more arbitrary
 free ports for each application instance.
@@ -333,7 +333,7 @@ If you need more control and want to specify your host ports in advance, you can
 
  The specified ports need to be in the local port range specified by the
  `--local_port_min` and `--local_port_max` flags. See
- [Command Line Flags doc page]({{ site.baseurl }}/docs/command-line-flags.md)).
+ [Command Line Flags doc page]({{ site.baseurl }}/docs/command-line-flags.html)).
 
 ##### upgradeStrategy
 
@@ -2526,13 +2526,9 @@ Server: Jetty(8.y.z-SNAPSHOT)
     "version": "0.7.0-SNAPSHOT",
     "zookeeper_config": {
         "zk": "zk://localhost:2181/marathon",
-        "zk_future_timeout": {
-            "duration": 10
-        },
-        "zk_hosts": "localhost:2181",
-        "zk_path": "/marathon",
-        "zk_state": "/marathon",
-        "zk_timeout": 10
+        "zk_timeout": 10000,
+        "zk_session_timeout": 1800000,
+        "zk_max_version": 5
     }
 }
 {% endhighlight %}

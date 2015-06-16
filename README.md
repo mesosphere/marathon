@@ -21,7 +21,7 @@ following the instructions.
 
             $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev
     * On Mac OS X:
-    
+
             $ brew install node
 
 2. Clone the Marathon repository
