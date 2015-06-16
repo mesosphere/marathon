@@ -6,7 +6,7 @@ import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.event.http.HttpEventStreamActor._
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
-import mesosphere.marathon.metrics.{MetricPrefixes, Metrics}
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.apache.log4j.Logger
 
 import scala.util.Try

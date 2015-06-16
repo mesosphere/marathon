@@ -176,7 +176,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     system.actorOf(
       Props(
         new MarathonSchedulerActor(
-          mapper,
           appRepository,
           deploymentRepository,
           healthCheckManager,
@@ -184,7 +183,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
           taskQueue,
           frameworkIdUtil,
           driverHolder,
-          taskIdUtil,
           storage,
           leaderInfo,
           eventBus,

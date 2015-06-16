@@ -37,7 +37,6 @@ import scala.util.{ Failure, Success, Try }
 class LockingFailedException(msg: String) extends Exception(msg)
 
 class MarathonSchedulerActor(
-    mapper: ObjectMapper,
     appRepository: AppRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
@@ -45,7 +44,6 @@ class MarathonSchedulerActor(
     taskQueue: TaskQueue,
     frameworkIdUtil: FrameworkIdUtil,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    taskIdUtil: TaskIdUtil,
     storage: StorageProvider,
     leaderInfo: LeaderInfo,
     eventBus: EventStream,
@@ -64,11 +62,9 @@ class MarathonSchedulerActor(
   override def preStart(): Unit = {
 
     scheduler = new SchedulerActions(
-      mapper,
       appRepository,
       healthCheckManager,
       taskTracker,
-      taskIdUtil,
       taskQueue,
       eventBus,
       self,
@@ -120,7 +116,7 @@ class MarathonSchedulerActor(
       self ! ReconcileHealthChecks
 
     case LocalLeadershipEvent.Standby =>
-      // ignore, FIXME: When we get this while recovering deployments, we become active
+    // ignore, FIXME: When we get this while recovering deployments, we become active
 
     case _                            => stash()
   }
@@ -400,11 +396,9 @@ object MarathonSchedulerActor {
 }
 
 class SchedulerActions(
-    mapper: ObjectMapper,
     appRepository: AppRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
-    taskIdUtil: TaskIdUtil,
     taskQueue: TaskQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,

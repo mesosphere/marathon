@@ -83,21 +83,20 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   def createActor() = {
     system.actorOf(Props(
-      classOf[MarathonSchedulerActor],
-      new ObjectMapper(),
-      repo,
-      deploymentRepo,
-      hcManager,
-      tracker,
-      queue,
-      frameworkIdUtil,
-      holder,
-      taskIdUtil,
-      storage,
-      leaderInfo,
-      system.eventStream,
-      taskFailureEventRepository,
-      mock[MarathonConf]
+      new MarathonSchedulerActor(
+        repo,
+        deploymentRepo,
+        hcManager,
+        tracker,
+        queue,
+        frameworkIdUtil,
+        holder,
+        storage,
+        leaderInfo,
+        system.eventStream,
+        taskFailureEventRepository,
+        mock[MarathonConf]
+      )
     ))
   }
 
@@ -448,21 +447,20 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(deploymentRepo.store(plan)).thenReturn(Future.successful(plan))
 
     val schedulerActor = system.actorOf(Props(
-      classOf[MarathonSchedulerActor],
-      new ObjectMapper(),
-      repo,
-      deploymentRepo,
-      hcManager,
-      tracker,
-      queue,
-      frameworkIdUtil,
-      holder,
-      taskIdUtil,
-      storage,
-      leaderInfo,
-      system.eventStream,
-      taskFailureEventRepository,
-      mock[MarathonConf]
+      new MarathonSchedulerActor(
+        repo,
+        deploymentRepo,
+        hcManager,
+        tracker,
+        queue,
+        frameworkIdUtil,
+        holder,
+        storage,
+        leaderInfo,
+        system.eventStream,
+        taskFailureEventRepository,
+        mock[MarathonConf]
+      )
     ))
 
     try {
@@ -521,7 +519,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val schedulerActor = TestActorRef(Props(
       new MarathonSchedulerActor(
-        new ObjectMapper(),
         repo,
         deploymentRepo,
         hcManager,
@@ -529,7 +526,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
         queue,
         frameworkIdUtil,
         holder,
-        taskIdUtil,
         storage,
         leaderInfo,
         system.eventStream,
