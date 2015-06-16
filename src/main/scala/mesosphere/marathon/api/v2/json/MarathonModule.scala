@@ -34,8 +34,10 @@ class MarathonModule extends Module {
 
   def getModuleName: String = "MarathonModule"
 
+  //scalastyle:off null
   def version(): Version = new Version(0, 0, 1, null, null, null)
 
+  //scalastyle:off cyclomatic.complexity
   def setupModule(context: SetupContext) {
     context.addSerializers(new Serializers.Base {
       override def findSerializer(config: SerializationConfig, javaType: JavaType,
@@ -71,6 +73,7 @@ class MarathonModule extends Module {
       }
     })
   }
+  //scalastyle:on
 
   object ConstraintSerializer extends JsonSerializer[Constraint] {
     def serialize(constraint: Constraint, jgen: JsonGenerator, provider: SerializerProvider) {
@@ -212,7 +215,7 @@ class MarathonModule extends Module {
       val emptyContainer = tree.has("container") && tree.get("container").isNull
 
       val appUpdate =
-        tree.traverse(oc).readValueAs(classOf[AppUpdateBuilder]).build
+        tree.traverse(oc).readValueAs(classOf[AppUpdateBuilder]).build()
 
       if (emptyContainer)
         appUpdate.copy(container = Some(Container.Empty))

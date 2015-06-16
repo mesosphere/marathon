@@ -5,7 +5,7 @@ import java.lang.{ Double => JDouble }
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
-import mesosphere.marathon.api.v2.{ GroupUpdate, AppUpdate }
+import mesosphere.marathon.api.v2.{ AppUpdate, GroupUpdate }
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -147,7 +147,7 @@ trait Formats
           case _: IllegalArgumentException => JsError(errorMsg(str))
         }
 
-      case x => JsError(s"expected string, got $x")
+      case x: JsValue => JsError(s"expected string, got $x")
     }
 
     val writes = Writes[A] { a: A => JsString(a.name) }
@@ -209,10 +209,10 @@ trait DeploymentFormats {
     )
   implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
-    (__ \ "apps").formatNullable[Set[AppDefinition]].withDefault(Group.DefaultApps) ~
-    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.DefaultGroups) ~
-    (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.DefaultDependencies) ~
-    (__ \ "version").formatNullable[Timestamp].withDefault(Group.DefaultVersion)
+    (__ \ "apps").formatNullable[Set[AppDefinition]].withDefault(Group.defaultApps) ~
+    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
+    (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
+    (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
   )(Group(_, _, _, _, _), unlift(Group.unapply))
 
   implicit lazy val GroupUpdateFormat: Format[GroupUpdate] = (
@@ -281,6 +281,7 @@ trait EventFormats {
   implicit lazy val SchedulerReregisteredEventWritesWrites: Writes[SchedulerReregisteredEvent] =
     Json.writes[SchedulerReregisteredEvent]
 
+  //scalastyle:off cyclomatic.complexity
   def eventToJson(event: MarathonEvent): JsValue = event match {
     case event: AppTerminatedEvent         => Json.toJson(event)
     case event: ApiPostEvent               => Json.toJson(event)
@@ -305,6 +306,7 @@ trait EventFormats {
     case event: SchedulerRegisteredEvent   => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
   }
+  //scalastyle:on
 }
 
 trait HealthCheckFormats {

@@ -6,6 +6,9 @@ import org.rogach.scallop.ScallopConf
   * Configuration for proxying to the current leader.
   */
 trait LeaderProxyConf extends ScallopConf {
+
+  //scalastyle:off magic.number
+
   lazy val leaderProxyConnectionTimeout = opt[Int]("leader_proxy_connection_timeout",
     descr = "Maximum time, in milliseconds, to wait for connecting to the current Marathon leader from " +
       "another Marathon instance.",

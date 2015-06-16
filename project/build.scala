@@ -7,7 +7,7 @@ import com.typesafe.sbt.SbtScalariform._
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import ohnosequences.sbt.SbtS3Resolver.S3Resolver
 import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
-import org.scalastyle.sbt.ScalastylePlugin.{ Settings => styleSettings }
+import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
 import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
@@ -81,7 +81,7 @@ object MarathonBuild extends Build {
 
   lazy val scalaStyleSettings = styleSettings ++ Seq(
     testScalaStyle := {
-      org.scalastyle.sbt.PluginKeys.scalastyle.toTask("").value
+      org.scalastyle.sbt.ScalastylePlugin.scalastyle.in(Compile).toTask("").value
     },
     (test in Test) <<= (test in Test) dependsOn testScalaStyle
   )

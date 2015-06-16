@@ -1,6 +1,6 @@
 package mesosphere.marathon.api
 
-import java.net.{ HttpURLConnection, URL }
+import java.net.{ URLConnection, HttpURLConnection, URL }
 import javax.validation.ConstraintViolation
 import mesosphere.marathon.MarathonSchedulerService
 import scala.reflect.ClassTag
@@ -15,6 +15,8 @@ import BeanValidation._
   * Specific validation helper for specific model classes.
   */
 object ModelValidation {
+
+  //scalastyle:off null
 
   def checkGroup(
     group: Group,
@@ -204,7 +206,7 @@ object ModelValidation {
         case http: HttpURLConnection =>
           http.setRequestMethod("HEAD")
           http.getResponseCode == HttpURLConnection.HTTP_OK
-        case other =>
+        case other: URLConnection =>
           other.getInputStream
           true //if we come here, we could read the stream
       }

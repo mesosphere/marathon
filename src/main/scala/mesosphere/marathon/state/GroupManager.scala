@@ -173,6 +173,7 @@ class GroupManager @Singleton @Inject() (
       }
   }
 
+  //scalastyle:off method.length
   private[state] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.ports)
@@ -226,8 +227,8 @@ class GroupManager @Singleton @Inject() (
 
     val dynamicApps: Set[AppDefinition] =
       to.transitiveApps.map {
-        case app if app.hasDynamicPort => assignPorts(app)
-        case app =>
+        case app: AppDefinition if app.hasDynamicPort => assignPorts(app)
+        case app: AppDefinition =>
           // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
           app.copy(ports = app.servicePorts.map(Integer.valueOf))
       }

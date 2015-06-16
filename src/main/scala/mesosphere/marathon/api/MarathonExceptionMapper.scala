@@ -37,7 +37,9 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       .build
   }
 
+  //scalastyle:off magic.number cyclomatic.complexity
   private def statusCode(exception: Exception): Int = exception match {
+    //scalastyle:off magic.number
     case e: IllegalArgumentException   => 422 // Unprocessable entity
     case e: TimeoutException           => 504 // Gateway timeout
     case e: UnknownAppException        => 404 // Not found
@@ -49,6 +51,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: JsonMappingException       => 400 // Bad Request
     case e: WebApplicationException    => e.getResponse.getStatus
     case _                             => 500 // Internal server error
+    //scalastyle:on
   }
 
   private def entity(exception: Exception): Any = exception match {
@@ -70,6 +73,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
         "details" -> errors
       )
     case e: WebApplicationException =>
+      //scalastyle:off null
       if (e.getResponse.getEntity != null) {
         Map("message" -> e.getResponse.getEntity)
       }

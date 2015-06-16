@@ -7,12 +7,13 @@ import com.google.protobuf.ByteString
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Environment._
-import org.apache.mesos.Protos._
+import org.apache.mesos.Protos.{ HealthCheck => _, _ }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
@@ -51,6 +52,8 @@ class TaskBuilder(app: AppDefinition,
       }
   }
 
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
   private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String,
                     portsResources: Seq[RangesResource]): Some[(TaskInfo, Seq[Long])] = {
 
@@ -154,7 +157,7 @@ class TaskBuilder(app: AppDefinition,
     // are currently implemented in the Mesos health check helper program.
     val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
       app.healthChecks.collect {
-        case healthCheck if healthCheck.protocol == Protocol.COMMAND => healthCheck.toMesos
+        case healthCheck: HealthCheck if healthCheck.protocol == Protocol.COMMAND => healthCheck.toMesos
       }
 
     if (mesosHealthChecks.size > 1) {
@@ -201,6 +204,7 @@ object TaskBuilder {
       if (app.container.isEmpty) builder.setValue(argv.head)
     }
 
+    //scalastyle:off null
     if (app.uris != null) {
       val uriProtos = app.uris.map(uri => {
         CommandInfo.URI.newBuilder()
@@ -210,6 +214,7 @@ object TaskBuilder {
       })
       builder.addAllUris(uriProtos.asJava)
     }
+    //scalastyle:on
 
     app.user.foreach(builder.setUser)
 

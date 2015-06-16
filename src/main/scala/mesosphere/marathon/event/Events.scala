@@ -10,6 +10,8 @@ import org.apache.log4j.Logger
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import akka.actor.ActorSystem
 
+//scalastyle:off number.of.types
+
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]
   def module(): Option[Class[M]]

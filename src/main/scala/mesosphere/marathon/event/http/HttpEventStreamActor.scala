@@ -1,17 +1,13 @@
 package mesosphere.marathon.event.http
 
-import javax.inject.Named
-
 import akka.actor._
-import akka.event.EventStream
 import com.google.inject.Inject
 import mesosphere.marathon.api.LeaderInfo
-import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
+import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.event.http.HttpEventStreamActor._
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
+import mesosphere.marathon.metrics.{MetricPrefixes, Metrics}
 import org.apache.log4j.Logger
-import play.api.libs.json.Json
 
 import scala.util.Try
 
@@ -133,7 +129,7 @@ class HttpEventStreamActor(
   }
 
   private[this] def warnAboutUnknownMessages: Receive = {
-    case message => log.warn(s"Received unexpected message $message")
+    case message: Any => log.warn(s"Received unexpected message $message")
   }
 }
 

@@ -1,7 +1,7 @@
 package mesosphere.marathon.api
 
 import java.io.{ IOException, InputStream, OutputStream }
-import java.net.{ UnknownServiceException, ConnectException, HttpURLConnection, URL }
+import java.net._
 import javax.inject.Named
 import javax.net.ssl.{ HttpsURLConnection, SSLContext }
 import javax.servlet._
@@ -55,8 +55,8 @@ trait LeaderInfo {
 class LeaderProxyFilter @Inject() (httpConf: HttpConf,
                                    leaderInfo: LeaderInfo,
                                    @Named(ModuleNames.NAMED_HOST_PORT) myHostPort: String,
-                                   forwarder: RequestForwarder)
-    extends Filter {
+                                   forwarder: RequestForwarder) extends Filter {
+  //scalastyle:off null
 
   import LeaderProxyFilter._
 
@@ -73,13 +73,17 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
     }
   }
 
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
   @tailrec
   final def doFilter(rawRequest: ServletRequest,
                      rawResponse: ServletResponse,
                      chain: FilterChain) {
 
     def waitForConsistentLeadership(response: HttpServletResponse): Boolean = {
+      //scalastyle:off magic.number
       var retries = 10
+      //scalastyle:on
 
       do {
         val weAreLeader = leaderInfo.elected
@@ -87,7 +91,9 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
 
         if (weAreLeader || currentLeaderData.exists(_ != myHostPort)) {
           log.info("Leadership info is consistent again!")
+          //scalastyle:off return
           return true
+          //scalastyle:on
         }
 
         if (retries >= 0) {
@@ -140,7 +146,9 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
   }
 
   protected def sleep(): Unit = {
+    //scalastyle:off magic.number
     Thread.sleep(250)
+    //scalastyle:on
   }
 
   def destroy() {
@@ -185,7 +193,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
           httpsConnection
         case httpConnection: HttpURLConnection =>
           httpConnection
-        case connection =>
+        case connection: URLConnection =>
           throw new scala.RuntimeException(s"unexpected connection type: ${connection.getClass}")
       }
 

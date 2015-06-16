@@ -1,17 +1,17 @@
 package mesosphere.marathon.api.v2
 
 import java.util
+import javax.inject.Inject
 import javax.ws.rs._
 import javax.ws.rs.core.{ MediaType, Response }
-import javax.inject.Inject
-import com.sun.jersey.api.Responses
-import mesosphere.marathon.api.{ EndpointsHelper, RestResource }
-import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
-import org.apache.log4j.Logger
+
 import com.codahale.metrics.annotation.Timed
+import mesosphere.marathon.api.v2.json.EnrichedTask
+import mesosphere.marathon.api.{ EndpointsHelper, RestResource }
+import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
+import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskState
 import play.api.libs.json.Json
 
@@ -35,9 +35,11 @@ class TasksResource @Inject() (
     @QueryParam("status") status: String,
     @QueryParam("status[]") statuses: util.List[String]): Response = {
 
+    //scalastyle:off null
     if (status != null) {
       statuses.add(status)
     }
+    //scalastyle:on
     val statusSet = statuses.asScala.flatMap(toTaskState).toSet
 
     val tasks = taskTracker.list.values.view.flatMap { app =>

@@ -20,6 +20,8 @@ object ResourceUtil {
   /**
     * Deduct usedResource from resource. If nothing is left, None is returned.
     */
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
   def consumeResource(resource: Resource, usedResource: Resource): Option[Resource] = {
     require(resource.getType == usedResource.getType)
 
@@ -47,12 +49,12 @@ object ResourceUtil {
       }
       else {
         val rangeBefore: Option[Value.Range] = if (baseRange.getBegin < usedRange.getBegin)
-          Some(baseRange.toBuilder().setEnd(usedRange.getBegin - 1).build())
+          Some(baseRange.toBuilder.setEnd(usedRange.getBegin - 1).build())
         else
           None
 
         val rangeAfter: Option[Value.Range] = if (baseRange.getEnd > usedRange.getEnd)
-          Some(baseRange.toBuilder().setBegin(usedRange.getEnd + 1).build())
+          Some(baseRange.toBuilder.setBegin(usedRange.getEnd + 1).build())
         else
           None
 
@@ -107,7 +109,7 @@ object ResourceUtil {
       case Value.Type.RANGES => consumeRangeResource
       case Value.Type.SET    => consumeSetResource
 
-      case unexpectedResourceType =>
+      case unexpectedResourceType: Value.Type =>
         log.warn("unexpected resourceType {} for resource {}", Seq(unexpectedResourceType, resource.getName): _*)
         // we don't know the resource, thus we consume it completely
         None
@@ -149,7 +151,7 @@ object ResourceUtil {
           range => s"${range.getBegin}->${range.getEnd}"
         }.mkString(",")
       }"
-    case other => resource.toString
+    case other: Value.Type => resource.toString
   }
 
   def displayResources(resources: Iterable[Resource]): String = {

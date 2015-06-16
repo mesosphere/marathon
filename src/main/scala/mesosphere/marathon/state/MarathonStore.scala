@@ -65,7 +65,7 @@ class MarathonStore[S <: MarathonState[_, S]](
     store.allIds()
       .map {
         _.collect {
-          case name if name startsWith prefix => name.replaceFirst(prefix, "")
+          case name: String if name startsWith prefix => name.replaceFirst(prefix, "")
         }
       }
       .recover(exceptionTransform(s"Could not list names for ${ct.runtimeClass.getSimpleName}"))

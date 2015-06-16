@@ -54,7 +54,9 @@ object IO {
     out: OutputStream = ByteStreams.nullOutputStream()): String = {
     val md = MessageDigest.getInstance(mdName)
     transfer(new DigestInputStream(in, md), out)
+    //scalastyle:off magic.number
     new BigInteger(1, md.digest()).toString(16)
+    //scalastyle:on
   }
 
   def transfer(

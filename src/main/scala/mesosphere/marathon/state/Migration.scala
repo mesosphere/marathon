@@ -3,7 +3,6 @@ package mesosphere.marathon.state
 import java.io.{ ByteArrayInputStream, ObjectInputStream }
 import javax.inject.Inject
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
@@ -26,6 +25,8 @@ class Migration @Inject() (
     groupRepo: GroupRepository,
     config: MarathonConf,
     metrics: Metrics) extends Logging {
+
+  //scalastyle:off magic.number
 
   type MigrationAction = (StorageVersion, () => Future[Any])
 

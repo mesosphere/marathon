@@ -54,6 +54,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
         .build()
     }
 
+    //scalastyle:off magic.number
     val offer: Offer = Offer.newBuilder()
       .setId(OfferID.newBuilder().setValue("thisisnotandid"))
       .setFrameworkId(FrameworkID.newBuilder().setValue("notanidframework"))
@@ -73,6 +74,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
           .build()
       ))
       .build()
+    //scalastyle:on
 
     val offers = SchedulerActor.ResourceOffers((1 to numberOfOffersPerCycle).map(_ => offer))
 

@@ -56,6 +56,8 @@ object ModuleNames {
 class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     extends AbstractModule {
 
+  //scalastyle:off magic.number
+
   val log = Logger.getLogger(getClass.getName)
 
   def configure() {
@@ -139,13 +141,14 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       new MesosStateStore(state, conf.zkTimeoutDuration)
     }
     conf.internalStoreBackend.get match {
-      case Some("zk")       => directZK()
-      case Some("mesos_zk") => mesosZK()
-      case Some("mem")      => new InMemoryStore()
-      case backend          => throw new IllegalArgumentException(s"Storage backend $backend not known!")
+      case Some("zk")              => directZK()
+      case Some("mesos_zk")        => mesosZK()
+      case Some("mem")             => new InMemoryStore()
+      case backend: Option[String] => throw new IllegalArgumentException(s"Storage backend $backend not known!")
     }
   }
 
+  //scalastyle:off parameter.number
   @Named("schedulerActor")
   @Provides
   @Singleton
@@ -210,7 +213,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
             hostPort.getBytes("UTF-8")
           }
         })
+      //scalastyle:off return
       return Some(candidate)
+      //scalastyle:on
     }
     None
   }
