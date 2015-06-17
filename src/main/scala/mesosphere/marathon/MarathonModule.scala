@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Named
 
 import akka.actor.SupervisorStrategy.Restart
-import akka.actor.{ Props, ActorRef, ActorRefFactory, ActorSystem, OneForOneStrategy }
+import akka.actor._
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -17,7 +17,7 @@ import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup,
 import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
-import mesosphere.marathon.event.EventModule
+import mesosphere.marathon.event.{ HistoryActor, EventModule }
 import mesosphere.marathon.event.http.{
   HttpEventStreamActorMetrics,
   HttpEventStreamHandleActor,
@@ -29,7 +29,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker, _ }
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import mesosphere.util.SerializeExecution
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
@@ -148,7 +148,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     }
   }
 
-  //scalastyle:off parameter.number
+  //scalastyle:off parameter.number method.length
   @Named("schedulerActor")
   @Provides
   @Singleton
@@ -173,23 +173,48 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       case NonFatal(_) => Restart
     }
 
-    system.actorOf(
+    import system.dispatcher
+
+    def createSchedulerActions(schedulerActor: ActorRef): SchedulerActions = {
+      new SchedulerActions(
+        appRepository,
+        healthCheckManager,
+        taskTracker,
+        taskQueue,
+        eventBus,
+        schedulerActor,
+        config)
+    }
+
+    def deploymentManagerProps(schedulerActions: SchedulerActions): Props = {
       Props(
-        new MarathonSchedulerActor(
-          mapper,
+        new DeploymentManager(
           appRepository,
-          deploymentRepository,
-          healthCheckManager,
           taskTracker,
           taskQueue,
-          frameworkIdUtil,
-          driverHolder,
-          taskIdUtil,
+          schedulerActions,
           storage,
-          leaderInfo,
-          eventBus,
-          taskFailureRepository,
-          config)
+          healthCheckManager,
+          eventBus
+        )
+      )
+    }
+
+    val historyActorProps = Props(new HistoryActor(eventBus, taskFailureRepository))
+
+    system.actorOf(
+      MarathonSchedulerActor.props(
+        createSchedulerActions,
+        deploymentManagerProps,
+        historyActorProps,
+        appRepository,
+        deploymentRepository,
+        healthCheckManager,
+        taskTracker,
+        taskQueue,
+        driverHolder,
+        leaderInfo,
+        eventBus
       ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }

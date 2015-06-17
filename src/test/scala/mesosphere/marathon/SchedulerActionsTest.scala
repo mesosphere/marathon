@@ -26,11 +26,9 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
     val taskTracker = mock[TaskTracker]
 
     val scheduler = new SchedulerActions(
-      mock[ObjectMapper],
       repo,
       mock[HealthCheckManager],
       taskTracker,
-      new TaskIdUtil,
       queue,
       system.eventStream,
       TestProbe().ref,
@@ -79,11 +77,9 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
       .build()
 
     val scheduler = new SchedulerActions(
-      mock[ObjectMapper],
       repo,
       mock[HealthCheckManager],
       taskTracker,
-      new TaskIdUtil,
       queue,
       system.eventStream,
       TestProbe().ref,
@@ -119,11 +115,9 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
       .build()
 
     val scheduler = new SchedulerActions(
-      mock[ObjectMapper],
       repo,
       mock[HealthCheckManager],
       taskTracker,
-      new TaskIdUtil,
       queue,
       system.eventStream,
       TestProbe().ref,

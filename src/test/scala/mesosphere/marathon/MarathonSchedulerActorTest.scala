@@ -3,19 +3,19 @@ package mesosphere.marathon
 import java.util.concurrent.TimeoutException
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.event.EventStream
 import akka.testkit._
 import akka.util.Timeout
-import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.LeaderInfo
-import mesosphere.marathon.event.{ LocalLeadershipEvent, DeploymentSuccess, MesosStatusUpdateEvent, UpgradeEvent }
+import mesosphere.marathon.event._
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
-import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, StopApplication }
+import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, DeploymentStep, StopApplication }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
 import mesosphere.util.state.FrameworkIdUtil
@@ -46,10 +46,12 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var frameworkIdUtil: FrameworkIdUtil = _
   var driver: SchedulerDriver = _
   var holder: MarathonSchedulerDriverHolder = _
-  var taskIdUtil: TaskIdUtil = _
   var storage: StorageProvider = _
   var taskFailureEventRepository: TaskFailureRepository = _
   var leaderInfo: LeaderInfo = _
+  var schedulerActions: ActorRef => SchedulerActions = _
+  var deploymentManagerProps: SchedulerActions => Props = _
+  var historyActorProps: Props = _
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -63,10 +65,21 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     tracker = mock[TaskTracker]
     queue = spy(new TaskQueue)
     frameworkIdUtil = mock[FrameworkIdUtil]
-    taskIdUtil = new TaskIdUtil
     storage = mock[StorageProvider]
     taskFailureEventRepository = mock[TaskFailureRepository]
     leaderInfo = mock[LeaderInfo]
+    deploymentManagerProps = schedulerActions => Props(new DeploymentManager(
+      repo,
+      tracker,
+      queue,
+      schedulerActions,
+      storage,
+      hcManager,
+      system.eventStream
+    ))
+    historyActorProps = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
+    schedulerActions = ref => new SchedulerActions(
+      repo, hcManager, tracker, queue, new EventStream(), ref, mock[MarathonConf])(system.dispatcher)
 
     when(deploymentRepo.store(any())).thenAnswer(new Answer[Future[DeploymentPlan]] {
       override def answer(p1: InvocationOnMock): Future[DeploymentPlan] = {
@@ -82,23 +95,21 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   def createActor() = {
-    system.actorOf(Props(
-      classOf[MarathonSchedulerActor],
-      new ObjectMapper(),
-      repo,
-      deploymentRepo,
-      hcManager,
-      tracker,
-      queue,
-      frameworkIdUtil,
-      holder,
-      taskIdUtil,
-      storage,
-      leaderInfo,
-      system.eventStream,
-      taskFailureEventRepository,
-      mock[MarathonConf]
-    ))
+    system.actorOf(
+      MarathonSchedulerActor.props(
+        schedulerActions,
+        deploymentManagerProps,
+        historyActorProps,
+        repo,
+        deploymentRepo,
+        hcManager,
+        tracker,
+        queue,
+        holder,
+        leaderInfo,
+        system.eventStream
+      )
+    )
   }
 
   def stopActor(ref: ActorRef): Unit = {
@@ -447,23 +458,20 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(deploymentRepo.all()).thenReturn(Future.successful(Seq(plan)))
     when(deploymentRepo.store(plan)).thenReturn(Future.successful(plan))
 
-    val schedulerActor = system.actorOf(Props(
-      classOf[MarathonSchedulerActor],
-      new ObjectMapper(),
-      repo,
-      deploymentRepo,
-      hcManager,
-      tracker,
-      queue,
-      frameworkIdUtil,
-      holder,
-      taskIdUtil,
-      storage,
-      leaderInfo,
-      system.eventStream,
-      taskFailureEventRepository,
-      mock[MarathonConf]
-    ))
+    val schedulerActor = system.actorOf(
+      MarathonSchedulerActor.props(
+        schedulerActions,
+        deploymentManagerProps,
+        historyActorProps,
+        repo,
+        deploymentRepo,
+        hcManager,
+        tracker,
+        queue,
+        holder,
+        leaderInfo,
+        system.eventStream
+      ))
 
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
@@ -519,25 +527,22 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(tracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
     when(repo.expunge(app.id)).thenReturn(Future.successful(Nil))
 
-    val schedulerActor = TestActorRef(Props(
-      new MarathonSchedulerActor(
-        new ObjectMapper(),
+    val schedulerActor = TestActorRef(
+      MarathonSchedulerActor.props(
+        schedulerActions,
+        deploymentManagerProps,
+        historyActorProps,
         repo,
         deploymentRepo,
         hcManager,
         tracker,
         queue,
-        frameworkIdUtil,
         holder,
-        taskIdUtil,
-        storage,
         leaderInfo,
         system.eventStream,
-        taskFailureEventRepository,
-        mock[MarathonConf]) {
-        override val cancellationTimeout = 0.millisecond
-      }
-    ))
+        cancellationTimeout = 0.seconds
+      )
+    )
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
