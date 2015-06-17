@@ -2,7 +2,7 @@
 package mesosphere.marathon.integration.setup
 
 import java.io.File
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ Executors, TimeUnit }
 
 import com.google.common.util.concurrent.{ AbstractIdleService, Service }
 import com.google.inject.Guice
@@ -111,8 +111,13 @@ object ProcessKeeper {
         process.exitValue()
       }
       log.info(s"Process $name finished with exit code $exitCode")
+
+      // Sometimes this finishes before the other future finishes parsing the output
+      // and we incorrectly report ProcessExited instead of ProcessIsUp as the result of upOrExited.
+      Await.result(up.future, 1.second)
+
       ProcessExited
-    }(ExecutionContext.global)
+    }(ExecutionContext.fromExecutor(Executors.newCachedThreadPool()))
     val upOrExited = Future.firstCompletedOf(Seq(up.future, processExitCode))(ExecutionContext.global)
     Try(Await.result(upOrExited, timeout)) match {
       case Success(result) =>

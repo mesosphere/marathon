@@ -162,9 +162,7 @@ class TaskTrackerTest extends MarathonSpec {
     }
 
     // TASK TERMINATED
-    val finishedTaskStatus = makeTaskStatus(TEST_TASK_ID, TaskState.TASK_FINISHED)
-
-    taskTracker.terminated(TEST_APP_NAME, finishedTaskStatus).futureValue
+    taskTracker.terminated(TEST_APP_NAME, TEST_TASK_ID).futureValue
 
     assert(taskTracker.contains(TEST_APP_NAME), "App was not stored")
     stateShouldNotContainKey(state, sampleTaskKey)

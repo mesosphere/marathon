@@ -3,66 +3,47 @@ package mesosphere.marathon
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.{ TestKit, TestProbe }
-import com.codahale.metrics.MetricRegistry
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.collect.Lists
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.event.{ MesosStatusUpdateEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
+import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.launcher.OfferProcessor
+import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.bus.TaskStatusEmitter
+import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
+import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks._
 import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.mockito.ArgumentCaptor
-import org.mockito.Matchers.same
-import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfterAll
-
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
-import scala.concurrent.Future
 
 class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with MarathonSpec with BeforeAndAfterAll {
 
+  var probe: TestProbe = _
   var repo: AppRepository = _
-  var hcManager: HealthCheckManager = _
-  var tracker: TaskTracker = _
-  var queue: TaskQueue = _
+  var queue: LaunchQueue = _
   var scheduler: MarathonScheduler = _
   var frameworkIdUtil: FrameworkIdUtil = _
-  var probe: TestProbe = _
   var taskIdUtil: TaskIdUtil = _
   var config: MarathonConf = _
   var eventBus: EventStream = _
+  var offerProcessor: OfferProcessor = _
+  var taskStatusEmitter: TaskStatusEmitter = _
 
   before {
     repo = mock[AppRepository]
-    hcManager = mock[HealthCheckManager]
-    tracker = mock[TaskTracker]
-    queue = spy(new TaskQueue)
+    queue = mock[LaunchQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     config = defaultConfig(maxTasksPerOffer = 10)
     taskIdUtil = TaskIdUtil
     probe = TestProbe()
     eventBus = system.eventStream
+    taskStatusEmitter = mock[TaskStatusEmitter]
     scheduler = new MarathonScheduler(
       eventBus,
-      new IterativeOfferMatcher(
-        config,
-        queue, tracker, new DefaultTaskFactory(taskIdUtil, tracker, config, new ObjectMapper()),
-        new IterativeOfferMatcherMetrics(new Metrics(new MetricRegistry))
-      ),
-      probe.ref,
-      repo,
-      hcManager,
-      tracker,
-      queue,
+      Clock(),
+      offerProcessor = offerProcessor,
+      taskStatusEmitter = taskStatusEmitter,
       frameworkIdUtil,
-      taskIdUtil,
-      mock[ActorSystem],
       config,
       new SchedulerCallbacks {
         override def disconnected(): Unit = {}
@@ -72,87 +53,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
 
   override def afterAll(): Unit = {
     system.shutdown()
-  }
-
-  test("ResourceOffers") {
-    val driver = mock[SchedulerDriver]
-    val offer = makeBasicOffer(cpus = 4, mem = 1024, disk = 4000, beginPort = 31000, endPort = 32000).build
-    val offers = Lists.newArrayList(offer)
-    val now = Timestamp.now()
-    val app = AppDefinition(
-      id = "testOffers".toRootPath,
-      executor = "//cmd",
-      ports = Seq(8080),
-      version = now
-    )
-
-    queue.add(app)
-
-    when(tracker.checkStagedTasks).thenReturn(Seq())
-    when(repo.currentAppVersions())
-      .thenReturn(Future.successful(Map(app.id -> app.version)))
-
-    scheduler.resourceOffers(driver, offers)
-
-    val offersCaptor = ArgumentCaptor.forClass(classOf[java.util.Collection[OfferID]])
-    val taskInfosCaptor = ArgumentCaptor.forClass(classOf[java.util.Collection[TaskInfo]])
-    val marathonTaskCaptor = ArgumentCaptor.forClass(classOf[MarathonTask])
-
-    verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
-    verify(tracker).created(same(app.id), marathonTaskCaptor.capture())
-
-    assert(1 == offersCaptor.getValue.size())
-    assert(offer.getId == offersCaptor.getValue.asScala.head)
-
-    assert(1 == taskInfosCaptor.getValue.size())
-    val taskInfoPortVar = taskInfosCaptor.getValue.asScala.head.getCommand.getEnvironment
-      .getVariablesList.asScala.find(v => v.getName == "PORT")
-    assert(taskInfoPortVar.isDefined)
-    val marathonTaskPort = marathonTaskCaptor.getValue.getPorts(0)
-    assert(taskInfoPortVar.get.getValue == marathonTaskPort.toString)
-    val marathonTaskVersion = marathonTaskCaptor.getValue.getVersion
-    assert(now.toString() == marathonTaskVersion)
-  }
-
-  test("Multiple tasks per ResourceOffer") {
-    val driver = mock[SchedulerDriver]
-    val offer = makeBasicOffer(cpus = 4, mem = 1024, disk = 4000, beginPort = 31000, endPort = 32000).build
-    val offers = Lists.newArrayList(offer)
-    val now = Timestamp.now()
-    val app = AppDefinition(
-      id = "testOffers".toRootPath,
-      executor = "//cmd",
-      ports = Seq(8080),
-      instances = 3,
-      version = now
-    )
-
-    queue.add(app, 3)
-
-    when(tracker.checkStagedTasks).thenReturn(Seq())
-    when(repo.currentAppVersions())
-      .thenReturn(Future.successful(Map(app.id -> app.version)))
-
-    scheduler.resourceOffers(driver, offers)
-
-    val offersCaptor = ArgumentCaptor.forClass(classOf[java.util.Collection[OfferID]])
-    val taskInfosCaptor = ArgumentCaptor.forClass(classOf[java.util.Collection[TaskInfo]])
-    val marathonTaskCaptor = ArgumentCaptor.forClass(classOf[MarathonTask])
-
-    verify(driver).launchTasks(offersCaptor.capture(), taskInfosCaptor.capture())
-    verify(tracker, times(3)).created(same(app.id), marathonTaskCaptor.capture())
-
-    assert(1 == offersCaptor.getValue.size())
-    assert(offer.getId == offersCaptor.getValue.asScala.head)
-
-    assert(3 == taskInfosCaptor.getValue.size())
-    val taskInfoPortVars = taskInfosCaptor.getValue.asScala.map { taskInfo =>
-      taskInfo.getCommand.getEnvironment
-        .getVariablesList.asScala.find(v => v.getName == "PORT")
-    }
-
-    // three different ports
-    assert(taskInfoPortVars.toSet.size == 3)
   }
 
   test("Publishes event when registered") {
@@ -208,35 +108,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     }
   }
 
-  // regression test for bug described here: https://github.com/mesosphere/marathon/issues/995
-  test("Does correctly extract app id from task id") {
-    val app = AppDefinition(id = "/test/app".toRootPath)
-    val taskId = "test_app.18462545-4ba2-12c5-65ba-37654cd26b63"
-    val taskVersion = Timestamp.now().toString
-    val driver = mock[SchedulerDriver]
-    val status = TaskStatus.newBuilder
-      .setTaskId(TaskID.newBuilder.setValue(taskId))
-      .setState(TaskState.TASK_RUNNING)
-      .build()
-
-    val task = Protos.MarathonTask.newBuilder.setId(taskId).setVersion(taskVersion).build()
-    for (_ <- 0 until 20) queue.rateLimiter.addDelay(app)
-
-    when(tracker.fetchTask(app.id, taskId)).thenReturn(None)
-    when(tracker.running(app.id, status)).thenReturn(Future.successful(task))
-    when(repo.app(app.id, Timestamp(taskVersion))).thenReturn(Future.successful(Some(app)))
-
-    eventBus.subscribe(probe.ref, classOf[MesosStatusUpdateEvent])
-
-    scheduler.statusUpdate(driver, status)
-
-    probe.expectMsgType[MesosStatusUpdateEvent]
-
-    awaitAssert(queue.rateLimiter.getDelay(app).isOverdue())
-  }
-
   // Currently does not work because of the injection used in MarathonScheduler.callbacks
-  /*
   test("Publishes event when disconnected") {
     val driver = mock[SchedulerDriver]
 
@@ -247,11 +119,10 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     try {
       val msg = probe.expectMsgType[SchedulerDisconnectedEvent]
 
-      assert(msg.eventType == "scheduler_reregistered_event")
+      assert(msg.eventType == "scheduler_disconnected_event")
     }
     finally {
       eventBus.unsubscribe(probe.ref)
     }
   }
-  */
 }

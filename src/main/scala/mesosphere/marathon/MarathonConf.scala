@@ -1,12 +1,18 @@
 package mesosphere.marathon
 
-import mesosphere.marathon.tasks.IterativeOfferMatcherConfig
+import mesosphere.marathon.core.flow.{ ReviveOffersConfig, LaunchTokenConfig }
+import mesosphere.marathon.core.launcher.OfferProcessorConfig
+import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
+import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import org.rogach.scallop.ScallopConf
 import scala.sys.SystemProperties
 
 import mesosphere.marathon.io.storage.StorageProvider
 
-trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMatcherConfig with LeaderProxyConf {
+trait MarathonConf
+    extends ScallopConf with ZookeeperConf with LeaderProxyConf
+    with LaunchTokenConfig with OfferMatcherManagerConfig with OfferProcessorConfig with ReviveOffersConfig
+    with MarathonSchedulerServiceConfig with LaunchQueueConfig {
 
   //scalastyle:off magic.number
 

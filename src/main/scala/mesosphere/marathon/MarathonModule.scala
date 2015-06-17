@@ -18,6 +18,7 @@ import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup,
 import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HistoryActor, EventModule }
 import mesosphere.marathon.event.http.{
   HttpEventStreamActorMetrics,
@@ -29,7 +30,7 @@ import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManag
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker, _ }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker, _ }
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import mesosphere.util.SerializeExecution
 import mesosphere.util.state.memory.InMemoryStore
@@ -79,10 +80,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[LeaderInfo]).to(classOf[MarathonLeaderInfo]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
-    bind(classOf[TaskQueue]).in(Scopes.SINGLETON)
     bind(classOf[TaskFactory]).to(classOf[DefaultTaskFactory]).in(Scopes.SINGLETON)
-    bind(classOf[IterativeOfferMatcherMetrics]).in(Scopes.SINGLETON)
-    bind(classOf[OfferMatcher]).to(classOf[IterativeOfferMatcher]).in(Scopes.SINGLETON)
 
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
 
@@ -114,10 +112,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
     system.actorOf(Props(new HttpEventStreamActor(leaderInfo, metrics, handleStreamProps)), "HttpEventStream")
   }
-
-  @Provides
-  @Singleton
-  def provideIterativeOfferMatcherConfig(): IterativeOfferMatcherConfig = conf
 
   @Provides
   @Singleton
@@ -162,7 +156,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
-    taskQueue: TaskQueue,
+    taskQueue: LaunchQueue,
     frameworkIdUtil: FrameworkIdUtil,
     driverHolder: MarathonSchedulerDriverHolder,
     taskIdUtil: TaskIdUtil,

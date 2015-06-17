@@ -1,17 +1,29 @@
 package mesosphere.marathon.state
 
+import java.util.concurrent.TimeUnit
+
 import org.joda.time.{ DateTime, DateTimeZone }
+
+import scala.concurrent.duration.FiniteDuration
 import scala.math.Ordered
 
 /**
   * An ordered wrapper for UTC timestamps.
   */
-abstract case class Timestamp private (utcDateTime: DateTime) extends Ordered[Timestamp] {
+abstract case class Timestamp private (private val utcDateTime: DateTime) extends Ordered[Timestamp] {
   def compare(that: Timestamp): Int = this.utcDateTime compareTo that.utcDateTime
 
   override def toString: String = utcDateTime.toString
 
   def toDateTime: DateTime = utcDateTime
+
+  def until(other: Timestamp): FiniteDuration = {
+    val millis = other.utcDateTime.getMillis - utcDateTime.getMillis
+    FiniteDuration(millis, TimeUnit.MILLISECONDS)
+  }
+
+  def +(duration: FiniteDuration): Timestamp = Timestamp(utcDateTime.getMillis + duration.toMillis)
+  def -(duration: FiniteDuration): Timestamp = Timestamp(utcDateTime.getMillis - duration.toMillis)
 }
 
 object Timestamp {

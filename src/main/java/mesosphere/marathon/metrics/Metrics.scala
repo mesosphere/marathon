@@ -9,6 +9,7 @@ import mesosphere.marathon.metrics.Metrics.{Histogram, Meter, Timer}
 import org.aopalliance.intercept.MethodInvocation
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.Future
 
 /**
   * Utils for timer metrics collection.
@@ -65,6 +66,16 @@ class Metrics @Inject() (val registry: MetricRegistry) {
 
 object Metrics {
   class Timer(timer: com.codahale.metrics.Timer) {
+    def timeFuture[T](future: => Future[T]): Future[T] = {
+      val startTime = System.nanoTime()
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val f = future
+      f.onComplete {
+        case _ => timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
+      }
+      f
+    }
+    
     def apply[T](block: => T): T = {
       val startTime = System.nanoTime()
       try {

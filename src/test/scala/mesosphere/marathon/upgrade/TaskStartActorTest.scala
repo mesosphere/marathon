@@ -4,15 +4,17 @@ import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
+import org.mockito.Mockito
 import org.mockito.Mockito.{ spy, times, verify, when }
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
@@ -30,14 +32,14 @@ class TaskStartActorTest
 
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
-  var taskQueue: TaskQueue = _
+  var launchQueue: LaunchQueue = _
   var taskTracker: TaskTracker = _
   var metrics: Metrics = _
 
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
-    taskQueue = spy(new TaskQueue)
+    launchQueue = mock[LaunchQueue]
     metrics = new Metrics(new MetricRegistry)
     taskTracker = spy(new TaskTracker(new InMemoryStore, mock[MarathonConf], metrics))
   }
@@ -51,11 +53,12 @@ class TaskStartActorTest
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
+    when(launchQueue.count(app.id)).thenReturn(0)
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
       driver,
       scheduler,
-      taskQueue,
+      launchQueue,
       taskTracker,
       system.eventStream,
       app,
@@ -64,9 +67,9 @@ class TaskStartActorTest
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
+    verify(launchQueue, Mockito.timeout(3000)).add(app, app.instances)
 
-    for (i <- 0 until taskQueue.count(app.id))
+    for (i <- 0 until app.instances)
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
@@ -78,13 +81,13 @@ class TaskStartActorTest
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
-    taskQueue.add(app)
+    when(launchQueue.count(app.id)).thenReturn(1)
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
       driver,
       scheduler,
-      taskQueue,
+      launchQueue,
       taskTracker,
       system.eventStream,
       app,
@@ -93,9 +96,9 @@ class TaskStartActorTest
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
+    verify(launchQueue, Mockito.timeout(3000)).add(app, app.instances - 1)
 
-    for (i <- 0 until taskQueue.count(app.id))
+    for (i <- 0 until (app.instances - 1))
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
@@ -117,7 +120,7 @@ class TaskStartActorTest
       classOf[TaskStartActor],
       driver,
       scheduler,
-      taskQueue,
+      launchQueue,
       taskTracker,
       system.eventStream,
       app,
@@ -126,9 +129,9 @@ class TaskStartActorTest
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app.id) == 4, 3.seconds)
+    verify(launchQueue, Mockito.timeout(3000)).add(app, app.instances - 1)
 
-    for (i <- 0 until taskQueue.count(app.id))
+    for (i <- 0 until (app.instances - 1))
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
@@ -144,7 +147,7 @@ class TaskStartActorTest
       classOf[TaskStartActor],
       driver,
       scheduler,
-      taskQueue,
+      launchQueue,
       taskTracker,
       system.eventStream,
       app,
@@ -170,7 +173,7 @@ class TaskStartActorTest
       classOf[TaskStartActor],
       driver,
       scheduler,
-      taskQueue,
+      launchQueue,
       taskTracker,
       system.eventStream,
       app,
@@ -179,9 +182,9 @@ class TaskStartActorTest
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
+    verify(launchQueue, Mockito.timeout(3000)).add(app, app.instances)
 
-    for (i <- 0 until taskQueue.count(app.id))
+    for (i <- 0 until app.instances)
       system.eventStream.publish(HealthStatusChanged(app.id, s"task_$i", app.version.toString, alive = true))
 
     Await.result(promise.future, 3.seconds) should be(())
@@ -201,7 +204,7 @@ class TaskStartActorTest
       classOf[TaskStartActor],
       driver,
       scheduler,
-      taskQueue,
+      launchQueue,
       taskTracker,
       system.eventStream,
       app,
@@ -223,7 +226,7 @@ class TaskStartActorTest
       classOf[TaskStartActor],
       driver,
       scheduler,
-      taskQueue,
+      launchQueue,
       taskTracker,
       system.eventStream,
       app,
@@ -249,7 +252,7 @@ class TaskStartActorTest
       classOf[TaskStartActor],
       driver,
       scheduler,
-      taskQueue,
+      launchQueue,
       taskTracker,
       system.eventStream,
       app,
@@ -258,17 +261,13 @@ class TaskStartActorTest
 
     watch(ref)
 
-    awaitCond(taskQueue.count(app.id) == 1, 3.seconds)
-
-    taskQueue.purge(app.id)
+    verify(launchQueue, Mockito.timeout(3000)).add(app, app.instances)
 
     system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", "", app.id, "", Nil, app.version.toString))
 
-    awaitCond(taskQueue.count(app.id) == 1, 3.seconds)
+    verify(launchQueue, Mockito.timeout(3000)).add(app, 1)
 
-    verify(taskQueue, times(2)).add(app, 1)
-
-    for (i <- 0 until taskQueue.count(app.id))
+    for (i <- 0 until app.instances)
       system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
@@ -291,7 +290,7 @@ class TaskStartActorTest
       classOf[TaskStartActor],
       driver,
       scheduler,
-      taskQueue,
+      launchQueue,
       taskTracker,
       system.eventStream,
       app,
@@ -301,28 +300,38 @@ class TaskStartActorTest
     watch(ref)
 
     // wait for initial sync
-    awaitCond(taskQueue.count(app.id) == 4, 3.seconds)
+    verify(launchQueue, Mockito.timeout(3000)).count(app.id)
+    verify(launchQueue, Mockito.timeout(3000)).add(app, app.instances - 1)
+
+    Mockito.verifyNoMoreInteractions(launchQueue)
+    Mockito.reset(launchQueue)
 
     // let existing task die
     // doesn't work because it needs Zookeeper: taskTracker.terminated(app.id, taskStatus)
     // we mock instead
     when(taskTracker.count(app.id)).thenReturn(0)
+    when(launchQueue.count(app.id)).thenReturn(4)
     system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_ERROR", "", app.id, "", Nil, task.getVersion))
 
     // sync will reschedule task
     ref ! StartingBehavior.Sync
-    awaitCond(taskQueue.count(app.id) == 5, 3.seconds)
+    verify(launchQueue, Mockito.timeout(3000)).count(app.id)
+    verify(launchQueue, Mockito.timeout(3000)).add(app, 1)
+
+    Mockito.verifyNoMoreInteractions(launchQueue)
+    Mockito.reset(launchQueue)
 
     // launch 4 of the tasks
+    when(launchQueue.count(app.id)).thenReturn(app.instances)
     when(taskTracker.count(app.id)).thenReturn(4)
     List(0, 1, 2, 3) foreach { i =>
-      taskQueue.poll()
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
     }
-    assert(taskQueue.count(app.id) == 1)
 
     // it finished early
     Await.result(promise.future, 3.seconds) should be(())
+
+    Mockito.verifyNoMoreInteractions(launchQueue)
 
     expectTerminated(ref)
   }

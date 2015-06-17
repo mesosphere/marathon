@@ -422,9 +422,9 @@ class TaskBuilderTest extends MarathonSpec {
     when(taskTracker.get(app.id)).thenReturn(s)
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s.toString), taskTracker, defaultConfig())
+      s => TaskID(s.toString), defaultConfig())
 
-    val task = builder.buildIfMatches(offer)
+    val task = builder.buildIfMatches(offer, taskTracker.get(app.id))
 
     assert(task.isDefined)
     // TODO test for resources etc.
@@ -448,10 +448,10 @@ class TaskBuilderTest extends MarathonSpec {
     })
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s.toString), taskTracker, defaultConfig())
+      s => TaskID(s.toString), defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer)
+      val tupleOption = builder.buildIfMatches(offer, taskTracker.get(app.id))
       assert(tupleOption.isDefined, message)
       val marathonTask = MarathonTasks.makeTask(
         tupleOption.get._1.getTaskId.getValue,
@@ -463,7 +463,7 @@ class TaskBuilderTest extends MarathonSpec {
     }
 
     def shouldNotBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer)
+      val tupleOption = builder.buildIfMatches(offer, taskTracker.get(app.id))
       assert(tupleOption.isEmpty, message)
     }
 
@@ -509,10 +509,10 @@ class TaskBuilderTest extends MarathonSpec {
     })
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s.toString), taskTracker, defaultConfig())
+      s => TaskID(s.toString), defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer)
+      val tupleOption = builder.buildIfMatches(offer, taskTracker.get(app.id))
       assert(tupleOption.isDefined, message)
       val marathonTask = MarathonTasks.makeTask(
         tupleOption.get._1.getTaskId.getValue,
@@ -523,7 +523,7 @@ class TaskBuilderTest extends MarathonSpec {
     }
 
     def shouldNotBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer)
+      val tupleOption = builder.buildIfMatches(offer, taskTracker.get(app.id))
       assert(tupleOption.isEmpty, message)
     }
 
@@ -836,13 +836,13 @@ class TaskBuilderTest extends MarathonSpec {
     val taskTracker = mock[TaskTracker]
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s.toString), taskTracker,
+      s => TaskID(s.toString),
       defaultConfig(
         mesosRole = mesosRole,
         acceptedResourceRoles = acceptedResourceRoles,
         envVarsPrefix = envVarsPrefix))
 
-    builder.buildIfMatches(offer)
+    builder.buildIfMatches(offer, taskTracker.get(app.id))
   }
 
   def makeSampleTask(id: PathId, attr: String, attrVal: String) = {

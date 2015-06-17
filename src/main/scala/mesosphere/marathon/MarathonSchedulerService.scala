@@ -16,6 +16,7 @@ import com.twitter.common.zookeeper.Candidate.Leader
 import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
@@ -29,7 +30,7 @@ import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.{ MILLISECONDS, _ }
+import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, TimeoutException }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
@@ -38,6 +39,7 @@ import scala.util.{ Failure, Success }
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
+    leadershipCoordinator: LeadershipCoordinator,
     healthCheckManager: HealthCheckManager,
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
     config: MarathonConf,
@@ -237,7 +239,7 @@ class MarathonSchedulerService @Inject() (
   }
 
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
-    var migrationComplete = false
+    var driverHandlesAbdication = false
     try {
       log.info("Elected (Leader Interface)")
 
@@ -246,7 +248,9 @@ class MarathonSchedulerService @Inject() (
 
       //execute tasks, only the leader is allowed to
       migration.migrate()
-      migrationComplete = true
+
+      Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)
+      driverHandlesAbdication = true
 
       // We have been elected. Thus, elect leadership with the abdication command.
       electLeadership(Some(abdicateCmd))
@@ -256,13 +260,13 @@ class MarathonSchedulerService @Inject() (
     }
     catch {
       case NonFatal(e) => // catch Scala and Java exceptions
-        log.error(s"Failed to take over leadership: $e")
+        log.error("Failed to take over leadership", e)
 
         increaseOfferLeadershipBackOff()
 
         abdicateLeadership()
 
-        if (!migrationComplete) {
+        if (!driverHandlesAbdication) {
           // here the driver is not running yet and therefore it cannot execute
           // the abdication command and offer the leadership. So we do it here
           abdicateCmd.execute()
@@ -301,6 +305,8 @@ class MarathonSchedulerService @Inject() (
 
   def abdicateLeadership(): Unit = {
     log.info("Abdicating")
+
+    leadershipCoordinator.stop()
 
     // To abdicate we defeat our leadership
     defeatLeadership()
