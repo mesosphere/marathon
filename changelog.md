@@ -1,3 +1,17 @@
+## Changes from 0.9.0 to 0.10.0
+
+### Breaking changes
+
+Please look at the following changes to check whether you have to verify your setup before upgrading:
+
+* If an http request is made without setting appropriate request headers, the Accept and Content-Type header 
+  is set automatically to `application/json`
+
+
+### Fixed Bugs
+
+- #1647 - Keep the rest-api return format consistent when request headers without "Accept: application/json"
+
 ## Changes from 0.8.2 to 0.9.0
 
 #### Recommended Mesos version is 0.22.1
