@@ -9,6 +9,7 @@ import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
+import com.codahale.metrics.Gauge
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.inject._
 import com.google.inject.name.Names
@@ -41,6 +42,7 @@ import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.ZooDefs.Ids
 
 import scala.collection.JavaConverters._
+import scala.concurrent.Await
 import scala.util.control.NonFatal
 
 object ModuleNames {
@@ -81,7 +83,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[TaskFactory]).to(classOf[DefaultTaskFactory]).in(Scopes.SINGLETON)
     bind(classOf[IterativeOfferMatcherMetrics]).in(Scopes.SINGLETON)
     bind(classOf[OfferMatcher]).to(classOf[IterativeOfferMatcher]).in(Scopes.SINGLETON)
-    bind(classOf[GroupManager]).in(Scopes.SINGLETON)
 
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
 
@@ -349,5 +350,41 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   def provideSerializeGroupUpdates(actorRefFactory: ActorRefFactory): SerializeExecution = {
     SerializeExecution(actorRefFactory, "serializeGroupUpdates")
+  }
+
+  @Provides
+  @Singleton
+  def provideGroupManager(
+    @Named(ModuleNames.NAMED_SERIALIZE_GROUP_UPDATES) serializeUpdates: SerializeExecution,
+    scheduler: MarathonSchedulerService,
+    taskTracker: TaskTracker,
+    groupRepo: GroupRepository,
+    storage: StorageProvider,
+    config: MarathonConf,
+    @Named(EventModule.busName) eventBus: EventStream,
+    metrics: Metrics): GroupManager = {
+    val groupManager: GroupManager = new GroupManager(
+      serializeUpdates,
+      scheduler,
+      taskTracker,
+      groupRepo,
+      storage,
+      config,
+      eventBus
+    )
+
+    metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
+      override def getValue: Int = {
+        Await.result(groupManager.root(false), conf.zkTimeoutDuration).transitiveApps.size
+      }
+    })
+
+    metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
+      override def getValue: Int = {
+        Await.result(groupManager.root(false), conf.zkTimeoutDuration).transitiveGroups.size
+      }
+    })
+
+    groupManager
   }
 }
