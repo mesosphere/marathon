@@ -1,11 +1,13 @@
 #!/usr/bin/env python2
 
 """Overview:
-  Servicerouter is a replacement for the haproxy-marathon-bridge.
-  It reads Marathon task information and generates haproxy configuration.
+  The servicerouter is a replacement for the haproxy-marathon-bridge.
+  It reads the Marathon task information and dynamically generates
+  haproxy configuration details.
 
-  Service configuration lives in Marathon via environment variables.
-  The servicerouter just needs to know where to find Marathon.
+  To gather the task information, the servicerouter needs to know where
+  to find Marathon. The service configuration details are stored in Marathon
+  environment variables.
 
   Every service port in Marathon can be configured independently.
 
@@ -27,85 +29,87 @@ Configuration:
 Usage:
   $ servicerouter.py --marathon http://marathon1:8080 --haproxy-config /etc/haproxy/haproxy.cfg
 
-  The user servicerouter is executed as must have the right to reload haproxy.
+  The user that executes servicerouter must have the permission to reload
+  haproxy.
 
 
 Environment Variables:
   HAPROXY_GROUP
-  Only servicerouter instances which are members of the given group will
-  point to the service. Service routers with the group '*' will collect
-      all groups.
+    The group of servicerouter instances that point to the service.
+    Service routers with the group '*' will collect all groups.
 
   HAPROXY_{n}_VHOST
-  HTTP Virtual Host proxy hostname to catch
-  Ex: HAPROXY_0_VHOST = 'marathon.mesosphere.com'
+    The Marathon HTTP Virtual Host proxy hostname to gather.
+    Ex: HAPROXY_0_VHOST = 'marathon.mesosphere.com'
 
   HAPROXY_{n}_STICKY
-  Use sticky request routing for the service
-  Ex: HAPROXY_0_STICKY = true
+    Enable sticky request routing for the service.
+    Ex: HAPROXY_0_STICKY = true
 
   HAPROXY_{n}_REDIRECT_TO_HTTPS
-  Redirect HTTP traffic to https
-  Ex: HAPROXY_0_REDIRECT_TO_HTTPS = true
+    Redirect HTTP traffic to HTTPS.
+    Ex: HAPROXY_0_REDIRECT_TO_HTTPS = true
 
   HAPROXY_{n}_SSL_CERT
-  Use the given SSL cert for TLS/SSL traffic
-  Ex: HAPROXY_0_SSL_CERT = '/etc/ssl/certs/marathon.mesosphere.com'
+    Enable the given SSL certificate for TLS/SSL traffic.
+    Ex: HAPROXY_0_SSL_CERT = '/etc/ssl/certs/marathon.mesosphere.com'
 
   HAPROXY_{n}_BIND_ADDR
-  Bind to the specific address for the service
-  Ex: HAPROXY_0_BIND_ADDR = '10.0.0.42'
+    Bind to the specific address for the service.
+    Ex: HAPROXY_0_BIND_ADDR = '10.0.0.42'
 
   HAPROXY_{n}_MODE
-  Set the connection mode to either tcp or http. Default is tcp.
-  Ex: HAPROXY_0_MODE = 'http'
+    Set the connection mode to either TCP or HTTP. The default is TCP.
+    Ex: HAPROXY_0_MODE = 'http'
 
 
 Templates:
-  Servicerouter searches for template files in a templates/ directory
-  relative to the path from where the script is being executed.
-  The sources contain defaults and example usage.
+  The servicerouter searches for configuration files in the templates/ directory.
+  The templates/ directory contains servicerouter configuration settings and
+  example usage. The templates/ directory is located in a relative path from
+  where the script is run.
 
   HAPROXY_HEAD
     The head of the haproxy config. This contains global settings
     and defaults.
 
   HAPROXY_HTTP_FRONTEND_HEAD
-    A http frontend that by default binds to *:80 and catches
-    all Vhosts defined by the HAPROXY_{n}_VHOST variable.
+    An HTTP frontend that binds to port *:80 by default and gathers
+    all virtual hosts as defined by the HAPROXY_{n}_VHOST variable.
 
   HAPROXY_HTTPS_FRONTEND_HEAD
-    Same as the previous option just for https encrypted connections
-    coming in on *:443. This needs to be modified to include a different
-    certificate.
+    An HTTPS frontend for encrypted connections that binds to port *:443 by
+    default and gathers all virtual hosts as defined by the
+    HAPROXY_{n}_VHOST variable. You must modify this file to
+    include your certificate.
 
   HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS
-    This is used for backends where HAPROXY_{n}_REDIRECT_TO_HTTPS
-    is defined.
+    This template is used with backends where the
+    HAPROXY_{n}_REDIRECT_TO_HTTPS environment variable is defined.
 
   HAPROXY_BACKEND_HTTP_OPTIONS
-    Sets http headers like X-Forwarded-For and X-Forwarded-Proto
+    Sets HTTP headers, for example X-Forwarded-For and X-Forwarded-Proto.
 
   HAPROXY_BACKEND_STICKY_OPTIONS
     Sets a cookie for services where HAPROXY_{n}_STICKY is true.
 
   HAPROXY_FRONTEND_HEAD
-    Defines which address and port to bind to.
+    Defines the address and port to bind to.
 
   HAPROXY_BACKEND_HEAD
-    Includes the type of load balancing (default is roundrobin)
-    and connection mode (tcp or http).
+    Defines the type of load balancing, roundrobin by default,
+    and connection mode, TCP or HTTP.
 
   HAPROXY_HTTP_FRONTEND_ACL
-    The ACL that will glue a backend to the corresponding VHost
-    of the HAPROXY_HTTP_FRONTEND_HEAD
+    The ACL that glues a backend to the corresponding virtual host
+    of the HAPROXY_HTTP_FRONTEND_HEAD.
 
   HAPROXY_HTTPS_FRONTEND_ACL
-    The ACL that does the SNI based hostname matching
-    for the HAPROXY_HTTPS_FRONTEND_HEAD
+    The ACL that performs the SNI based hostname matching
+    for the HAPROXY_HTTPS_FRONTEND_HEAD.
 
   HAPROXY_BACKEND_SERVER_OPTIONS
-    Used for each real server that's added to a backend.
+    The options for each physical server added to a backend.
 
   HAPROXY_FRONTEND_BACKEND_GLUE
     This option glues the backend to the frontend.
