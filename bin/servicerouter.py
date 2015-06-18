@@ -20,14 +20,15 @@ Features:
 
 
 Configuration:
-  Service configuration lives in marathon via environment variables.
+  Service configuration lives in Marathon via environment variables.
   The servicerouter just needs to know where to find marathon.
   To run in listening mode you must also specify the address + port at
   which the servicerouter can be reached by marathon.
 
 
 Usage:
-  $ servicerouter.py --marathon http://marathon1:8080 --haproxy-config /etc/haproxy/haproxy.cfg
+  $ servicerouter.py --marathon http://marathon1:8080 \
+        --haproxy-config /etc/haproxy/haproxy.cfg
 
   The user that executes servicerouter must have the permission to reload
   haproxy.
@@ -64,10 +65,10 @@ Environment Variables:
 
 
 Templates:
-  The servicerouter searches for configuration files in the templates/ directory.
-  The templates/ directory contains servicerouter configuration settings and
-  example usage. The templates/ directory is located in a relative path from
-  where the script is run.
+  The servicerouter searches for configuration files in the templates/
+  directory. The templates/ directory contains servicerouter configuration
+  settings and example usage. The templates/ directory is located in a relative
+  path from where the script is run.
 
   HAPROXY_HEAD
     The head of the haproxy config. This contains global settings
@@ -218,7 +219,7 @@ class ConfigTemplater(object):
 '''
 
     def __init__(self, directory='templates'):
-        self.__template_dicrectory = directory
+        self.__template_directory = directory
         self.__load_templates()
 
     def __load_templates(self):
@@ -304,20 +305,26 @@ class ConfigTemplater(object):
 def string_to_bool(s):
     return s.lower() in ["true", "t", "yes", "y"]
 
+
 def set_hostname(x, y):
     x.hostname = y
+
 
 def set_sticky(x, y):
     x.sticky = string_to_bool(y)
 
+
 def set_redirect_http_to_https(x, y):
     x.redirectHttpToHttps = string_to_bool(y)
+
 
 def set_sslCert(x, y):
     x.sslCert = y
 
+
 def set_bindAddr(x, y):
     x.bindAddr = y
+
 
 def set_mode(x, y):
     x.mode = y
@@ -498,8 +505,10 @@ def config(apps, groups):
 
         if app.redirectHttpToHttps:
             logger.debug("rule to redirect http to https traffic")
-            haproxy_backend_redirect_http_to_https = templater.haproxy_backend_redirect_http_to_https
-            frontends += haproxy_backend_redirect_http_to_https.format(bindAddr=app.bindAddr)
+            haproxy_backend_redirect_http_to_https = \
+                templater.haproxy_backend_redirect_http_to_https
+            frontends += haproxy_backend_redirect_http_to_https.format(
+                bindAddr=app.bindAddr)
 
         backend_head = templater.haproxy_backend_head
         backends += backend_head.format(
@@ -635,7 +644,7 @@ def get_apps(marathon):
         for i in xrange(len(task['servicePorts'])):
             # Marathon 0.7.6 bug workaround
             if len(task['host']) == 0:
-                logger.warning("Ignoring marathon task without host " +
+                logger.warning("Ignoring Marathon task without host " +
                                task['id'])
                 continue
 
@@ -714,12 +723,18 @@ def get_arg_parser():
                         )
     parser.add_argument("--marathon", "-m",
                         nargs="+",
-                        help="Marathon endpoint, eg. -m http://marathon1:8080 -m http://marathon2:8080"
+                        help="Marathon endpoint, eg. -m " +
+                             "http://marathon1:8080 -m http://marathon2:8080"
                         )
     parser.add_argument("--listening", "-l",
-                        help="The HTTP address that marathon can call this script back at (http://lb1:8080)"
+                        help="The HTTP address that Marathon can call this " +
+                             "script back at (http://lb1:8080)"
                         )
-    log_socket = "/var/run/syslog" if sys.platform == "darwin" else "/dev/log"
+
+    default_log_socket = "/var/run/syslog"
+    if sys.platform == "darwin":
+        default_log_socket = "/dev/log"
+
     parser.add_argument("--syslog-socket",
                         help="Socket to write syslog messages to",
                         default=log_socket
@@ -779,12 +794,12 @@ if __name__ == '__main__':
 
     # Print the long help text if flag is set
     if args.longhelp:
-      print __doc__
-      sys.exit()
+        print __doc__
+        sys.exit()
     # otherwise make sure that a Marathon URL was specified
     else:
-      if args.marathon is None:
-        arg_parser.error('argument --marathon/-m is required')
+        if args.marathon is None:
+            arg_parser.error('argument --marathon/-m is required')
 
     # Setup logging
     setup_logging(args.syslog_socket)
