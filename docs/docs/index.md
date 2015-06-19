@@ -21,7 +21,7 @@ An easy way to try out Marathon locally is using the [playa-mesos](https://githu
 #### Install Mesos
 
 One easy way is via your system's package manager.
-Current builds and instructions on how to set up repositories for major Linux distributions and Mac OS X are available on the Mesosphere [downloads page](http://mesosphere.com/downloads/).
+Current builds and instructions on how to set up repositories for major Linux distributions are available on the Mesosphere [downloads page](http://mesosphere.com/downloads/).
 
 If building from source, see the
 Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
