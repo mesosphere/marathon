@@ -79,7 +79,7 @@ class MarathonSchedulerService @Inject() (
 
   // FIXME: Remove from this class
   def frameworkId: Option[FrameworkID] = {
-    val fid = frameworkIdUtil.fetch
+    val fid = frameworkIdUtil.fetch()
 
     fid match {
       case Some(id) =>
@@ -241,10 +241,13 @@ class MarathonSchedulerService @Inject() (
   }
 
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
-    log.info("Elected (Leader Interface)")
-    driver = Some(driverFactory.createDriver())
     var migrationComplete = false
     try {
+      log.info("Elected (Leader Interface)")
+
+      //create new driver
+      driver = Some(driverFactory.createDriver())
+
       //execute tasks, only the leader is allowed to
       migration.migrate()
       migrationComplete = true
