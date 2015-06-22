@@ -5,8 +5,6 @@ import AssemblyKeys._
 import sbtrelease.ReleasePlugin._
 import com.typesafe.sbt.SbtScalariform._
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
-import ohnosequences.sbt.SbtS3Resolver.S3Resolver
-import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
 import org.scalastyle.sbt.ScalastylePlugin.{ Settings => styleSettings }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
@@ -19,7 +17,6 @@ object MarathonBuild extends Build {
     settings = baseSettings ++
                asmSettings ++
                releaseSettings ++
-               publishSettings ++
                formatSettings ++
                scalaStyleSettings ++
                revolverSettings ++
@@ -140,13 +137,6 @@ object MarathonBuild extends Build {
       )
       cp filter { x => exclude(x.data.getName) }
     }
-  )
-
-  lazy val publishSettings = S3Resolver.defaults ++ Seq(
-    publishTo := Some(s3resolver.value(
-      "Mesosphere Public Repo (S3)",
-      s3("downloads.mesosphere.com/maven")
-    ))
   )
 
   lazy val formatSettings = scalariformSettings ++ Seq(
