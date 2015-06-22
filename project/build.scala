@@ -172,6 +172,10 @@ object MarathonBuild extends Build {
   /**
    * This on load trigger is used to set parameters in teamcity.
    * It is only executed within teamcity and can be ignored otherwise.
+   * It will set values as build and env parameter.
+   * Those parameters can be used in subsequent build steps and dependent builds.
+   * TeamCity does this by watching the output of the build it currently performs.
+   * See: https://confluence.jetbrains.com/display/TCD8/Build+Script+Interaction+with+TeamCity
    */
   lazy val teamCitySetEnvSettings = Seq(
     onLoad in Global := {
