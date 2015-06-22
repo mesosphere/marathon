@@ -263,6 +263,36 @@ class MarathonSchedulerServiceTest
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
     awaitAssert { verify(candidate.get).offerLeadership(schedulerService) }
-    assert(leader.get() == false)
+    leader.get() should be (false)
+  }
+
+  test("Abdicate leadership when the driver creation fails by some exception") {
+    when(frameworkIdUtil.fetch()).thenReturn(None)
+    candidate = Some(mock[Candidate])
+    val driverFactory = mock[SchedulerDriverFactory]
+
+    val schedulerService = new MarathonSchedulerService(
+      healthCheckManager,
+      candidate,
+      config,
+      frameworkIdUtil,
+      leader,
+      appRepository,
+      taskTracker,
+      driverFactory,
+      system,
+      migration,
+      schedulerActor,
+      events
+    ) {
+      override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
+    }
+
+    when(driverFactory.createDriver()).thenThrow(new Exception("Some weird exception"))
+
+    schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
+
+    awaitAssert { verify(candidate.get).offerLeadership(schedulerService) }
+    leader.get() should be (false)
   }
 }
