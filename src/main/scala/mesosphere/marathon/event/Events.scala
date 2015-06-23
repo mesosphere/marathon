@@ -169,11 +169,13 @@ case class GroupChangeFailed(
 
 case class DeploymentSuccess(
   id: String,
+  plan: DeploymentPlan,
   eventType: String = "deployment_success",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentFailed(
   id: String,
+  plan: DeploymentPlan,
   eventType: String = "deployment_failed",
   timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
