@@ -2189,7 +2189,7 @@ Transfer-Encoding: chunked
 
 ##### Example
 
-Cancel the deployment with `deploymendId`, and do not create a new rollback deployment.
+Cancel the deployment with `deploymentId`, and do not create a new rollback deployment.
 
 **Request:**
 
