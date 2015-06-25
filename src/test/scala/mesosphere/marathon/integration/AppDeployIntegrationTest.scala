@@ -37,6 +37,22 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 1) //make sure, the app has really started
   }
 
+  test("create a simple app without health checks via secondary (proxying)") {
+    if (!config.useExternalSetup) {
+      Given("a new app")
+      val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+
+      When("The app is deployed")
+      val result = marathonProxy.createApp(app)
+
+      Then("The app is created")
+      result.code should be (201) //Created
+      extractDeploymentIds(result) should have size 1
+      waitForEvent("deployment_success")
+      waitForTasks(app.id, 1) //make sure, the app has really started
+    }
+  }
+
   test("create a simple app with http health checks") {
     Given("a new app")
     val app = appProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).

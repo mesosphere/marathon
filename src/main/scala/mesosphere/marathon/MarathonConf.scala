@@ -6,7 +6,9 @@ import scala.sys.SystemProperties
 
 import mesosphere.marathon.io.storage.StorageProvider
 
-trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMatcherConfig {
+trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMatcherConfig with LeaderProxyConf {
+
+  //scalastyle:off magic.number
 
   lazy val mesosMaster = opt[String]("master",
     descr = "The URL of the Mesos master",
@@ -158,5 +160,13 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
   lazy val mesosAuthenticationSecretFile = opt[String]("mesos_authentication_secret_file",
     descr = "Mesos Authentication Secret",
     noshort = true
+  )
+
+  //Internal settings, that are not intended for external use
+  lazy val internalStoreBackend = opt[String]("internal_store_backend",
+    descr = "The backend storage system to use. One of zk, mesos_zk, mem",
+    hidden = true,
+    validate = Set("zk", "mesos_zk", "mem").contains,
+    default = Some("zk")
   )
 }

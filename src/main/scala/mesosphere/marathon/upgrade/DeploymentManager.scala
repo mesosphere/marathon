@@ -6,10 +6,10 @@ import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ PathId, Timestamp, Group, AppRepository }
+import mesosphere.marathon.state.{ AppRepository, Group, Timestamp }
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
-import mesosphere.marathon.{ DeploymentCanceledException, ConcurrentTaskUpgradeException, SchedulerActions }
+import mesosphere.marathon.{ ConcurrentTaskUpgradeException, DeploymentCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.immutable.Seq
@@ -35,6 +35,8 @@ class DeploymentManager(
     case NonFatal(e) => Stop
   }
 
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
   def receive: Receive = {
     case CancelConflictingDeployments(plan) =>
       val conflictingDeployments = for {

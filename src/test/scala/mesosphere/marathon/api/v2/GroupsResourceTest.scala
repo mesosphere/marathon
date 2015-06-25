@@ -6,6 +6,7 @@ import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import org.mockito.Mockito.when
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsObject, Json }
+import mesosphere.marathon.api.v2.json.Formats._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -31,7 +32,8 @@ class GroupsResourceTest extends MarathonSpec with Matchers {
 
     when(groupManager.group(update.groupId)).thenReturn(Future.successful(None))
 
-    val result = groupsResource.update("/test", update, force = false, dryRun = true)
+    val body = Json.stringify(Json.toJson(update)).getBytes
+    val result = groupsResource.update("/test", force = false, dryRun = true, body)
     val json = Json.parse(result.getEntity.toString)
 
     val steps = (json \ "steps").as[Seq[JsObject]]

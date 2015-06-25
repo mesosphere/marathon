@@ -46,6 +46,11 @@ trait SingleMarathonIntegrationTest
   val testBasePath: PathId = PathId("/marathonintegrationtest")
   override lazy val marathon: MarathonFacade = new MarathonFacade(config.marathonUrl, testBasePath)
 
+  lazy val marathonProxy = {
+    startMarathon(config.marathonPort + 1, "--master", config.master, "--event_subscriber", "http_callback")
+    new MarathonFacade(config.copy(marathonPort = config.marathonPort + 1).marathonUrl, testBasePath)
+  }
+
   implicit class PathIdTestHelper(path: String) {
     def toRootTestPath: PathId = testBasePath.append(path).canonicalPath()
     def toTestPath: PathId = testBasePath.append(path)
@@ -59,7 +64,7 @@ trait SingleMarathonIntegrationTest
     if (!config.useExternalSetup) {
       log.info("Setting up local mesos/marathon infrastructure...")
 
-      ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo")
+      ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo/single")
       ProcessKeeper.startMesosLocal()
       cleanMarathonState()
 

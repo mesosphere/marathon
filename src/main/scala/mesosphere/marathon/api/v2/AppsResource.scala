@@ -101,10 +101,12 @@ class AppsResource @Inject() (
           .build()
 
       case _ =>
+        //scalastyle:off magic.number
         Response
           .status(409)
           .entity(Json.obj("message" -> s"An app with id [${app.id}] already exists.").toString())
           .build()
+      //scalastyle:on
     }
   }
 

@@ -7,11 +7,13 @@ import scala.annotation.tailrec
 
 import com.google.common.io.ByteStreams
 
-trait IO {
+import scala.util.Try
+
+object IO {
 
   private val BufferSize = 8192
 
-  protected def moveFile(from: File, to: File): File = {
+  def moveFile(from: File, to: File): File = {
     if (to.exists()) delete(to)
     createDirectory(to.getParentFile)
     if (!from.renameTo(to)) {
@@ -21,7 +23,7 @@ trait IO {
     to
   }
 
-  protected def copyFile(sourceFile: File, targetFile: File) {
+  def copyFile(sourceFile: File, targetFile: File) {
     require(sourceFile.exists, "Source file '" + sourceFile.getAbsolutePath + "' does not exist.")
     require(!sourceFile.isDirectory, "Source file '" + sourceFile.getAbsolutePath + "' is a directory.")
     using(new FileInputStream(sourceFile)) { source =>
@@ -31,7 +33,7 @@ trait IO {
     }
   }
 
-  protected def createDirectory(dir: File) {
+  def createDirectory(dir: File) {
     if (!dir.exists()) {
       val result = dir.mkdirs()
       if (!result || !dir.isDirectory || !dir.exists)
@@ -39,23 +41,25 @@ trait IO {
     }
   }
 
-  protected def delete(file: File) {
+  def delete(file: File) {
     if (file.isDirectory) {
       file.listFiles().foreach(delete)
     }
     file.delete()
   }
 
-  protected def mdSum(
+  def mdSum(
     in: InputStream,
     mdName: String = "SHA-1",
     out: OutputStream = ByteStreams.nullOutputStream()): String = {
     val md = MessageDigest.getInstance(mdName)
     transfer(new DigestInputStream(in, md), out)
+    //scalastyle:off magic.number
     new BigInteger(1, md.digest()).toString(16)
+    //scalastyle:on
   }
 
-  protected def transfer(
+  def transfer(
     in: InputStream,
     out: OutputStream,
     close: Boolean = true,
@@ -71,11 +75,22 @@ trait IO {
       }
       read()
     }
-    finally { if (close) in.close() }
+    finally { if (close) Try(in.close()) }
   }
 
-  protected def using[A <: Closeable, B](closeable: A)(fn: (A) => B): B = {
-    try { fn(closeable) } finally { closeable.close() }
+  def copyInputStreamToString(in: InputStream): String = {
+    val out = new ByteArrayOutputStream()
+    transfer(in, out)
+    new String(out.toByteArray, "UTF-8")
+  }
+
+  def using[A <: Closeable, B](closeable: A)(fn: (A) => B): B = {
+    try {
+      fn(closeable)
+    }
+    finally {
+      Try(closeable.close())
+    }
   }
 }
 

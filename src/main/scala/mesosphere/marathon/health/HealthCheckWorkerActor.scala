@@ -127,11 +127,13 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         object BlindFaithX509TrustManager extends X509TrustManager {
           def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
           def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
-          def getAcceptedIssuers(): Array[X509Certificate] = Array[X509Certificate]()
+          def getAcceptedIssuers: Array[X509Certificate] = Array[X509Certificate]()
         }
 
         val context = SSLContext.getInstance("Default")
+        //scalastyle:off null
         context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
+        //scalastyle:on
         context
       }
       val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
@@ -150,6 +152,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
 object HealthCheckWorker {
 
+  //scalastyle:off magic.number
   // Similar to AWS R53, we accept all responses in [200, 399]
   protected[health] val acceptableResponses = Range(200, 400)
   protected[health] val toIgnoreResponses = Range(100, 200)

@@ -10,6 +10,8 @@ import org.apache.log4j.Logger
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import akka.actor.ActorSystem
 
+//scalastyle:off number.of.types
+
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]
   def module(): Option[Class[M]]
@@ -38,6 +40,14 @@ class EventModule(conf: EventConfiguration) extends AbstractModule {
 
 object EventModule {
   final val busName = "events"
+}
+
+/** Local leadership events. They are not delivered via the event endpoints. */
+sealed trait LocalLeadershipEvent
+
+object LocalLeadershipEvent {
+  case object ElectedAsLeader extends LocalLeadershipEvent
+  case object Standby extends LocalLeadershipEvent
 }
 
 sealed trait MarathonEvent {

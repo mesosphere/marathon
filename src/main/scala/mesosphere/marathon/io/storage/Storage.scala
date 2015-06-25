@@ -13,7 +13,7 @@ import mesosphere.marathon.io.IO
   * The storage item is an entry in the storage, which is identified by a path.
   * The path is the unique identifier.
   */
-trait StorageItem extends IO {
+trait StorageItem {
 
   /**
     * The provider independent path of the item.
@@ -66,8 +66,8 @@ trait StorageItem extends IO {
     * Store this item with given file input.
     */
   def store(from: File): StorageItem = {
-    using(new FileInputStream(from)) { in =>
-      store(out => transfer(in, out))
+    IO.using(new FileInputStream(from)) { in =>
+      store(out => IO.transfer(in, out))
     }
   }
 
@@ -75,8 +75,8 @@ trait StorageItem extends IO {
     * Store this item with given item input.
     */
   def store(from: StorageItem): StorageItem = {
-    using(from.inputStream()) { in =>
-      store(out => transfer(in, out))
+    IO.using(from.inputStream()) { in =>
+      store(out => IO.transfer(in, out))
     }
   }
 
@@ -84,7 +84,7 @@ trait StorageItem extends IO {
     * Store this item with given input stream.
     */
   def store(in: InputStream): StorageItem = {
-    store(out => transfer(in, out))
+    store(out => IO.transfer(in, out))
   }
 }
 

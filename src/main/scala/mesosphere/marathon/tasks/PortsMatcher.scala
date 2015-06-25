@@ -232,7 +232,9 @@ object PortsMatcher {
       val numberOfOfferedPorts = offeredPortRanges.map(_.range.size).sum
 
       if (numberOfOfferedPorts == 0) {
+        //scalastyle:off return
         return Iterator.empty
+        //scalastyle:on
       }
 
       def findStartPort(shuffled: Vector[PortRange], startPortIdx: Int): (Int, Int) = {

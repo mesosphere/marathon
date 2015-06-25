@@ -1,33 +1,32 @@
 package mesosphere.marathon.state
 
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream }
+import java.io.{ ByteArrayInputStream, ObjectInputStream }
 import javax.inject.Inject
 
 import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.tasks.TaskTracker.{ InternalApp, App }
-import mesosphere.marathon.{ BuildInfo, MarathonConf, StorageException }
-import mesosphere.util.BackToTheFuture.futureToFutureOption
+import mesosphere.marathon.tasks.TaskTracker.InternalApp
+import mesosphere.marathon.{ BuildInfo, MarathonConf }
+import mesosphere.util.Logging
 import mesosphere.util.ThreadPoolContext.context
-import mesosphere.util.{ BackToTheFuture, Logging }
-import com.codahale.metrics.MetricRegistry
-import org.apache.mesos.state.{ State, Variable }
+import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
 
 class Migration @Inject() (
-  state: State,
-  appRepo: AppRepository,
-  groupRepo: GroupRepository,
-  config: MarathonConf,
-  registry: MetricRegistry,
-  implicit val timeout: BackToTheFuture.Timeout = BackToTheFuture.Implicits.defaultTimeout)
-    extends Logging {
+    store: PersistentStore,
+    appRepo: AppRepository,
+    groupRepo: GroupRepository,
+    config: MarathonConf,
+    metrics: Metrics) extends Logging {
+
+  //scalastyle:off magic.number
 
   type MigrationAction = (StorageVersion, () => Future[Any])
 
@@ -78,21 +77,18 @@ class Migration @Inject() (
   private val storageVersionName = "internal:storage:version"
 
   def currentStorageVersion: Future[StorageVersion] = {
-    state.fetch(storageVersionName).map {
-      case Some(variable) => Try(StorageVersion.parseFrom(variable.value())).getOrElse(StorageVersions.empty)
-      case None           => throw new StorageException("Failed to read storage version")
+    store.load(storageVersionName).map {
+      case Some(variable) => StorageVersion.parseFrom(variable.bytes.toArray)
+      case None           => StorageVersions.empty
     }
   }
 
   def storeCurrentVersion: Future[StorageVersion] = {
-    state.fetch(storageVersionName) flatMap {
-      case Some(variable) =>
-        state.store(variable.mutate(StorageVersions.current.toByteArray)) map {
-          case Some(newVar) => StorageVersion.parseFrom(newVar.value)
-          case None         => throw new StorageException(s"Failed to store storage version")
-        }
-      case None => throw new StorageException("Failed to read storage version")
-    }
+    val bytes = StorageVersions.current.toByteArray
+    store.load(storageVersionName).flatMap {
+      case Some(entity) => store.update(entity.withNewContent(bytes))
+      case None         => store.create(storageVersionName, bytes)
+    }.map{ _ => StorageVersions.current }
   }
 
   // specific migration helper methods
@@ -105,29 +101,24 @@ class Migration @Inject() (
   }
 
   private def changeTasks(fn: InternalApp => InternalApp): Future[Any] = {
-    val taskTracker = new TaskTracker(state, config, registry)
+    val taskTracker = new TaskTracker(store, config, metrics)
     def fetchApp(appId: PathId): Option[InternalApp] = {
-      val bytes = state.fetch("tasks:" + appId.safePath).get().value
-      if (bytes.length > 0) {
-        val source = new ObjectInputStream(new ByteArrayInputStream(bytes))
+      Await.result(store.load("tasks:" + appId.safePath), config.zkTimeoutDuration).map { entity =>
+        val source = new ObjectInputStream(new ByteArrayInputStream(entity.bytes.toArray))
         val fetchedTasks = taskTracker.legacyDeserialize(appId, source).map {
           case (key, task) =>
             val builder = task.toBuilder.clearOBSOLETEStatuses()
             task.getOBSOLETEStatusesList.asScala.lastOption.foreach(builder.setStatus)
             key -> builder.build()
         }
-        Some(new InternalApp(appId, fetchedTasks, false))
+        new InternalApp(appId, fetchedTasks, false)
       }
-      else None
     }
-    def store(app: InternalApp): Future[Seq[Variable]] = {
-      val oldVar = state.fetch("tasks:" + app.appName.safePath).get()
-      val bytes = new ByteArrayOutputStream()
-      val output = new ObjectOutputStream(bytes)
+    def storeApp(app: InternalApp): Future[Seq[PersistentEntity]] = {
       Future.sequence(app.tasks.values.toSeq.map(taskTracker.store(app.appName, _)))
     }
     appRepo.allPathIds().flatMap { apps =>
-      val res = apps.flatMap(fetchApp).map{ app => store(fn(app)) }
+      val res = apps.flatMap(fetchApp).map{ app => storeApp(fn(app)) }
       Future.sequence(res)
     }
   }

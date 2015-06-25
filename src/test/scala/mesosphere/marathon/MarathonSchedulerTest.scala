@@ -9,10 +9,11 @@ import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event.{ MesosStatusUpdateEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
 import mesosphere.marathon.tasks._
-import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
@@ -37,8 +38,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
   var config: MarathonConf = _
   var eventBus: EventStream = _
 
-  val metricRegistry = new MetricRegistry
-
   before {
     repo = mock[AppRepository]
     hcManager = mock[HealthCheckManager]
@@ -54,7 +53,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       new IterativeOfferMatcher(
         config,
         queue, tracker, new DefaultTaskFactory(taskIdUtil, tracker, config, new ObjectMapper()),
-        new IterativeOfferMatcherMetrics(new MetricRegistry)
+        new IterativeOfferMatcherMetrics(new Metrics(new MetricRegistry))
       ),
       probe.ref,
       repo,

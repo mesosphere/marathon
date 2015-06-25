@@ -203,6 +203,7 @@ object DeploymentPlan {
     }.to[Seq]
   }
 
+  //scalastyle:off method.length
   def apply(
     original: Group,
     target: Group,
@@ -258,7 +259,7 @@ object DeploymentPlan {
       UUID.randomUUID().toString,
       original,
       target,
-      steps.result.filter(_.actions.nonEmpty),
+      steps.result().filter(_.actions.nonEmpty),
       version
     )
 

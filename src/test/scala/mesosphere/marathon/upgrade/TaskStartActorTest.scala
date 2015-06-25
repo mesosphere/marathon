@@ -3,17 +3,17 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestKit }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
+import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
-import org.apache.mesos.state.InMemoryState
-import org.mockito.Mockito.{ times, spy, verify, when }
+import org.mockito.Mockito.{ spy, times, verify, when }
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
@@ -32,15 +32,14 @@ class TaskStartActorTest
   var scheduler: SchedulerActions = _
   var taskQueue: TaskQueue = _
   var taskTracker: TaskTracker = _
-  var registry: MetricRegistry = _
+  var metrics: Metrics = _
 
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
-    taskTracker = new TaskTracker(new InMemoryState, mock[MarathonConf], new MetricRegistry)
     taskQueue = spy(new TaskQueue)
-    registry = new MetricRegistry
-    taskTracker = spy(new TaskTracker(new InMemoryState, mock[MarathonConf], registry))
+    metrics = new Metrics(new MetricRegistry)
+    taskTracker = spy(new TaskTracker(new InMemoryStore, mock[MarathonConf], metrics))
   }
 
   override protected def afterAll(): Unit = {
@@ -317,7 +316,7 @@ class TaskStartActorTest
     // launch 4 of the tasks
     when(taskTracker.count(app.id)).thenReturn(4)
     List(0, 1, 2, 3) foreach { i =>
-      taskQueue.poll
+      taskQueue.poll()
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
     }
     assert(taskQueue.count(app.id) == 1)

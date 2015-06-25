@@ -176,6 +176,17 @@ message TaskFailure {
   required string timestamp = 7;
 }
 
+/**
+ * Describes a state entry, a versioned (via a UUID) key/value pair.
+ * Copied from libmesos (src/messages/state.pro) to ensure
+ * compatibility with ZooKeeperState from libmesos.
+ */
+message ZKStoreEntry {
+  required string name = 1;
+  required bytes uuid = 2;
+  required bytes value = 3;
+}
+
 message CustomResource {
     required string name = 1;
 

@@ -17,6 +17,8 @@ import mesosphere.marathon.{ BadRequestException, MarathonConf }
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class EventSubscriptionsResource @Inject() (val config: MarathonConf) extends RestResource {
 
+  //scalastyle:off null
+
   @Inject(optional = true) val service: HttpCallbackSubscriptionService = null
 
   @GET

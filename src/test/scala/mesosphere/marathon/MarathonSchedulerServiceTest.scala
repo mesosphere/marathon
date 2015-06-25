@@ -1,31 +1,31 @@
 package mesosphere.marathon
 
-import java.util.{ TimerTask, Timer }
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.{ Timer, TimerTask }
 
 import akka.actor.{ ActorRef, ActorSystem }
+import akka.event.EventStream
 import akka.testkit.{ TestKit, TestProbe }
-import com.google.inject.Provider
+import com.codahale.metrics.MetricRegistry
 import com.twitter.common.base.ExceptionalCommand
-import com.twitter.common.zookeeper.{ Group, Candidate }
 import com.twitter.common.zookeeper.Group.JoinException
+import com.twitter.common.zookeeper.{ Candidate, Group }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ AppRepository, Migration }
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.{ MarathonStore, AppRepository, Migration }
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.util.BackToTheFuture.Timeout
-import org.apache.mesos.SchedulerDriver
-import org.apache.mesos.{ Protos => mesos }
-import org.apache.mesos.state.InMemoryState
+import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
+import mesosphere.util.state.memory.InMemoryStore
+import org.apache.mesos.{ Protos => mesos, SchedulerDriver }
 import org.mockito.Matchers.{ any, eq => mockEq }
 import org.mockito.Mockito
 import org.mockito.Mockito.{ times, verify, when }
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.rogach.scallop.ScallopOption
-import org.scalatest.{ Matchers, BeforeAndAfterAll }
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.duration._
 
@@ -44,7 +44,7 @@ object MarathonSchedulerServiceTest {
     when(config.reconciliationInterval).thenReturn(scallopOption(Some(ReconciliationInterval)))
     when(config.scaleAppsInitialDelay).thenReturn(scallopOption(Some(ScaleAppsDelay)))
     when(config.scaleAppsInterval).thenReturn(scallopOption(Some(ScaleAppsInterval)))
-    when(config.zkFutureTimeout).thenReturn(Timeout(1.second))
+    when(config.zkTimeoutDuration).thenReturn(1.second)
 
     config
   }
@@ -77,6 +77,7 @@ class MarathonSchedulerServiceTest
   var scheduler: MarathonScheduler = _
   var migration: Migration = _
   var schedulerActor: ActorRef = _
+  var events: EventStream = _
 
   before {
     probe = TestProbe()
@@ -91,6 +92,7 @@ class MarathonSchedulerServiceTest
     scheduler = mock[MarathonScheduler]
     migration = mock[Migration]
     schedulerActor = probe.ref
+    events = new EventStream()
   }
 
   def driverFactory[T](provide: => SchedulerDriver): SchedulerDriverFactory = {
@@ -102,7 +104,7 @@ class MarathonSchedulerServiceTest
   test("Start timer when elected") {
     val mockTimer = mock[Timer]
 
-    when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
+    when(frameworkIdUtil.fetch()).thenReturn(None)
 
     val schedulerService = new MarathonSchedulerService(
       healthCheckManager,
@@ -115,7 +117,8 @@ class MarathonSchedulerServiceTest
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
-      schedulerActor
+      schedulerActor,
+      events
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
@@ -131,7 +134,7 @@ class MarathonSchedulerServiceTest
   test("Cancel timer when defeated") {
     val mockTimer = mock[Timer]
 
-    when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
+    when(frameworkIdUtil.fetch()).thenReturn(None)
 
     val schedulerService = new MarathonSchedulerService(
       healthCheckManager,
@@ -144,7 +147,8 @@ class MarathonSchedulerServiceTest
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
-      schedulerActor
+      schedulerActor,
+      events
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
@@ -160,7 +164,7 @@ class MarathonSchedulerServiceTest
   test("Re-enable timer when re-elected") {
     val mockTimer = mock[Timer]
 
-    when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
+    when(frameworkIdUtil.fetch()).thenReturn(None)
 
     val schedulerService = new MarathonSchedulerService(
       healthCheckManager,
@@ -173,7 +177,8 @@ class MarathonSchedulerServiceTest
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
-      schedulerActor
+      schedulerActor,
+      events
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
       override def newTimer() = mockTimer
@@ -195,7 +200,9 @@ class MarathonSchedulerServiceTest
     val frameworkId = mesos.FrameworkID.newBuilder.setValue("myId").build()
     val mockTimer = mock[Timer]
 
-    frameworkIdUtil = new FrameworkIdUtil(new InMemoryState)
+    val metrics = new Metrics(new MetricRegistry)
+    val store = new MarathonStore[FrameworkId](new InMemoryStore, metrics, () => new FrameworkId(""))
+    frameworkIdUtil = new FrameworkIdUtil(store, Duration.Inf)
 
     val schedulerService = new MarathonSchedulerService(
       healthCheckManager,
@@ -208,7 +215,8 @@ class MarathonSchedulerServiceTest
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
-      schedulerActor
+      schedulerActor,
+      events
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
       override def newTimer() = mockTimer
@@ -216,14 +224,14 @@ class MarathonSchedulerServiceTest
 
     schedulerService.frameworkId should be(None)
 
-    implicit lazy val timeout = Timeout(1.second)
+    implicit lazy val timeout = 1.second
     frameworkIdUtil.store(frameworkId)
 
     awaitAssert(schedulerService.frameworkId should be(Some(frameworkId)))
   }
 
   test("Abdicate leadership when migration fails and reoffer leadership") {
-    when(frameworkIdUtil.fetch(any(), any())).thenReturn(None)
+    when(frameworkIdUtil.fetch()).thenReturn(None)
     candidate = Some(mock[Candidate])
 
     val schedulerService = new MarathonSchedulerService(
@@ -237,7 +245,8 @@ class MarathonSchedulerServiceTest
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
-      schedulerActor
+      schedulerActor,
+      events
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
@@ -254,6 +263,36 @@ class MarathonSchedulerServiceTest
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
     awaitAssert { verify(candidate.get).offerLeadership(schedulerService) }
-    assert(schedulerService.isLeader == false)
+    leader.get() should be (false)
+  }
+
+  test("Abdicate leadership when the driver creation fails by some exception") {
+    when(frameworkIdUtil.fetch()).thenReturn(None)
+    candidate = Some(mock[Candidate])
+    val driverFactory = mock[SchedulerDriverFactory]
+
+    val schedulerService = new MarathonSchedulerService(
+      healthCheckManager,
+      candidate,
+      config,
+      frameworkIdUtil,
+      leader,
+      appRepository,
+      taskTracker,
+      driverFactory,
+      system,
+      migration,
+      schedulerActor,
+      events
+    ) {
+      override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
+    }
+
+    when(driverFactory.createDriver()).thenThrow(new Exception("Some weird exception"))
+
+    schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
+
+    awaitAssert { verify(candidate.get).offerLeadership(schedulerService) }
+    leader.get() should be (false)
   }
 }

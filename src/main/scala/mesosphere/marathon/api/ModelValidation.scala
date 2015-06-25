@@ -1,7 +1,6 @@
 package mesosphere.marathon.api
 
-import java.lang.{ Double => JDouble }
-import java.net.{ HttpURLConnection, URL }
+import java.net.{ URLConnection, HttpURLConnection, URL }
 import javax.validation.ConstraintViolation
 import mesosphere.marathon.MarathonSchedulerService
 import scala.reflect.ClassTag
@@ -16,6 +15,8 @@ import BeanValidation._
   * Specific validation helper for specific model classes.
   */
 object ModelValidation {
+
+  //scalastyle:off null
 
   def checkGroup(
     group: Group,
@@ -40,7 +41,7 @@ object ModelValidation {
     if (group == null) {
       Seq(violation(group, null, "", "Given group is empty!"))
     }
-    else if ((group.version orElse group.scaleBy).isDefined) {
+    else if (group.version.isDefined || group.scaleBy.isDefined) {
       validate(group,
         defined(
           group,
@@ -53,7 +54,7 @@ object ModelValidation {
           group,
           group.scaleBy,
           "scaleBy",
-          (b: GroupUpdate, t: JDouble, i: String) => hasOnlyOneDefinedOption(b, t, i),
+          (b: GroupUpdate, t: Double, i: String) => hasOnlyOneDefinedOption(b, t, i),
           mandatory = false
         )
       )
@@ -205,7 +206,7 @@ object ModelValidation {
         case http: HttpURLConnection =>
           http.setRequestMethod("HEAD")
           http.getResponseCode == HttpURLConnection.HTTP_OK
-        case other =>
+        case other: URLConnection =>
           other.getInputStream
           true //if we come here, we could read the stream
       }

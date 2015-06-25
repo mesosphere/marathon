@@ -60,6 +60,12 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--webui_url` (Optional. Default: None): The url of the Marathon web ui. It
     is passed to Mesos to be used in links back to the Marathon UI. If not set,
     the url to the leading instance will be sent to Mesos.
+* <span class="label label-default">v0.9.0</span> `--leader_proxy_connection_timeout` (Optional. Default: 5000):
+    Maximum time, in milliseconds, for connecting to the
+    current Marathon leader from this Marathon instance.
+* <span class="label label-default">v0.9.0</span> `--leader_proxy_read_timeout` (Optional. Default: 10000):
+    Maximum time, in milliseconds, for reading from the
+    current Marathon leader.
 * `--local_port_max` (Optional. Default: 20000): Max port number to use when dynamically assigning globally unique
     service ports to apps. If you assign your service port statically in your app definition, it does
     not have to be in this range.
@@ -107,6 +113,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
     in milliseconds.
+*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 1.800.000 (30 minutes)): Timeout for ZooKeeper
+    sessions in milliseconds.
 * `--mesos_authentication_principal` (Optional.): The Mesos principal used for
     authentication
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret

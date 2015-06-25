@@ -41,7 +41,7 @@ class TaskReplaceActor(
       maxCapacity += 1
 
     log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} of ${app.id.toString} leave " +
-      s"${minHealthy} tasks running, maximum capacity ${maxCapacity}, killing ${nrToKillImmediately} tasks immediately")
+      s"$minHealthy tasks running, maximum capacity $maxCapacity, killing $nrToKillImmediately tasks immediately")
 
     for (_ <- 0 until nrToKillImmediately) {
       val taskId = Protos.TaskID.newBuilder
@@ -93,7 +93,7 @@ class TaskReplaceActor(
       oldTaskIds -= taskId
       conciliateNewTasks()
 
-    case x => log.debug(s"Received $x")
+    case x: Any => log.debug(s"Received $x")
   }
 
   def conciliateNewTasks(): Unit = {
@@ -101,7 +101,7 @@ class TaskReplaceActor(
     val tasksNotStartedYet = math.max(0, app.instances - newTasksStarted)
     val tasksToStartNow = math.min(tasksNotStartedYet, leftCapacity)
     if (tasksToStartNow > 0) {
-      log.info(s"Reconciliating tasks during app ${app.id.toString} restart: queuing ${tasksToStartNow} new tasks")
+      log.info(s"Reconciliating tasks during app ${app.id.toString} restart: queuing $tasksToStartNow new tasks")
       taskQueue.add(app, tasksToStartNow)
       newTasksStarted += tasksToStartNow
     }

@@ -3,9 +3,10 @@ package mesosphere.marathon
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{ Timer, TimerTask }
-import javax.inject.{ Provider, Inject, Named }
+import javax.inject.{ Inject, Named }
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.actor.{ ActorRef, ActorSystem }
+import akka.event.EventStream
 import akka.pattern.{ after, ask }
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
@@ -13,23 +14,23 @@ import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
 import com.twitter.common.zookeeper.Group.JoinException
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.util.PromiseActor
+import mesosphere.util.state.FrameworkIdUtil
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.{ MILLISECONDS, _ }
-import scala.concurrent.{ TimeoutException, Await, Future, Promise }
+import scala.concurrent.{ Await, Future, TimeoutException }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
@@ -47,11 +48,12 @@ class MarathonSchedulerService @Inject() (
     driverFactory: SchedulerDriverFactory,
     system: ActorSystem,
     migration: Migration,
-    @Named("schedulerActor") schedulerActor: ActorRef) extends AbstractExecutionThreadService with Leader {
+    @Named("schedulerActor") schedulerActor: ActorRef,
+    @Named(EventModule.busName) eventStream: EventStream) extends AbstractExecutionThreadService with Leader {
 
   import mesosphere.util.ThreadPoolContext.context
 
-  implicit val zkTimeout = config.zkFutureTimeout
+  implicit val zkTimeout = config.zkTimeoutDuration
 
   val latch = new CountDownLatch(1)
 
@@ -77,7 +79,7 @@ class MarathonSchedulerService @Inject() (
 
   // FIXME: Remove from this class
   def frameworkId: Option[FrameworkID] = {
-    val fid = frameworkIdUtil.fetch
+    val fid = frameworkIdUtil.fetch()
 
     fid match {
       case Some(id) =>
@@ -228,16 +230,6 @@ class MarathonSchedulerService @Inject() (
     driver = None
   }
 
-  def isLeader: Boolean = leader.get()
-
-  def getLeader: Option[String] = {
-    candidate.flatMap { c =>
-      if (c.getLeaderData.isPresent)
-        Some(new String(c.getLeaderData.get))
-      else
-        None
-    }
-  }
   //End Service interface
 
   //Begin Leader interface, which is required for CandidateImpl.
@@ -249,10 +241,13 @@ class MarathonSchedulerService @Inject() (
   }
 
   override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
-    log.info("Elected (Leader Interface)")
-    driver = Some(driverFactory.createDriver())
     var migrationComplete = false
     try {
+      log.info("Elected (Leader Interface)")
+
+      //create new driver
+      driver = Some(driverFactory.createDriver())
+
       //execute tasks, only the leader is allowed to
       migration.migrate()
       migrationComplete = true
@@ -261,7 +256,7 @@ class MarathonSchedulerService @Inject() (
       electLeadership(Some(abdicateCmd))
 
       // We successfully took over leadership. Time to reset backoff
-      resetOfferLeadershipBackOff
+      resetOfferLeadershipBackOff()
     }
     catch {
       case NonFatal(e) => // catch Scala and Java exceptions
@@ -284,7 +279,7 @@ class MarathonSchedulerService @Inject() (
   private def defeatLeadership(): Unit = {
     log.info("Defeat leadership")
 
-    schedulerActor ! Suspend(LostLeadershipException("Leadership was defeated"))
+    eventStream.publish(LocalLeadershipEvent.Standby)
 
     timer.cancel()
     timer = newTimer()
@@ -302,7 +297,7 @@ class MarathonSchedulerService @Inject() (
     leader.set(true)
     runDriver(abdicateOption)
 
-    schedulerActor ! Start
+    eventStream.publish(LocalLeadershipEvent.ElectedAsLeader)
 
     // Start the timer
     schedulePeriodicOperations()
@@ -355,7 +350,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (isLeader) {
+          if (leader.get()) {
             schedulerActor ! ScaleApps
           }
           else log.info("Not leader therefore not scaling apps")
@@ -368,7 +363,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (isLeader) {
+          if (leader.get()) {
             schedulerActor ! ReconcileTasks
             schedulerActor ! ReconcileHealthChecks
           }
@@ -385,7 +380,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (isLeader) {
+          if (leader.get()) {
             taskTracker.expungeOrphanedTasks()
           }
         }

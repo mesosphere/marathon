@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory
 object MarathonSchedulerDriver {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off method.length
   def newDriver(config: MarathonConf,
                 httpConfig: HttpConf,
                 newScheduler: MarathonScheduler,
@@ -73,7 +75,7 @@ object MarathonSchedulerDriver {
         new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster())
     }
 
-    log.debug("Finished creating new driver")
+    log.debug("Finished creating new driver", newDriver)
 
     newDriver
   }

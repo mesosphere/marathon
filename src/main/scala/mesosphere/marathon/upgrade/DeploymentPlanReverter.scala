@@ -60,6 +60,8 @@ private[upgrade] object DeploymentPlanReverter {
     * It is more difficult than reverting any app definition changes
     * because groups are not locked by deployments and concurrent changes are allowed.
     */
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
   private[this] def revertGroupChanges(
     version: Timestamp, groupChanges: Seq[(Option[Group], Option[Group])])(
       group: Group): Group = {

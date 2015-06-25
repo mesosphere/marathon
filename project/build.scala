@@ -5,9 +5,7 @@ import AssemblyKeys._
 import sbtrelease.ReleasePlugin._
 import com.typesafe.sbt.SbtScalariform._
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
-import ohnosequences.sbt.SbtS3Resolver.S3Resolver
-import ohnosequences.sbt.SbtS3Resolver.{ s3, s3resolver }
-import org.scalastyle.sbt.ScalastylePlugin.{ Settings => styleSettings }
+import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
 import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
@@ -19,18 +17,18 @@ object MarathonBuild extends Build {
     settings = baseSettings ++
                asmSettings ++
                releaseSettings ++
-               publishSettings ++
                formatSettings ++
                scalaStyleSettings ++
                revolverSettings ++
                graphSettings ++
                testSettings ++
                integrationTestSettings ++
-      Seq(
-        libraryDependencies ++= Dependencies.root,
-        parallelExecution in Test := false,
-        fork in Test := true
-      )
+               teamCitySetEnvSettings ++
+               Seq(
+                 libraryDependencies ++= Dependencies.root,
+                 parallelExecution in Test := false,
+                 fork in Test := true
+               )
     )
     .configs(IntegrationTest)
     // run mesos-simulation/test:test when running test
@@ -81,7 +79,7 @@ object MarathonBuild extends Build {
 
   lazy val scalaStyleSettings = styleSettings ++ Seq(
     testScalaStyle := {
-      org.scalastyle.sbt.PluginKeys.scalastyle.toTask("").value
+      org.scalastyle.sbt.ScalastylePlugin.scalastyle.in(Compile).toTask("").value
     },
     (test in Test) <<= (test in Test) dependsOn testScalaStyle
   )
@@ -141,13 +139,6 @@ object MarathonBuild extends Build {
     }
   )
 
-  lazy val publishSettings = S3Resolver.defaults ++ Seq(
-    publishTo := Some(s3resolver.value(
-      "Mesosphere Public Repo (S3)",
-      s3("downloads.mesosphere.com/maven")
-    ))
-  )
-
   lazy val formatSettings = scalariformSettings ++ Seq(
     ScalariformKeys.preferences := FormattingPreferences()
       .setPreference(IndentWithTabs, false)
@@ -166,6 +157,33 @@ object MarathonBuild extends Build {
       .setPreference(SpacesWithinPatternBinders, true)
       .setPreference(FormatXml, true)
     )
+
+
+  /**
+   * This on load trigger is used to set parameters in teamcity.
+   * It is only executed within teamcity and can be ignored otherwise.
+   * It will set values as build and env parameter.
+   * Those parameters can be used in subsequent build steps and dependent builds.
+   * TeamCity does this by watching the output of the build it currently performs.
+   * See: https://confluence.jetbrains.com/display/TCD8/Build+Script+Interaction+with+TeamCity
+   */
+  lazy val teamCitySetEnvSettings = Seq(
+    onLoad in Global := {
+      sys.env.get("TEAMCITY_VERSION") match {
+        case None => // no-op
+        case Some(teamcityVersion) =>
+          def reportParameter(key: String, value: String): Unit = {
+            //env parameters will be made available as environment variables
+            println(s"##teamcity[setParameter name='env.SBT_$key' value='$value']")
+            //system parameters will be made available as teamcity build parameters
+            println(s"##teamcity[setParameter name='system.sbt.$key' value='$value']")
+          }
+          reportParameter("SCALA_VERSION", scalaVersion.value)
+          reportParameter("PROJECT_VERSION", version.value)
+      }
+      (onLoad in Global).value
+    }
+  )
 }
 
 object Dependencies {
@@ -194,6 +212,7 @@ object Dependencies {
     scallop % "compile",
     playJson % "compile",
     jsonSchemaValidator % "compile",
+    twitterZk % "compile",
 
     // test
     Test.scalatest % "test",
@@ -211,6 +230,7 @@ object Dependency {
     val Akka = "2.3.9"
     val Spray = "1.3.2"
     val TwitterCommons = "0.0.76"
+    val TwitterZk = "6.24.0"
     val Jersey = "1.18.1"
     val JettyEventSource = "1.0.0"
     val JodaTime = "2.3"
@@ -251,6 +271,7 @@ object Dependency {
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.2"
   val scallop = "org.rogach" %% "scallop" % V.Scallop
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
+  val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

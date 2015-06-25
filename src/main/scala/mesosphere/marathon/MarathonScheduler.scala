@@ -4,7 +4,6 @@ import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
-import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event._
@@ -12,14 +11,13 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import mesosphere.marathon.tasks._
-import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.mesos.{ TaskBuilder, protos }
+import mesosphere.mesos.protos
+import mesosphere.util.state.FrameworkIdUtil
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success }
 
@@ -46,7 +44,7 @@ class MarathonScheduler @Inject() (
   import mesosphere.mesos.protos.Implicits._
   import mesosphere.util.ThreadPoolContext.context
 
-  implicit val zkTimeout = config.zkFutureTimeout
+  implicit val zkTimeout = config.zkTimeoutDuration
 
   override def registered(
     driver: SchedulerDriver,
@@ -93,6 +91,8 @@ class MarathonScheduler @Inject() (
     log.info("Offer %s rescinded".format(offer))
   }
 
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
   override def statusUpdate(driver: SchedulerDriver, status: TaskStatus): Unit = {
 
     log.info("Received status update for task %s: %s (%s)"
@@ -130,7 +130,7 @@ class MarathonScheduler @Inject() (
         taskTracker.running(appId, status).onComplete {
           case Success(task) =>
             appRepo.app(appId, Timestamp(task.getVersion)).onSuccess {
-              case maybeApp => maybeApp.foreach(taskQueue.rateLimiter.resetDelay)
+              case maybeApp: Option[AppDefinition] => maybeApp.foreach(taskQueue.rateLimiter.resetDelay)
             }
             postEvent(status, task)
 
@@ -193,6 +193,7 @@ class MarathonScheduler @Inject() (
   private def suicide(): Unit = {
     log.fatal("Committing suicide")
 
+    //scalastyle:off magic.number
     // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
     Future {
       sys.exit(9)

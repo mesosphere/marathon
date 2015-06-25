@@ -2,9 +2,9 @@ package mesosphere.marathon
 
 import javax.inject.Provider
 
-import com.codahale.metrics.MetricRegistry
 import com.google.inject.AbstractModule
 import com.google.inject.matcher.{ AbstractMatcher, Matchers }
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
 import org.apache.log4j.{ Level, Logger }
 import org.rogach.scallop.ScallopConf
@@ -32,23 +32,15 @@ trait DebugConf extends ScallopConf {
 }
 
 class DebugModule(conf: DebugConf) extends AbstractModule {
-
-  trait Behavior extends MethodInterceptor {
-    def className(in: MethodInvocation): String = in.getThis.getClass.getName
-  }
-
   /**
     * Measure processing time of each service method.
     */
-  class MetricsBehavior(provider: Provider[MetricRegistry]) extends Behavior {
+  class MetricsBehavior(metricsProvider: Provider[Metrics]) extends MethodInterceptor {
     override def invoke(in: MethodInvocation): AnyRef = {
-      val timer = provider.get.timer(s"service.${className(in)}.${in.getMethod.getName}")
-      val ctx = timer.time()
-      try {
-        in.proceed()
-      }
-      finally {
-        ctx.stop()
+      val metrics: Metrics = metricsProvider.get
+
+      metrics.timed(metrics.name(MetricPrefixes.SERVICE, in)) {
+        in.proceed
       }
     }
   }
@@ -56,10 +48,11 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
   /**
     * Add trace, whenever a service method is entered and finished.
     */
-  class TracingBehavior extends Behavior {
+  class TracingBehavior(metrics: Provider[Metrics]) extends MethodInterceptor {
     override def invoke(in: MethodInvocation): AnyRef = {
-      val logger = Logger.getLogger(className(in))
-      val method = s"""${className(in)}.${in.getMethod.getName}(${in.getArguments.mkString(", ")})"""
+      val className = metrics.get.className(in.getThis.getClass)
+      val logger = Logger.getLogger(className)
+      val method = s"""$className.${in.getMethod.getName}(${in.getArguments.mkString(", ")})"""
       logger.trace(s">>> $method")
       val result = in.proceed()
       logger.trace(s"<<< $method")
@@ -68,18 +61,23 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
   }
 
   object MarathonMatcher extends AbstractMatcher[Class[_]] {
-    override def matches(t: Class[_]): Boolean = t.getPackage.getName.startsWith("mesosphere")
+    override def matches(t: Class[_]): Boolean = {
+      // Don't instrument the Metrics class, in order to avoid an infinite recursion
+      t.getPackage.getName.startsWith("mesosphere") && t != classOf[Metrics]
+    }
   }
 
   override def configure(): Unit = {
     //set trace log level
-    conf.logLevel.get.foreach(level => Logger.getRootLogger.setLevel(Level.toLevel(level.toUpperCase())))
+    conf.logLevel.get.foreach(level => Logger.getRootLogger.setLevel(Level.toLevel(level.toUpperCase)))
 
     //add behaviors
-    val registry = getProvider(classOf[MetricRegistry])
-    val tracing = conf.debugTracing.get.filter(identity).map(_ => new TracingBehavior)
-    val metrics = conf.enableMetrics.get.filter(identity).map(_ => new MetricsBehavior(registry))
-    val behaviors = (tracing :: metrics :: Nil).flatten
+    val metricsProvider = getProvider(classOf[Metrics])
+
+    val tracingBehavior = conf.debugTracing.get.filter(identity).map(_ => new TracingBehavior(metricsProvider))
+    val metricsBehavior = conf.enableMetrics.get.filter(identity).map(_ => new MetricsBehavior(metricsProvider))
+
+    val behaviors = (tracingBehavior :: metricsBehavior :: Nil).flatten
     if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)
   }
 }

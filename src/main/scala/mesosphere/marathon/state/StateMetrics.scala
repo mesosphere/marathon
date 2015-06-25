@@ -1,20 +1,23 @@
 package mesosphere.marathon.state
 
-import com.codahale.metrics.{ Histogram, Meter, MetricRegistry }
-import com.codahale.metrics.MetricRegistry.name
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.metrics.Metrics.{ Histogram, Meter }
 
 trait StateMetrics {
 
   // metrics!
-  protected def registry: MetricRegistry
+  protected val metrics: Metrics
 
-  private[this] val readRequests: Meter = registry.meter(name(getClass, "read-requests"))
-  private[this] val readRequestErrors: Meter = registry.meter(name(getClass, "read-request-errors"))
-  private[this] val readRequestTime: Histogram = registry.histogram(name(getClass, "read-request-time"))
+  private[this] def prefix: String = MetricPrefixes.SERVICE
 
-  private[this] val writeRequests: Meter = registry.meter(name(getClass, "write-requests"))
-  private[this] val writeRequestErrors: Meter = registry.meter(name(getClass, "write-request-errors"))
-  private[this] val writeRequestTime: Histogram = registry.histogram(name(getClass, "write-request-time"))
+  private[this] val readRequests: Meter = metrics.meter(metrics.name(prefix, getClass, "read-requests"))
+  private[this] val readRequestErrors: Meter = metrics.meter(metrics.name(prefix, getClass, "read-request-errors"))
+  private[this] val readRequestTime: Histogram = metrics.histogram(metrics.name(prefix, getClass, "read-request-time"))
+
+  private[this] val writeRequests: Meter = metrics.meter(metrics.name(prefix, getClass, "write-requests"))
+  private[this] val writeRequestErrors: Meter = metrics.meter(metrics.name(prefix, getClass, "write-request-errors"))
+  private[this] val writeRequestTime: Histogram =
+    metrics.histogram(metrics.name(prefix, getClass, "write-request-time"))
 
   protected[this] def timed[T](hist: Histogram, invocations: Meter, errors: Meter)(f: => T): T = {
     invocations.mark()

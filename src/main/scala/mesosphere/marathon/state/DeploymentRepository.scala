@@ -1,14 +1,14 @@
 package mesosphere.marathon.state
 
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.upgrade.DeploymentPlan
-import com.codahale.metrics.MetricRegistry
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 class DeploymentRepository(
-  val store: PersistenceStore[DeploymentPlan],
+  val store: EntityStore[DeploymentPlan],
   val maxVersions: Option[Int] = None,
-  val registry: MetricRegistry)
+  val metrics: Metrics)
     extends EntityRepository[DeploymentPlan] with StateMetrics {
 
   import mesosphere.util.ThreadPoolContext.context

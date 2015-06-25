@@ -6,13 +6,12 @@ import javax.ws.rs._
 import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
-
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
-import mesosphere.marathon.api.{ BeanValidation, ModelValidation, RestResource }
 import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.{ BeanValidation, ModelValidation, RestResource }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
 import mesosphere.util.ThreadPoolContext.context
 import play.api.libs.json.Json
 
@@ -64,28 +63,28 @@ class GroupsResource @Inject() (
 
   /**
     * Create a new group.
-    * @param update the group is encoded in the update.
+    * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
+    * @param body the request body as array byte buffer
     */
   @POST
-  @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def create(update: GroupUpdate, @DefaultValue("false")@QueryParam("force") force: Boolean): Response =
-    createWithPath("", update, force)
+  def create(@DefaultValue("false")@QueryParam("force") force: Boolean,
+             body: Array[Byte]): Response = createWithPath("", force, body)
 
   /**
     * Create or update a group.
     * If the path to the group does not exist, it gets created.
     * @param id is the identifier of the the group to update.
-    * @param update is the update to apply on the group specified by the given path.
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
+    * @param body the request body as array byte buffer
     */
   @POST
-  @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("""{id:.+}""")
   @Timed
   def createWithPath(@PathParam("id") id: String,
-                     update: GroupUpdate,
-                     @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
+                     @DefaultValue("false")@QueryParam("force") force: Boolean,
+                     body: Array[Byte]): Response = {
+    val update = Json.parse(body).as[GroupUpdate]
     BeanValidation.requireValid(ModelValidation.checkGroupUpdate(update, needsId = true))
     val effectivePath = update.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
     val current = result(groupManager.root(withLatestApps = false)).findGroup(_.id == effectivePath)
@@ -96,28 +95,28 @@ class GroupsResource @Inject() (
   }
 
   @PUT
-  @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  def updateRoot(group: GroupUpdate,
-                 @DefaultValue("false")@QueryParam("force") force: Boolean,
-                 @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean): Response =
-    update("", group, force, dryRun)
+  def updateRoot(@DefaultValue("false")@QueryParam("force") force: Boolean,
+                 @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean,
+                 body: Array[Byte]): Response = {
+    update("", force, dryRun, body)
+  }
 
   /**
     * Create or update a group.
     * If the path to the group does not exist, it gets created.
     * @param id is the identifier of the the group to update.
-    * @param update is the update to apply on the group specified by the given path.
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
+    * @param dryRun only create the deployment without executing it.
     */
   @PUT
-  @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("""{id:.+}""")
   @Timed
   def update(@PathParam("id") id: String,
-             update: GroupUpdate,
              @DefaultValue("false")@QueryParam("force") force: Boolean,
-             @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean): Response = {
+             @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean,
+             body: Array[Byte]): Response = {
+    val update = Json.parse(body).as[GroupUpdate]
     BeanValidation.requireValid(ModelValidation.checkGroupUpdate(update, needsId = false))
     if (dryRun) {
       val planFuture = groupManager.group(id.toRootPath).map { maybeOldGroup =>

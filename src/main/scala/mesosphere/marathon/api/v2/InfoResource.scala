@@ -5,15 +5,17 @@ import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
-import mesosphere.marathon.{ MarathonSchedulerService, BuildInfo, MarathonConf }
+import mesosphere.marathon.{ LeaderProxyConf, MarathonSchedulerService, BuildInfo, MarathonConf }
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class InfoResource @Inject() (
     schedulerService: MarathonSchedulerService,
-    conf: MarathonConf with HttpConf with EventConfiguration with HttpEventConfiguration) {
+    leaderInfo: LeaderInfo,
+    conf: MarathonConf with HttpConf with EventConfiguration with HttpEventConfiguration with LeaderProxyConf) {
 
   // Marathon configurations
   private[this] lazy val marathonConfigValues = Map(
@@ -32,16 +34,17 @@ class InfoResource @Inject() (
     "reconciliation_initial_delay" -> conf.reconciliationInitialDelay.get,
     "reconciliation_interval" -> conf.reconciliationInterval.get,
     "marathon_store_timeout" -> conf.marathonStoreTimeout.get,
-    "mesos_user" -> conf.mesosUser.get)
+    "mesos_user" -> conf.mesosUser.get,
+    "leader_proxy_connection_timeout_ms" -> conf.leaderProxyConnectionTimeout.get,
+    "leader_proxy_read_timeout_ms" -> conf.leaderProxyReadTimeout.get)
 
   // Zookeeper congiurations
-  private[this] lazy val zookeeperConfigValues = Map(
-    "zk_timeout" -> conf.zooKeeperTimeout.get,
-    "zk" -> conf.zooKeeperUrl.get,
-    "zk_hosts" -> conf.zkHosts,
-    "zk_path" -> conf.zkPath,
-    "zk_timeout" -> conf.zkTimeoutDuration,
-    "zk_future_timeout" -> conf.zkFutureTimeout)
+  private[this] lazy val zookeeperConfigValues = Map[String, Any] (
+    "zk" -> conf.zooKeeperUrl(),
+    "zk_timeout" -> conf.zooKeeperTimeout(),
+    "zk_session_timeout" -> conf.zooKeeperSessionTimeout(),
+    "zk_max_versions" -> conf.zooKeeperMaxVersions()
+  )
 
   private[this] lazy val eventHandlerConfigValues = {
     def httpEventConfig: Map[String, Option[Seq[String]]] = Map(
@@ -71,8 +74,8 @@ class InfoResource @Inject() (
       Map(
         "name" -> BuildInfo.name,
         "version" -> BuildInfo.version,
-        "elected" -> schedulerService.isLeader,
-        "leader" -> schedulerService.getLeader,
+        "elected" -> leaderInfo.elected,
+        "leader" -> leaderInfo.currentLeaderHostPort(),
         "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
         "marathon_config" -> marathonConfigValues,
         "zookeeper_config" -> zookeeperConfigValues,

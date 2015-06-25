@@ -10,7 +10,7 @@ case class GroupUpdate(
     apps: Option[Set[AppDefinition]] = None,
     groups: Option[Set[GroupUpdate]] = None,
     dependencies: Option[Set[PathId]] = None,
-    scaleBy: Option[JDouble] = None,
+    scaleBy: Option[Double] = None,
     version: Option[Timestamp] = None) {
 
   def groupId: PathId = id.getOrElse(throw new IllegalArgumentException("No group id was given!"))
