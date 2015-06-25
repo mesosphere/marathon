@@ -10,7 +10,8 @@ import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.ser.Serializers
 import org.apache.mesos.{ Protos => mesos }
-import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
+import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask, CustomResourceDefinition }
 import mesosphere.marathon.api.v2._
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
@@ -31,6 +32,11 @@ class MarathonModule extends Module {
   private val appUpdateClass = classOf[AppUpdate]
   private val groupIdClass = classOf[PathId]
   private val taskIdClass = classOf[mesos.TaskID]
+  private val customResourceClass = classOf[Protos.CustomResource] // TODOC
+  private val customResourceDefinitionClass = classOf[Protos.CustomResourceDefinition]
+  private val customScalarClass = classOf[Protos.CustomResource.CustomScalar]
+  private val customSetClass = classOf[Protos.CustomResource.CustomSet]
+  private val customRangesClass = classOf[Protos.CustomResource.CustomRanges]
 
   def getModuleName: String = "MarathonModule"
 
@@ -50,6 +56,11 @@ class MarathonModule extends Module {
         else if (matches(finiteDurationClass)) FiniteDurationSerializer
         else if (matches(groupIdClass)) PathIdSerializer
         else if (matches(taskIdClass)) TaskIdSerializer
+        /*else if (matches(customResourceClass)) CustomResourceSerializer
+        else if (matches(customResourceDefinitionClass)) CustomResourceDefinitionSerializer
+        else if (matches(customScalarClass)) CustomScalarSerializer
+        else if (matches(customSetClass)) CustomSetSerializer
+        else if (matches(customRangesClass)) CustomRangesSerializer*/
         else null
       }
     })
@@ -217,6 +228,113 @@ class MarathonModule extends Module {
       if (emptyContainer)
         appUpdate.copy(container = Some(Container.Empty))
       else appUpdate
+    }
+  }
+  /*
+  object CustomResourceSerializer extends JsonSerializer[CustomResource] {
+    def serialize(resource: CustomResource, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+      //jgen.writeObjectField("name", resource.name)
+      writeFieldValues(resource, jgen, provider)
+      jgen.writeEndObject()
+    }
+
+    def writeFieldValues(resource: CustomResource, jgen: JsonGenerator, provider: SerializerProvider) {
+      if (!resource.scalar.isEmpty) {
+        jgen.writeStartObject()
+        jgen.writeObjectField("value", resource.scalar.get.value)
+        jgen.writeEndObject()
+      }
+      else if (!resource.set.isEmpty) {
+        jgen.writeStartObject()
+        jgen.writeObjectField("numberRequired", resource.set.get.numberRequired)
+        jgen.writeStartArray()
+        resource.set.get.value.foreach(v => jgen.writeString(v))
+        jgen.writeEndArray()
+        jgen.writeEndObject()
+      }
+      else if (!resource.ranges.isEmpty) {
+        jgen.writeStartObject()
+        resource.ranges.get.value.foreach { range =>
+          jgen.writeStartObject()
+          jgen.writeObjectField("numberRequired", range.numberRequired)
+          jgen.writeObjectField("begin", range.begin)
+          jgen.writeObjectField("end", range.end)
+          jgen.writeEndObject()
+        }
+        jgen.writeEndObject()
+      }
+    }
+  }
+
+  object CustomResourceDefinitionDeserializer extends JsonDeserializer[CustomResource] {
+    def deserialize(json: JsonParser, context: DeserializationContext): CustomResource = {
+      val tree: JsonNode = json.getCodec.readTree(json)
+      CustomResource("null")
+    }
+  }
+*/
+  object CustomResourceSerializer extends JsonSerializer[Protos.CustomResource] {
+    def serialize(resource: Protos.CustomResource, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+      //jgen.writeObjectField("name", resource.name)
+      writeFieldValues(resource, jgen, provider)
+      jgen.writeEndObject()
+    }
+
+    def writeFieldValues(resource: Protos.CustomResource, jgen: JsonGenerator, provider: SerializerProvider) {
+      if (!resource.hasScalar) {
+        jgen.writeObjectField("scalar", resource.getScalar)
+      }
+      else if (!resource.hasSet) {
+        jgen.writeObjectField("set", resource.getSet)
+      }
+      else if (!resource.hasRange) { /*
+        jgen.writeObjectfield("range", resource.range.get)
+        jgen.writeStartObject()
+        resource.ranges.get.value.foreach { range =>
+          jgen.writeStartObject()
+          jgen.writeObjectField("numberRequired", range.numberRequired)
+          jgen.writeObjectField("begin", range.begin)
+          jgen.writeObjectField("end", range.end)
+          jgen.writeEndObject()
+        }
+        jgen.writeEndObject()*/
+      }
+    }
+  }
+
+  object CustomResourceDefinitionSerializer extends JsonSerializer[Protos.CustomResourceDefinition] {
+    def serialize(definition: Protos.CustomResourceDefinition, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+      jgen.writeObjectField("key", definition.getName)
+      jgen.writeObjectField("resource", definition.getResource)
+      jgen.writeEndObject()
+    }
+  }
+
+  object CustomScalarSerializer extends JsonSerializer[Protos.CustomResource.CustomScalar] {
+    def serialize(scalar: Protos.CustomResource.CustomScalar, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+      jgen.writeObjectField("value", scalar.getValue)
+      jgen.writeEndObject()
+    }
+  }
+  object CustomSetSerializer extends JsonSerializer[Protos.CustomResource.CustomSet] {
+    def serialize(set: Protos.CustomResource.CustomSet, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+      jgen.writeObjectField("numberRequired", set.getNumberRequired)
+      //jgen.writeStartArray()
+      //set.getValueList.asScala.toSet.foreach(s => jgen.writeString(s))
+      //jgen.writeEndArray()
+      jgen.writeEndObject()
+    }
+  }
+  object CustomRangesSerializer extends JsonSerializer[Protos.CustomResource.CustomRanges] {
+    def serialize(ranges: Protos.CustomResource.CustomRanges, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeStartObject()
+      //jgen.writeObjectField("value", ranges.getValue)
+      jgen.writeEndObject()
     }
   }
 }

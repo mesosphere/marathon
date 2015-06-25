@@ -9,6 +9,7 @@ import com.google.common.collect.Lists
 import mesosphere.jackson.CaseClassModule
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ Protos, MarathonSpec }
+import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.ModelValidation
@@ -650,5 +651,72 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     proto.getResourcesList.asScala
       .find(_.getName == name)
       .get.getScalar.getValue
+  }
+
+  test("CustomResources ToProto") {
+    val app1 = AppDefinition(
+      id = "play".toPath,
+      cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
+      cpus = 4,
+      mem = 256,
+      instances = 5,
+      ports = Seq(8080, 8081),
+      executor = "//cmd",
+      acceptedResourceRoles = Some(Set("a", "b")),
+      customResources = Map("foo" -> CustomResource("foo", Some(CustomResource.CustomScalar(10))))
+    )
+
+    //validateJsonSchema(app1)
+
+    val proto1 = app1.toProto
+    assert("play" == proto1.getId)
+    assert(proto1.getCmd.hasValue)
+    assert(proto1.getCmd.getShell)
+    assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
+    assert(5 == proto1.getInstances)
+    assert(Lists.newArrayList(8080, 8081) == proto1.getPortsList)
+    assert("//cmd" == proto1.getExecutor)
+    assert(4 == getScalarResourceValue(proto1, "cpus"), 1e-6)
+    assert(256 == getScalarResourceValue(proto1, "mem"), 1e-6)
+    assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
+    assert(!proto1.hasContainer)
+    assert(1.0 == proto1.getUpgradeStrategy.getMinimumHealthCapacity)
+    assert(1.0 == proto1.getUpgradeStrategy.getMaximumOverCapacity)
+    assert(proto1.hasAcceptedResourceRoles)
+    assert(proto1.getAcceptedResourceRoles == Protos.ResourceRoles.newBuilder().addRole("a").addRole("b").build())
+    println(proto1.getCustomResourcesList.asScala.last.getResource.getScalar.getValue)
+    assert(proto1.getCustomResourcesList.asScala.last.getResource.getScalar.getValue == 10) //Protos.CustomResource.newBuilder().setScalar(Protos.CustomResource.CustomScalar.newBuilder().setValue(10)).build)
+    /*
+    val app2 = AppDefinition(
+      id = "play".toPath,
+      cmd = None,
+      args = Some(Seq("a", "b", "c")),
+      container = Some(
+        Container(docker = Some(Container.Docker("group/image")))
+      ),
+      cpus = 4,
+      mem = 256,
+      instances = 5,
+      ports = Seq(8080, 8081),
+      executor = "//cmd",
+      upgradeStrategy = UpgradeStrategy(0.7, 0.4)
+    )
+
+    validateJsonSchema(app2)
+    val proto2 = app2.toProto
+    assert("play" == proto2.getId)
+    assert(!proto2.getCmd.hasValue)
+    assert(!proto2.getCmd.getShell)
+    assert(Seq("a", "b", "c") == proto2.getCmd.getArgumentsList.asScala)
+    assert(5 == proto2.getInstances)
+    assert(Lists.newArrayList(8080, 8081) == proto2.getPortsList)
+    assert("//cmd" == proto2.getExecutor)
+    assert(4 == getScalarResourceValue(proto2, "cpus"), 1e-6)
+    assert(256 == getScalarResourceValue(proto2, "mem"), 1e-6)
+    assert(proto2.hasContainer)
+    assert(0.7 == proto2.getUpgradeStrategy.getMinimumHealthCapacity)
+    assert(0.4 == proto2.getUpgradeStrategy.getMaximumOverCapacity)
+    assert(!proto2.hasAcceptedResourceRoles)
+    */
   }
 }

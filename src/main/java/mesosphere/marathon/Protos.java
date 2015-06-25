@@ -23682,34 +23682,34 @@ public final class Protos {
   public interface CustomResourceDefinitionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required string key = 1;
+    // required string name = 1;
     /**
-     * <code>required string key = 1;</code>
+     * <code>required string name = 1;</code>
      */
-    boolean hasKey();
+    boolean hasName();
     /**
-     * <code>required string key = 1;</code>
+     * <code>required string name = 1;</code>
      */
-    java.lang.String getKey();
+    java.lang.String getName();
     /**
-     * <code>required string key = 1;</code>
+     * <code>required string name = 1;</code>
      */
     com.google.protobuf.ByteString
-        getKeyBytes();
+        getNameBytes();
 
-    // required .mesosphere.marathon.CustomResource value = 2;
+    // required .mesosphere.marathon.CustomResource resource = 2;
     /**
-     * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+     * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
      */
-    boolean hasValue();
+    boolean hasResource();
     /**
-     * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+     * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
      */
-    mesosphere.marathon.Protos.CustomResource getValue();
+    mesosphere.marathon.Protos.CustomResource getResource();
     /**
-     * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+     * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
      */
-    mesosphere.marathon.Protos.CustomResourceOrBuilder getValueOrBuilder();
+    mesosphere.marathon.Protos.CustomResourceOrBuilder getResourceOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.CustomResourceDefinition}
@@ -23764,18 +23764,18 @@ public final class Protos {
             }
             case 10: {
               bitField0_ |= 0x00000001;
-              key_ = input.readBytes();
+              name_ = input.readBytes();
               break;
             }
             case 18: {
               mesosphere.marathon.Protos.CustomResource.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
-                subBuilder = value_.toBuilder();
+                subBuilder = resource_.toBuilder();
               }
-              value_ = input.readMessage(mesosphere.marathon.Protos.CustomResource.PARSER, extensionRegistry);
+              resource_ = input.readMessage(mesosphere.marathon.Protos.CustomResource.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom(value_);
-                value_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom(resource_);
+                resource_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000002;
               break;
@@ -23820,20 +23820,20 @@ public final class Protos {
     }
 
     private int bitField0_;
-    // required string key = 1;
-    public static final int KEY_FIELD_NUMBER = 1;
-    private java.lang.Object key_;
+    // required string name = 1;
+    public static final int NAME_FIELD_NUMBER = 1;
+    private java.lang.Object name_;
     /**
-     * <code>required string key = 1;</code>
+     * <code>required string name = 1;</code>
      */
-    public boolean hasKey() {
+    public boolean hasName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required string key = 1;</code>
+     * <code>required string name = 1;</code>
      */
-    public java.lang.String getKey() {
-      java.lang.Object ref = key_;
+    public java.lang.String getName() {
+      java.lang.Object ref = name_;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
@@ -23841,68 +23841,68 @@ public final class Protos {
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
-          key_ = s;
+          name_ = s;
         }
         return s;
       }
     }
     /**
-     * <code>required string key = 1;</code>
+     * <code>required string name = 1;</code>
      */
     public com.google.protobuf.ByteString
-        getKeyBytes() {
-      java.lang.Object ref = key_;
+        getNameBytes() {
+      java.lang.Object ref = name_;
       if (ref instanceof java.lang.String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        key_ = b;
+        name_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
 
-    // required .mesosphere.marathon.CustomResource value = 2;
-    public static final int VALUE_FIELD_NUMBER = 2;
-    private mesosphere.marathon.Protos.CustomResource value_;
+    // required .mesosphere.marathon.CustomResource resource = 2;
+    public static final int RESOURCE_FIELD_NUMBER = 2;
+    private mesosphere.marathon.Protos.CustomResource resource_;
     /**
-     * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+     * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
      */
-    public boolean hasValue() {
+    public boolean hasResource() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+     * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
      */
-    public mesosphere.marathon.Protos.CustomResource getValue() {
-      return value_;
+    public mesosphere.marathon.Protos.CustomResource getResource() {
+      return resource_;
     }
     /**
-     * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+     * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
      */
-    public mesosphere.marathon.Protos.CustomResourceOrBuilder getValueOrBuilder() {
-      return value_;
+    public mesosphere.marathon.Protos.CustomResourceOrBuilder getResourceOrBuilder() {
+      return resource_;
     }
 
     private void initFields() {
-      key_ = "";
-      value_ = mesosphere.marathon.Protos.CustomResource.getDefaultInstance();
+      name_ = "";
+      resource_ = mesosphere.marathon.Protos.CustomResource.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
 
-      if (!hasKey()) {
+      if (!hasName()) {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!hasValue()) {
+      if (!hasResource()) {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!getValue().isInitialized()) {
+      if (!getResource().isInitialized()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -23914,10 +23914,10 @@ public final class Protos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(1, getKeyBytes());
+        output.writeBytes(1, getNameBytes());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeMessage(2, value_);
+        output.writeMessage(2, resource_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -23930,11 +23930,11 @@ public final class Protos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, getKeyBytes());
+          .computeBytesSize(1, getNameBytes());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, value_);
+          .computeMessageSize(2, resource_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -24044,7 +24044,7 @@ public final class Protos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getValueFieldBuilder();
+          getResourceFieldBuilder();
         }
       }
       private static Builder create() {
@@ -24053,12 +24053,12 @@ public final class Protos {
 
       public Builder clear() {
         super.clear();
-        key_ = "";
+        name_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
-        if (valueBuilder_ == null) {
-          value_ = mesosphere.marathon.Protos.CustomResource.getDefaultInstance();
+        if (resourceBuilder_ == null) {
+          resource_ = mesosphere.marathon.Protos.CustomResource.getDefaultInstance();
         } else {
-          valueBuilder_.clear();
+          resourceBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
@@ -24092,14 +24092,14 @@ public final class Protos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        result.key_ = key_;
+        result.name_ = name_;
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        if (valueBuilder_ == null) {
-          result.value_ = value_;
+        if (resourceBuilder_ == null) {
+          result.resource_ = resource_;
         } else {
-          result.value_ = valueBuilder_.build();
+          result.resource_ = resourceBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -24117,28 +24117,28 @@ public final class Protos {
 
       public Builder mergeFrom(mesosphere.marathon.Protos.CustomResourceDefinition other) {
         if (other == mesosphere.marathon.Protos.CustomResourceDefinition.getDefaultInstance()) return this;
-        if (other.hasKey()) {
+        if (other.hasName()) {
           bitField0_ |= 0x00000001;
-          key_ = other.key_;
+          name_ = other.name_;
           onChanged();
         }
-        if (other.hasValue()) {
-          mergeValue(other.getValue());
+        if (other.hasResource()) {
+          mergeResource(other.getResource());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
 
       public final boolean isInitialized() {
-        if (!hasKey()) {
+        if (!hasName()) {
           
           return false;
         }
-        if (!hasValue()) {
+        if (!hasResource()) {
           
           return false;
         }
-        if (!getValue().isInitialized()) {
+        if (!getResource().isInitialized()) {
           
           return false;
         }
@@ -24164,195 +24164,195 @@ public final class Protos {
       }
       private int bitField0_;
 
-      // required string key = 1;
-      private java.lang.Object key_ = "";
+      // required string name = 1;
+      private java.lang.Object name_ = "";
       /**
-       * <code>required string key = 1;</code>
+       * <code>required string name = 1;</code>
        */
-      public boolean hasKey() {
+      public boolean hasName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required string key = 1;</code>
+       * <code>required string name = 1;</code>
        */
-      public java.lang.String getKey() {
-        java.lang.Object ref = key_;
+      public java.lang.String getName() {
+        java.lang.Object ref = name_;
         if (!(ref instanceof java.lang.String)) {
           java.lang.String s = ((com.google.protobuf.ByteString) ref)
               .toStringUtf8();
-          key_ = s;
+          name_ = s;
           return s;
         } else {
           return (java.lang.String) ref;
         }
       }
       /**
-       * <code>required string key = 1;</code>
+       * <code>required string name = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getKeyBytes() {
-        java.lang.Object ref = key_;
+          getNameBytes() {
+        java.lang.Object ref = name_;
         if (ref instanceof String) {
           com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
-          key_ = b;
+          name_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
       /**
-       * <code>required string key = 1;</code>
+       * <code>required string name = 1;</code>
        */
-      public Builder setKey(
+      public Builder setName(
           java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000001;
-        key_ = value;
+        name_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>required string key = 1;</code>
+       * <code>required string name = 1;</code>
        */
-      public Builder clearKey() {
+      public Builder clearName() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        key_ = getDefaultInstance().getKey();
+        name_ = getDefaultInstance().getName();
         onChanged();
         return this;
       }
       /**
-       * <code>required string key = 1;</code>
+       * <code>required string name = 1;</code>
        */
-      public Builder setKeyBytes(
+      public Builder setNameBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000001;
-        key_ = value;
+        name_ = value;
         onChanged();
         return this;
       }
 
-      // required .mesosphere.marathon.CustomResource value = 2;
-      private mesosphere.marathon.Protos.CustomResource value_ = mesosphere.marathon.Protos.CustomResource.getDefaultInstance();
+      // required .mesosphere.marathon.CustomResource resource = 2;
+      private mesosphere.marathon.Protos.CustomResource resource_ = mesosphere.marathon.Protos.CustomResource.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          mesosphere.marathon.Protos.CustomResource, mesosphere.marathon.Protos.CustomResource.Builder, mesosphere.marathon.Protos.CustomResourceOrBuilder> valueBuilder_;
+          mesosphere.marathon.Protos.CustomResource, mesosphere.marathon.Protos.CustomResource.Builder, mesosphere.marathon.Protos.CustomResourceOrBuilder> resourceBuilder_;
       /**
-       * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+       * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
        */
-      public boolean hasValue() {
+      public boolean hasResource() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+       * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
        */
-      public mesosphere.marathon.Protos.CustomResource getValue() {
-        if (valueBuilder_ == null) {
-          return value_;
+      public mesosphere.marathon.Protos.CustomResource getResource() {
+        if (resourceBuilder_ == null) {
+          return resource_;
         } else {
-          return valueBuilder_.getMessage();
+          return resourceBuilder_.getMessage();
         }
       }
       /**
-       * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+       * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
        */
-      public Builder setValue(mesosphere.marathon.Protos.CustomResource value) {
-        if (valueBuilder_ == null) {
+      public Builder setResource(mesosphere.marathon.Protos.CustomResource value) {
+        if (resourceBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          value_ = value;
+          resource_ = value;
           onChanged();
         } else {
-          valueBuilder_.setMessage(value);
+          resourceBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000002;
         return this;
       }
       /**
-       * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+       * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
        */
-      public Builder setValue(
+      public Builder setResource(
           mesosphere.marathon.Protos.CustomResource.Builder builderForValue) {
-        if (valueBuilder_ == null) {
-          value_ = builderForValue.build();
+        if (resourceBuilder_ == null) {
+          resource_ = builderForValue.build();
           onChanged();
         } else {
-          valueBuilder_.setMessage(builderForValue.build());
+          resourceBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000002;
         return this;
       }
       /**
-       * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+       * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
        */
-      public Builder mergeValue(mesosphere.marathon.Protos.CustomResource value) {
-        if (valueBuilder_ == null) {
+      public Builder mergeResource(mesosphere.marathon.Protos.CustomResource value) {
+        if (resourceBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              value_ != mesosphere.marathon.Protos.CustomResource.getDefaultInstance()) {
-            value_ =
-              mesosphere.marathon.Protos.CustomResource.newBuilder(value_).mergeFrom(value).buildPartial();
+              resource_ != mesosphere.marathon.Protos.CustomResource.getDefaultInstance()) {
+            resource_ =
+              mesosphere.marathon.Protos.CustomResource.newBuilder(resource_).mergeFrom(value).buildPartial();
           } else {
-            value_ = value;
+            resource_ = value;
           }
           onChanged();
         } else {
-          valueBuilder_.mergeFrom(value);
+          resourceBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000002;
         return this;
       }
       /**
-       * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+       * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
        */
-      public Builder clearValue() {
-        if (valueBuilder_ == null) {
-          value_ = mesosphere.marathon.Protos.CustomResource.getDefaultInstance();
+      public Builder clearResource() {
+        if (resourceBuilder_ == null) {
+          resource_ = mesosphere.marathon.Protos.CustomResource.getDefaultInstance();
           onChanged();
         } else {
-          valueBuilder_.clear();
+          resourceBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       /**
-       * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+       * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
        */
-      public mesosphere.marathon.Protos.CustomResource.Builder getValueBuilder() {
+      public mesosphere.marathon.Protos.CustomResource.Builder getResourceBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
-        return getValueFieldBuilder().getBuilder();
+        return getResourceFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+       * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
        */
-      public mesosphere.marathon.Protos.CustomResourceOrBuilder getValueOrBuilder() {
-        if (valueBuilder_ != null) {
-          return valueBuilder_.getMessageOrBuilder();
+      public mesosphere.marathon.Protos.CustomResourceOrBuilder getResourceOrBuilder() {
+        if (resourceBuilder_ != null) {
+          return resourceBuilder_.getMessageOrBuilder();
         } else {
-          return value_;
+          return resource_;
         }
       }
       /**
-       * <code>required .mesosphere.marathon.CustomResource value = 2;</code>
+       * <code>required .mesosphere.marathon.CustomResource resource = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           mesosphere.marathon.Protos.CustomResource, mesosphere.marathon.Protos.CustomResource.Builder, mesosphere.marathon.Protos.CustomResourceOrBuilder> 
-          getValueFieldBuilder() {
-        if (valueBuilder_ == null) {
-          valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+          getResourceFieldBuilder() {
+        if (resourceBuilder_ == null) {
+          resourceBuilder_ = new com.google.protobuf.SingleFieldBuilder<
               mesosphere.marathon.Protos.CustomResource, mesosphere.marathon.Protos.CustomResource.Builder, mesosphere.marathon.Protos.CustomResourceOrBuilder>(
-                  value_,
+                  resource_,
                   getParentForChildren(),
                   isClean());
-          value_ = null;
+          resource_ = null;
         }
-        return valueBuilder_;
+        return resourceBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.CustomResourceDefinition)
@@ -24575,10 +24575,11 @@ public final class Protos {
       "mResource.CustomRanges.CustomRange\032A\n\013Cu" +
       "stomRange\022\026\n\016numberRequired\030\001 \002(\004\022\r\n\005beg" +
       "in\030\002 \001(\004\022\013\n\003end\030\003 \001(\004\0322\n\tCustomSet\022\r\n\005va",
-      "lue\030\001 \003(\t\022\026\n\016numberRequired\030\002 \002(\r\"[\n\030Cus" +
-      "tomResourceDefinition\022\013\n\003key\030\001 \002(\t\0222\n\005va" +
-      "lue\030\002 \002(\0132#.mesosphere.marathon.CustomRe" +
-      "sourceB\035\n\023mesosphere.marathonB\006Protos"
+      "lue\030\001 \003(\t\022\026\n\016numberRequired\030\002 \002(\r\"_\n\030Cus" +
+      "tomResourceDefinition\022\014\n\004name\030\001 \002(\t\0225\n\010r" +
+      "esource\030\002 \002(\0132#.mesosphere.marathon.Cust" +
+      "omResourceB\035\n\023mesosphere.marathonB\006Proto" +
+      "s"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -24716,7 +24717,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_CustomResourceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_CustomResourceDefinition_descriptor,
-              new java.lang.String[] { "Key", "Value", });
+              new java.lang.String[] { "Name", "Resource", });
           return null;
         }
       };

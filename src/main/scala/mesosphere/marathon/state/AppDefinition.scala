@@ -21,7 +21,6 @@ import org.apache.mesos.{ Protos => mesos }
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-import org.apache.log4j.Logger // TODOC remove this
 
 @PortIndices
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -84,8 +83,6 @@ case class AppDefinition(
 
   import mesosphere.mesos.protos.Implicits._
 
-  val log = Logger.getLogger(getClass.getName) // TODOC remove this
-
   assert(
     portIndicesAreValid(),
     "Health check port indices must address an element of the ports array or container port mappings."
@@ -108,29 +105,7 @@ case class AppDefinition(
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
-    /*
-    val customResourcesList = customResources.flatMap {
-      case (name, resource) =>
-        value.getType match {
-          case Value.Type.SCALAR =>
-            List(ScalarResource(name, resource.scalar.get.value))
-          case Value.Type.RANGES =>
-            log.info("TODOC print ranges resources")
-            resource.ranges.get.foreach { r => println(r) }
-            List()
-          // foreach rangeresource add it to list
-          //resource.ranges.get.foreach { r => println(r) }
-          //resource.ranges.get.map { r =>
-          //  RangesResource(resource.name, r: Seq[mesosphere.mesos.protos.Range])
-          //}
-          //RangesResource(resource.name, resource.ranges.get: mesosphere.mesos.protos.Range)
-          case Value.Type.SET =>
-            List(SetResource(name, resource.set.get.value))
-          case default =>
-            log.info("TODOC invalid resource type")
-            List()
-        }
-    }*/
+
     val appLabels = labels.map {
       case (key, value) =>
         mesos.Parameter.newBuilder
@@ -142,8 +117,8 @@ case class AppDefinition(
     val customResourcesMap = customResources.map {
       case (key, value) =>
         Protos.CustomResourceDefinition.newBuilder
-          .setKey(key)
-          .setValue(value.toProto)
+          .setName(key)
+          .setResource(value.toProto)
           .build
     }
 
@@ -169,8 +144,6 @@ case class AppDefinition(
       .addAllLabels(appLabels.asJava)
       .addAllCustomResources(customResourcesMap.asJava) // TODOC
 
-    //customResourcesList.foreach(builder.addResources(_))
-
     container.foreach { c => builder.setContainer(c.toProto()) }
 
     acceptedResourceRoles.foreach { acceptedResourceRoles =>
@@ -193,18 +166,14 @@ case class AppDefinition(
         r => r.getName -> (r.getScalar.getValue: JDouble)
       }.toMap
 
-    log.info("TODOC resourcesMAP")
-    log.info(proto.getResourcesList.asScala)
-
     //val customResourcesMap: Map[String, JDouble] = resourcesMap
     // TODOC maybe we don't need name?
     val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
 
-    val customResourcesMap: Map[String, CustomResource] = proto.getCustomResourcesList.asScala // TODOC change name
-      .map { r => r.getKey -> CustomResource.create(r.getValue).get }.toMap
-
-    log.info("TODOC get")
-    proto.getResourcesList.asScala.foreach(r => println(r.getSet))
+    val customResourcesMap: Map[String, CustomResource] = proto.getCustomResourcesList.asScala
+      .map { r =>
+        r.getName -> CustomResource.create(r.getResource).get
+      }.toMap
 
     val commandOption =
       if (proto.getCmd.hasValue && proto.getCmd.getValue.nonEmpty)
