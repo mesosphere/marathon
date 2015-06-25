@@ -21,6 +21,7 @@ object ResourceMatcher {
                            customScalars: Seq[ScalarResource], customSets: Seq[SetResource],
                            customRanges: Seq[RangesResource])
 
+  //scalastyle:off cyclomatic.complexity
   //scalastyle:off method.length
   def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Set[MarathonTask],
                      acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {

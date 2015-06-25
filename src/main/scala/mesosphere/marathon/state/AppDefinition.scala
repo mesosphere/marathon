@@ -99,7 +99,7 @@ case class AppDefinition(
       hc.protocol == Protocol.COMMAND || (validPortIndices contains hc.portIndex)
     }
   }
-
+  //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, None, None, Seq.empty)
     val cpusResource = ScalarResource(Resource.CPUS, cpus)

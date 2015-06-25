@@ -717,7 +717,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(proto1.hasAcceptedResourceRoles)
     assert(proto1.getAcceptedResourceRoles == Protos.ResourceRoles.newBuilder().addRole("a").addRole("b").build())
     println(proto1.getCustomResourcesList.asScala.last.getResource.getScalar.getValue)
-    assert(proto1.getCustomResourcesList.asScala.last.getResource.getScalar.getValue == 10) //Protos.CustomResource.newBuilder().setScalar(Protos.CustomResource.CustomScalar.newBuilder().setValue(10)).build)
+    assert(proto1.getCustomResourcesList.asScala.last.getResource.getScalar.getValue == 10)
     /*
     val app2 = AppDefinition(
       id = "play".toPath,
