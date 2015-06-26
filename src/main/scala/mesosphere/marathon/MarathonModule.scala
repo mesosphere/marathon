@@ -195,7 +195,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideHostPort: String = {
-    "%s:%d".format(conf.hostname(), http.httpPort())
+    val port = if (http.disableHttp()) http.httpsPort() else http.httpPort()
+    "%s:%d".format(conf.hostname(), port)
   }
 
   @Named(ModuleNames.NAMED_CANDIDATE)

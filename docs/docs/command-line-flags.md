@@ -141,7 +141,8 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * `--http_port` (Optional. Default: 8080): The port on which to listen for HTTP
     requests.
 * `--disable_http` (Optional.): Disable HTTP completely. This is only allowed if you configure HTTPS.
-    HTTPS stays enabled.
+    HTTPS stays enabled. <span class="label label-default">v0.9.0</span> Also enables forwarding queries to the
+    leader via HTTPS instead of HTTP.
 * `--https_address` (Optional. Default: all): The address on which to listen
     for HTTPS requests.
 * `--https_port` (Optional. Default: 8443): The port on which to listen for
