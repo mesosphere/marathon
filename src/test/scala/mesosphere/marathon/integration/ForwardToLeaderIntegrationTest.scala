@@ -4,6 +4,7 @@ import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
 import akka.actor.ActorSystem
+import mesosphere.marathon.api.{ LeaderProxyFilter, JavaUrlConnectionRequestForwarder }
 import mesosphere.marathon.integration.setup._
 import org.apache.commons.httpclient.HttpStatus
 import org.scalatest.BeforeAndAfter
@@ -34,6 +35,11 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
     val result = appFacade.ping("localhost", port = ports.head)
     assert(result.originalResponse.status.intValue == 200)
     assert(result.entityString == "pong\n")
+    assert(!result.originalResponse.headers.exists(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA))
+    assert(result.originalResponse.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
+    assert(
+      result.originalResponse.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
+        == s"http://localhost:${ports.head}")
   }
 
   test("forwarding ping") {
@@ -45,6 +51,14 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
     val result = appFacade.ping("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == 200)
     assert(result.entityString == "pong\n")
+    assert(result.originalResponse.headers.count(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) == 1)
+    assert(
+      result.originalResponse.headers.find(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA).get.value
+        == s"1.1 localhost:${ports(1)}")
+    assert(result.originalResponse.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
+    assert(
+      result.originalResponse.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
+        == s"http://localhost:${ports.head}")
   }
 
   test("direct HTTPS ping") {
@@ -57,8 +71,12 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
 
     val pingURL = new URL(s"https://localhost:${ports.head}/ping")
     val connection = SSLContextTestUtil.sslConnection(pingURL)
+    val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
+    val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
     val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
     assert(response == "pong\n")
+    assert(via == null)
+    assert(leader == s"https://localhost:${ports.head}")
   }
 
   test("forwarding HTTPS ping") {
@@ -80,8 +98,12 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
 
     val pingURL = new URL(s"https://localhost:${ports(1)}/ping")
     val connection = SSLContextTestUtil.sslConnection(pingURL)
+    val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
+    val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
     val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
     assert(response == "pong\n")
+    assert(via == s"1.1 localhost:${ports(1)}")
+    assert(leader == s"https://localhost:${ports.head}")
   }
 
   test("direct 404") {
