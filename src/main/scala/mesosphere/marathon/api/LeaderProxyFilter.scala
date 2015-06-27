@@ -65,13 +65,19 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
   private[this] val scheme = if (httpConf.disableHttp()) "https" else "http"
 
   private[this] def buildUrl(leaderData: String, request: HttpServletRequest): URL = {
-    if (request.getQueryString != null) {
-      new URL(s"$scheme://$leaderData${request.getRequestURI}?${request.getQueryString}")
-    }
-    else {
-      new URL(s"$scheme://$leaderData${request.getRequestURI}")
-    }
+    buildUrl(leaderData, request.getRequestURI, Option(request.getQueryString))
   }
+
+  private[this] def buildUrl(
+    leaderData: String,
+    requestURI: String = "",
+    queryStringOpt: Option[String] = None): URL =
+    {
+      queryStringOpt match {
+        case Some(queryString) => new URL(s"$scheme://$leaderData$requestURI?$queryString")
+        case None              => new URL(s"$scheme://$leaderData$requestURI")
+      }
+    }
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
@@ -117,6 +123,7 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
         lazy val leaderDataOpt = leaderInfo.currentLeaderHostPort()
 
         if (leaderInfo.elected) {
+          response.addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, buildUrl(myHostPort).toString)
           chain.doFilter(request, response)
         }
         else if (leaderDataOpt.forall(_ == myHostPort)) { // either not leader or ourselves
@@ -159,6 +166,7 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
 object LeaderProxyFilter {
   private val log = Logger.getLogger(getClass.getName)
 
+  val HEADER_MARATHON_LEADER: String = "X-Marathon-Leader"
   val ERROR_STATUS_NO_CURRENT_LEADER: String = "Could not determine the current leader"
 }
 
@@ -263,6 +271,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
           }
         }
       }
+      response.addHeader(HEADER_VIA, viaValue)
 
       IO.using(response.getOutputStream) { output =>
         try {
