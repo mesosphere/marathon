@@ -25,6 +25,7 @@ object MarathonBuild extends Build {
                integrationTestSettings ++
                teamCitySetEnvSettings ++
                Seq(
+                 publishTo := Some(Resolver.file("file",  new File( "/tmp" ))),
                  libraryDependencies ++= Dependencies.root,
                  parallelExecution in Test := false,
                  fork in Test := true
