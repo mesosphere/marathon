@@ -34,7 +34,8 @@ require_arg() {
   fi
 }
 
-for env_op in `env | grep ^MARATHON_ | awk '{gsub(/MARATHON_/,""); gsub(/=/," "); printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'`; do
+# Filter out MARATHON_APP* env variables. All MARATHON_XXX=yyy variables are interpreted as -xxx yyy application parameter
+for env_op in `env | grep -v ^MARATHON_APP | grep ^MARATHON_ | awk '{gsub(/MARATHON_/,""); gsub(/=/," "); printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'`; do
   addApplication "$env_op"
 done
 
