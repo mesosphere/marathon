@@ -121,7 +121,9 @@ object ForwarderService {
   private def startImpl(conf: ForwarderConf, leaderModule: Module, assetPath: String = "/tmp"): Service = {
     val injector = Guice.createInjector(
       new MetricsModule, new HttpModule(conf),
-      new ForwarderAppModule(myHostPort = s"localhost:${conf.httpPort()}", conf, conf),
+      new ForwarderAppModule(
+        myHostPort = if (conf.disableHttp()) s"localhost:${conf.httpsPort()}" else s"localhost:${conf.httpPort()}",
+        conf, conf),
       leaderModule
     )
     val http = injector.getInstance(classOf[HttpService])
