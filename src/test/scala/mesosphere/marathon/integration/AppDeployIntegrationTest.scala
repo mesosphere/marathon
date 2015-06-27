@@ -1,5 +1,7 @@
 package mesosphere.marathon.integration
 
+import java.lang.{ Double => JDouble }
+
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.AppUpdate
 import mesosphere.marathon.health.HealthCheck
@@ -35,6 +37,22 @@ class AppDeployIntegrationTest
     extractDeploymentIds(result) should have size 1
     waitForEvent("deployment_success")
     waitForTasks(app.id, 1) //make sure, the app has really started
+  }
+
+  test("increase the app count metric when an app is created") {
+    Given("a new app")
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+
+    var appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "value").as[Int]
+    appCount should be (0)
+
+    When("The app is deployed")
+    val result = marathon.createApp(app)
+
+    Then("The app count metric should increase")
+    result.code should be (201) // Created
+    appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "value").as[Int]
+    appCount should be (1)
   }
 
   test("create a simple app without health checks via secondary (proxying)") {
@@ -165,20 +183,20 @@ class AppDeployIntegrationTest
     marathon.createApp(app)
     waitForEvent("deployment_success")
 
-    When("The app get an update to be scaled up")
-    val saleUp = marathon.updateApp(app.id, AppUpdate(instances = Some(2)))
+    When("The app is scaled up")
+    val scaleUp = marathon.updateApp(app.id, AppUpdate(instances = Some(2)))
 
-    Then("The app is scaled up")
-    saleUp.code should be (200) //OK
+    Then("New tasks are launched")
+    scaleUp.code should be (200) //OK
     waitForEvent("deployment_success")
     waitForTasks(app.id, 2)
 
-    When("The app get an update to be scaled down")
+    When("The apps is scaled down")
     val scaleDown = marathon.updateApp(app.id, AppUpdate(instances = Some(1)))
 
-    Then("The app is scaled down")
+    Then("Tasks are killed")
     scaleDown.code should be (200) //OK
-    waitForEvent("deployment_success")
+    waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
     waitForTasks(app.id, 1)
   }
 
@@ -204,15 +222,43 @@ class AppDeployIntegrationTest
   test("list app versions") {
     Given("a new app")
     val v1 = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
-    marathon.createApp(v1).code should be (201)
+    val createResponse = marathon.createApp(v1)
+    createResponse.code should be (201)
     waitForEvent("deployment_success")
 
-    When("The app is restarted")
+    When("The list of versions is fetched")
     val list = marathon.listAppVersions(v1.id)
 
-    Then("All instances of the app get restarted")
+    Then("The response should contain all the versions")
     list.code should be (200)
     list.value.versions should have size 1
+    list.value.versions.head should be (createResponse.value.version)
+  }
+
+  test("correctly version apps") {
+    Given("a new app")
+    val v1 = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val createResponse = marathon.createApp(v1)
+    createResponse.code should be (201)
+    val originalVersion = createResponse.value.version
+    waitForEvent("deployment_success")
+
+    When("A resource specification is updated")
+    val updatedDisk: JDouble = v1.disk + 1.0
+    val appUpdate = AppUpdate(Option(v1.id), disk = Option(updatedDisk))
+    val updateResponse = marathon.updateApp(v1.id, appUpdate)
+    updateResponse.code should be (200)
+    waitForEvent("deployment_success")
+
+    Then("It should create a new version with the right data")
+    val responseOriginalVersion = marathon.appVersion(v1.id, originalVersion)
+    responseOriginalVersion.code should be (200)
+    responseOriginalVersion.value.disk should be (v1.disk)
+
+    val updatedVersion = updateResponse.value.version
+    val responseUpdatedVersion = marathon.appVersion(v1.id, updatedVersion)
+    responseUpdatedVersion.code should be (200)
+    responseUpdatedVersion.value.disk should be (updatedDisk)
   }
 
   test("kill a task of an App") {

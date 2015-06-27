@@ -20,10 +20,10 @@ import scala.concurrent.duration._
   * Needed for dumb jackson.
   */
 case class ListAppsResult(apps: Seq[AppDefinition])
-case class AppVersions(versions: Seq[String])
+case class AppVersions(versions: Seq[Timestamp])
 case class ListTasks(tasks: Seq[ITEnrichedTask])
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
-case class ITDeploymentResult(version: String, deploymentId: String)
+case class ITDeploymentResult(version: Timestamp, deploymentId: String)
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Integer], startedAt: Date, stagedAt: Date, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
 
@@ -83,9 +83,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Delete(s"$url/v2/apps$id?force=$force")), waitTime)
   }
 
-  def updateApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[HttpResponse] = {
+  def updateApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = sendReceive ~> read[ITDeploymentResult]
     val putUrl: String = s"$url/v2/apps$id?force=$force"
     LoggerFactory.getLogger(getClass).info(s"put url = $putUrl")
 
@@ -102,6 +102,12 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     requireInBaseGroup(id)
     val pipeline = sendReceive ~> read[AppVersions]
     result(pipeline(Get(s"$url/v2/apps$id/versions")), waitTime)
+  }
+
+  def appVersion(id: PathId, version: Timestamp): RestResult[AppDefinition] = {
+    requireInBaseGroup(id)
+    val pipeline = sendReceive ~> read[AppDefinition]
+    result(pipeline(Get(s"$url/v2/apps$id/versions/$version")), waitTime)
   }
 
   //apps tasks resource --------------------------------------
@@ -168,9 +174,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
   }
 
-  def rollbackGroup(groupId: PathId, version: String, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def rollbackGroup(groupId: PathId, version: Timestamp, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(groupId)
-    updateGroup(groupId, GroupUpdate(None, version = Some(Timestamp(version))), force)
+    updateGroup(groupId, GroupUpdate(None, version = Some(version)), force)
   }
 
   //deployment resource ------
