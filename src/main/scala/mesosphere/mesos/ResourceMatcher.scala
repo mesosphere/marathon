@@ -104,7 +104,7 @@ object ResourceMatcher {
     def customScalarRolesOpt: Option[Seq[ScalarResource]] = Some(app.customResources
       .filter {
         case (_, value) =>
-          value.getType == Value.Type.SCALAR
+          value.resourceType == Value.Type.SCALAR
       }
       .map {
         case (key, value) =>
@@ -114,7 +114,7 @@ object ResourceMatcher {
     def customRangesRolesOpt: Option[Seq[RangesResource]] = Some(app.customResources
       .filter {
         case (_, value) =>
-          value.getType == Value.Type.RANGES
+          value.resourceType == Value.Type.RANGES
       }
       .map {
         case (key, value) =>
@@ -125,7 +125,7 @@ object ResourceMatcher {
     def customSetRolesOpt: Option[Seq[SetResource]] = Some(app.customResources
       .filter {
         case (_, value) =>
-          value.getType == Value.Type.SET
+          value.resourceType == Value.Type.SET
       }
       .map {
         case (key, value) =>

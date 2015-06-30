@@ -155,6 +155,63 @@
             "minimum": 0,
             "type": "number"
         },
+        "customResources": {
+            "patternProperties": {
+                ".*": {
+                    "scalar": {
+                        "properties": {
+                            "value": {
+                                "type": "number"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "set": {
+                        "properties": {
+                            "value": {
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            },
+                            "numberRequired": {
+                                "minimum": 0,
+                                "type": "integer"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "ranges": {
+                        "properties": {
+                            "value": {
+                                "items": {
+                                    "properties": {
+                                        "begin": {
+                                            "minimum": 0,
+                                            "type": "integer"
+                                        },
+                                        "end": {
+                                            "minimum": 0,
+                                            "type": "integer"
+                                        },
+                                        "numberRequired": {
+                                            "minimum": 0,
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                               },
+                               "type": "array"
+                            },
+                            "type": "object"
+                        },
+                        "type": "object"
+                    },
+                    "type": "object"
+                }
+            },
+            "type": "object"
+        },
         "env": {
             "patternProperties": {
                 ".*": {

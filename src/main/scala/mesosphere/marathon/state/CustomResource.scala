@@ -17,32 +17,17 @@ case class CustomResource(
 
     set: Option[CustomResource.CustomSet] = None) {
 
-  //val log = Logger.getLogger(getClass.getName)
-
-  val resourceSet = Set(scalar, ranges, set)
-
-  if (resourceSet.filter(!_.isEmpty).size == 0) {
-    //log.info("No resource value (scalar, range, or set) specified for custom resource") //TODOC change to warn
-  }
-
-  if (resourceSet.filter(!_.isEmpty).size > 1) {
-    //log.info("Multiple resources types specified for (scalar, range, or set) specified" +
-    //  " for custom resource")
-  }
-
   var resourceType: Value.Type = Value.Type.SCALAR
   if (!ranges.isEmpty)
     resourceType = Value.Type.RANGES
   else if (!set.isEmpty)
     resourceType = Value.Type.SET
 
-  def getType: Value.Type = resourceType
-
   def toProto: Protos.CustomResource = {
     val builder = Protos.CustomResource.newBuilder
 
     builder.setName(name)
-    getType match {
+    resourceType match {
       case Value.Type.SCALAR => builder.setScalar(scalar.get.toProto)
       case Value.Type.RANGES => builder.setRange(ranges.get.toProto)
       case Value.Type.SET    => builder.setSet(set.get.toProto)
