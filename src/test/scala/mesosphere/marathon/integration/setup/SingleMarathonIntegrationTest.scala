@@ -47,8 +47,7 @@ trait SingleMarathonIntegrationTest
   override lazy val marathon: MarathonFacade = new MarathonFacade(config.marathonUrl, testBasePath)
 
   lazy val marathonProxy = {
-    startMarathon(config.marathonPort + 1, "--master", config.master, "--event_subscriber", "http_callback",
-      "--enable_metrics")
+    startMarathon(config.marathonPort + 1, "--master", config.master, "--event_subscriber", "http_callback")
     new MarathonFacade(config.copy(marathonPort = config.marathonPort + 1).marathonUrl, testBasePath)
   }
 
