@@ -293,14 +293,14 @@ class MarathonSchedulerActor private (
 
   def deploymentSuccess(plan: DeploymentPlan): Unit = {
     log.info(s"Deployment of ${plan.target.id} successful")
-    eventBus.publish(DeploymentSuccess(plan.id))
+    eventBus.publish(DeploymentSuccess(plan.id, plan))
     deploymentRepository.expunge(plan.id)
   }
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
     log.error(reason, s"Deployment of ${plan.target.id} failed")
     plan.affectedApplicationIds.foreach(appId => taskQueue.purge(appId))
-    eventBus.publish(DeploymentFailed(plan.id))
+    eventBus.publish(DeploymentFailed(plan.id, plan))
     if (reason.isInstanceOf[DeploymentCanceledException])
       deploymentRepository.expunge(plan.id)
   }
