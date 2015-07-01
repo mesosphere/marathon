@@ -142,7 +142,7 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
-      .addAllCustomResources(customResourcesMap.asJava) // TODOC
+      .addAllCustomResources(customResourcesMap.asJava)
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
@@ -168,7 +168,6 @@ case class AppDefinition(
         r => r.getName -> (r.getScalar.getValue: JDouble)
       }.toMap
 
-    //val customResourcesMap: Map[String, JDouble] = resourcesMap
     // TODOC maybe we don't need name?
     val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
 
