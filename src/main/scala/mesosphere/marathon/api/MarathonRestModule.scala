@@ -8,6 +8,7 @@ import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Singleton, Provides, Scopes }
 import mesosphere.chaos.http.{ HttpConf, RestModule }
 import mesosphere.jackson.CaseClassModule
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.json.MarathonModule
 import mesosphere.marathon.event.http.HttpEventStreamServlet
 import mesosphere.marathon.io.SSLContextUtil
@@ -60,6 +61,8 @@ class MarathonRestModule extends RestModule {
 
     install(new LeaderProxyFilterModule)
 
+    filter("/*").through(classOf[LimitConcurrentRequestsFilter])
+
     bind(classOf[SetRequestDefaultsFilter]).asEagerSingleton()
     filter("/*").through(classOf[SetRequestDefaultsFilter])
 
@@ -73,5 +76,11 @@ class MarathonRestModule extends RestModule {
     serve("/v2/events").`with`(classOf[HttpEventStreamServlet])
 
     super.configureServlets()
+  }
+
+  @Provides
+  @Singleton
+  def provideRequestsLimiter(conf: MarathonConf): LimitConcurrentRequestsFilter = {
+    new LimitConcurrentRequestsFilter(conf.maxConcurrentHttpConnections())
   }
 }
