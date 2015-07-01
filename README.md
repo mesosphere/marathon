@@ -1,5 +1,5 @@
 [![Stories in Ready](https://badge.waffle.io/mesosphere/marathon.png?label=ready&title=Ready)](https://waffle.io/mesosphere/marathon)
-# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://travis-ci.org/mesosphere/marathon.png?branch=master)](https://travis-ci.org/mesosphere/marathon)
+# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://travis-ci.org/mesosphere/marathon.png?branch=master)](https://travis-ci.org/mesosphere/marathon) [![Coverage Status](https://coveralls.io/repos/mesosphere/marathon/badge.svg?branch=master)](https://coveralls.io/r/mesosphere/marathon?branch=master)
 
 Marathon is an [Apache Mesos][Mesos] framework for long-running applications. Given that
 you have Mesos running as the kernel for your datacenter, Marathon is the
