@@ -723,7 +723,6 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val customResources = proto1.getCustomResourcesList.asScala.map {
       r => r.getName -> r.getResource
     }.toMap
-    println(customResources) // TOODC
     assert(customResources("foo").getScalar.getValue == 10)
     assert(customResources("bar").getSet.getValueList.asScala.toList == Seq("a", "b", "c", "d"))
     assert(customResources("bar").getSet.getNumberRequired == 4)

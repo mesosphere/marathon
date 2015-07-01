@@ -8,6 +8,7 @@ import org.apache.mesos.Protos.Offer
 import org.rogach.scallop.ScallopConf
 
 import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.CustomResource
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.IterativeOfferMatcher
 import mesosphere.mesos.protos._
@@ -42,8 +43,9 @@ trait MarathonTestHelper {
     makeConfig(args: _*)
   }
 
-  def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
-                     beginPort: Int = 31000, endPort: Int = 32000, role: String = "*"): Offer.Builder = {
+  def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0, beginPort: Int = 31000, endPort: Int = 32000,
+                     role: String = "*", customScalar: Double = 4.0, customSet: Set[String] = Set("a", "b", "c", "d"),
+                     customRanges: Seq[(Int, Int)] = Seq((10000, 20000), (25000, 27000))): Offer.Builder = {
     val cpusResource = ScalarResource(Resource.CPUS, cpus, role = role)
     val memResource = ScalarResource(Resource.MEM, mem, role = role)
     val diskResource = ScalarResource(Resource.DISK, disk, role = role)
@@ -57,6 +59,9 @@ trait MarathonTestHelper {
     else {
       None
     }
+    val customScalarResource = ScalarResource("customScalar", customScalar, role = role)
+    val customSetResource = SetResource("customSet", customSet, role = role)
+    val customRangesResource = RangesResource("customRanges", customRanges.map(r => Range(r._1.toLong, r._2.toLong)), role = role)
     val offerBuilder = Offer.newBuilder
       .setId(OfferID("1"))
       .setFrameworkId(FrameworkID("marathon"))
@@ -65,6 +70,9 @@ trait MarathonTestHelper {
       .addResources(cpusResource)
       .addResources(memResource)
       .addResources(diskResource)
+      .addResources(customScalarResource)
+      .addResources(customSetResource)
+      .addResources(customRangesResource)
 
     portsResource.foreach(offerBuilder.addResources(_))
 
@@ -125,13 +133,8 @@ trait MarathonTestHelper {
   val appSchema = getAppSchema()
 
   def validateJsonSchema(app: AppDefinition, valid: Boolean = true) {
-    println("TODOC1 appStr appJson")
     val appStr = schemaMapper.writeValueAsString(app)
-    println("TODOC2 appStr appJson")
-    println(appStr)
     val appJson = JsonLoader.fromString(appStr)
-    println("TODOC3 appStr appJson")
-    println(appJson)
     assert(appSchema.validate(appJson).isSuccess == valid)
   }
 }
