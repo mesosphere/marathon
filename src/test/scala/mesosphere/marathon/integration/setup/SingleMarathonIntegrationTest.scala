@@ -46,9 +46,10 @@ trait SingleMarathonIntegrationTest
   val testBasePath: PathId = PathId("/marathonintegrationtest")
   override lazy val marathon: MarathonFacade = new MarathonFacade(config.marathonUrl, testBasePath)
 
+  def extraMarathonParameters: List[String] = List.empty[String]
+
   lazy val marathonProxy = {
-    startMarathon(config.marathonPort + 1, "--master", config.master, "--event_subscriber", "http_callback",
-      "--enable_metrics")
+    startMarathon(config.marathonPort + 1, "--master", config.master, "--event_subscriber", "http_callback")
     new MarathonFacade(config.copy(marathonPort = config.marathonPort + 1).marathonUrl, testBasePath)
   }
 
@@ -69,7 +70,9 @@ trait SingleMarathonIntegrationTest
       ProcessKeeper.startMesosLocal()
       cleanMarathonState()
 
-      startMarathon(config.marathonPort, "--master", config.master, "--event_subscriber", "http_callback")
+      val parameters = List("--master", config.master, "--event_subscriber", "http_callback") ++ extraMarathonParameters
+      startMarathon(config.marathonPort, parameters: _*)
+
       log.info("Setting up local mesos/marathon infrastructure: done.")
     }
     else {

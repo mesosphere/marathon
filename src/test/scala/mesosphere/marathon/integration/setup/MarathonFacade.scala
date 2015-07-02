@@ -1,5 +1,6 @@
 package mesosphere.marathon.integration.setup
 
+import java.io.File
 import java.util.Date
 
 import akka.actor.ActorSystem
@@ -10,7 +11,7 @@ import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import org.slf4j.LoggerFactory
 import spray.client.pipelining._
-import spray.http.HttpResponse
+import spray.http._
 
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
@@ -212,5 +213,22 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   def metrics(): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Get(s"$url/metrics")), waitTime)
+  }
+
+  //artifacts ---------------------------------------------
+  def uploadArtifact(path: String, file: File): RestResult[HttpResponse] = {
+    val pipeline = sendReceive ~> responseResult
+    val payload = MultipartFormData(Seq(BodyPart(file, "file")))
+    result(pipeline(Post(s"$url/v2/artifacts$path", payload)), waitTime)
+  }
+
+  def getArtifact(path: String): RestResult[HttpResponse] = {
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Get(s"$url/v2/artifacts$path")), waitTime)
+  }
+
+  def deleteArtifact(path: String): RestResult[HttpResponse] = {
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Delete(s"$url/v2/artifacts$path")), waitTime)
   }
 }
