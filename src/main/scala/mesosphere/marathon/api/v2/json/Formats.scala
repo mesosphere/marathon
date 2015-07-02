@@ -178,7 +178,7 @@ trait ContainerFormats {
     (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
   )(Docker(_, _, _, _, _, _), unlift(Docker.unapply))
 
-  implicit val ModeFormat: Format[mesos.Volume.Mode] =
+  implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mode")
 
   implicit lazy val VolumeFormat: Format[Volume] = (
@@ -187,7 +187,7 @@ trait ContainerFormats {
     (__ \ "mode").format[mesos.Volume.Mode]
   )(Volume(_, _, _), unlift(Volume.unapply))
 
-  implicit val ContainerTypeFormat: Format[mesos.ContainerInfo.Type] =
+  implicit lazy val ContainerTypeFormat: Format[mesos.ContainerInfo.Type] =
     enumFormat(mesos.ContainerInfo.Type.valueOf, str => s"$str is not a valid container type")
 
   implicit lazy val ContainerFormat: Format[Container] = (
@@ -436,50 +436,44 @@ trait V2Formats {
   }
 
   implicit lazy val V2AppDefinitionWrites: Writes[V2AppDefinition] = {
-    implicit val durationWrites = Writes[FiniteDuration] { d =>
+    implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
     }
 
     Writes[V2AppDefinition] { app =>
-      try {
-        Json.obj(
-          "id" -> app.id.toString,
-          "cmd" -> app.cmd,
-          "args" -> app.args,
-          "user" -> app.user,
-          "env" -> app.env,
-          "instances" -> app.instances,
-          "cpus" -> app.cpus,
-          "mem" -> app.mem,
-          "disk" -> app.disk,
-          "executor" -> app.executor,
-          "constraints" -> app.constraints,
-          "uris" -> app.uris,
-          "storeUrls" -> app.storeUrls,
-          // the ports field was written incorrectly in old code if a container was specified
-          // it should contain the service ports
-          "ports" -> app.toAppDefinition.servicePorts,
-          "requirePorts" -> app.requirePorts,
-          "backoffSeconds" -> app.backoff,
-          "backoffFactor" -> app.backoffFactor,
-          "maxLaunchDelaySeconds" -> app.maxLaunchDelay,
-          "container" -> app.container,
-          "healthChecks" -> app.healthChecks,
-          "dependencies" -> app.dependencies,
-          "upgradeStrategy" -> app.upgradeStrategy,
-          "labels" -> app.labels,
-          "acceptedResourceRoles" -> app.acceptedResourceRoles,
-          "version" -> app.version
-        )
-      }
-      catch {
-        case NonFatal(e) =>
-          throw e
-      }
+      Json.obj(
+        "id" -> app.id.toString,
+        "cmd" -> app.cmd,
+        "args" -> app.args,
+        "user" -> app.user,
+        "env" -> app.env,
+        "instances" -> app.instances,
+        "cpus" -> app.cpus,
+        "mem" -> app.mem,
+        "disk" -> app.disk,
+        "executor" -> app.executor,
+        "constraints" -> app.constraints,
+        "uris" -> app.uris,
+        "storeUrls" -> app.storeUrls,
+        // the ports field was written incorrectly in old code if a container was specified
+        // it should contain the service ports
+        "ports" -> app.toAppDefinition.servicePorts,
+        "requirePorts" -> app.requirePorts,
+        "backoffSeconds" -> app.backoff,
+        "backoffFactor" -> app.backoffFactor,
+        "maxLaunchDelaySeconds" -> app.maxLaunchDelay,
+        "container" -> app.container,
+        "healthChecks" -> app.healthChecks,
+        "dependencies" -> app.dependencies,
+        "upgradeStrategy" -> app.upgradeStrategy,
+        "labels" -> app.labels,
+        "acceptedResourceRoles" -> app.acceptedResourceRoles,
+        "version" -> app.version
+      )
     }
   }
 
-  implicit val WithTaskCountsAndDeploymentsWrites: Writes[WithTaskCountsAndDeployments] =
+  implicit lazy val WithTaskCountsAndDeploymentsWrites: Writes[WithTaskCountsAndDeployments] =
     Writes { app =>
       val appJson = V2AppDefinitionWrites.writes(app).as[JsObject]
 
@@ -492,7 +486,7 @@ trait V2Formats {
       )
     }
 
-  implicit val WithTasksAndDeploymentsWrites: Writes[WithTasksAndDeployments] =
+  implicit lazy val WithTasksAndDeploymentsWrites: Writes[WithTasksAndDeployments] =
     Writes { app =>
       val appJson = WithTaskCountsAndDeploymentsWrites.writes(app).as[JsObject]
       appJson ++ Json.obj(
@@ -500,7 +494,7 @@ trait V2Formats {
       )
     }
 
-  implicit val WithTasksAndDeploymentsAndFailuresWrites: Writes[WithTasksAndDeploymentsAndTaskFailures] =
+  implicit lazy val WithTasksAndDeploymentsAndFailuresWrites: Writes[WithTasksAndDeploymentsAndTaskFailures] =
     Writes { app =>
       val appJson = WithTasksAndDeploymentsWrites.writes(app).as[JsObject]
       appJson ++ Json.obj(

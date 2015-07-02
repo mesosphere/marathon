@@ -232,9 +232,8 @@ class AppsResource @Inject() (
       previousVersion.orElse(Some(update(V2AppDefinition(app)).toAppDefinition)).getOrElse(app)
     }
     def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
-      val transform = (app: AppDefinition) => updateApp(update, app)
       update.id match {
-        case Some(id) => group.updateApp(id.canonicalPath(), transform, version)
+        case Some(id) => group.updateApp(id.canonicalPath(), updateApp(update, _), version)
         case None     => group
       }
     }

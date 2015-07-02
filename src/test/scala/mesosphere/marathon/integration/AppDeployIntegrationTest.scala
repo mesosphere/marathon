@@ -41,13 +41,13 @@ class AppDeployIntegrationTest
 
   test("increase the app count metric when an app is created") {
     Given("a new app")
-    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val app = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
 
     var appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "value").as[Int]
     appCount should be (0)
 
     When("The app is deployed")
-    val result = marathon.createApp(app)
+    val result = marathon.createAppV2(app)
 
     Then("The app count metric should increase")
     result.code should be (201) // Created
@@ -222,7 +222,7 @@ class AppDeployIntegrationTest
   test("list app versions") {
     Given("a new app")
     val v1 = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
-    val createResponse = marathon.createAppV2(v1).code should be (201)
+    val createResponse = marathon.createAppV2(v1)
     createResponse.code should be (201)
     waitForEvent("deployment_success")
 
@@ -237,15 +237,15 @@ class AppDeployIntegrationTest
 
   test("correctly version apps") {
     Given("a new app")
-    val v1 = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
-    val createResponse = marathon.createApp(v1)
+    val v1 = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val createResponse = marathon.createAppV2(v1)
     createResponse.code should be (201)
     val originalVersion = createResponse.value.version
     waitForEvent("deployment_success")
 
     When("A resource specification is updated")
     val updatedDisk: JDouble = v1.disk + 1.0
-    val appUpdate = AppUpdate(Option(v1.id), disk = Option(updatedDisk))
+    val appUpdate = V2AppUpdate(Option(v1.id), disk = Option(updatedDisk))
     val updateResponse = marathon.updateApp(v1.id, appUpdate)
     updateResponse.code should be (200)
     waitForEvent("deployment_success")

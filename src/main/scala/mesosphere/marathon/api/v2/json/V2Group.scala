@@ -15,11 +15,11 @@ case class V2Group(
     */
   def toGroup(): Group =
     Group(
-      id,
-      apps.map(_.toAppDefinition),
-      groups.map(_.toGroup),
-      dependencies,
-      version
+      id = id,
+      apps = apps.map(_.toAppDefinition),
+      groups = groups.map(_.toGroup),
+      dependencies = dependencies,
+      version = version
     )
 
 }
@@ -31,9 +31,9 @@ object V2Group {
 
   def apply(group: Group): V2Group =
     V2Group(
-      group.id,
-      group.apps.map(V2AppDefinition(_)),
-      group.groups.map(V2Group(_)),
-      group.dependencies,
-      group.version)
+      id = group.id,
+      apps = group.apps.map(V2AppDefinition(_)),
+      groups = group.groups.map(V2Group(_)),
+      dependencies = group.dependencies,
+      version = group.version)
 }

@@ -181,7 +181,7 @@ object V2AppDefinition {
     @JsonProperty
     def deployments: Seq[Identifiable] = {
       runningDeployments.collect {
-        case plan: Any if plan.affectedApplicationIds contains app.id => Identifiable(plan.id)
+        case plan: DeploymentPlan if plan.affectedApplicationIds contains app.id => Identifiable(plan.id)
       }
     }
   }

@@ -13,9 +13,9 @@ final case class V2DeploymentPlan(
 object V2DeploymentPlan {
   def apply(plan: DeploymentPlan): V2DeploymentPlan =
     V2DeploymentPlan(
-      plan.id,
-      V2Group(plan.original),
-      V2Group(plan.target),
-      plan.steps,
-      plan.version)
+      id = plan.id,
+      original = V2Group(plan.original),
+      target = V2Group(plan.target),
+      steps = plan.steps,
+      version = plan.version)
 }
