@@ -20,14 +20,15 @@ Features:
 
 
 Configuration:
-  Service configuration lives in marathon via environment variables.
+  Service configuration lives in Marathon via environment variables.
   The servicerouter just needs to know where to find marathon.
   To run in listening mode you must also specify the address + port at
   which the servicerouter can be reached by marathon.
 
 
 Usage:
-  $ servicerouter.py --marathon http://marathon1:8080 --haproxy-config /etc/haproxy/haproxy.cfg
+  $ servicerouter.py --marathon http://marathon1:8080 \
+        --haproxy-config /etc/haproxy/haproxy.cfg
 
   The user that executes servicerouter must have the permission to reload
   haproxy.
@@ -64,10 +65,10 @@ Environment Variables:
 
 
 Templates:
-  The servicerouter searches for configuration files in the templates/ directory.
-  The templates/ directory contains servicerouter configuration settings and
-  example usage. The templates/ directory is located in a relative path from
-  where the script is run.
+  The servicerouter searches for configuration files in the templates/
+  directory. The templates/ directory contains servicerouter configuration
+  settings and example usage. The templates/ directory is located in a relative
+  path from where the script is run.
 
   HAPROXY_HEAD
     The head of the haproxy config. This contains global settings
@@ -218,106 +219,112 @@ class ConfigTemplater(object):
 '''
 
     def __init__(self, directory='templates'):
-       self.__template_dicrectory = directory
-       self.__load_templates()
+        self.__template_directory = directory
+        self.__load_templates()
 
     def __load_templates(self):
-       '''Loads template files if they exist, othwerwise it sets defaults'''
-       variables = [
-          'HAPROXY_HEAD',
-          'HAPROXY_HTTP_FRONTEND_HEAD',
-          'HAPROXY_HTTPS_FRONTEND_HEAD',
-          'HAPROXY_FRONTEND_HEAD',
-          'HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS',
-          'HAPROXY_BACKEND_HEAD',
-          'HAPROXY_HTTP_FRONTEND_ACL',
-          'HAPROXY_HTTPS_FRONTEND_ACL',
-          'HAPROXY_BACKEND_HTTP_OPTIONS',
-          'HAPROXY_BACKEND_STICKY_OPTIONS',
-          'HAPROXY_BACKEND_SERVER_OPTIONS',
-          'HAPROXY_FRONTEND_BACKEND_GLUE',
-       ]
+        '''Loads template files if they exist, othwerwise it sets defaults'''
+        variables = [
+            'HAPROXY_HEAD',
+            'HAPROXY_HTTP_FRONTEND_HEAD',
+            'HAPROXY_HTTPS_FRONTEND_HEAD',
+            'HAPROXY_FRONTEND_HEAD',
+            'HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS',
+            'HAPROXY_BACKEND_HEAD',
+            'HAPROXY_HTTP_FRONTEND_ACL',
+            'HAPROXY_HTTPS_FRONTEND_ACL',
+            'HAPROXY_BACKEND_HTTP_OPTIONS',
+            'HAPROXY_BACKEND_STICKY_OPTIONS',
+            'HAPROXY_BACKEND_SERVER_OPTIONS',
+            'HAPROXY_FRONTEND_BACKEND_GLUE',
+        ]
 
-       for variable in variables:
-          try:
-             filename = os.path.join(self.__template_dicrectory, variable)
-             with open(filename) as f:
-                logger.info('overriding %s from %s', variable, filename)
-                setattr(self, variable, f.read())
-          except IOError:
-             logger.debug("setting default value for %s", variable)
-             try:
-                setattr(self, variable, getattr(self.__class__, variable))
-             except AttributeError:
-                logger.exception('default not found, aborting.')
-                raise
+        for variable in variables:
+            try:
+                filename = os.path.join(self.__template_dicrectory, variable)
+                with open(filename) as f:
+                    logger.info('overriding %s from %s', variable, filename)
+                    setattr(self, variable, f.read())
+            except IOError:
+                logger.debug("setting default value for %s", variable)
+                try:
+                    setattr(self, variable, getattr(self.__class__, variable))
+                except AttributeError:
+                    logger.exception('default not found, aborting.')
+                    raise
 
     @property
     def haproxy_head(self):
-       return self.HAPROXY_HEAD
+        return self.HAPROXY_HEAD
 
     @property
     def haproxy_http_frontend_head(self):
-       return self.HAPROXY_HTTP_FRONTEND_HEAD
+        return self.HAPROXY_HTTP_FRONTEND_HEAD
 
     @property
     def haproxy_https_frontend_head(self):
-       return self.HAPROXY_HTTPS_FRONTEND_HEAD
+        return self.HAPROXY_HTTPS_FRONTEND_HEAD
 
     @property
     def haproxy_frontend_head(self):
-       return self.HAPROXY_FRONTEND_HEAD
+        return self.HAPROXY_FRONTEND_HEAD
 
     @property
     def haproxy_backend_redirect_http_to_https(self):
-       return self.HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS
+        return self.HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS
 
     @property
     def haproxy_backend_head(self):
-       return self.HAPROXY_BACKEND_HEAD
+        return self.HAPROXY_BACKEND_HEAD
 
     @property
     def haproxy_http_frontend_acl(self):
-       return self.HAPROXY_HTTP_FRONTEND_ACL
+        return self.HAPROXY_HTTP_FRONTEND_ACL
 
     @property
     def haproxy_https_frontend_acl(self):
-       return self.HAPROXY_HTTPS_FRONTEND_ACL
+        return self.HAPROXY_HTTPS_FRONTEND_ACL
 
     @property
     def haproxy_backend_http_options(self):
-       return self.HAPROXY_BACKEND_HTTP_OPTIONS
+        return self.HAPROXY_BACKEND_HTTP_OPTIONS
 
     @property
     def haproxy_backend_sticky_options(self):
-       return self.HAPROXY_BACKEND_STICKY_OPTIONS
+        return self.HAPROXY_BACKEND_STICKY_OPTIONS
 
     @property
     def haproxy_backend_server_options(self):
-       return self.HAPROXY_BACKEND_SERVER_OPTIONS
+        return self.HAPROXY_BACKEND_SERVER_OPTIONS
 
     @property
     def haproxy_frontend_backend_glue(self):
-       return self.HAPROXY_FRONTEND_BACKEND_GLUE
+        return self.HAPROXY_FRONTEND_BACKEND_GLUE
 
 
 def string_to_bool(s):
-  return s.lower() in ["true", "t", "yes", "y"]
+    return s.lower() in ["true", "t", "yes", "y"]
+
 
 def set_hostname(x, y):
     x.hostname = y
 
+
 def set_sticky(x, y):
     x.sticky = string_to_bool(y)
+
 
 def set_redirect_http_to_https(x, y):
     x.redirectHttpToHttps = string_to_bool(y)
 
+
 def set_sslCert(x, y):
     x.sslCert = y
 
+
 def set_bindAddr(x, y):
     x.bindAddr = y
+
 
 def set_mode(x, y):
     x.mode = y
@@ -346,6 +353,7 @@ class MarathonBackend(object):
     def __repr__(self):
         return "MarathonBackend(%r, %r)" % (self.host, self.port)
 
+
 class MarathonService(object):
 
     def __init__(self, appId, servicePort):
@@ -371,6 +379,7 @@ class MarathonService(object):
 
     def __repr__(self):
         return "MarathonService(%r, %r)" % (self.appId, self.servicePort)
+
 
 class MarathonApp(object):
 
@@ -435,10 +444,16 @@ class Marathon(object):
         return self.api_req('GET', ['tasks'])["tasks"]
 
     def add_subscriber(self, callbackUrl):
-        return self.api_req('POST', ['eventSubscriptions'], params={'callbackUrl': callbackUrl})
+        return self.api_req(
+                'POST',
+                ['eventSubscriptions'],
+                params={'callbackUrl': callbackUrl})
 
     def remove_subscriber(self, callbackUrl):
-        return self.api_req('DELETE', ['eventSubscriptions'], params={'callbackUrl': callbackUrl})
+        return self.api_req(
+                'DELETE',
+                ['eventSubscriptions'],
+                params={'callbackUrl': callbackUrl})
 
 
 def has_group(groups, app_groups):
@@ -490,8 +505,10 @@ def config(apps, groups):
 
         if app.redirectHttpToHttps:
             logger.debug("rule to redirect http to https traffic")
-            haproxy_backend_redirect_http_to_https = templater.haproxy_backend_redirect_http_to_https
-            frontends += haproxy_backend_redirect_http_to_https.format(bindAddr=app.bindAddr)
+            haproxy_backend_redirect_http_to_https = \
+                templater.haproxy_backend_redirect_http_to_https
+            frontends += haproxy_backend_redirect_http_to_https.format(
+                bindAddr=app.bindAddr)
 
         backend_head = templater.haproxy_backend_head
         backends += backend_head.format(
@@ -528,11 +545,15 @@ def config(apps, groups):
         frontend_backend_glue = templater.haproxy_frontend_backend_glue
         frontends += frontend_backend_glue.format(backend=backend)
 
-        for backendServer in sorted(app.backends, key=attrgetter('host', 'port')):
+        key_func = attrgetter('host', 'port')
+        for backendServer in sorted(app.backends, key=key_func):
             logger.debug(
-                "backend server at %s:%d", backendServer.host, backendServer.port)
+                "backend server at %s:%d",
+                backendServer.host,
+                backendServer.port)
             serverName = re.sub(
-                r'[^a-zA-Z0-9\-]', '_', backendServer.host + '_' + str(backendServer.port))
+                r'[^a-zA-Z0-9\-]', '_',
+                backendServer.host + '_' + str(backendServer.port))
 
             backend_server_options = templater.haproxy_backend_server_options
             backends += backend_server_options.format(
@@ -556,9 +577,8 @@ def reloadConfig():
     if os.path.isfile('/etc/init/haproxy.conf'):
         logger.debug("we seem to be running on an Upstart based system")
         reloadCommand = ['reload', 'haproxy']
-    elif (os.path.isfile('/usr/lib/systemd/system/haproxy.service')
-          or os.path.isfile('/etc/systemd/system/haproxy.service')
-          ):
+    elif (os.path.isfile('/usr/lib/systemd/system/haproxy.service') or
+            os.path.isfile('/etc/systemd/system/haproxy.service')):
         logger.debug("we seem to be running on systemd based system")
         reloadCommand = ['systemctl', 'reload', 'haproxy']
     else:
@@ -569,10 +589,12 @@ def reloadConfig():
     try:
         subprocess.check_call(reloadCommand)
     except OSError as ex:
-        logger.error("unable to reload config using command %s", " ".join(reloadCommand))
+        logger.error("unable to reload config using command %s",
+                     " ".join(reloadCommand))
         logger.error("OSError: %s", ex)
     except subprocess.CalledProcessError as ex:
-        logger.error("unable to reload config using command %s", " ".join(reloadCommand))
+        logger.error("unable to reload config using command %s",
+                     " ".join(reloadCommand))
         logger.error("reload returned non-zero: %s", ex)
 
 
@@ -581,10 +603,12 @@ def writeConfig(config, config_file):
     fd, haproxyTempConfigFile = mkstemp()
     logger.debug("writing config to temp file %s", haproxyTempConfigFile)
     with os.fdopen(fd, 'w') as haproxyTempConfig:
-      haproxyTempConfig.write(config)
+        haproxyTempConfig.write(config)
 
     # Move into place
-    logger.debug("moving temp file %s to %s", haproxyTempConfigFile, config_file)
+    logger.debug("moving temp file %s to %s",
+                 haproxyTempConfigFile,
+                 config_file)
     move(haproxyTempConfigFile, config_file)
 
 
@@ -614,24 +638,25 @@ def get_apps(marathon):
     for task in tasks:
         # For each task, extract the app it belongs to and add a
         # backend for each service it provides
-        if not 'servicePorts' in task:
-          continue
+        if 'servicePorts' not in task:
+            continue
 
         for i in xrange(len(task['servicePorts'])):
             # Marathon 0.7.6 bug workaround
             if len(task['host']) == 0:
-              logger.warning("Ignoring marathon task without host " + task['id'])
-              continue
+                logger.warning("Ignoring Marathon task without host " +
+                               task['id'])
+                continue
 
             servicePort = task['servicePorts'][i]
             port = task['ports'][i] if len(task['ports']) else servicePort
             appId = task['appId']
 
-
             if appId not in apps:
                 app_tmp = MarathonApp(marathon, appId)
                 if 'HAPROXY_GROUP' in app_tmp.app['env']:
-                    app_tmp.groups = app_tmp.app['env']['HAPROXY_GROUP'].split(',')
+                    app_tmp.groups = \
+                            app_tmp.app['env']['HAPROXY_GROUP'].split(',')
                 apps[appId] = app_tmp
 
             app = apps[appId]
@@ -662,7 +687,7 @@ def get_apps(marathon):
 
 
 def regenerate_config(apps, config_file, groups):
-  compareWriteAndReloadConfig(config(apps, groups), config_file)
+    compareWriteAndReloadConfig(config(apps, groups), config_file)
 
 
 class MarathonEventSubscriber(object):
@@ -679,8 +704,8 @@ class MarathonEventSubscriber(object):
         self.reset_from_tasks()
 
     def reset_from_tasks(self):
-      self.__apps = get_apps(self.__marathon)
-      regenerate_config(self.__apps, self.__config_file, self.__groups)
+        self.__apps = get_apps(self.__marathon)
+        regenerate_config(self.__apps, self.__config_file, self.__groups)
 
     def handle_event(self, event):
         if event['eventType'] == 'status_update_event':
@@ -698,14 +723,21 @@ def get_arg_parser():
                         )
     parser.add_argument("--marathon", "-m",
                         nargs="+",
-                        help="Marathon endpoint, eg. -m http://marathon1:8080 -m http://marathon2:8080"
+                        help="Marathon endpoint, eg. -m " +
+                             "http://marathon1:8080 -m http://marathon2:8080"
                         )
     parser.add_argument("--listening", "-l",
-                        help="The HTTP address that marathon can call this script back at (http://lb1:8080)"
+                        help="The HTTP address that Marathon can call this " +
+                             "script back at (http://lb1:8080)"
                         )
+
+    default_log_socket = "/var/run/syslog"
+    if sys.platform == "darwin":
+        default_log_socket = "/dev/log"
+
     parser.add_argument("--syslog-socket",
                         help="Socket to write syslog messages to",
-                        default="/var/run/syslog" if sys.platform == "darwin" else "/dev/log"
+                        default=log_socket
                         )
     parser.add_argument("--haproxy-config",
                         help="Location of haproxy configuration",
@@ -722,7 +754,10 @@ def get_arg_parser():
 
 
 def run_server(marathon, callback_url, config_file, groups):
-    subscriber = MarathonEventSubscriber(marathon, callback_url, config_file, groups)
+    subscriber = MarathonEventSubscriber(marathon,
+                                         callback_url,
+                                         config_file,
+                                         groups)
 
     # TODO(cmaloney): Switch to a sane http server
     # TODO(cmaloney): Good exception catching, etc
@@ -759,22 +794,23 @@ if __name__ == '__main__':
 
     # Print the long help text if flag is set
     if args.longhelp:
-      print __doc__
-      sys.exit()
+        print __doc__
+        sys.exit()
     # otherwise make sure that a Marathon URL was specified
     else:
-      if args.marathon is None:
-        arg_parser.error('argument --marathon/-m is required')
+        if args.marathon is None:
+            arg_parser.error('argument --marathon/-m is required')
 
-    #Setup logging
+    # Setup logging
     setup_logging(args.syslog_socket)
 
     # Marathon API connector
     marathon = Marathon(args.marathon)
 
-    # If in listening mode, spawn a webserver waiting for events. Otherwise just write the config
+    # If in listening mode, spawn a webserver waiting for events. Otherwise
+    # just write the config.
     if args.listening:
-      run_server(marathon, args.listening, args.haproxy_config, args.group)
+        run_server(marathon, args.listening, args.haproxy_config, args.group)
     else:
-      # Generate base config
-      regenerate_config(get_apps(marathon), args.haproxy_config, args.group)
+        # Generate base config
+        regenerate_config(get_apps(marathon), args.haproxy_config, args.group)
