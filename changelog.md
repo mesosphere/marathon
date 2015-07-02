@@ -7,6 +7,17 @@ Please look at the following changes to check whether you have to verify your se
 * If an http request is made without setting appropriate request headers, the Accept and Content-Type header 
   is set automatically to `application/json`
 
+### Overview
+
+##### Restrict the number of concurrent HTTP requests
+
+With this number of Marathon it is possible to restrict the number of concurrent http requests.
+This prevents Denial of Service behavior, that has been reported in some installations.
+If the limit of concurrent requests is reached, a HTTP 503 Service Temporarily Unavailable is returned,
+which means that this operation can be retried.
+The option has a sensible default (20), which should be suitable for almost all installations and 
+can be adjusted with the `--http_max_concurrent_requests` command line property.
+
 
 ### Fixed Bugs
 
