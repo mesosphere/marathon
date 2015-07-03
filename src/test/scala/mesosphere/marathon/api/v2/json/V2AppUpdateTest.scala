@@ -1,4 +1,4 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon.api.v2.json
 
 import javax.validation.Validation
 
@@ -13,24 +13,24 @@ import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-class AppUpdateTest extends MarathonSpec {
+class V2AppUpdateTest extends MarathonSpec {
 
   test("Validation") {
     val validator = Validation.buildDefaultValidatorFactory().getValidator
 
-    def shouldViolate(update: AppUpdate, path: String, template: String) = {
+    def shouldViolate(update: V2AppUpdate, path: String, template: String) = {
       val violations = validator.validate(update).asScala
       assert(violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
-    def shouldNotViolate(update: AppUpdate, path: String, template: String) = {
+    def shouldNotViolate(update: V2AppUpdate, path: String, template: String) = {
       val violations = validator.validate(update).asScala
       assert(!violations.exists(v =>
         v.getPropertyPath.toString == path && v.getMessageTemplate == template))
     }
 
-    val update = AppUpdate()
+    val update = V2AppUpdate()
 
     shouldViolate(
       update.copy(ports = Some(Seq(9000, 8080, 9000))),
@@ -51,12 +51,12 @@ class AppUpdateTest extends MarathonSpec {
     mapper.registerModule(new MarathonModule)
     mapper.registerModule(CaseClassModule)
 
-    val update0 = AppUpdate(container = Some(Container.Empty))
+    val update0 = V2AppUpdate(container = Some(Container.Empty))
     val json0 = mapper.writeValueAsString(update0)
-    val readResult0 = mapper.readValue(json0, classOf[AppUpdate])
+    val readResult0 = mapper.readValue(json0, classOf[V2AppUpdate])
     assert(readResult0 == update0)
 
-    val update1 = AppUpdate(
+    val update1 = V2AppUpdate(
       cmd = Some("sleep 60"),
       args = None,
       user = Some("nobody"),
@@ -91,10 +91,10 @@ class AppUpdateTest extends MarathonSpec {
       )
     )
     val json1 = mapper.writeValueAsString(update1)
-    val readResult1 = mapper.readValue(json1, classOf[AppUpdate])
+    val readResult1 = mapper.readValue(json1, classOf[V2AppUpdate])
     assert(readResult1 == update1)
 
-    val update2 = AppUpdate(container = Some(Container.Empty))
+    val update2 = V2AppUpdate(container = Some(Container.Empty))
     val json2 = """
       {
         "cmd": null,
@@ -116,28 +116,28 @@ class AppUpdateTest extends MarathonSpec {
         "version": null
       }
     """
-    val readResult2 = mapper.readValue(json2, classOf[AppUpdate])
+    val readResult2 = mapper.readValue(json2, classOf[V2AppUpdate])
     assert(readResult2 == update2)
 
-    val update3 = AppUpdate()
+    val update3 = V2AppUpdate()
     val json3 = "{}"
-    val readResult3 = mapper.readValue(json3, classOf[AppUpdate])
+    val readResult3 = mapper.readValue(json3, classOf[V2AppUpdate])
     assert(readResult3 == update3)
 
-    val update4 = AppUpdate(args = Some(Seq("a", "b", "c")))
+    val update4 = V2AppUpdate(args = Some(Seq("a", "b", "c")))
     val json4 = """{ "args": ["a", "b", "c"] }"""
-    val readResult4 = mapper.readValue(json4, classOf[AppUpdate])
+    val readResult4 = mapper.readValue(json4, classOf[V2AppUpdate])
     assert(readResult4 == update4)
 
   }
 
   test("'version' field can only be combined with 'id'") {
-    assert(AppUpdate(version = Some(Timestamp.now())).onlyVersionOrIdSet)
+    assert(V2AppUpdate(version = Some(Timestamp.now())).onlyVersionOrIdSet)
 
-    assert(AppUpdate(id = Some("foo".toPath), version = Some(Timestamp.now())).onlyVersionOrIdSet)
+    assert(V2AppUpdate(id = Some("foo".toPath), version = Some(Timestamp.now())).onlyVersionOrIdSet)
 
     intercept[Exception] {
-      AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
+      V2AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
     }
   }
 }

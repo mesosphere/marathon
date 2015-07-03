@@ -5,7 +5,7 @@ import java.util.Date
 
 import akka.actor.ActorSystem
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import mesosphere.marathon.api.v2.{ AppUpdate, GroupUpdate }
+import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate, V2Group, V2GroupUpdate }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
@@ -20,7 +20,7 @@ import scala.concurrent.duration._
   * GET /apps will deliver something like Apps instead of List[App]
   * Needed for dumb jackson.
   */
-case class ListAppsResult(apps: Seq[AppDefinition])
+case class ListAppsResult(apps: Seq[V2AppDefinition])
 case class AppVersions(versions: Seq[Timestamp])
 case class ListTasks(tasks: Seq[ITEnrichedTask])
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
@@ -42,10 +42,10 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   require(baseGroup.absolute)
 
-  implicit val appDefMarshaller = marshaller[AppDefinition]
-  implicit val appUpdateMarshaller = marshaller[AppUpdate]
-  implicit val groupMarshaller = marshaller[Group]
-  implicit val groupUpdateMarshaller = marshaller[GroupUpdate]
+  implicit val v2appDefMarshaller = marshaller[V2AppDefinition]
+  implicit val appUpdateMarshaller = marshaller[V2AppUpdate]
+  implicit val v2groupMarshaller = marshaller[V2Group]
+  implicit val groupUpdateMarshaller = marshaller[V2GroupUpdate]
   implicit val versionMarshaller = marshaller[ITDeploymentResult]
 
   def isInBaseGroup(pathId: PathId): Boolean = {
@@ -58,23 +58,23 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   //app resource ----------------------------------------------
 
-  def listAppsInBaseGroup: RestResult[List[AppDefinition]] = {
+  def listAppsInBaseGroup: RestResult[List[V2AppDefinition]] = {
     val pipeline = sendReceive ~> read[ListAppsResult]
     val res = result(pipeline(Get(s"$url/v2/apps")), waitTime)
     res.map(_.apps.toList.filter(app => isInBaseGroup(app.id)))
   }
 
-  def app(id: PathId): RestResult[AppDefinition] = {
+  def app(id: PathId): RestResult[V2AppDefinition] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[AppDefinition]
+    val pipeline = sendReceive ~> read[V2AppDefinition]
     val getUrl: String = s"$url/v2/apps$id"
     LoggerFactory.getLogger(getClass).info(s"get url = $getUrl")
     result(pipeline(Get(getUrl)), waitTime)
   }
 
-  def createApp(app: AppDefinition): RestResult[AppDefinition] = {
+  def createAppV2(app: V2AppDefinition): RestResult[V2AppDefinition] = {
     requireInBaseGroup(app.id)
-    val pipeline = sendReceive ~> read[AppDefinition]
+    val pipeline = sendReceive ~> read[V2AppDefinition]
     result(pipeline(Post(s"$url/v2/apps", app)), waitTime)
   }
 
@@ -84,7 +84,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Delete(s"$url/v2/apps$id?force=$force")), waitTime)
   }
 
-  def updateApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def updateApp(id: PathId, app: V2AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val pipeline = sendReceive ~> read[ITDeploymentResult]
     val putUrl: String = s"$url/v2/apps$id?force=$force"
@@ -152,7 +152,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Get(s"$url/v2/groups$id")), waitTime)
   }
 
-  def createGroup(group: GroupUpdate): RestResult[ITDeploymentResult] = {
+  def createGroup(group: V2GroupUpdate): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(group.groupId)
     val pipeline = sendReceive ~> read[ITDeploymentResult]
     result(pipeline(Post(s"$url/v2/groups", group)), waitTime)
@@ -169,7 +169,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Delete(s"$url/v2/groups?force=$force")), waitTime)
   }
 
-  def updateGroup(id: PathId, group: GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def updateGroup(id: PathId, group: V2GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val pipeline = sendReceive ~> read[ITDeploymentResult]
     result(pipeline(Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
@@ -177,7 +177,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   def rollbackGroup(groupId: PathId, version: Timestamp, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(groupId)
-    updateGroup(groupId, GroupUpdate(None, version = Some(version)), force)
+    updateGroup(groupId, V2GroupUpdate(None, version = Some(version)), force)
   }
 
   //deployment resource ------

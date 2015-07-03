@@ -1,6 +1,7 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.api.v2.GroupUpdate
+import mesosphere.marathon.api.v2.json.V2AppDefinition
+import mesosphere.marathon.api.v2.json.V2GroupUpdate
 import mesosphere.marathon.integration.setup.{ WaitTestSupport, IntegrationHealthCheck, IntegrationFunSuite, SingleMarathonIntegrationTest }
 import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
 import org.scalatest._
@@ -21,7 +22,7 @@ class GroupDeployIntegrationTest
 
   test("create empty group successfully") {
     Given("A group which does not exist in marathon")
-    val group = GroupUpdate.empty("test".toRootTestPath)
+    val group = V2GroupUpdate.empty("test".toRootTestPath)
 
     When("The group gets created")
     val result = marathon.createGroup(group)
@@ -34,7 +35,7 @@ class GroupDeployIntegrationTest
   test("update empty group successfully") {
     Given("An existing group")
     val name = "test2".toRootTestPath
-    val group = GroupUpdate.empty(name)
+    val group = V2GroupUpdate.empty(name)
     val dependencies = Set("/test".toTestPath)
     waitForChange(marathon.createGroup(group))
 
@@ -49,7 +50,7 @@ class GroupDeployIntegrationTest
 
   test("deleting an existing group gives a 200 http response") {
     Given("An existing group")
-    val group = GroupUpdate.empty("test3".toRootTestPath)
+    val group = V2GroupUpdate.empty("test3".toRootTestPath)
     waitForChange(marathon.createGroup(group))
 
     When("The group gets deleted")
@@ -74,8 +75,8 @@ class GroupDeployIntegrationTest
 
   test("create a group with applications to start") {
     Given("A group with one application")
-    val app = appProxy("/test/app".toRootTestPath, "v1", 2, withHealth = false)
-    val group = GroupUpdate("/test".toRootTestPath, Set(app))
+    val app = v2AppProxy("/test/app".toRootTestPath, "v1", 2, withHealth = false)
+    val group = V2GroupUpdate("/test".toRootTestPath, Set(app))
 
     When("The group is created")
     waitForChange(marathon.createGroup(group))
@@ -89,13 +90,13 @@ class GroupDeployIntegrationTest
     Given("A group with one application started")
     val id = "test".toRootTestPath
     val appId = id / "app"
-    val app1V1 = appProxy(appId, "v1", 2, withHealth = false)
-    waitForChange(marathon.createGroup(GroupUpdate(id, Set(app1V1))))
+    val app1V1 = v2AppProxy(appId, "v1", 2, withHealth = false)
+    waitForChange(marathon.createGroup(V2GroupUpdate(id, Set(app1V1))))
     waitForTasks(app1V1.id, app1V1.instances)
 
     When("The group is updated, with a changed application")
-    val app1V2 = appProxy(appId, "v2", 2, withHealth = false)
-    waitForChange(marathon.updateGroup(id, GroupUpdate(id, Set(app1V2))))
+    val app1V2 = v2AppProxy(appId, "v2", 2, withHealth = false)
+    waitForChange(marathon.updateGroup(id, V2GroupUpdate(id, Set(app1V2))))
 
     Then("A success event is send and the application has been started")
     waitForTasks(app1V2.id, app1V2.instances)
@@ -105,8 +106,8 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val id = "proxy".toRootTestPath
     val appId = id / "app"
-    val proxy = appProxy(appId, "v1", 1)
-    val group = GroupUpdate(id, Set(proxy))
+    val proxy = v2AppProxy(appId, "v1", 1)
+    val group = V2GroupUpdate(id, Set(proxy))
 
     When("The group is created")
     val create = marathon.createGroup(group)
@@ -119,15 +120,15 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val id = "test".toRootTestPath
     val appId = id / "app"
-    val proxy = appProxy(appId, "v1", 1)
-    val group = GroupUpdate(id, Set(proxy))
+    val proxy = v2AppProxy(appId, "v1", 1)
+    val group = V2GroupUpdate(id, Set(proxy))
     waitForChange(marathon.createGroup(group))
     val check = appProxyCheck(proxy.id, "v1", state = true)
 
     When("The group is updated")
     check.afterDelay(1.second, state = false)
     check.afterDelay(3.seconds, state = true)
-    val update = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 1)))))
+    val update = marathon.updateGroup(id, group.copy(apps = Some(Set(v2AppProxy(appId, "v2", 1)))))
 
     Then("A success event is send and the application has been started")
     waitForChange(update)
@@ -137,15 +138,15 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val gid = "proxy".toRootTestPath
     val appId = gid / "app"
-    val proxy = appProxy(appId, "v1", 2)
-    val group = GroupUpdate(gid, Set(proxy))
+    val proxy = v2AppProxy(appId, "v1", 2)
+    val group = V2GroupUpdate(gid, Set(proxy))
     val create = marathon.createGroup(group)
     waitForChange(create)
     waitForTasks(proxy.id, proxy.instances)
     val v1Checks = appProxyCheck(appId, "v1", state = true)
 
     When("The group is updated")
-    waitForChange(marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v2", 2))))))
+    waitForChange(marathon.updateGroup(gid, group.copy(apps = Some(Set(v2AppProxy(appId, "v2", 2))))))
 
     Then("The new version is deployed")
     val v2Checks = appProxyCheck(appId, "v2", state = true)
@@ -163,8 +164,8 @@ class GroupDeployIntegrationTest
     Given("A group with one application")
     val id = "test".toRootTestPath
     val appId = id / "app"
-    val proxy = appProxy(appId, "v1", 2).copy(upgradeStrategy = UpgradeStrategy(1))
-    val group = GroupUpdate(id, Set(proxy))
+    val proxy = v2AppProxy(appId, "v1", 2).copy(upgradeStrategy = UpgradeStrategy(1))
+    val group = V2GroupUpdate(id, Set(proxy))
     val create = marathon.createGroup(group)
     waitForChange(create)
     waitForTasks(appId, proxy.instances)
@@ -172,7 +173,7 @@ class GroupDeployIntegrationTest
 
     When("The new application is not healthy")
     val v2Check = appProxyCheck(appId, "v2", state = false) //will always fail
-    val update = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
+    val update = marathon.updateGroup(id, group.copy(apps = Some(Set(v2AppProxy(appId, "v2", 2)))))
 
     Then("All v1 applications are kept alive")
     v1Check.healthy
@@ -187,23 +188,23 @@ class GroupDeployIntegrationTest
     Given("A group with one application with an upgrade in progress")
     val id = "forcetest".toRootTestPath
     val appId = id / "app"
-    val proxy = appProxy(appId, "v1", 2)
-    val group = GroupUpdate(id, Set(proxy))
+    val proxy = v2AppProxy(appId, "v1", 2)
+    val group = V2GroupUpdate(id, Set(proxy))
     val create = marathon.createGroup(group)
     waitForChange(create)
     appProxyCheck(appId, "v2", state = false) //will always fail
-    marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
+    marathon.updateGroup(id, group.copy(apps = Some(Set(v2AppProxy(appId, "v2", 2)))))
 
     When("Another upgrade is triggered, while the old one is not completed")
     intercept[UnsuccessfulResponseException] {
-      marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v3", 2)))))
+      marathon.updateGroup(id, group.copy(apps = Some(Set(v2AppProxy(appId, "v3", 2)))))
     }
 
     Then("An error is indicated")
     waitForEvent("group_change_failed")
 
     When("Another upgrade is triggered with force, while the old one is not completed")
-    val force = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v4", 2)))), force = true)
+    val force = marathon.updateGroup(id, group.copy(apps = Some(Set(v2AppProxy(appId, "v4", 2)))), force = true)
 
     Then("The update is performed")
     waitForChange(force)
@@ -213,9 +214,9 @@ class GroupDeployIntegrationTest
     Given("A group with one application with an upgrade in progress")
     val id = "forcetest".toRootTestPath
     val appId = id / "app"
-    val proxy = appProxy(appId, "v1", 2)
+    val proxy = v2AppProxy(appId, "v1", 2)
     appProxyCheck(appId, "v1", state = false) //will always fail
-    val group = GroupUpdate(id, Set(proxy))
+    val group = V2GroupUpdate(id, Set(proxy))
     val create = marathon.createGroup(group)
 
     When("Delete the group, while the deployment is in progress")
@@ -235,10 +236,10 @@ class GroupDeployIntegrationTest
 
   test("Groups with Applications with circular dependencies can not get deployed") {
     Given("A group with 3 circular dependent applications")
-    val db = appProxy("/test/db".toTestPath, "v1", 1, dependencies = Set("/test/frontend1".toTestPath))
-    val service = appProxy("/test/service".toTestPath, "v1", 1, dependencies = Set(db.id))
-    val frontend = appProxy("/test/frontend1".toTestPath, "v1", 1, dependencies = Set(service.id))
-    val group = GroupUpdate("test".toTestPath, Set(db, service, frontend))
+    val db = v2AppProxy("/test/db".toTestPath, "v1", 1, dependencies = Set("/test/frontend1".toTestPath))
+    val service = v2AppProxy("/test/service".toTestPath, "v1", 1, dependencies = Set(db.id))
+    val frontend = v2AppProxy("/test/frontend1".toTestPath, "v1", 1, dependencies = Set(service.id))
+    val group = V2GroupUpdate("test".toTestPath, Set(db, service, frontend))
 
     When("The group gets posted")
     val exception = intercept[UnsuccessfulResponseException] {
@@ -251,10 +252,10 @@ class GroupDeployIntegrationTest
 
   test("Applications with dependencies get deployed in the correct order") {
     Given("A group with 3 dependent applications")
-    val db = appProxy("/test/db".toTestPath, "v1", 1)
-    val service = appProxy("/test/service".toTestPath, "v1", 1, dependencies = Set(db.id))
-    val frontend = appProxy("/test/frontend1".toTestPath, "v1", 1, dependencies = Set(service.id))
-    val group = GroupUpdate("/test".toTestPath, Set(db, service, frontend))
+    val db = v2AppProxy("/test/db".toTestPath, "v1", 1)
+    val service = v2AppProxy("/test/service".toTestPath, "v1", 1, dependencies = Set(db.id))
+    val frontend = v2AppProxy("/test/frontend1".toTestPath, "v1", 1, dependencies = Set(service.id))
+    val group = V2GroupUpdate("/test".toTestPath, Set(db, service, frontend))
 
     When("The group gets deployed")
     var ping = Map.empty[PathId, DateTime]
@@ -274,14 +275,18 @@ class GroupDeployIntegrationTest
 
   test("Groups with dependencies get deployed in the correct order") {
     Given("A group with 3 dependent applications")
-    val db = appProxy("/test/db/db1".toTestPath, "v1", 1)
-    val service = appProxy("/test/service/service1".toTestPath, "v1", 1)
-    val frontend = appProxy("/test/frontend/frontend1".toTestPath, "v1", 1)
-    val group = GroupUpdate("/test".toTestPath, Set.empty[AppDefinition], Set(
-      GroupUpdate(PathId("db"), apps = Set(db)),
-      GroupUpdate(PathId("service"), apps = Set(service)).copy(dependencies = Some(Set("/test/db".toTestPath))),
-      GroupUpdate(PathId("frontend"), apps = Set(frontend)).copy(dependencies = Some(Set("/test/service".toTestPath)))
-    ))
+    val db = v2AppProxy("/test/db/db1".toTestPath, "v1", 1)
+    val service = v2AppProxy("/test/service/service1".toTestPath, "v1", 1)
+    val frontend = v2AppProxy("/test/frontend/frontend1".toTestPath, "v1", 1)
+    val group = V2GroupUpdate(
+      "/test".toTestPath,
+      Set.empty[V2AppDefinition],
+      Set(
+        V2GroupUpdate(PathId("db"), apps = Set(db)),
+        V2GroupUpdate(PathId("service"), apps = Set(service)).copy(dependencies = Some(Set("/test/db".toTestPath))),
+        V2GroupUpdate(PathId("frontend"), apps = Set(frontend)).copy(dependencies = Some(Set("/test/service".toTestPath)))
+      )
+    )
 
     When("The group gets deployed")
     var ping = Map.empty[PathId, DateTime]
@@ -306,10 +311,10 @@ class GroupDeployIntegrationTest
       if (!ping.contains(key(health))) ping += key(health) -> DateTime.now
     }
     def create(version: String) = {
-      val db = appProxy("/test/db".toTestPath, version, 1)
-      val service = appProxy("/test/service".toTestPath, version, 1, dependencies = Set(db.id))
-      val frontend = appProxy("/test/frontend1".toTestPath, version, 1, dependencies = Set(service.id))
-      (GroupUpdate("/test".toTestPath, Set(db, service, frontend)),
+      val db = v2AppProxy("/test/db".toTestPath, version, 1)
+      val service = v2AppProxy("/test/service".toTestPath, version, 1, dependencies = Set(db.id))
+      val frontend = v2AppProxy("/test/frontend1".toTestPath, version, 1, dependencies = Set(service.id))
+      (V2GroupUpdate("/test".toTestPath, Set(db, service, frontend)),
         appProxyCheck(db.id, version, state = true).withHealthAction(storeFirst),
         appProxyCheck(service.id, version, state = true).withHealthAction(storeFirst),
         appProxyCheck(frontend.id, version, state = true).withHealthAction(storeFirst))

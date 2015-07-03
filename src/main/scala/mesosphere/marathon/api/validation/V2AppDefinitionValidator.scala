@@ -2,13 +2,14 @@ package mesosphere.marathon.api.validation
 
 import javax.validation.{ ConstraintValidatorContext, ConstraintValidator }
 
-import mesosphere.marathon.state.{ AppDefinition, Container }
+import mesosphere.marathon.api.v2.json.V2AppDefinition
+import mesosphere.marathon.state.Container
 
-class AppDefinitionValidator extends ConstraintValidator[ValidAppDefinition, AppDefinition] {
-  override def initialize(constraintAnnotation: ValidAppDefinition): Unit = {}
+class V2AppDefinitionValidator extends ConstraintValidator[ValidV2AppDefinition, V2AppDefinition] {
+  override def initialize(constraintAnnotation: ValidV2AppDefinition): Unit = {}
 
   override def isValid(
-    value: AppDefinition,
+    value: V2AppDefinition,
     context: ConstraintValidatorContext): Boolean = {
     val cmd = value.cmd.nonEmpty
     val args = value.args.nonEmpty

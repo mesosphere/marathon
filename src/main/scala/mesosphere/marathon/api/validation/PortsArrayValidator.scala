@@ -1,6 +1,8 @@
 package mesosphere.marathon.api.validation
 
 import mesosphere.marathon.state.AppDefinition.RandomPortValue
+import mesosphere.util.Logging
+
 import javax.validation.{ ConstraintValidator, ConstraintValidatorContext }
 
 /**
@@ -9,11 +11,15 @@ import javax.validation.{ ConstraintValidator, ConstraintValidatorContext }
   * elements are unique.
   */
 class PortsArrayValidator
-    extends ConstraintValidator[PortsArray, Any] {
+    extends ConstraintValidator[PortsArray, Any]
+    with Logging {
 
   def initialize(annotation: PortsArray): Unit = {}
 
-  def isValid(obj: Any, context: ConstraintValidatorContext): Boolean =
+  def isValid(obj: Any, context: ConstraintValidatorContext): Boolean = {
+
+    log.info(s"validating ports array: $obj")
+
     obj match {
       case opt: Option[_] => opt.forall { isValid(_, context) }
       case it: Iterable[_] => {
@@ -22,5 +28,6 @@ class PortsArrayValidator
       }
       case _ => false
     }
+  }
 
 }

@@ -7,6 +7,7 @@ import com.github.fge.jsonschema.main.{ JsonSchema, JsonSchemaFactory }
 import org.apache.mesos.Protos.Offer
 import org.rogach.scallop.ScallopConf
 
+import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.IterativeOfferMatcher
@@ -124,7 +125,7 @@ trait MarathonTestHelper {
   }
   val appSchema = getAppSchema()
 
-  def validateJsonSchema(app: AppDefinition, valid: Boolean = true) {
+  def validateJsonSchema(app: V2AppDefinition, valid: Boolean = true) {
     val appStr = schemaMapper.writeValueAsString(app)
     val appJson = JsonLoader.fromString(appStr)
     assert(appSchema.validate(appJson).isSuccess == valid)

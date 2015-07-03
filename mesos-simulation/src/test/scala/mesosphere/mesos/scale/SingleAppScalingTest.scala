@@ -2,9 +2,9 @@ package mesosphere.mesos.scale
 
 import java.io.File
 
-import mesosphere.marathon.api.v2.AppUpdate
+import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate }
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.PathId
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json._
@@ -28,7 +28,7 @@ class SingleAppScalingTest
   //clean up state before running the test case
   before(cleanUp())
 
-  def extractDeploymentIds(app: RestResult[AppDefinition]): Seq[String] = {
+  def extractDeploymentIds(app: RestResult[V2AppDefinition]): Seq[String] = {
     for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
       yield (deployment \ "id").as[String]
   }
@@ -47,10 +47,10 @@ class SingleAppScalingTest
   private[this] def createStopApp(instances: Int): Unit = {
     Given("a new app")
     val appIdPath: PathId = testBasePath / "/test/app"
-    val app = appProxy(appIdPath, "v1", instances = instances, withHealth = false)
+    val app = v2AppProxy(appIdPath, "v1", instances = instances, withHealth = false)
 
     When("the app gets posted")
-    val createdApp: RestResult[AppDefinition] = marathon.createApp(app)
+    val createdApp: RestResult[V2AppDefinition] = marathon.createAppV2(app)
     createdApp.code should be(201) // created
     val deploymentIds: Seq[String] = extractDeploymentIds(createdApp)
     deploymentIds.length should be(1)
@@ -79,8 +79,8 @@ class SingleAppScalingTest
     // for better grepability.
 
     val appIdPath = testBasePath / "/test/app"
-    val appWithManyInstances = appProxy(appIdPath, "v1", instances = 100000, withHealth = false)
-    val response = marathon.createApp(appWithManyInstances)
+    val appWithManyInstances = v2AppProxy(appIdPath, "v1", instances = 100000, withHealth = false)
+    val response = marathon.createAppV2(appWithManyInstances)
     log.info(s"XXX ${response.originalResponse.status}: ${response.originalResponse.entity}")
 
     val startTime = System.currentTimeMillis()
@@ -110,7 +110,7 @@ class SingleAppScalingTest
     ScalingTestResultFiles.writeJson(SingleAppScalingTest.metricsFile, metrics.result())
 
     log.info("XXX suspend")
-    val result = marathon.updateApp(appWithManyInstances.id, AppUpdate(instances = Some(0)), force = true).originalResponse
+    val result = marathon.updateApp(appWithManyInstances.id, V2AppUpdate(instances = Some(0)), force = true).originalResponse
     log.info(s"XXX ${result.status}: ${result.entity}")
 
     WaitTestSupport.waitFor("app suspension", 10.seconds) {

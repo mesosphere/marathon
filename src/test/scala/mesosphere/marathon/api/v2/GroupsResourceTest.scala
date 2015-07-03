@@ -1,5 +1,6 @@
 package mesosphere.marathon.api.v2
 
+import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2GroupUpdate }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, GroupManager }
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
@@ -27,8 +28,8 @@ class GroupsResourceTest extends MarathonSpec with Matchers {
 
   test("dry run update") {
 
-    val app = AppDefinition(id = "/test/app".toRootPath, cmd = Some("test cmd"))
-    val update = GroupUpdate(id = Some("/test".toRootPath), apps = Some(Set(app)))
+    val app = V2AppDefinition(id = "/test/app".toRootPath, cmd = Some("test cmd"))
+    val update = V2GroupUpdate(id = Some("/test".toRootPath), apps = Some(Set(app)))
 
     when(groupManager.group(update.groupId)).thenReturn(Future.successful(None))
 

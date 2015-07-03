@@ -2,7 +2,8 @@ package mesosphere.marathon.state
 
 import javax.validation.ConstraintViolation
 
-import mesosphere.marathon.api.{ ModelValidation, BeanValidation }
+import mesosphere.marathon.api.v2.{ ModelValidation, BeanValidation }
+import mesosphere.marathon.api.v2.json.V2Group
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
@@ -129,7 +130,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       group3 should equal(current)
     }
 
-    it("can replace a group without apps by a app definition") {
+    it("can replace a group without apps by an app definition") {
       // See https://github.com/mesosphere/marathon/issues/851
       // Groups are created implicitly by creating apps and are not visible as separate entities
       // at the time of the creation of this test/issue. They are only visible in the GUI if they contain apps.
@@ -140,6 +141,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
           .empty
           .makeGroup("/some/nested/path".toPath)
           .makeGroup("/some/nested/path2".toPath)
+
       current.transitiveGroups.map(_.id.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
 
@@ -153,8 +155,8 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       changed.transitiveGroups.map(_.id.toString) should be(Set("/", "/some"))
       changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested"))
 
-      Then("the resulting group should be valid")
-      ModelValidation.checkGroup(changed) should be('empty)
+      Then("the resulting group should be valid when represented in the V2 API model")
+      ModelValidation.checkGroup(V2Group(changed)) should be('empty)
     }
 
     it("cannot replace a group with apps by an app definition") {
@@ -183,8 +185,8 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
       changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested", "/some/nested/path2/app"))
 
-      Then("the conflict will be detected by our validation")
-      val constraintViolations: Iterable[ConstraintViolation[Group]] = ModelValidation.checkGroup(changed)
+      Then("the conflict will be detected by our V2 API model validation")
+      val constraintViolations: Iterable[ConstraintViolation[V2Group]] = ModelValidation.checkGroup(V2Group(changed))
       constraintViolations should be('nonEmpty)
       constraintViolations.map(_.getMessage) should be(Set("Groups and Applications may not have the same identifier: /some/nested"))
     }

@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.ser.Serializers
 import org.apache.mesos.{ Protos => mesos }
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
-import mesosphere.marathon.api.v2._
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
@@ -28,7 +27,7 @@ class MarathonModule extends Module {
   private val enrichedTaskClass = classOf[EnrichedTask]
   private val timestampClass = classOf[Timestamp]
   private val finiteDurationClass = classOf[FiniteDuration]
-  private val appUpdateClass = classOf[AppUpdate]
+  private val appUpdateClass = classOf[V2AppUpdate]
   private val groupIdClass = classOf[PathId]
   private val taskIdClass = classOf[mesos.TaskID]
 
@@ -204,8 +203,8 @@ class MarathonModule extends Module {
     }
   }
 
-  object AppUpdateDeserializer extends JsonDeserializer[AppUpdate] {
-    override def deserialize(json: JsonParser, context: DeserializationContext): AppUpdate = {
+  object AppUpdateDeserializer extends JsonDeserializer[V2AppUpdate] {
+    override def deserialize(json: JsonParser, context: DeserializationContext): V2AppUpdate = {
       val oc = json.getCodec
       val tree: JsonNode = oc.readTree(json)
       val containerDeserializer = context.findRootValueDeserializer(
@@ -215,7 +214,7 @@ class MarathonModule extends Module {
       val emptyContainer = tree.has("container") && tree.get("container").isNull
 
       val appUpdate =
-        tree.traverse(oc).readValueAs(classOf[AppUpdateBuilder]).build()
+        tree.traverse(oc).readValueAs(classOf[V2AppUpdateBuilder]).build()
 
       if (emptyContainer)
         appUpdate.copy(container = Some(Container.Empty))
@@ -229,7 +228,7 @@ object MarathonModule {
   // TODO: make @JsonDeserialize work on the 'container' field
   // of the 'AppUpdate' class and remove this workaround.
   @JsonIgnoreProperties(ignoreUnknown = true)
-  case class AppUpdateBuilder(
+  case class V2AppUpdateBuilder(
       id: Option[PathId] = None, //needed for updates inside a group
       cmd: Option[String] = None,
       args: Option[Seq[String]] = None,
@@ -255,7 +254,7 @@ object MarathonModule {
       labels: Option[Map[String, String]] = None,
       acceptedResourceRoles: Option[Set[String]] = None,
       version: Option[Timestamp] = None) {
-    def build(): AppUpdate = AppUpdate(
+    def build(): V2AppUpdate = V2AppUpdate(
       id, cmd, args, user, env, instances, cpus, mem, disk, executor, constraints,
       uris, storeUrls, ports, requirePorts, backoff, backoffFactor, maxLaunchDelay,
       container, healthChecks, dependencies, upgradeStrategy, labels,
