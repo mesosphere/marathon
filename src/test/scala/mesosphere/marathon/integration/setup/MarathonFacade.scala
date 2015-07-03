@@ -191,6 +191,11 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     }
   }
 
+  def deleteDeployment(id: String, force: Boolean = false): RestResult[HttpResponse] = {
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Delete(s"$url/v2/deployments/$id?force=$force")), waitTime)
+  }
+
   //event resource ---------------------------------------------
 
   def listSubscribers: RestResult[EventSubscribers] = {
