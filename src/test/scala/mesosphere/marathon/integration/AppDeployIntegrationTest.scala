@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{ AppDefinition, Command, PathId }
+import mesosphere.marathon.state.{ Command, PathId }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsArray
@@ -138,8 +138,7 @@ class AppDeployIntegrationTest
     Given("a new app that is not healthy")
     val appId = testBasePath / "failing"
     val check = appProxyCheck(appId, "v1", state = false)
-    val app = v2AppProxy(appId, "v1", instances = 1, withHealth = false).
-      copy(healthChecks = Set(HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)))
+    val app = v2AppProxy(appId, "v1", instances = 1, withHealth = true)
 
     When("The app is deployed")
     val create = marathon.createAppV2(app)
@@ -394,6 +393,27 @@ class AppDeployIntegrationTest
 
     pingTask(taskUpdate1).entityString should be(s"Pong $appId\n")
     pingTask(taskUpdate2).entityString should be(s"Pong $appId\n")
+  }
+
+  test("stop (forcefully delete) a deployment") {
+    Given("a new app that is not healthy")
+    val appId = testBasePath / "failing"
+    val app = v2AppProxy(appId, "v1", instances = 1, withHealth = true)
+    appProxyCheck(appId, "v1", state = false)
+    val create = marathon.createAppV2(app)
+    create.code should be (201) // Created
+    val deploymentId = extractDeploymentIds(create).head
+
+    Then("the deployment can not be finished")
+    marathon.listDeploymentsForBaseGroup().value should have size 1
+
+    When("the deployment is forcefully removed")
+    val delete = marathon.deleteDeployment(deploymentId, force = true)
+    delete.code should be (202)
+
+    Then("the deployment should be gone")
+    waitForEvent("deployment_failed")
+    marathon.listDeploymentsForBaseGroup().value should have size 0
   }
 
   def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)
