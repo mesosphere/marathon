@@ -50,8 +50,8 @@ trait SingleMarathonIntegrationTest
   def extraMarathonParameters: List[String] = List.empty[String]
 
   lazy val marathonProxy = {
-    startMarathon(config.marathonPort + 1, "--master", config.master, "--event_subscriber", "http_callback")
-    new MarathonFacade(config.copy(marathonPort = config.marathonPort + 1).marathonUrl, testBasePath)
+    startMarathon(config.marathonBasePort + 1, "--master", config.master, "--event_subscriber", "http_callback")
+    new MarathonFacade(config.copy(marathonBasePort = config.marathonBasePort + 1).marathonUrl, testBasePath)
   }
 
   implicit class PathIdTestHelper(path: String) {
@@ -72,7 +72,7 @@ trait SingleMarathonIntegrationTest
       cleanMarathonState()
 
       val parameters = List("--master", config.master, "--event_subscriber", "http_callback") ++ extraMarathonParameters
-      startMarathon(config.marathonPort, parameters: _*)
+      startMarathon(config.marathonBasePort, parameters: _*)
 
       log.info("Setting up local mesos/marathon infrastructure: done.")
     }

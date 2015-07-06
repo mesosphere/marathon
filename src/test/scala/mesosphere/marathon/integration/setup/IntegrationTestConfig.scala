@@ -47,15 +47,21 @@ case class IntegrationTestConfig(
     //the marathon host to use.
     marathonHost: String,
 
-    //the marathon port to use.
-    marathonPort: Int,
+    //the base marathon port to use
+    marathonBasePort: Int,
 
     //perform test inside of this group
     marathonGroup: PathId,
 
     //the port for the local http interface which receives all callbacks from marathon.
     //Defaults dynamically to a port [11211-11311]
-    httpPort: Int) {
+    httpPort: Int,
+
+    //the number of nodes to start. Used by MarathonClusterIntegrationTest
+    clusterSize: Int,
+
+    //List of the ports to use in the cluster formed by MarathonClusterIntegrationTest
+    marathonPorts: Seq[Int]) {
 
   private val zkURLPattern = """^zk://([A-z0-9-.]+):(\d+)(.+)$""".r
 
@@ -63,7 +69,8 @@ case class IntegrationTestConfig(
   def zkPath = "/marathon-itest"
   def zk = s"zk://$zkHostAndPort$zkPath"
 
-  def marathonUrl = s"http://$marathonHost:$marathonPort"
+  def marathonUrls: Seq[String] = marathonPorts.map(port => s"http://$marathonHost:$port")
+  def marathonUrl = marathonUrls.head
 }
 
 object IntegrationTestConfig {
@@ -108,7 +115,9 @@ object IntegrationTestConfig {
     val mesosLib = string("mesosLib", unusedForExternalSetup(defaultMesosLibConfig))
     val httpPort = int("httpPort", 11211 + (math.random * 100).toInt)
     val marathonHost = string("marathonHost", "localhost")
-    val marathonPort = int("marathonPort", 8080 + (math.random * 100).toInt)
+    val marathonBasePort = int("marathonPort", 8080 + (math.random * 100).toInt)
+    val clusterSize = int("clusterSize", 3)
+    val marathonPorts = 0.to(clusterSize - 1).map(_ + marathonBasePort)
     val marathonGroup = PathId(string("marathonGroup", "/marathon_integration_test"))
 
     IntegrationTestConfig(
@@ -116,8 +125,10 @@ object IntegrationTestConfig {
       useExternalSetup,
       zkHost, zkPort,
       master, mesosLib,
-      marathonHost, marathonPort, marathonGroup,
-      httpPort)
+      marathonHost, marathonBasePort, marathonGroup,
+      httpPort,
+      clusterSize,
+      marathonPorts)
   }
 }
 
