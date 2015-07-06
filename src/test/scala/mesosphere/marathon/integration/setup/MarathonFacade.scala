@@ -27,11 +27,13 @@ case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: 
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Integer], startedAt: Date, stagedAt: Date, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
+case class LeaderResult(leader: String)
 
 case class ListDeployments(deployments: Seq[Deployment])
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class Deployment(id: String, affectedApps: Seq[String])
+
 /**
   * The MarathonFacade offers the REST API of a remote marathon instance
   * with all local domain objects.
@@ -235,5 +237,16 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   def deleteArtifact(path: String): RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Delete(s"$url/v2/artifacts$path")), waitTime)
+  }
+
+  //leader ----------------------------------------------
+  def leader(): RestResult[LeaderResult] = {
+    val pipeline = sendReceive ~> read[LeaderResult]
+    result(pipeline(Get(s"$url/v2/leader")), waitTime)
+  }
+
+  def abdicate(): RestResult[HttpResponse] = {
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Delete(s"$url/v2/leader")), waitTime)
   }
 }
