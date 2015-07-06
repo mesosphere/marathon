@@ -99,7 +99,23 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-Optionally, you can specify a minimum number of groups to try and achieve.
+It is important to note that Marathon only knows about different values of the attribute (e.g. "rack_id") by analyzing current running tasks. If tasks are not already spread across all possible values, it may be required to specify the number of values in constraints (assuming you know apriori). For example, if you are spreading across 3 racks, use:
+
+``` bash
+$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:GROUP_BY:3
+```
+
+via curl:
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "GROUP_BY", "3"]]
+  }'
+```
+
 
 ### LIKE operator
 
