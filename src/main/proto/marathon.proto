@@ -188,12 +188,9 @@ message ZKStoreEntry {
 }
 
 message CustomResource {
-    required string name = 1;
-
     message CustomScalar {
         required double value = 1;
     }
-    optional CustomScalar scalar = 2;
 
     message CustomRanges {
         message CustomRange {
@@ -203,13 +200,15 @@ message CustomResource {
         }
         repeated CustomRange value = 1;
     }
-    optional CustomRanges range = 3;
 
     message CustomSet {
         repeated string value = 1;
         required uint32 numberRequired = 2;
     }
-    optional CustomSet set = 4;
+
+    optional CustomScalar scalar = 1;
+    optional CustomRanges range = 2;
+    optional CustomSet set = 3;
 }
 
 message CustomResourceDefinition {

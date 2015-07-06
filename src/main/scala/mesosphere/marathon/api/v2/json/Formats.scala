@@ -200,7 +200,6 @@ trait ContainerFormats {
 }
 
 trait CustomResourceFormats {
-  import Formats._
 
   implicit lazy val CustomScalarRead: Reads[CustomScalar] = (__ \ "value").read[Double].map(CustomScalar(_))
   implicit lazy val CustomScalarWrite: Writes[CustomScalar] =
@@ -213,8 +212,8 @@ trait CustomResourceFormats {
 
   implicit lazy val CustomRangeFormat: Format[CustomRange] = (
     (__ \ "numberRequired").format[Long] ~
-    (__ \ "begin").formatNullable[Option[Long]].withDefault(Some(0)) ~
-    (__ \ "end").formatNullable[Option[Long]].withDefault(Some(Long.MaxValue))
+    (__ \ "begin").formatNullable[Long] ~
+    (__ \ "end").formatNullable[Long]
   )(CustomRange(_, _, _), unlift(CustomRange.unapply))
 
   implicit lazy val CustomRangesRead: Reads[CustomRanges] = (__ \ "value").read[Seq[CustomRange]].map(CustomRanges(_))
@@ -222,11 +221,10 @@ trait CustomResourceFormats {
     (__ \ "value").write[Seq[CustomRange]].contramap((f: CustomRanges) => f.value.toList)
 
   implicit lazy val CustomResourceFormat: Format[CustomResource] = (
-    (__ \ "name").format[String] ~
     (__ \ "scalar").formatNullable[CustomScalar] ~
     (__ \ "ranges").formatNullable[CustomRanges] ~
     (__ \ "set").formatNullable[CustomSet]
-  )(CustomResource(_, _, _, _), unlift(CustomResource.unapply))
+  )(CustomResource(_, _, _), unlift(CustomResource.unapply))
 }
 
 trait DeploymentFormats {

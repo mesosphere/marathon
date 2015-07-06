@@ -21,11 +21,14 @@ object ResourceMatcher {
                            customScalars: Seq[ScalarResource], customSets: Seq[SetResource],
                            customRanges: Seq[RangesResource])
 
-  //scalastyle:off cyclomatic.complexity
-  //scalastyle:off method.length
+  //scalastyle:off method.length cyclomatic.complexity
   def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Set[MarathonTask],
                      acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {
     val groupedResources = offer.getResourcesList.asScala.groupBy(_.getName)
+
+    log.info("TODOC resource matcher offer")
+    log.info(groupedResources)
+    log.info(app)
 
     def findScalarResourceRole(tpe: String, value: Double): Option[Role] =
       groupedResources.get(tpe).flatMap {
@@ -62,6 +65,7 @@ object ResourceMatcher {
           .flatten
           .headOption
       }
+
     def findCustomRanges(tpe: String, value: Seq[CustomRange]): Option[RangesResource] =
       groupedResources.get(tpe).flatMap {
         _
@@ -73,7 +77,8 @@ object ResourceMatcher {
             var success = true
             var resourcesTaken = value.flatMap { range =>
               totalRequired += range.numberRequired
-              val subset = availableRanges.intersect((range.begin.get to range.end.get).toSet)
+              val subset = if (range.begin.isEmpty || range.end.isEmpty) availableRanges
+              else availableRanges.intersect((range.begin.get to range.end.get).toSet)
               if (subset.size >= range.numberRequired) {
                 val taken = subset.take(range.numberRequired.toInt).toList // TODOC need to take Long ideally...
                 availableRanges --= taken
@@ -97,6 +102,7 @@ object ResourceMatcher {
           .flatten
           .headOption
       }
+
     def cpuRoleOpt: Option[Role] = findScalarResourceRole(Resource.CPUS, app.cpus)
     def memRoleOpt: Option[Role] = findScalarResourceRole(Resource.MEM, app.mem)
     def diskRoleOpt: Option[Role] = findScalarResourceRole(Resource.DISK, app.disk)
@@ -164,7 +170,9 @@ object ResourceMatcher {
         log.debug("Met all constraints.")
         x
     }
-
+    log.info(customSetRolesOpt)
+    log.info(customRangesRolesOpt)
+    log.info(customScalarRolesOpt)
     for {
       cpuRole <- cpuRoleOpt
       memRole <- memRoleOpt

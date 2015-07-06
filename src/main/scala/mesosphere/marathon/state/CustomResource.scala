@@ -3,14 +3,11 @@ package mesosphere.marathon.state
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import org.apache.mesos.Protos.{ Value }
 import mesosphere.marathon.Protos
-//import org.apache.log4j.Logger
 import mesosphere.mesos.protos.Range
 import scala.collection.JavaConverters._
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class CustomResource(
-    name: String,
-
     scalar: Option[CustomResource.CustomScalar] = None,
 
     ranges: Option[CustomResource.CustomRanges] = None,
@@ -26,7 +23,6 @@ case class CustomResource(
   def toProto: Protos.CustomResource = {
     val builder = Protos.CustomResource.newBuilder
 
-    builder.setName(name)
     resourceType match {
       case Value.Type.SCALAR => builder.setScalar(scalar.get.toProto)
       case Value.Type.RANGES => builder.setRange(ranges.get.toProto)
@@ -38,9 +34,6 @@ case class CustomResource(
 }
 
 object CustomResource {
-  //val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
-  //TODOC throw error if standardResource?
-  //val log = Logger.getLogger(getClass.getName)
 
   case class CustomScalar(
       value: Double = 0) {
@@ -67,13 +60,16 @@ object CustomResource {
 
   case class CustomRange(
       numberRequired: Long = 0,
-      begin: Option[Long] = Some(0),
-      end: Option[Long] = Some(Long.MaxValue)) {
+      begin: Option[Long],
+      end: Option[Long]) {
     def toProto(): Protos.CustomResource.CustomRanges.CustomRange = {
       val builder = Protos.CustomResource.CustomRanges.CustomRange.newBuilder
         .setNumberRequired(numberRequired)
-        .setBegin(begin.get)
-        .setEnd(end.get)
+
+      if (!begin.isEmpty && !end.isEmpty) {
+        builder.setBegin(begin.get)
+        builder.setEnd(end.get)
+      }
 
       builder.build
     }
@@ -92,25 +88,21 @@ object CustomResource {
 
   def create(resource: Protos.CustomResource): Option[CustomResource] = {
     if (resource.hasScalar) {
-      Some(CustomResource(resource.getName,
-        scalar = Some(CustomScalar(resource.getScalar.getValue: Double))))
+      Some(CustomResource(scalar = Some(CustomScalar(resource.getScalar.getValue: Double))))
     }
     else if (resource.hasRange) {
-      Some(CustomResource(resource.getName,
-        ranges = Some(CustomRanges(
-          resource.getRange.getValueList.asScala.toSeq.map {
-            r: Protos.CustomResource.CustomRanges.CustomRange =>
-              CustomRange(r.getNumberRequired, begin = Some(r.getBegin), end = Some(r.getEnd))
-          }))))
+      Some(CustomResource(ranges = Some(CustomRanges(
+        resource.getRange.getValueList.asScala.toSeq.map {
+          r: Protos.CustomResource.CustomRanges.CustomRange =>
+            CustomRange(r.getNumberRequired, begin = Some(r.getBegin), end = Some(r.getEnd))
+        }))))
     }
     else if (resource.hasSet) {
-      Some(CustomResource(resource.getName,
-        set = Some(CustomSet(
-          resource.getSet.getValueList.asScala.toSet: Set[String],
-          resource.getSet.getNumberRequired))))
+      Some(CustomResource(set = Some(CustomSet(
+        resource.getSet.getValueList.asScala.toSet: Set[String],
+        resource.getSet.getNumberRequired))))
     }
     else {
-      //log.info("TODOC proto resource doesn't have any one of scalar, set, ranges")
       None
     }
   }

@@ -695,9 +695,9 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       ports = Seq(8080, 8081),
       executor = "//cmd",
       acceptedResourceRoles = Some(Set("a", "b")),
-      customResources = Map("foo" -> CustomResource("foo", scalar = Some(CustomResource.CustomScalar(10))),
-        "bar" -> CustomResource("bar", set = Some(CustomResource.CustomSet(Set("a", "b", "c", "d"), 4))),
-        "baz" -> CustomResource("baz", ranges = Some(CustomResource.CustomRanges(
+      customResources = Map("foo" -> CustomResource(Some(CustomResource.CustomScalar(10))),
+        "bar" -> CustomResource(set = Some(CustomResource.CustomSet(Set("a", "b", "c", "d"), 4))),
+        "baz" -> CustomResource(ranges = Some(CustomResource.CustomRanges(
           Seq(CustomResource.CustomRange(5, Some(10L), Some(20L))))))
       )
     )

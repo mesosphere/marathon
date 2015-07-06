@@ -61,7 +61,7 @@
  <check level="error" class="org.scalastyle.scalariform.StructuralTypeChecker" enabled="true"/>
  <check level="error" class="org.scalastyle.file.RegexChecker" enabled="true">
   <parameters>
-   <parameter name="regex"><![CDATA[println]]></parameter>
+   <parameter name="regex"><![CDATA[TODOC println]]></parameter>
   </parameters>
  </check>
  <check level="error" class="org.scalastyle.scalariform.NumberOfTypesChecker" enabled="true">
@@ -106,7 +106,7 @@
  <check level="error" class="org.scalastyle.scalariform.RedundantIfChecker" enabled="false"/>
  <check level="error" class="org.scalastyle.scalariform.TokenChecker" enabled="false">
   <parameters>
-   <parameter name="regex"><![CDATA[println]]></parameter>
+   <parameter name="regex"><![CDATA[TODOC println]]></parameter>
   </parameters>
  </check>
  <check level="error" class="org.scalastyle.scalariform.DeprecatedJavaChecker" enabled="true"/>

@@ -20,10 +20,9 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       mem = 128.0,
       disk = 0.0,
       ports = Seq(0, 0),
-      customResources = Map("customScalar" -> CustomResource("customScalar", scalar = Some(CustomScalar(3.0))),
-        "customSet" -> CustomResource("customSet", set = Some(CustomSet(Set("a", "b", "c"), 3))),
-        "customRanges" -> CustomResource("customRanges",
-          ranges = Some(CustomRanges(Seq(CustomRange(10L, Some(25000L), Some(32000L))))))
+      customResources = Map("customScalar" -> CustomResource(Some(CustomScalar(3.0))),
+        "customSet" -> CustomResource(set = Some(CustomSet(Set("a", "b", "c"), 3))),
+        "customRanges" -> CustomResource(ranges = Some(CustomRanges(Seq(CustomRange(10L, Some(25000L), Some(32000L))))))
       )
     )
 
@@ -43,6 +42,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     res.memRole should be("*")
     res.diskRole should be("*")
 
+    // TODOC
     //    res.customScalars.last.getValue should be (3.0)
     //    res.customSets.last.getItemList should be Seq("a", "b", "c")
 
@@ -200,13 +200,14 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       mem = 128.0,
       disk = 1.0,
       ports = Seq(0, 0),
-      customResources = Map("customScalar" -> CustomResource("customScalar", scalar = Some(CustomScalar(4.0))))
+      customResources = Map("customScalar" -> CustomResource(scalar = Some(CustomScalar(4.0))))
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())
 
     resOpt should be (empty)
   }
+
   test("match custom resources fails on custom set resource") {
     val offer = makeBasicOffer().build()
     val app = AppDefinition(
@@ -215,13 +216,14 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       mem = 128.0,
       disk = 1.0,
       ports = Seq(0, 0),
-      customResources = Map("customSet" -> CustomResource("customSet", set = Some(CustomSet(Set("a", "e"), 2))))
+      customResources = Map("customSet" -> CustomResource(set = Some(CustomSet(Set("a", "e"), 2))))
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())
 
     resOpt should be (empty)
   }
+
   test("match custom resources fails on custom ranges resource") {
     val offer = makeBasicOffer().build()
     val app = AppDefinition(
@@ -230,7 +232,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       mem = 128.0,
       disk = 1.0,
       ports = Seq(0, 0),
-      customResources = Map("customRanges" -> CustomResource("customRanges", ranges =
+      customResources = Map("customRanges" -> CustomResource(ranges =
         Some(CustomRanges(Seq(CustomRange(10000L, Some(15000L), Some(25000L)))))))
     )
 
@@ -247,7 +249,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       mem = 128.0,
       disk = 1.0,
       ports = Seq(0, 0),
-      customResources = Map("customRanges" -> CustomResource("customRanges", ranges =
+      customResources = Map("customRanges" -> CustomResource(ranges =
         Some(CustomRanges(Seq(CustomRange(10L, Some(19995L), Some(25005L)))))))
     )
 

@@ -41,6 +41,7 @@ class TaskBuilder(app: AppDefinition,
       acceptedResourceRoles = acceptedResourceRoles) match {
 
         case Some(ResourceMatch(cpu, mem, disk, ranges, customScalars, customSets, customRanges)) =>
+          log.info("TODOC BUILD")
           build(offer, cpu, mem, disk, ranges, customScalars, customSets, customRanges)
 
         case _ =>
@@ -73,7 +74,11 @@ class TaskBuilder(app: AppDefinition,
       case (key, value) =>
         Label.newBuilder.setKey(key).setValue(value).build()
     }
-
+    log.info("TODOC")
+    log.info(offer)
+    log.info(customScalars)
+    log.info(customRanges)
+    log.info(customSets)
     val taskId = newTaskId(app.id)
     val builder = TaskInfo.newBuilder
       // Use a valid hostname to make service discovery easier

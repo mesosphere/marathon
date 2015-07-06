@@ -168,7 +168,6 @@ case class AppDefinition(
         r => r.getName -> (r.getScalar.getValue: JDouble)
       }.toMap
 
-    // TODOC maybe we don't need name?
     val standardResources = Set(Resource.CPUS, Resource.MEM, Resource.DISK, Resource.PORTS)
 
     val customResourcesMap: Map[String, CustomResource] = proto.getCustomResourcesList.asScala
