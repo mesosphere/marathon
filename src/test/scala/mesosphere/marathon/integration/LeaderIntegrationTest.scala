@@ -1,10 +1,18 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.integration.setup.{ MarathonClusterIntegrationTest, IntegrationFunSuite, WaitTestSupport }
+import play.api.libs.json.Json
+import scala.concurrent.duration._
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-class LeaderIntegrationTest extends IntegrationFunSuite with MarathonClusterIntegrationTest with GivenWhenThen with Matchers {
+class LeaderIntegrationTest extends IntegrationFunSuite
+    with MarathonClusterIntegrationTest
+    with GivenWhenThen
+    with Matchers {
   test("all nodes return the same leader") {
+    Given("a leader has been elected")
+    WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
+
     When("calling /v2/leader on all nodes of a cluster")
     val results = marathonFacades.map(marathon => marathon.leader())
 
@@ -17,6 +25,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite with MarathonClusterInte
 
   test("the leader abdicates when it receives a DELETE") {
     Given("a leader")
+    WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
     val leader = marathon.leader().value
 
     When("calling DELETE /v2/leader")
@@ -24,9 +33,9 @@ class LeaderIntegrationTest extends IntegrationFunSuite with MarathonClusterInte
 
     Then("the request should be successful")
     result.code should be (200)
-    (result.entityJson \ "message").as[String] should be ("Leadership abdicted")
+    (result.entityJson \ "message") should be (Json.toJson("Leadership abdicted"))
 
     And("the leader must have changed")
-    marathon.leader().value shouldNot be(leader)
+    WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
   }
 }

@@ -17,7 +17,7 @@ class EventSubscribersIntegrationTest
     marathon.subscribe("http://localhost:1337").code should be(200)
 
     Then("a notification should be sent to all the subscribers")
-    waitForEvent("subscribe_event").info should contain("callbackUrl" -> "http://localhost:1337")
+    waitForEventWith("subscribe_event", _.info.exists(_ == "callbackUrl" -> "http://localhost:1337"))
 
     And("the subscriber should show up in the list of subscribers")
     marathon.listSubscribers.value.urls should contain("http://localhost:1337")
@@ -33,7 +33,7 @@ class EventSubscribersIntegrationTest
     marathon.unsubscribe("http://localhost:1337").code should be(200)
 
     Then("a notification should be sent to all the subscribers")
-    waitForEvent("unsubscribe_event").info should contain("callbackUrl" -> "http://localhost:1337")
+    waitForEventWith("subscribe_event", _.info.exists(_ == "callbackUrl" -> "http://localhost:1337"))
 
     And("the subscriber should not show up in the list of subscribers")
     marathon.listSubscribers.value.urls shouldNot contain("http://localhost:1337")
