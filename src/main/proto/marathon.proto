@@ -194,9 +194,9 @@ message CustomResource {
 
     message CustomRanges {
         message CustomRange {
-            required uint64 numberRequired = 1;
-            optional uint64 begin = 2;
-            optional uint64 end = 3;
+            required uint32 numberRequired = 1;
+            optional uint32 begin = 2;
+            optional uint32 end = 3;
         }
         repeated CustomRange value = 1;
     }

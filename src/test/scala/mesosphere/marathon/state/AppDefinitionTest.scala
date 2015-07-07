@@ -698,7 +698,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       customResources = Map("foo" -> CustomResource(Some(CustomResource.CustomScalar(10))),
         "bar" -> CustomResource(set = Some(CustomResource.CustomSet(Set("a", "b", "c", "d"), 4))),
         "baz" -> CustomResource(ranges = Some(CustomResource.CustomRanges(
-          Seq(CustomResource.CustomRange(5, Some(10L), Some(20L))))))
+          Seq(CustomResource.CustomRange(5, Some(10), Some(20))))))
       )
     )
 

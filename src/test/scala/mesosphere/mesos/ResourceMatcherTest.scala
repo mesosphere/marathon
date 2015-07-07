@@ -22,29 +22,25 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       ports = Seq(0, 0),
       customResources = Map("customScalar" -> CustomResource(Some(CustomScalar(3.0))),
         "customSet" -> CustomResource(set = Some(CustomSet(Set("a", "b", "c"), 3))),
-        "customRanges" -> CustomResource(ranges = Some(CustomRanges(Seq(CustomRange(10L, Some(25000L), Some(32000L))))))
+        "customRanges" -> CustomResource(ranges = Some(CustomRanges(Seq(CustomRange(10, Some(25000), Some(32000))))))
       )
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())
 
-    println("TODOC-matcher")
-    println(offer)
-    println(app)
-
     resOpt should not be empty
     val res = resOpt.get
 
-    println("TODOC-matcher")
     println(res)
 
     res.cpuRole should be("*")
     res.memRole should be("*")
     res.diskRole should be("*")
 
-    // TODOC
-    //    res.customScalars.last.getValue should be (3.0)
-    //    res.customSets.last.getItemList should be Seq("a", "b", "c")
+    res.customScalars.last.value should be (3.0)
+    res.customSets.last.items should contain theSameElementsAs Set("a", "b", "c")
+    res.customRanges.last.ranges.last.begin should be (25000)
+    res.customRanges.last.ranges.last.end should be (25009)
 
     // check if we got 2 ports
     val range = res.ports.head.ranges.head
@@ -233,7 +229,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       disk = 1.0,
       ports = Seq(0, 0),
       customResources = Map("customRanges" -> CustomResource(ranges =
-        Some(CustomRanges(Seq(CustomRange(10000L, Some(15000L), Some(25000L)))))))
+        Some(CustomRanges(Seq(CustomRange(10000, Some(15000), Some(25000)))))))
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())
@@ -250,7 +246,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       disk = 1.0,
       ports = Seq(0, 0),
       customResources = Map("customRanges" -> CustomResource(ranges =
-        Some(CustomRanges(Seq(CustomRange(10L, Some(19995L), Some(25005L)))))))
+        Some(CustomRanges(Seq(CustomRange(10, Some(19995), Some(25005)))))))
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())

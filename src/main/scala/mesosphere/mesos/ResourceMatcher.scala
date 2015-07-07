@@ -65,27 +65,26 @@ object ResourceMatcher {
     def findCustomRanges(tpe: String, value: Seq[CustomRange]): Option[RangesResource] =
       groupedResources.get(tpe).flatMap {
         _
-          .filter(resource => acceptedResourceRoles(resource.getRole)) // TODOC test what you get at this stage
+          .filter(resource => acceptedResourceRoles(resource.getRole))
           .map { resource =>
             var availableRanges = collection.SortedSet(
               resource.getRanges.getRangeList.asScala.flatMap(r => (r.getBegin to r.getEnd)): _*)
-            var totalRequired: Long = 0
+            var totalRequired = 0
             var success = true
             var resourcesTaken = value.flatMap { range =>
               totalRequired += range.numberRequired
               val subset = if (range.begin.isEmpty || range.end.isEmpty) availableRanges
-              else availableRanges.intersect((range.begin.get to range.end.get).toSet)
+              else availableRanges.intersect((range.begin.get.toLong to range.end.get.toLong).toSet)
               if (subset.size >= range.numberRequired) {
-                val taken = subset.take(range.numberRequired.toInt).toList // TODOC need to take Long ideally...
+                val taken = subset.take(range.numberRequired).toList
                 availableRanges --= taken
                 taken
-                // takes from the left of the TreeSet, ensuring ranges aren't modified too much
               }
               else {
                 success = false
                 List.empty
               }
-            }.map { r => PortWithRole(resource.getRole, r.toInt) } // TODOC find out convert to double
+            }.map { r => PortWithRole(resource.getRole, r.toInt) }
             if (success) {
               Some(RangesResource(tpe, PortWithRole.createPortsResources(resourcesTaken).flatMap { r =>
                 r.ranges

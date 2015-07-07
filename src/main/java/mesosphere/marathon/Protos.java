@@ -21730,35 +21730,35 @@ public final class Protos {
       public interface CustomRangeOrBuilder
           extends com.google.protobuf.MessageOrBuilder {
 
-        // required uint64 numberRequired = 1;
+        // required uint32 numberRequired = 1;
         /**
-         * <code>required uint64 numberRequired = 1;</code>
+         * <code>required uint32 numberRequired = 1;</code>
          */
         boolean hasNumberRequired();
         /**
-         * <code>required uint64 numberRequired = 1;</code>
+         * <code>required uint32 numberRequired = 1;</code>
          */
-        long getNumberRequired();
+        int getNumberRequired();
 
-        // optional uint64 begin = 2;
+        // optional uint32 begin = 2;
         /**
-         * <code>optional uint64 begin = 2;</code>
+         * <code>optional uint32 begin = 2;</code>
          */
         boolean hasBegin();
         /**
-         * <code>optional uint64 begin = 2;</code>
+         * <code>optional uint32 begin = 2;</code>
          */
-        long getBegin();
+        int getBegin();
 
-        // optional uint64 end = 3;
+        // optional uint32 end = 3;
         /**
-         * <code>optional uint64 end = 3;</code>
+         * <code>optional uint32 end = 3;</code>
          */
         boolean hasEnd();
         /**
-         * <code>optional uint64 end = 3;</code>
+         * <code>optional uint32 end = 3;</code>
          */
-        long getEnd();
+        int getEnd();
       }
       /**
        * Protobuf type {@code mesosphere.marathon.CustomResource.CustomRanges.CustomRange}
@@ -21813,17 +21813,17 @@ public final class Protos {
                 }
                 case 8: {
                   bitField0_ |= 0x00000001;
-                  numberRequired_ = input.readUInt64();
+                  numberRequired_ = input.readUInt32();
                   break;
                 }
                 case 16: {
                   bitField0_ |= 0x00000002;
-                  begin_ = input.readUInt64();
+                  begin_ = input.readUInt32();
                   break;
                 }
                 case 24: {
                   bitField0_ |= 0x00000004;
-                  end_ = input.readUInt64();
+                  end_ = input.readUInt32();
                   break;
                 }
               }
@@ -21866,58 +21866,58 @@ public final class Protos {
         }
 
         private int bitField0_;
-        // required uint64 numberRequired = 1;
+        // required uint32 numberRequired = 1;
         public static final int NUMBERREQUIRED_FIELD_NUMBER = 1;
-        private long numberRequired_;
+        private int numberRequired_;
         /**
-         * <code>required uint64 numberRequired = 1;</code>
+         * <code>required uint32 numberRequired = 1;</code>
          */
         public boolean hasNumberRequired() {
           return ((bitField0_ & 0x00000001) == 0x00000001);
         }
         /**
-         * <code>required uint64 numberRequired = 1;</code>
+         * <code>required uint32 numberRequired = 1;</code>
          */
-        public long getNumberRequired() {
+        public int getNumberRequired() {
           return numberRequired_;
         }
 
-        // optional uint64 begin = 2;
+        // optional uint32 begin = 2;
         public static final int BEGIN_FIELD_NUMBER = 2;
-        private long begin_;
+        private int begin_;
         /**
-         * <code>optional uint64 begin = 2;</code>
+         * <code>optional uint32 begin = 2;</code>
          */
         public boolean hasBegin() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
         /**
-         * <code>optional uint64 begin = 2;</code>
+         * <code>optional uint32 begin = 2;</code>
          */
-        public long getBegin() {
+        public int getBegin() {
           return begin_;
         }
 
-        // optional uint64 end = 3;
+        // optional uint32 end = 3;
         public static final int END_FIELD_NUMBER = 3;
-        private long end_;
+        private int end_;
         /**
-         * <code>optional uint64 end = 3;</code>
+         * <code>optional uint32 end = 3;</code>
          */
         public boolean hasEnd() {
           return ((bitField0_ & 0x00000004) == 0x00000004);
         }
         /**
-         * <code>optional uint64 end = 3;</code>
+         * <code>optional uint32 end = 3;</code>
          */
-        public long getEnd() {
+        public int getEnd() {
           return end_;
         }
 
         private void initFields() {
-          numberRequired_ = 0L;
-          begin_ = 0L;
-          end_ = 0L;
+          numberRequired_ = 0;
+          begin_ = 0;
+          end_ = 0;
         }
         private byte memoizedIsInitialized = -1;
         public final boolean isInitialized() {
@@ -21936,13 +21936,13 @@ public final class Protos {
                             throws java.io.IOException {
           getSerializedSize();
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
-            output.writeUInt64(1, numberRequired_);
+            output.writeUInt32(1, numberRequired_);
           }
           if (((bitField0_ & 0x00000002) == 0x00000002)) {
-            output.writeUInt64(2, begin_);
+            output.writeUInt32(2, begin_);
           }
           if (((bitField0_ & 0x00000004) == 0x00000004)) {
-            output.writeUInt64(3, end_);
+            output.writeUInt32(3, end_);
           }
           getUnknownFields().writeTo(output);
         }
@@ -21955,15 +21955,15 @@ public final class Protos {
           size = 0;
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
             size += com.google.protobuf.CodedOutputStream
-              .computeUInt64Size(1, numberRequired_);
+              .computeUInt32Size(1, numberRequired_);
           }
           if (((bitField0_ & 0x00000002) == 0x00000002)) {
             size += com.google.protobuf.CodedOutputStream
-              .computeUInt64Size(2, begin_);
+              .computeUInt32Size(2, begin_);
           }
           if (((bitField0_ & 0x00000004) == 0x00000004)) {
             size += com.google.protobuf.CodedOutputStream
-              .computeUInt64Size(3, end_);
+              .computeUInt32Size(3, end_);
           }
           size += getUnknownFields().getSerializedSize();
           memoizedSerializedSize = size;
@@ -22081,11 +22081,11 @@ public final class Protos {
 
           public Builder clear() {
             super.clear();
-            numberRequired_ = 0L;
+            numberRequired_ = 0;
             bitField0_ = (bitField0_ & ~0x00000001);
-            begin_ = 0L;
+            begin_ = 0;
             bitField0_ = (bitField0_ & ~0x00000002);
-            end_ = 0L;
+            end_ = 0;
             bitField0_ = (bitField0_ & ~0x00000004);
             return this;
           }
@@ -22183,101 +22183,101 @@ public final class Protos {
           }
           private int bitField0_;
 
-          // required uint64 numberRequired = 1;
-          private long numberRequired_ ;
+          // required uint32 numberRequired = 1;
+          private int numberRequired_ ;
           /**
-           * <code>required uint64 numberRequired = 1;</code>
+           * <code>required uint32 numberRequired = 1;</code>
            */
           public boolean hasNumberRequired() {
             return ((bitField0_ & 0x00000001) == 0x00000001);
           }
           /**
-           * <code>required uint64 numberRequired = 1;</code>
+           * <code>required uint32 numberRequired = 1;</code>
            */
-          public long getNumberRequired() {
+          public int getNumberRequired() {
             return numberRequired_;
           }
           /**
-           * <code>required uint64 numberRequired = 1;</code>
+           * <code>required uint32 numberRequired = 1;</code>
            */
-          public Builder setNumberRequired(long value) {
+          public Builder setNumberRequired(int value) {
             bitField0_ |= 0x00000001;
             numberRequired_ = value;
             onChanged();
             return this;
           }
           /**
-           * <code>required uint64 numberRequired = 1;</code>
+           * <code>required uint32 numberRequired = 1;</code>
            */
           public Builder clearNumberRequired() {
             bitField0_ = (bitField0_ & ~0x00000001);
-            numberRequired_ = 0L;
+            numberRequired_ = 0;
             onChanged();
             return this;
           }
 
-          // optional uint64 begin = 2;
-          private long begin_ ;
+          // optional uint32 begin = 2;
+          private int begin_ ;
           /**
-           * <code>optional uint64 begin = 2;</code>
+           * <code>optional uint32 begin = 2;</code>
            */
           public boolean hasBegin() {
             return ((bitField0_ & 0x00000002) == 0x00000002);
           }
           /**
-           * <code>optional uint64 begin = 2;</code>
+           * <code>optional uint32 begin = 2;</code>
            */
-          public long getBegin() {
+          public int getBegin() {
             return begin_;
           }
           /**
-           * <code>optional uint64 begin = 2;</code>
+           * <code>optional uint32 begin = 2;</code>
            */
-          public Builder setBegin(long value) {
+          public Builder setBegin(int value) {
             bitField0_ |= 0x00000002;
             begin_ = value;
             onChanged();
             return this;
           }
           /**
-           * <code>optional uint64 begin = 2;</code>
+           * <code>optional uint32 begin = 2;</code>
            */
           public Builder clearBegin() {
             bitField0_ = (bitField0_ & ~0x00000002);
-            begin_ = 0L;
+            begin_ = 0;
             onChanged();
             return this;
           }
 
-          // optional uint64 end = 3;
-          private long end_ ;
+          // optional uint32 end = 3;
+          private int end_ ;
           /**
-           * <code>optional uint64 end = 3;</code>
+           * <code>optional uint32 end = 3;</code>
            */
           public boolean hasEnd() {
             return ((bitField0_ & 0x00000004) == 0x00000004);
           }
           /**
-           * <code>optional uint64 end = 3;</code>
+           * <code>optional uint32 end = 3;</code>
            */
-          public long getEnd() {
+          public int getEnd() {
             return end_;
           }
           /**
-           * <code>optional uint64 end = 3;</code>
+           * <code>optional uint32 end = 3;</code>
            */
-          public Builder setEnd(long value) {
+          public Builder setEnd(int value) {
             bitField0_ |= 0x00000004;
             end_ = value;
             onChanged();
             return this;
           }
           /**
-           * <code>optional uint64 end = 3;</code>
+           * <code>optional uint32 end = 3;</code>
            */
           public Builder clearEnd() {
             bitField0_ = (bitField0_ & ~0x00000004);
-            end_ = 0L;
+            end_ = 0;
             onChanged();
             return this;
           }
@@ -25092,8 +25092,8 @@ public final class Protos {
       "stomScalar\022\r\n\005value\030\001 \002(\001\032\236\001\n\014CustomRang" +
       "es\022K\n\005value\030\001 \003(\0132<.mesosphere.marathon." +
       "CustomResource.CustomRanges.CustomRange\032" +
-      "A\n\013CustomRange\022\026\n\016numberRequired\030\001 \002(\004\022\r",
-      "\n\005begin\030\002 \001(\004\022\013\n\003end\030\003 \001(\004\0322\n\tCustomSet\022" +
+      "A\n\013CustomRange\022\026\n\016numberRequired\030\001 \002(\r\022\r",
+      "\n\005begin\030\002 \001(\r\022\013\n\003end\030\003 \001(\r\0322\n\tCustomSet\022" +
       "\r\n\005value\030\001 \003(\t\022\026\n\016numberRequired\030\002 \002(\r\"_" +
       "\n\030CustomResourceDefinition\022\014\n\004name\030\001 \002(\t" +
       "\0225\n\010resource\030\002 \002(\0132#.mesosphere.marathon" +

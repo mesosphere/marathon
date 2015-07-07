@@ -211,9 +211,9 @@ trait CustomResourceFormats {
   )(CustomSet(_, _), unlift(CustomSet.unapply))
 
   implicit lazy val CustomRangeFormat: Format[CustomRange] = (
-    (__ \ "numberRequired").format[Long] ~
-    (__ \ "begin").formatNullable[Long] ~
-    (__ \ "end").formatNullable[Long]
+    (__ \ "numberRequired").format[Int] ~
+    (__ \ "begin").formatNullable[Int] ~
+    (__ \ "end").formatNullable[Int]
   )(CustomRange(_, _, _), unlift(CustomRange.unapply))
 
   implicit lazy val CustomRangesRead: Reads[CustomRanges] = (__ \ "value").read[Seq[CustomRange]].map(CustomRanges(_))

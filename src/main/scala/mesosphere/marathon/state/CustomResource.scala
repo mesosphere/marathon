@@ -59,9 +59,9 @@ object CustomResource {
   }
 
   case class CustomRange(
-      numberRequired: Long = 0,
-      begin: Option[Long],
-      end: Option[Long]) {
+      numberRequired: Int = 0,
+      begin: Option[Int],
+      end: Option[Int]) {
     def toProto(): Protos.CustomResource.CustomRanges.CustomRange = {
       val builder = Protos.CustomResource.CustomRanges.CustomRange.newBuilder
         .setNumberRequired(numberRequired)
