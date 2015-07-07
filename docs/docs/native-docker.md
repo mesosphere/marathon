@@ -238,6 +238,16 @@ and execute `echo hello`:
 }
 ```
 
+Named arguments can be passed as an array of consecutive `argc, argv` tuples,
+e.g.:
+
+```json
+   "args": [
+      "--name", "etcd0",
+      "--initial-cluster-state", "new"
+    ]
+```
+
 #### Privileged Mode and Arbitrary Docker Options
 
 Starting with version 0.7.6, Marathon supports two new keys for docker
