@@ -45,7 +45,6 @@ case class AppDefinition(
 
   disk: JDouble = AppDefinition.DefaultDisk,
 
-  //customResources: Map[String, JDouble] = AppDefinition.DefaultCustomResources,
   customResources: Map[String, CustomResource] = AppDefinition.DefaultCustomResources,
 
   @FieldPattern(regexp = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$") executor: String = AppDefinition.DefaultExecutor,
@@ -318,7 +317,6 @@ object AppDefinition {
 
   val DefaultDisk: Double = 0.0
 
-  //var DefaultCustomResources: Map[String, JDouble] = Map.empty
   var DefaultCustomResources: Map[String, CustomResource] = Map.empty
 
   val DefaultExecutor: String = ""

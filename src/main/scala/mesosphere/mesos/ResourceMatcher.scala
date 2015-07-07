@@ -26,10 +26,6 @@ object ResourceMatcher {
                      acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {
     val groupedResources = offer.getResourcesList.asScala.groupBy(_.getName)
 
-    log.info("TODOC resource matcher offer")
-    log.info(groupedResources)
-    log.info(app)
-
     def findScalarResourceRole(tpe: String, value: Double): Option[Role] =
       groupedResources.get(tpe).flatMap {
         _
@@ -170,9 +166,7 @@ object ResourceMatcher {
         log.debug("Met all constraints.")
         x
     }
-    log.info(customSetRolesOpt)
-    log.info(customRangesRolesOpt)
-    log.info(customScalarRolesOpt)
+
     for {
       cpuRole <- cpuRoleOpt
       memRole <- memRoleOpt

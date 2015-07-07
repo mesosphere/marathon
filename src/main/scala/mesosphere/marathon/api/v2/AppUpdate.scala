@@ -43,7 +43,6 @@ case class AppUpdate(
     disk: Option[JDouble] = None,
 
     customResources: Option[Map[String, CustomResource]] = None,
-    //customResources: Option[Map[String, JDouble]] = None,
 
     executor: Option[String] = None,
 

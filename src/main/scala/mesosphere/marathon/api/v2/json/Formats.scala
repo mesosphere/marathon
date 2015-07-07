@@ -48,10 +48,10 @@ object Formats extends Formats {
 trait Formats
     extends AppDefinitionFormats
     with HealthCheckFormats
+    with ContainerFormats
     with CustomResourceFormats
     with DeploymentFormats
-    with EventFormats
-    with ContainerFormats {
+    with EventFormats {
   import scala.collection.JavaConverters._
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
