@@ -40,6 +40,7 @@ title: REST API
   * [DELETE /v2/eventSubscriptions](#delete-/v2/eventsubscriptions) Unregister a callback URL from the event subscribers list
 * [Queue](#queue) <span class="label label-default">v0.7.0</span>
   * [GET /v2/queue](#get-/v2/queue): List content of the staging queue.
+  * [DELETE /v2/queue/{appId}/delay](#delete-/v2/queue/{appId}/delay): <span class="label label-default">v0.10.0</span> Reset the application specific task launch delay.
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
   * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
   * [GET /v2/leader](#get-/v2/leader): Get the current leader
@@ -2428,7 +2429,8 @@ Transfer-Encoding: chunked
         {
             "count" : 10,
             "delay": {
-              "overdue": "true"
+              "overdue": "true",
+              "timeLeftSeconds": 784
             }
             "app" : {
                 "cmd" : "tail -f /dev/null",
@@ -2464,6 +2466,30 @@ Transfer-Encoding: chunked
         }
     ]
 }
+{% endhighlight %}
+
+#### DELETE `/v2/queue/{appId}/delay`
+
+The application specific task launch delay can be reset by calling this endpoint 
+
+##### Example
+
+{% highlight http %}
+DELETE /v2/queue/myapp/delay HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Length: 0
+Host: localhost:8080
+User-Agent: HTTPie/0.9.2
+{% endhighlight %}
+
+{% highlight http %}
+HTTP/1.1 204 No Content
+Cache-Control: no-cache, no-store, must-revalidate
+Expires: 0
+Pragma: no-cache
+Server: Jetty(8.1.15.v20140411)
 {% endhighlight %}
 
 ### Server Info
