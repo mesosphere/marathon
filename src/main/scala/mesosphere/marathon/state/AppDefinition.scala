@@ -98,13 +98,13 @@ case class AppDefinition(
       hc.protocol == Protocol.COMMAND || (validPortIndices contains hc.portIndex)
     }
   }
+
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(this, None, None, Seq.empty)
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
-
     val appLabels = labels.map {
       case (key, value) =>
         mesos.Parameter.newBuilder

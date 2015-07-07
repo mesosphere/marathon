@@ -127,7 +127,7 @@ class AppsResource @Inject() (
       id = baseId,
       dependencies = app.dependencies.map(_.canonicalPath(baseId))
     )
-    
+
     val deploymentPlan = result(
       groupManager.updateApp(
         baseId,

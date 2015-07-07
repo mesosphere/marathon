@@ -138,7 +138,7 @@ object Container {
     }
 
   }
-  
+
   object Docker {
     def apply(proto: Protos.ExtendedContainerInfo.DockerInfo): Docker =
       Docker(
