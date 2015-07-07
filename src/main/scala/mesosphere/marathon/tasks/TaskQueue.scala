@@ -129,4 +129,12 @@ class TaskQueue {
 
     findMatching(sorted)
   }
+
+  /**
+    * Reset the rate limiting delay for the given app definition
+    * @param app the app definition to reset.
+    */
+  def resetDelay(app: AppDefinition): Unit = {
+    rateLimiter.resetDelay(app)
+  }
 }
