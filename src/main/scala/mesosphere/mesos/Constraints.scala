@@ -1,5 +1,7 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.state.AppDefinition
+
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
 import mesosphere.marathon.Protos.Constraint.Operator
@@ -82,13 +84,12 @@ object Constraints {
           (value.isEmpty || attr.get.getText.getValue == value) &&
             // All running tasks should have the matching attribute
             matches.size == tasks.size
-        case Operator.GROUP_BY => {
+        case Operator.GROUP_BY =>
           val groupFunc = (task: MarathonTask) =>
             task.getAttributesList.asScala
               .find(_.getName == field)
               .map(_.getText.getValue)
           checkGroupBy(attr.get.getText.getValue, groupFunc)
-        }
         case Operator.LIKE =>
           if (value.nonEmpty) {
             attr.get.getText.getValue.matches(value)
@@ -125,4 +126,88 @@ object Constraints {
 
   def meetsConstraint(tasks: Iterable[MarathonTask], offer: Offer, constraint: Constraint): Boolean =
     new ConstraintsChecker(tasks, offer, constraint).isMatch
+
+  /**
+    * Select tasks to kill while maintaining the constraints of the application definition.
+    * Note: It is possible, that the result of this operation does not select as much tasks as needed.
+    * @param app the application definition of the tasks.
+    * @param runningTasks the list of running tasks to filter
+    * @param toKillCount the expected number of tasks to select for kill
+    * @return the selected tasks to kill. The number of tasks will not exceed toKill but can be less.
+    */
+  //scalastyle:off return
+  def selectTasksToKill(app: AppDefinition, runningTasks: Set[MarathonTask], toKillCount: Int): Set[MarathonTask] = {
+    require(toKillCount <= runningTasks.size, "Can not kill more instances than running")
+
+    //short circuit, if all tasks shall be killed
+    if (runningTasks.size == toKillCount) return runningTasks
+
+    //currently, only the GROUP_BY operator is able to select tasks to kill
+    val distributions = app.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
+      def groupFn(task: MarathonTask): Option[String] = constraint.getField match {
+        case "hostname"    => Some(task.getHost)
+        case field: String => task.getAttributesList.asScala.find(_.getName == field).map(_.getText.getValue)
+      }
+      GroupByDistribution(constraint, runningTasks.groupBy(groupFn).values.toSeq)
+    }
+
+    //short circuit, if there are no constraints to align with
+    if (distributions.isEmpty) return Set.empty
+
+    var toKillTasks = Set.empty[MarathonTask]
+    var flag = true
+    while (flag && toKillTasks.size != toKillCount) {
+      val tried = distributions
+          //sort all distributions in descending order based on distribution difference
+          .toSeq.sortBy(_.distributionDifference(toKillTasks)).reverseIterator
+          //select tasks to kill (without already selected ones)
+          .flatMap(_.tasksToKillIterator(toKillTasks)) ++
+          //fallback: if the distributions did not select a task, choose one of the not chosen ones
+          runningTasks.iterator.filterNot(toKillTasks.contains)
+
+      tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + tryTask))) match {
+        case Some(task) => toKillTasks += task
+        case None       => flag = false
+      }
+    }
+
+    //log the selected tasks and why they were selected
+    if (log.isInfoEnabled) {
+      val taskDesc = toKillTasks.map { task =>
+        val attrs = task.getAttributesList.asScala.map(a => s"${a.getName}=${a.getText.getValue}").mkString(", ")
+        s"Task:${task.getId} host:${task.getHost} attrs:$attrs"
+      }.mkString("Selected Tasks to kill:\n", "\n", "\n")
+      val distDesc = distributions.map { d =>
+        val (before, after) = (d.distributionDifference(), d.distributionDifference(toKillTasks))
+        s"${d.constraint.getField} changed from: $before to $after"
+      }.mkString("Selected Constraint diff changed:\n", "\n", "\n")
+      log.info(s"$taskDesc$distDesc")
+    }
+
+    toKillTasks
+  }
+
+  /**
+    * Helper class for easier distribution computation.
+    */
+  private case class GroupByDistribution(constraint: Constraint, distribution: Seq[Set[MarathonTask]]) {
+    def isMoreEvenWithout(selected: Set[MarathonTask]): Boolean = {
+      val diffAfterKill = distributionDifference(selected)
+      //diff after kill is 0=perfect, 1=tolerated or minimizes the difference
+      diffAfterKill <= 1 || distributionDifference() > diffAfterKill
+    }
+
+    def tasksToKillIterator(without: Set[MarathonTask]): Iterator[MarathonTask] = {
+      val updated = distribution.map(_ -- without).groupBy(_.size)
+      if (updated.size == 1) /* even distributed */ Iterator.empty else {
+        updated.maxBy(_._1)._2.iterator.flatten
+      }
+    }
+
+    def distributionDifference(without: Set[MarathonTask] = Set.empty): Int = {
+      val updated = distribution.map(_ -- without).groupBy(_.size).keySet
+      updated.max - updated.min
+    }
+  }
 }
+

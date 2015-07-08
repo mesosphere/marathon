@@ -2,6 +2,7 @@ package mesosphere.marathon.upgrade
 
 import java.net.URL
 import mesosphere.marathon.event.{ DeploymentStatus, DeploymentStepSuccess, DeploymentStepFailure }
+import mesosphere.mesos.Constraints
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
@@ -138,7 +139,12 @@ class DeploymentActor(
       promise.future
     }
     else {
-      killTasks(app.id, runningTasks.toSeq.sortBy(_.getStartedAt).drop(scaleTo))
+      val toKillCount = runningTasks.size - scaleTo
+      var toKill = Constraints.selectTasksToKill(app, runningTasks, toKillCount)
+      if (toKill.size < toKillCount) {
+        toKill ++= (runningTasks -- toKill).toSeq.sortBy(_.getStartedAt).drop(scaleTo)
+      }
+      killTasks(app.id, toKill.toSeq)
     }
   }
 
