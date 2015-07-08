@@ -32,7 +32,7 @@ title: REST API
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
   * [GET /v2/deployments](#get-/v2/deployments): List running deployments
   * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Revert or cancel the deployment with `deploymentId`
-* [Event Stream](#event-stream)
+* [Event Stream](#event-stream) <span class="label label-default">v0.9.0</span>
   * [GET /v2/events](#get-/v2/events): Attach to the event stream
 * [Event Subscriptions](#event-subscriptions)
   * [POST /v2/eventSubscriptions](#post-/v2/eventsubscriptions): Register a callback URL as an event subscriber
