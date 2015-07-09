@@ -123,7 +123,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 
 ## Companies using Marathon
 
-Marathon is managing applications on more than 100,000 nodes at these companies, and many more:
+Across all installations Marathon is managing applications on more than 100,000 nodes world-wide. These are some of the companies using it:
 
 * [Airbnb](https://www.airbnb.com/)
 * [Allegro Group](http://www.allegrogroup.com)
