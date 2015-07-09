@@ -9,6 +9,8 @@ import org.scalastyle.sbt.ScalastylePlugin.{ Settings => styleSettings }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
 import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
+import sbtrelease._
+import ReleaseStateTransformations._
 
 object MarathonBuild extends Build {
   lazy val root: Project = Project(
@@ -16,7 +18,7 @@ object MarathonBuild extends Build {
     base = file("."),
     settings = baseSettings ++
                asmSettings ++
-               releaseSettings ++
+               customReleaseSettings ++
                formatSettings ++
                scalaStyleSettings ++
                revolverSettings ++
@@ -25,7 +27,6 @@ object MarathonBuild extends Build {
                integrationTestSettings ++
                teamCitySetEnvSettings ++
                Seq(
-                 publishTo := Some(Resolver.file("file",  new File( "/tmp" ))),
                  libraryDependencies ++= Dependencies.root,
                  parallelExecution in Test := false,
                  fork in Test := true
@@ -159,6 +160,22 @@ object MarathonBuild extends Build {
       .setPreference(FormatXml, true)
     )
 
+  /**
+   * This is the standard release process without
+   * -publishArtifacts
+   * -setNextVersion
+   * -commitNextVersion
+   */
+  lazy val customReleaseSettings = releaseSettings ++ Seq(
+    ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+      checkSnapshotDependencies,
+      inquireVersions,
+      runTest,
+      setReleaseVersion,
+      commitReleaseVersion,
+      tagRelease,
+      pushChanges
+    ))
 
   /**
    * This on load trigger is used to set parameters in teamcity.
