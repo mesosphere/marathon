@@ -20,19 +20,23 @@ import scala.concurrent.duration._
   * GET /apps will deliver something like Apps instead of List[App]
   * Needed for dumb jackson.
   */
-case class ListAppsResult(apps: Seq[V2AppDefinition])
-case class AppVersions(versions: Seq[Timestamp])
-case class ListTasks(tasks: Seq[ITEnrichedTask])
+case class ITListAppsResult(apps: Seq[V2AppDefinition])
+case class ITAppVersions(versions: Seq[Timestamp])
+case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Integer], startedAt: Date, stagedAt: Date, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
-case class LeaderResult(leader: String)
+case class ITLeaderResult(leader: String)
 
-case class ListDeployments(deployments: Seq[Deployment])
+case class ITListDeployments(deployments: Seq[ITDeployment])
+
+case class ITQueueDelay(timeLeftSeconds: Int, overdue: Boolean)
+case class ITQueueItem(app: V2AppDefinition, count: Int, delay: ITQueueDelay)
+case class ITTaskQueue(queue: List[ITQueueItem])
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-case class Deployment(id: String, affectedApps: Seq[String])
+case class ITDeployment(id: String, affectedApps: Seq[String])
 
 /**
   * The MarathonFacade offers the REST API of a remote marathon instance
@@ -61,7 +65,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   //app resource ----------------------------------------------
 
   def listAppsInBaseGroup: RestResult[List[V2AppDefinition]] = {
-    val pipeline = sendReceive ~> read[ListAppsResult]
+    val pipeline = sendReceive ~> read[ITListAppsResult]
     val res = result(pipeline(Get(s"$url/v2/apps")), waitTime)
     res.map(_.apps.toList.filter(app => isInBaseGroup(app.id)))
   }
@@ -101,9 +105,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Post(s"$url/v2/apps$id/restart?force=$force")), waitTime)
   }
 
-  def listAppVersions(id: PathId): RestResult[AppVersions] = {
+  def listAppVersions(id: PathId): RestResult[ITAppVersions] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[AppVersions]
+    val pipeline = sendReceive ~> read[ITAppVersions]
     result(pipeline(Get(s"$url/v2/apps$id/versions")), waitTime)
   }
 
@@ -117,14 +121,14 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
     requireInBaseGroup(appId)
-    val pipeline = addHeader("Accept", "application/json") ~> sendReceive ~> read[ListTasks]
+    val pipeline = addHeader("Accept", "application/json") ~> sendReceive ~> read[ITListTasks]
     val res = result(pipeline(Get(s"$url/v2/apps$appId/tasks")), waitTime)
     res.map(_.tasks.toList)
   }
 
-  def killAllTasks(appId: PathId, scale: Boolean = false): RestResult[ListTasks] = {
+  def killAllTasks(appId: PathId, scale: Boolean = false): RestResult[ITListTasks] = {
     requireInBaseGroup(appId)
-    val pipeline = sendReceive ~> read[ListTasks]
+    val pipeline = sendReceive ~> read[ITListTasks]
     result(pipeline(Delete(s"$url/v2/apps$appId/tasks?scale=$scale")), waitTime)
   }
 
@@ -184,8 +188,8 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   //deployment resource ------
 
-  def listDeploymentsForBaseGroup(): RestResult[List[Deployment]] = {
-    val pipeline = sendReceive ~> read[Array[Deployment]] ~> toList[Deployment]
+  def listDeploymentsForBaseGroup(): RestResult[List[ITDeployment]] = {
+    val pipeline = sendReceive ~> read[Array[ITDeployment]] ~> toList[ITDeployment]
     result(pipeline(Get(s"$url/v2/deployments")), waitTime).map { deployments =>
       deployments.filter { deployment =>
         deployment.affectedApps.map(PathId(_)).exists(id => isInBaseGroup(id))
@@ -240,8 +244,8 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   }
 
   //leader ----------------------------------------------
-  def leader(): RestResult[LeaderResult] = {
-    val pipeline = sendReceive ~> read[LeaderResult]
+  def leader(): RestResult[ITLeaderResult] = {
+    val pipeline = sendReceive ~> read[ITLeaderResult]
     result(pipeline(Get(s"$url/v2/leader")), waitTime)
   }
 
@@ -254,5 +258,11 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   def info: RestResult[HttpResponse] = {
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Get(s"$url/v2/info")), waitTime)
+  }
+
+  //task queue ------------------------------------------
+  def taskQueue(): RestResult[ITTaskQueue] = {
+    val pipeline = sendReceive ~> read[ITTaskQueue]
+    result(pipeline(Get(s"$url/v2/queue")), waitTime)
   }
 }
