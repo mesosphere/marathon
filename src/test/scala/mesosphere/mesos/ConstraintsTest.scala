@@ -3,52 +3,79 @@ package mesosphere.mesos
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.state.AppDefinition
+import org.scalatest.{ Matchers, GivenWhenThen }
 import scala.collection.JavaConverters._
 import scala.util.Random
 import mesosphere.mesos.protos.{ FrameworkID, SlaveID, OfferID, TextAttribute }
 import org.apache.mesos.Protos.{ Offer, Attribute }
 import mesosphere.marathon.MarathonSpec
 
-class ConstraintsTest extends MarathonSpec {
+class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
   import mesosphere.mesos.protos.Implicits._
 
-  def makeSampleTask(id: String, attrs: Map[String, String]) = {
-    val builder = MarathonTask.newBuilder()
-      .setHost("host")
-      .addAllPorts(Lists.newArrayList(999))
-      .setId(id)
+  test("Select tasks to kill for a single group by works") {
+    Given("app with hostname group_by and 20 tasks even distributed on 2 hosts")
+    val app = AppDefinition(constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
+    val tasks = 0.to(19).map(num => makeTaskWithHost(s"$num", s"srv${num % 2}")).toSet
 
-    for ((name, value) <- attrs) {
-      builder.addAttributes(TextAttribute(name, value))
-    }
-    builder.build()
+    When("10 tasks should be selected to kill")
+    val result = Constraints.selectTasksToKill(app, tasks, 10)
+
+    Then("10 tasks got selected and evenly distributed")
+    result should have size 10
+    val dist = result.groupBy(_.getId.toInt % 2 == 1)
+    dist should have size 2
+    dist.values.head should have size 5
   }
 
-  def makeOffer(hostname: String, attributes: Iterable[Attribute]) = {
-    Offer.newBuilder
-      .setId(OfferID(Random.nextString(9)))
-      .setSlaveId(SlaveID(Random.nextString(9)))
-      .setFrameworkId(FrameworkID(Random.nextString(9)))
-      .setHostname(hostname)
-      .addAllAttributes(attributes.asJava)
-      .build
+  test("Select only tasks to kill for an unbalanced distribution") {
+    Given("app with hostname group_by and 30 tasks uneven distributed on 2 hosts")
+    val app = AppDefinition(constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
+    val tasks = 0.to(19).map(num => makeTaskWithHost(s"$num", s"srv1")) ++
+      20.to(29).map(num => makeTaskWithHost(s"$num", s"srv2"))
+
+    When("10 tasks should be selected to kill")
+    val result = Constraints.selectTasksToKill(app, tasks.toSet, 10)
+
+    Then("All 10 tasks are from srv1")
+    result should have size 10
+    result.forall(_.getHost == "srv1") should be(true)
   }
 
-  def makeTaskWithHost(id: String, host: String) = {
-    MarathonTask.newBuilder()
-      .setHost(host)
-      .addAllPorts(Lists.newArrayList(999))
-      .setId(id)
-      .build()
+  test("Select tasks to kill for multiple group by works") {
+    Given("app with 2 group_by distributions and 40 tasks even distributed")
+    val app = AppDefinition(constraints = Set(
+      makeConstraint("rack", Operator.GROUP_BY, ""),
+      makeConstraint("color", Operator.GROUP_BY, "")))
+    val tasks =
+      0.to(9).map(num => makeSampleTask(s"$num", Map("rack" -> "rack-1", "color" -> "blue"))) ++
+        10.to(19).map(num => makeSampleTask(s"$num", Map("rack" -> "rack-1", "color" -> "green"))) ++
+        20.to(29).map(num => makeSampleTask(s"$num", Map("rack" -> "rack-2", "color" -> "blue"))) ++
+        30.to(39).map(num => makeSampleTask(s"$num", Map("rack" -> "rack-2", "color" -> "green")))
+
+    When("20 tasks should be selected to kill")
+    val result = Constraints.selectTasksToKill(app, tasks.toSet, 20)
+
+    Then("20 tasks got selected and evenly distributed")
+    result should have size 20
+    result.count(_.getAttributesList.asScala.exists(_.getText.getValue == "rack-1")) should be(10)
+    result.count(_.getAttributesList.asScala.exists(_.getText.getValue == "rack-1")) should be(10)
+    result.count(_.getAttributesList.asScala.exists(_.getText.getValue == "blue")) should be(10)
+    result.count(_.getAttributesList.asScala.exists(_.getText.getValue == "green")) should be(10)
   }
 
-  def makeConstraint(field: String, operator: Operator, value: String) = {
-    Constraint.newBuilder
-      .setField(field)
-      .setOperator(operator)
-      .setValue(value)
-      .build
+  test("Does not select any task without constraint") {
+    Given("app with hostname group_by and 10 tasks even distributed on 5 hosts")
+    val app = AppDefinition()
+    val tasks = 0.to(9).map(num => makeSampleTask(s"$num", Map("rack" -> "rack-1", "color" -> "blue")))
+
+    When("10 tasks should be selected to kill")
+    val result = Constraints.selectTasksToKill(app, tasks.toSet, 5)
+
+    Then("0 tasks got selected")
+    result should have size 0
   }
 
   test("UniqueHostConstraint") {
@@ -413,4 +440,43 @@ class ConstraintsTest extends MarathonSpec {
 
     assert(groupByHostMet6, "Should meet group-by-host constraint.")
   }
+
+  def makeSampleTask(id: String, attrs: Map[String, String]) = {
+    val builder = MarathonTask.newBuilder()
+      .setHost("host")
+      .addAllPorts(Lists.newArrayList(999))
+      .setId(id)
+
+    for ((name, value) <- attrs) {
+      builder.addAttributes(TextAttribute(name, value))
+    }
+    builder.build()
+  }
+
+  def makeOffer(hostname: String, attributes: Iterable[Attribute]) = {
+    Offer.newBuilder
+      .setId(OfferID(Random.nextString(9)))
+      .setSlaveId(SlaveID(Random.nextString(9)))
+      .setFrameworkId(FrameworkID(Random.nextString(9)))
+      .setHostname(hostname)
+      .addAllAttributes(attributes.asJava)
+      .build
+  }
+
+  def makeTaskWithHost(id: String, host: String) = {
+    MarathonTask.newBuilder()
+      .setHost(host)
+      .addAllPorts(Lists.newArrayList(999))
+      .setId(id)
+      .build()
+  }
+
+  def makeConstraint(field: String, operator: Operator, value: String) = {
+    Constraint.newBuilder
+      .setField(field)
+      .setOperator(operator)
+      .setValue(value)
+      .build
+  }
+
 }
