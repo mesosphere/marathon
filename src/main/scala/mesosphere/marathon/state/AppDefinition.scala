@@ -2,21 +2,20 @@ package mesosphere.marathon.state
 
 import java.lang.{ Double => JDouble, Integer => JInt }
 
-import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
+import com.fasterxml.jackson.annotation.JsonIgnore
+import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.Protos
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.apache.mesos.{ Protos => mesos }
-import scala.collection.immutable.Seq
+
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 case class AppDefinition(
