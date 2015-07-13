@@ -10,18 +10,19 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.api.v2.json.{ EnrichedTask, V2AppDefinition, V2AppUpdate, V2Group }
+import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.v2.json.{ EnrichedTask, V2AppDefinition, V2AppUpdate }
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.health.{ HealthCheckManager, HealthCounts }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.upgrade.{ DeploymentStep, RestartApplication, DeploymentPlan }
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService }
-import mesosphere.marathon.api.v2.json.Formats._
-import play.api.libs.json.{ Writes, JsObject, Json }
+import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, RestartApplication }
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -90,61 +91,23 @@ class AppsResource @Inject() (
   @Timed
   def create(@Context req: HttpServletRequest, body: Array[Byte],
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
-    val app = Json.parse(body).as[V2AppDefinition]
-    service.getApp(app.id.copy(absolute = true)) match {
-      case None =>
-        val (_, managed) = create(req, app, force)
-        Response
-          .created(new URI(managed.id.toString))
-          .entity(managed)
-          .build()
 
-      case _ =>
-        //scalastyle:off magic.number
-        Response
-          .status(409)
-          .entity(Json.obj("message" -> s"An app with id [${app.id}] already exists.").toString())
-          .build()
-      //scalastyle:on
-    }
-  }
+    val app = validateApp(Json.parse(body).as[V2AppDefinition].withCanonizedIds().toAppDefinition)
 
-  private def create(
-    req: HttpServletRequest,
-    app: V2AppDefinition,
-    force: Boolean): (DeploymentPlan, V2AppDefinition.WithTasksAndDeployments) = {
-    val baseId = app.id.canonicalPath()
-    BeanValidation.requireValid(ModelValidation.checkAppConstraints(app, baseId.parent))
+    def createOrThrow(opt: Option[AppDefinition]) = opt
+      .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
+      .getOrElse(app)
 
-    val conflicts = ModelValidation.checkAppConflicts(app, baseId, service)
-    if (conflicts.nonEmpty)
-      throw new ConflictingChangeException(conflicts.mkString(","))
+    val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
 
-    maybePostEvent(req, app)
-
-    val modelApp = app.toAppDefinition
-
-    val managedApp = modelApp.copy(
-      id = baseId,
-      dependencies = app.dependencies.map(_.canonicalPath(baseId))
-    )
-
-    val deploymentPlan = result(
-      groupManager.updateApp(
-        baseId,
-        _ => managedApp,
-        managedApp.version,
-        force
-      )
-    )
-
-    val managedAppWithDeployments = V2AppDefinition(managedApp).withTasksAndDeployments(
+    val appWithDeployments = V2AppDefinition(app).withTasksAndDeployments(
       appTasks = Nil,
       healthCounts = HealthCounts(0, 0, 0),
-      runningDeployments = Seq(deploymentPlan)
+      runningDeployments = Seq(plan)
     )
 
-    deploymentPlan -> managedAppWithDeployments
+    maybePostEvent(req, appWithDeployments)
+    Response.created(new URI(app.id.toString)).entity(appWithDeployments).build()
   }
 
   @GET
@@ -166,7 +129,7 @@ class AppsResource @Inject() (
       }
       ok(Json.obj("*" -> withTasks).toString())
     }
-    def app(): Response = service.getApp(id.toRootPath) match {
+    def app(): Future[Response] = groupManager.app(id.toRootPath).map {
       case Some(app) =>
         val mapped = V2AppDefinition(app).withTasksAndDeploymentsAndFailures(
           enrichedTasks(app),
@@ -180,7 +143,7 @@ class AppsResource @Inject() (
     }
     id match {
       case ListApps(gid) => transitiveApps(gid.toRootPath)
-      case _             => app()
+      case _             => result(app())
     }
   }
 
@@ -191,54 +154,31 @@ class AppsResource @Inject() (
               @PathParam("id") id: String,
               @DefaultValue("false")@QueryParam("force") force: Boolean,
               body: Array[Byte]): Response = {
-    val appUpdate = Json.parse(body).as[V2AppUpdate]
-    // prefer the id from the V2AppUpdate over that in the UI
-    val appId = appUpdate.id.map(_.canonicalPath()).getOrElse(id.toRootPath)
-    // TODO error if they're not the same?
-    val updateWithId = appUpdate.copy(id = Some(appId))
+    val appId = id.toRootPath
+    val appUpdate = Json.parse(body).as[V2AppUpdate].copy(id = Some(appId))
+    BeanValidation.requireValid(ModelValidation.checkUpdate(appUpdate, needsId = false))
 
-    BeanValidation.requireValid(ModelValidation.checkUpdate(updateWithId, needsId = false))
+    val newVersion = Timestamp.now()
+    val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, newVersion), newVersion, force))
 
-    service.getApp(appId).map(V2AppDefinition(_)) match {
-      case Some(app) =>
-        //if version is defined, replace with version
-        val previousVersion: Option[V2AppDefinition] =
-          updateWithId.version.flatMap(service.getApp(appId, _).map(V2AppDefinition(_)))
-
-        val update = previousVersion.orElse(Some(updateWithId(app)))
-
-        val response = update.map { updatedApp =>
-          maybePostEvent(req, updatedApp)
-          val updatedModelApp = updatedApp.toAppDefinition
-          val deployment = result(groupManager.updateApp(appId, _ => updatedModelApp, updatedApp.version, force))
-          deploymentResult(deployment)
-        }
-        response.getOrElse(unknownApp(appId, updateWithId.version))
-
-      case None =>
-        val (deploymentPlan, app) = create(req, updateWithId(V2AppDefinition(appId)), force)
-        deploymentResult(deploymentPlan, Response.created(new URI(app.id.toString)))
-    }
+    val response = plan.original.app(appId).map(_ => Response.ok()).getOrElse(Response.created(new URI(appId.toString)))
+    maybePostEvent(req, V2AppDefinition(plan.target.app(appId).get))
+    deploymentResult(plan, response)
   }
 
   @PUT
   @Timed
   def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean, body: Array[Byte]): Response = {
-    val updates = Json.parse(body).as[Seq[V2AppUpdate]]
+    val updates = Json.parse(body).as[Seq[V2AppUpdate]].map(_.withCanonizedIds())
     BeanValidation.requireValid(ModelValidation.checkUpdates(updates))
     val version = Timestamp.now()
-    def updateApp(update: V2AppUpdate, app: AppDefinition): AppDefinition = {
-      val previousVersion = update.version.flatMap(service.getApp(app.id, _))
-      previousVersion.orElse(Some(update(V2AppDefinition(app)).toAppDefinition)).getOrElse(app)
-    }
     def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
       update.id match {
-        case Some(id) => group.updateApp(id.canonicalPath(), updateApp(update, _), version)
+        case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, version), version)
         case None     => group
       }
     }
-    val deployment = result(groupManager.update(PathId.empty, updateGroup, version, force))
-    deploymentResult(deployment)
+    deploymentResult(result(groupManager.update(PathId.empty, updateGroup, version, force)))
   }
 
   @DELETE
@@ -248,14 +188,12 @@ class AppsResource @Inject() (
              @DefaultValue("true")@QueryParam("force") force: Boolean,
              @PathParam("id") id: String): Response = {
     val appId = id.toRootPath
-    service.getApp(appId) match {
-      case Some(app) =>
-        maybePostEvent(req, V2AppDefinition(id = appId))
-        val deployment = result(groupManager.update(appId.parent, _.removeApplication(appId), force = force))
-        deploymentResult(deployment)
 
-      case None => unknownApp(appId)
-    }
+    def deleteApp(group: Group) = group.app(appId)
+      .map(_ => group.removeApplication(appId))
+      .getOrElse(throw new UnknownAppException(appId))
+
+    deploymentResult(result(groupManager.update(appId.parent, deleteApp, force = force)))
   }
 
   @Path("{appId:.+}/tasks")
@@ -270,28 +208,44 @@ class AppsResource @Inject() (
   def restart(@PathParam("id") id: String,
               @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val appId = id.toRootPath
-    service.getApp(appId) match {
-      case Some(app) =>
-        val future = groupManager.group(app.id.parent).map {
-          case Some(group) =>
-            val newApp = app.copy(version = Timestamp.now())
-            val newGroup = group.updateApp(app.id, _ => newApp, Timestamp.now())
-            val plan = DeploymentPlan(
-              UUID.randomUUID().toString,
-              group,
-              newGroup,
-              DeploymentStep(RestartApplication(newApp) :: Nil) :: Nil,
-              Timestamp.now())
-            val res = service.deploy(plan, force = force)
-            result(res)
-            deploymentResult(plan)
+    val newVersion = Timestamp.now()
+    def setVersionOrThrow(opt: Option[AppDefinition]) = opt
+      .map(_.copy(version = newVersion))
+      .getOrElse(throw new UnknownAppException(appId))
 
-          case None => unknownGroup(app.id.parent)
-        }
-        result(future)
-
-      case None => unknownApp(appId)
+    def restartApp(versionChange: DeploymentPlan): DeploymentPlan = {
+      val newApp = versionChange.target.app(appId).get
+      val plan = DeploymentPlan(
+        UUID.randomUUID().toString,
+        versionChange.original,
+        versionChange.target,
+        DeploymentStep(RestartApplication(newApp) :: Nil) :: Nil,
+        Timestamp.now())
+      result(service.deploy(plan, force = force))
+      plan
     }
+    //this will create an empty deployment, since version chances do not trigger restarts
+    val versionChange = result(groupManager.updateApp(id.toRootPath, setVersionOrThrow, newVersion, force))
+    //create a restart app deployment plan manually
+    deploymentResult(restartApp(versionChange))
+  }
+
+  private def updateOrCreate(appId: PathId,
+                             existing: Option[AppDefinition],
+                             appUpdate: V2AppUpdate,
+                             newVersion: Timestamp): AppDefinition = {
+    def createApp() = validateApp(appUpdate(AppDefinition(appId)))
+    def updateApp(current: AppDefinition) = validateApp(appUpdate(current))
+    def rollback(version: Timestamp) = service.getApp(appId, version).getOrElse(throw new UnknownAppException(appId))
+    def updateOrRollback(current: AppDefinition) = appUpdate.version.map(rollback).getOrElse(updateApp(current))
+    existing.map(updateOrRollback).getOrElse(createApp()).copy(version = newVersion)
+  }
+
+  private def validateApp(app: AppDefinition): AppDefinition = {
+    BeanValidation.requireValid(ModelValidation.checkAppConstraints(V2AppDefinition(app), app.id.parent))
+    val conflicts = ModelValidation.checkAppConflicts(app, app.id.parent, service)
+    if (conflicts.nonEmpty) throw new ConflictingChangeException(conflicts.mkString(","))
+    app
   }
 
   private def enrichedTasks(app: AppDefinition): Seq[EnrichedTask] = {

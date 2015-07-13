@@ -158,12 +158,12 @@ object Constraints {
     var flag = true
     while (flag && toKillTasks.size != toKillCount) {
       val tried = distributions
-          //sort all distributions in descending order based on distribution difference
-          .toSeq.sortBy(_.distributionDifference(toKillTasks)).reverseIterator
-          //select tasks to kill (without already selected ones)
-          .flatMap(_.tasksToKillIterator(toKillTasks)) ++
-          //fallback: if the distributions did not select a task, choose one of the not chosen ones
-          runningTasks.iterator.filterNot(toKillTasks.contains)
+        //sort all distributions in descending order based on distribution difference
+        .toSeq.sortBy(_.distributionDifference(toKillTasks)).reverseIterator
+        //select tasks to kill (without already selected ones)
+        .flatMap(_.tasksToKillIterator(toKillTasks)) ++
+        //fallback: if the distributions did not select a task, choose one of the not chosen ones
+        runningTasks.iterator.filterNot(toKillTasks.contains)
 
       tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + tryTask))) match {
         case Some(task) => toKillTasks += task

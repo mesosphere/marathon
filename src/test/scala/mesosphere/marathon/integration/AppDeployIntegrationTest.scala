@@ -10,6 +10,7 @@ import mesosphere.marathon.state.{ Command, PathId }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsArray
+import spray.httpx.UnsuccessfulResponseException
 
 import scala.concurrent.duration._
 
@@ -414,6 +415,36 @@ class AppDeployIntegrationTest
     Then("the deployment should be gone")
     waitForEvent("deployment_failed")
     marathon.listDeploymentsForBaseGroup().value should have size 0
+
+    Then("the app should still be there")
+    marathon.app(appId).code should be (200)
+  }
+
+  test("rollback a deployment") {
+    Given("a new app that is not healthy")
+    val appId = testBasePath / "failing"
+    val app = v2AppProxy(appId, "v1", instances = 1, withHealth = true)
+    appProxyCheck(appId, "v1", state = false)
+    val create = marathon.createAppV2(app)
+    create.code should be (201) // Created
+    val deploymentId = extractDeploymentIds(create).head
+
+    Then("the deployment can not be finished")
+    marathon.listDeploymentsForBaseGroup().value should have size 1
+
+    When("the deployment is rolled back")
+    val delete = marathon.deleteDeployment(deploymentId, force = false)
+    delete.code should be (200)
+
+    Then("the deployment should be gone")
+    waitForEvent("deployment_failed")
+    marathon.listDeploymentsForBaseGroup().value should have size 0
+
+    Then("the app should also be gone")
+    val result = intercept[UnsuccessfulResponseException] {
+      marathon.app(appId).code should be (404)
+    }
+    result.response.status.intValue should be(404)
   }
 
   def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)

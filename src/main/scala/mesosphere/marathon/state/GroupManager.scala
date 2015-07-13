@@ -78,6 +78,15 @@ class GroupManager @Singleton @Inject() (
   }
 
   /**
+    * Get a specific app definition by its id.
+    * @param id the id of the app.
+    * @return the app uf ut is found, otherwise false
+    */
+  def app(id: PathId): Future[Option[AppDefinition]] = {
+    root(false).map(_.app(id))
+  }
+
+  /**
     * Update a group with given identifier.
     * The change of the group is defined by a change function.
     * The complete tree gets the given version.
@@ -111,7 +120,7 @@ class GroupManager @Singleton @Inject() (
     */
   def updateApp(
     appId: PathId,
-    fn: AppDefinition => AppDefinition,
+    fn: Option[AppDefinition] => AppDefinition,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false): Future[DeploymentPlan] =
     upgrade(appId.parent, _.updateApp(appId, fn, version), version, force)
@@ -237,5 +246,4 @@ class GroupManager @Singleton @Inject() (
       group.updateApp(app.id, _ => app, app.version)
     }
   }
-
 }
