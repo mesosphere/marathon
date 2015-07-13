@@ -249,4 +249,10 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     val pipeline = sendReceive ~> responseResult
     result(pipeline(Delete(s"$url/v2/leader")), waitTime)
   }
+
+  //info --------------------------------------------------
+  def info: RestResult[HttpResponse] = {
+    val pipeline = sendReceive ~> responseResult
+    result(pipeline(Get(s"$url/v2/info")), waitTime)
+  }
 }
