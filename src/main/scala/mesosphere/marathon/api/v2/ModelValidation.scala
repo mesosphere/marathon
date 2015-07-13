@@ -275,8 +275,8 @@ object ModelValidation {
     * Returns a non-empty list of validation messages if the given app definition
     * will conflict with existing apps.
     */
-  def checkAppConflicts(app: V2AppDefinition, baseId: PathId, service: MarathonSchedulerService): Seq[String] = {
-    app.toAppDefinition.containerServicePorts.toSeq.flatMap { servicePorts =>
+  def checkAppConflicts(app: AppDefinition, baseId: PathId, service: MarathonSchedulerService): Seq[String] = {
+    app.containerServicePorts.toSeq.flatMap { servicePorts =>
       checkServicePortConflicts(baseId, servicePorts, service)
     }
   }

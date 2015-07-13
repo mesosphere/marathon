@@ -47,15 +47,10 @@ case class Group(
     }
   }
 
-  def updateApp(path: PathId, fn: AppDefinition => AppDefinition, timestamp: Timestamp): Group = {
+  def updateApp(path: PathId, fn: Option[AppDefinition] => AppDefinition, timestamp: Timestamp): Group = {
     val groupId = path.parent
     makeGroup(groupId).update(timestamp) { group =>
-      if (group.id == groupId) {
-        val current = group.apps.find(_.id == path).getOrElse(AppDefinition(path))
-        val changed: AppDefinition = fn(current)
-        group.putApplication(changed)
-      }
-      else group
+      if (group.id == groupId) group.putApplication(fn(group.apps.find(_.id == path))) else group
     }
   }
 

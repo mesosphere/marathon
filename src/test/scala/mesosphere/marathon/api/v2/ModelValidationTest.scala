@@ -31,7 +31,7 @@ class ModelValidationTest
     val service = mock[MarathonSchedulerService]
     when(service.listApps()).thenReturn(List(existingApp.toAppDefinition))
 
-    val conflictingApp = createServicePortApp("/app2".toPath, 3200)
+    val conflictingApp = createServicePortApp("/app2".toPath, 3200).toAppDefinition
     val validations = ModelValidation.checkAppConflicts(conflictingApp, conflictingApp.id, service)
 
     validations should not be Nil
@@ -43,7 +43,7 @@ class ModelValidationTest
     val service = mock[MarathonSchedulerService]
     when(service.listApps()).thenReturn(List(existingApp.toAppDefinition))
 
-    val conflictingApp = createServicePortApp("/app2".toPath, 3201)
+    val conflictingApp = createServicePortApp("/app2".toPath, 3201).toAppDefinition
     val validations = ModelValidation.checkAppConflicts(conflictingApp, conflictingApp.id, service)
 
     validations should be(Nil)
@@ -54,7 +54,7 @@ class ModelValidationTest
     val service = mock[MarathonSchedulerService]
     when(service.listApps()).thenReturn(List(existingApp.toAppDefinition))
 
-    val conflictingApp = existingApp.copy(id = "/app2".toPath)
+    val conflictingApp = existingApp.copy(id = "/app2".toPath).toAppDefinition
     val validations = ModelValidation.checkAppConflicts(conflictingApp, conflictingApp.id, service)
 
     validations should not be Nil

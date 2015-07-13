@@ -8,14 +8,9 @@ import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidV2AppDefinition }
 import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
 import mesosphere.marathon.state._
-import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.Protos
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.mesos.TaskBuilder
-import mesosphere.mesos.protos.{ Resource, ScalarResource }
-import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.apache.mesos.{ Protos => mesos }
+
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
@@ -119,6 +114,11 @@ case class V2AppDefinition(
       appTasks, healthCounts,
       runningDeployments, taskFailure, this
     )
+
+  def withCanonizedIds(base: PathId = PathId.empty): V2AppDefinition = {
+    val baseId = id.canonicalPath(base)
+    copy(id = baseId, dependencies = dependencies.map(_.canonicalPath(baseId)))
+  }
 }
 
 object V2AppDefinition {
