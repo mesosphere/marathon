@@ -241,7 +241,7 @@ class ConfigTemplater(object):
 
         for variable in variables:
             try:
-                filename = os.path.join(self.__template_dicrectory, variable)
+                filename = os.path.join(self.__template_directory, variable)
                 with open(filename) as f:
                     logger.info('overriding %s from %s', variable, filename)
                     setattr(self, variable, f.read())
@@ -737,7 +737,7 @@ def get_arg_parser():
 
     parser.add_argument("--syslog-socket",
                         help="Socket to write syslog messages to",
-                        default=log_socket
+                        default=default_log_socket
                         )
     parser.add_argument("--haproxy-config",
                         help="Location of haproxy configuration",
