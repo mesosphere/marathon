@@ -382,7 +382,7 @@ class AppDeployIntegrationTest
     deploymentSuccess.info("id") should be(deploymentId)
 
     Then("after that deployments should be empty")
-    val event: RestResult[List[Deployment]] = marathon.listDeploymentsForBaseGroup()
+    val event: RestResult[List[ITDeployment]] = marathon.listDeploymentsForBaseGroup()
     event.value should be('empty)
 
     Then("Both tasks respond to http requests")
