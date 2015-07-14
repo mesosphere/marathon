@@ -20,8 +20,15 @@ trait DebugConf extends ScallopConf {
     default = Some(false),
     noshort = true)
 
+  @deprecated("Metrics are enabled by default. See disableMetrics.", "Since version 0.10.0")
   lazy val enableMetrics = opt[Boolean]("enable_metrics",
     descr = "Enable metric measurement of service method calls",
+    hidden = true,
+    default = Some(true),
+    noshort = true)
+
+  lazy val disableMetrics = opt[Boolean]("disable_metrics",
+    descr = "Disable metric measurement of service method calls",
     default = Some(false),
     noshort = true)
 
@@ -75,7 +82,7 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
     val metricsProvider = getProvider(classOf[Metrics])
 
     val tracingBehavior = conf.debugTracing.get.filter(identity).map(_ => new TracingBehavior(metricsProvider))
-    val metricsBehavior = conf.enableMetrics.get.filter(identity).map(_ => new MetricsBehavior(metricsProvider))
+    val metricsBehavior = conf.disableMetrics.get.filterNot(identity).map(_ => new MetricsBehavior(metricsProvider))
 
     val behaviors = (tracingBehavior :: metricsBehavior :: Nil).flatten
     if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)

@@ -187,15 +187,17 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 
 ### Debug Flags
 
-Note: all debug flags are for debugging purposes only and should not be used in production settings.
-All debug flags are experimental and subject of change.
-
 * <span class="label label-default">v0.8.2</span> `--logging_level` (Optional.):
     Set the logging level of the application.
     Use one of `off`, `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `all`.
-* <span class="label label-default">v0.8.2</span> `--enable_metrics` (Optional.):
+* <span class="label label-default">Deprecated</span> `--enable_metrics` (Optional.):
     Enable metrics for all service method calls.
     The execution time per method is available via the metrics endpoint.
+    This option is turned on by default since version 0.10.0.
+    To turn this feature off, you can use `--disable_metrics`.
+* <span class="label label-default">v0.10.0</span> `--disable_metrics` (Optional.):
+    Metrics are enabled by default, so that the execution time per method is available via the metrics endpoint.
+    This metrics measurement can be disabled with this option.
 * <span class="label label-default">v0.8.2</span> `--enable_tracing` (Optional.):
     Enable tracing for all service method calls.
     Around the execution of every service method a trace log message is issued.
