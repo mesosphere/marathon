@@ -731,13 +731,14 @@ def get_arg_parser():
                              "script back at (http://lb1:8080)"
                         )
 
-    default_log_socket = "/var/run/syslog"
+    
+    default_log_socket = "/dev/log"
     if sys.platform == "darwin":
-        default_log_socket = "/dev/log"
+        default_log_socket = "/var/run/syslog"
 
     parser.add_argument("--syslog-socket",
                         help="Socket to write syslog messages to",
-                        default=log_socket
+                        default=default_log_socket
                         )
     parser.add_argument("--haproxy-config",
                         help="Location of haproxy configuration",
