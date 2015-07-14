@@ -4,7 +4,7 @@ import mesosphere.marathon.state.{ MarathonState, MarathonStore }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.FrameworkID
 
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 
 /**
@@ -18,6 +18,7 @@ class FrameworkIdUtil(mStore: MarathonStore[FrameworkId], timeout: Duration, key
     val frameworkId = FrameworkId(proto.getValue)
     Await.result(mStore.modify(key) { _ => frameworkId }, timeout)
   }
+  def expunge(): Future[Boolean] = mStore.expunge(key)
 }
 
 //TODO: move logic from FrameworkID to FrameworkId (which also implies moving this class)

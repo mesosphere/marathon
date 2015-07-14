@@ -19,6 +19,7 @@ import org.apache.mesos.{ Scheduler, SchedulerDriver }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ Await, Future }
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 trait SchedulerCallbacks {
@@ -187,19 +188,36 @@ class MarathonScheduler @Inject() (
 
   override def error(driver: SchedulerDriver, message: String) {
     log.warn("Error: %s".format(message))
-    suicide()
+
+    // Currently, it's pretty hard to disambiguate this error from other causes of framework errors.
+    // Watch MESOS-2522 which will add a reason field for framework errors to help with this.
+    // For now the frameworkId is removed for all messages.
+    val removeFrameworkId = true
+    suicide(removeFrameworkId)
   }
 
-  private def suicide(): Unit = {
-    log.fatal("Committing suicide")
+  /**
+    * Exits the JVM process, optionally deleting Marathon's FrameworkID
+    * from the backing persistence store.
+    *
+    * If `removeFrameworkId` is set, the next Marathon process elected
+    * leader will fail to find a stored FrameworkID and invoke `register`
+    * instead of `reregister`.  This is important because on certain kinds
+    * of framework errors (such as exceeding the framework failover timeout),
+    * the scheduler may never re-register with the saved FrameworkID until
+    * the leading Mesos master process is killed.
+    */
+  private def suicide(removeFrameworkId: Boolean): Unit = {
+    log.fatal(s"Committing suicide!")
 
-    //scalastyle:off magic.number
+    if (removeFrameworkId) Await.ready(frameworkIdUtil.expunge(), config.zkTimeoutDuration)
+
     // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
-    Future {
-      sys.exit(9)
-    } onFailure {
-      case t: Throwable => log.fatal("Exception while committing suicide", t)
+    // scalastyle:off magic.number
+    Future(sys.exit(9)).onFailure {
+      case NonFatal(t) => log.fatal("Exception while committing suicide", t)
     }
+    // scalastyle:on
   }
 
   private def postEvent(status: TaskStatus, task: MarathonTask): Unit = {
