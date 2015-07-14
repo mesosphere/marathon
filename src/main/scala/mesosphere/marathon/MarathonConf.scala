@@ -168,6 +168,11 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
     noshort = true
   )
 
+  lazy val envVarsPrefix = opt[String]("env_vars_prefix",
+    descr = "Prefix to use for environment variables",
+    noshort = true
+  )
+
   //Internal settings, that are not intended for external use
   lazy val internalStoreBackend = opt[String]("internal_store_backend",
     descr = "The backend storage system to use. One of zk, mesos_zk, mem",

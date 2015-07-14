@@ -131,9 +131,10 @@ class TaskBuilder(app: AppDefinition,
         containerWithPortMappings.toMesos()
       }
 
+    val envPrefix: Option[String] = config.envVarsPrefix.get
     executor match {
       case CommandExecutor() =>
-        builder.setCommand(TaskBuilder.commandInfo(app, Some(taskId), host, ports))
+        builder.setCommand(TaskBuilder.commandInfo(app, Some(taskId), host, ports, envPrefix))
         containerProto.foreach(builder.setContainer)
 
       case PathExecutor(path) =>
@@ -141,7 +142,7 @@ class TaskBuilder(app: AppDefinition,
         val executorPath = s"'$path'" // TODO: Really escape this.
         val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
-        val command = TaskBuilder.commandInfo(app, Some(taskId), host, ports).toBuilder.setValue(shell)
+        val command = TaskBuilder.commandInfo(app, Some(taskId), host, ports, envPrefix).toBuilder.setValue(shell)
 
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
@@ -178,12 +179,16 @@ class TaskBuilder(app: AppDefinition,
 
 object TaskBuilder {
 
-  def commandInfo(app: AppDefinition, taskId: Option[TaskID], host: Option[String], ports: Seq[Long]): CommandInfo = {
+  def commandInfo(app: AppDefinition,
+                  taskId: Option[TaskID],
+                  host: Option[String],
+                  ports: Seq[Long],
+                  envPrefix: Option[String]): CommandInfo = {
     val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(app.ports)
     val envMap: Map[String, String] =
       taskContextEnv(app, taskId) ++
-        portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _) ++
+        addPrefix(envPrefix, portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _).toMap) ++
         app.env
 
     val builder = CommandInfo.newBuilder()
@@ -264,6 +269,13 @@ object TaskBuilder {
       env += ("PORT" -> assignedPorts.head.toString)
       env += ("PORTS" -> assignedPorts.mkString(","))
       env.result()
+    }
+  }
+
+  def addPrefix(envVarsPrefix: Option[String], env: Map[String, String]): Map[String, String] = {
+    envVarsPrefix match {
+      case Some(prefix) => env.map { case (key: String, value: String) => (prefix + key, value) }
+      case None         => env
     }
   }
 
