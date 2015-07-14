@@ -241,7 +241,7 @@ class ConfigTemplater(object):
 
         for variable in variables:
             try:
-                filename = os.path.join(self.__template_dicrectory, variable)
+                filename = os.path.join(self.__template_directory, variable)
                 with open(filename) as f:
                     logger.info('overriding %s from %s', variable, filename)
                     setattr(self, variable, f.read())
@@ -770,8 +770,12 @@ def run_server(marathon, callback_url, config_file, groups):
 
         return "Got it"
 
-    print "Serving on port 8000..."
-    httpd = make_server('', 8000, wsgi_app)
+    try:
+        port = int(callback_url.split(':')[-1])
+    except ValueError:
+        port = 8000  # no port or invalid port specified
+    print "Serving on port {}...".format(port)
+    httpd = make_server('', port, wsgi_app)
     httpd.serve_forever()
 
 
