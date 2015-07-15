@@ -2,11 +2,13 @@ package mesosphere.marathon.integration
 
 import java.lang.{ Double => JDouble }
 
+import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{ Command, PathId }
+import mesosphere.marathon.state.{ AppDefinition, Command, PathId }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsArray
@@ -398,11 +400,12 @@ class AppDeployIntegrationTest
   }
 
   test("stop (forcefully delete) a deployment") {
-    Given("a new app that is not healthy")
-    val appId = testBasePath / "failing"
-    val app = v2AppProxy(appId, "v1", instances = 1, withHealth = true)
-    appProxyCheck(appId, "v1", state = false)
-    val create = marathon.createAppV2(app)
+    Given("a new app with constraints that cannot be fulfilled")
+    val c = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Operator.CLUSTER).setValue("na").build()
+    val appId = testBasePath / "app"
+    val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, ports = List.empty)
+
+    val create = marathon.createAppV2(V2AppDefinition(app))
     create.code should be (201) // Created
     val deploymentId = extractDeploymentIds(create).head
 
@@ -422,11 +425,12 @@ class AppDeployIntegrationTest
   }
 
   test("rollback a deployment") {
-    Given("a new app that is not healthy")
-    val appId = testBasePath / "failing"
-    val app = v2AppProxy(appId, "v1", instances = 1, withHealth = true)
-    appProxyCheck(appId, "v1", state = false)
-    val create = marathon.createAppV2(app)
+    Given("a new app with constraints that cannot be fulfilled")
+    val c = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Operator.CLUSTER).setValue("na").build()
+    val appId = testBasePath / "app"
+    val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, ports = List.empty)
+
+    val create = marathon.createAppV2(V2AppDefinition(app))
     create.code should be (201) // Created
     val deploymentId = extractDeploymentIds(create).head
 
