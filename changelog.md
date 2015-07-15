@@ -1,17 +1,53 @@
 ## Changes from 0.9.0 to 0.10.0
 
-### Breaking changes
+### Recommended Mesos version is 0.22.1
 
-Please look at the following changes to check whether you have to verify your setup before upgrading:
+We tested this release against Mesos version 0.22.1. Thus, this is the recommended
+Mesos version for this release.
 
-* If an http request is made without setting appropriate request headers, the Accept and Content-Type header 
-  is set automatically to `application/json`
+### Notes 
+
+This will be the last release that supports Java 6, since Java 6 and Java 7 have reached End of Life.
+Starting with 0.11.0 we will rely on Java 8.
 
 ### Overview
 
-##### Restrict the number of concurrent HTTP requests
+#### Administratively zeroing the task launch delay
 
-With this version of Marathon it is possible to restrict the number of concurrent http requests,
+It is now possible to reset the task launch delay via the REST endpoint `/v2/queue/{app_id}/delay`.
+The UI displays two additional possible statuses: "Delayed" and "Waiting". 
+The "Delayed" status also displays a tooltip showing the remaining time until the next launch attempt.
+The App page now allows the user to reset the task launch delay for a "Delayed" app, thus forcing a new immediate launch attempt.
+
+#### The FrameworkId is invalidated, if the scheduler reports an error
+
+If the scheduler reports an error, the framework id is removed from the backing persistence store.
+This is important because on certain kinds of framework errors (such as exceeding the framework failover timeout),
+the scheduler may never re-register with the saved FrameworkID until the leading Mesos master process is killed.
+
+#### Maintain constraints while scaling down
+
+Constraints in Marathon is a powerful mechanism. 
+While the constraints are maintained when scaling up, previous versions of Marathon did not do so while scaling down.
+This version picks instances to kill based on defined constraints and will not violate those. 
+
+#### Custom prefix for automatically created environment variables
+
+It is now possible to specify a custom prefix via the `--env_vars_prefix`
+command line flag. This prefix will be added to the name of task's environment
+variables created automatically by Marathon (e.g., `PORT`, `PORTS`)
+
+_Note_: This prefix will not be added to variables that are already prefixed,
+such as `MESOS_TASK_ID` and `MARATHON_APP_ID`
+
+#### Handle requests with missing Accept and Content-Type headers correctly 
+
+If an HTTP request is made without setting appropriate request headers, the Accept and Content-Type header 
+is set automatically to `application/json`.
+
+#### Option to restrict the number of concurrent HTTP requests
+
+With this version of Marathon it is possible to restrict the number of concurrent HTTP requests,
 that are handled concurrently in the service layer.
 This enables the Marathon service to apply back pressure when receiving too many requests 
 and helps prevent Denial of Service attacks.
@@ -19,9 +55,58 @@ If the limit of concurrent requests is reached, a HTTP 503 Service Temporarily U
 which means that this operation can be retried.
 You can turn on this feature by setting the parameter `--http_max_concurrent_requests`.
 
-### Fixed Bugs
+#### Serialize all concurrent change requests
+ 
+In former versions of Marathon it was possible that multiple concurrent changes of the same application definition
+would lead to an inconsistent state of that application. All changes of groups or application definitions now
+get serialized, so the resulting state is always consistent.
 
+#### Enhance the reported metrics 
+
+The metrics endpoint (`/metrics`) gives valuable insight into the system behavior.
+We now have meters for all service objects as well as the number applications and groups in the system.
+
+#### Decouple API (un)marshalling types from internal models
+
+With this change we can control API changes and are free to change internal models.
+This will change nothing in the current API, but will help a lot while we create the v3 API. 
+
+### Infrastructure
+
+#### Added integration tests for all API endpoints
+
+We now have an integration test suite, that covers all endpoints with almost all possible parameter combinations.
+This test suite runs with every commit on every pull request.
+This test suite is our safety net to ensure compatibility while introducing new functionality in future versions.
+
+#### Code coverage reporting using coveralls
+
+See our github page https://github.com/mesosphere/marathon or go directly to  
+https://coveralls.io/github/mesosphere/marathon to see our code coverage reporting.
+With every Pull Request we try to make sure, this coverage will be increased.  
+
+#### Improved the release process of Marathon itself
+
+Several changes are made to the sbt build file, but also to the infrastructure that is performing the release.
+We now have a more reliable way of pushing distributions.
+
+
+### Fixed Issues
+
+- #1710 - Too many simultaneous requests will kill Marathon 
+- #1709 - Concurrent changes to the same AppDefinition will lead to inconsistent state
+- #1669 - Inconsistent content-type and response from REST API 
+- #1660 - The GUI doesn't allow creating apps with 0 instances, but it is possible through the v2 API 
 - #1647 - Keep the rest-api return format consistent when request headers without "Accept: application/json"
+- #1397 - Kill tasks with scaling does not update group
+- #1654 - Marathon 0.8.1 - API - /v2/tasks 
+- #555  - Constraints not satisfied when scaling down
+- #650  - deployment_success/failed should contain deployment info  
+- #1316 - Invalidate framework ID if registration triggers an error  
+- #1254 - Add flag to define Marathon PORT prefix
+
+------------------------------------------------------------
+
 
 ## Changes from 0.8.2 to 0.9.0
 
@@ -197,6 +282,10 @@ script is started as `root`.
 - #1569 - `http_endpoints` not being split on comma
 - #1572 - Remove `$$EnhancerByGuice$$...` from class names in metrics
 
+
+------------------------------------------------------------
+
+
 ## Changes from 0.8.1 to 0.8.2
 
 #### New health check option `ignoreHttp1xx`
@@ -248,6 +337,10 @@ Instead of declining the creation of an app with the same name as a previously e
 #### Performance improvements
 
 App and task related API calls should be considerably faster with large amounts of tasks now.
+
+
+------------------------------------------------------------
+
 
 ## Changes from 0.8.0 to 0.8.1
 
