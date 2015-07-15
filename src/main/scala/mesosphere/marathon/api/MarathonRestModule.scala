@@ -81,6 +81,6 @@ class MarathonRestModule extends RestModule {
   @Provides
   @Singleton
   def provideRequestsLimiter(conf: MarathonConf): LimitConcurrentRequestsFilter = {
-    new LimitConcurrentRequestsFilter(conf.maxConcurrentHttpConnections())
+    new LimitConcurrentRequestsFilter(conf.maxConcurrentHttpConnections.get)
   }
 }

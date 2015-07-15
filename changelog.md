@@ -11,13 +11,13 @@ Please look at the following changes to check whether you have to verify your se
 
 ##### Restrict the number of concurrent HTTP requests
 
-With this number of Marathon it is possible to restrict the number of concurrent http requests.
-This prevents Denial of Service behavior, that has been reported in some installations.
-If the limit of concurrent requests is reached, a HTTP 503 Service Temporarily Unavailable is returned,
+With this version of Marathon it is possible to restrict the number of concurrent http requests,
+that are handled concurrently in the service layer.
+This enables the Marathon service to apply back pressure when receiving too many requests 
+and helps prevent Denial of Service attacks.
+If the limit of concurrent requests is reached, a HTTP 503 Service Temporarily Unavailable is returned, 
 which means that this operation can be retried.
-The option has a sensible default (20), which should be suitable for almost all installations and 
-can be adjusted with the `--http_max_concurrent_requests` command line property.
-
+You can turn on this feature by setting the parameter `--http_max_concurrent_requests`.
 
 ### Fixed Bugs
 

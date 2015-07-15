@@ -56,7 +56,7 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
   lazy val maxConcurrentHttpConnections = opt[Int]("http_max_concurrent_requests",
     descr = "The number of concurrent http requests, that are allowed before rejecting.",
     noshort = true,
-    default = Some(20)
+    default = None
   )
 
   lazy val accessControlAllowOrigin = opt[String]("access_control_allow_origin",
