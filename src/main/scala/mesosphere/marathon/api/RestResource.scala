@@ -3,14 +3,14 @@ package mesosphere.marathon.api
 import java.net.URI
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.{ ResponseBuilder, Status }
+
+import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.upgrade.DeploymentPlan
 import play.api.libs.json.Json
 
 import scala.concurrent.{ Await, Awaitable }
-
-import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.upgrade.DeploymentPlan
 
 trait RestResource {
 

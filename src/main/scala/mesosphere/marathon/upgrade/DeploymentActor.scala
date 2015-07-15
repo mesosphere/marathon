@@ -83,11 +83,11 @@ class DeploymentActor(
       val futures = step.actions.map { action =>
         healthCheckManager.addAllFor(action.app) // ensure health check actors are in place before tasks are launched
         action match {
-          case StartApplication(app, scaleTo) => storeAndThen(app) { startApp(app, scaleTo) }
-          case ScaleApplication(app, scaleTo) => storeAndThen(app) { scaleApp(app, scaleTo) }
-          case RestartApplication(app)        => storeAndThen(app) { restartApp(app) }
-          case StopApplication(app)           => storeAndThen(app.copy(instances = 0)) { stopApp(app) }
-          case ResolveArtifacts(app, urls)    => resolveArtifacts(app, urls)
+          case StartApplication(app, scaleTo)         => storeAndThen(app) { startApp(app, scaleTo) }
+          case ScaleApplication(app, scaleTo, toKill) => storeAndThen(app) { scaleApp(app, scaleTo, toKill) }
+          case RestartApplication(app)                => storeAndThen(app) { restartApp(app) }
+          case StopApplication(app)                   => storeAndThen(app.copy(instances = 0)) { stopApp(app) }
+          case ResolveArtifacts(app, urls)            => resolveArtifacts(app, urls)
         }
       }
 
@@ -116,12 +116,19 @@ class DeploymentActor(
     promise.future
   }
 
-  def scaleApp(app: AppDefinition, scaleTo: Int): Future[Unit] = {
+  def scaleApp(app: AppDefinition, scaleTo: Int, toKill: Option[Set[MarathonTask]]): Future[Unit] = {
     val runningTasks = taskTracker.get(app.id)
-    if (scaleTo == runningTasks.size) {
-      Future.successful(())
+    def killToMeetConstraints(notSentencedAndRunning: Set[MarathonTask], toKillCount: Int) =
+      Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
+
+    val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
+      runningTasks, toKill, killToMeetConstraints, scaleTo)
+
+    def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) {
+      killTasks(app.id, _)
     }
-    else if (scaleTo > runningTasks.size) {
+
+    def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
       val promise = Promise[Unit]()
       context.actorOf(
         Props(
@@ -138,14 +145,8 @@ class DeploymentActor(
       )
       promise.future
     }
-    else {
-      val toKillCount = runningTasks.size - scaleTo
-      var toKill = Constraints.selectTasksToKill(app, runningTasks, toKillCount)
-      if (toKill.size < toKillCount) {
-        toKill ++= (runningTasks -- toKill).toSeq.sortBy(_.getStartedAt).drop(scaleTo)
-      }
-      killTasks(app.id, toKill.toSeq)
-    }
+
+    killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
   def killTasks(appId: PathId, tasks: Seq[MarathonTask]): Future[Unit] = {

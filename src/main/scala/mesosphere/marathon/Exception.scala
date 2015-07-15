@@ -6,7 +6,7 @@ import mesosphere.marathon.state.PathId
 
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
-class UnknownAppException(id: PathId) extends Exception(s"App '$id' does not exist")
+case class UnknownAppException(id: PathId) extends Exception(s"App '$id' does not exist")
 
 class BadRequestException(msg: String) extends Exception(msg)
 

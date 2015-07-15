@@ -5,7 +5,7 @@ import java.util.Date
 
 import akka.actor.ActorSystem
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate, V2Group, V2GroupUpdate }
+import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppDefinitionWrapper, V2AppUpdate, V2Group, V2GroupUpdate }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory
 import spray.client.pipelining._
 import spray.http._
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 
@@ -23,6 +24,8 @@ import scala.concurrent.duration._
 case class ITListAppsResult(apps: Seq[V2AppDefinition])
 case class ITAppVersions(versions: Seq[Timestamp])
 case class ITListTasks(tasks: Seq[ITEnrichedTask])
+@JsonIgnoreProperties(ignoreUnknown = true)
+case class ITDeploymentPlan(version: String, deploymentId: String)
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -48,7 +51,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   require(baseGroup.absolute)
 
+  implicit val v2appDefWrapperMarshaller = marshaller[V2AppDefinitionWrapper]
   implicit val v2appDefMarshaller = marshaller[V2AppDefinition]
+  implicit val deploymentPlanMarshaller = marshaller[ITDeploymentPlan]
   implicit val appUpdateMarshaller = marshaller[V2AppUpdate]
   implicit val v2groupMarshaller = marshaller[V2Group]
   implicit val groupUpdateMarshaller = marshaller[V2GroupUpdate]
@@ -70,9 +75,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     res.map(_.apps.toList.filter(app => isInBaseGroup(app.id)))
   }
 
-  def app(id: PathId): RestResult[V2AppDefinition] = {
+  def app(id: PathId): RestResult[V2AppDefinitionWrapper] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[V2AppDefinition]
+    val pipeline = sendReceive ~> read[V2AppDefinitionWrapper]
     val getUrl: String = s"$url/v2/apps$id"
     LoggerFactory.getLogger(getClass).info(s"get url = $getUrl")
     result(pipeline(Get(getUrl)), waitTime)
@@ -130,6 +135,12 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     requireInBaseGroup(appId)
     val pipeline = sendReceive ~> read[ITListTasks]
     result(pipeline(Delete(s"$url/v2/apps$appId/tasks?scale=$scale")), waitTime)
+  }
+
+  def killAllTasksAndScale(appId: PathId): RestResult[ITDeploymentPlan] = {
+    requireInBaseGroup(appId)
+    val pipeline = sendReceive ~> read[ITDeploymentPlan]
+    result(pipeline(Delete(s"$url/v2/apps$appId/tasks?scale=true")), waitTime)
   }
 
   def killTask(appId: PathId, taskId: String, scale: Boolean = false): RestResult[HttpResponse] = {

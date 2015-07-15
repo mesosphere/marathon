@@ -290,7 +290,7 @@ class AppDeployIntegrationTest
 
     Then("All instances of the app get restarted")
     waitForTasks(app.id, 1)
-    marathon.app(app.id).value.instances should be (1)
+    marathon.app(app.id).value.app.instances should be (1)
   }
 
   test("kill all tasks of an App") {
@@ -308,22 +308,23 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 2)
   }
 
-  ignore("kill all tasks of an App with scaling") {
+  test("kill all tasks of an App with scaling") {
     Given("a new app with multiple tasks")
     val app = v2AppProxy(testBasePath / "tokill", "v1", instances = 2, withHealth = false)
     marathon.createAppV2(app).code should be (201)
     waitForEvent("deployment_success")
+    marathon.app(app.id).value.app.instances should be (2)
 
     When("all task of an app are killed")
-    val result = marathon.killAllTasks(app.id, scale = true)
-    result.value.tasks should have size 2
+    val result = marathon.killAllTasksAndScale(app.id)
+    result.value.version should not be empty
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
+    waitForEvent("deployment_success")
 
     Then("All instances of the app get restarted")
     waitForTasks(app.id, 0)
-    //TODO: this is a bug in marathon: it will update the instance count to "something"
-    marathon.app(app.id).value.instances should be (0)
+    marathon.app(app.id).value.app.instances should be (0)
   }
 
   test("delete an application") {

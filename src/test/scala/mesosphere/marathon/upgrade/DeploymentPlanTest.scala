@@ -1,6 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -304,4 +305,41 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     DeploymentPlan(from, to) should be (empty)
   }
+
+  test("ScaleApplication step is created with TasksToKill") {
+    Given("a group with one app")
+    val aId = "/test/some/a".toPath
+    val oldApp = AppDefinition(aId, version = Timestamp(0))
+
+    When("A deployment plan is generated")
+    val originalGroup = Group(
+      id = "/test".toPath,
+      apps = Set(oldApp),
+      groups = Set(
+        Group("/test/some".toPath, Set(oldApp))
+      )
+    )
+
+    val newApp = oldApp.copy(instances = 5)
+    val targetGroup = Group(
+      id = "/test".toPath,
+      apps = Set(newApp),
+      groups = Set(
+        Group("/test/some".toPath, Set(newApp))
+      )
+    )
+
+    val taskToKill = MarathonTask.getDefaultInstance
+    val plan = DeploymentPlan(
+      original = originalGroup,
+      target = targetGroup,
+      resolveArtifacts = Seq.empty,
+      version = Timestamp.now(),
+      toKill = Map(aId -> Set(taskToKill)))
+
+    Then("DeploymentSteps should include ScaleApplication w/ tasksToKill")
+    plan.steps should not be empty
+    plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Set(taskToKill)))
+  }
+
 }

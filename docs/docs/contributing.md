@@ -19,8 +19,17 @@ _TODO_: Do we need a CLA?
 
 ## Submitting Changes to Marathon
 
-- A GitHub pull request is the preferred way of submitting patch sets. Please rebase your
-  pull requests on top of the current master and squash your changes to a single commit.
+- A GitHub pull request is the preferred way of submitting patch sets. Please
+  rebase your pull requests on top of the current master using
+  ```git rebase master``, and squash your changes to a single commit as
+  described [here](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html).
+  Yes, we want you to rewrite history – the branch on which you are
+  implementing your changes is only meant for this pull request. You can
+  either rebase before or after you squash your commits, depending on how
+  you'd like to resolve potential merge conflicts. The idea behind is that we
+  don't want an arbitrary number of commits for one pull request, but exactly
+  one commit. This commit should be easy to merge onto master, therefore we
+  ask you to rebase to master.
 
 - Any changes in the public API or behavior must be reflected in the project
   documentation.

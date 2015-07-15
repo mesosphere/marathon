@@ -9,7 +9,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.api.{ TaskKiller, RestResource }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.{ EnrichedTask, V2AppDefinition, V2AppUpdate }
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
@@ -31,6 +31,7 @@ class AppsResource @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
     service: MarathonSchedulerService,
     taskTracker: TaskTracker,
+    taskKiller: TaskKiller,
     healthCheckManager: HealthCheckManager,
     taskFailureRepository: TaskFailureRepository,
     val config: MarathonConf,
@@ -198,7 +199,7 @@ class AppsResource @Inject() (
 
   @Path("{appId:.+}/tasks")
   def appTasksResource(): AppTasksResource =
-    new AppTasksResource(service, taskTracker, healthCheckManager, config, groupManager)
+    new AppTasksResource(service, taskTracker, taskKiller, healthCheckManager, config, groupManager)
 
   @Path("{appId:.+}/versions")
   def appVersionsResource(): AppVersionsResource = new AppVersionsResource(service, config)

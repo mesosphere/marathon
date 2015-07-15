@@ -5,20 +5,23 @@ import javax.ws.rs._
 import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
-import org.apache.log4j.Logger
-
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.api.{ EndpointsHelper, RestResource }
+import mesosphere.marathon.api.{ TaskKiller, EndpointsHelper, RestResource }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ GroupManager, PathId }
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
+import org.apache.log4j.Logger
+
+import scala.concurrent.Future
 
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class AppTasksResource @Inject() (service: MarathonSchedulerService,
                                   taskTracker: TaskTracker,
+                                  taskKiller: TaskKiller,
                                   healthCheckManager: HealthCheckManager,
                                   val config: MarathonConf,
                                   groupManager: GroupManager) extends RestResource {
@@ -65,19 +68,19 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   def deleteMany(@PathParam("appId") appId: String,
                  @QueryParam("host") host: String,
                  @QueryParam("scale") scale: Boolean = false): Response = {
-    val id = appId.toRootPath
-    if (taskTracker.contains(id)) {
-      val tasks = taskTracker.get(id)
+    val pathId = appId.toRootPath
+    def findToKill(appTasks: Set[MarathonTask]): Set[MarathonTask] = Option(host).fold(appTasks) { hostname =>
+      appTasks.filter(_.getHost == hostname || hostname == "*")
+    }
 
-      val toKill = Option(host).fold(tasks) { hostname =>
-        tasks.filter(_.getHost == hostname || hostname == "*")
-      }
-
-      service.killTasks(id, toKill, scale)
-      ok(Map("tasks" -> toKill))
+    if (scale) {
+      val deploymentF = taskKiller.killAndScale(pathId, findToKill, force = true)
+      deploymentResult(result(deploymentF))
     }
     else {
-      unknownApp(id)
+      reqToResponse(taskKiller.kill(pathId, findToKill, scale)) {
+        tasks => ok(Map("tasks" -> tasks))
+      }
     }
   }
 
@@ -88,15 +91,27 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                 @PathParam("taskId") id: String,
                 @QueryParam("scale") scale: Boolean = false): Response = {
     val pathId = appId.toRootPath
-    if (taskTracker.contains(pathId)) {
-      val tasks = taskTracker.get(pathId)
-      tasks.find(_.getId == id).fold(unknownTask(id)) { task =>
-        service.killTasks(pathId, Seq(task), scale)
-        ok(Map("task" -> task))
-      }
+    def findToKill(appTasks: Set[MarathonTask]): Set[MarathonTask] = appTasks.find(_.getId == id).toSet
+
+    if (scale) {
+      val deploymentF = taskKiller.killAndScale(pathId, findToKill, force = true)
+      deploymentResult(result(deploymentF))
     }
     else {
-      unknownApp(pathId)
+      reqToResponse(taskKiller.kill(pathId, findToKill, force = true)) {
+        tasks => tasks.headOption.fold(unknownTask(id))(task => ok(Map("task" -> task)))
+      }
     }
   }
+
+  private def reqToResponse(future: Future[Set[MarathonTask]])(toResponse: Set[MarathonTask] => Response): Response = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val response = future.map {
+      toResponse
+    } recover {
+      case UnknownAppException(unknownAppId) => unknownApp(unknownAppId)
+    }
+    result(response)
+  }
+
 }

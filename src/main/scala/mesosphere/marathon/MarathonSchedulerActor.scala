@@ -133,27 +133,16 @@ class MarathonSchedulerActor private (
     case cmd @ Deploy(plan, force) =>
       deploy(sender(), cmd)
 
-    case cmd @ KillTasks(appId, taskIds, scale) =>
+    case cmd @ KillTasks(appId, taskIds) =>
       val origSender = sender()
       withLockFor(appId) {
         val promise = Promise[Unit]()
         val tasksToKill = taskIds.flatMap(taskTracker.fetchTask(appId, _))
         context.actorOf(Props(classOf[TaskKillActor], driver, appId, taskTracker, eventBus, tasksToKill, promise))
-        val res = if (scale) {
-          for {
-            _ <- promise.future
-            currentApp <- appRepository.currentVersion(appId)
-            _ <- currentApp
-              .map { app => appRepository.store(app.copy(instances = app.instances - tasksToKill.size)) }
-              .getOrElse(Future.successful(()))
-          } yield ()
-        }
-        else {
-          for {
-            _ <- promise.future
-            Some(app) <- appRepository.currentVersion(appId)
-          } yield schedulerActions.scale(driver, app)
-        }
+        val res = for {
+          _ <- promise.future
+          Some(app) <- appRepository.currentVersion(appId)
+        } yield schedulerActions.scale(driver, app)
 
         res onComplete { _ =>
           self ! cmd.answer
@@ -362,7 +351,7 @@ object MarathonSchedulerActor {
     def answer: Event = DeploymentStarted(plan)
   }
 
-  case class KillTasks(appId: PathId, taskIds: Set[String], scale: Boolean) extends Command {
+  case class KillTasks(appId: PathId, taskIds: Set[String]) extends Command {
     def answer: Event = TasksKilled(appId, taskIds)
   }
 

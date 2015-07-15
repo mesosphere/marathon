@@ -4,6 +4,7 @@ import java.net.URL
 import java.util.UUID
 
 import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory
 
@@ -18,8 +19,10 @@ sealed trait DeploymentAction {
 // application has not been started before
 final case class StartApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
 
-// application is started, but more instances should be started
-final case class ScaleApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
+// application is started, but the instance count should be changed
+final case class ScaleApplication(app: AppDefinition,
+                                  scaleTo: Int,
+                                  sentencedToDeath: Option[Set[MarathonTask]] = None) extends DeploymentAction
 
 // application is started, but shall be completely stopped
 final case class StopApplication(app: AppDefinition) extends DeploymentAction
@@ -78,11 +81,11 @@ final case class DeploymentPlan(
   override def toString: String = {
     def appString(app: AppDefinition): String = s"App(${app.id}, ${app.cmd}))"
     def actionString(a: DeploymentAction): String = a match {
-      case StartApplication(app, scale) => s"Start(${appString(app)}, $scale)"
-      case StopApplication(app)         => s"Stop(${appString(app)})"
-      case ScaleApplication(app, scale) => s"Scale(${appString(app)}, $scale)"
-      case RestartApplication(app)      => s"Restart(${appString(app)})"
-      case ResolveArtifacts(app, urls)  => s"Resolve(${appString(app)}, $urls})"
+      case StartApplication(app, scale)         => s"Start(${appString(app)}, $scale)"
+      case StopApplication(app)                 => s"Stop(${appString(app)})"
+      case ScaleApplication(app, scale, toKill) => s"Scale(${appString(app)}, $scale, $toKill})"
+      case RestartApplication(app)              => s"Restart(${appString(app)})"
+      case ResolveArtifacts(app, urls)          => s"Resolve(${appString(app)}, $urls})"
     }
     val stepString = steps.map("Step(" + _.actions.map(actionString) + ")").mkString("(", ", ", ")")
     s"DeploymentPlan($version, $stepString)"
@@ -172,7 +175,8 @@ object DeploymentPlan {
     * Returns a sequence of deployment steps, the order of which is derived
     * from the topology of the target group's dependency graph.
     */
-  def dependencyOrderedSteps(original: Group, target: Group): Seq[DeploymentStep] = {
+  def dependencyOrderedSteps(original: Group, target: Group,
+                             toKill: Map[PathId, Set[MarathonTask]]): Seq[DeploymentStep] = {
     val originalApps: Map[PathId, AppDefinition] =
       original.transitiveApps.map(app => app.id -> app).toMap
 
@@ -187,7 +191,7 @@ object DeploymentPlan {
 
           // Scale-only change.
           case Some(oldApp) if oldApp.isOnlyScaleChange(newApp) =>
-            Some(ScaleApplication(newApp, newApp.instances))
+            Some(ScaleApplication(newApp, newApp.instances, toKill.get(newApp.id)))
 
           // Update existing app.
           case Some(oldApp) if oldApp.isUpgrade(newApp) =>
@@ -208,7 +212,8 @@ object DeploymentPlan {
     original: Group,
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
-    version: Timestamp = Timestamp.now()): DeploymentPlan = {
+    version: Timestamp = Timestamp.now(),
+    toKill: Map[PathId, Set[MarathonTask]] = Map.empty): DeploymentPlan = {
     log.info(s"Compute DeploymentPlan from $original to $target")
 
     // Lookup maps for original and target apps.
@@ -252,7 +257,7 @@ object DeploymentPlan {
     //            the old app or the new app, whichever is less.
     //         ii. Restart the app, up to the new target number of instances.
     //
-    steps ++= dependencyOrderedSteps(original, target)
+    steps ++= dependencyOrderedSteps(original, target, toKill)
 
     // Build the result.
     val result = DeploymentPlan(
