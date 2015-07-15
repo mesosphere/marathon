@@ -91,7 +91,13 @@ case class AppDefinition(
   }
 
   def toProto: Protos.ServiceDefinition = {
-    val commandInfo = TaskBuilder.commandInfo(this, None, None, Seq.empty)
+    val commandInfo = TaskBuilder.commandInfo(
+      app = this,
+      taskId = None,
+      host = None,
+      ports = Seq.empty,
+      envPrefix = None
+    )
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)

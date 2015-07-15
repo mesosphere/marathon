@@ -30,7 +30,8 @@ trait MarathonTestHelper {
     maxTasksPerOffer: Int = 1,
     maxTasksPerOfferCycle: Int = 10,
     mesosRole: Option[String] = None,
-    acceptedResourceRoles: Option[Set[String]] = None): MarathonConf = {
+    acceptedResourceRoles: Option[Set[String]] = None,
+    envVarsPrefix: Option[String] = None): MarathonConf = {
 
     var args = Seq(
       "--master", "127.0.0.1:5050",
@@ -40,6 +41,7 @@ trait MarathonTestHelper {
 
     mesosRole.foreach(args ++= Seq("--mesos_role", _))
     acceptedResourceRoles.foreach(v => args ++= Seq("--default_accepted_resource_roles", v.mkString(",")))
+    envVarsPrefix.foreach(args ++ Seq("--env_vars_prefix", _))
     makeConfig(args: _*)
   }
 
