@@ -144,6 +144,7 @@ class ConfigTemplater(object):
       log 127.0.0.1 local0
       log 127.0.0.1 local1 notice
       maxconn 4096
+      tune.ssl.default-dh-param 2048
 
     defaults
       log               global
@@ -493,6 +494,11 @@ def config(apps, groups):
 
         logger.debug("frontend at %s:%d with backend %s",
                      app.bindAddr, app.servicePort, backend)
+
+        # if the app has a hostname set force mode to http
+        # otherwise recent versions of haproxy refuse to start
+        if app.hostname:
+            app.mode = 'http'
 
         frontend_head = templater.haproxy_frontend_head
         frontends += frontend_head.format(
