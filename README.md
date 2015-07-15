@@ -145,6 +145,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Measurence](http://www.measurence.com/)
 * [Motus](http://www.motus.com/)
 * [OpenTable](http://www.opentable.com/)
+* [Orbitz](http://www.orbitz.com/)
 * [Otto](https://www.otto.de/)
 * [PayPal](https://www.paypal.com)
 * [Qubit](http://www.qubitproducts.com/)
