@@ -71,7 +71,11 @@ trait SingleMarathonIntegrationTest
       ProcessKeeper.startMesosLocal()
       cleanMarathonState()
 
-      val parameters = List("--master", config.master, "--event_subscriber", "http_callback") ++ extraMarathonParameters
+      val parameters = List(
+        "--master", config.master,
+        "--event_subscriber", "http_callback",
+        "--access_control_allow_origin", "*"
+      ) ++ extraMarathonParameters
       startMarathon(config.marathonBasePort, parameters: _*)
 
       log.info("Setting up local mesos/marathon infrastructure: done.")
