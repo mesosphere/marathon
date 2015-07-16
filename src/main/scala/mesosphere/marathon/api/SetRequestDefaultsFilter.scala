@@ -20,7 +20,7 @@ class SetRequestDefaultsFilter extends Filter {
       if (!headerMap.contains("Content-Type")) headerMap += "Content-Type" -> enum("application/json")
       if (!headerMap.contains("Accept")) headerMap += "Accept" -> enum("application/json")
       headerMap
-    }.withDefaultValue(null) //I hate it, but this is the default
+    }.withDefaultValue(emptyEnum)
 
     override val getHeaderNames: util.Enumeration[String] = new util.Vector(headers.keySet.asJava).elements()
 
@@ -42,4 +42,5 @@ class SetRequestDefaultsFilter extends Filter {
   override def init(filterConfig: FilterConfig): Unit = {}
   override def destroy(): Unit = {}
   private[this] def enum(values: String*) = new util.Vector(values.asJava).elements()
+  private[this] val emptyEnum = new util.Vector[String](0).elements()
 }
