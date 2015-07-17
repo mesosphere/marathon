@@ -435,13 +435,16 @@ class Marathon(object):
         return self.api_req('POST', ['apps'], app_json)
 
     def get_app(self, appid):
+        logger.info('fetching app %s', appid)
         return self.api_req('GET', ['apps', appid])["app"]
 
     # Lists all running apps.
     def list(self):
+        logger.info('fetching apps')
         return self.api_req('GET', ['apps'])["apps"]
 
     def tasks(self):
+        logger.info('fetching tasks')
         return self.api_req('GET', ['tasks'])["tasks"]
 
     def add_subscriber(self, callbackUrl):
@@ -610,6 +613,8 @@ def writeConfig(config, config_file):
     logger.debug("writing config to temp file %s", haproxyTempConfigFile)
     with os.fdopen(fd, 'w') as haproxyTempConfig:
         haproxyTempConfig.write(config)
+
+    os.chmod(haproxyTempConfigFile, 0o644)
 
     # Move into place
     logger.debug("moving temp file %s to %s",
