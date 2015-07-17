@@ -59,6 +59,11 @@ Environment Variables:
     Bind to the specific address for the service.
     Ex: HAPROXY_0_BIND_ADDR = '10.0.0.42'
 
+  HAPROXY_{n}_PORT
+    Bind to the specific port for the service.
+    This overrides the servicePort which has to be unique.
+    Ex: HAPROXY_0_PORT = 80
+
   HAPROXY_{n}_MODE
     Set the connection mode to either TCP or HTTP. The default is TCP.
     Ex: HAPROXY_0_MODE = 'http'
