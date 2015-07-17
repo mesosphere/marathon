@@ -330,13 +330,17 @@ def set_bindAddr(x, y):
 def set_mode(x, y):
     x.mode = y
 
+def set_port(x, y):
+    x.servicePort = int(y)
+
 env_keys = {
     'HAPROXY_{0}_VHOST': set_hostname,
     'HAPROXY_{0}_STICKY': set_sticky,
     'HAPROXY_{0}_REDIRECT_TO_HTTPS': set_redirect_http_to_https,
     'HAPROXY_{0}_SSL_CERT': set_sslCert,
     'HAPROXY_{0}_BIND_ADDR': set_bindAddr,
-    'HAPROXY_{0}_MODE': set_mode
+    'HAPROXY_{0}_MODE': set_mode,
+    'HAPROXY_{0}_PORT': set_port
 }
 
 logger = logging.getLogger('servicerouter')
