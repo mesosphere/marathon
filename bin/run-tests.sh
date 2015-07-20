@@ -69,7 +69,7 @@ Directories:
 
 Docker caching:
 
-    NO_DOCKER_CACHE = "NO_DOCKER_CACHE" allowed: true or false default: true
+    NO_DOCKER_CACHE = "$NO_DOCKER_CACHE" allowed: true or false default: true
                        (whether to use the docker cache when building the base image)
 
 Cleanup:
