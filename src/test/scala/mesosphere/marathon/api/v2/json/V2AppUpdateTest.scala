@@ -140,4 +140,14 @@ class V2AppUpdateTest extends MarathonSpec {
       V2AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
     }
   }
+
+  test("acceptedResourceRoles of update is only applied when != None") {
+    val app = V2AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Some(Set("a")))
+
+    val unchanged = V2AppUpdate().apply(app).copy(version = app.version)
+    assert(unchanged == app)
+
+    val changed = V2AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(version = app.version)
+    assert(changed == app.copy(acceptedResourceRoles = Some(Set("b"))))
+  }
 }
