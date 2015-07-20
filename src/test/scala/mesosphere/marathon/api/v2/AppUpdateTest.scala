@@ -5,7 +5,7 @@ import javax.validation.Validation
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container._
-import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, UpgradeStrategy }
 import mesosphere.marathon.state.PathId._
 import org.apache.mesos.{ Protos => mesos }
 
@@ -139,5 +139,15 @@ class AppUpdateTest extends MarathonSpec {
     intercept[Exception] {
       AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
     }
+  }
+
+  test("acceptedResourceRoles of update is only applied when != None") {
+    val app = AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Some(Set("a")))
+
+    val unchanged = AppUpdate().apply(app).copy(version = app.version)
+    assert(unchanged == app)
+
+    val changed = AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(version = app.version)
+    assert(changed == app.copy(acceptedResourceRoles = Some(Set("b"))))
   }
 }
