@@ -82,7 +82,7 @@ Upgrading to a newer version of Marathon should be executed in that order:
 1. Install the new version of Marathon on one of the nodes with the old version.
 1. Start the instance with the new version of Marathon.
 1. Stop the last node with the old version. Now the new version of Marathon will take over leadership and becomes active.
-1. Watch the log of this instance for a successful start
+1. Watch the log of this instance for a successful start. There should be no ERROR or FATAL statements in the logs.
 1. Start all other instances of Marathon instances to build a quorum.
 
 
