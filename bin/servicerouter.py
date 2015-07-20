@@ -346,8 +346,8 @@ env_keys = {
     'HAPROXY_{0}_REDIRECT_TO_HTTPS': set_redirect_http_to_https,
     'HAPROXY_{0}_SSL_CERT': set_sslCert,
     'HAPROXY_{0}_BIND_ADDR': set_bindAddr,
-    'HAPROXY_{0}_MODE': set_mode,
-    'HAPROXY_{0}_PORT': set_port
+    'HAPROXY_{0}_PORT': set_port,
+    'HAPROXY_{0}_MODE': set_mode
 }
 
 logger = logging.getLogger('servicerouter')
