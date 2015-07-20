@@ -112,7 +112,7 @@ case class V2AppUpdate(
     dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels.getOrElse(app.labels),
-    acceptedResourceRoles,
+    acceptedResourceRoles.orElse(app.acceptedResourceRoles),
     version.getOrElse(Timestamp.now())
   )
 
