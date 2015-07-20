@@ -244,7 +244,7 @@ class AppsResource @Inject() (
 
   private def validateApp(app: AppDefinition): AppDefinition = {
     BeanValidation.requireValid(ModelValidation.checkAppConstraints(V2AppDefinition(app), app.id.parent))
-    val conflicts = ModelValidation.checkAppConflicts(app, app.id.parent, service)
+    val conflicts = ModelValidation.checkAppConflicts(app, service)
     if (conflicts.nonEmpty) throw new ConflictingChangeException(conflicts.mkString(","))
     app
   }
