@@ -332,11 +332,13 @@ def set_bindAddr(x, y):
     x.bindAddr = y
 
 
+def set_port(x, y):
+    x.servicePort = int(y)
+
+
 def set_mode(x, y):
     x.mode = y
 
-def set_port(x, y):
-    x.servicePort = int(y)
 
 env_keys = {
     'HAPROXY_{0}_VHOST': set_hostname,
