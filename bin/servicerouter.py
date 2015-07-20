@@ -59,6 +59,11 @@ Environment Variables:
     Bind to the specific address for the service.
     Ex: HAPROXY_0_BIND_ADDR = '10.0.0.42'
 
+  HAPROXY_{n}_PORT
+    Bind to the specific port for the service.
+    This overrides the servicePort which has to be unique.
+    Ex: HAPROXY_0_PORT = 80
+
   HAPROXY_{n}_MODE
     Set the connection mode to either TCP or HTTP. The default is TCP.
     Ex: HAPROXY_0_MODE = 'http'
@@ -327,8 +332,13 @@ def set_bindAddr(x, y):
     x.bindAddr = y
 
 
+def set_port(x, y):
+    x.servicePort = int(y)
+
+
 def set_mode(x, y):
     x.mode = y
+
 
 env_keys = {
     'HAPROXY_{0}_VHOST': set_hostname,
@@ -336,6 +346,7 @@ env_keys = {
     'HAPROXY_{0}_REDIRECT_TO_HTTPS': set_redirect_http_to_https,
     'HAPROXY_{0}_SSL_CERT': set_sslCert,
     'HAPROXY_{0}_BIND_ADDR': set_bindAddr,
+    'HAPROXY_{0}_PORT': set_port,
     'HAPROXY_{0}_MODE': set_mode
 }
 
