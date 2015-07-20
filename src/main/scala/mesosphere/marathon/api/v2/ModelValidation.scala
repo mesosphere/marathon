@@ -275,9 +275,9 @@ object ModelValidation {
     * Returns a non-empty list of validation messages if the given app definition
     * will conflict with existing apps.
     */
-  def checkAppConflicts(app: AppDefinition, baseId: PathId, service: MarathonSchedulerService): Seq[String] = {
+  def checkAppConflicts(app: AppDefinition, service: MarathonSchedulerService): Seq[String] = {
     app.containerServicePorts.toSeq.flatMap { servicePorts =>
-      checkServicePortConflicts(baseId, servicePorts, service)
+      checkServicePortConflicts(app.id, servicePorts, service)
     }
   }
 
@@ -288,12 +288,12 @@ object ModelValidation {
     * Does not compare the app definition's service ports with the same deployed app's service ports, as app updates
     * may simply restate the existing service ports.
     */
-  private def checkServicePortConflicts(baseId: PathId, requestedServicePorts: Seq[Int],
+  private def checkServicePortConflicts(appId: PathId, requestedServicePorts: Seq[Int],
                                         service: MarathonSchedulerService): Seq[String] = {
 
     for {
       existingApp <- service.listApps().toList
-      if existingApp.id != baseId // in case of an update, do not compare the app against itself
+      if existingApp.id != appId // in case of an update, do not compare the app against itself
       existingServicePort <- existingApp.portMappings.toList.flatten.map(_.servicePort)
       if existingServicePort != 0 // ignore zero ports, which will be chosen at random
       if requestedServicePorts contains existingServicePort
