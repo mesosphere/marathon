@@ -4,17 +4,12 @@ title: Setting Up and Running Marathon
 
 ## Setting Up And Running Marathon
 
-### Quickstart
-
-An easy way to try out Marathon locally is using the [playa-mesos](https://github.com/mesosphere/playa-mesos) project, a virtual machine installation of Mesos and Marathon.
 
 ### Requirements
 
-* [Apache Mesos][Mesos] 0.20.1+
+* [Apache Mesos][Mesos] 0.22.1+
 * [Apache ZooKeeper][ZooKeeper]
-* JDK 1.6+
-* Scala 2.11+
-* sbt 0.13.5
+* JDK 1.7+ 
 
 ### Installation
 
@@ -42,8 +37,8 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
     **For Mesos 0.22.1+:**
 
     ``` bash
-    $ curl -O http://downloads.mesosphere.com/marathon/v0.8.2/marathon-0.8.2.tgz
-    $ tar xzf marathon-0.8.2.tgz
+    $ curl -O http://downloads.mesosphere.com/marathon/v0.9.0/marathon-0.9.0.tgz
+    $ tar xzf marathon-0.9.0.tgz
     ```
 
     **For Mesos 0.20.0 until 0.22.0:**
@@ -53,27 +48,6 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
     ``` bash
     $ curl -O http://downloads.mesosphere.com/marathon/v0.8.1/marathon-0.8.1.tgz
     $ tar xzf marathon-0.8.1.tgz
-    ```
-
-    **For Mesos 0.19.0:**
-
-    ``` bash
-    $ curl -O http://downloads.mesosphere.com/marathon/marathon-0.6.1/marathon-0.6.1.tgz
-    $ tar xzf marathon-0.6.1.tgz
-    ```
-
-    **For Mesos 0.17.0 to 0.18.2:**
-
-    ``` console
-    $ curl -O http://downloads.mesosphere.com/marathon/marathon-0.5.1/marathon-0.5.1.tgz
-    $ tar xzf marathon-0.5.1.tgz
-    ```
-
-    **For Mesos 0.16.0 and earlier:**
-
-    ``` console
-    $ curl -O http://downloads.mesosphere.com/marathon/marathon-0.5.1_mesos-0.16.0/marathon-0.5.1_mesos-0.16.0.tgz
-    $ tar xzf marathon-0.5.1_mesos-0.16.0.tgz
     ```
 
     SHA-256 checksums are available by appending `.sha256` to the URLs.
@@ -92,13 +66,27 @@ give us feedback (particularly on violations of the versioning policy).
 
 ### Upgrading to a Newer Version
 
-Upgrading to a newer version of Marathon should be seamless.
+We generally recommend creating a backup of the ZooKeeper state before upgrading to be able to downgrade in case of problems after an upgrade. This can be done by creating a copy of ZooKeeper's [data directory](http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#The+Data+Directory).
 
-We generally recommend creating a backup of the ZooKeeper state before upgrading to be able to downgrade in case
-of problems after an upgrade. This can done by creating a copy of ZooKeeper's
-[data directory](http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#The+Data+Directory).
+#### Upgrading a non HA installation
+Upgrading to a newer version of Marathon should be executed in that order:
 
-#### Upgrading from 0.7.* to 0.8.* or upgrading from 0.8.* to 0.9.*
+1. Tear down the running instance of Marathon.
+1. Install the new version of Marathon.
+1. Start the new version of Marathon and watch the log for a successful start.  
+
+#### Upgrading an HA installation
+Upgrading to a newer version of Marathon should be executed in that order:
+
+1. Tear down all running instances of Marathon except one. This instance will be the leader.
+1. Install the new version of Marathon on one of the nodes with the old version.
+1. Start the instance with the new version of Marathon.
+1. Stop the last node with the old version. Now the new version of Marathon will take over leadership and becomes active.
+1. Watch the log of this instance for a successful start
+1. Start all other instances of Marathon instances to build a quorum.
+
+
+#### Upgrading from 0.7.* or 0.8.* to 0.9.*
 
 0.8.x and 0.9.x only add new optional fields and do not change the storage format in an incompatible fashion.
 Thus, an upgrade should not require any migration. You can also rollback at any time in case of errors as long as you
