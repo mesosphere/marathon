@@ -90,7 +90,7 @@ class TasksResource @Inject() (
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
-  @Path("/delete")
+  @Path("delete")
   def killTasks(
     @QueryParam("scale")@DefaultValue("false") scale: Boolean,
     body: Array[Byte]): Response = {

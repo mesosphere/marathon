@@ -16,7 +16,7 @@ class SchemaResource @Inject() (
 
   @GET
   @Timed
-  @Path("/app")
+  @Path("app")
   def index(): InputStream = {
     getClass().getResourceAsStream("AppDefinition.json")
   }
