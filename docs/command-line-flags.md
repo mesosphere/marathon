@@ -72,13 +72,6 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--local_port_min` (Optional. Default: 10000): Min port number to use when dynamically assigning globally unique
     service ports to apps. If you assign your service port statically in your app definition, it does
     not have to be in this range.
-* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
-    number of tasks per Mesos offer. Usually,
-    there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
-* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer_cycle` (Optional. Default: 1000): Launch at
-    most this number of tasks per Mesos offer cycle.
-    A larger value speeds up launching new tasks.
-    Yet, choosing a too large value might overwhelm Mesos/Marathon with processing task updates.
 * `--mesos_role` (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
     for the specified role in addition to resources with the role designation '*'.
 * <span class="label label-default">v0.9.0</span> `--default_accepted_resource_roles` (Optional. Default: all roles):
@@ -121,7 +114,45 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     file containing the authentication secret
 * `--marathon_store_timeout` (Optional. Default: 2000 (2 seconds)): Maximum time
     in milliseconds, to wait for persistent storage operations to complete.
+* <span class="label label-default">v0.10.0</span> `--env_vars_prefix` (Optional. Default: None):
+    The prefix to add to the name of task's environment variables created
+    automatically by Marathon.
+    _Note: This prefix will not be added to variables that are already prefixed,
+    such as `MESOS_TASK_ID` and `MARATHON_APP_ID`
 
+## Tuning Flags for Offer Matching/Launching Tasks
+
+Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
+available resources of a single node in the cluster. Before this <span class="label label-default">v0.8.2</span>,
+Marathon would only start a single task per
+resource offer, which led to slow task launching in smaller clusters. In order to speed up task launching and use the
+resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm which tries
+to start as many tasks as possible per task offer cycle. The maximum number of tasks to start is configurable with
+the following startup parameters:
+
+* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
+    number of tasks per Mesos offer. Usually,
+    there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
+
+* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer_cycle` (Optional. Default: 1000): Launch at
+    most this number of tasks per Mesos offer cycle.
+    A larger value speeds up launching new tasks.
+    Yet, choosing a too large value might overwhelm Mesos/Marathon with processing task updates.
+
+**Example**
+
+Given a cluster with 200 nodes and the default settings for task launching. If we want to start 2000 tasks, it would
+take at least 10 cycles, because we are only starting 1 task per offer, leading to a total maximum of 200. If we
+change the `max_tasks_per_offer` setting to 10, we could start 1000 tasks per offer (the default setting for
+`max_tasks_per_offer_cycle`), reducing the necessary cycles to 2. If we also adjust the `max_tasks_per_offer_cycle `
+to 2000, we could start all tasks in a single cycle (given we receive offers for all nodes).
+
+**Important**
+
+Starting too many tasks at once can lead to a higher number of status updates being sent to Marathon than it can
+currently handle. We will improve the number of events Marathon can handle in a future version. A maximum of 1000
+tasks has proven to be a good default for now. `max_tasks_per_offer` should be adjusted so that `NUM_MESOS_SLAVES *
+max_tasks_per_offer == max_tasks_per_offer_cycle `. E.g. in a cluster of 200 nodes it should be set to 5.
 
 ## Web Site Flags
 
@@ -141,7 +172,8 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * `--http_port` (Optional. Default: 8080): The port on which to listen for HTTP
     requests.
 * `--disable_http` (Optional.): Disable HTTP completely. This is only allowed if you configure HTTPS.
-    HTTPS stays enabled.
+    HTTPS stays enabled. <span class="label label-default">v0.9.0</span> Also enables forwarding queries to the
+    leader via HTTPS instead of HTTP.
 * `--https_address` (Optional. Default: all): The address on which to listen
     for HTTPS requests.
 * `--https_port` (Optional. Default: 8443): The port on which to listen for
@@ -153,21 +185,26 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * `--ssl_keystore_password` (Optional. Default: None): Password for the keystore
     supplied with the `ssl_keystore_path` option. Required if `ssl_keystore_path` is supplied.
     May also be specified with the `MESOSPHERE_KEYSTORE_PASS` environment variable.
-
+*  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of
+    concurrent http requests, that is allowed concurrently before requests get answered directly with a
+    HTTP 503 Service Temporarily Unavailable.
+    
 
 
 
 ### Debug Flags
 
-Note: all debug flags are for debugging purposes only and should not be used in production settings.
-All debug flags are experimental and subject of change.
-
 * <span class="label label-default">v0.8.2</span> `--logging_level` (Optional.):
     Set the logging level of the application.
     Use one of `off`, `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `all`.
-* <span class="label label-default">v0.8.2</span> `--enable_metrics` (Optional.):
+* <span class="label label-default">Deprecated</span> `--enable_metrics` (Optional.):
     Enable metrics for all service method calls.
     The execution time per method is available via the metrics endpoint.
+    This option is turned on by default since version 0.10.0.
+    To turn this feature off, you can use `--disable_metrics`.
+* <span class="label label-default">v0.10.0</span> `--disable_metrics` (Optional.):
+    Metrics are enabled by default, so that the execution time per method is available via the metrics endpoint.
+    This metrics measurement can be disabled with this option.
 * <span class="label label-default">v0.8.2</span> `--enable_tracing` (Optional.):
     Enable tracing for all service method calls.
     Around the execution of every service method a trace log message is issued.

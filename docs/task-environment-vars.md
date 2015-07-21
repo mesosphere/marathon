@@ -12,6 +12,9 @@ addition to those set by Mesos.
 Each element of the `env` field of each task's app definition describes
 an environment variable.
 
+_Note: No custom prefix will be added to these variable names, even if one is
+specified via the `--env_vars_prefix` command line flag.
+
 ## Host Ports
 
 Host ports are the ports at which the application is reachable on the host running
@@ -30,12 +33,18 @@ port, then `PORT` has the same value as `PORT0`.
 The `PORTS` variable contains a comma-separated list of all assigned
 host ports.
 
+_Note: It is possible to specify a custom prefix for these variable
+names through the `--env_vars_prefix` command line flag.
+
 ## App Metadata
 
 - `MARATHON_APP_ID` contains the complete path of the corresponding app
   definition. For example `/httpServer`, or `/webshop/db`.
 - `MARATHON_APP_VERSION` contains the version of the app definition which
   was used to start this task. For example `2015-04-02T09:37:00.596Z`.
+
+_Note: No custom prefix will be added to these variable names, even if one is
+specified via the `--env_vars_prefix` command line flag.
 
 ## Task Metadata
 
