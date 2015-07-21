@@ -105,7 +105,7 @@ A typical pattern in the development and deployment cycle is to have your automa
 
 ## A Simple Docker-based Application
 
-With Marathon it is straightforward to run applications that use Docker images. See also [Running Docker Containers on Marathon](https://mesosphere.github.io/marathon/docs/native-docker.html) for further details and advanced options.
+With Marathon it is straightforward to run applications that use Docker images. See also [Running Docker Containers on Marathon]({{ site.baseurl }}/docs/native-docker.html) for further details and advanced options.
 
 In the following example application definition, we will focus on a simple Docker app: a Python-based web server using the image [python:3](https://registry.hub.docker.com/_/python/). Inside the container, the web server runs on port `8080` (the value of `containerPort`). Outside of the container, Marathon assigns a random port (`hostPort` is set to `0`):
 
@@ -128,7 +128,7 @@ In the following example application definition, we will focus on a simple Docke
 }
 ```
 
-Since launching Docker-based apps is currently not directly supported by the Marathon UI, we will use the [HTTP API](https://mesosphere.github.io/marathon/docs/rest-api.html) to deploy the app `basic-3`:
+Since launching Docker-based apps is currently not directly supported by the Marathon UI, we will use the [HTTP API]({{ site.baseurl }}/docs/rest-api.html) to deploy the app `basic-3`:
 
 ```sh
 curl -X POST http://10.141.141.10:8080/v2/apps -d @basic-3.json -H "Content-type: application/json"
