@@ -23,10 +23,11 @@ target
 */*/target
 
 # assets (keep dist/img directory)
-src/main/resource/assets/css
-src/main/resource/assets/js
-src/main/resource/assets/test
-src/main/resource/assets/.git
-src/main/resource/assets/.gitattributes
-src/main/resource/assets/.gitignore
+src/main/resources/assets/node_modules
+src/main/resources/assets/css
+src/main/resources/assets/js
+src/main/resources/assets/test
+src/main/resources/assets/.git
+src/main/resources/assets/.gitattributes
+src/main/resources/assets/.gitignore
 
