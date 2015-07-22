@@ -1,9 +1,10 @@
 package mesosphere.marathon
 
-import com.google.inject.Module
+import com.google.common.util.concurrent.ServiceManager
+import com.google.inject.{ Guice, Module }
 import com.twitter.common.quantity.{ Amount, Time }
 import com.twitter.common.zookeeper.ZooKeeperClient
-import mesosphere.chaos.{ App, AppConfiguration }
+import mesosphere.chaos.AppConfiguration
 import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
@@ -11,10 +12,15 @@ import mesosphere.marathon.event.http.{ HttpEventConfiguration, HttpEventModule 
 import mesosphere.marathon.event.{ EventConfiguration, EventModule }
 import org.apache.log4j.Logger
 import org.rogach.scallop.ScallopConf
+import org.slf4j.bridge.SLF4JBridgeHandler
 
 import scala.collection.JavaConverters._
+import scala.util.{ Failure, Success, Try }
 
 class MarathonApp extends App {
+  // Handle java.util.logging with SLF4J, copied from Chaos's App trait
+  SLF4JBridgeHandler.removeHandlersForRootLogger()
+  SLF4JBridgeHandler.install()
   val log = Logger.getLogger(getClass.getName)
 
   lazy val zk: ZooKeeperClient = {
@@ -81,14 +87,39 @@ class MarathonApp extends App {
     with HttpEventConfiguration
     with DebugConf
 
-  override lazy val conf = new AllConf
+  lazy val conf = new AllConf
+  var serviceManager: Option[ServiceManager] = None
 
   def runDefault(): Unit = {
     log.info(s"Starting Marathon ${BuildInfo.version}")
-    run(
-      classOf[HttpService],
-      classOf[MarathonSchedulerService]
+
+    conf.afterInit()
+
+    sys.addShutdownHook(shutdownAndWait())
+
+    lazy val injector = Guice.createInjector(modules().asJava)
+    val services = List(
+      injector.getInstance(classOf[HttpService]),
+      injector.getInstance(classOf[MarathonSchedulerService])
     )
+    val serviceManager = new ServiceManager(services.asJava)
+    this.serviceManager = Some(serviceManager)
+
+    serviceManager.startAsync
+
+    Try { serviceManager.awaitHealthy() } match {
+      case Success(_) =>
+        log.info("All services up and running.")
+      case Failure(f) =>
+        log.fatal(s"Failed to start all services. Services by state: ${serviceManager.servicesByState()}", f)
+        shutdownAndWait()
+        System.exit(1)
+    }
+  }
+
+  private def shutdownAndWait(): Unit = {
+    serviceManager.foreach(_.stopAsync())
+    serviceManager.foreach(_.awaitStopped())
   }
 }
 
