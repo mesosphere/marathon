@@ -409,8 +409,8 @@ class AppDeployIntegrationTest
     create.code should be (201) // Created
     val deploymentId = extractDeploymentIds(create).head
 
-    Then("the deployment can not be finished")
-    marathon.listDeploymentsForBaseGroup().value should have size 1
+    Then("the deployment gets created")
+    WaitTestSupport.validFor("deployment visible", 1.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
 
     When("the deployment is forcefully removed")
     val delete = marathon.deleteDeployment(deploymentId, force = true)
@@ -434,8 +434,8 @@ class AppDeployIntegrationTest
     create.code should be (201) // Created
     val deploymentId = extractDeploymentIds(create).head
 
-    Then("the deployment can not be finished")
-    marathon.listDeploymentsForBaseGroup().value should have size 1
+    Then("the deployment gets created")
+    WaitTestSupport.validFor("deployment visible", 1.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
 
     When("the deployment is rolled back")
     val delete = marathon.deleteDeployment(deploymentId, force = false)
