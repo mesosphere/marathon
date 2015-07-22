@@ -90,7 +90,7 @@ object MarathonBuild extends Build {
 
   lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
     organization := "mesosphere",
-    scalaVersion := "2.11.5",
+    scalaVersion := "2.11.7",
     crossScalaVersions := Seq(scalaVersion.value),
     scalacOptions in Compile ++= Seq(
       "-encoding", "UTF-8",
