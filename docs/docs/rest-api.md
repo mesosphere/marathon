@@ -5,51 +5,51 @@ title: REST API
 # Marathon REST API
 
 * [Apps](#apps)
-  * [POST /v2/apps](#post-/v2/apps): Create and start a new app
-  * [GET /v2/apps](#get-/v2/apps): List all running apps
-  * [GET /v2/apps/{appId}](#get-/v2/apps/{appid}): List the app `appId`
-  * [GET /v2/apps/{appId}/versions](#get-/v2/apps/{appid}/versions): List the versions of the application with id `appId`.
-  * [GET /v2/apps/{appId}/versions/{version}](#get-/v2/apps/{appid}/versions/{version}): List the configuration of the application with id `appId` at version `version`.
-  * [PUT /v2/apps/{appId}](#put-/v2/apps/{appid}): Change config of the app
+  * [POST /v2/apps](#post-v2-apps): Create and start a new app
+  * [GET /v2/apps](#get-v2-apps): List all running apps
+  * [GET /v2/apps/{appId}](#get-v2-apps-appid): List the app `appId`
+  * [GET /v2/apps/{appId}/versions](#get-v2-apps-appid-versions): List the versions of the application with id `appId`.
+  * [GET /v2/apps/{appId}/versions/{version}](#get-v2-apps-appid-versions-version): List the configuration of the application with id `appId` at version `version`.
+  * [PUT /v2/apps/{appId}](#put-v2-apps-appid): Change config of the app
     `appId`
-  * [POST /v2/apps/{appId}/restart](#post-/v2/apps/{appid}/restart): Rolling restart of all tasks of the given app
-  * [DELETE /v2/apps/{appId}](#delete-/v2/apps/{appid}): Destroy app `appId`
-  * [GET /v2/apps/{appId}/tasks](#get-/v2/apps/{appid}/tasks): List running tasks
+  * [POST v2-apps/{appId}/restart](#post-v2-apps-appid-restart): Rolling restart of all tasks of the given app
+  * [DELETE /v2/apps/{appId}](#delete-v2-apps-appid): Destroy app `appId`
+  * [GET /v2/apps/{appId}/tasks](#get-v2-apps-appid-tasks): List running tasks
     for app `appId`
-  * [DELETE /v2/apps/{appId}/tasks](#delete-/v2/apps/{appid}/tasks):
+  * [DELETE /v2/apps/{appId}/tasks](#delete-v2-apps-appid-tasks):
     kill tasks belonging to app `appId`
-  * [DELETE /v2/apps/{appId}/tasks/{taskId}](#delete-/v2/apps/{appid}/tasks/{taskid}):
+  * [DELETE /v2/apps/{appId}/tasks/{taskId}](#delete-v2-apps-appid-tasks-taskid):
     Kill the task `taskId` that belongs to the application `appId`
 * [Groups](#groups) <span class="label label-default">v0.7.0</span>
-  * [GET /v2/groups](#get-/v2/groups): List all groups
-  * [GET /v2/groups/{groupId}](#get-/v2/groups/{groupid}): List the group with the specified ID
-  * [POST /v2/groups](#post-/v2/groups): Create and start a new groups
-  * [PUT /v2/groups/{groupId}](#put-/v2/groups/{groupid}): Change parameters of a deployed application group
-  * [DELETE /v2/groups/{groupId}](#delete-/v2/groups/{groupid}): Destroy a group
+  * [GET /v2/groups](#get-v2-groups): List all groups
+  * [GET /v2/groups/{groupId}](#get-v2-groups-groupid): List the group with the specified ID
+  * [POST /v2/groups](#post-v2-groups): Create and start a new groups
+  * [PUT /v2/groups/{groupId}](#put-v2-groups-groupid): Change parameters of a deployed application group
+  * [DELETE /v2/groups/{groupId}](#delete-v2-groups-groupid): Destroy a group
 * [Tasks](#tasks)
-  * [GET /v2/tasks](#get-/v2/tasks): List all running tasks
-  * [POST /v2/tasks/delete](#post-/v2/tasks/delete): Kill given list of tasks
+  * [GET /v2/tasks](#get-v2-tasks): List all running tasks
+  * [POST /v2/tasks/delete](#post-v2-tasks-delete): Kill given list of tasks
 * [Deployments](#deployments) <span class="label label-default">v0.7.0</span>
-  * [GET /v2/deployments](#get-/v2/deployments): List running deployments
-  * [DELETE /v2/deployments/{deploymentId}](#delete-/v2/deployments/{deploymentid}): Revert or cancel the deployment with `deploymentId`
+  * [GET /v2/deployments](#get-v2-deployments): List running deployments
+  * [DELETE /v2/deployments/{deploymentId}](#delete-v2-deployments-deploymentid): Revert or cancel the deployment with `deploymentId`
 * [Event Stream](#event-stream) <span class="label label-default">v0.9.0</span>
-  * [GET /v2/events](#get-/v2/events): Attach to the event stream
+  * [GET /v2/events](#get-v2-events): Attach to the event stream
 * [Event Subscriptions](#event-subscriptions)
-  * [POST /v2/eventSubscriptions](#post-/v2/eventsubscriptions): Register a callback URL as an event subscriber
-  * [GET /v2/eventSubscriptions](#get-/v2/eventsubscriptions): List all event subscriber callback URLs
-  * [DELETE /v2/eventSubscriptions](#delete-/v2/eventsubscriptions) Unregister a callback URL from the event subscribers list
+  * [POST /v2/eventSubscriptions](#post-v2-eventsubscriptions): Register a callback URL as an event subscriber
+  * [GET /v2/eventSubscriptions](#get-v2-eventsubscriptions): List all event subscriber callback URLs
+  * [DELETE /v2/eventSubscriptions](#delete-v2-eventsubscriptions) Unregister a callback URL from the event subscribers list
 * [Queue](#queue) <span class="label label-default">v0.7.0</span>
-  * [GET /v2/queue](#get-/v2/queue): List content of the staging queue.
-  * [DELETE /v2/queue/{appId}/delay](#delete-/v2/queue/{appId}/delay): <span class="label label-default">v0.10.0</span> Reset the application specific task launch delay.
+  * [GET /v2/queue](#get-v2-queue): List content of the staging queue.
+  * [DELETE /v2/queue/{appId}/delay](#delete-v2-queue-appid-delay): <span class="label label-default">v0.10.0</span> Reset the application specific task launch delay.
 * [Server Info](#server-info) <span class="label label-default">v0.7.0</span>
-  * [GET /v2/info](#get-/v2/info): Get info about the Marathon Instance
-  * [GET /v2/leader](#get-/v2/leader): Get the current leader
-  * [DELETE /v2/leader](#delete-/v2/leader): Causes the current leader to abdicate, triggering a new election
+  * [GET /v2/info](#get-v2-info): Get info about the Marathon Instance
+  * [GET /v2/leader](#get-v2-leader): Get the current leader
+  * [DELETE /v2/leader](#delete-v2-leader): Causes the current leader to abdicate, triggering a new election
 * [Miscellaneous](#miscellaneous)
-  * [GET /ping](#get-/ping)
-  * [GET /logging](#get-/logging)
-  * [GET /help](#get-/help)
-  * [GET /metrics](#get-/metrics)
+  * [GET /ping](#get-ping)
+  * [GET /logging](#get-logging)
+  * [GET /help](#get-help)
+  * [GET /metrics](#get-metrics)
 
 ### Apps
 
