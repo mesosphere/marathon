@@ -2,6 +2,23 @@
 
 List the application with id `appId`.
 
+The response includes some status informations besides the current configuration of the app.
+
+##### deployments (Array of Strings)
+
+A list of currently running deployments that affect this application.
+If this array is nonempty, then this app is locked for updates.
+
+##### taskRunning (Integer)
+
+The number of tasks running for this application definition. This parameter can not be set.
+
+##### tasksStaged (Integer)
+
+The number of tasks staged to run. This parameter can not be set.
+
+##### version
+
 ### Example
 
 **Request:**
