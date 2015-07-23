@@ -130,7 +130,9 @@ from wsgiref.simple_server import make_server
 import argparse
 import json
 import logging
+import os
 import os.path
+import stat
 import re
 import requests
 import subprocess
@@ -614,7 +616,15 @@ def writeConfig(config, config_file):
     with os.fdopen(fd, 'w') as haproxyTempConfig:
         haproxyTempConfig.write(config)
 
-    os.chmod(haproxyTempConfigFile, 0o644)
+    # Ensure new config is created with the same
+    # permissions the old file had or use defaults
+    # if config file doesn't exist yet
+    perms = 0o644
+    if os.path.isfile(config_file):
+        perms = stat.S_IMODE(os.lstat(config_file).st_mode)
+
+    os.chmod(haproxyTempConfigFile, perms)
+
 
     # Move into place
     logger.debug("moving temp file %s to %s",
