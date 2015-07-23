@@ -59,7 +59,7 @@ Create and start a new application.
 
 The full JSON format of an application resource is as follows:
 
-{% highlight javascript %}
+```javascript
 {
     "id": "/product/service/my-app",
     "cmd": "env && sleep 300",
@@ -167,7 +167,7 @@ The full JSON format of an application resource is as follows:
     },
     "version": "2014-03-01T23:29:30.158Z"
 }
-{% endhighlight %}
+```
 
 ##### id
 
@@ -386,7 +386,7 @@ any point of time during the upgrade with 10% of additional capacity.
 **Request:**
 
 
-{% highlight http %}
+```http
 POST /v2/apps HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate
@@ -432,12 +432,12 @@ User-Agent: HTTPie/0.8.0
         "maximumOverCapacity": 0.5
     }
 }
-{% endhighlight json %}
+```
 
 **Response:**
 
 
-{% highlight http %}
+```http
 HTTP/1.1 201 Created
 Content-Type: application/json
 Location: http://mesos.vm:8080/v2/apps/my-app
@@ -501,7 +501,7 @@ Transfer-Encoding: chunked
     "user": null,
     "version": "2014-08-18T22:36:41.451Z"
 }
-{% endhighlight %}
+```
 
 #### GET `/v2/apps`
 
@@ -551,17 +551,17 @@ List all running applications.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/apps/ HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-{%endhighlight%}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -637,11 +637,11 @@ Transfer-Encoding: chunked
         }
     ]
 }
-{%endhighlight%}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -726,7 +726,7 @@ Transfer-Encoding: chunked
         }
     ]
 }
-{%endhighlight%}
+```
 
 #### GET `/v2/apps/{appId}`
 
@@ -736,17 +736,17 @@ List the application with id `appId`.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/apps/toggle?embed=apps.tasks HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -854,7 +854,7 @@ Transfer-Encoding: chunked
         "version": "2014-09-12T23:28:21.737Z"
     }
 }
-{% endhighlight %}
+```
 
 #### GET `/v2/apps/{appId}/versions`
 
@@ -864,18 +864,18 @@ List the versions of the application with id `appId`.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/apps/my-app/versions HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -886,7 +886,7 @@ Transfer-Encoding: chunked
         "2014-04-04T06:25:31.399Z"
     ]
 }
-{% endhighlight %}
+```
 
 #### GET `/v2/apps/{appId}/versions/{version}`
 
@@ -896,17 +896,17 @@ List the configuration of the application with id `appId` at version `version`.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/apps/my-app/versions/2014-03-01T23:17:50.295Z HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -931,7 +931,7 @@ Transfer-Encoding: chunked
     ],
     "version": "2014-03-01T23:17:50.295Z"
 }
-{% endhighlight %}
+```
 
 #### PUT `/v2/apps/{appId}`
 
@@ -965,7 +965,7 @@ restarted, while maintaining the `minimumHealthCapacity`
 
 **Request:**
 
-{% highlight http %}
+```http
 PUT /v2/apps/my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -990,11 +990,11 @@ User-Agent: HTTPie/0.7.2
         9000
     ]
 }
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1004,7 +1004,7 @@ Transfer-Encoding: chunked
     "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438",
     "version": "2014-08-26T07:37:50.462Z"
 }
-{% endhighlight %}
+```
 
 ##### Example (version rollback)
 
@@ -1012,7 +1012,7 @@ If the `version` key is supplied in the JSON body, the rest of the object is ign
 
 **Request:**
 
-{% highlight http %}
+```http
 PUT /v2/apps/my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -1024,9 +1024,9 @@ User-Agent: HTTPie/0.7.2
 {
     "version": "2014-03-01T23:17:50.295Z"
 }
-{% endhighlight %}
+```
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1036,7 +1036,7 @@ Transfer-Encoding: chunked
     "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438",
     "version": "2014-08-26T07:37:50.462Z"
 }
-{% endhighlight %}
+```
 
 ##### Example (update an app that is locked by a running deployment)
 
@@ -1047,7 +1047,7 @@ subsequent request.
 
 **Request:**
 
-{% highlight http %}
+```http
 PUT /v2/apps/test HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate
@@ -1059,9 +1059,9 @@ User-Agent: HTTPie/0.8.0
 {
     "instances": "2"
 }
-{% endhighlight %}
+```
 
-{% highlight http %}
+```http
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1075,7 +1075,7 @@ Transfer-Encoding: chunked
     ],
     "message": "App is locked by one or more deployments. Override with the option '?force=true'. View details at '/v2/deployments/<DEPLOYMENT_ID>'."
 }
-{% endhighlight %}
+```
 
 #### POST `/v2/apps/{appId}/restart`
 
@@ -1107,7 +1107,7 @@ Initiates a rolling restart of all running tasks of the given app. This call res
 
 **Request:**
 
-{% highlight http %}
+```http
 POST /v2/apps/my-app/restart HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -1115,11 +1115,11 @@ Content-Length: 0
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1129,7 +1129,7 @@ Transfer-Encoding: chunked
     "deploymentId": "83b215a6-4e26-4e44-9333-5c385eda6438",
     "version": "2014-08-26T07:37:50.462Z"
 }
-{% endhighlight %}
+```
 
 #### DELETE `/v2/apps/{appId}`
 
@@ -1139,7 +1139,7 @@ Destroy an application. All data about that application will be deleted.
 
 **Request:**
 
-{% highlight http %}
+```http
 DELETE /v2/apps/my-app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -1147,12 +1147,12 @@ Content-Length: 0
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Cache-Control: no-cache, no-store, must-revalidate
 Content-Type: application/json
@@ -1165,7 +1165,7 @@ Transfer-Encoding: chunked
     "deploymentId": "14f48a7d-261e-4641-a158-8c5894c3116a",
     "version": "2015-04-21T10:34:13.646Z"
 }
-{% endhighlight %}
+```
 
 
 #### GET `/v2/apps/{appId}/tasks`
@@ -1176,18 +1176,18 @@ List all running tasks for application `appId`.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/apps/my-app/tasks HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1219,23 +1219,23 @@ Transfer-Encoding: chunked
         }
     ]
 }
-{% endhighlight %}
+```
 
 ##### Example (as text)
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/apps/my-app/tasks HTTP/1.1
 Accept: text/plain
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1243,7 +1243,7 @@ Transfer-Encoding: chunked
 
 my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382 
 my-app  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383 
-{% endhighlight %}
+```
 
 #### DELETE `/v2/apps/{appId}/tasks`
 
@@ -1280,7 +1280,7 @@ Kill tasks that belong to the application `appId`.
 
 **Request:**
 
-{% highlight http %}
+```http
 DELETE /v2/apps/my-app/tasks?host=mesos.vm&scale=false HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -1288,11 +1288,11 @@ Content-Length: 0
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1301,7 +1301,7 @@ Transfer-Encoding: chunked
 {
     "tasks": []
 }
-{% endhighlight %}
+```
 
 #### DELETE `/v2/apps/{appId}/tasks/{taskId}`
 
@@ -1332,7 +1332,7 @@ Kill the task with ID `taskId` that belongs to the application `appId`.
 
 **Request:**
 
-{% highlight http %}
+```http
 DELETE /v2/apps/my-app/tasks/my-app_3-1389916890411 HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -1340,11 +1340,11 @@ Content-Length: 0
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1362,7 +1362,7 @@ Transfer-Encoding: chunked
         "startedAt": "2014-01-17T00:01+0000"
     }
 }
-{% endhighlight %}
+```
 
 ### Groups
 
@@ -1372,17 +1372,17 @@ List all groups.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/groups HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1433,7 +1433,7 @@ Transfer-Encoding: chunked
     "id": "/",
     "version": "2014-08-28T01:09:46.212Z"
 }
-{% endhighlight %}
+```
 
 #### GET `/v2/groups/{groupId}`
 
@@ -1441,17 +1441,17 @@ List the group with the specified ID.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/groups/test HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1494,7 +1494,7 @@ Transfer-Encoding: chunked
     "id": "/test",
     "version": "2014-08-28T01:09:46.212Z"
 }
-{% endhighlight %}
+```
 
 #### POST `/v2/groups`
 
@@ -1535,7 +1535,7 @@ The failure or success of the action is signalled via event. There is a
 
 **Request:**
 
-{% highlight http %}
+```http
 POST /v2/groups HTTP/1.1
 User-Agent: curl/7.35.0
 Accept: application/json
@@ -1553,18 +1553,18 @@ Content-Length: 273
     }
   ]
 }
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 201 Created
 Location: http://localhost:8080/v2/groups/product
 Content-Type: application/json
 Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
 {"version":"2014-07-01T10:20:50.196Z"}
-{% endhighlight %}
+```
 
 Create and start a new application group.
 Application groups can contain other application groups.
@@ -1604,7 +1604,7 @@ The failure or success of the action is signalled via event. There is a
 
 **Request:**
 
-{% highlight http %}
+```http
 POST /v2/groups HTTP/1.1
 User-Agent: curl/7.35.0
 Accept: application/json
@@ -1622,19 +1622,19 @@ Content-Length: 273
     }
   ]
 }
-{% endhighlight %}
+```
 
 **Response:**
 
 
-{% highlight http %}
+```http
 HTTP/1.1 201 Created
 Location: http://localhost:8080/v2/groups/product
 Content-Type: application/json
 Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
 {"version":"2014-07-01T10:20:50.196Z"}
-{% endhighlight %}
+```
 
 #### PUT `/v2/groups/{groupId}`
 
@@ -1664,7 +1664,7 @@ The failure or success of the action is signalled via event. There is a
 
 **Request:**
 
-{% highlight http %}
+```http
 PUT /v2/groups/test/project HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate
@@ -1702,9 +1702,9 @@ User-Agent: HTTPie/0.8.0
         }
     ]
 }
-{% endhighlight %}
+```
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1714,7 +1714,7 @@ Transfer-Encoding: chunked
     "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231",
     "version": "2014-08-28T16:45:41.063Z"
 }
-{% endhighlight %}
+```
 
 ### Example
 
@@ -1729,17 +1729,17 @@ The failure or success of the action is signalled via event. There is a
 
 **Request:**
 
-{% highlight http %}
+```http
 PUT /v2/groups/product/service HTTP/1.1
 Content-Length: 123
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 { "scaleBy": 1.5 }
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1749,7 +1749,7 @@ Transfer-Encoding: chunked
     "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231",
     "version": "2014-08-28T16:45:41.063Z"
 }
-{% endhighlight %}
+```
 
 ### Example
 
@@ -1760,17 +1760,17 @@ endpoint.
 
 **Request:**
 
-{% highlight http %}
+```http
 PUT /v2/groups/product/service HTTP/1.1
 Content-Length: 123
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 { "version": "2014-08-27T15:34:48.163Z" }
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1780,7 +1780,7 @@ Transfer-Encoding: chunked
     "deploymentId": "c0e7434c-df47-4d23-99f1-78bd78662231",
     "version": "2014-08-28T16:45:41.063Z"
 }
-{% endhighlight %}
+```
 
 ### Example
 
@@ -1790,7 +1790,7 @@ Get a preview of the deployment steps Marathon would run for a given group updat
 
 **Request:**
 
-{% highlight http %}
+```http
 PUT /v2/groups/product?dryRun=true HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -1819,11 +1819,11 @@ User-Agent: HTTPie/0.8.0
     }],
     "version": "2014-03-01T23:29:30.158Z"
 }
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1861,7 +1861,7 @@ Transfer-Encoding: chunked
         }
     ]
 }
-{% endhighlight %}
+```
 
 #### DELETE `/v2/groups/{groupId}`
 
@@ -1873,7 +1873,7 @@ The failure or success of the action is signalled via event. There is a
 
 **Request:**
 
-{% highlight http %}
+```http
 DELETE /v2/groups/product/service/app HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -1881,18 +1881,18 @@ Content-Length: 0
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: curl/7.35.0
-{% endhighlight %}
+```
 
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 Ok
 Content-Type: application/json
 Transfer-Encoding: chunked
 Server: Jetty(8.y.z-SNAPSHOT)
 {"version":"2014-07-01T10:20:50.196Z"}
-{% endhighlight %}
+```
 
 ### Tasks
 
@@ -1925,18 +1925,18 @@ List tasks of all applications.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/tasks HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate
 Content-Type: application/json; charset=utf-8
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -1995,7 +1995,7 @@ Transfer-Encoding: chunked
     ]
 }
 
-{% endhighlight %}
+```
 
 ##### Example (as text)
 
@@ -2003,17 +2003,17 @@ In text/plain only tasks with status `running` will be returned.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/tasks HTTP/1.1
 Accept: text/plain
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: text/plain
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -2021,7 +2021,7 @@ Transfer-Encoding: chunked
 
 my-app  19385 agouti.local:31336  agouti.local:31364  agouti.local:31382 
 my-app2  11186 agouti.local:31337  agouti.local:31365  agouti.local:31383 
-{% endhighlight %}
+```
 
 #### POST `/v2/tasks/delete`
 
@@ -2052,7 +2052,7 @@ Kill the given list of tasks and scale apps if requested.
 
 **Request:**
 
-{% highlight http %}
+```http
 POST /v2/tasks/delete HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate
@@ -2067,157 +2067,30 @@ User-Agent: HTTPie/0.8.0
     ]
 }
 
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Length: 0
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
-{% endhighlight %}
+```
 
 ### Deployments
 
 <span class="label label-default">v0.7.0</span>
 
-#### GET /v2/deployments
+{% include_relative rest-api/mesosphere/marathon/api/v2/DeploymentsResource_running.md %}
 
-List running deployments
-
-**Request:**
-
-{% highlight http %}
-GET /v2/deployments HTTP/1.1
-Accept: */*
-Accept-Encoding: gzip, deflate
-Host: mesos.vm:8080
-User-Agent: HTTPie/0.8.0
-{% endhighlight %}
-
-**Response:**
-
-{% highlight http %}
-HTTP/1.1 200 OK
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-Transfer-Encoding: chunked
-
-[
-    {
-        "affectedApps": [
-            "/test"
-        ],
-        "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b",
-        "steps": [
-            [
-                {
-                    "action": "ScaleApplication",
-                    "app": "/test"
-                }
-            ]
-        ],
-        "currentActions": [
-          {
-            "action": "ScaleApplication",
-            "app": "/test"
-          }
-        ],
-        "version": "2014-08-26T08:18:03.595Z",
-        "currentStep": 1,
-        "totalSteps" 1
-    }
-]
-{% endhighlight %}
-
-#### DELETE /v2/deployments/{deploymentId}
-
-##### Parameters
-
-<table class="table table-bordered">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>force</code></td>
-      <td><code>boolean</code></td>
-      <td>
-        If set to <code>false</code> (the default) then the deployment is
-        canceled and a new deployment is created to revert the changes of this
-        deployment. Without concurrent deployments, this restores the configuration before this
-        deployment. If set to <code>true</code>, then the deployment
-        is still canceled but no rollback deployment is created.
-        Default: <code>false</code>.</td>
-    </tr>
-  </tbody>
-</table>
-
-##### Example
-
-Revert the deployment with `deploymentId` by creating a new deployment which reverses
-all changes.
-
-**Request:**
-
-{% highlight http %}
-DELETE /v2/deployments/867ed450-f6a8-4d33-9b0e-e11c5513990b HTTP/1.1
-Accept: */*
-Accept-Encoding: gzip, deflate
-Content-Length: 0
-Host: mesos.vm:8080
-User-Agent: HTTPie/0.8.0
-{% endhighlight %}
-
-**Response:**
-
-{% highlight http %}
-HTTP/1.1 200 OK
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-Transfer-Encoding: chunked
-
-{
-    "deploymentId": "0b1467fc-d5cd-4bbc-bac2-2805351cee1e",
-    "version": "2014-08-26T08:20:26.171Z"
-}
-{% endhighlight %}
-
-##### Example
-
-Cancel the deployment with `deploymentId`, and do not create a new rollback deployment.
-
-**Request:**
-
-{% highlight http %}
-DELETE /v2/deployments/177b7556-1287-4e09-8432-3d862981a987?force=true HTTP/1.1
-Accept: */*
-Accept-Encoding: gzip, deflate
-Content-Length: 0
-Host: mesos.vm:8080
-User-Agent: HTTPie/0.8.0
-{% endhighlight %}
-
-**Response:**
-
-{% highlight http %}
-HTTP/1.1 202 Accepted
-Content-Length: 0
-Content-Type: application/json
-Server: Jetty(8.y.z-SNAPSHOT)
-{% endhighlight %}
-
+{% include_relative rest-api/mesosphere/marathon/api/v2/DeploymentsResource_cancel.md %}
 
 ### Event Stream
 
-#### GET `/v2/events`
-
 <span class="label label-default">v0.9.0</span>
+
+#### GET `/v2/events`
 
 Attach to the marathon event stream.
 
@@ -2287,7 +2160,7 @@ NOTE: To activate this endpoint, you need to start Marathon with `--event_subscr
 
 **Request:**
 
-{% highlight http %}
+```http
 POST /v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -2295,11 +2168,11 @@ Content-Length: 0
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -2310,7 +2183,7 @@ Transfer-Encoding: chunked
     "clientIp": "0:0:0:0:0:0:0:1",
     "eventType": "subscribe_event"
 }
-{% endhighlight %}
+```
 
 #### GET `/v2/eventSubscriptions`
 
@@ -2322,18 +2195,18 @@ NOTE: To activate this endpoint, you need to startup Marathon with `--event_subs
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/eventSubscriptions HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -2344,7 +2217,7 @@ Transfer-Encoding: chunked
         "http://localhost:9292/callback"
     ]
 }
-{% endhighlight %}
+```
 
 #### DELETE `/v2/eventSubscriptions`
 
@@ -2375,7 +2248,7 @@ NOTE: To activate this endpoint, you need to start Marathon with `--event_subscr
 
 **Request:**
 
-{% highlight http %}
+```http
 DELETE /v2/eventSubscriptions?callbackUrl=http://localhost:9292/callback HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
@@ -2383,11 +2256,11 @@ Content-Length: 0
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -2398,7 +2271,7 @@ Transfer-Encoding: chunked
     "clientIp": "0:0:0:0:0:0:0:1",
     "eventType": "unsubscribe_event"
 }
-{% endhighlight %}
+```
 
 ### Queue
 
@@ -2410,15 +2283,15 @@ Show content of the task queue.
 
 ##### Example
 
-{% highlight http %}
+```http
 GET /v2/queue HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: localhost:8080
 User-Agent: HTTPie/0.8.0
-{% endhighlight %}
+```
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
@@ -2466,7 +2339,7 @@ Transfer-Encoding: chunked
         }
     ]
 }
-{% endhighlight %}
+```
 
 #### DELETE `/v2/queue/{appId}/delay`
 
@@ -2474,7 +2347,7 @@ The application specific task launch delay can be reset by calling this endpoint
 
 ##### Example
 
-{% highlight http %}
+```http
 DELETE /v2/queue/myapp/delay HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -2482,15 +2355,15 @@ Connection: keep-alive
 Content-Length: 0
 Host: localhost:8080
 User-Agent: HTTPie/0.9.2
-{% endhighlight %}
+```
 
-{% highlight http %}
+```http
 HTTP/1.1 204 No Content
 Cache-Control: no-cache, no-store, must-revalidate
 Expires: 0
 Pragma: no-cache
 Server: Jetty(8.1.15.v20140411)
-{% endhighlight %}
+```
 
 ### Server Info
 
@@ -2502,18 +2375,18 @@ Get info about the Marathon Instance
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/info HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Length: 872
 Content-Type: application/json
@@ -2557,7 +2430,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
         "zk_max_version": 5
     }
 }
-{% endhighlight %}
+```
 
 #### GET `/v2/leader`
 
@@ -2566,17 +2439,17 @@ If no leader exists, Marathon will respond with a 404 error.
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /v2/leader HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Length: 872
 Content-Type: application/json
@@ -2585,7 +2458,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 {
     "leader": "127.0.0.1:8080"
 }
-{% endhighlight %}
+```
 
 #### DELETE `/v2/leader`
 
@@ -2596,17 +2469,17 @@ If no leader exists, Marathon will respond with a 404 error.
 
 **Request:**
 
-{% highlight http %}
+```http
 DELETE /v2/leader HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Content-Length: 872
 Content-Type: application/json
@@ -2615,35 +2488,35 @@ Server: Jetty(8.y.z-SNAPSHOT)
 {
     "message": "Leadership abdicted"
 }
-{% endhighlight %}
+```
 
 ### Miscellaneous
 
 **Request:**
 
-{% highlight http %}
-{% endhighlight %}
+```http
+```
 
 **Response:**
 
-{% highlight http %}
-{% endhighlight %}
+```http
+```
 
 #### GET `/ping`
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /ping HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Access-Control-Allow-Credentials: true
 Cache-Control: must-revalidate,no-cache,no-store
@@ -2652,18 +2525,18 @@ Content-Type: text/plain;charset=ISO-8859-1
 Server: Jetty(8.y.z-SNAPSHOT)
 
 pong
-{% endhighlight %}
+```
 
 #### GET `/logging`
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /logging HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
-User-Agent: HTTPie/0.8.0{% endhighlight %}
+User-Agent: HTTPie/0.8.0```
 
 **Response:**
 
@@ -2673,13 +2546,13 @@ _HTML-only endpoint_
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /help HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-{% endhighlight %}
+```
 
 **Response:**
 
@@ -2689,17 +2562,17 @@ _HTML-only endpoint_
 
 **Request:**
 
-{% highlight http %}
+```http
 GET /metrics HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
 User-Agent: HTTPie/0.8.0
-{% endhighlight %}
+```
 
 **Response:**
 
-{% highlight http %}
+```http
 HTTP/1.1 200 OK
 Cache-Control: must-revalidate,no-cache,no-store
 Content-Type: application/json
@@ -2722,4 +2595,4 @@ Transfer-Encoding: chunked
     },
     "version": "3.0.0"
 }
-{% endhighlight %}
+```

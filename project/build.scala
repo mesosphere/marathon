@@ -27,6 +27,7 @@ object MarathonBuild extends Build {
                integrationTestSettings ++
                teamCitySetEnvSettings ++
                Seq(
+                 unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
                  libraryDependencies ++= Dependencies.root,
                  parallelExecution in Test := false,
                  fork in Test := true

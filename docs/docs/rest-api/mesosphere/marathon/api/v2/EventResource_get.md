@@ -1,8 +1,8 @@
-## GET `/v2/events`
+#### GET `/v2/events`
 
 Attach to the marathon event stream.
 
-### Server Sent Events
+##### Server Sent Events
 
 To use this endpoint, the client has to accept the text/event-stream content type.
 Please note: a request to this endpoint will not be closed by the server.

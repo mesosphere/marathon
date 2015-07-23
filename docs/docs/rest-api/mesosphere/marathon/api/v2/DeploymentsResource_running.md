@@ -1,4 +1,4 @@
-## GET `/v2/deployments`
+#### GET `/v2/deployments`
 
 List all running deployments.
 A deployment is a change in the service setup.
@@ -13,28 +13,27 @@ Every step contains a list of actions with following types:
 * KillAllOldTasksOf: last step of a restart action.
 
 
-### Example
+##### Example
 
 **Request:**
 
-```
+```http
 GET /v2/deployments HTTP/1.1
 Accept: application/json
 Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
-
-
 ```
 
 **Response:**
 
-```
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Server: Jetty(8.1.11.v20130520)
 Transfer-Encoding: chunked
+
 [
     {
         "affectedApplications": [
@@ -103,4 +102,5 @@ Transfer-Encoding: chunked
     }
 ]
 ```
+
 
