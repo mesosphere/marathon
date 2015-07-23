@@ -135,7 +135,9 @@ from wsgiref.simple_server import make_server
 import argparse
 import json
 import logging
+import os
 import os.path
+import stat
 import re
 import requests
 import subprocess
@@ -446,13 +448,16 @@ class Marathon(object):
         return self.api_req('POST', ['apps'], app_json)
 
     def get_app(self, appid):
+        logger.info('fetching app %s', appid)
         return self.api_req('GET', ['apps', appid])["app"]
 
     # Lists all running apps.
     def list(self):
+        logger.info('fetching apps')
         return self.api_req('GET', ['apps'])["apps"]
 
     def tasks(self):
+        logger.info('fetching tasks')
         return self.api_req('GET', ['tasks'])["tasks"]
 
     def add_subscriber(self, callbackUrl):
@@ -621,6 +626,14 @@ def writeConfig(config, config_file):
     logger.debug("writing config to temp file %s", haproxyTempConfigFile)
     with os.fdopen(fd, 'w') as haproxyTempConfig:
         haproxyTempConfig.write(config)
+
+    # Ensure new config is created with the same
+    # permissions the old file had or use defaults
+    # if config file doesn't exist yet
+    perms = 0o644
+    if os.path.isfile(config_file):
+        perms = stat.S_IMODE(os.lstat(config_file).st_mode)
+    os.chmod(haproxyTempConfigFile, perms)
 
     # Move into place
     logger.debug("moving temp file %s to %s",
