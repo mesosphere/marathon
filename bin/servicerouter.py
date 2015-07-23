@@ -622,9 +622,7 @@ def writeConfig(config, config_file):
     perms = 0o644
     if os.path.isfile(config_file):
         perms = stat.S_IMODE(os.lstat(config_file).st_mode)
-
     os.chmod(haproxyTempConfigFile, perms)
-
 
     # Move into place
     logger.debug("moving temp file %s to %s",
