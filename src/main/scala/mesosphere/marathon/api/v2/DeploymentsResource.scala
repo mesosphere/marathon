@@ -5,7 +5,7 @@ import javax.ws.rs._
 import javax.ws.rs.core.Response.Status._
 import javax.ws.rs.core.{ MediaType, Response }
 
-import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentPlan }
@@ -14,7 +14,7 @@ import mesosphere.util.Logging
 
 @Path("v2/deployments")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MediaType.APPLICATION_JSON))
+@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class DeploymentsResource @Inject() (
   service: MarathonSchedulerService,
   groupManager: GroupManager,

@@ -8,10 +8,9 @@ import javax.ws.rs.core.{ MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
-import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.api.v2.json.{ V2Group, V2GroupUpdate }
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -20,7 +19,7 @@ import mesosphere.util.ThreadPoolContext.context
 import play.api.libs.json.Json
 
 @Path("v2/groups")
-@Produces(Array(MediaType.APPLICATION_JSON))
+@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class GroupsResource @Inject() (
     groupManager: GroupManager,
     val config: MarathonConf) extends RestResource {

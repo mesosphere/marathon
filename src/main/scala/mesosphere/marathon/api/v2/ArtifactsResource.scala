@@ -11,7 +11,7 @@ import com.sun.jersey.multipart.{ FormDataParam => FormParam }
 import org.eclipse.jetty.http.MimeTypes
 
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.io.storage.StorageProvider
 
 @Path("v2/artifacts")
@@ -55,7 +55,7 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
     */
   @GET
   @Path("{path:.+}")
-  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def get(@PathParam("path") path: String): Response = {
     val item = storage.item(path)
     if (!item.exists) {
@@ -75,7 +75,7 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
     */
   @DELETE
   @Path("{path:.+}")
-  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def delete(@PathParam("path") path: String): Response = {
     val item = storage.item(path)
     if (item.exists) item.delete()

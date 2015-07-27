@@ -6,12 +6,12 @@ import javax.ws.rs.core.{ MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 import org.apache.log4j.Logger
 
-import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 
-@Produces(Array(MediaType.APPLICATION_JSON))
+@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class AppVersionsResource(service: MarathonSchedulerService, val config: MarathonConf) extends RestResource {
 
