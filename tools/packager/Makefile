@@ -25,6 +25,7 @@ FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
 	--vendor "Mesosphere, Inc."
 FPM_OPTS_DEB := -t deb \
 	-d 'java8-runtime-headless | java7-runtime-headless | java6-runtime-headless' \
+	-d 'lsb-release' \
 	--after-install marathon.postinst \
 	--after-remove marathon.postrm
 FPM_OPTS_DEB_INIT := --deb-init marathon.init
