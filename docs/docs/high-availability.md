@@ -5,14 +5,14 @@ title: High Availability
 
 # Introduction
 
-Marathon by default supports a highly available mode of operation which allows applications to continue running if an individual instance becomes unavailable. This is accomplished by running several Marathon instances pointing to the same ZooKeeper quorum. ZooKeeper is used to perform leader election in the event that the currently leading Marathon instance falls over.
+Marathon by default supports a high availability mode of operation which allows applications to continue running if an individual instance becomes unavailable. This is accomplished by running several Marathon instances pointing to the same ZooKeeper quorum. ZooKeeper is used to perform leader election in the event that the currently leading Marathon instance fails.
 
 
 # Configuration
 
-When set to `true`, the `--ha` command line argument launches Marathon in high availability mode. It defaults to true so does not need to explicitly be set.
+When set to `true`, the `--ha` command line argument launches Marathon in high availability mode. `true` is the default, so it does not need to explicitly be set.
 
-Each Marathon must be launched with the same ZooKeeper quorum specified, e.g. if your quorum is `zk://1.2.3.4:2181,2.3.4.5:2181,3.4.5.6:2181/marathon` then launch each instance in the normal way with the argument:
+Each Marathon must be launched with the same ZooKeeper quorum specified. For example, if your quorum is `zk://1.2.3.4:2181,2.3.4.5:2181,3.4.5.6:2181/marathon` then launch each instance in the normal way with the argument:
 
 ```sh
 --zk zk://1.2.3.4:2181,2.3.4.5:2181,3.4.5.6:2181/marathon
