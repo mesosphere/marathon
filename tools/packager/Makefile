@@ -49,19 +49,19 @@ all: deb rpm
 deb: ubuntu debian
 
 .PHONY: rpm
-rpm: el fedora
+rpm: el
 
 .PHONY: el
 el: el6 el7
 
 .PHONY: fedora
-fedora: fedora20 fedora21
+fedora: fedora20 fedora21 fedora22
 
 .PHONY: ubuntu
-ubuntu: ubuntu-precise ubuntu-quantal ubuntu-raring ubuntu-saucy ubuntu-trusty ubuntu-utopic ubuntu-vivid
+ubuntu: ubuntu-precise ubuntu-trusty ubuntu-vivid
 
 .PHONY: debian
-debian: debian-wheezy debian-jessie
+debian: debian-jessie
 
 .PHONY: debian-wheezy
 debian-wheezy: debian-wheezy-77
@@ -81,6 +81,13 @@ fedora21: toor/fedora21/usr/lib/systemd/system/marathon.service
 fedora21: toor/fedora21/$(PREFIX)/bin/marathon
 	fpm -C toor/fedora21 --config-files usr/lib/systemd/system/marathon.service \
 		--iteration $(PKG_REL).fc21 \
+		$(FPM_OPTS_RPM) $(FPM_OPTS) .
+
+.PHONY: fedora22
+fedora22: toor/fedora22/usr/lib/systemd/system/marathon.service
+fedora22: toor/fedora22/$(PREFIX)/bin/marathon
+	fpm -C toor/fedora22 --config-files usr/lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).fc22 \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: el6
