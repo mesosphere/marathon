@@ -9,7 +9,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.api.{ TaskKiller, RestResource }
+import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, RestResource }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.{ EnrichedTask, V2AppDefinition, V2AppUpdate }
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
@@ -26,7 +26,7 @@ import scala.concurrent.Future
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MediaType.APPLICATION_JSON))
+@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppsResource @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
     service: MarathonSchedulerService,

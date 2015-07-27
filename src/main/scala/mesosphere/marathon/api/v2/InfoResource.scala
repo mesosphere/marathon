@@ -5,7 +5,7 @@ import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.api.{ MarathonMediaType, LeaderInfo }
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
 import mesosphere.marathon.{ LeaderProxyConf, MarathonSchedulerService, BuildInfo, MarathonConf }
@@ -68,7 +68,7 @@ class InfoResource @Inject() (
   )
 
   @GET
-  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def index(): Response = {
     Response.ok(
       Map(

@@ -6,7 +6,7 @@ import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.api.v2.json.{ Formats, V2AppDefinition }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskQueue
@@ -20,7 +20,7 @@ class QueueResource @Inject() (
 
   @GET
   @Timed
-  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def index(): Response = {
     import Formats._
 
