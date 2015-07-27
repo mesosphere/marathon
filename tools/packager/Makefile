@@ -24,12 +24,12 @@ FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
 	--maintainer "Mesosphere Package Builder <support@mesosphere.io>" \
 	--vendor "Mesosphere, Inc."
 FPM_OPTS_DEB := -t deb \
-	-d 'java7-runtime-headless | java8-runtime-headless' \
+	-d 'java8-runtime-headless | java7-runtime-headless | java6-runtime-headless' \
 	--after-install marathon.postinst \
 	--after-remove marathon.postrm
 FPM_OPTS_DEB_INIT := --deb-init marathon.init
 FPM_OPTS_RPM := -t rpm \
-	-d coreutils -d 'java >= 1.7'
+	-d coreutils -d 'java >= 1.6'
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
 .PHONY: help
