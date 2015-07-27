@@ -67,7 +67,7 @@ debian: debian-wheezy debian-jessie
 debian-wheezy: debian-wheezy-77
 
 .PHONY: debian-jessie
-debian-wheezy: debian-jessie-81
+debian-jessie: debian-jessie-81
 
 .PHONY: fedora20
 fedora20: toor/fedora20/usr/lib/systemd/system/marathon.service
