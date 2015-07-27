@@ -24,12 +24,12 @@ FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
 	--maintainer "Mesosphere Package Builder <support@mesosphere.io>" \
 	--vendor "Mesosphere, Inc."
 FPM_OPTS_DEB := -t deb \
-	-d 'java7-runtime-headless | java6-runtime-headless' \
-	--deb-init marathon.init \
+	-d 'java7-runtime-headless | java8-runtime-headless' \
 	--after-install marathon.postinst \
 	--after-remove marathon.postrm
+FPM_OPTS_DEB_INIT := --deb-init marathon.init
 FPM_OPTS_RPM := -t rpm \
-	-d coreutils -d 'java >= 1.6'
+	-d coreutils -d 'java >= 1.7'
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
 .PHONY: help
@@ -58,13 +58,16 @@ el: el6 el7
 fedora: fedora20 fedora21
 
 .PHONY: ubuntu
-ubuntu: ubuntu-precise ubuntu-quantal ubuntu-raring ubuntu-saucy ubuntu-trusty ubuntu-utopic
+ubuntu: ubuntu-precise ubuntu-quantal ubuntu-raring ubuntu-saucy ubuntu-trusty ubuntu-utopic ubuntu-vivid
 
 .PHONY: debian
-debian: debian-wheezy
+debian: debian-wheezy debian-jessie
 
 .PHONY: debian-wheezy
 debian-wheezy: debian-wheezy-77
+
+.PHONY: debian-jessie
+debian-wheezy: debian-jessie-81
 
 .PHONY: fedora20
 fedora20: toor/fedora20/usr/lib/systemd/system/marathon.service
@@ -89,10 +92,10 @@ el6: toor/el6/$(PREFIX)/bin/marathon
 .PHONY: el7
 el7: toor/el7/usr/lib/systemd/system/marathon.service
 el7: toor/el7/$(PREFIX)/bin/marathon
-el7: marathon.el7.postinst
+el7: marathon.systemd.postinst
 	fpm -C toor/el7 --config-files usr/lib/systemd/system/marathon.service \
 		--iteration $(PKG_REL).el7 \
-		--after-install marathon.el7.postinst \
+		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: ubuntu-precise
@@ -102,7 +105,7 @@ ubuntu-precise: toor/ubuntu-precise/$(PREFIX)/bin/marathon
 ubuntu-precise: marathon.postinst
 ubuntu-precise: marathon.postrm
 	fpm -C toor/ubuntu-precise --config-files etc/ --iteration $(PKG_REL).ubuntu1204 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
 
 .PHONY: ubuntu-quantal
 ubuntu-quantal: toor/ubuntu-quantal/etc/init/marathon.conf
@@ -111,7 +114,7 @@ ubuntu-quantal: toor/ubuntu-quantal/$(PREFIX)/bin/marathon
 ubuntu-quantal: marathon.postinst
 ubuntu-quantal: marathon.postrm
 	fpm -C toor/ubuntu-quantal --config-files etc/ --iteration $(PKG_REL).ubuntu1210 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
 
 .PHONY: ubuntu-raring
 ubuntu-raring: toor/ubuntu-raring/etc/init/marathon.conf
@@ -120,7 +123,7 @@ ubuntu-raring: toor/ubuntu-raring/$(PREFIX)/bin/marathon
 ubuntu-raring: marathon.postinst
 ubuntu-raring: marathon.postrm
 	fpm -C toor/ubuntu-raring --config-files etc/ --iteration $(PKG_REL).ubuntu1304 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
 
 .PHONY: ubuntu-saucy
 ubuntu-saucy: toor/ubuntu-saucy/etc/init/marathon.conf
@@ -129,7 +132,7 @@ ubuntu-saucy: toor/ubuntu-saucy/$(PREFIX)/bin/marathon
 ubuntu-saucy: marathon.postinst
 ubuntu-saucy: marathon.postrm
 	fpm -C toor/ubuntu-saucy --config-files etc/ --iteration $(PKG_REL).ubuntu1310 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
 
 .PHONY: ubuntu-trusty
 ubuntu-trusty: toor/ubuntu-trusty/etc/init/marathon.conf
@@ -138,7 +141,7 @@ ubuntu-trusty: toor/ubuntu-trusty/$(PREFIX)/bin/marathon
 ubuntu-trusty: marathon.postinst
 ubuntu-trusty: marathon.postrm
 	fpm -C toor/ubuntu-trusty --config-files etc/ --iteration $(PKG_REL).ubuntu1404 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
 
 .PHONY: ubuntu-utopic
 ubuntu-utopic: toor/ubuntu-utopic/etc/init/marathon.conf
@@ -147,6 +150,15 @@ ubuntu-utopic: toor/ubuntu-utopic/$(PREFIX)/bin/marathon
 ubuntu-utopic: marathon.postinst
 ubuntu-utopic: marathon.postrm
 	fpm -C toor/ubuntu-utopic --config-files etc/ --iteration $(PKG_REL).ubuntu1410 \
+		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
+
+.PHONY: ubuntu-vivid
+ubuntu-vivid: toor/ubuntu-vivid/lib/systemd/system/marathon.service
+ubuntu-vivid: toor/ubuntu-vivid/$(PREFIX)/bin/marathon
+ubuntu-vivid: marathon.systemd.postinst
+	fpm -C toor/ubuntu-vivid --config-files lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).ubuntu1504 \
+		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: debian-wheezy-77
@@ -156,7 +168,17 @@ debian-wheezy-77: toor/debian-wheezy-77/$(PREFIX)/bin/marathon
 debian-wheezy-77: marathon.postinst
 debian-wheezy-77: marathon.postrm
 	fpm -C toor/debian-wheezy-77 --config-files etc/ --iteration $(PKG_REL).debian77 \
+		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
+
+.PHONY: debian-jessie-81
+debian-jessie-8: toor/debian-jessie-81/lib/systemd/system/marathon.service
+debian-jessie-8: toor/debian-jessie-81/$(PREFIX)/bin/marathon
+debian-jessie-8: marathon.systemd.postinst
+	fpm -C toor/debian-jessie-81 --config-files lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).debian81 \
+		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
 
 .PHONY: osx
 osx: toor/osx/$(PREFIX)/bin/marathon
@@ -171,6 +193,10 @@ toor/%/etc/init.d/marathon: marathon.init
 	cp marathon.init "$@"
 
 toor/%/usr/lib/systemd/system/marathon.service: marathon.service
+	mkdir -p "$(dir $@)"
+	cp marathon.service "$@"
+
+toor/%/lib/systemd/system/marathon.service: marathon.service
 	mkdir -p "$(dir $@)"
 	cp marathon.service "$@"
 
