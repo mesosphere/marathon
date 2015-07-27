@@ -171,9 +171,9 @@ debian-wheezy-77: marathon.postrm
 		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
 
 .PHONY: debian-jessie-81
-debian-jessie-8: toor/debian-jessie-81/lib/systemd/system/marathon.service
-debian-jessie-8: toor/debian-jessie-81/$(PREFIX)/bin/marathon
-debian-jessie-8: marathon.systemd.postinst
+debian-jessie-81: toor/debian-jessie-81/lib/systemd/system/marathon.service
+debian-jessie-81: toor/debian-jessie-81/$(PREFIX)/bin/marathon
+debian-jessie-81: marathon.systemd.postinst
 	fpm -C toor/debian-jessie-81 --config-files lib/systemd/system/marathon.service \
 		--iteration $(PKG_REL).debian81 \
 		--after-install marathon.systemd.postinst \
