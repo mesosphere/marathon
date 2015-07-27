@@ -42,6 +42,8 @@ names through the `--env_vars_prefix` command line flag.
   definition. For example `/httpServer`, or `/webshop/db`.
 - `MARATHON_APP_VERSION` contains the version of the app definition which
   was used to start this task. For example `2015-04-02T09:37:00.596Z`.
+- `MARATHON_APP_DOCKER_IMAGE` contains the value of the app definition 
+  `container.docker.image` value. For example `mesosphere/marathon:latest`, `nginx` or `nginx:1.9.3`.
 
 _Note: No custom prefix will be added to these variable names, even if one is
 specified via the `--env_vars_prefix` command line flag.

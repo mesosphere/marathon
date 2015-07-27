@@ -279,13 +279,20 @@ object TaskBuilder {
     }
   }
 
-  def taskContextEnv(app: AppDefinition, taskId: Option[TaskID]): Map[String, String] =
-    if (taskId.isEmpty)
+  def taskContextEnv(app: AppDefinition, taskId: Option[TaskID]): Map[String, String] = {
+    if (taskId.isEmpty) {
+      // This branch is taken during serialization. Do not add environment variables in this case.
       Map.empty
-    else
-      Map(
-        "MESOS_TASK_ID" -> taskId.get.getValue,
-        "MARATHON_APP_ID" -> app.id.toString,
-        "MARATHON_APP_VERSION" -> app.version.toString
-      )
+    }
+    else {
+      Seq(
+        "MESOS_TASK_ID" -> taskId.map(_.getValue),
+        "MARATHON_APP_ID" -> Some(app.id.toString),
+        "MARATHON_APP_VERSION" -> Some(app.version.toString),
+        "MARATHON_APP_DOCKER_IMAGE" -> app.container.flatMap(_.docker.map(_.image))
+      ).collect {
+          case (key, Some(value)) => key -> value
+        }.toMap
+    }
+  }
 }

@@ -7,10 +7,11 @@ import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, MarathonTasks, TaskTracker }
 import mesosphere.mesos.protos.{ Resource, TaskID, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.apache.mesos.Protos.{ Offer, _ }
+import org.joda.time.{ DateTimeZone, DateTime }
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
@@ -562,13 +563,68 @@ class TaskBuilderTest extends MarathonSpec {
     assert("1002" == env("PORT_8080"))
   }
 
+  test("TaskContextEnv empty when no taskId given") {
+    val app = AppDefinition(
+      id = PathId("/app"),
+      version = Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC))
+    )
+    val env = TaskBuilder.taskContextEnv(app = app, taskId = None)
+
+    assert(env == Map.empty)
+  }
+
+  test("TaskContextEnv minimal") {
+    val app = AppDefinition(
+      id = PathId("/app"),
+      version = Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC))
+    )
+    val env = TaskBuilder.taskContextEnv(app = app, taskId = Some(TaskID("taskId")))
+
+    assert(
+      env == Map(
+        "MESOS_TASK_ID" -> "taskId",
+        "MARATHON_APP_ID" -> "/app",
+        "MARATHON_APP_VERSION" -> "2015-02-03T12:30:00.000Z"
+      )
+    )
+  }
+
+  test("TaskContextEnv all fields") {
+    val taskId = TaskID("taskId")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      version = Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)),
+      container = Some(Container(
+        docker = Some(Docker(
+          image = "myregistry/myimage:version"
+        ))
+      ))
+    )
+    val env = TaskBuilder.taskContextEnv(app = app, Some(taskId))
+
+    assert(
+      env == Map(
+        "MESOS_TASK_ID" -> "taskId",
+        "MARATHON_APP_ID" -> "/app",
+        "MARATHON_APP_VERSION" -> "2015-02-03T12:30:00.000Z",
+        "MARATHON_APP_DOCKER_IMAGE" -> "myregistry/myimage:version"
+      )
+    )
+  }
+
   test("AppContextEnvironment") {
     val command =
       TaskBuilder.commandInfo(
         app = AppDefinition(
           id = "/test".toPath,
           ports = Seq(8080, 8081),
-          version = Timestamp(0)
+          version = Timestamp(0),
+          container = Some(Container(
+            docker = Some(Docker(
+              image = "myregistry/myimage:version"
+            ))
+          )
+          )
         ),
         taskId = Some(TaskID("task-123")),
         host = Some("host.mega.corp"),
@@ -581,6 +637,7 @@ class TaskBuilderTest extends MarathonSpec {
     assert("task-123" == env("MESOS_TASK_ID"))
     assert("/test" == env("MARATHON_APP_ID"))
     assert("1970-01-01T00:00:00.000Z" == env("MARATHON_APP_VERSION"))
+    assert("myregistry/myimage:version" == env("MARATHON_APP_DOCKER_IMAGE"))
   }
 
   test("user defined variables override automatic port variables") {
