@@ -1,3 +1,12 @@
+## Changes from 0.10.0 to 0.11.0
+
+### Overview
+
+#### New `MARATHON_APP_DOCKER_IMAGE` environment variable
+
+Any task of an app definition with a docker image attribute (`container.docker.image`) will now be started with
+an environment variable `MARATHON_APP_DOCKER_IMAGE` containing its value.
+
 ## Changes from 0.9.0 to 0.10.0
 
 ### Recommended Mesos version is 0.22.1
