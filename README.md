@@ -136,6 +136,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Disqus](https://www.disqus.com/)
 * [eBay](http://www.ebay.com/)
 * [The Factory](https://github.com/thefactory/)
+* [Football Radar](http://www.footballradar.com)
 * [Guidewire](http://www.guidewire.com/)
 * [Groupon](http://www.groupon.com/)
 * [HolidayCheck](http://www.holidaycheck.com/)
