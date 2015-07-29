@@ -4,6 +4,19 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.util.ThreadPoolContext.context
 import scala.concurrent.Future
 
+/**
+  * This responsibility is in transit:
+  *
+  * Current state:
+  * - all applications are stored as part of the root group in the group repository for every user intended change
+  * - all applications are stored again in the app repository, if the deployment of that application starts
+  *
+  * Future plan:
+  * - the applications should be always loaded via the groupManager or groupRepository.
+  * - the app repository is used to store versions of the application
+  *
+  * Until this plan is implemented, please think carefully when to use the app repository!
+  */
 class AppRepository(
   val store: EntityStore[AppDefinition],
   val maxVersions: Option[Int] = None,

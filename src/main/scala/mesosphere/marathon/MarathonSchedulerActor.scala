@@ -8,12 +8,7 @@ import akka.pattern.ask
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.api.v2.json.V2AppUpdate
-import mesosphere.marathon.event.{
-  LocalLeadershipEvent,
-  AppTerminatedEvent,
-  DeploymentFailed,
-  DeploymentSuccess
-}
+import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
@@ -386,6 +381,7 @@ object MarathonSchedulerActor {
 
 class SchedulerActions(
     appRepository: AppRepository,
+    groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
     taskQueue: TaskQueue,
@@ -485,11 +481,12 @@ class SchedulerActions(
     }.map(_ => ())
   }
 
-  def reconcileHealthChecks(): Unit =
+  def reconcileHealthChecks(): Unit = {
     for {
-      apps <- appRepository.apps()
+      apps <- groupRepository.rootGroup().map(_.map(_.transitiveApps).getOrElse(Set.empty))
       app <- apps
     } healthCheckManager.reconcileWith(app.id)
+  }
 
   /**
     * Ensures current application parameters (resource requirements, URLs,
@@ -543,25 +540,6 @@ class SchedulerActions(
     currentAppVersion(appId).map {
       case Some(app) => scale(driver, app)
       case _         => log.warn(s"App $appId does not exist. Not scaling.")
-    }
-  }
-
-  def updateApp(
-    driver: SchedulerDriver,
-    id: PathId,
-    appUpdate: V2AppUpdate): Future[AppDefinition] = {
-    appRepository.currentVersion(id).flatMap {
-      case Some(currentVersion) =>
-        val updatedApp = appUpdate(currentVersion)
-
-        taskQueue.purge(id)
-
-        appRepository.store(updatedApp).map { _ =>
-          update(driver, updatedApp, appUpdate)
-          healthCheckManager.reconcileWith(id)
-          updatedApp
-        }
-      case _ => throw new UnknownAppException(id)
     }
   }
 
