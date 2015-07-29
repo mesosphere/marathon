@@ -14,7 +14,7 @@ an environment variable `MARATHON_APP_DOCKER_IMAGE` containing its value.
 We tested this release against Mesos version 0.22.1. Thus, this is the recommended
 Mesos version for this release.
 
-### Notes 
+### Notes
 
 This will be the last release that supports Java 6, since Java 6 and Java 7 have reached End of Life.
 Starting with 0.11.0 we will rely on Java 8.
@@ -24,7 +24,7 @@ Starting with 0.11.0 we will rely on Java 8.
 #### Administratively zeroing the task launch delay
 
 It is now possible to reset the task launch delay via the REST endpoint `/v2/queue/{app_id}/delay`.
-The UI displays two additional possible statuses: "Delayed" and "Waiting". 
+The UI displays two additional possible statuses: "Delayed" and "Waiting".
 The "Delayed" status also displays a tooltip showing the remaining time until the next launch attempt.
 The App page now allows the user to reset the task launch delay for a "Delayed" app, thus forcing a new immediate launch attempt.
 
@@ -36,9 +36,9 @@ the scheduler may never re-register with the saved FrameworkID until the leading
 
 #### Maintain constraints while scaling down
 
-Constraints in Marathon is a powerful mechanism. 
+Constraints in Marathon is a powerful mechanism.
 While the constraints are maintained when scaling up, previous versions of Marathon did not do so while scaling down.
-This version picks instances to kill based on defined constraints and will not violate those. 
+This version picks instances to kill based on defined constraints and will not violate those.
 
 #### Custom prefix for automatically created environment variables
 
@@ -49,28 +49,28 @@ variables created automatically by Marathon (e.g., `PORT`, `PORTS`)
 _Note_: This prefix will not be added to variables that are already prefixed,
 such as `MESOS_TASK_ID` and `MARATHON_APP_ID`
 
-#### Handle requests with missing Accept and Content-Type headers correctly 
+#### Handle requests with missing Accept and Content-Type headers correctly
 
-If an HTTP request is made without setting appropriate request headers, the Accept and Content-Type header 
+If an HTTP request is made without setting appropriate request headers, the Accept and Content-Type header
 is set automatically to `application/json`.
 
 #### Option to restrict the number of concurrent HTTP requests
 
 With this version of Marathon it is possible to restrict the number of concurrent HTTP requests,
 that are handled concurrently in the service layer.
-This enables the Marathon service to apply back pressure when receiving too many requests 
+This enables the Marathon service to apply back pressure when receiving too many requests
 and helps prevent Denial of Service attacks.
-If the limit of concurrent requests is reached, a HTTP 503 Service Temporarily Unavailable is returned, 
+If the limit of concurrent requests is reached, a HTTP 503 Service Temporarily Unavailable is returned,
 which means that this operation can be retried.
 You can turn on this feature by setting the parameter `--http_max_concurrent_requests`.
 
 #### Serialize all concurrent change requests
- 
+
 In former versions of Marathon it was possible that multiple concurrent changes of the same application definition
 would lead to an inconsistent state of that application. All changes of groups or application definitions now
 get serialized, so the resulting state is always consistent.
 
-#### Enhance the reported metrics 
+#### Enhance the reported metrics
 
 The metrics endpoint (`/metrics`) gives valuable insight into the system behavior.
 We now have meters for all service objects as well as the number applications and groups in the system.
@@ -78,7 +78,7 @@ We now have meters for all service objects as well as the number applications an
 #### Decouple API (un)marshalling types from internal models
 
 With this change we can control API changes and are free to change internal models.
-This will change nothing in the current API, but will help a lot while we create the v3 API. 
+This will change nothing in the current API, but will help a lot while we create the v3 API.
 
 ### Infrastructure
 
@@ -90,9 +90,9 @@ This test suite is our safety net to ensure compatibility while introducing new 
 
 #### Code coverage reporting using coveralls
 
-See our github page https://github.com/mesosphere/marathon or go directly to  
+See our github page https://github.com/mesosphere/marathon or go directly to
 https://coveralls.io/github/mesosphere/marathon to see our code coverage reporting.
-With every Pull Request we try to make sure, this coverage will be increased.  
+With every Pull Request we try to make sure, this coverage will be increased.
 
 #### Improved the release process of Marathon itself
 
@@ -102,17 +102,18 @@ We now have a more reliable way of pushing distributions.
 
 ### Fixed Issues
 
-- #1710 - Too many simultaneous requests will kill Marathon 
+- #1710 - Too many simultaneous requests will kill Marathon
 - #1709 - Concurrent changes to the same AppDefinition will lead to inconsistent state
-- #1669 - Inconsistent content-type and response from REST API 
-- #1660 - The GUI doesn't allow creating apps with 0 instances, but it is possible through the v2 API 
+- #1669 - Inconsistent content-type and response from REST API
+- #1660 - The GUI doesn't allow creating apps with 0 instances, but it is possible through the v2 API
 - #1647 - Keep the rest-api return format consistent when request headers without "Accept: application/json"
 - #1397 - Kill tasks with scaling does not update group
-- #1654 - Marathon 0.8.1 - API - /v2/tasks 
+- #1654 - Marathon 0.8.1 - API - /v2/tasks
 - #555  - Constraints not satisfied when scaling down
-- #650  - deployment_success/failed should contain deployment info  
-- #1316 - Invalidate framework ID if registration triggers an error  
+- #650  - deployment_success/failed should contain deployment info
+- #1316 - Invalidate framework ID if registration triggers an error
 - #1254 - Add flag to define Marathon PORT prefix
+- #1853 - App can't be deleted because it "does not exist", although /apps still returns it
 
 ------------------------------------------------------------
 
