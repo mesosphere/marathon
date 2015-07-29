@@ -158,6 +158,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     @Named("restMapper") mapper: ObjectMapper,
     system: ActorSystem,
     appRepository: AppRepository,
+    groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
@@ -179,6 +180,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     def createSchedulerActions(schedulerActor: ActorRef): SchedulerActions = {
       new SchedulerActions(
         appRepository,
+        groupRepository,
         healthCheckManager,
         taskTracker,
         taskQueue,
@@ -376,13 +378,13 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
     metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
       override def getValue: Int = {
-        Await.result(groupManager.root(false), conf.zkTimeoutDuration).transitiveApps.size
+        Await.result(groupManager.rootGroup(), conf.zkTimeoutDuration).transitiveApps.size
       }
     })
 
     metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
       override def getValue: Int = {
-        Await.result(groupManager.root(false), conf.zkTimeoutDuration).transitiveGroups.size
+        Await.result(groupManager.rootGroup(), conf.zkTimeoutDuration).transitiveGroups.size
       }
     })
 

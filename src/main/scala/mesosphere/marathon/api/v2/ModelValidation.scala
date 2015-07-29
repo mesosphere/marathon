@@ -1,15 +1,14 @@
 package mesosphere.marathon.api.v2
 
-import java.net.{ URLConnection, HttpURLConnection, URL }
+import java.net.{ HttpURLConnection, URL, URLConnection }
 import javax.validation.ConstraintViolation
-import mesosphere.marathon.MarathonSchedulerService
-import scala.reflect.ClassTag
-import scala.util.{ Failure, Success, Try }
 
+import mesosphere.marathon.api.v2.BeanValidation._
 import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate, V2Group, V2GroupUpdate }
 import mesosphere.marathon.state._
 
-import BeanValidation._
+import scala.reflect.ClassTag
+import scala.util.{ Failure, Success, Try }
 
 /**
   * Specific validation helper for specific model classes.
@@ -97,7 +96,7 @@ object ModelValidation {
     apps: Set[V2AppDefinition],
     groups: Set[V2Group])(implicit ct: ClassTag[T]): Iterable[ConstraintViolation[_]] = {
     val groupIds = groups.map(_.id)
-    val clashingIds = apps.map(_.id).filter(groupIds.contains)
+    val clashingIds = apps.map(_.id).intersect(groupIds)
     isTrue(
       t,
       apps,
@@ -115,7 +114,7 @@ object ModelValidation {
       group.dependencies,
       path,
       "Dependency graph has cyclic dependencies",
-      group.toGroup.hasNonCyclicDependencies)
+      group.toGroup().hasNonCyclicDependencies)
   }
 
   def checkGroupUpdates(
@@ -275,9 +274,9 @@ object ModelValidation {
     * Returns a non-empty list of validation messages if the given app definition
     * will conflict with existing apps.
     */
-  def checkAppConflicts(app: AppDefinition, service: MarathonSchedulerService): Seq[String] = {
+  def checkAppConflicts(app: AppDefinition, root: Group): Seq[String] = {
     app.containerServicePorts.toSeq.flatMap { servicePorts =>
-      checkServicePortConflicts(app.id, servicePorts, service)
+      checkServicePortConflicts(app.id, servicePorts, root)
     }
   }
 
@@ -289,10 +288,10 @@ object ModelValidation {
     * may simply restate the existing service ports.
     */
   private def checkServicePortConflicts(appId: PathId, requestedServicePorts: Seq[Int],
-                                        service: MarathonSchedulerService): Seq[String] = {
+                                        root: Group): Seq[String] = {
 
     for {
-      existingApp <- service.listApps().toList
+      existingApp <- root.transitiveApps.toList
       if existingApp.id != appId // in case of an update, do not compare the app against itself
       existingServicePort <- existingApp.portMappings.toList.flatten.map(_.servicePort)
       if existingServicePort != 0 // ignore zero ports, which will be chosen at random

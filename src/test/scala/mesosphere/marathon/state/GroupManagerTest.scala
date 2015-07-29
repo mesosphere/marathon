@@ -3,21 +3,19 @@ package mesosphere.marathon.state
 import java.util.concurrent.atomic.AtomicInteger
 import javax.validation.ConstraintViolationException
 
-import akka.actor.{ ActorRefFactory, ActorSystem }
+import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.TestKit
-import com.google.inject.name.Named
-import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{ MarathonSpec, MarathonConf, MarathonSchedulerService, PortRangeExhaustedException }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
 import mesosphere.util.SerializeExecution
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopConf
+import org.scalatest.Matchers
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{ FunSuite, Matchers }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -141,7 +139,7 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
 
     val group = Group(PathId.empty, Set(AppDefinition("/app1".toPath)), Set(Group("/group1".toPath)))
 
-    when(groupRepo.group("root", withLatestApps = false)).thenReturn(Future.successful(None))
+    when(groupRepo.group(groupRepo.zkRootName)).thenReturn(Future.successful(None))
 
     intercept[ConstraintViolationException] {
       Await.result(manager.update(group.id, _ => group), 3.seconds)

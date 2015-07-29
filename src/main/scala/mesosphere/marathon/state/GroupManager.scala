@@ -37,10 +37,10 @@ class GroupManager @Singleton @Inject() (
     @Named(EventModule.busName) eventBus: EventStream) extends PathFun {
 
   private[this] val log = Logger.getLogger(getClass.getName)
-  private[this] val zkName = "root"
+  private[this] val zkName = groupRepo.zkRootName
 
-  def root(withLatestApps: Boolean = true): Future[Group] =
-    groupRepo.group(zkName, withLatestApps).map(_.getOrElse(Group.empty))
+  def rootGroup(): Future[Group] =
+    groupRepo.group(zkName).map(_.getOrElse(Group.empty))
 
   /**
     * Get all available versions for given group identifier.
@@ -63,7 +63,7 @@ class GroupManager @Singleton @Inject() (
     * @return the group if it is found, otherwise None
     */
   def group(id: PathId): Future[Option[Group]] = {
-    root().map(_.findGroup(_.id == id))
+    rootGroup().map(_.findGroup(_.id == id))
   }
 
   /**
@@ -84,7 +84,7 @@ class GroupManager @Singleton @Inject() (
     * @return the app uf ut is found, otherwise false
     */
   def app(id: PathId): Future[Option[AppDefinition]] = {
-    root(false).map(_.app(id))
+    rootGroup().map(_.app(id))
   }
 
   /**
@@ -140,10 +140,8 @@ class GroupManager @Singleton @Inject() (
       scheduler.deploy(plan, force).map(_ => plan)
     }
 
-    val rootGroup = root(withLatestApps = false)
-
     val deployment = for {
-      from <- rootGroup //ignore the state of the scheduler
+      from <- rootGroup()
       (to, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
       _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty))
       plan <- deploy(from, to, resolve)

@@ -2,20 +2,19 @@ package mesosphere.marathon
 
 import akka.actor.ActorSystem
 import akka.testkit.{ TestKit, TestProbe }
-import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ PathId, AppDefinition, AppRepository }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
-import org.apache.mesos.Protos.{ TaskState, TaskID, TaskStatus }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupRepository, PathId }
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ times, verify, when }
 import org.scalatest.Matchers
 import org.scalatest.mock.MockitoSugar
 
-import scala.concurrent.{ Await, Future }
-import scala.concurrent.duration._
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 
 class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with MarathonSpec with Matchers with MockitoSugar {
   import system.dispatcher
@@ -27,6 +26,7 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
 
     val scheduler = new SchedulerActions(
       repo,
+      mock[GroupRepository],
       mock[HealthCheckManager],
       taskTracker,
       queue,
@@ -78,6 +78,7 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
 
     val scheduler = new SchedulerActions(
       repo,
+      mock[GroupRepository],
       mock[HealthCheckManager],
       taskTracker,
       queue,
@@ -116,6 +117,7 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
 
     val scheduler = new SchedulerActions(
       repo,
+      mock[GroupRepository],
       mock[HealthCheckManager],
       taskTracker,
       queue,
