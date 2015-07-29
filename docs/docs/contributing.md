@@ -5,7 +5,43 @@ title: Contributor Guidelines
 
 # Contributor Guidelines
 
-## Getting Started
+## Contributing Documentation Changes
+
+You were confused about our documentation? You ran into a
+pitfall that others also might run into? Help us making the Marathon documentation great.
+ 
+The documentation that is published [here](https://mesosphere.github.io/marathon/) actually gets
+generated from what is found in the docs directory.
+
+If you simply want to correct a spelling mistake or improve the wording of a sentence, you can browse
+the mark down files [here](https://github.com/mesosphere/marathon/tree/master/docs) and use the edit
+button above the markup. That will make it easy to create a pull request that will be reviewed by us.
+
+If want to contribute a larger improvement to our documentation: 
+
+* Edit the files in the docs directory.
+* Check the rendered result as described in the 
+  [docs/README.md](https://github.com/mesosphere/marathon/blob/master/docs/README.md).
+* If you are feeling perfectionistic, check if there is already an issue about this documentation deficiency
+  [here](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3Adocs).
+  Prefix your commit message with with "Fixes #1234 - " where #1234 is the number of the issue.
+* Create a pull request against master.
+
+Please rebase your pull requests on top of the current master using
+  `git fetch origin && git rebase origin/master`, and squash your changes to a single commit as
+  described [here](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html).
+  Yes, we want you to rewrite history - the branch on which you are
+  implementing your changes is only meant for this pull request. You can
+  either rebase before or after you squash your commits, depending on how
+  you'd like to resolve potential merge conflicts. The idea behind is that we
+  don't want an arbitrary number of commits for one pull request, but exactly
+  one commit. This commit should be easy to merge onto master, therefore we
+  ask you to rebase to master.
+    
+After you pull request has been accepted, there is still some manual work that we need to do to publish that 
+documentation. But don't worry, we will do that for you.
+
+## Getting Started with Code Changes
 
 Maybe you already have a bugfix or enhancement in mind.  If not, there are a
 number of relatively approachable issues with the label
@@ -17,19 +53,23 @@ number of relatively approachable issues with the label
 _TODO_: Do we need a CLA?
 -->
 
-## Submitting Changes to Marathon
+## Submitting Code Changes to Marathon
 
 - A GitHub pull request is the preferred way of submitting patch sets. Please
   rebase your pull requests on top of the current master using
-  ```git rebase master``, and squash your changes to a single commit as
+  `git fetch origin && git rebase origin/master`, and squash your changes to a single commit as
   described [here](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html).
-  Yes, we want you to rewrite history – the branch on which you are
+  Yes, we want you to rewrite history - the branch on which you are
   implementing your changes is only meant for this pull request. You can
   either rebase before or after you squash your commits, depending on how
   you'd like to resolve potential merge conflicts. The idea behind is that we
   don't want an arbitrary number of commits for one pull request, but exactly
   one commit. This commit should be easy to merge onto master, therefore we
   ask you to rebase to master.
+  
+- Please start your commit message with "Fixes #1234 - " where #1234 is the github issue number
+  that your pull request relates to. Github will automatically link this PR to the issue and make it more
+  visible to others.
 
 - Any changes in the public API or behavior must be reflected in the project
   documentation.
