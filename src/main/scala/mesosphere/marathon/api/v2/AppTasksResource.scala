@@ -7,7 +7,7 @@ import javax.ws.rs.core.{ MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.api.{ TaskKiller, EndpointsHelper, RestResource }
+import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, EndpointsHelper, RestResource }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ GroupManager, PathId }
@@ -17,7 +17,6 @@ import org.apache.log4j.Logger
 
 import scala.concurrent.Future
 
-@Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class AppTasksResource @Inject() (service: MarathonSchedulerService,
                                   taskTracker: TaskTracker,
@@ -30,7 +29,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
   @GET
-  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   @Timed
   def indexJson(@PathParam("appId") appId: String): Response = {
 

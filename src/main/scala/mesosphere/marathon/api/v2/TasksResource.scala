@@ -8,7 +8,7 @@ import javax.ws.rs.core.{ MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.EnrichedTask
-import mesosphere.marathon.api.{ TaskKiller, EndpointsHelper, RestResource }
+import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, EndpointsHelper, RestResource }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
@@ -33,7 +33,7 @@ class TasksResource @Inject() (
   val log = Logger.getLogger(getClass.getName)
 
   @GET
-  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   @Timed
   def indexJson(
     @QueryParam("status") status: String,
@@ -87,7 +87,7 @@ class TasksResource @Inject() (
   ))
 
   @POST
-  @Produces(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
   @Path("delete")
