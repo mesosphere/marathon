@@ -16,7 +16,6 @@ import mesosphere.util.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 class AppsResourceTest extends MarathonSpec with Matchers with Mockito with GivenWhenThen {
@@ -31,6 +30,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
 
     When("The create request is made")
     val response = appsResource.create(req, body, false)
@@ -89,27 +89,28 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
   test("Search apps can be filtered") {
     val app1 = AppDefinition(id = "/app/service-a".toRootPath, cmd = Some("party hard"), labels = Map("a" -> "1", "b" -> "2"))
     val app2 = AppDefinition(id = "/app/service-b".toRootPath, cmd = Some("work hard"), labels = Map("a" -> "1", "b" -> "3"))
-    service.listApps() returns Seq(app1, app2)
+    val group = Group(id = PathId.empty, apps = Set(app1, app2))
+    groupManager.rootGroup() returns Future.successful(group)
 
-    appsResource.search(None, None, None) should be(Seq(app1, app2))
-    appsResource.search(Some(""), None, None) should be(Seq(app1, app2))
-    appsResource.search(Some("party"), None, None) should be(Seq(app1))
-    appsResource.search(Some("work"), None, None) should be(Seq(app2))
-    appsResource.search(Some("hard"), None, None) should be(Seq(app1, app2))
-    appsResource.search(Some("none"), None, None) should be(Seq.empty)
+    appsResource.search(None, None, None).toSet should be(Set(app1, app2))
+    appsResource.search(Some(""), None, None).toSet should be(Set(app1, app2))
+    appsResource.search(Some("party"), None, None).toSet should be(Set(app1))
+    appsResource.search(Some("work"), None, None).toSet should be(Set(app2))
+    appsResource.search(Some("hard"), None, None).toSet should be(Set(app1, app2))
+    appsResource.search(Some("none"), None, None).toSet should be(Set.empty)
 
-    appsResource.search(None, Some("app"), None) should be(Seq(app1, app2))
-    appsResource.search(None, Some("service-a"), None) should be(Seq(app1))
-    appsResource.search(Some("party"), Some("app"), None) should be(Seq(app1))
-    appsResource.search(Some("work"), Some("app"), None) should be(Seq(app2))
-    appsResource.search(Some("hard"), Some("service-a"), None) should be(Seq(app1))
-    appsResource.search(Some(""), Some(""), None) should be(Seq(app1, app2))
+    appsResource.search(None, Some("app"), None).toSet should be(Set(app1, app2))
+    appsResource.search(None, Some("service-a"), None).toSet should be(Set(app1))
+    appsResource.search(Some("party"), Some("app"), None).toSet should be(Set(app1))
+    appsResource.search(Some("work"), Some("app"), None).toSet should be(Set(app2))
+    appsResource.search(Some("hard"), Some("service-a"), None).toSet should be(Set(app1))
+    appsResource.search(Some(""), Some(""), None).toSet should be(Set(app1, app2))
 
-    appsResource.search(None, None, Some("b==2")) should be(Seq(app1))
-    appsResource.search(Some("party"), Some("app"), Some("a==1")) should be(Seq(app1))
-    appsResource.search(Some("work"), Some("app"), Some("a==1")) should be(Seq(app2))
-    appsResource.search(Some("hard"), Some("service-a"), Some("a==1")) should be(Seq(app1))
-    appsResource.search(Some(""), Some(""), Some("")) should be(Seq(app1, app2))
+    appsResource.search(None, None, Some("b==2")).toSet should be(Set(app1))
+    appsResource.search(Some("party"), Some("app"), Some("a==1")).toSet should be(Set(app1))
+    appsResource.search(Some("work"), Some("app"), Some("a==1")).toSet should be(Set(app2))
+    appsResource.search(Some("hard"), Some("service-a"), Some("a==1")).toSet should be(Set(app1))
+    appsResource.search(Some(""), Some(""), Some("")).toSet should be(Set(app1, app2))
   }
 
   var eventBus: EventStream = _

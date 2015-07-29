@@ -14,7 +14,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, DeploymentStep, StopApplication }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
@@ -39,6 +39,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     with ImplicitSender {
 
   var repo: AppRepository = _
+  var groupRepo: GroupRepository = _
   var deploymentRepo: DeploymentRepository = _
   var hcManager: HealthCheckManager = _
   var tracker: TaskTracker = _
@@ -60,6 +61,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     holder = new MarathonSchedulerDriverHolder
     holder.driver = Some(driver)
     repo = mock[AppRepository]
+    groupRepo = mock[GroupRepository]
     deploymentRepo = mock[DeploymentRepository]
     hcManager = mock[HealthCheckManager]
     tracker = mock[TaskTracker]
@@ -79,7 +81,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     ))
     historyActorProps = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
     schedulerActions = ref => new SchedulerActions(
-      repo, hcManager, tracker, queue, new EventStream(), ref, mock[MarathonConf])(system.dispatcher)
+      repo, groupRepo, hcManager, tracker, queue, new EventStream(), ref, mock[MarathonConf])(system.dispatcher)
 
     when(deploymentRepo.store(any())).thenAnswer(new Answer[Future[DeploymentPlan]] {
       override def answer(p1: InvocationOnMock): Future[DeploymentPlan] = {
@@ -88,10 +90,10 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     })
 
     when(deploymentRepo.expunge(any())).thenReturn(Future.successful(Seq(true)))
-
     when(deploymentRepo.all()).thenReturn(Future.successful(Nil))
-
     when(repo.apps()).thenReturn(Future.successful(Nil))
+    when(groupRepo.rootGroup()).thenReturn(Future.successful(None))
+
   }
 
   def createActor() = {
@@ -124,7 +126,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   test("RecoversDeploymentsAndReconcilesHealthChecksOnStart") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    when(repo.apps()).thenReturn(Future.successful(Seq(app)))
+    when(groupRepo.rootGroup()).thenReturn(Future.successful(Some(Group.apply(PathId.empty, apps = Set(app)))))
 
     val schedulerActor = createActor()
     try {

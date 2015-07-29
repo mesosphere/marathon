@@ -244,7 +244,7 @@ class AppsResource @Inject() (
 
   private def validateApp(app: AppDefinition): AppDefinition = {
     BeanValidation.requireValid(ModelValidation.checkAppConstraints(V2AppDefinition(app), app.id.parent))
-    val conflicts = ModelValidation.checkAppConflicts(app, service)
+    val conflicts = ModelValidation.checkAppConflicts(app, result(groupManager.rootGroup()))
     if (conflicts.nonEmpty) throw new ConflictingChangeException(conflicts.mkString(","))
     app
   }
@@ -269,7 +269,7 @@ class AppsResource @Inject() (
     def containCaseInsensitive(a: String, b: String): Boolean = b.toLowerCase contains a.toLowerCase
     val selectors = label.map(new LabelSelectorParsers().parsed)
 
-    service.listApps().filter { app =>
+    result(groupManager.rootGroup()).transitiveApps.filter { app =>
       val appMatchesCmd = cmd.fold(true)(c => app.cmd.exists(containCaseInsensitive(c, _)))
       val appMatchesId = id.fold(true)(s => containCaseInsensitive(s, app.id.toString))
       val appMatchesLabel = selectors.fold(true)(_.matches(app))

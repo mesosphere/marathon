@@ -112,9 +112,6 @@ class MarathonSchedulerService @Inject() (
   def cancelDeployment(id: String): Unit =
     schedulerActor ! CancelDeployment(id)
 
-  def listApps(): Iterable[AppDefinition] =
-    Await.result(appRepository.apps(), config.zkTimeoutDuration)
-
   def listAppVersions(appId: PathId): Iterable[Timestamp] =
     Await.result(appRepository.listVersions(appId), config.zkTimeoutDuration)
 

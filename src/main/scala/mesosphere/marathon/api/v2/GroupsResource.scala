@@ -3,18 +3,16 @@ package mesosphere.marathon.api.v2
 import java.net.URI
 import javax.inject.Inject
 import javax.ws.rs._
-import javax.ws.rs.core.{ MediaType, Response }
+import javax.ws.rs.core.Response
 
 import com.codahale.metrics.annotation.Timed
-
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
-import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
-import mesosphere.marathon.api.v2.json.{ V2Group, V2GroupUpdate }
 import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.v2.json.{V2Group, V2GroupUpdate}
+import mesosphere.marathon.api.{MarathonMediaType, RestResource}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
+import mesosphere.marathon.state.{Group, GroupManager, PathId, Timestamp}
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
+import mesosphere.marathon.{ConflictingChangeException, MarathonConf}
 import mesosphere.util.ThreadPoolContext.context
 import play.api.libs.json.Json
 
@@ -36,7 +34,7 @@ class GroupsResource @Inject() (
     */
   @GET
   @Timed
-  def root(): Group = result(groupManager.root())
+  def root(): Group = result(groupManager.rootGroup())
 
   /**
     * Get a specific group, optionally with specific version
@@ -90,7 +88,7 @@ class GroupsResource @Inject() (
     val update = Json.parse(body).as[V2GroupUpdate]
     BeanValidation.requireValid(ModelValidation.checkGroupUpdate(update, needsId = true))
     val effectivePath = update.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
-    val current = result(groupManager.root(withLatestApps = false)).findGroup(_.id == effectivePath)
+    val current = result(groupManager.rootGroup()).findGroup(_.id == effectivePath)
     if (current.isDefined)
       throw ConflictingChangeException(s"Group $effectivePath is already created. Use PUT to change this group.")
     val (deployment, path, version) = updateOrCreate(id.toRootPath, update, force)
