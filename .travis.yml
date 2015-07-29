@@ -1,7 +1,7 @@
 sudo: false
 language: scala
 jdk:
-  - openjdk6
+  - oraclejdk8
 scala:
   - 2.11.7
 cache:

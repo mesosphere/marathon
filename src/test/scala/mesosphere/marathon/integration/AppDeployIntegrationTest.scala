@@ -443,7 +443,9 @@ class AppDeployIntegrationTest
 
     Then("the deployment should be gone")
     waitForEvent("deployment_failed")
-    marathon.listDeploymentsForBaseGroup().value should have size 0
+    WaitTestSupport.waitUntil("Deployments get removed from the queue", 30.seconds) {
+      marathon.listDeploymentsForBaseGroup().value.isEmpty
+    }
 
     Then("the app should also be gone")
     val result = intercept[UnsuccessfulResponseException] {

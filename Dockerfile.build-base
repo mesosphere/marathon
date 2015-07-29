@@ -1,13 +1,10 @@
-FROM mesosphere/mesos:0.22.1-1.0.ubuntu1404
+FROM java:8-jdk
 
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y \
-    default-jdk \
-    curl
-
-RUN curl -SsL -O http://dl.bintray.com/sbt/debian/sbt-0.13.5.deb && \
-    dpkg -i sbt-0.13.5.deb
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
+    echo "deb http://repos.mesosphere.io/debian jessie main" | tee /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list && \
+    apt-get update && \
+    apt-get install --no-install-recommends -y --force-yes mesos=0.23.0-1.0.debian81 sbt
 
 COPY . /marathon
 WORKDIR /marathon
