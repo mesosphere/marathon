@@ -76,6 +76,7 @@ object ForwarderService {
 
     ProcessKeeper.startJavaProcess(
       s"app_${conf.httpPort()}",
+      heapInMegs = 128,
       arguments = List(ForwarderService.className, "helloApp") ++ args,
       upWhen = _.contains("Started SelectChannelConnector"))
   }
@@ -85,6 +86,7 @@ object ForwarderService {
 
     ProcessKeeper.startJavaProcess(
       s"forwarder_${conf.httpPort()}",
+      heapInMegs =  128,
       arguments = List(ForwarderService.className, "forwarder", forwardToPort.toString) ++ args,
       upWhen = _.contains("SelectChannelConnector@"))
   }

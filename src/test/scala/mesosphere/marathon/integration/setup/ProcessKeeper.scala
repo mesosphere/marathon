@@ -1,23 +1,23 @@
 
 package mesosphere.marathon.integration.setup
 
-import com.google.common.util.concurrent.Service.{ State, Listener }
-import org.apache.commons.io.FileUtils
+import java.io.File
+import java.util.concurrent.TimeUnit
 
+import com.google.common.util.concurrent.{ AbstractIdleService, Service }
+import com.google.inject.Guice
+import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
+import mesosphere.chaos.metrics.MetricsModule
+import org.apache.commons.io.FileUtils
+import org.apache.log4j.Logger
+import org.rogach.scallop.ScallopConf
+
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
 import scala.sys.ShutdownHookThread
 import scala.sys.process._
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
-import com.google.inject.Guice
-import org.rogach.scallop.ScallopConf
-import com.google.common.util.concurrent.{ AbstractIdleService, Service }
-import mesosphere.chaos.http.{ HttpService, HttpConf, HttpModule }
-import mesosphere.chaos.metrics.MetricsModule
-import java.io.{ Closeable, File }
-import java.util.concurrent.{ Executor, TimeUnit }
-import org.apache.log4j.Logger
-import scala.concurrent.{ ExecutionContext, Future, duration, Await, Promise }
-import scala.concurrent.duration._
 
 /**
   * Book Keeper for processes and services.
@@ -47,7 +47,7 @@ object ProcessKeeper {
     val workDirFile = new File(workDir)
     FileUtils.deleteDirectory(workDirFile)
     FileUtils.forceMkdir(workDirFile)
-    startJavaProcess("zookeeper", args, new File("."), sys.env, _.contains("binding to port"))
+    startJavaProcess("zookeeper", heapInMegs = 256, args, new File("."), sys.env, _.contains("binding to port"))
   }
 
   def startMesosLocal(): Process = {
@@ -73,17 +73,18 @@ object ProcessKeeper {
     FileUtils.forceMkdir(mesosWorkDirFile)
 
     startJavaProcess(
-      "marathon", argsWithMain, cwd,
+      "marathon", heapInMegs = 512, argsWithMain, cwd,
       env + (ENV_MESOS_WORK_DIR -> mesosWorkDir),
       upWhen = _.contains(startupLine))
   }
 
-  def startJavaProcess(name: String, arguments: List[String],
+  def startJavaProcess(name: String, heapInMegs: Int, arguments: List[String],
                        cwd: File = new File("."), env: Map[String, String] = Map.empty, upWhen: String => Boolean): Process = {
     log.info(s"Start java process $name with args: $arguments")
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes")
-    val builder = Process(javaExecutable :: "-classpath" :: classPath :: arguments, cwd, env.toList: _*)
+    val memSettings = s"-Xmx${heapInMegs}m"
+    val builder = Process(javaExecutable :: memSettings :: "-classpath" :: classPath :: arguments, cwd, env.toList: _*)
     val process = startProcess(name, builder, upWhen)
     log.info(s"Java process $name up and running!")
     process

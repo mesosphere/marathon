@@ -1,9 +1,8 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.api.v2.json.V2AppDefinition
-import mesosphere.marathon.api.v2.json.V2GroupUpdate
-import mesosphere.marathon.integration.setup.{ WaitTestSupport, IntegrationHealthCheck, IntegrationFunSuite, SingleMarathonIntegrationTest }
-import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
+import mesosphere.marathon.api.v2.json.{V2AppDefinition, V2GroupUpdate}
+import mesosphere.marathon.integration.setup.{IntegrationFunSuite, IntegrationHealthCheck, SingleMarathonIntegrationTest, WaitTestSupport}
+import mesosphere.marathon.state.{PathId, UpgradeStrategy}
 import org.scalatest._
 import spray.http.DateTime
 import spray.httpx.UnsuccessfulResponseException
@@ -310,25 +309,22 @@ class GroupDeployIntegrationTest
     def storeFirst(health: IntegrationHealthCheck) {
       if (!ping.contains(key(health))) ping += key(health) -> DateTime.now
     }
-    def create(version: String) = {
+    def create(version: String, initialState: Boolean) = {
       val db = v2AppProxy("/test/db".toTestPath, version, 1)
       val service = v2AppProxy("/test/service".toTestPath, version, 1, dependencies = Set(db.id))
       val frontend = v2AppProxy("/test/frontend1".toTestPath, version, 1, dependencies = Set(service.id))
       (V2GroupUpdate("/test".toTestPath, Set(db, service, frontend)),
-        appProxyCheck(db.id, version, state = true).withHealthAction(storeFirst),
-        appProxyCheck(service.id, version, state = true).withHealthAction(storeFirst),
-        appProxyCheck(frontend.id, version, state = true).withHealthAction(storeFirst))
+        appProxyCheck(db.id, version, state = initialState).withHealthAction(storeFirst),
+        appProxyCheck(service.id, version, state = initialState).withHealthAction(storeFirst),
+        appProxyCheck(frontend.id, version, state = initialState).withHealthAction(storeFirst))
     }
 
     Given("A group with 3 dependent applications")
-    val (groupV1, dbV1, serviceV1, frontendV1) = create("v1")
+    val (groupV1, dbV1, serviceV1, frontendV1) = create("v1", true)
     waitForChange(marathon.createGroup(groupV1))
 
     When("The group gets updated, where frontend2 is not healthy")
-    val (groupV2, dbV2, serviceV2, frontendV2) = create("v2")
-    frontendV2.state = false
-    dbV2.state = false
-    serviceV2.state = false
+    val (groupV2, dbV2, serviceV2, frontendV2) = create("v2", false)
 
     val upgrade = marathon.updateGroup(groupV2.id.get, groupV2)
     waitForHealthCheck(dbV2)

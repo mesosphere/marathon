@@ -43,7 +43,7 @@ SBT_DIR="${SBT_DIR-$BUILD_VOLUME_DIR/sbt}"
 IVY2_DIR="${IVY2_DIR-$BUILD_VOLUME_DIR/ivy2}"
 TARGET_DIRS="${TARGET_DIRS-$BUILD_VOLUME_DIR/targets}"
 CLEANUP_TARGET_DIRS="${CLEANUP_TARGET_DIRS-true}"
-CLEANUP_CONTAINERS_ON_EXIT="${CLEANUP_CONTAINERS-true}"
+CLEANUP_CONTAINERS_ON_EXIT="${CLEANUP_CONTAINERS_ON_EXIT-true}"
 export MARATHON_MAX_TASKS_PER_OFFER="${MARATHON_MAX_TASKS_PER_OFFER-1}"
 NO_DOCKER_CACHE="${NO_DOCKER_CACHE-true}"
 
@@ -126,7 +126,6 @@ docker run \
     -i \
     marathon-buildbase:$BUILD_ID \
     bash -c '
-    sbt -Dsbt.log.format=false test:compile &&\
     sbt -Dsbt.log.format=false test integration:test &&\
     sbt -Dsbt.log.format=false "project mesosSimulation" integration:test "test:runMain mesosphere.mesos.scale.DisplayAppScalingResults"' \
     || fatal "build/tests failed"

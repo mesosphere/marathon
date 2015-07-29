@@ -1,6 +1,5 @@
 package mesosphere.marathon.integration
 
-import java.lang.{ Integer => JInt }
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint.Operator
@@ -8,6 +7,7 @@ import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.AppDefinition
 import org.scalatest.{ GivenWhenThen, Matchers }
+import scala.concurrent.duration._
 
 class TaskQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with GivenWhenThen with Matchers {
   test("GET /v2/queue with an empty queue") {
@@ -31,6 +31,7 @@ class TaskQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIn
     create.code should be (201) // Created
 
     Then("the app shows up in the task queue")
+    WaitTestSupport.waitUntil("Deployment is put in the deployment queue", 30.seconds) { marathon.taskQueue().value.queue.size == 1 }
     val response = marathon.taskQueue()
     response.code should be (200)
 

@@ -131,7 +131,7 @@ trait SingleMarathonIntegrationTest
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[AppMock].getName
-    s"""$javaExecutable -classpath $classPath $main"""
+    s"""$javaExecutable -Xmx64m -classpath $classPath $main"""
   }
 
   /**
