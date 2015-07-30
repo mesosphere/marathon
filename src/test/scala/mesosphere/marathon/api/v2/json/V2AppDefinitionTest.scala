@@ -2,16 +2,17 @@ package mesosphere.marathon.api.v2.json
 
 import javax.validation.Validation
 
-import com.google.common.collect.Lists
-import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ Protos, MarathonSpec }
-import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
+import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ModelValidation
 import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
 import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state._
+import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.mesos.protos.Implicits.slaveIDToProto
+import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
 import play.api.libs.json.Json
@@ -221,7 +222,6 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
@@ -235,7 +235,8 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     val readResult1 = mapper.readValue(json1, classOf[V2AppDefinition])
     assert(readResult1 == app1)
 
-    val json2 = """
+    val json2 =
+      """
       {
         "id": "toggle",
         "cmd": "python toggle.py $PORT0",
@@ -252,7 +253,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
         "ports": [0],
         "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
       }
-    """
+      """
     val readResult2 = mapper.readValue(json2, classOf[V2AppDefinition])
     assert(readResult2.healthChecks.head.command.isDefined)
 
@@ -310,7 +311,8 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       ))
     )
 
-    val json4 = """
+    val json4 =
+      """
       {
         "id": "bridged-webapp",
         "cmd": "python3 -m http.server 8080",
@@ -325,13 +327,14 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
           }
         }
       }
-    """
+      """
     val readResult4 = mapper.readValue(json4, classOf[V2AppDefinition])
     assert(readResult4.copy(version = app4.version) == app4)
   }
 
   test("jackson and play-json parsing has the same result") {
-    val fullAppJson = """{
+    val fullAppJson =
+      """{
         "id": "/product/service/my-app",
         "cmd": "env && sleep 300",
         "args": ["/bin/sh", "-c", "env && sleep 300"],
@@ -435,7 +438,6 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.jackson.CaseClassModule
     import mesosphere.marathon.api.v2.json.Formats._
-    import mesosphere.marathon.api.v2.json.MarathonModule
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
@@ -465,11 +467,10 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       HealthCounts(0, 0, 0),
       Seq(DeploymentPlan(Group.empty, appGroup.toGroup)))
 
-    import mesosphere.marathon.api.v2.json.Formats.WithTaskCountsAndDeploymentsWrites
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
+    import mesosphere.marathon.api.v2.json.Formats.WithTaskCountsAndDeploymentsWrites
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
@@ -488,6 +489,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       .newBuilder
       .setHost("localhost")
       .setId("my-task")
+      .setSlaveId(SlaveID("0000-0000-0000"))
       .addPorts(9999)
       .setStagedAt(0)
       .setStartedAt(0)
@@ -501,11 +503,10 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       HealthCounts(0, 0, 0),
       Seq(DeploymentPlan(Group.empty, appGroup.toGroup)))
 
-    import mesosphere.marathon.api.v2.json.Formats.WithTasksAndDeploymentsWrites
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
+    import mesosphere.marathon.api.v2.json.Formats.WithTasksAndDeploymentsWrites
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
@@ -524,6 +525,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       .newBuilder
       .setHost("localhost")
       .setId("my-task")
+      .setSlaveId(SlaveID("0000-0000-0000"))
       .addPorts(9999)
       .setStagedAt(0)
       .setStartedAt(0)
@@ -544,11 +546,10 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       Seq(DeploymentPlan(Group.empty, appGroup.toGroup)),
       Some(failure))
 
-    import mesosphere.marathon.api.v2.json.Formats.WithTasksAndDeploymentsAndFailuresWrites
     import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
     import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
+    import mesosphere.marathon.api.v2.json.Formats.WithTasksAndDeploymentsAndFailuresWrites
 
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)

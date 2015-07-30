@@ -1967,6 +1967,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
         "local_port_max": 49151,
         "local_port_min": 32767,
         "master": "zk://localhost:2181/mesos",
+        "mesos_master_url": "http://mesos.vm:5050",
         "mesos_role": null,
         "mesos_user": "root",
         "reconciliation_initial_delay": 30000,

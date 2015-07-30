@@ -5,6 +5,8 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ GroupManager, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil, TaskTracker }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
+import mesosphere.mesos.protos.Implicits._
+import mesosphere.mesos.protos._
 import org.mockito.Matchers.{ any, eq => equalTo }
 import org.mockito.Mockito._
 import org.scalatest.Matchers
@@ -46,8 +48,15 @@ class TasksResourceTest extends MarathonSpec with Matchers {
     val bodyBytes = body.toCharArray.map(_.toByte)
     val taskId1 = "task-1"
     val taskId2 = "task-2"
-    val task1 = MarathonTasks.makeTask(taskId1, "host", ports = Nil, attributes = Nil, version = Timestamp.now())
-    val task2 = MarathonTasks.makeTask(taskId2, "host", ports = Nil, attributes = Nil, version = Timestamp.now())
+    val slaveId = SlaveID("some slave ID")
+    val task1 = MarathonTasks.makeTask(
+      taskId1, "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      slaveId = slaveId
+    )
+    val task2 = MarathonTasks.makeTask(
+      taskId2, "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      slaveId = slaveId
+    )
     val app1 = PathId("/my/app-1")
     val app2 = PathId("/my/app-2")
 

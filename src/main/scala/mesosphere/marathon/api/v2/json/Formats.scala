@@ -71,7 +71,8 @@ trait Formats
       "ports" -> task.getPortsList.asScala,
       "startedAt" -> (if (task.getStartedAt != 0) Timestamp(task.getStartedAt) else JsNull),
       "stagedAt" -> (if (task.getStagedAt != 0) Timestamp(task.getStagedAt) else JsNull),
-      "version" -> task.getVersion
+      "version" -> task.getVersion,
+      "slaveId" -> (if (task.hasSlaveId) task.getSlaveId.getValue else JsNull)
     )
   }
 

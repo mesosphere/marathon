@@ -11,7 +11,7 @@ import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegister
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks._
-import mesosphere.util.state.FrameworkIdUtil
+import mesosphere.util.state.{ MutableMesosLeaderInfo, MesosLeaderInfo, FrameworkIdUtil }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.BeforeAndAfterAll
@@ -23,6 +23,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
   var queue: LaunchQueue = _
   var scheduler: MarathonScheduler = _
   var frameworkIdUtil: FrameworkIdUtil = _
+  var mesosLeaderInfo: MesosLeaderInfo = _
   var taskIdUtil: TaskIdUtil = _
   var config: MarathonConf = _
   var eventBus: EventStream = _
@@ -33,6 +34,8 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     repo = mock[AppRepository]
     queue = mock[LaunchQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
+    mesosLeaderInfo = new MutableMesosLeaderInfo
+    mesosLeaderInfo.onNewMasterInfo(MasterInfo.getDefaultInstance)
     config = defaultConfig(maxTasksPerOffer = 10)
     taskIdUtil = TaskIdUtil
     probe = TestProbe()
@@ -44,6 +47,9 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       offerProcessor = offerProcessor,
       taskStatusEmitter = taskStatusEmitter,
       frameworkIdUtil,
+      mesosLeaderInfo,
+      taskIdUtil,
+      mock[ActorSystem],
       config,
       new SchedulerCallbacks {
         override def disconnected(): Unit = {}
@@ -78,6 +84,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       assert(msg.frameworkId == frameworkId.getValue)
       assert(msg.master == masterInfo.getHostname)
       assert(msg.eventType == "scheduler_registered_event")
+      assert(mesosLeaderInfo.currentLeaderUrl.get == "http://some_host:5050/")
     }
     finally {
       eventBus.unsubscribe(probe.ref)
@@ -102,6 +109,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
 
       assert(msg.master == masterInfo.getHostname)
       assert(msg.eventType == "scheduler_reregistered_event")
+      assert(mesosLeaderInfo.currentLeaderUrl.get == "http://some_host:5050/")
     }
     finally {
       eventBus.unsubscribe(probe.ref)

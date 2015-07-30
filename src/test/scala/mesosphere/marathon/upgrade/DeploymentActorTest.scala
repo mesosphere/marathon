@@ -15,7 +15,7 @@ import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, Deplo
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.TaskID
+import mesosphere.mesos.protos.{ SlaveID, TaskID }
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.{ any, same }
@@ -70,11 +70,12 @@ class DeploymentActorTest
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New, app2New, app3))
 
     // setting started at to 0 to make sure this survives
-    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version).toBuilder.setStartedAt(0).build()
-    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version).toBuilder.setStartedAt(1000).build()
-    val task2_1 = MarathonTasks.makeTask("task2_1", "", Nil, Nil, app2.version)
-    val task3_1 = MarathonTasks.makeTask("task3_1", "", Nil, Nil, app3.version)
-    val task4_1 = MarathonTasks.makeTask("task4_1", "", Nil, Nil, app4.version)
+    val slaveId = SlaveID("some slave id")
+    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(0).build()
+    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(1000).build()
+    val task2_1 = MarathonTasks.makeTask("task2_1", "", Nil, Nil, app2.version, slaveId)
+    val task3_1 = MarathonTasks.makeTask("task3_1", "", Nil, Nil, app3.version, slaveId)
+    val task4_1 = MarathonTasks.makeTask("task4_1", "", Nil, Nil, app4.version, slaveId)
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
@@ -174,8 +175,9 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
-    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app.version).toBuilder.setStartedAt(0).build()
-    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app.version).toBuilder.setStartedAt(1000).build()
+    val slaveId = SlaveID("some slave id")
+    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app.version, slaveId).toBuilder.setStartedAt(0).build()
+    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app.version, slaveId).toBuilder.setStartedAt(1000).build()
 
     when(tracker.get(app.id)).thenReturn(Set(task1_1, task1_2))
 
@@ -292,9 +294,10 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New))
 
-    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version).toBuilder.setStartedAt(0).build()
-    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version).toBuilder.setStartedAt(500).build()
-    val task1_3 = MarathonTasks.makeTask("task1_3", "", Nil, Nil, app1.version).toBuilder.setStartedAt(1000).build()
+    val slaveId = SlaveID("some slave id")
+    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(0).build()
+    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(500).build()
+    val task1_3 = MarathonTasks.makeTask("task1_3", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(1000).build()
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 
