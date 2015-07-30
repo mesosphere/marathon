@@ -23,6 +23,8 @@ If the specified attribute is not defined on the slave, then most operators will
 
 Attribute field supports all operators of Marathon.
 
+Note that currently Marathon only supports text values for attributes and will not be able to process any numberic values. For example the attribute pair `foo:bar` will be recognised, but marathon will not be able to match `cpu:4`.
+
 ## Operators
 
 ### UNIQUE operator
