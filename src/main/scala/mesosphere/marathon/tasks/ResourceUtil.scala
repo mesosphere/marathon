@@ -1,5 +1,6 @@
 package mesosphere.marathon.tasks
 
+import com.twitter.util.NonFatal
 import org.apache.mesos.Protos.{ Value, Resource }
 import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
@@ -91,6 +92,8 @@ object ResourceUtil {
     def consumeSetResource: Option[Resource] = {
       val baseSet: Set[String] = resource.getSet.getItemList.asScala.toSet
       val consumedSet: Set[String] = usedResource.getSet.getItemList.asScala.toSet
+      require(consumedSet subsetOf baseSet, s"$consumedSet must be subset of $baseSet")
+
       val resultSet: Set[String] = baseSet -- consumedSet
 
       if (resultSet.nonEmpty)
@@ -134,7 +137,12 @@ object ResourceUtil {
                 None
               }
               else
-                ResourceUtil.consumeResource(resource, usedResource)
+                try ResourceUtil.consumeResource(resource, usedResource)
+                catch {
+                  case NonFatal(e) =>
+                    log.warn("while consuming {} of type {}", resource.getName, resource.getType, e)
+                    None
+                }
             case (None, _) => None
           }
         case None => // if the resource isn't used, we keep it

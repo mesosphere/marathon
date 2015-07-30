@@ -1,6 +1,5 @@
 package mesosphere.marathon.integration
 
-
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.v2.json.V2AppDefinition

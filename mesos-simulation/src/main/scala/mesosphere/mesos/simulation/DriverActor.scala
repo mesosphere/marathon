@@ -1,8 +1,11 @@
 package mesosphere.mesos.simulation
 
+import java.util.UUID
+
 import akka.actor.{ Actor, ActorRef, Cancellable, Props }
 import akka.event.LoggingReceive
-import mesosphere.mesos.simulation.DriverActor.{ KillTask, LaunchTasks }
+import mesosphere.mesos.simulation.DriverActor.{ ReviveOffers, KillTask, LaunchTasks }
+import mesosphere.mesos.simulation.SchedulerActor.ResourceOffers
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
@@ -33,6 +36,8 @@ object DriverActor {
     * `override def reconcileTasks(statuses: util.Collection[TaskStatus]): Status`
     */
   case class ReconcileTask(taskStatus: Seq[TaskStatus])
+
+  case object ReviveOffers
 }
 
 class DriverActor(schedulerProps: Props) extends Actor {
@@ -43,9 +48,8 @@ class DriverActor(schedulerProps: Props) extends Actor {
   private[this] var periodicOffers: Option[Cancellable] = None
   private[this] var scheduler: ActorRef = _
 
-  override def preStart(): Unit = {
-    super.preStart()
-    scheduler = context.actorOf(schedulerProps, "scheduler")
+  //scalastyle:off magic.number
+  private[this] def offer: Offer = {
     def resource(name: String, value: Double): Resource = {
       Resource.newBuilder()
         .setName(name)
@@ -53,10 +57,8 @@ class DriverActor(schedulerProps: Props) extends Actor {
         .setScalar(Value.Scalar.newBuilder().setValue(value))
         .build()
     }
-
-    //scalastyle:off magic.number
-    val offer: Offer = Offer.newBuilder()
-      .setId(OfferID.newBuilder().setValue("thisisnotandid"))
+    Offer.newBuilder()
+      .setId(OfferID.newBuilder().setValue(UUID.randomUUID().toString))
       .setFrameworkId(FrameworkID.newBuilder().setValue("notanidframework"))
       .setSlaveId(SlaveID.newBuilder().setValue("notanidslave"))
       .setHostname("hostname")
@@ -74,13 +76,18 @@ class DriverActor(schedulerProps: Props) extends Actor {
           .build()
       ))
       .build()
-    //scalastyle:on
+  }
+  private[this] def offers: ResourceOffers =
+    SchedulerActor.ResourceOffers((1 to numberOfOffersPerCycle).map(_ => offer))
 
-    val offers = SchedulerActor.ResourceOffers((1 to numberOfOffersPerCycle).map(_ => offer))
+  //scalastyle:on
+  override def preStart(): Unit = {
+    super.preStart()
+    scheduler = context.actorOf(schedulerProps, "scheduler")
 
     import context.dispatcher
     periodicOffers = Some(
-      context.system.scheduler.schedule(1.second, 1.seconds, scheduler, offers)
+      context.system.scheduler.schedule(1.second, 1.seconds)(scheduler ! offers)
     )
   }
 
@@ -101,6 +108,13 @@ class DriverActor(schedulerProps: Props) extends Actor {
         scheduler ! TaskStatus.newBuilder()
           .setSource(TaskStatus.Source.SOURCE_EXECUTOR)
           .setTaskId(taskInfo.getTaskId)
+          .setState(TaskState.TASK_STAGING)
+          .build()
+      }
+      tasks.foreach { taskInfo: TaskInfo =>
+        scheduler ! TaskStatus.newBuilder()
+          .setSource(TaskStatus.Source.SOURCE_EXECUTOR)
+          .setTaskId(taskInfo.getTaskId)
           .setState(TaskState.TASK_RUNNING)
           .build()
       }
@@ -113,6 +127,8 @@ class DriverActor(schedulerProps: Props) extends Actor {
         .setState(TaskState.TASK_KILLED)
         .build()
 
-    case _ =>
+    case ReviveOffers => scheduler ! offers
+
+    case _            =>
   }
 }

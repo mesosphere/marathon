@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.health.HealthCheck
@@ -20,7 +21,6 @@ import scala.collection.immutable.Seq
 
 class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => TaskID,
-                  taskTracker: TaskTracker,
                   config: MarathonConf,
                   mapper: ObjectMapper = new ObjectMapper()) {
 
@@ -28,7 +28,7 @@ class TaskBuilder(app: AppDefinition,
 
   val log = Logger.getLogger(getClass.getName)
 
-  def buildIfMatches(offer: Offer): Option[(TaskInfo, Seq[Long])] = {
+  def buildIfMatches(offer: Offer, runningTasks: => Set[MarathonTask]): Option[(TaskInfo, Seq[Long])] = {
 
     val acceptedResourceRoles: Set[String] = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
 
@@ -37,7 +37,7 @@ class TaskBuilder(app: AppDefinition,
     }
 
     ResourceMatcher.matchResources(
-      offer, app, taskTracker.get(app.id),
+      offer, app, runningTasks,
       acceptedResourceRoles = acceptedResourceRoles) match {
 
         case Some(ResourceMatch(cpu, mem, disk, ranges)) =>

@@ -3,9 +3,10 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HealthStatusChanged, MarathonHealthCheckEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.TaskTracker
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._
@@ -17,7 +18,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   def eventBus: EventStream
   def scaleTo: Int
   def nrToStart: Int
-  def taskQueue: TaskQueue
+  def taskQueue: LaunchQueue
   def driver: SchedulerDriver
   def scheduler: SchedulerActions
   def taskTracker: TaskTracker

@@ -9,12 +9,13 @@ import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, DeploymentStep, StopApplication }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
@@ -22,6 +23,7 @@ import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
+import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
@@ -43,7 +45,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var deploymentRepo: DeploymentRepository = _
   var hcManager: HealthCheckManager = _
   var tracker: TaskTracker = _
-  var queue: TaskQueue = _
+  var queue: LaunchQueue = _
   var frameworkIdUtil: FrameworkIdUtil = _
   var driver: SchedulerDriver = _
   var holder: MarathonSchedulerDriverHolder = _
@@ -65,7 +67,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     deploymentRepo = mock[DeploymentRepository]
     hcManager = mock[HealthCheckManager]
     tracker = mock[TaskTracker]
-    queue = spy(new TaskQueue)
+    queue = mock[LaunchQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     storage = mock[StorageProvider]
     taskFailureEventRepository = mock[TaskFailureRepository]
@@ -357,9 +359,14 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(repo.store(any())).thenReturn(Future.successful(app))
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
 
-    system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
+    when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString))
+        Status.DRIVER_RUNNING
+      }
+    })
 
-    queue.rateLimiter.addDelay(app)
+    system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
     val schedulerActor = createActor()
     try {
@@ -368,20 +375,21 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       expectMsg(DeploymentStarted(plan))
 
-      awaitAssert(verify(repo).store(app.copy(instances = 0)))
+      Mockito.verify(queue, timeout(1000)).resetDelay(app)
 
       system.eventStream.unsubscribe(probe.ref)
     }
     finally {
       stopActor(schedulerActor)
     }
+
+    Mockito.verify(queue).resetDelay(app)
   }
 
   test("Stopping an app sets instance count to 0 before removing the app completely") {
     val probe = TestProbe()
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val origGroup = Group(PathId("/foo/bar"), Set(app))
     val targetGroup = Group(PathId("/foo/bar"), Set())
 
@@ -400,8 +408,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
-    queue.rateLimiter.addDelay(app)
-
     val schedulerActor = createActor()
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
@@ -409,7 +415,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       expectMsg(DeploymentStarted(plan))
 
-      awaitCond(queue.rateLimiter.getDelay(app).isOverdue(), 200.millis)
+      verify(repo, timeout(1000)).store(app.copy(instances = 0))
 
       system.eventStream.unsubscribe(probe.ref)
     }

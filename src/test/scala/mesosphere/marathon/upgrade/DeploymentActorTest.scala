@@ -5,11 +5,12 @@ import java.util.UUID
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
 import mesosphere.marathon.Protos.MarathonTask
@@ -35,7 +36,7 @@ class DeploymentActorTest
 
   var repo: AppRepository = _
   var tracker: TaskTracker = _
-  var queue: TaskQueue = _
+  var queue: LaunchQueue = _
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
   var storage: StorageProvider = _
@@ -47,7 +48,7 @@ class DeploymentActorTest
     driver = mock[SchedulerDriver]
     repo = mock[AppRepository]
     tracker = mock[TaskTracker]
-    queue = mock[TaskQueue]
+    queue = mock[LaunchQueue]
     scheduler = mock[SchedulerActions]
     storage = mock[StorageProvider]
     hcManager = mock[HealthCheckManager]

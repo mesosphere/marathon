@@ -15,17 +15,16 @@ import scala.collection.JavaConverters._
 
 class DefaultTaskFactory @Inject() (
   taskIdUtil: TaskIdUtil,
-  taskTracker: TaskTracker,
   config: MarathonConf,
   @Named("restMapper") mapper: ObjectMapper)
     extends TaskFactory {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  def newTask(app: AppDefinition, offer: Offer): Option[CreatedTask] = {
+  def newTask(app: AppDefinition, offer: Offer, runningTasks: Set[MarathonTask]): Option[CreatedTask] = {
     log.debug("newTask")
 
-    new TaskBuilder(app, taskIdUtil.newTaskId, taskTracker, config, mapper).buildIfMatches(offer).map {
+    new TaskBuilder(app, taskIdUtil.newTaskId, config, mapper).buildIfMatches(offer, runningTasks).map {
       case (taskInfo, ports) =>
         CreatedTask(
           taskInfo,

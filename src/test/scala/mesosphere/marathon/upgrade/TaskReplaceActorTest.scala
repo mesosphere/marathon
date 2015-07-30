@@ -4,11 +4,12 @@ import akka.actor.ActorSystem
 import akka.testkit.{ TestActorRef, TestKit }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.TaskUpgradeCanceledException
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.TaskTracker
 import org.apache.mesos.Protos.{ Status, TaskID }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
@@ -40,7 +41,7 @@ class TaskReplaceActorTest
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
-    val queue = mock[TaskQueue]
+    val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
@@ -78,7 +79,7 @@ class TaskReplaceActorTest
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
-    val queue = mock[TaskQueue]
+    val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
@@ -112,7 +113,7 @@ class TaskReplaceActorTest
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
-    val queue = mock[TaskQueue]
+    val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskC))
@@ -155,7 +156,7 @@ class TaskReplaceActorTest
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
-    val queue = mock[TaskQueue]
+    val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     var oldTaskCount = 3
@@ -221,7 +222,7 @@ class TaskReplaceActorTest
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
-    val queue = mock[TaskQueue]
+    val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     var oldTaskCount = 3
@@ -290,7 +291,7 @@ class TaskReplaceActorTest
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
-    val queue = mock[TaskQueue]
+    val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     var oldTaskCount = 3
@@ -358,7 +359,7 @@ class TaskReplaceActorTest
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
-    val queue = mock[TaskQueue]
+    val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     var oldTaskCount = 3
@@ -419,7 +420,7 @@ class TaskReplaceActorTest
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
-    val queue = mock[TaskQueue]
+    val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))

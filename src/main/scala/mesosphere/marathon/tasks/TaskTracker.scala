@@ -66,6 +66,8 @@ class TaskTracker @Inject() (
 
   def created(appId: PathId, task: MarathonTask): Unit = {
     // Keep this here so running() can pick it up
+    // FIXME: Should be persisted here for task reconciliation
+    //        Wont fix for now since this should be completely remodeled in #462
     getInternal(appId) += (task.getId -> task)
   }
 
@@ -92,10 +94,9 @@ class TaskTracker @Inject() (
     }
   }
 
-  def terminated(appId: PathId, status: TaskStatus): Future[Option[MarathonTask]] = {
+  def terminated(appId: PathId, taskId: String): Future[Option[MarathonTask]] = {
     val appTasks = getInternal(appId)
     val app = apps(appId)
-    val taskId = status.getTaskId.getValue
 
     appTasks.get(taskId) match {
       case Some(task) =>

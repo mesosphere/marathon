@@ -1,6 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import java.net.URL
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ DeploymentStatus, DeploymentStepSuccess, DeploymentStepFailure }
 import mesosphere.mesos.Constraints
 
@@ -16,7 +17,7 @@ import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ PathId, AppDefinition, AppRepository }
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentStepInfo, DeploymentFinished }
 
 class DeploymentActor(
@@ -27,7 +28,7 @@ class DeploymentActor(
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
     taskTracker: TaskTracker,
-    taskQueue: TaskQueue,
+    taskQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream) extends Actor with ActorLogging {

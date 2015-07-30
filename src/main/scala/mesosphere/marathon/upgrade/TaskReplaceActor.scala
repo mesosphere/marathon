@@ -3,9 +3,10 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.{ TaskTracker, TaskQueue }
+import mesosphere.marathon.tasks.TaskTracker
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.{ Protos, SchedulerDriver }
 
@@ -14,7 +15,7 @@ import scala.concurrent.Promise
 
 class TaskReplaceActor(
     driver: SchedulerDriver,
-    taskQueue: TaskQueue,
+    taskQueue: LaunchQueue,
     taskTracker: TaskTracker,
     eventBus: EventStream,
     app: AppDefinition,

@@ -269,7 +269,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     }
     def startTask_i(i: Int): MarathonTask = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: MarathonTask) =
-      Await.result(taskTracker.terminated(appId, taskStatus(task, mesos.TaskState.TASK_FAILED)), 2.second)
+      Await.result(taskTracker.terminated(appId, task.getId), 2.second)
 
     // one other task of another app
     val otherAppId = "other".toRootPath
