@@ -176,10 +176,9 @@ documentation for more details on how Docker handles networking.
 
 ### Using a Private Docker Repository
 
-To supply credentials to pull from a private repository, add a `.dockercfg` to
-the `uris` field of your app. The `$HOME` environment variable will then be set
-to the same value as `$MESOS_SANDBOX` so Docker can automatically pick up the
-config file.
+See the [private registry]({{ site.baseurl }}/docs/native-docker-private-registry.html)
+documentation for more details on how to initiate a `docker pull` from a private docker registry
+using marathon.
 
 ### Advanced Usage
 
