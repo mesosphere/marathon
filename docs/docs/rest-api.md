@@ -12,7 +12,7 @@ title: REST API
   * [GET /v2/apps/{appId}/versions/{version}](#get-v2-apps-appid-versions-version): List the configuration of the application with id `appId` at version `version`.
   * [PUT /v2/apps/{appId}](#put-v2-apps-appid): Change config of the app
     `appId`
-  * [POST v2-apps/{appId}/restart](#post-v2-apps-appid-restart): Rolling restart of all tasks of the given app
+  * [POST /v2/apps/{appId}/restart](#post-v2-apps-appid-restart): Rolling restart of all tasks of the given app
   * [DELETE /v2/apps/{appId}](#delete-v2-apps-appid): Destroy app `appId`
   * [GET /v2/apps/{appId}/tasks](#get-v2-apps-appid-tasks): List running tasks
     for app `appId`
