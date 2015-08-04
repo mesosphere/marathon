@@ -18849,6 +18849,20 @@ public final class Protos {
      */
     com.google.protobuf.ByteString
         getTimestampBytes();
+
+    // optional .mesos.SlaveID slaveId = 8;
+    /**
+     * <code>optional .mesos.SlaveID slaveId = 8;</code>
+     */
+    boolean hasSlaveId();
+    /**
+     * <code>optional .mesos.SlaveID slaveId = 8;</code>
+     */
+    org.apache.mesos.Protos.SlaveID getSlaveId();
+    /**
+     * <code>optional .mesos.SlaveID slaveId = 8;</code>
+     */
+    org.apache.mesos.Protos.SlaveIDOrBuilder getSlaveIdOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.TaskFailure}
@@ -18948,6 +18962,19 @@ public final class Protos {
             case 58: {
               bitField0_ |= 0x00000040;
               timestamp_ = input.readBytes();
+              break;
+            }
+            case 66: {
+              org.apache.mesos.Protos.SlaveID.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000080) == 0x00000080)) {
+                subBuilder = slaveId_.toBuilder();
+              }
+              slaveId_ = input.readMessage(org.apache.mesos.Protos.SlaveID.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(slaveId_);
+                slaveId_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000080;
               break;
             }
           }
@@ -19243,6 +19270,28 @@ public final class Protos {
       }
     }
 
+    // optional .mesos.SlaveID slaveId = 8;
+    public static final int SLAVEID_FIELD_NUMBER = 8;
+    private org.apache.mesos.Protos.SlaveID slaveId_;
+    /**
+     * <code>optional .mesos.SlaveID slaveId = 8;</code>
+     */
+    public boolean hasSlaveId() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional .mesos.SlaveID slaveId = 8;</code>
+     */
+    public org.apache.mesos.Protos.SlaveID getSlaveId() {
+      return slaveId_;
+    }
+    /**
+     * <code>optional .mesos.SlaveID slaveId = 8;</code>
+     */
+    public org.apache.mesos.Protos.SlaveIDOrBuilder getSlaveIdOrBuilder() {
+      return slaveId_;
+    }
+
     private void initFields() {
       appId_ = "";
       taskId_ = org.apache.mesos.Protos.TaskID.getDefaultInstance();
@@ -19251,6 +19300,7 @@ public final class Protos {
       host_ = "";
       version_ = "";
       timestamp_ = "";
+      slaveId_ = org.apache.mesos.Protos.SlaveID.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -19281,6 +19331,12 @@ public final class Protos {
         memoizedIsInitialized = 0;
         return false;
       }
+      if (hasSlaveId()) {
+        if (!getSlaveId().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -19308,6 +19364,9 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeBytes(7, getTimestampBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeMessage(8, slaveId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -19345,6 +19404,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(7, getTimestampBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, slaveId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -19455,6 +19518,7 @@ public final class Protos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getTaskIdFieldBuilder();
+          getSlaveIdFieldBuilder();
         }
       }
       private static Builder create() {
@@ -19481,6 +19545,12 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000020);
         timestamp_ = "";
         bitField0_ = (bitField0_ & ~0x00000040);
+        if (slaveIdBuilder_ == null) {
+          slaveId_ = org.apache.mesos.Protos.SlaveID.getDefaultInstance();
+        } else {
+          slaveIdBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
@@ -19541,6 +19611,14 @@ public final class Protos {
           to_bitField0_ |= 0x00000040;
         }
         result.timestamp_ = timestamp_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        if (slaveIdBuilder_ == null) {
+          result.slaveId_ = slaveId_;
+        } else {
+          result.slaveId_ = slaveIdBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -19588,6 +19666,9 @@ public final class Protos {
           timestamp_ = other.timestamp_;
           onChanged();
         }
+        if (other.hasSlaveId()) {
+          mergeSlaveId(other.getSlaveId());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -19616,6 +19697,12 @@ public final class Protos {
         if (!getTaskId().isInitialized()) {
           
           return false;
+        }
+        if (hasSlaveId()) {
+          if (!getSlaveId().isInitialized()) {
+            
+            return false;
+          }
         }
         return true;
       }
@@ -20160,6 +20247,123 @@ public final class Protos {
         timestamp_ = value;
         onChanged();
         return this;
+      }
+
+      // optional .mesos.SlaveID slaveId = 8;
+      private org.apache.mesos.Protos.SlaveID slaveId_ = org.apache.mesos.Protos.SlaveID.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.SlaveID, org.apache.mesos.Protos.SlaveID.Builder, org.apache.mesos.Protos.SlaveIDOrBuilder> slaveIdBuilder_;
+      /**
+       * <code>optional .mesos.SlaveID slaveId = 8;</code>
+       */
+      public boolean hasSlaveId() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional .mesos.SlaveID slaveId = 8;</code>
+       */
+      public org.apache.mesos.Protos.SlaveID getSlaveId() {
+        if (slaveIdBuilder_ == null) {
+          return slaveId_;
+        } else {
+          return slaveIdBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .mesos.SlaveID slaveId = 8;</code>
+       */
+      public Builder setSlaveId(org.apache.mesos.Protos.SlaveID value) {
+        if (slaveIdBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          slaveId_ = value;
+          onChanged();
+        } else {
+          slaveIdBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.SlaveID slaveId = 8;</code>
+       */
+      public Builder setSlaveId(
+          org.apache.mesos.Protos.SlaveID.Builder builderForValue) {
+        if (slaveIdBuilder_ == null) {
+          slaveId_ = builderForValue.build();
+          onChanged();
+        } else {
+          slaveIdBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.SlaveID slaveId = 8;</code>
+       */
+      public Builder mergeSlaveId(org.apache.mesos.Protos.SlaveID value) {
+        if (slaveIdBuilder_ == null) {
+          if (((bitField0_ & 0x00000080) == 0x00000080) &&
+              slaveId_ != org.apache.mesos.Protos.SlaveID.getDefaultInstance()) {
+            slaveId_ =
+              org.apache.mesos.Protos.SlaveID.newBuilder(slaveId_).mergeFrom(value).buildPartial();
+          } else {
+            slaveId_ = value;
+          }
+          onChanged();
+        } else {
+          slaveIdBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.SlaveID slaveId = 8;</code>
+       */
+      public Builder clearSlaveId() {
+        if (slaveIdBuilder_ == null) {
+          slaveId_ = org.apache.mesos.Protos.SlaveID.getDefaultInstance();
+          onChanged();
+        } else {
+          slaveIdBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000080);
+        return this;
+      }
+      /**
+       * <code>optional .mesos.SlaveID slaveId = 8;</code>
+       */
+      public org.apache.mesos.Protos.SlaveID.Builder getSlaveIdBuilder() {
+        bitField0_ |= 0x00000080;
+        onChanged();
+        return getSlaveIdFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .mesos.SlaveID slaveId = 8;</code>
+       */
+      public org.apache.mesos.Protos.SlaveIDOrBuilder getSlaveIdOrBuilder() {
+        if (slaveIdBuilder_ != null) {
+          return slaveIdBuilder_.getMessageOrBuilder();
+        } else {
+          return slaveId_;
+        }
+      }
+      /**
+       * <code>optional .mesos.SlaveID slaveId = 8;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.SlaveID, org.apache.mesos.Protos.SlaveID.Builder, org.apache.mesos.Protos.SlaveIDOrBuilder> 
+          getSlaveIdFieldBuilder() {
+        if (slaveIdBuilder_ == null) {
+          slaveIdBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.mesos.Protos.SlaveID, org.apache.mesos.Protos.SlaveID.Builder, org.apache.mesos.Protos.SlaveIDOrBuilder>(
+                  slaveId_,
+                  getParentForChildren(),
+                  isClean());
+          slaveId_ = null;
+        }
+        return slaveIdBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.TaskFailure)
@@ -21017,14 +21221,15 @@ public final class Protos {
       "ymentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versi" +
       "on\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosphere." +
       "marathon.GroupDefinition\0224\n\006target\030\005 \002(\013" +
-      "2$.mesosphere.marathon.GroupDefinition\"\245" +
+      "2$.mesosphere.marathon.GroupDefinition\"\306" +
       "\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_i" +
       "d\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020." +
       "mesos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004ho" +
       "st\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp" +
-      "\030\007 \002(\t\"9\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004" +
-      "uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014B\035\n\023mesosphere.",
-      "marathonB\006Protos"
+      "\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"" +
+      "9\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 ",
+      "\002(\014\022\r\n\005value\030\003 \002(\014B\035\n\023mesosphere.maratho" +
+      "nB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21126,7 +21331,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_TaskFailure_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_TaskFailure_descriptor,
-              new java.lang.String[] { "AppId", "TaskId", "State", "Message", "Host", "Version", "Timestamp", });
+              new java.lang.String[] { "AppId", "TaskId", "State", "Message", "Host", "Version", "Timestamp", "SlaveId", });
           internal_static_mesosphere_marathon_ZKStoreEntry_descriptor =
             getDescriptor().getMessageTypes().get(14);
           internal_static_mesosphere_marathon_ZKStoreEntry_fieldAccessorTable = new

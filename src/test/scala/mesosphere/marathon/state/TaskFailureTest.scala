@@ -3,6 +3,8 @@ package mesosphere.marathon.state
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos
 import mesosphere.marathon.state.PathId._
+import mesosphere.mesos.protos.Implicits.slaveIDToProto
+import mesosphere.mesos.protos.SlaveID
 import org.scalatest.Matchers
 import org.apache.mesos.{ Protos => mesos }
 
@@ -49,6 +51,25 @@ class TaskFailureTest extends MarathonSpec with Matchers {
 
     val taskFailure = TaskFailure(proto)
     assert(taskFailure == f.taskFailure)
+  }
+
+  test("ConstructFromProto with SlaveID") {
+    val taskFailureFixture = new Fixture()
+      .taskFailure.copy(slaveId = Option(slaveIDToProto(SlaveID("slave id"))))
+
+    val proto = Protos.TaskFailure.newBuilder
+      .setAppId(taskFailureFixture.appId.toString)
+      .setTaskId(taskFailureFixture.taskId)
+      .setState(taskFailureFixture.state)
+      .setMessage(taskFailureFixture.message)
+      .setHost(taskFailureFixture.host)
+      .setVersion(taskFailureFixture.version.toString)
+      .setTimestamp(taskFailureFixture.timestamp.toString)
+      .setSlaveId(taskFailureFixture.slaveId.get)
+      .build
+
+    val taskFailure = TaskFailure(proto)
+    assert(taskFailure == taskFailureFixture)
   }
 
   test("SerializationRoundtrip") {
