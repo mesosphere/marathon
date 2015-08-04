@@ -68,6 +68,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[ZooKeeperClient]).toInstance(zk)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
+    bind(classOf[OfferReviverConf]).toInstance(conf)
+    bind(classOf[IterativeOfferMatcherConfig]).toInstance(conf)
 
     // needs to be eager to break circular dependencies
     bind(classOf[SchedulerCallbacks]).to(classOf[SchedulerCallbacksServiceAdapter]).asEagerSingleton()
@@ -114,10 +116,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
     system.actorOf(Props(new HttpEventStreamActor(leaderInfo, metrics, handleStreamProps)), "HttpEventStream")
   }
-
-  @Provides
-  @Singleton
-  def provideIterativeOfferMatcherConfig(): IterativeOfferMatcherConfig = conf
 
   @Provides
   @Singleton
@@ -220,6 +218,27 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         eventBus
       ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
+  }
+
+  @Named(OfferReviverActor.NAME)
+  @Provides
+  @Singleton
+  @Inject
+  def provideOfferReviverActor(
+    system: ActorSystem,
+    conf: OfferReviverConf,
+    @Named(EventModule.busName) eventBus: EventStream,
+    driverHolder: MarathonSchedulerDriverHolder): ActorRef =
+    {
+      val props = OfferReviverActor.props(conf, eventBus, driverHolder)
+      system.actorOf(props, OfferReviverActor.NAME)
+    }
+
+  @Provides
+  @Singleton
+  @Inject
+  def provideOfferReviver(@Named(OfferReviverActor.NAME) reviverRef: ActorRef): OfferReviver = {
+    new OfferReviverDelegate(reviverRef)
   }
 
   @Named(ModuleNames.NAMED_HOST_PORT)

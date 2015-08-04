@@ -2,6 +2,8 @@ package mesosphere.marathon.tasks
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.google.inject.Inject
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.util._
 import org.apache.log4j.Logger
@@ -39,7 +41,7 @@ object TaskQueue {
 /**
   * Utility class to stage tasks before they get scheduled
   */
-class TaskQueue {
+class TaskQueue @Inject() (conf: MarathonConf, offerReviver: OfferReviver) {
 
   import mesosphere.marathon.tasks.TaskQueue._
 
@@ -70,7 +72,11 @@ class TaskQueue {
     val queuedTask = apps.getOrElseUpdate(
       (app.id, app.version),
       QueuedTask(app, new AtomicInteger(0)))
-    queuedTask.count.addAndGet(count)
+    val oldValue = queuedTask.count.getAndAdd(count)
+    if (conf.reviveOffersForNewApps() && oldValue == 0) {
+      log.info("New application definition in queue, reviving offers.")
+      offerReviver.reviveOffers()
+    }
   }
 
   /**

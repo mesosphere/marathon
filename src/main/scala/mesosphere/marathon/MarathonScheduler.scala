@@ -38,6 +38,7 @@ class MarathonScheduler @Inject() (
     taskIdUtil: TaskIdUtil,
     system: ActorSystem,
     config: MarathonConf,
+    offerReviver: OfferReviver,
     schedulerCallbacks: SchedulerCallbacks) extends Scheduler {
 
   private[this] val log = Logger.getLogger(getClass.getName)
@@ -111,12 +112,23 @@ class MarathonScheduler @Inject() (
     val killedForFailingHealthChecks =
       status.getState == TASK_KILLED && status.hasHealthy && !status.getHealthy
 
+    lazy val maybeApp: Future[Option[AppDefinition]] = appRepo.currentVersion(appId)
+
     if (status.getState == TASK_ERROR || status.getState == TASK_FAILED || killedForFailingHealthChecks)
-      appRepo.currentVersion(appId).foreach {
+      maybeApp.foreach {
         _.foreach(taskQueue.rateLimiter.addDelay)
       }
     status.getState match {
       case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
+        if (config.reviveOffersForNewApps()) {
+          maybeApp.foreach(_.foreach { (app: AppDefinition) =>
+            if (app.constraints.nonEmpty) {
+              log.info(s"Reviving offers because a task was killed for an app with a constraint (${app.id}).")
+              offerReviver.reviveOffers()
+            }
+          })
+        }
+
         // Remove from our internal list
         taskTracker.terminated(appId, status).foreach { taskOption =>
           taskOption match {

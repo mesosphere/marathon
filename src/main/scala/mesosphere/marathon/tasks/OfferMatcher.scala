@@ -27,6 +27,11 @@ trait OfferMatcher {
 }
 
 trait IterativeOfferMatcherConfig extends ScallopConf {
+  lazy val rejectOfferDuration = opt[Long]("reject_offer_duration",
+    descr = "(Default: Use mesos default of 5 seconds) " +
+      "The duration (milliseconds) for which to reject offers by default",
+    default = None)
+
   lazy val maxTasksPerOffer = opt[Int]("max_tasks_per_offer",
     descr = "Maximally launch this number of tasks per offer.",
     default = Some(1),
@@ -190,6 +195,10 @@ class IterativeOfferMatcher @Inject() (
   }
 
   private[tasks] def commitOfferUsagesToDriver(driver: SchedulerDriver, finalOfferUsage: OfferUsages): Unit = {
+    val numberOfTasksToLaunch: Int = finalOfferUsage.usages.map(_.scheduledTasks.size).sum
+    // if the taskLaunchLimit was hit, we might need to get offers back again faster
+    val taskLaunchLimitHit: Boolean = numberOfTasksToLaunch >= maxTasksPerCycle
+
     var usedOffers: Long = 0
     var launchedTasks: Long = 0
     var declinedOffers: Long = 0
@@ -199,8 +208,8 @@ class IterativeOfferMatcher @Inject() (
         val offerIds: util.Collection[OfferID] = Seq(offer.getId).asJavaCollection
         val tasks: util.Collection[TaskInfo] = offerUsage.scheduledTasks.asJavaCollection
         if (log.isDebugEnabled) {
-          log.debug("for offer {} launch tasks {}",
-            Seq(offer.getId, tasks.asScala.map(_.getTaskId.getValue).mkString(", ")): _*)
+          log.debug("Offer [{}]. Launch tasks {}",
+            Seq(offer.getId.getValue, tasks.asScala.map(_.getTaskId.getValue).mkString(", ")): _*)
         }
         driver.launchTasks(offerIds, tasks)
         metrics.tasksLaunchedPerOffer.update(tasks.size())
@@ -208,8 +217,21 @@ class IterativeOfferMatcher @Inject() (
         launchedTasks += tasks.size()
       }
       else {
-        log.debug("declining offer {}", offer.getId)
-        driver.declineOffer(offer.getId)
+        iterativeOfferMatcherConfig.rejectOfferDuration.get match {
+          case Some(durationInMs) if !taskLaunchLimitHit =>
+            val filter = Filters.newBuilder().setRefuseSeconds(durationInMs / 1000.0).build()
+            log.info(s"Offer [${offer.getId.getValue}]. Decline with filter refuseSeconds=${filter.getRefuseSeconds}" +
+              s"(use --${iterativeOfferMatcherConfig.rejectOfferDuration.name} to reconfigure)")
+            driver.declineOffer(offer.getId, filter)
+          case Some(durationInMs) if taskLaunchLimitHit =>
+            log.info(s"Offer [${offer.getId.getValue}]. " +
+              s"Task launch limit reached. Decline with default filter refuseSeconds.")
+            driver.declineOffer(offer.getId)
+          case None =>
+            log.info(s"Offer [${offer.getId.getValue}]. Decline with default filter refuseSeconds " +
+              s"(use --${iterativeOfferMatcherConfig.rejectOfferDuration.name} to configure)")
+            driver.declineOffer(offer.getId)
+        }
         declinedOffers += 1
       }
     }

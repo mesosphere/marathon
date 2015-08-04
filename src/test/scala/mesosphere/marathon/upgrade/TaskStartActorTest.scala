@@ -9,8 +9,14 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
-import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
+import mesosphere.marathon.tasks.{ OfferReviverDummy, TaskIdUtil, TaskQueue, TaskTracker }
+import mesosphere.marathon.{
+  MarathonTestHelper,
+  MarathonSchedulerDriverHolder,
+  MarathonConf,
+  SchedulerActions,
+  TaskUpgradeCanceledException
+}
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ spy, times, verify, when }
@@ -37,7 +43,7 @@ class TaskStartActorTest
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
-    taskQueue = spy(new TaskQueue)
+    taskQueue = spy(new TaskQueue(MarathonTestHelper.defaultConfig(), OfferReviverDummy()))
     metrics = new Metrics(new MetricRegistry)
     taskTracker = spy(new TaskTracker(new InMemoryStore, mock[MarathonConf], metrics))
   }

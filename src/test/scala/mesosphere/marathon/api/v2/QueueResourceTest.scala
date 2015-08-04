@@ -9,6 +9,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskQueue.QueuedTask
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import mesosphere.marathon.tasks.TaskQueue
+import mesosphere.marathon.tasks.{ OfferReviver, TaskQueue }
 import mesosphere.util.Mockito
 import org.scalatest.Matchers
 import play.api.libs.json._

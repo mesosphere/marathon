@@ -42,7 +42,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     repo = mock[AppRepository]
     hcManager = mock[HealthCheckManager]
     tracker = mock[TaskTracker]
-    queue = spy(new TaskQueue)
+    queue = spy(new TaskQueue(offerReviver = mock[OfferReviver], conf = MarathonTestHelper.defaultConfig()))
     frameworkIdUtil = mock[FrameworkIdUtil]
     config = defaultConfig(maxTasksPerOffer = 10)
     taskIdUtil = TaskIdUtil
@@ -64,6 +64,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       taskIdUtil,
       mock[ActorSystem],
       config,
+      offerReviver = mock[OfferReviver],
       new SchedulerCallbacks {
         override def disconnected(): Unit = {}
       }
@@ -240,7 +241,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
   test("Publishes event when disconnected") {
     val driver = mock[SchedulerDriver]
 
-    eventBus.subscribe(probe.ref, classOf[SchedulerDisconnectedEvent])
+    eventStream.subscribe(probe.ref, classOf[SchedulerDisconnectedEvent])
 
     scheduler.disconnected(driver)
 
@@ -250,7 +251,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
       assert(msg.eventType == "scheduler_reregistered_event")
     }
     finally {
-      eventBus.unsubscribe(probe.ref)
+      eventStream.unsubscribe(probe.ref)
     }
   }
   */

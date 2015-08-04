@@ -6,10 +6,10 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.IterativeOfferMatcher.{ OfferUsage, OfferUsages }
-import mesosphere.marathon.{ MarathonConf, MarathonTestHelper }
+import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonConf, MarathonTestHelper }
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
-import org.apache.mesos.Protos.{ Offer, OfferID, TaskInfo }
+import org.apache.mesos.Protos.{ Filters, Offer, OfferID, TaskInfo }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.{ ArgumentCaptor, Mockito }
 import org.scalatest.{ FunSuite, GivenWhenThen, ShouldMatchers }
@@ -28,10 +28,16 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
   var matcher: IterativeOfferMatcher = _
   var metrics: Metrics = _
 
-  def createEnv(maxTasksPerOffer: Int, maxTasksPerOfferCycle: Int = 1000): Unit = {
+  def createEnv(
+    maxTasksPerOffer: Int,
+    maxTasksPerOfferCycle: Int = 1000,
+    rejectOfferDuration: Option[Long] = Some(3600000)): Unit = {
     config = MarathonTestHelper.defaultConfig(
-      maxTasksPerOffer = maxTasksPerOffer, maxTasksPerOfferCycle = maxTasksPerOfferCycle)
-    taskQueue = new TaskQueue
+      maxTasksPerOffer = maxTasksPerOffer,
+      maxTasksPerOfferCycle = maxTasksPerOfferCycle,
+      rejectOfferDuration = rejectOfferDuration
+    )
+    taskQueue = new TaskQueue(MarathonTestHelper.defaultConfig(), offerReviver = OfferReviverDummy())
     state = new InMemoryStore
     metrics = new Metrics(new MetricRegistry)
     iterativeOfferMatcherMetrics = new IterativeOfferMatcherMetrics(metrics)
@@ -172,6 +178,65 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     When("committing usages")
     matcher.commitOfferUsagesToDriver(driver, usages)
 
+    Then("expect a declineOffer call with configured timeout")
+    val filter: Filters = Filters.newBuilder().setRefuseSeconds(3600.0).build()
+    Mockito.verify(driver, Mockito.times(1)).declineOffer(offer.getId, filter)
+    Mockito.verifyNoMoreInteractions(driver)
+  }
+
+  test("Committing launch tasks/ decline offers to driver, maxTasksLimitPerOfferCycle reached") {
+    Given("a in-memory matcher")
+    createEnv(maxTasksPerOffer = 1, maxTasksPerOfferCycle = 1)
+    val driver = Mockito.mock(classOf[SchedulerDriver], "schedulerDriver")
+
+    Given("one unused offer")
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 10).build()
+    val offer2: Offer = offer.toBuilder.setId(OfferID.newBuilder().setValue("123")).build()
+    val taskInfo: TaskInfo = taskFactory.newTask(app, offer).get.mesosTask
+    val usages = OfferUsages(
+      depleted = Vector(
+        OfferUsage(
+          offer,
+          Vector(taskInfo)
+        ),
+        OfferUsage(offer2)
+      )
+    )
+
+    When("committing usages")
+    matcher.commitOfferUsagesToDriver(driver, usages)
+
+    Then("expect a launchTasks call")
+    val launchTasksOffersCaptor = ArgumentCaptor.forClass(classOf[java.util.Collection[OfferID]])
+    val taskInfosCaptor = ArgumentCaptor.forClass(classOf[java.util.Collection[TaskInfo]])
+    Mockito.verify(driver, Mockito.times(1)).launchTasks(launchTasksOffersCaptor.capture(), taskInfosCaptor.capture())
+    And("a declineOffer WITHOUT timeout")
+    Mockito.verify(driver, Mockito.times(1)).declineOffer(offer2.getId)
+    Mockito.verifyNoMoreInteractions(driver)
+
+    launchTasksOffersCaptor.getValue.asScala.toSeq should be(Seq(offer.getId))
+    taskInfosCaptor.getValue.asScala.toSeq should be(Seq(taskInfo))
+  }
+
+  test("Committing decline to driver without configured reject timeout") {
+    Given("a in-memory matcher")
+    createEnv(maxTasksPerOffer = 10, rejectOfferDuration = None)
+    val driver = Mockito.mock(classOf[SchedulerDriver], "schedulerDriver")
+
+    Given("one unused offer")
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 10).build()
+    val usages = OfferUsages(
+      depleted = Vector(
+        OfferUsage(
+          offer,
+          Vector()
+        )
+      )
+    )
+
+    When("committing usages")
+    matcher.commitOfferUsagesToDriver(driver, usages)
+
     Then("expect a declineOffer call")
     Mockito.verify(driver, Mockito.times(1)).declineOffer(offer.getId)
     Mockito.verifyNoMoreInteractions(driver)
@@ -233,7 +298,8 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
     val launchTasksOffersCaptor = ArgumentCaptor.forClass(classOf[java.util.Collection[OfferID]])
     val taskInfosCaptor = ArgumentCaptor.forClass(classOf[java.util.Collection[TaskInfo]])
     Mockito.verify(driver, Mockito.times(1)).launchTasks(launchTasksOffersCaptor.capture(), taskInfosCaptor.capture())
-    Mockito.verify(driver, Mockito.times(1)).declineOffer(offer2.getId)
+    val filter: Filters = Filters.newBuilder().setRefuseSeconds(3600.0).build()
+    Mockito.verify(driver, Mockito.times(1)).declineOffer(offer2.getId, filter)
     Mockito.verifyNoMoreInteractions(driver)
 
     launchTasksOffersCaptor.getValue.asScala.toSeq should be(Seq(offer.getId))

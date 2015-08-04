@@ -1,6 +1,6 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSchedulerDriverHolder, MarathonSpec }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId.StringPathId
@@ -14,7 +14,7 @@ class TaskQueueTest extends MarathonSpec {
   var queue: TaskQueue = _
 
   before {
-    queue = new TaskQueue()
+    queue = new TaskQueue(MarathonTestHelper.defaultConfig(), OfferReviverDummy())
   }
 
   def buildConstraint(field: String, operator: String, value: String = ""): Constraint = {
