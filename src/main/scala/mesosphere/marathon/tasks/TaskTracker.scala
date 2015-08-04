@@ -75,7 +75,7 @@ class TaskTracker @Inject() (
 
   def running(appId: PathId, status: TaskStatus): Future[MarathonTask] = {
     val taskId = status.getTaskId.getValue
-    getInternal(appId).get(taskId) match {
+    fetchTaskById(appId, taskId) match {
       case Some(oldTask) if !oldTask.hasStartedAt => // staged
         val task = oldTask.toBuilder
           .setStartedAt(System.currentTimeMillis)
