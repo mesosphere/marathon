@@ -93,6 +93,7 @@ class MarathonScheduler @Inject() (
   }
 
   override def statusUpdate(driver: SchedulerDriver, status: TaskStatus): Unit = {
+    val statusUpdateStart = System.currentTimeMillis()
 
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
@@ -162,6 +163,11 @@ class MarathonScheduler @Inject() (
             driver.killTask(status.getTaskId)
         }
     }
+
+    val statusUpdateDuration = System.currentTimeMillis() - statusUpdateStart
+    log.info(
+      s"Finished processing status update for task ${status.getTaskId.getValue}. " +
+        s"Took $statusUpdateDuration ms")
   }
 
   override def frameworkMessage(
