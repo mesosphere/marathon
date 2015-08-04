@@ -2,13 +2,15 @@ package mesosphere.marathon
 
 import javax.inject.{ Inject, Named }
 
+import akka.actor.ActorSystem
 import akka.event.EventStream
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusEmitter }
 import mesosphere.marathon.event._
-import mesosphere.util.state.FrameworkIdUtil
+import mesosphere.marathon.tasks._
+import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
@@ -26,6 +28,9 @@ class MarathonScheduler @Inject() (
     offerProcessor: OfferProcessor,
     taskStatusEmitter: TaskStatusEmitter,
     frameworkIdUtil: FrameworkIdUtil,
+    mesosLeaderInfo: MesosLeaderInfo,
+    taskIdUtil: TaskIdUtil,
+    system: ActorSystem,
     config: MarathonConf,
     schedulerCallbacks: SchedulerCallbacks) extends Scheduler {
 
@@ -41,13 +46,13 @@ class MarathonScheduler @Inject() (
     master: MasterInfo): Unit = {
     log.info(s"Registered as ${frameworkId.getValue} to master '${master.getId}'")
     frameworkIdUtil.store(frameworkId)
-
+    mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerRegisteredEvent(frameworkId.getValue, master.getHostname))
   }
 
   override def reregistered(driver: SchedulerDriver, master: MasterInfo): Unit = {
     log.info("Re-registered to %s".format(master))
-
+    mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerReregisteredEvent(master.getHostname))
   }
 

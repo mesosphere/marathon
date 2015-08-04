@@ -21,6 +21,11 @@ trait MarathonConf
     required = true,
     noshort = true)
 
+  lazy val mesosMasterUrl = opt[String]("mesos_master_url",
+    descr = "The host and port (e.g. \"http://mesos_host:5050\") of the Mesos master",
+    required = false,
+    noshort = true)
+
   lazy val mesosFailoverTimeout = opt[Long]("failover_timeout",
     descr = "The failover_timeout for mesos in seconds (default: 1 week)",
     default = Some(604800L))

@@ -5,6 +5,8 @@ import mesosphere.marathon.state.{ AppDefinition, Group, GroupManager, PathId, T
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ AppLockedException, MarathonSchedulerService, MarathonSpec, UnknownAppException }
+import mesosphere.mesos.protos.Implicits.slaveIDToProto
+import mesosphere.mesos.protos.SlaveID
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
@@ -50,8 +52,14 @@ class TaskKillerTest extends MarathonSpec
 
   test("KillRequested with scaling") {
     val appId = PathId(List("my", "app"))
-    val task1 = MarathonTasks.makeTask("task-1", "host", ports = Nil, attributes = Nil, version = Timestamp.now())
-    val task2 = MarathonTasks.makeTask("task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now())
+    val task1 = MarathonTasks.makeTask(
+      "task-1", "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      slaveId = SlaveID("1")
+    )
+    val task2 = MarathonTasks.makeTask(
+      "task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      slaveId = SlaveID("1")
+    )
     val tasksToKill = Set(task1, task2)
     val originalAppDefinition = AppDefinition(appId, instances = 23)
 
@@ -92,8 +100,14 @@ class TaskKillerTest extends MarathonSpec
 
   test("Kill and scale w/o force should fail if there is a deployment") {
     val appId = PathId(List("my", "app"))
-    val task1 = MarathonTasks.makeTask("task-1", "host", ports = Nil, attributes = Nil, version = Timestamp.now())
-    val task2 = MarathonTasks.makeTask("task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now())
+    val task1 = MarathonTasks.makeTask(
+      "task-1", "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      slaveId = SlaveID("1")
+    )
+    val task2 = MarathonTasks.makeTask(
+      "task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      slaveId = SlaveID("1")
+    )
     val tasksToKill = Set(task1, task2)
 
     when(tracker.contains(appId)).thenReturn(true)

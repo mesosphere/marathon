@@ -458,7 +458,8 @@ class TaskBuilderTest extends MarathonSpec {
         offer.getHostname,
         tupleOption.get._2,
         offer.getAttributesList.asScala.toList,
-        Timestamp.now())
+        Timestamp.now(),
+        offer.slaveId)
       runningTasks += marathonTask
     }
 
@@ -518,7 +519,8 @@ class TaskBuilderTest extends MarathonSpec {
         tupleOption.get._1.getTaskId.getValue,
         offer.getHostname,
         tupleOption.get._2,
-        offer.getAttributesList.asScala.toList, Timestamp.now())
+        offer.getAttributesList.asScala.toList, Timestamp.now(),
+        offer.slaveId)
       runningTasks += marathonTask
     }
 

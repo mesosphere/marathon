@@ -3,6 +3,8 @@ package mesosphere.marathon.upgrade
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.MarathonTasks
+import mesosphere.mesos.protos.Implicits.slaveIDToProto
+import mesosphere.mesos.protos.SlaveID
 import org.scalatest.{ FunSuite, Matchers }
 
 class ScalingPropositionTest extends FunSuite with Matchers {
@@ -146,7 +148,9 @@ class ScalingPropositionTest extends FunSuite with Matchers {
 
   // Helper functions
 
-  private def createTask(index: Long) = MarathonTasks.makeTask(s"task-$index", "", Nil, Nil, version = Timestamp(index))
+  private def createTask(index: Long) = MarathonTasks.makeTask(
+    s"task-$index", "", Nil, Nil, version = Timestamp(index), slaveId = SlaveID("1")
+  )
 
   private def noConstraintsToMeet(running: Set[MarathonTask], killCount: Int) = Set.empty[MarathonTask]
 

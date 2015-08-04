@@ -112,6 +112,10 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     authentication
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret
     file containing the authentication secret
+* `--mesos_master_url` (Optional.): The URL to the Mesos master facade. By default this
+    value is detected automatically when framework is registered or new Mesos leader is
+    elected.
+    Format: `protocol://host:port/`
 * `--marathon_store_timeout` (Optional. Default: 2000 (2 seconds)): Maximum time
     in milliseconds, to wait for persistent storage operations to complete.
 * <span class="label label-default">v0.10.0</span> `--env_vars_prefix` (Optional. Default: None):

@@ -15,7 +15,7 @@ import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup, ZooKeeperClient }
-import com.twitter.zk.{ NativeConnector, ZkClient }
+import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -36,7 +36,7 @@ import mesosphere.util.SerializeExecution
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.ZKStore
-import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore }
+import mesosphere.util.state._
 import org.apache.log4j.Logger
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
@@ -97,6 +97,15 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
 
+  }
+
+  @Provides
+  @Singleton
+  def provideMesosLeaderInfo(): MesosLeaderInfo = {
+    conf.mesosMasterUrl.get match {
+      case someUrl @ Some(_) => ConstMesosLeaderInfo(someUrl)
+      case None              => new MutableMesosLeaderInfo
+    }
   }
 
   @Named(ModuleNames.NAMED_HTTP_EVENT_STREAM)

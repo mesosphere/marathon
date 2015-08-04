@@ -1,17 +1,19 @@
 package mesosphere.marathon.tasks
 
-import org.apache.mesos.Protos.Attribute
 import mesosphere.marathon.Protos.MarathonTask
-import scala.collection.JavaConverters._
-import org.apache.mesos.Protos
 import mesosphere.marathon.state.Timestamp
+import org.apache.mesos.Protos
+import org.apache.mesos.Protos.Attribute
+
+import scala.collection.JavaConverters._
 
 object MarathonTasks {
   def makeTask(id: String,
                host: String,
                ports: Iterable[Long],
                attributes: Iterable[Attribute],
-               version: Timestamp): MarathonTask = {
+               version: Timestamp,
+               slaveId: Protos.SlaveID): MarathonTask = {
     MarathonTask.newBuilder()
       .setId(id)
       .setHost(host)
@@ -19,6 +21,7 @@ object MarathonTasks {
       .addAllPorts(ports.map(i => i.toInt: java.lang.Integer).asJava)
       .addAllAttributes(attributes.asJava)
       .setStagedAt(System.currentTimeMillis)
+      .setSlaveId(slaveId)
       .build
   }
 }

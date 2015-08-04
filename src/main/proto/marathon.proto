@@ -84,6 +84,7 @@ message MarathonTask {
   repeated mesos.TaskStatus OBSOLETE_statuses = 7;
   optional string version = 8 [default = "1970-01-01T00:00:00.000Z"]; // since 0.7.0
   optional mesos.TaskStatus status = 9;
+  optional mesos.SlaveID slaveId = 10;
 }
 
 message MarathonApp {
