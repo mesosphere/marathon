@@ -34,7 +34,14 @@ object ResourceMatcher {
 
     def cpuRoleOpt: Option[Role] = findScalarResourceRole(Resource.CPUS, app.cpus)
     def memRoleOpt: Option[Role] = findScalarResourceRole(Resource.MEM, app.mem)
-    def diskRoleOpt: Option[Role] = findScalarResourceRole(Resource.DISK, app.disk)
+    def diskRoleOpt: Option[Role] =
+      if (app.disk == 0) {
+        // Not used in builder since that checks for disk == 0 as well and ignores this role designation
+        Some("")
+      }
+      else {
+        findScalarResourceRole(Resource.DISK, app.disk)
+      }
 
     def meetsAllConstraints: Boolean = {
       lazy val tasks = runningTasks
