@@ -450,10 +450,7 @@ class SchedulerActions(
           taskTracker.get(appId).collect {
             case task: Protos.MarathonTask if task.hasStatus => task.getStatus
             case task: Protos.MarathonTask => // staged tasks, which have no status yet
-              TaskStatus.newBuilder
-                .setState(TaskState.TASK_STAGING)
-                .setTaskId(TaskID.newBuilder.setValue(task.getId))
-                .build()
+              taskStatus(task)
           }
         }
 
@@ -480,6 +477,16 @@ class SchedulerActions(
       case Failure(t) =>
         log.warn("Failed to get task names", t)
     }.map(_ => ())
+  }
+
+  private def taskStatus(task: Protos.MarathonTask) = {
+    val taskStatusBuilder = TaskStatus.newBuilder
+      .setState(TaskState.TASK_STAGING)
+      .setTaskId(TaskID.newBuilder.setValue(task.getId))
+    if (task.hasSlaveId) {
+      taskStatusBuilder.setSlaveId(task.getSlaveId)
+    }
+    taskStatusBuilder.build()
   }
 
   def reconcileHealthChecks(): Unit = {
