@@ -1,6 +1,9 @@
 package mesosphere.marathon.state
 
+import java.util.concurrent.TimeUnit
+
 import org.joda.time.{ DateTime, DateTimeZone }
+import scala.concurrent.duration.FiniteDuration
 import scala.math.Ordered
 
 /**
@@ -12,6 +15,14 @@ abstract case class Timestamp private (utcDateTime: DateTime) extends Ordered[Ti
   override def toString: String = utcDateTime.toString
 
   def toDateTime: DateTime = utcDateTime
+
+  def until(other: Timestamp): FiniteDuration = {
+    val millis = other.utcDateTime.getMillis - utcDateTime.getMillis
+    FiniteDuration(millis, TimeUnit.MILLISECONDS)
+  }
+
+  def +(duration: FiniteDuration): Timestamp = Timestamp(utcDateTime.getMillis + duration.toMillis)
+  def -(duration: FiniteDuration): Timestamp = Timestamp(utcDateTime.getMillis - duration.toMillis)
 }
 
 object Timestamp {
