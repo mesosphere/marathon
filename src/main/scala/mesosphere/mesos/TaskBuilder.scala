@@ -41,10 +41,38 @@ class TaskBuilder(app: AppDefinition,
           build(offer, cpu, mem, disk, ranges)
 
         case _ =>
-          log.debug(
-            s"No matching offer for ${app.id} (need cpus=${app.cpus}, mem=${app.mem}, " +
-              s"disk=${app.disk}, ports=${app.hostPorts}) : " + offer
-          )
+          def logInsufficientResources(): Unit = {
+            val appHostPorts = if (app.requirePorts) app.ports else app.ports.map(_ => 0)
+            val containerHostPorts: Option[Seq[Int]] = app.containerHostPorts
+            val hostPorts = containerHostPorts.getOrElse(appHostPorts)
+            val staticHostPorts = hostPorts.filter(_ != 0)
+            val numberDynamicHostPorts = hostPorts.count(_ == 0)
+
+            val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
+              Some(s"[${staticHostPorts.mkString(", ")}] required")
+            }
+            else {
+              None
+            }
+
+            val maybeDynamic: Option[String] = if (numberDynamicHostPorts > 0) {
+              Some(s"$numberDynamicHostPorts dynamic")
+            }
+            else {
+              None
+            }
+
+            val portStrings = Seq(maybeStatic, maybeDynamic).flatten.mkString(" + ")
+
+            val portsString = s"ports=($portStrings)"
+
+            log.info(
+              s"Offer [${offer.getId.getValue}]. Insufficient resources for [${app.id}] (need cpus=${app.cpus}, " +
+                s"mem=${app.mem}, disk=${app.disk}, $portsString, available in offer:\n" + offer
+            )
+          }
+
+          logInsufficientResources()
           None
       }
   }
