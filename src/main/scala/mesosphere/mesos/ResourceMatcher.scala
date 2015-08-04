@@ -95,7 +95,7 @@ object ResourceMatcher {
       "mem" -> memMatchOpt
     )
 
-    if (!basicResourceMatches.values.forAll(_.map(_.matches).getOrElse(false))) {
+    if (!basicResourceMatches.values.forall(_.map(_.matches).getOrElse(false))) {
       val basicResourceString = basicResourceMatches.map {
         case (resource, Some(scalarMatch)) =>
           s"$resource $scalarMatch"

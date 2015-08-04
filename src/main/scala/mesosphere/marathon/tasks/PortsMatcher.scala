@@ -131,7 +131,7 @@ class PortsMatcher(
             case Some(PortRange(role, _)) =>
               Some(PortWithRole(role, pm.hostPort))
             case None =>
-              log.info(s"Offer ${offer.getId.getValue}. " +
+              log.info(s"Offer [${offer.getId.getValue}]. " +
                 s"Cannot find range with host port ${pm.hostPort} for app [${app.id}]")
               None
           }
