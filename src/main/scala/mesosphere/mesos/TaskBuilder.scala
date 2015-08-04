@@ -170,7 +170,13 @@ class TaskBuilder(app: AppDefinition,
       }
     }
 
-    if (cpuRole.isEmpty || memRole.isEmpty || diskRole.isEmpty) {
+    // If a particular resource type for this framework's role has been fully
+    // allocated on a slave, then the resource offer will not include that
+    // resource at all.
+    //
+    // For this reason, we should reject on empty disk role only if this app
+    // requires a positive amount of disk.
+    if (cpuRole.isEmpty || memRole.isEmpty || diskRole.isEmpty && app.disk > 0.0) {
       return None
     }
 
