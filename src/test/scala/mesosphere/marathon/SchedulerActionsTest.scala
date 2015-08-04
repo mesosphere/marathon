@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ PathId, AppDefinition, AppRepository }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ OfferReviver, TaskIdUtil, TaskQueue, TaskTracker }
 import org.apache.mesos.Protos.{ TaskState, TaskID, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ times, verify, when }
@@ -21,7 +21,7 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
   import system.dispatcher
 
   test("Reset rate limiter if application is stopped") {
-    val queue = new TaskQueue
+    val queue = new TaskQueue(conf = MarathonTestHelper.defaultConfig(), offerReviver = mock[OfferReviver])
     val repo = mock[AppRepository]
     val taskTracker = mock[TaskTracker]
 
@@ -54,7 +54,7 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
   }
 
   test("Task reconciliation sends known running and staged tasks and empty list") {
-    val queue = new TaskQueue
+    val queue = new TaskQueue(conf = MarathonTestHelper.defaultConfig(), offerReviver = mock[OfferReviver])
     val repo = mock[AppRepository]
     val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
@@ -103,7 +103,7 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
   }
 
   test("Task reconciliation only one empty list, when no tasks are present in Marathon") {
-    val queue = new TaskQueue
+    val queue = new TaskQueue(conf = MarathonTestHelper.defaultConfig(), offerReviver = mock[OfferReviver])
     val repo = mock[AppRepository]
     val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]

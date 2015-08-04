@@ -34,7 +34,9 @@ trait MarathonTestHelper {
     var args = Seq(
       "--master", "127.0.0.1:5050",
       "--max_tasks_per_offer", maxTasksPerOffer.toString,
-      "--max_tasks_per_offer_cycle", maxTasksPerOfferCycle.toString
+      "--max_tasks_per_offer_cycle", maxTasksPerOfferCycle.toString,
+      "--revive_offers_for_new_apps",
+      "--reject_offer_duration", "3600000"
     )
 
     mesosRole.foreach(args ++= Seq("--mesos_role", _))
