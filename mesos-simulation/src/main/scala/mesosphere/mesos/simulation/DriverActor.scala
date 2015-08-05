@@ -33,6 +33,9 @@ object DriverActor {
     * `override def reconcileTasks(statuses: util.Collection[TaskStatus]): Status`
     */
   case class ReconcileTask(taskStatus: Seq[TaskStatus])
+
+  // Ignored for now. It is implemented in Marathon 0.11.*
+  case object ReviveOffers
 }
 
 class DriverActor(schedulerProps: Props) extends Actor {

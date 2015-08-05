@@ -1,12 +1,13 @@
 package mesosphere.marathon
 
-import mesosphere.marathon.tasks.IterativeOfferMatcherConfig
+import mesosphere.marathon.tasks.{ OfferReviverConf, IterativeOfferMatcherConfig }
 import org.rogach.scallop.ScallopConf
 import scala.sys.SystemProperties
 
 import mesosphere.marathon.io.storage.StorageProvider
 
-trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMatcherConfig with LeaderProxyConf {
+trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMatcherConfig with LeaderProxyConf
+    with OfferReviverConf {
 
   lazy val mesosMaster = opt[String]("master",
     descr = "The URL of the Mesos master",
@@ -167,4 +168,9 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
     validate = Set("zk", "mesos_zk", "mem").contains,
     default = Some("zk")
   )
+
+  lazy val reviveOffersForNewApps = opt[Boolean]("revive_offers_for_new_apps",
+    descr = "Whether to call reviveOffers for new or changed apps. (Default: do not use reviveOffers) ",
+    default = Some(false))
+
 }

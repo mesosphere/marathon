@@ -6,8 +6,15 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.tasks.{ TaskQueue, TaskTracker }
-import mesosphere.marathon.{ AppStartCanceledException, MarathonConf, MarathonSpec, SchedulerActions }
+import mesosphere.marathon.tasks.{ OfferReviverDummy, TaskQueue, TaskTracker }
+import mesosphere.marathon.{
+  MarathonTestHelper,
+  MarathonSchedulerDriverHolder,
+  AppStartCanceledException,
+  MarathonConf,
+  MarathonSpec,
+  SchedulerActions
+}
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verify
@@ -33,7 +40,7 @@ class AppStartActorTest
   before {
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
-    taskQueue = new TaskQueue
+    taskQueue = new TaskQueue(MarathonTestHelper.defaultConfig(), OfferReviverDummy())
     taskTracker = new TaskTracker(new InMemoryStore, mock[MarathonConf], new Metrics(new MetricRegistry))
   }
 

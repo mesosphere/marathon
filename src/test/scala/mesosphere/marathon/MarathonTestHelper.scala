@@ -29,13 +29,18 @@ trait MarathonTestHelper {
     maxTasksPerOffer: Int = 1,
     maxTasksPerOfferCycle: Int = 10,
     mesosRole: Option[String] = None,
-    acceptedResourceRoles: Option[Set[String]] = None): MarathonConf = {
+    acceptedResourceRoles: Option[Set[String]] = None,
+    reviveOffersForNewApps: Option[Boolean] = Some(true),
+    rejectOfferDuration: Option[Long] = Some(3600000)): MarathonConf = {
 
     var args = Seq(
       "--master", "127.0.0.1:5050",
       "--max_tasks_per_offer", maxTasksPerOffer.toString,
       "--max_tasks_per_offer_cycle", maxTasksPerOfferCycle.toString
     )
+
+    reviveOffersForNewApps.foreach(_ => args ++= Seq("--revive_offers_for_new_apps"))
+    rejectOfferDuration.foreach(duration => args ++= Seq("--reject_offer_duration", duration.toString))
 
     mesosRole.foreach(args ++= Seq("--mesos_role", _))
     acceptedResourceRoles.foreach(v => args ++= Seq("--default_accepted_resource_roles", v.mkString(",")))
