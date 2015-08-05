@@ -7,6 +7,9 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupRepository, PathId }
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.mesos.protos
+import mesosphere.mesos.protos.Implicits.{ slaveIDToProto, taskIDToProto }
+import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ times, verify, when, verifyNoMoreInteractions }
@@ -75,6 +78,17 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
       .setState(TaskState.TASK_STAGING)
       .build()
 
+    val stagedTaskWithSlaveId = MarathonTask.newBuilder
+      .setId("task_3")
+      .setSlaveId(SlaveID("slave 1"))
+      .build()
+
+    val stagedWithSlaveIdStatus = TaskStatus.newBuilder
+      .setTaskId(TaskID.newBuilder.setValue(stagedTaskWithSlaveId.getId))
+      .setSlaveId(stagedTaskWithSlaveId.getSlaveId)
+      .setState(TaskState.TASK_STAGING)
+      .build()
+
     val scheduler = new SchedulerActions(
       repo,
       mock[GroupRepository],
@@ -88,13 +102,15 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
 
     val app = AppDefinition(id = PathId("/myapp"))
 
-    when(taskTracker.get(app.id)).thenReturn(Set(runningTask, stagedTask))
+    when(taskTracker.get(app.id)).thenReturn(Set(runningTask, stagedTask, stagedTaskWithSlaveId))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(taskTracker.list).thenReturn(Map(app.id -> TaskTracker.App(app.id, Set(runningTask, stagedTask), shutdown = false)))
+    when(taskTracker.list).thenReturn(Map(
+      app.id -> TaskTracker.App(app.id, Set(runningTask, stagedTask, stagedTaskWithSlaveId), shutdown = false)
+    ))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
-    verify(driver).reconcileTasks(Set(runningStatus, stagedStatus).asJava)
+    verify(driver).reconcileTasks(Set(runningStatus, stagedStatus, stagedWithSlaveIdStatus).asJava)
     verify(driver).reconcileTasks(java.util.Arrays.asList())
   }
 
@@ -103,16 +119,6 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
     val repo = mock[AppRepository]
     val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
-
-    val status = TaskStatus.newBuilder
-      .setTaskId(TaskID.newBuilder.setValue("task_1"))
-      .setState(TaskState.TASK_RUNNING)
-      .build()
-
-    val task = MarathonTask.newBuilder
-      .setId("task_1")
-      .setStatus(status)
-      .build()
 
     val scheduler = new SchedulerActions(
       repo,
@@ -134,5 +140,54 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
     verify(driver, times(1)).reconcileTasks(java.util.Arrays.asList())
+  }
+
+  test("Kill orphaned task") {
+    val queue = mock[LaunchQueue]
+    val repo = mock[AppRepository]
+    val taskTracker = mock[TaskTracker]
+    val driver = mock[SchedulerDriver]
+
+    val status = TaskStatus.newBuilder
+      .setTaskId(TaskID.newBuilder.setValue("task_1"))
+      .setState(TaskState.TASK_RUNNING)
+      .build()
+
+    val task = MarathonTask.newBuilder
+      .setId("task_1")
+      .setStatus(status)
+      .build()
+
+    val orphanedTask = MarathonTask.newBuilder
+      .setId("orphaned task")
+      .setStatus(status)
+      .build()
+
+    val scheduler = new SchedulerActions(
+      repo,
+      mock[GroupRepository],
+      mock[HealthCheckManager],
+      taskTracker,
+      queue,
+      system.eventStream,
+      TestProbe().ref,
+      mock[MarathonConf]
+    )
+
+    val app = AppDefinition(id = PathId("/myapp"))
+    val orphanedApp = AppDefinition(id = PathId("/orphan"))
+
+    when(taskTracker.get(app.id)).thenReturn(Set(task))
+    when(taskTracker.get(orphanedApp.id)).thenReturn(Set(orphanedTask))
+    when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
+    when(taskTracker.list).thenReturn(Map(
+      app.id -> TaskTracker.App(app.id, Set(task), shutdown = false),
+      orphanedApp.id -> TaskTracker.App(orphanedApp.id, Set(orphanedTask, task), shutdown = false)
+    ))
+
+    Await.result(scheduler.reconcileTasks(driver), 5.seconds)
+
+    verify(driver, times(1)).killTask(protos.TaskID(orphanedTask.getId))
+    verify(taskTracker, times(1)).shutdown(orphanedApp.id)
   }
 }
