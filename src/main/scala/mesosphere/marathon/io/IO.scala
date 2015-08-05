@@ -70,6 +70,7 @@ object IO {
         val byteCount = in.read(buffer)
         if (byteCount >= 0 && continue) {
           out.write(buffer, 0, byteCount)
+          out.flush()
           read()
         }
       }
