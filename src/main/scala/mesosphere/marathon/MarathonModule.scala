@@ -191,6 +191,31 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       "MarathonScheduler")
   }
 
+  @Provides
+  @Singleton
+  def provideOfferReviveConf(): OfferReviverConf = conf
+
+  @Named(OfferReviverActor.NAME)
+  @Provides
+  @Singleton
+  @Inject
+  def provideOfferReviverActor(
+    system: ActorSystem,
+    conf: OfferReviverConf,
+    @Named(EventModule.busName) eventBus: EventStream,
+    driverHolder: MarathonSchedulerDriverHolder): ActorRef =
+    {
+      val props = OfferReviverActor.props(conf, eventBus, driverHolder)
+      system.actorOf(props, OfferReviverActor.NAME)
+    }
+
+  @Provides
+  @Singleton
+  @Inject
+  def provideOfferReviver(@Named(OfferReviverActor.NAME) reviverRef: ActorRef): OfferReviver = {
+    new OfferReviverDelegate(reviverRef)
+  }
+
   @Named(ModuleNames.NAMED_HOST_PORT)
   @Provides
   @Singleton

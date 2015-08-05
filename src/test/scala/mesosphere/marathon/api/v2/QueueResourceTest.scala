@@ -3,8 +3,8 @@ package mesosphere.marathon.api.v2
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.{ MarathonConf, MarathonSpec }
-import mesosphere.marathon.tasks.TaskQueue
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSchedulerDriverHolder, MarathonConf, MarathonSpec }
+import mesosphere.marathon.tasks.{ OfferReviver, TaskQueue }
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsObject, Json }
 
@@ -12,7 +12,7 @@ class QueueResourceTest extends MarathonSpec with Matchers {
 
   // regression test for #1210
   test("return well formatted JSON") {
-    val queue = new TaskQueue
+    val queue = new TaskQueue(conf = MarathonTestHelper.defaultConfig(), offerReviver = mock[OfferReviver])
     val app1 = AppDefinition(id = "app1".toRootPath)
     val app2 = AppDefinition(id = "app2".toRootPath)
     val resource = new QueueResource(queue, mock[MarathonConf])

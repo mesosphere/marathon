@@ -14,7 +14,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskQueue, TaskTracker }
+import mesosphere.marathon.tasks.{ OfferReviver, TaskIdUtil, TaskQueue, TaskTracker }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, StopApplication }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
@@ -61,7 +61,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     deploymentRepo = mock[DeploymentRepository]
     hcManager = mock[HealthCheckManager]
     tracker = mock[TaskTracker]
-    queue = spy(new TaskQueue)
+    queue = spy(new TaskQueue(offerReviver = mock[OfferReviver], conf = MarathonTestHelper.defaultConfig()))
     frameworkIdUtil = mock[FrameworkIdUtil]
     taskIdUtil = new TaskIdUtil
     storage = mock[StorageProvider]
