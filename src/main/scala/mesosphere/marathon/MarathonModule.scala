@@ -202,9 +202,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   def provideOfferReviverActor(
     system: ActorSystem,
     conf: OfferReviverConf,
+    @Named(EventModule.busName) eventBus: EventStream,
     driverHolder: MarathonSchedulerDriverHolder): ActorRef =
     {
-      val props = OfferReviverActor.props(conf, driverHolder)
+      val props = OfferReviverActor.props(conf, eventBus, driverHolder)
       system.actorOf(props, OfferReviverActor.NAME)
     }
 
