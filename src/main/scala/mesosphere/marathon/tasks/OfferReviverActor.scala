@@ -2,7 +2,7 @@ package mesosphere.marathon.tasks
 
 import akka.actor.{ Props, Cancellable, ActorLogging, Actor }
 import akka.event.{ EventStream, LoggingReceive }
-import mesosphere.marathon.event.SchedulerReregisteredEvent
+import mesosphere.marathon.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.state.Timestamp
 import scala.concurrent.duration._
@@ -29,7 +29,16 @@ private class OfferReviverActor(
 
   override def preStart(): Unit = {
     // Subscribe to the global event bus
+    log.info("Subscribing to the event bus")
+
+    // We want to revive offers when the scheduler re-registers
+    // with the Mesos master.
     eventBus.subscribe(self, classOf[SchedulerReregisteredEvent])
+
+    // For some reason, when the scheduler re-registers with an
+    // existing framework ID, we have observed the `registered`
+    // callback instead.
+    eventBus.subscribe(self, classOf[SchedulerRegisteredEvent])
   }
 
   override def postStop(): Unit = {
@@ -68,6 +77,10 @@ private class OfferReviverActor(
 
     case _: SchedulerReregisteredEvent =>
       log.info("Received scheduler reregistration event; reviving offers")
+      reviveOffers()
+
+    case _: SchedulerRegisteredEvent =>
+      log.info("Received scheduler registration event; reviving offers")
       reviveOffers()
   }
 
