@@ -72,7 +72,7 @@ class TaskQueue @Inject() (conf: MarathonConf, offerReviver: OfferReviver) {
     val queuedTask = apps.getOrElseUpdate(
       (app.id, app.version),
       QueuedTask(app, new AtomicInteger(0)))
-    val oldValue = queuedTask.count.addAndGet(count)
+    val oldValue = queuedTask.count.getAndAdd(count)
     if (conf.reviveOffersForNewApps() && oldValue == 0) {
       log.info("New application definition in queue, reviving offers.")
       offerReviver.reviveOffers()
