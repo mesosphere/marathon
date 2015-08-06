@@ -135,6 +135,10 @@ trait MarathonTestHelper {
 
   def validateJsonSchema(app: V2AppDefinition, valid: Boolean = true) {
     val appStr = schemaMapper.writeValueAsString(app)
+    validateJsonSchemaForString(appStr, valid)
+  }
+
+  def validateJsonSchemaForString(appStr: String, valid: Boolean): Unit = {
     val appJson = JsonLoader.fromString(appStr)
     assert(appSchema.validate(appJson).isSuccess == valid)
   }

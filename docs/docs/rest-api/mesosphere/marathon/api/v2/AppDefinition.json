@@ -172,7 +172,15 @@
                 "additionalProperties": false,
                 "properties": {
                     "command": {
-                        "type": "string"
+                        "type": "object",
+                        "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                                "value": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     },
                     "gracePeriodSeconds": {
                         "minimum": 0,
