@@ -102,6 +102,8 @@ A typical pattern in the development and deployment cycle is to have your automa
 * `ftps:`
 * `hdfs:`
 * `s3:`
+* `s3a:`
+* `s3n:`
 
 ## A Simple Docker-based Application
 
