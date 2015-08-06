@@ -2,6 +2,8 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.state.PathId._
+import mesosphere.mesos.protos.Implicits.slaveIDToProto
+import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{ Protos => mesos }
 
 case class TaskFailure(
@@ -11,7 +13,8 @@ case class TaskFailure(
   message: String = "",
   host: String = "",
   version: Timestamp = Timestamp.now,
-  timestamp: Timestamp = Timestamp.now)
+  timestamp: Timestamp = Timestamp.now,
+  slaveId: Option[mesos.SlaveID] = None)
     extends MarathonState[Protos.TaskFailure, TaskFailure] {
 
   override def mergeFromProto(proto: Protos.TaskFailure): TaskFailure =
@@ -22,8 +25,8 @@ case class TaskFailure(
     mergeFromProto(proto)
   }
 
-  override def toProto: Protos.TaskFailure =
-    Protos.TaskFailure.newBuilder
+  override def toProto: Protos.TaskFailure = {
+    val taskFailureBuilder = Protos.TaskFailure.newBuilder
       .setAppId(appId.toString)
       .setTaskId(taskId)
       .setState(state)
@@ -31,8 +34,11 @@ case class TaskFailure(
       .setHost(host)
       .setVersion(version.toString)
       .setTimestamp(timestamp.toString)
-      .build
-
+    if (slaveId.isDefined) {
+      taskFailureBuilder.setSlaveId(slaveId.get)
+    }
+    taskFailureBuilder.build
+  }
 }
 
 object TaskFailure {
@@ -47,7 +53,8 @@ object TaskFailure {
       message = proto.getMessage,
       host = proto.getHost,
       version = Timestamp(proto.getVersion),
-      timestamp = Timestamp(proto.getTimestamp)
+      timestamp = Timestamp(proto.getTimestamp),
+      slaveId = if (proto.hasSlaveId) Some(proto.getSlaveId) else None
     )
 
   object FromMesosStatusUpdateEvent {
@@ -70,7 +77,8 @@ object TaskFailure {
           message,
           host,
           Timestamp(version),
-          Timestamp(ts)
+          Timestamp(ts),
+          Option(slaveIDToProto(SlaveID(slaveId)))
         ))
       else None
     }

@@ -60,7 +60,8 @@ trait Formats
       "state" -> failure.state.name(),
       "taskId" -> failure.taskId.getValue,
       "timestamp" -> failure.timestamp,
-      "version" -> failure.version
+      "version" -> failure.version,
+      "slaveId" -> (if (failure.slaveId.isDefined) failure.slaveId.get.getValue else JsNull)
     )
   }
 

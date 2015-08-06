@@ -30,6 +30,7 @@ class MarathonModule extends Module {
   private val appUpdateClass = classOf[V2AppUpdate]
   private val groupIdClass = classOf[PathId]
   private val taskIdClass = classOf[mesos.TaskID]
+  private val slaveIdClass = classOf[mesos.SlaveID]
 
   def getModuleName: String = "MarathonModule"
 
@@ -51,6 +52,7 @@ class MarathonModule extends Module {
         else if (matches(finiteDurationClass)) FiniteDurationSerializer
         else if (matches(groupIdClass)) PathIdSerializer
         else if (matches(taskIdClass)) TaskIdSerializer
+        else if (matches(slaveIdClass)) SlaveIdSerializer
         else null
       }
     })
@@ -68,6 +70,7 @@ class MarathonModule extends Module {
         else if (matches(appUpdateClass)) AppUpdateDeserializer
         else if (matches(groupIdClass)) PathIdDeserializer
         else if (matches(taskIdClass)) TaskIdDeserializer
+        else if (matches(slaveIdClass)) SlaveIdDeserializer
         else null
       }
     })
@@ -201,6 +204,19 @@ class MarathonModule extends Module {
     def deserialize(json: JsonParser, context: DeserializationContext): mesos.TaskID = {
       val tree: JsonNode = json.getCodec.readTree(json)
       mesos.TaskID.newBuilder.setValue(tree.textValue).build
+    }
+  }
+
+  object SlaveIdSerializer extends JsonSerializer[mesos.SlaveID] {
+    def serialize(id: mesos.SlaveID, jgen: JsonGenerator, provider: SerializerProvider) {
+      jgen.writeString(id.getValue)
+    }
+  }
+
+  object SlaveIdDeserializer extends JsonDeserializer[mesos.SlaveID] {
+    def deserialize(json: JsonParser, context: DeserializationContext): mesos.SlaveID = {
+      val tree: JsonNode = json.getCodec.readTree(json)
+      mesos.SlaveID.newBuilder.setValue(tree.textValue).build
     }
   }
 
