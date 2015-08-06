@@ -1,0 +1,6 @@
+ldapRealm = org.apache.shiro.realm.ldap.JndiLdapRealm
+ldapRealm.userDnTemplate =
+ldapRealm.contextFactory.url =
+ldapRealm.contextFactory.systemUsername =
+ldapRealm.contextFactory.systemPassword =
+securityManager.realms = $ldapRealm

@@ -215,6 +215,8 @@ object Dependencies {
     sprayClient % "compile",
     sprayHttpx % "compile",
     chaos % "compile",
+    unboundid % "compile",
+    shiro % "compile",
     mesosUtils % "compile",
     jacksonCaseClass % "compile",
     twitterCommons % "compile",
@@ -277,6 +279,8 @@ object Dependency {
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos
+  val shiro = "org.apache.shiro" % "shiro-all" % "1.2.3"
+  val unboundid = "com.unboundid" % "unboundid-ldapsdk" % "2.3.1"
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey

@@ -17,7 +17,7 @@ import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup, ZooKeeperClient }
 import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.api.{ AuthenticationService, LeaderInfo }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HistoryActor, EventModule }
 import mesosphere.marathon.event.http.{
@@ -81,6 +81,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[LeaderInfo]).to(classOf[MarathonLeaderInfo]).in(Scopes.SINGLETON)
     bind(classOf[TaskTracker]).in(Scopes.SINGLETON)
     bind(classOf[TaskFactory]).to(classOf[DefaultTaskFactory]).in(Scopes.SINGLETON)
+    bind(classOf[AuthenticationService]).in(Scopes.SINGLETON)
 
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
 

@@ -1,4 +1,5 @@
 bin/run-tests-config.sh
+src/main/resources/shiro.ini
 .idea
 *.iml
 docker-volumes

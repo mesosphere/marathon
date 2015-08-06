@@ -69,6 +69,9 @@ class MarathonRestModule extends RestModule {
     bind(classOf[CORSFilter]).asEagerSingleton()
     filter("/*").through(classOf[CORSFilter])
 
+    bind(classOf[AuthenticationFilter]).asEagerSingleton()
+    filter("/*").through(classOf[AuthenticationFilter])
+
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
     filter("/*").through(classOf[CacheDisablingFilter])
 
