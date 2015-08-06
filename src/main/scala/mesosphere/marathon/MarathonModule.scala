@@ -102,7 +102,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideMesosLeaderInfo(): MesosLeaderInfo = {
-    conf.mesosMasterUrl.get match {
+    conf.mesosLeaderUiUrl.get match {
       case someUrl @ Some(_) => ConstMesosLeaderInfo(someUrl)
       case None              => new MutableMesosLeaderInfo
     }

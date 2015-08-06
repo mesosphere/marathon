@@ -72,7 +72,7 @@ class InfoResource @Inject() (
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def index(): Response = {
-    val mesosMasterUrl = "mesos_master_url" -> mesosLeaderInfo.currentLeaderUrl
+    val mesosLeaderUiUrl = "mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl
     Response.ok(
       Map(
         "name" -> BuildInfo.name,
@@ -80,7 +80,7 @@ class InfoResource @Inject() (
         "elected" -> leaderInfo.elected,
         "leader" -> leaderInfo.currentLeaderHostPort(),
         "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
-        "marathon_config" -> (marathonConfigValues + mesosMasterUrl),
+        "marathon_config" -> (marathonConfigValues + mesosLeaderUiUrl),
         "zookeeper_config" -> zookeeperConfigValues,
         "event_subscriber" -> conf.eventSubscriber.get.map(_ => eventHandlerConfigValues),
         "http_config" -> httpConfigValues)).build()
