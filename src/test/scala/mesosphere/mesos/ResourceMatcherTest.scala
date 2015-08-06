@@ -10,6 +10,37 @@ import org.scalatest.Matchers
 import scala.collection.immutable.Seq
 
 class ResourceMatcherTest extends MarathonSpec with Matchers {
+  test("match with app.disk == 0, even if no disk resource is contained in the offer") {
+    import scala.collection.JavaConverters._
+    val offerBuilder = makeBasicOffer()
+    val diskResourceIndex = offerBuilder.getResourcesList.asScala.indexWhere(_.getName == "disk")
+    offerBuilder.removeResources(diskResourceIndex)
+    val offer = offerBuilder.build()
+
+    offer.getResourcesList.asScala.find(_.getName == "disk") should be('empty)
+
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      cpus = 1.0,
+      mem = 128.0,
+      disk = 0.0,
+      ports = Seq(0, 0)
+    )
+
+    val resOpt = ResourceMatcher.matchResources(offer, app, Set())
+
+    resOpt should not be empty
+    val res = resOpt.get
+
+    res.cpuRole should be("*")
+    res.memRole should be("*")
+    res.diskRole should be("")
+
+    // check if we got 2 ports
+    val range = res.ports.head.ranges.head
+    (range.end - range.begin) should be (1)
+  }
+
   test("match resources success") {
     val offer = makeBasicOffer().build()
     val app = AppDefinition(
@@ -27,7 +58,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     res.cpuRole should be("*")
     res.memRole should be("*")
-    res.diskRole should be("*")
+    res.diskRole should be("")
 
     // check if we got 2 ports
     val range = res.ports.head.ranges.head
@@ -53,7 +84,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     res.cpuRole should be("marathon")
     res.memRole should be("marathon")
-    res.diskRole should be("marathon")
+    res.diskRole should be("")
   }
 
   test("match resources failure because of incorrect roles") {
