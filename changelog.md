@@ -1,3 +1,24 @@
+## Changes from 0.9.0 to 0.9.2
+
+This is a bug fix release, with fixes back ported to the 0.9 series.
+
+#### Improve the way in which unused offers are declined, in order to avoid starvation in a multi-framework context.
+
+We have observed that running a large number of frameworks could lead to starvation, in which some frameworks would not receive any offers from the Mesos master. This release includes changes to mitigate offer starvation.
+This is done by making the amount of time for which an offer will be declined configurable. This value defaults to 5 seconds (Mesos default), but should be set to a higher value in a multi-framework environment, in order to reduce starvation.
+If there is need for an offer (e.g., when a new app is added), then all already declined offers will be actively revived.
+`--decline_offer_duration` allows configuring the duration for which unused offers are declined.
+`--revive_offers_for_new_apps` if specified, then revive offers will be called when a new app is added to the TaskQueue
+`--min_revive_offers_interval` if `--revive_offers_for_new_apps` is specified, do not call reviveOffers more often than this interval. 
+
+
+### Fixed Bugs
+
+- #1924 - Launch tasks that require no disk resource
+- #1927 - Improve logging of unsatisfied resource requirements
+- #1931 - Flag for reviveOffers and the duration for which to reject offers
+
+
 ## Changes from 0.8.2 to 0.9.0
 
 #### Recommended Mesos version is 0.22.1
