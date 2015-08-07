@@ -30,7 +30,7 @@ trait MarathonTestHelper {
     acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None,
     reviveOffersForNewApps: Option[Boolean] = Some(true),
-    rejectOfferDuration: Option[Long] = Some(3600000)): MarathonConf = {
+    declineOfferDuration: Option[Long] = Some(3600000)): MarathonConf = {
 
     var args = Seq(
       "--master", "127.0.0.1:5050",
@@ -39,7 +39,7 @@ trait MarathonTestHelper {
     )
 
     reviveOffersForNewApps.foreach(_ => args ++= Seq("--revive_offers_for_new_apps"))
-    rejectOfferDuration.foreach(duration => args ++= Seq("--reject_offer_duration", duration.toString))
+    declineOfferDuration.foreach(duration => args ++= Seq("--decline_offer_duration", duration.toString))
 
     mesosRole.foreach(args ++= Seq("--mesos_role", _))
     acceptedResourceRoles.foreach(v => args ++= Seq("--default_accepted_resource_roles", v.mkString(",")))

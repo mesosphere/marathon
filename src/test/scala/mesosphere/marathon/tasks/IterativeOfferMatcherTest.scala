@@ -6,7 +6,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.IterativeOfferMatcher.{ OfferUsage, OfferUsages }
-import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonConf, MarathonTestHelper }
+import mesosphere.marathon.{ MarathonConf, MarathonTestHelper }
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.Protos.{ Filters, Offer, OfferID, TaskInfo }
@@ -31,11 +31,11 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
   def createEnv(
     maxTasksPerOffer: Int,
     maxTasksPerOfferCycle: Int = 1000,
-    rejectOfferDuration: Option[Long] = Some(3600000)): Unit = {
+    declineOfferDuration: Option[Long] = Some(3600000)): Unit = {
     config = MarathonTestHelper.defaultConfig(
       maxTasksPerOffer = maxTasksPerOffer,
       maxTasksPerOfferCycle = maxTasksPerOfferCycle,
-      rejectOfferDuration = rejectOfferDuration
+      declineOfferDuration = declineOfferDuration
     )
     taskQueue = new TaskQueue(MarathonTestHelper.defaultConfig(), offerReviver = OfferReviverDummy())
     state = new InMemoryStore
@@ -220,7 +220,7 @@ class IterativeOfferMatcherTest extends FunSuite with GivenWhenThen with ShouldM
 
   test("Committing decline to driver without configured reject timeout") {
     Given("a in-memory matcher")
-    createEnv(maxTasksPerOffer = 10, rejectOfferDuration = None)
+    createEnv(maxTasksPerOffer = 10, declineOfferDuration = None)
     val driver = Mockito.mock(classOf[SchedulerDriver], "schedulerDriver")
 
     Given("one unused offer")

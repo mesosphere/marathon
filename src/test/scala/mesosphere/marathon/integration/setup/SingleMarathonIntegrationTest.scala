@@ -76,7 +76,7 @@ trait SingleMarathonIntegrationTest
         "--event_subscriber", "http_callback",
         "--access_control_allow_origin", "*",
         "--revive_offers_for_new_apps",
-        "--reject_offer_duration", "3600000",
+        "--decline_offer_duration", "3600000",
         "--min_revive_offers_interval", "100"
       ) ++ extraMarathonParameters
       startMarathon(config.marathonBasePort, parameters: _*)
