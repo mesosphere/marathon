@@ -90,6 +90,15 @@ With every Pull Request we try to make sure, this coverage will be increased.
 Several changes are made to the sbt build file, but also to the infrastructure that is performing the release.
 We now have a more reliable way of pushing distributions.
 
+#### Improve the way in which unused offers are declined, in order to avoid starvation in a multi-framework context.
+
+We have observed that running a large number of frameworks could lead to starvation, in which some frameworks would not receive any offers from the Mesos master. This release includes changes to mitigate offer starvation.
+This is done by making the amount of time for which an offer will be declined configurable. This value defaults to 5 seconds (Mesos default), but should be set to a higher value in a multi-framework environment, in order to reduce starvation.
+If there is need for an offer (e.g., when a new app is added), then all already declined offers will be actively revived.
+`--decline_offer_duration` allows configuring the duration for which unused offers are declined.
+`--revive_offers_for_new_apps` if specified, then revive offers will be called when a new app is added to the TaskQueue
+`--min_revive_offers_interval` if `--revive_offers_for_new_apps` is specified, do not call reviveOffers more often than this interval. 
+
 
 ### Fixed Issues
 
@@ -105,6 +114,9 @@ We now have a more reliable way of pushing distributions.
 - #1316 - Invalidate framework ID if registration triggers an error
 - #1254 - Add flag to define Marathon PORT prefix
 - #1853 - App can't be deleted because it "does not exist", although /apps still returns it
+- #1924 - Launch tasks that require no disk resource
+- #1927 - Improve logging of unsatisfied resource requirements
+- #1931 - Flag for reviveOffers and the duration for which to reject offers
 
 ------------------------------------------------------------
 
