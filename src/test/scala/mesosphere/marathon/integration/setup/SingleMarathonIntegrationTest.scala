@@ -71,7 +71,7 @@ trait SingleMarathonIntegrationTest
       startMarathon(
         config.marathonPort, "--master", config.master, "--event_subscriber", "http_callback",
         "--revive_offers_for_new_apps",
-        "--reject_offer_duration", "3600000",
+        "--decline_offer_duration", "3600000",
         "--min_revive_offers_interval", "100"
       )
       log.info("Setting up local mesos/marathon infrastructure: done.")
