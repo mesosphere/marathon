@@ -66,7 +66,6 @@ case class Timer(name: String,
 
 case class MetricsSample(
     version: String,
-    relativeTimestampMs: Long,
     gauges: Seq[Gauge],
     counters: Seq[Counter],
     histograms: Seq[Histogram],
@@ -111,5 +110,10 @@ object MetricsFormat {
   def readMetrics(url: URL): Seq[MetricsSample] = {
     val jsonString = Source.fromURL(url, "UTF-8").mkString
     Json.parse(jsonString).as[Seq[MetricsSample]]
+  }
+
+  def readMetric(url: URL): MetricsSample = {
+    val jsonString = Source.fromURL(url, "UTF-8").mkString
+    Json.parse(jsonString).as[MetricsSample]
   }
 }
