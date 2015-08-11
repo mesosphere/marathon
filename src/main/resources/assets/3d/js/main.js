@@ -20,7 +20,7 @@
     particleAttributes,
     particleUniforms,
     taskIdLookupTable = {},
-    particleTexture = THREE.ImageUtils.loadTexture("img/particle.png"),
+    particleTexture = THREE.ImageUtils.loadTexture("./img/particle.png"),
     stagingColor = new THREE.Color(0xcccccc),
     colorScheme = {
       "nginx": new THREE.Color(0x48B978),

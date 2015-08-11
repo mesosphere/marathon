@@ -42,7 +42,10 @@ var Marathon = (function () {
   }
 
   function fetchApps (generation) {
-    Qajax(apiURL + "/apps")
+    Qajax({
+      url: apiURL + "/apps",
+      headers: {"Accept": "application/json"}
+      })
       .then(function (xhr) {
         var data = JSON.parse(xhr.responseText);
         data.apps.forEach(function (appData) {
@@ -58,7 +61,10 @@ var Marathon = (function () {
   }
 
   function fetchTasks (app, generation) {
-    Qajax(apiURL + "/apps" + app.id + "/tasks")
+    Qajax({
+      url: apiURL + "/apps" + app.id + "/tasks",
+      headers: {"Accept": "application/json"}
+      })
       .then(function (xhr) {
         var data = JSON.parse(xhr.responseText);
         data.tasks.forEach(function (taskData) {
