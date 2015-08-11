@@ -1,0 +1,120 @@
+<!doctype html>
+<html class="no-js" lang="">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>Testing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div id="hud">
+  <h4>OBSERVATION DECK</h4>
+  <div class="content">
+    <p>Total Instances: <span id="total-instances">0</span></p>
+    <p>
+      Group by: <a href="#0" id="group-radius">App</a> |
+      <a href="#0" id="ungroup-radius">Reset</a>
+    </p>
+    <p>
+      Fly Camera: <a href="#0" id="move-camera">On</a> |
+      <a href="#0" id="reset-camera">Off</a>
+    </p>
+  </div>
+</div>
+<div id="content"></div>
+<script type="x-shader/x-vertex" id="vertexshader">
+    // MIT License.
+    // Copyright Ian Webster 2012 (asterank.com)
+    // https://github.com/typpo/asterank/blob/master/LICENSE
+    #define pi 3.141592653589793238462643383279
+
+    attribute vec3 value_color;
+    varying vec3 vColor;
+
+    attribute float value_alpha;
+    varying float vAlpha;
+
+    attribute float size;
+
+    uniform float jed;
+
+    attribute float phi;
+    attribute float radius;
+    attribute float theta;
+    attribute float speed;
+    attribute float locked;
+    attribute float is_planet;
+
+    varying float vLocked;
+    varying float vPlanet;
+
+    vec3 getAstroPos() {
+      float phi_rad = (phi) * pi/180.0; // longitude of ascending node
+      float theta_rad = (theta) * pi/180.0; // LONGITUDE of perihelion
+
+      float t = mod(jed, speed) / speed * 2.0 * pi;
+      float X = radius * sin(phi_rad + t);
+      float Y = radius * cos(phi_rad + t);
+      float Z = theta * cos(mod(theta, 2.0*pi) + t);
+
+      return vec3(X, Y, Z);
+    }
+
+    void main() {
+      vColor = value_color;
+      vAlpha = value_alpha;
+      vLocked = locked;
+      vPlanet = is_planet;
+
+      vec3 newpos = getAstroPos();
+      vec4 mvPosition = modelViewMatrix * vec4(newpos, 1.0);
+      gl_Position = projectionMatrix * mvPosition;
+      gl_PointSize = size;
+    }
+</script>
+<script type="x-shader/x-fragment" id="fragmentshader">
+    // MIT License.
+    // Copyright Ian Webster 2012 (asterank.com)
+    // https://github.com/typpo/asterank/blob/master/LICENSE
+    varying vec3 vColor;
+    varying float vAlpha;
+    varying float vLocked;
+    varying float vPlanet;
+    uniform sampler2D planet_texture;
+    uniform sampler2D small_roid_texture;
+    uniform sampler2D small_roid_circled_texture;
+
+    void main() {
+      if (vLocked < .5) {
+        if (vPlanet < .5) {
+          gl_FragColor = vec4(vColor, vAlpha) * texture2D(small_roid_texture,
+            vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
+        }
+        else {
+          gl_FragColor = vec4(vColor, vAlpha) * texture2D(planet_texture,
+            vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
+        }
+      }
+      else {
+        gl_FragColor = vec4(vColor, vAlpha) * texture2D(small_roid_circled_texture,
+          vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
+      }
+    }
+</script>
+
+<!-- lib -->
+<script src="lib/three.min.js"></script>
+<script src="lib/q.js"></script>
+<script src="lib/qajax.min.js"></script>
+<script src="lib/lazy.min.js"></script>
+<script src="lib/tweenjs.min.js"></script>
+
+<!-- src -->
+<script src="js/trackball-controls.js"></script>
+<script src="js/ellipse.js"></script>
+<script src="js/data.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>
