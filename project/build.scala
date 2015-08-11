@@ -233,6 +233,7 @@ object Dependencies {
     jsonSchemaValidator % "compile",
     twitterZk % "compile",
     rxScala % "compile",
+    ui % "compile",
 
     // test
     Test.scalatest % "test",
@@ -262,6 +263,7 @@ object Dependency {
     val PlayJson = "2.3.7"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
+    val UI = "0.10.0-SNAPSHOT"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -294,6 +296,7 @@ object Dependency {
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
   val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
+  val ui = "mesosphere.marathon" % "ui" % V.UI
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
