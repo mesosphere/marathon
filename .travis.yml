@@ -1,15 +1,9 @@
 language: scala
-before_install:
-  - git submodule update --init --recursive
-before_script:
-  - npm install -g npm@2.0.2
-  - npm cache clear
-  - npm install -g broccoli-cli
 jdk:
   - openjdk6
 scala:
   - 2.11.5
-script: pushd src/main/resources/assets && npm install && npm run dist && popd && sbt assembly doc
+script: sbt assembly doc
 notifications:
   slack:
     secure: apUObVUa/OhaTEvoYw3oM1ZTTT0LtYolofJYqnWiBOusc6qgMlK2rfk5kod7vDn33cSKwGhFcyVrrFCn2qxuvYUWCpK4Yo6Hj7KIjoqMi9yHLHXAAWIfAFNMlCdaUGjlHLWn757rBkbuQUDVH8HmB6Vc3J3sybTbiFmMDP1cEVo=
