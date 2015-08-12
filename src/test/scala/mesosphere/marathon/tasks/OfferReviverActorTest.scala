@@ -19,7 +19,7 @@ class OfferReviverActorTest extends MarathonSpec with BeforeAndAfter with GivenW
   private[this] var conf: OfferReviverConf = _
   private[this] var delegate: OfferReviverDelegate = _
 
-  test("Revive offers on ReviveOffers message") {
+  ignore("Revive offers on ReviveOffers message") {
     val actorRef = startActor()
 
     When("calling revive offers")
@@ -35,7 +35,7 @@ class OfferReviverActorTest extends MarathonSpec with BeforeAndAfter with GivenW
     Mockito.verify(driverHolder.driver.get).reviveOffers()
   }
 
-  test("Second revive offers results in scheduling") {
+  ignore("Second revive offers results in scheduling") {
     @volatile
     var scheduleCheckCalled = 0
 
@@ -64,7 +64,7 @@ class OfferReviverActorTest extends MarathonSpec with BeforeAndAfter with GivenW
     scheduleCheckCalled should be(1)
   }
 
-  test("Revive offers on SchedulerReregisteredEvent message") {
+  ignore("Revive offers on SchedulerReregisteredEvent message") {
     val actorRef = startActor()
 
     When("sending SchedulerReregisteredEvent")
@@ -80,7 +80,7 @@ class OfferReviverActorTest extends MarathonSpec with BeforeAndAfter with GivenW
     Mockito.verify(driverHolder.driver.get).reviveOffers()
   }
 
-  test("Revive offers on SchedulerRegisteredEvent message") {
+  ignore("Revive offers on SchedulerRegisteredEvent message") {
     val actorRef = startActor()
 
     When("sending SchedulerRegisteredEvent")
