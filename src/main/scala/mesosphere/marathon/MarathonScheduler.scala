@@ -140,9 +140,9 @@ class MarathonScheduler @Inject() (
       case TASK_RUNNING if !maybeTask.exists(_.hasStartedAt) => // staged, not running
         taskTracker.running(appId, status).onComplete {
           case Success(task) =>
-            appRepo.app(appId, Timestamp(task.getVersion)).onSuccess {
-              case maybeApp => maybeApp.foreach(taskQueue.rateLimiter.resetDelay)
-            }
+            val appId = TaskIdUtil.appId(task.getId)
+            val version = Timestamp(task.getVersion)
+            taskQueue.rateLimiter.resetDelay(appId, version)
             postEvent(status, task)
 
           case Failure(t) =>
