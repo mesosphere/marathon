@@ -8,21 +8,75 @@
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
+<div id="content"></div>
+
 <div id="hud">
-  <h4>OBSERVATION DECK</h4>
-  <div class="content">
-    <p>Total Instances: <span id="total-instances">0</span></p>
-    <p>
-      Group by: <a href="#0" id="group-radius">App</a> |
-      <a href="#0" id="ungroup-radius">Reset</a>
-    </p>
-    <p>
-      Fly Camera: <a href="#0" id="move-camera">On</a> |
-      <a href="#0" id="reset-camera">Off</a>
-    </p>
+  <div class="wrap">
+    <p id="total-instances" class="big-number">0</p>
+    <p class="label">TOTAL TASKS</p>
+    <span class="hairline"></span>
+
+    <div class="app" id="app-1">
+      <div class="switch">
+        <input id="toggle-app-1" class="cmn-toggle" type="checkbox" checked>
+        <label for="toggle-app-1"></label>
+      </div>
+      <div class="info">
+        <p id="app-1-instances" class="big-number">0</p>
+        <p class="label" id="app-1-label">n/a</p>
+      </div>
+    </div>
+
+    <div class="app" id="app-2">
+      <div class="switch">
+        <input id="toggle-app-2" class="cmn-toggle" type="checkbox" checked>
+        <label for="toggle-app-2"></label>
+      </div>
+      <div class="info">
+        <p id="app-2-instances" class="big-number">0</p>
+        <p class="label" id="app-2-label">n/a</p>
+      </div>
+    </div>
+
+    <div class="app" id="app-3">
+      <div class="switch">
+        <input id="toggle-app-3" class="cmn-toggle" type="checkbox" checked>
+        <label for="toggle-app-3"></label>
+      </div>
+      <div class="info">
+        <p id="app-3-instances" class="big-number">0</p>
+        <p class="label" id="app-3-label">n/a</p>
+      </div>
+    </div>
+
+    <div class="app" id="app-4">
+      <div class="switch">
+        <input id="toggle-app-4" class="cmn-toggle" type="checkbox" checked>
+        <label for="toggle-app-4"></label>
+      </div>
+      <div class="info">
+        <p id="app-4-instances" class="big-number">0</p>
+        <p class="label" id="app-4-label">n/a</p>
+      </div>
+    </div>
+
   </div>
 </div>
-<div id="content"></div>
+<div id="controls">
+  <p>
+    <a href="#0" id="group-radius">
+      <img class="icon" src="./img/grouped.png"/>
+    </a>
+    <a href="#0" class="active" id="ungroup-radius">
+      <img class="icon" src="./img/ungrouped.png"/>
+    </a>
+  </p>
+</div>
+<p id="camera-controls">
+  <a href="#0" id="move-camera">Fly Cam</a> ❘
+  <a href="#0" class="active" id="reset-camera">Manual Cam</a>
+</p>
+<img src="./img/logo.png" id="logo"/>
 <script type="x-shader/x-vertex" id="vertexshader">
     // MIT License.
     // Copyright Ian Webster 2012 (asterank.com)

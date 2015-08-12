@@ -1,19 +1,26 @@
+@font-face {
+  font-family: "SourceSansSemibold";
+  src: url("fonts/source-sans-semibold.ttf");
+}
 body {
     margin: 0;
     overflow: hidden;
-    font-family: Arial, Helvetica, sans;
+    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+    font-weight: 100;
 }
-
+#logo {
+  position: absolute;
+  bottom: 20pt;
+  left: 40pt;
+  opacity: 0.3;
+}
 #hud {
     color: #fff;
     position: absolute;
-    top: 20px;
-    left: 20px;
-    opacity: 0.7;
-    background: #1e1e1e;
-    min-width: 320px;
+    top: 20pt;
+    left: 40pt;
+    min-width: 300px;
     z-index: 10;
-    padding: 40px;
 }
 #hud a {
     color: #fff;
@@ -23,7 +30,136 @@ body {
   font-size: 18px;
   margin: 0;
 }
-#hud .content {
+#hud .wrap {
   margin-top: 10px;
-  border-top: 1px solid #444;
 }
+#hud p {
+  padding: 0;
+  margin: 0;
+  line-height: 1em;
+}
+.big-number {
+  font-size: 48pt;
+}
+#hud p.label {
+  font-family: "SourceSansSemibold";
+  font-size: 13pt;
+  color: #898D97;
+  margin-top: 1em;
+}
+.hairline {
+  display: block;
+  margin: 30px 0;
+  border: 1px solid #2E3343;
+}
+
+#hud .app {
+  clear: left;
+  margin-bottom: 3em;
+}
+#hud .app .switch {
+  width: 60pt;
+  margin: 0;
+  padding: 0;
+  padding-top: 20px;
+  height: 70px;
+  float: left;
+}
+
+#hud .app .big-number {
+  font-size: 32pt;
+}
+#hud .app .label {
+  font-size: 12pt;
+}
+
+#controls {
+  color: #fff;
+  width: 300px;
+  position: absolute;
+  top: 20pt;
+  right: 40pt;
+  color: #fff;
+  text-align: right;
+}
+#controls a {
+  color: #fff;
+  display: block;
+}
+
+#controls .icon {
+  background: #202432;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+#controls a.active {
+  text-decoration: none;
+  font-weight: bold;
+  display: none;
+}
+
+#camera-controls {
+  position: absolute;
+  bottom: 20pt;
+  color: #626673;
+  right: 40pt;
+  font-family: "SourceSansSemibold";
+  font-size: 13pt;
+}
+#camera-controls a {
+  color: #626673;
+  text-decoration: none;
+  font-weight: 100;
+}
+#camera-controls a.active {
+  color: #fff;
+}
+/* toggles */
+.cmn-toggle {
+  position: absolute;
+  margin-left: -9999px;
+  visibility: hidden;
+}
+
+input.cmn-toggle + label {
+  display: block;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  padding: 2px;
+  width: 30pt;
+  height: 15pt;
+  border: 2px solid #2E3343;
+  border-radius: 60px;
+  transition: border-color 0.4s;
+}
+
+input.cmn-toggle + label:before,
+input.cmn-toggle + label:after {
+  display: block;
+  position: absolute;
+  content: "";
+}
+
+input.cmn-toggle + label:after {
+  /* width = 2*border-radius */
+  top: 4px;
+  left: 4px;
+  bottom: 4px;
+  width: 12pt;
+  background-color: #2E3343;
+  border-radius: 12pt;
+  transition: margin 0.4s, background 0.4s;
+}
+
+input.cmn-toggle:checked + label:after {
+  margin-left: 15pt;
+  background-color: #fff;
+}
+
+#app-1 input.cmn-toggle:checked + label:after { background-color: #48B978;}
+#app-2 input.cmn-toggle:checked + label:after { background-color: #7F32DE;}
+#app-3 input.cmn-toggle:checked + label:after { background-color: #E82A78;}
+#app-4 input.cmn-toggle:checked + label:after { background-color: #20D5FF;}

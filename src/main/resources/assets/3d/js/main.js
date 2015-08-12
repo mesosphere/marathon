@@ -1,6 +1,7 @@
 (function() {
   /*global THREE */
   /*global TWEEN */
+  /*global Marathon */
   var scene = new THREE.Scene(),
     renderer = new THREE.WebGLRenderer(),
     geometry = new THREE.Geometry(),
@@ -23,12 +24,12 @@
     particleTexture = THREE.ImageUtils.loadTexture("./img/particle.png"),
     stagingColor = new THREE.Color(0xcccccc),
     colorScheme = {
-      "nginx": new THREE.Color(0x48B978),
-      "kafka": new THREE.Color(0x2F81F7),
-      "cassandra": new THREE.Color(0xff24eb),
-      "hadoop": new THREE.Color(0x24ebff),
-      "mysql": new THREE.Color(0xff435e),
-      "sleep": new THREE.Color(0xebff24)
+      "uranus": new THREE.Color(0x48B978), // green
+      "heliotrope": new THREE.Color(0x7F32DE), // purple
+      "mercury": new THREE.Color(0xE82A78), // magenta
+      "neptune": new THREE.Color(0x20D5FF) // cyan
+      //"venus": new THREE.Color(0xF4B826), // yellow
+      //"earth": new THREE.Color(0x2F81F7) // blue
     },
     pointCloudRadiusMin = 500,
     pointCloudRadiusMax = 10000,
@@ -36,13 +37,36 @@
       alpha: []
     },
     hudElements = {
-      totalInstancesCounter: document.getElementById("total-instances")
+      totalInstancesCounter: document.getElementById("total-instances"),
+      individualAppCounters: [],
+      individualAppToggles: [],
+      individualAppLabels: [],
+      toggleGrouped: document.getElementById("group-radius"),
+      toggleUngrouped: document.getElementById("ungroup-radius"),
+      toggleFlyCam: document.getElementById("move-camera"),
+      toggleManualCam: document.getElementById("reset-camera")
     },
     easeAlpha = 0.009,
-    ease = 0.1;
+    ease = 0.1,
+    appIds = [],
+    individualAppCounters = [],
+    maxApps = Object.keys(colorScheme).length;
 
   function init() {
     var container = document.getElementById("content");
+    // Individual apps HUD
+    for (var i = 1; i <= maxApps; i++) {
+      hudElements.individualAppCounters.push(
+        document.getElementById("app-" + i + "-instances")
+      );
+      hudElements.individualAppToggles.push(
+        document.getElementById("toggle-app-" + i )
+      );
+      hudElements.individualAppLabels.push(
+        document.getElementById("app-" + i + "-label")
+      );
+      individualAppCounters[i - 1] = 0;
+    }
     // Renderer
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(viewportWidth, viewportHeight);
@@ -79,8 +103,8 @@
       var radius = maxR + (Math.random() * maxR + minR) - (maxR - minR);
 
       // Grouped by color
-      var appIndex = Object.keys(colorScheme).indexOf(colorKey)
-      var minR = appIndex < 1 ? pointCloudRadiusMin : 0;
+      var appIndex = Object.keys(colorScheme).indexOf(colorKey);
+      var minR = pointCloudRadiusMin;
       var maxR = pointCloudRadiusMax - ((numApps - appIndex) * radiusStep) + radiusStep;
       var groupedRadius = minR + maxR + Math.random() * radiusStep - radiusStep;
 
@@ -95,6 +119,7 @@
           value_alpha: 0.0,
           locked: 0
         },
+        running: 0,
         targetAlpha: parseFloat(randomAlpha.toFixed(2)),
         targetColor: targetColor,
         initialRadius: radius,
@@ -192,49 +217,100 @@
     // add it to the scene
     scene.add(particleSystem);
 
-    document.getElementById("group-radius").addEventListener("click", function (e) {
+    // Group / Ungroup apps
+    hudElements.toggleGrouped.addEventListener("click", function (e) {
       e.preventDefault();
       initialParticles.forEach(function(p){
         if (p.transitionEnd.initialRadius) p.transitionEnd.groupedRadius = false;
       });
+      hudElements.toggleGrouped.className = "active";
+      hudElements.toggleUngrouped.className = "";
     });
 
-    document.getElementById("ungroup-radius").addEventListener("click", function (e) {
+    hudElements.toggleUngrouped.addEventListener("click", function (e) {
       e.preventDefault();
       initialParticles.forEach(function(p){
         p.transitionEnd.initialRadius = false;
       });
+      hudElements.toggleGrouped.className = "";
+      hudElements.toggleUngrouped.className = "active";
     });
 
-    document.getElementById("move-camera").addEventListener("click", function (e) {
-      e.preventDefault();
-      flyCamera = true;
-    });
-    document.getElementById("reset-camera").addEventListener("click", function (e) {
-      e.preventDefault();
+    // Auto-disengage flycam on mouse drag
+    container.childNodes[0].addEventListener("mousedown", function (e) {
       TWEEN.removeAll();
+      cameraControls.enabled = true;
       flyCamera = false;
       cameraIsMoving = false;
+      hudElements.toggleFlyCam.className = "";
+      hudElements.toggleManualCam.className = "active";
+    });
+    // Turn flycam on
+    hudElements.toggleFlyCam.addEventListener("click", function (e) {
+      e.preventDefault();
+      flyCamera = true;
+      cameraControls.enabled = false;
+      hudElements.toggleFlyCam.className = "active";
+      hudElements.toggleManualCam.className = "";
+    });
+    // Turn flycam off
+    hudElements.toggleManualCam.addEventListener("click", function (e) {
+      e.preventDefault();
+      TWEEN.removeAll();
+      cameraControls.enabled = true;
+      flyCamera = false;
+      cameraIsMoving = false;
+      hudElements.toggleFlyCam.className = "";
+      hudElements.toggleManualCam.className = "active";
     });
 
     window.geometry = geometry;
     window.camera = camera;
     window.cameraControls = cameraControls;
 
-    // Kaboom
-    animate();
+
     Marathon.Events.created(function (task) {
       var taskId = task.id;
       var j = taskIdLookupTable[taskId];
       if (j === undefined) {
         j = particlesPointer++; // pick a new particle
         taskIdLookupTable[taskId] = j;
-        initialParticles[j].visible = true;
-        initialParticles[j].transitionEnd.alpha = false;
-        initialParticles[j].transitionEnd.initialRadius = false;
       }
+      // Update app labels in HUD
+      var pos = appIds.indexOf(task.appId);
+      if (pos === -1) {
+        if (appIds.length < maxApps) {
+          pos = appIds.push(task.appId) - 1;
+          if (hudElements.individualAppLabels[pos]) {
+            hudElements.individualAppLabels[pos].textContent = task.appId
+              .toString()
+              .toUpperCase() + " TASKS";
+          }
+        }
+      }
+      if (pos > -1) {
+        individualAppCounters[pos]++;
+      }
+
+      initialParticles[j].visible = true;
+      initialParticles[j].running = task.running;
+      initialParticles[j].transitionEnd.alpha = false;
+      initialParticles[j].transitionEnd.initialRadius = false;
     });
+
+    Marathon.Events.updated(function (task) {
+      var taskId = task.id;
+      var j = taskIdLookupTable[taskId];
+      if (j === undefined) {
+        j = particlesPointer++; // pick a new particle
+        taskIdLookupTable[taskId] = j;
+      }
+      initialParticles[j].visible = true;
+      initialParticles[j].running = task.running;
+    });
+    // Kaboom
     Marathon.startPolling();
+    animate();
   }
 
   /*
@@ -305,9 +381,10 @@
 
     // Animation loop
     for (var i = 0; i < maxParticles; i++) {
-      // Subtle glowing effect
       var p = initialParticles[i];
+      var color = particleAttributes.value_color.value[i];
 
+      // Subtle glowing effect
       if (!p.transitionEnd.alpha) {
         var alpha = particleAttributes.value_alpha.value[i];
         var targetAlpha = 1.0;
@@ -343,17 +420,39 @@
         var dr = initialRadius - radius;
         var vr = dr * ease;
         particleAttributes.radius.value[i] += vr;
-        if (parseInt(radius) == parseInt(initialRadius)) {
+        if (parseInt(radius) === parseInt(initialRadius)) {
           initialParticles[i].transitionEnd.initialRadius = true;
-          particleAttributes.value_color.value[i] = p.targetColor;
         }
+      }
+      // Update color for running tasks
+      if (parseInt(p.running) === 1) {
+        particleAttributes.value_color.value[i] = p.targetColor;
+      } else {
+        particleAttributes.value_color.value[i] = stagingColor;
       }
     }
 
-    hudElements.totalInstancesCounter.textContent = particlesPointer;
+    // Update global counter
+    var currentTotalCounter = parseInt(hudElements.totalInstancesCounter.textContent);
+    if (currentTotalCounter !== particlesPointer) {
+      var dct = particlesPointer - currentTotalCounter;
+      var vct = dct * ease;
+      hudElements.totalInstancesCounter.textContent = Math.ceil(currentTotalCounter + vct);
+    }
 
-    particleAttributes.theta.value[i] += 0.1;
+    // Update individual app counters
+    for (var i = 0; i < maxApps; i++) {
+      var currentAppCounter = parseInt(hudElements.individualAppCounters[i].textContent);
+      var targetAppCounter = individualAppCounters[i];
+      if (currentAppCounter !== targetAppCounter) {
+        var dct = targetAppCounter - currentAppCounter;
+        var vct = dct * ease;
+        hudElements.individualAppCounters[i].textContent = Math.ceil(currentAppCounter + vct);
+      }
+    }
 
+
+    // Sorry, GPU
     geometry.__dirtyVertices = true;
     particleAttributes.radius.needsUpdate = true;
     particleAttributes.phi.needsUpdate = true;
