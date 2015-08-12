@@ -139,6 +139,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Football Radar](http://www.footballradar.com)
 * [Guidewire](http://www.guidewire.com/)
 * [Groupon](http://www.groupon.com/)
+* [GSShop](http://www.gsshop.com/)
 * [HolidayCheck](http://www.holidaycheck.com/)
 * [Human API](https://humanapi.co/)
 * [ING](http://www.ing.com/)
