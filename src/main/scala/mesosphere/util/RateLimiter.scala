@@ -35,10 +35,12 @@ class RateLimiter {
     taskLaunchDelays += ((app.id, app.version) -> newDelay)
   }
 
-  def resetDelay(app: AppDefinition): Unit = {
-    if (taskLaunchDelays contains (app.id -> app.version))
-      log.info(s"Task launch delay for [${app.id} - ${app.version}}] reset to zero")
-    taskLaunchDelays = taskLaunchDelays - (app.id -> app.version)
+  def resetDelay(app: AppDefinition): Unit = resetDelay(app.id, app.version)
+
+  def resetDelay(appId: PathId, version: Timestamp): Unit = {
+    if (taskLaunchDelays contains (appId -> version))
+      log.info(s"Task launch delay for [$appId - $version}] reset to zero")
+    taskLaunchDelays = taskLaunchDelays - (appId -> version)
   }
 
   /**
