@@ -5,9 +5,11 @@ import com.github.fge.jackson.JsonLoader
 import javax.validation.ConstraintValidatorContext
 
 import mesosphere.jackson.CaseClassModule
+import mesosphere.marathon.Protos.HealthCheckDefinition
 import mesosphere.marathon.api.v2.json.{ MarathonModule, V2AppDefinition }
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.{ Container, PathId, AppDefinition }
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.{ Command, Container, PathId, AppDefinition }
 import mesosphere.marathon.MarathonSpec
 
 class V2AppDefinitionValidatorTest extends MarathonSpec {
@@ -21,6 +23,21 @@ class V2AppDefinitionValidatorTest extends MarathonSpec {
     val app = V2AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"))
+    assert(validator.isValid(app, mock[ConstraintValidatorContext]))
+    validateJsonSchema(app)
+  }
+
+  test("only cmd + command health check") {
+    val app = V2AppDefinition(
+      id = PathId("/test"),
+      cmd = Some("true"),
+      healthChecks = Set(
+        HealthCheck(
+          protocol = HealthCheckDefinition.Protocol.COMMAND,
+          command = Some(Command("curl http://localhost:$PORT"))
+        )
+      )
+    )
     assert(validator.isValid(app, mock[ConstraintValidatorContext]))
     validateJsonSchema(app)
   }
