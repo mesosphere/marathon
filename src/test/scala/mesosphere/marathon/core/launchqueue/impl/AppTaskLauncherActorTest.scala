@@ -3,8 +3,9 @@ package mesosphere.marathon.core.launchqueue.impl
 import akka.actor.{ Terminated, Cancellable, ActorContext, Props, ActorRef, ActorSystem }
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -18,9 +19,10 @@ import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.{ Protos, MarathonSpec, MarathonTestHelper }
 import mesosphere.util.state.PersistentEntity
 import org.mockito.Mockito
+import org.scalatest.GivenWhenThen
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 import scala.concurrent.{ Future, Await }
@@ -36,7 +38,7 @@ import akka.pattern.ask
   * * tracking task status
   * * timeout for task launching feedback
   */
-class AppTaskLauncherActorTest extends MarathonSpec {
+class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   test("Initial population of task list from taskTracker with one task") {
     Mockito.when(taskTracker.get(app.id)).thenReturn(Set(marathonTask))
 
@@ -146,7 +148,9 @@ class AppTaskLauncherActorTest extends MarathonSpec {
     val props = Props(
       new AppTaskLauncherActor(
         launchQueueConfig,
-        offerMatcherManager, clock, taskFactory, taskStatusObservable, taskTracker, rateLimiterActor.ref,
+        offerMatcherManager, clock, taskFactory, taskStatusObservable,
+        maybeOfferReviver = None,
+        taskTracker, rateLimiterActor.ref,
         app, tasksToLaunch = 1
       ) {
         override protected def scheduleTaskLaunchTimeout(
@@ -240,6 +244,44 @@ class AppTaskLauncherActorTest extends MarathonSpec {
 
   for (
     update <- Seq(
+      TaskStatusUpdateTestHelper.finished,
+      TaskStatusUpdateTestHelper.lost,
+      TaskStatusUpdateTestHelper.killed,
+      TaskStatusUpdateTestHelper.error
+    )
+  ) {
+    test(s"Revive offers if task with constraints terminates (${update.wrapped.status.getClass.getSimpleName})") {
+      Given("an actor for an app with constraints and one task")
+      val constraint = Protos.Constraint
+        .newBuilder()
+        .setField("test")
+        .setOperator(Protos.Constraint.Operator.CLUSTER)
+        .build()
+      val appWithConstraints = app.copy(constraints = Set(constraint))
+      Mockito.when(taskTracker.get(appWithConstraints.id)).thenReturn(Set(marathonTask))
+
+      val launcherRef = createLauncherRef(instances = 0, appToLaunch = appWithConstraints)
+      launcherRef ! RateLimiterActor.DelayUpdate(appWithConstraints, clock.now())
+
+      And("that has succesfully started up")
+      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+
+      When("we get a status update about a terminated task")
+      appStatusObservable.onNext(update.withTaskId(marathonTask.getId).wrapped)
+
+      And("this update has been fully processed")
+      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+
+      Then("reviveOffers has been called")
+      Mockito.verify(offerReviver).reviveOffers()
+
+      And("the task tracker as well")
+      Mockito.verify(taskTracker).get(appWithConstraints.id)
+    }
+  }
+
+  for (
+    update <- Seq(
       TaskStatusUpdateTestHelper.staging,
       TaskStatusUpdateTestHelper.running
     )
@@ -281,14 +323,17 @@ class AppTaskLauncherActorTest extends MarathonSpec {
   private[this] var appStatusObservable: Subject[TaskStatusUpdate] = _
   private[this] var taskStatusObservable: TaskStatusObservables = _
   private[this] var taskTracker: TaskTracker = _
+  private[this] var offerReviver: OfferReviver = _
   private[this] var rateLimiterActor: TestProbe = _
 
-  private[this] def createLauncherRef(instances: Int): ActorRef = {
+  private[this] def createLauncherRef(instances: Int, appToLaunch: AppDefinition = app): ActorRef = {
     val props = AppTaskLauncherActor.props(
       launchQueueConfig,
-      offerMatcherManager, clock, taskFactory, taskStatusObservable, taskTracker, rateLimiterActor.ref) _
+      offerMatcherManager, clock, taskFactory, taskStatusObservable,
+      maybeOfferReviver = Some(offerReviver),
+      taskTracker, rateLimiterActor.ref) _
     actorSystem.actorOf(
-      props(app, instances),
+      props(appToLaunch, instances),
       "launcher"
     )
   }
@@ -304,6 +349,7 @@ class AppTaskLauncherActorTest extends MarathonSpec {
     taskStatusObservable = mock[TaskStatusObservables]
     Mockito.when(taskStatusObservable.forAppId(app.id)).thenReturn(appStatusObservable)
     taskTracker = mock[TaskTracker]
+    offerReviver = mock[OfferReviver]
     rateLimiterActor = TestProbe()
   }
 

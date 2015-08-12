@@ -71,6 +71,7 @@ class CoreModuleImpl @Inject() (
     // internal core dependencies
     offerMatcherManagerModule.subOfferMatcherManager,
     taskBusModule.taskStatusObservables,
+    maybeOfferReviver,
 
     // external guice dependencies
     appRepository,
@@ -78,14 +79,30 @@ class CoreModuleImpl @Inject() (
     taskFactory
   )
 
-  // MAINTENANCE TASKS
-
   // FLOW CONTROL GLUE
 
-  private[this] val flowActors = new FlowModule(leadershipModule)
+  private[this] lazy val flowActors = new FlowModule(leadershipModule)
+
   flowActors.refillOfferMatcherManagerLaunchTokens(
     marathonConf, taskBusModule.taskStatusObservables, offerMatcherManagerModule.subOfferMatcherManager)
-  flowActors.reviveOffersWhenOfferMatcherManagerSignalsInterest(
+
+  lazy val maybeOfferReviver = flowActors.maybeOfferReviver(
     clock, marathonConf,
+    actorSystem.eventStream,
     offerMatcherManagerModule.globalOfferMatcherWantsOffers, marathonSchedulerDriverHolder)
+
+  // GREEDY INSTANTIATION
+  //
+  // Greedily instantiate everything.
+  //
+  // lazy val allows us to write down object instantiations in any order.
+  //
+  // The LeadershipModule requires that all actors have been registered when the controller
+  // is created. Changing the wiring order for this feels wrong since it is nicer if it
+  // follows architectural logic. Therefore we instantiate them here explicitly.
+
+  taskTrackerModule.killOverdueTasks(taskTracker, marathonSchedulerDriverHolder)
+  maybeOfferReviver
+  offerMatcherManagerModule
+  launcherModule
 }

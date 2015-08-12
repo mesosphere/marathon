@@ -4,6 +4,7 @@ import akka.actor.{ ActorContext, Stash, Cancellable, Actor, ActorLogging, Actor
 import akka.event.LoggingReceive
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.AppTaskLauncherActor.RecheckIfBackOffUntilReached
@@ -36,6 +37,7 @@ private[launchqueue] object AppTaskLauncherActor {
     clock: Clock,
     taskFactory: TaskFactory,
     taskStatusObservable: TaskStatusObservables,
+    maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef)(
       app: AppDefinition,
@@ -43,7 +45,9 @@ private[launchqueue] object AppTaskLauncherActor {
     Props(new AppTaskLauncherActor(
       config,
       offerMatcherManager,
-      clock, taskFactory, taskStatusObservable, taskTracker, rateLimiterActor,
+      clock, taskFactory, taskStatusObservable,
+      maybeOfferReviver,
+      taskTracker, rateLimiterActor,
       app, initialCount))
   }
   // scalastyle:on parameter.number
@@ -85,6 +89,7 @@ private class AppTaskLauncherActor(
     clock: Clock,
     taskFactory: TaskFactory,
     taskStatusObservable: TaskStatusObservables,
+    maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef,
 
@@ -144,6 +149,8 @@ private class AppTaskLauncherActor(
       stash()
       unstashAll()
       context.become(active)
+    case msg @ RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp != app =>
+      log.warning("Received delay update for other app: {}", msg)
     case message: Any => stash()
   }
 
@@ -207,6 +214,9 @@ private class AppTaskLauncherActor(
 
       log.debug("After delay update {}", status)
 
+    case msg @ RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp != app =>
+      log.warning("Received delay update for other app: {}", msg)
+
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
   }
 
@@ -241,6 +251,9 @@ private class AppTaskLauncherActor(
     case TaskStatusUpdate(_, taskId, MarathonTaskStatus.Terminal(_)) =>
       log.debug("task '{}' finished", taskId.getValue)
       removeTask(taskId)
+      if (app.constraints.nonEmpty) {
+        maybeOfferReviver.foreach(_.reviveOffers())
+      }
 
     case TaskStatusUpdate(_, taskId, status) =>
       runningTasksMap.get(taskId.getValue) match {
