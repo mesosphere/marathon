@@ -9,10 +9,13 @@ import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.scalatest.{ Matchers, GivenWhenThen, BeforeAndAfter }
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
 
 class OfferReviverActorTest extends MarathonSpec with BeforeAndAfter with GivenWhenThen with Matchers {
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
   private[this] implicit var actorSystem: ActorSystem = _
   private[this] var eventStream: EventStream = _
   private[this] var driverHolder: MarathonSchedulerDriverHolder = _
@@ -115,8 +118,11 @@ class OfferReviverActorTest extends MarathonSpec with BeforeAndAfter with GivenW
     delegate = new OfferReviverDelegate(actorRef)
 
     // wait for actor to subscribe to event stream
+    eventStreamProbe.expectMsgClass(classOf[Logging.Debug])
+    val subscribeDebugMessage = "subscribing " + actorRef + " to channel " + classOf[SchedulerRegisteredEvent]
     eventStreamProbe.expectMsgPF() {
-      case Logging.Debug(_, _, message) if message.toString.startsWith("subscribing " + actorRef) =>
+      case Logging.Debug(_, _, `subscribeDebugMessage`) =>
+        log.info("subscribe has finished")
       // noop
     }
 
