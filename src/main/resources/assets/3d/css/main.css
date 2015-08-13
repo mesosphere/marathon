@@ -10,9 +10,21 @@ body {
 }
 #logo {
   position: absolute;
-  bottom: 20pt;
+  bottom: 40pt;
   left: 40pt;
   opacity: 0.3;
+  padding-bottom: 10px;
+}
+#loading {
+    position: absolute;
+    top: -28pt;
+    text-align: center;
+    width: 100vw;
+    color: #898D97;
+    transition: top 0.4s ease;
+}
+#loading.active {
+  top: 20pt;
 }
 #hud {
     color: #fff;
@@ -39,7 +51,7 @@ body {
   line-height: 1em;
 }
 .big-number {
-  font-size: 48pt;
+  font-size: 28pt;
 }
 #hud p.label {
   font-family: "SourceSansSemibold";
@@ -72,7 +84,13 @@ body {
 #hud .app .label {
   font-size: 12pt;
 }
-
+#hud #total-staged {
+  font-size: 28pt;
+  margin-top: 10px;
+}
+#hud .label.small {
+  font-size: 10pt;
+}
 #controls {
   color: #fff;
   width: 300px;
@@ -99,22 +117,6 @@ body {
   display: none;
 }
 
-#camera-controls {
-  position: absolute;
-  bottom: 20pt;
-  color: #626673;
-  right: 40pt;
-  font-family: "SourceSansSemibold";
-  font-size: 13pt;
-}
-#camera-controls a {
-  color: #626673;
-  text-decoration: none;
-  font-weight: 100;
-}
-#camera-controls a.active {
-  color: #fff;
-}
 /* toggles */
 .cmn-toggle {
   position: absolute;
@@ -132,7 +134,7 @@ input.cmn-toggle + label {
   width: 30pt;
   height: 15pt;
   border: 2px solid #2E3343;
-  border-radius: 60px;
+  border-radius: 12pt;
   transition: border-color 0.4s;
 }
 
@@ -163,3 +165,28 @@ input.cmn-toggle:checked + label:after {
 #app-2 input.cmn-toggle:checked + label:after { background-color: #7F32DE;}
 #app-3 input.cmn-toggle:checked + label:after { background-color: #E82A78;}
 #app-4 input.cmn-toggle:checked + label:after { background-color: #20D5FF;}
+
+#camera-controls {
+  position: absolute;
+  bottom: 40pt;
+  right: 40pt;
+}
+
+#camera-controls .cmn-toggle + label {
+  width: 54px;
+  height: 28px;
+  border-radius: 32px;
+  border: 3px solid #2E3343;
+  border-color: #202432;
+}
+
+#camera-controls .cmn-toggle + label:after {
+  width: 26px;
+  border-radius: 26px;
+  background: #595E6C url("../img/plane.png") 50% no-repeat;
+}
+
+#camera-controls input.cmn-toggle:checked + label:after {
+  margin-left: 24px;
+  background: #28C268 url("../img/plane-white.png") 50% no-repeat;
+}

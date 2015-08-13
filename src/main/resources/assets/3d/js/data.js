@@ -4,12 +4,16 @@ var Marathon = (function () {
   // EDIT THE BELOW URL TO POINT TO YOUR MARATHON API    //
   /////////////////////////////////////////////////////////
   var apiURL = "../v2";
+  var withCredentials = false; // Set to TRUE for CORS
+  var timeout = 5000;
 
   /*global Qajax, Lazy*/
   var callbacks = {
     created: [],
     updated: [],
-    deleted: []
+    deleted: [],
+    error: [],
+    success: []
   };
 
   var nextGeneration = 0;
@@ -19,7 +23,7 @@ var Marathon = (function () {
 
   var appDefaults = {
     instances: 0,
-    tasksStaging: 0,
+    tasksStaged: 0,
     tasksRunning: 0,
     tasksHealthy: 0,
     tasksUnhealthy: 0,
@@ -35,6 +39,12 @@ var Marathon = (function () {
     },
     deleted: function (cb) {
       callbacks.deleted.push(cb);
+    },
+    success: function (cb) {
+      callbacks.success.push(cb);
+    },
+    error: function (cb) {
+      callbacks.error.push(cb);
     }
   };
 
@@ -54,7 +64,9 @@ var Marathon = (function () {
   function fetchApps (generation) {
     Qajax({
       url: apiURL + "/apps",
-      headers: {"Accept": "application/json"}
+      headers: {"Accept": "application/json"},
+      timeout: timeout,
+      withCredentials: withCredentials
       })
       .then(function (xhr) {
         var data = JSON.parse(xhr.responseText);
@@ -63,11 +75,13 @@ var Marathon = (function () {
             id: appData.id,
             instances: appData.instances,
             tasksRunning: appData.tasksRunning,
-            tasksHealthy: appData.tasksHealthy
+            tasksStaged: appData.tasksStaged,
           };
-          //fetchTasks(app, generation);
           simulateFetchTasks(app, generation);
         });
+        fire("success", data.apps);
+      }, function (err) {
+        fire("error", err);
       });
   }
 
@@ -75,21 +89,21 @@ var Marathon = (function () {
     var oldApp = Apps[app.id] || appDefaults;
     var tasks = oldApp.tasks;
 
-    deleteTasks(tasks, app, oldApp);
+    //deleteTasks(tasks, app, oldApp);
     createTasks(tasks, app, oldApp, generation);
     updateTasks(tasks, app, oldApp, generation);
 
     app.tasks = tasks;
     Apps[app.id] = app;
   }
-  
+
   function createTasks (tasks, app, oldApp, generation) {
-    for (var i = oldApp.instances; i < app.instances; i++) {
+    for (var i = oldApp.tasksRunning; i < app.tasksRunning; i++) {
       var newTask = {
         id: app.id + "_" + i,
         appId: app.id,
         running: 1,
-        healthy: 1,
+        healthy: 0,
         generation: generation
       };
       fire("created", newTask);
@@ -98,27 +112,12 @@ var Marathon = (function () {
   }
 
   function updateTasks (tasks, app, oldApp, generation) {
-    var deltaHealthy = app.tasksHealthy - oldApp.tasksHealthy;
-    var deltaUnhealthy = app.tasksUnhealthy - oldApp.tasksUnhealthy;
 
     for (var i = 0; i < tasks.length; i++) {
       var task = tasks[i];
       var taskRunning = Number(i <= app.tasksRunning);
       if (task.running !== taskRunning) {
         task.running = taskRunning;
-        if (task.generation !== generation) {
-          fire("updated", task);
-        }
-      }
-      if (deltaHealthy > 0 && task.healthy === 0) {
-        task.healthy = 1;
-        deltaHealthy--;
-        if (task.generation !== generation) {
-          fire("updated", task);
-        }
-      } else if (deltaUnhealthy > 0 && task.healthy === 1) {
-        task.healthy = 0;
-        deltaUnhealthy--;
         if (task.generation !== generation) {
           fire("updated", task);
         }
@@ -134,12 +133,14 @@ var Marathon = (function () {
   }
 
   // The below performs a fetch the the /tasks/ endpoint and retrieves
-  // individual task statuses. We have concerns about its performance 
+  // individual task statuses. We have concerns about its performance
   // under hyperscale load, so it is not currently used.
   function fetchTasks (app, generation) {
     Qajax({
       url: apiURL + "/apps" + app.id + "/tasks",
-      headers: {"Accept": "application/json"}
+      headers: {"Accept": "application/json"},
+      timeout: timeout,
+      withCredentials: withCredentials
       })
       .then(function (xhr) {
         var data = JSON.parse(xhr.responseText);

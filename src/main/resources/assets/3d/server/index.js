@@ -1,16 +1,19 @@
 var _ = require("underscore");
 var express = require("express");
 var nconf = require("nconf");
+var fs = require("fs");
 
 nconf.argv().env().defaults({
   apps: 4,
   tasks: 1000,
   health: 0.9,
-  generations: 10
+  generations: 10,
+  generation: 0
 });
 
-var generation = 0;
+var loggedDataResponses = fs.readFileSync('data.log').toString().split("\n");
 var app = express();
+var generation = nconf.get("generation");
 
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -29,7 +32,7 @@ app.get("/v2/apps", function (req, res) {
   var running = totalTasks;
   var staging = 0;
   var tasks = totalTasks;
-  
+
   if (generation < generations) {
     running = Math.round(tasks * (generation / generations));
     staging = Math.round(tasks * (1 / generations));
@@ -62,6 +65,15 @@ app.get("/v2/apps/:appId/tasks", function (req, res) {
     };
   });
   res.json({ tasks: tasks });
+});
+
+// Replay a log of an actual session with 1 app x 100K instances in 2m20s
+app.get("/replay/apps", function (req, res) {
+  console.log("GET /replay/apps", "generation", generation);
+  res.json(JSON.parse(loggedDataResponses[generation]));
+  if (loggedDataResponses[generation + 1]) {
+    generation++;
+  }
 });
 
 var server = app.listen(3000, function () {

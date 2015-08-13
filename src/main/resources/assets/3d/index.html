@@ -9,57 +9,17 @@
 </head>
 <body>
 <div id="content"></div>
-
+<div id="loading" class="active">
+  <p>Loading apps...</p>
+</div>
 <div id="hud">
   <div class="wrap">
-    <p id="total-instances" class="big-number">0</p>
-    <p class="label">TOTAL TASKS</p>
+    <p id="total-instances" class="big-number" data-value="0">0</p>
+    <p class="label">RUNNING CONTAINERS</p>
+    <p id="total-staged" class="big-number" data-value="0">0</p>
+    <p class="label small">STAGED CONTAINERS</p>
     <span class="hairline"></span>
-
-    <div class="app" id="app-1">
-      <div class="switch">
-        <input id="toggle-app-1" class="cmn-toggle" type="checkbox" checked>
-        <label for="toggle-app-1"></label>
-      </div>
-      <div class="info">
-        <p id="app-1-instances" class="big-number">0</p>
-        <p class="label" id="app-1-label">n/a</p>
-      </div>
-    </div>
-
-    <div class="app" id="app-2">
-      <div class="switch">
-        <input id="toggle-app-2" class="cmn-toggle" type="checkbox" checked>
-        <label for="toggle-app-2"></label>
-      </div>
-      <div class="info">
-        <p id="app-2-instances" class="big-number">0</p>
-        <p class="label" id="app-2-label">n/a</p>
-      </div>
-    </div>
-
-    <div class="app" id="app-3">
-      <div class="switch">
-        <input id="toggle-app-3" class="cmn-toggle" type="checkbox" checked>
-        <label for="toggle-app-3"></label>
-      </div>
-      <div class="info">
-        <p id="app-3-instances" class="big-number">0</p>
-        <p class="label" id="app-3-label">n/a</p>
-      </div>
-    </div>
-
-    <div class="app" id="app-4">
-      <div class="switch">
-        <input id="toggle-app-4" class="cmn-toggle" type="checkbox" checked>
-        <label for="toggle-app-4"></label>
-      </div>
-      <div class="info">
-        <p id="app-4-instances" class="big-number">0</p>
-        <p class="label" id="app-4-label">n/a</p>
-      </div>
-    </div>
-
+    <!-- .app nodes will be appended here -->
   </div>
 </div>
 <div id="controls">
@@ -72,10 +32,13 @@
     </a>
   </p>
 </div>
-<p id="camera-controls">
-  <a href="#0" id="move-camera">Fly Cam</a> ❘
-  <a href="#0" class="active" id="reset-camera">Manual Cam</a>
-</p>
+
+<div id="camera-controls">
+  <div class="switch">
+    <input id="toggle-fly-cam" class="cmn-toggle" type="checkbox">
+    <label for="toggle-fly-cam"></label>
+  </div>
+</div>
 <img src="./img/logo.png" id="logo"/>
 <script type="x-shader/x-vertex" id="vertexshader">
     // MIT License.
@@ -97,11 +60,6 @@
     attribute float radius;
     attribute float theta;
     attribute float speed;
-    attribute float locked;
-    attribute float is_planet;
-
-    varying float vLocked;
-    varying float vPlanet;
 
     vec3 getAstroPos() {
       float phi_rad = (phi) * pi/180.0; // longitude of ascending node
@@ -118,8 +76,6 @@
     void main() {
       vColor = value_color;
       vAlpha = value_alpha;
-      vLocked = locked;
-      vPlanet = is_planet;
 
       vec3 newpos = getAstroPos();
       vec4 mvPosition = modelViewMatrix * vec4(newpos, 1.0);
@@ -133,27 +89,10 @@
     // https://github.com/typpo/asterank/blob/master/LICENSE
     varying vec3 vColor;
     varying float vAlpha;
-    varying float vLocked;
-    varying float vPlanet;
-    uniform sampler2D planet_texture;
     uniform sampler2D small_roid_texture;
-    uniform sampler2D small_roid_circled_texture;
 
     void main() {
-      if (vLocked < .5) {
-        if (vPlanet < .5) {
-          gl_FragColor = vec4(vColor, vAlpha) * texture2D(small_roid_texture,
-            vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
-        }
-        else {
-          gl_FragColor = vec4(vColor, vAlpha) * texture2D(planet_texture,
-            vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
-        }
-      }
-      else {
-        gl_FragColor = vec4(vColor, vAlpha) * texture2D(small_roid_circled_texture,
-          vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
-      }
+      gl_FragColor = vec4(vColor, vAlpha) * texture2D(small_roid_texture, vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
     }
 </script>
 
