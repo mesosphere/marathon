@@ -13,13 +13,16 @@ class AuthenticationService @Inject() (config: MarathonConf) {
   val log = Logger.getLogger(getClass.getName)
 
   def authenticate(user: String, pass: String, requiredRole: String): Boolean = {
-
-    log.debug(s"Credentials: $user:$pass")
-    login(user, pass, requiredRole)
+    if (config.shiroConfigPath.isDefined) {
+      login(user, pass, requiredRole)
+    }
+    else {
+      true
+    }
   }
 
   def login(uname: String, pwd: String, requiredRole: String): Boolean = {
-    val ldapFactory = new IniSecurityManagerFactory("classpath:shiro.ini")
+    val ldapFactory = new IniSecurityManagerFactory(config.shiroConfigPath())
     val securityManager = ldapFactory.getInstance
     val token = new UsernamePasswordToken(uname, pwd)
 
