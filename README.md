@@ -153,6 +153,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Qubit](http://www.qubitproducts.com/)
 * [RelateIQ](http://relateiq.com/)
 * [Sailthru](http://www.sailthru.com/)
+* [SmartProcure](https://smartprocure.us/)
 * [sloppy.io](http://sloppy.io/)
 * [Strava](https://www.strava.com)
 * [Viadeo](http://www.viadeo.com)
