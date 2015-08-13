@@ -184,11 +184,31 @@ trait MarathonConf
     noshort = true
   )
 
-  //Internal settings, that are not intended for external use
-  lazy val internalStoreBackend = opt[String]("internal_store_backend",
-    descr = "The backend storage system to use. One of zk, mesos_zk, mem",
+  lazy val storeBackend = opt[String]("store_backend",
+    descr = "The backend storage system to use. One of zk, mesos_zk, mesos_log, mem",
     hidden = true,
-    validate = Set("zk", "mesos_zk", "mem").contains,
+    validate = Set("zk", "mesos_zk", "mesos_log", "mem").contains,
     default = Some("zk")
+  )
+
+  lazy val storeMesosLogZkPath = opt[String] ("store_mesos_log_zk_path",
+    descr = "The path inside zk to coordinate the mesos log replicas",
+    noshort = true
+  )
+
+  lazy val storeMesosLogQuorum = opt[Long] ("store_mesos_log_quorum",
+    descr = "The number of replicas that build the quorum.",
+    noshort = true
+  )
+
+  lazy val storeMesosLogPath = opt[String] ("store_mesos_log_path",
+    descr = "The path in the local file system, where the initialized replicated log is stored.",
+    noshort = true
+  )
+
+  lazy val storeMesosLogDiffsBetweenSnapshot = opt[Int] ("store_mesos_log_diffs_between_snapshot",
+    descr = "The number of diffs between snapshots.",
+    noshort = true,
+    default = Some(0)
   )
 }
