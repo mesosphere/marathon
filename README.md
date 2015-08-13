@@ -60,7 +60,7 @@ Instructions on how to install prepackaged releases are available [in the Marath
 
         git clone --recursive https://github.com/mesosphere/marathon.git
         cd marathon
-        sbt assembly
+        ./sbt/bin/sbt assembly
 
 1.  Run `./bin/build-distribution` to package Marathon as an
     [executable JAR](http://mesosphere.com/2013/12/07/executable-jars/)
