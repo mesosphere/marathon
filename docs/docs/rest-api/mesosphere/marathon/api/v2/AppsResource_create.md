@@ -287,16 +287,6 @@ filling up the hard disk on Mesos slaves. The backoff period is multiplied by
 the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
 This applies also to tasks that are killed due to failing too many health checks.
 
-_upgradeStrategy:_ [UpgradeStrategy] during an upgrade all instances of an application get replaced by a new version. 
-The minimumHealthCapacity defines the minimum number of healthy nodes, that do not sacrifice overall application purpose. 
-It is a number between 0 and 1 which is multiplied with the instance count. 
-The default minimumHealthCapacity is 1, which means no old instance can be stopped, before all new instances are deployed. 
-A value of 0.5 means that an upgrade can be deployed side by side, by taking half of the instances down in the first step, 
-deploy half of the new version and than take the other half down and deploy the rest. 
-A value of 0 means take all instances down immediately and replace with the new application.
-
-_version:_ [String] ISODate string, which shows the last change of the application. This parameter can not be set.
-
 ##### upgradeStrategy
 
 During an upgrade all instances of an application get replaced by a new version.
