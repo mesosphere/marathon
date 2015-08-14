@@ -12,7 +12,7 @@ import mesosphere.util.state.zk.ZKStore._
 import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 import org.apache.log4j.Logger
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.NoNodeException
+import org.apache.zookeeper.KeeperException.{ NodeExistsException, NoNodeException }
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Future, Promise }
@@ -98,7 +98,9 @@ class ZKStore(val client: ZkClient, rootNode: ZNode) extends PersistentStore {
 
       if (!exists) {
         createParent(node.parent)
-        Await.result(node.create().asScala.recover(exceptionTransform("Can not create")), Duration.Inf)
+        Await.result(node.create().asScala
+          .recover { case ex: NodeExistsException => node }
+          .recover(exceptionTransform("Can not create")), Duration.Inf)
       }
       node
     }
