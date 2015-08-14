@@ -3,39 +3,39 @@
   src: url("fonts/source-sans-semibold.ttf");
 }
 body {
-    margin: 0;
-    overflow: hidden;
-    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
-    font-weight: 100;
+  margin: 0;
+  overflow: hidden;
+  font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+  font-weight: 100;
+  background: #111;
 }
 #logo {
   position: absolute;
   bottom: 40pt;
   left: 40pt;
   opacity: 0.3;
-  padding-bottom: 10px;
 }
 #loading {
-    position: absolute;
-    top: -28pt;
-    text-align: center;
-    width: 100vw;
-    color: #898D97;
-    transition: top 0.4s ease;
+  position: absolute;
+  top: -28pt;
+  text-align: center;
+  width: 100vw;
+  color: #898D97;
+  transition: top 0.4s ease;
 }
 #loading.active {
   top: 20pt;
 }
 #hud {
-    color: #fff;
-    position: absolute;
-    top: 20pt;
-    left: 40pt;
-    min-width: 300px;
-    z-index: 10;
+  color: #fff;
+  position: absolute;
+  top: 20pt;
+  left: 40pt;
+  min-width: 230px;
+  z-index: 10;
 }
 #hud a {
-    color: #fff;
+  color: #fff;
 }
 #hud h4 {
   font-weight: normal;
@@ -48,16 +48,16 @@ body {
 #hud p {
   padding: 0;
   margin: 0;
-  line-height: 1em;
+  line-height: 1.1em;
 }
 .big-number {
-  font-size: 28pt;
+  font-size: 32pt;
 }
 #hud p.label {
   font-family: "SourceSansSemibold";
-  font-size: 13pt;
+  font-size: 11pt;
   color: #898D97;
-  margin-top: 1em;
+  margin-top: 0.6em;
 }
 .hairline {
   display: block;
@@ -67,29 +67,31 @@ body {
 
 #hud .app {
   clear: left;
-  margin-bottom: 3em;
+  margin-bottom: 10pt;
 }
 #hud .app .switch {
   width: 60pt;
   margin: 0;
   padding: 0;
-  padding-top: 20px;
-  height: 70px;
+  padding-top: 1pt;
+  height: 50pt;
   float: left;
 }
 
 #hud .app .big-number {
-  font-size: 32pt;
+  font-size: 22pt;
+  line-height: 1em;
 }
 #hud .app .label {
-  font-size: 12pt;
+  font-size: 11pt;
+  line-height: 15pt;
 }
 #hud #total-staged {
-  font-size: 28pt;
+  font-size: 32pt;
   margin-top: 10px;
 }
 #hud .label.small {
-  font-size: 10pt;
+  font-size: 11pt;
 }
 #controls {
   color: #fff;
@@ -110,8 +112,11 @@ body {
   border-radius: 4px;
   padding: 12px;
 }
-
-#controls a.active {
+#controls span {
+  cursor: pointer;
+  outline: 0;
+}
+#controls .active {
   text-decoration: none;
   font-weight: bold;
   display: none;

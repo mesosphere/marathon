@@ -6,6 +6,12 @@
     container = document.getElementById("content"),
     camera,
     cameraControls,
+    cameraPositions = [
+      {x: 2000, y: -3200, z: 4500}, // start, "dawn on earth"
+      {x: -1850, y: 5500, z: -50}, // event horizon
+      {x: 0, y: 0, z: 12000}, // eye of sauron
+      {x: 0, y: 0, z: 3500} // end, zoomed in upfront
+    ],
     flyCamera = false,
     cameraIsMoving = false,
     viewportHeight = window.innerHeight,
@@ -45,14 +51,14 @@
       toggleFlyCam: document.getElementById("toggle-fly-cam"),
       loading: document.getElementById("loading")
     },
-    easeAlpha = 0.009,
+    easeAlpha = 0.05,
     ease = 0.1,
     appIds = [],
     individualAppCounters = [],
     maxApps = Object.keys(colorScheme).length,
     totalStagedCounter = 0,
     isToggleGroupedActive = false,
-    appDefinitions = {};
+    lastCameraPos = null;
 
   function createIndividualAppHUDElements() {
     var parent = document.getElementById("hud").firstElementChild;
@@ -60,7 +66,7 @@
       var html = `
        <div class="app" id="app-${i}">
          <div class="switch">
-           <input id="toggle-app-${i}" class="cmn-toggle" type="checkbox" checked>
+           <input id="toggle-app-${i}" data-index="${i}" class="cmn-toggle" type="checkbox" checked>
            <label for="toggle-app-${i}"></label>
          </div>
          <div class="info">
@@ -141,12 +147,14 @@
 
     // Reset camera to start position
     document.addEventListener("keydown", function (e) {
-      if (e.keyCode === 27) { // ESC
+      if (e.keyCode < 49 || e.keyCode > 57) return;
+      var cameraIndex = parseInt(e.keyCode) - 49; // start at 0
+      if (cameraIndex < cameraPositions.length) {
         toggleFlyCam();
         cameraIsMoving = true;
         TWEEN.removeAll();
         new TWEEN.Tween(camera.position)
-          .to({x: 0, y: 0, z: pointCloudRadiusMax + 2000}, 2000)
+          .to(cameraPositions[cameraIndex], 4000)
           .easing(TWEEN.Easing.Cubic.InOut)
           .onUpdate(function () {
             camera.updateProjectionMatrix();
@@ -160,6 +168,28 @@
           .start();
       }
     });
+
+    // App toggles
+    hudElements.individualAppToggles.forEach(function (toggle) {
+      toggle.addEventListener("change", function (e) {
+        var index = parseInt(e.target.dataset.index) - 1;
+        var checked = e.target.checked;
+        for (var i = 0; i < maxParticles; i++) {
+          var p = initialParticles[i];
+          if (p.id === index) {
+            initialParticles[i].visible = checked;
+            initialParticles[i].transitionEnd.alpha = false;
+          }
+        }
+      });
+    });
+  }
+
+  function setCameraPosition(i) {
+    if (cameraPositions[i] === undefined) i = 0;
+    camera.position.x = cameraPositions[i].x;
+    camera.position.y = cameraPositions[i].y;
+    camera.position.z = cameraPositions[i].z;
   }
 
   function init() {
@@ -176,10 +206,9 @@
     var aspectRatio = viewportWidth / viewportHeight;
     camera = new THREE.PerspectiveCamera(90, aspectRatio, 1, 0);
     scene.add(camera);
-    camera.position.x = 2000;
-    camera.position.y = -3200;
-    camera.position.z = 4500;
-    // Camera controls
+    setCameraPosition(0);
+
+     //Camera controls
     cameraControls = new THREE.TrackballControls(camera, container);
     cameraControls.staticMoving = true;
     cameraControls.panSpeed = 2;
@@ -189,23 +218,14 @@
     cameraControls.dynamicDampingFactor = 0.5;
 
     // Generate total amount of "invisible" particles
-    var numApps = Object.keys(colorScheme).length;
-    var radiusStep = pointCloudRadiusMax / numApps;
+    var radiusStep = pointCloudRadiusMax / maxApps;
     for (var i = 0; i < maxParticles; i++) {
-      var colorKey = Object.keys(colorScheme)[Object.keys(colorScheme).length * Math.random() << 0];
-      var targetColor = colorScheme[colorKey];
       var randomAlpha = Math.random() * (0.9 - 0.7) + 0.7;
 
       // Ungrouped orbits
       var minR = pointCloudRadiusMin;
       var maxR = pointCloudRadiusMax;
       var radius = maxR + (Math.random() * maxR + minR) - (maxR - minR);
-
-      // Grouped by color
-      var appIndex = Object.keys(colorScheme).indexOf(colorKey);
-      var minR = pointCloudRadiusMin;
-      var maxR = pointCloudRadiusMax - ((numApps - appIndex) * radiusStep) + radiusStep;
-      var groupedRadius = minR + maxR + Math.random() * radiusStep - radiusStep;
 
       initialParticles[i] = {
         id: null,
@@ -220,11 +240,11 @@
         },
         running: 0,
         targetAlpha: parseFloat(randomAlpha.toFixed(2)),
-        targetColor: targetColor,
+        targetColor: stagingColor,
         initialRadius: radius,
-        groupedRadius: groupedRadius,
+        groupedRadius: radius,
         transitionEnd: {
-          alpha: true,
+          alpha: false,
           initialRadius: true,
           groupedRadius: true
         },
@@ -240,8 +260,8 @@
       var orbit = new Orbit3D(roid, {
         color: 0xffffff,
         display_color: new THREE.Color(0x000000),
-        width: 10,
-        object_size: 15,
+        width: 20,
+        object_size: 25,
         jed: jed,
         particle_geometry: geometry // will add itself to this geometry
       }, true);
@@ -316,6 +336,8 @@
 
     Marathon.Events.created(function (task) {
       var taskId = task.id;
+      var groupedRadius = null;
+      var targetColor = stagingColor;
       var j = taskIdLookupTable[taskId];
       if (j === undefined) {
         // pick a new particle
@@ -335,11 +357,22 @@
         }
       }
       if (pos > -1) {
+        targetColor = colorScheme[Object.keys(colorScheme)[pos]];
+        // Grouped by color
+        var minR = pointCloudRadiusMin;
+        var maxR = pointCloudRadiusMax - ((maxApps - pos) * radiusStep) + radiusStep;
+        groupedRadius = minR + maxR + Math.random() * radiusStep - radiusStep;
         individualAppCounters[pos]++;
+        // Set app index
+        initialParticles[j].id = pos;
       }
 
-      initialParticles[j].visible = true;
+      initialParticles[j].visible = pos > -1
+        ? hudElements.individualAppToggles[pos].checked
+        : true;
       initialParticles[j].running = task.running;
+      initialParticles[j].targetColor = targetColor;
+      if (groupedRadius) initialParticles[j].groupedRadius = groupedRadius;
       initialParticles[j].transitionEnd.alpha = false;
       initialParticles[j].transitionEnd.initialRadius = !!isToggleGroupedActive;
       initialParticles[j].transitionEnd.groupedRadius = !isToggleGroupedActive;
@@ -348,14 +381,31 @@
 
     Marathon.Events.updated(function (task) {
       var taskId = task.id;
+      var targetColor = stagingColor;
+      var groupedRadius = null;
       var j = taskIdLookupTable[taskId];
       if (j === undefined) {
         // pick a new particle
         j = parseInt(particlesPointers.pop());
         taskIdLookupTable[taskId] = j;
       }
-      initialParticles[j].visible = true;
+      var pos = appIds.indexOf(task.appId);
+      if (pos > -1) {
+        targetColor = colorScheme[Object.keys(colorScheme)[pos]];
+        // Grouped by color
+        var minR = pointCloudRadiusMin;
+        var maxR = pointCloudRadiusMax - ((maxApps - pos) * radiusStep) + radiusStep;
+        groupedRadius = minR + maxR + Math.random() * radiusStep - radiusStep;
+        // Set app index
+        initialParticles[j].id = pos;
+      }
+      initialParticles[j].visible = pos > -1
+        ? hudElements.individualAppToggles[pos].checked
+        : true;
       initialParticles[j].running = task.running;
+      initialParticles[j].targetColor = targetColor;
+      if (groupedRadius) initialParticles[j].groupedRadius = groupedRadius;
+      initialParticles[j].transitionEnd.alpha = false;
       initialParticles[j].transitionEnd.initialRadius = !!isToggleGroupedActive;
       initialParticles[j].transitionEnd.groupedRadius = !isToggleGroupedActive;
       hudElements.loading.className = "";
@@ -419,25 +469,32 @@
       TWEEN.update();
     }
     cameraControls.update();
+    // Uncomment to capture camera position values
+    //if (JSON.stringify(lastCameraPos) != JSON.stringify(camera.position)) {
+    //  lastCameraPos = JSON.parse(JSON.stringify(camera.position));
+    //  console.log(camera.position);
+    //}
 
     // Animation loop
     for (var i = 0; i < maxParticles; i++) {
       var p = initialParticles[i];
-      // Subtle glowing effect
-      //if (!p.transitionEnd.alpha) {
-      //  var alpha = particleAttributes.value_alpha.value[i];
-      //  var targetAlpha = 1.0;
-      //  if (alpha >= p.targetAlpha) {
-      //    animationDirections.alpha[i] = -1;
-      //  } else if (alpha <= 0.1) {
-      //    animationDirections.alpha[i] = 1;
-      //  }
-      //  var da = targetAlpha - alpha;
-      //  var va = da * easeAlpha;
-      //  particleAttributes.value_alpha.value[i] +=
-      //    va * animationDirections.alpha[i];
-      //}
-      if (p.running) particleAttributes.value_alpha.value[i] = 0.5;
+
+      // Animate to light
+      var alpha = particleAttributes.value_alpha.value[i];
+      var targetAlpha = p.visible ? 0.5 : 0.0;
+      animationDirections.alpha[i] = p.visible ? -1 : 1;
+      if (p.visible && alpha < targetAlpha ||
+        !p.visible && alpha > targetAlpha) {
+        if (!p.transitionEnd.alpha) {
+          var da = alpha - 1.0;
+          var va = da * easeAlpha;
+          particleAttributes.value_alpha.value[i] +=
+            va * animationDirections.alpha[i];
+        } else {
+          particleAttributes.value_alpha.value[i] = targetAlpha;
+          initialParticles[i].transitionEnd.alpha = true;
+        }
+      }
 
       // Animate grouped radius
       if (!p.transitionEnd.groupedRadius &&
@@ -483,7 +540,7 @@
       hudElements.totalInstancesCounter.textContent = tot.toLocaleString();
     }
 
-     //Update staged counter
+    // Update staged counter
     var currentStagedCounter = parseInt(hudElements.totalStagedCounter.dataset.value);
     if (currentStagedCounter !== totalStagedCounter) {
       var dct = totalStagedCounter - currentStagedCounter;
