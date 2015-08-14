@@ -811,6 +811,11 @@ def run_server(marathon, callback_url, config_file, groups):
     httpd.serve_forever()
 
 
+def clear_callbacks(marathon, callback_url):
+    logger.info("Cleanup, removing subscription to {0}".format(callback_url))
+    marathon.remove_subscriber(callback_url)
+
+
 def setup_logging(syslog_socket):
     logger.setLevel(logging.DEBUG)
 
@@ -849,7 +854,11 @@ if __name__ == '__main__':
     # If in listening mode, spawn a webserver waiting for events. Otherwise
     # just write the config.
     if args.listening:
-        run_server(marathon, args.listening, args.haproxy_config, args.group)
+        try:
+            run_server(marathon, args.listening,
+                       args.haproxy_config, args.group)
+        finally:
+            clear_callbacks(marathon, args.listening)
     else:
         # Generate base config
         regenerate_config(get_apps(marathon), args.haproxy_config, args.group)
