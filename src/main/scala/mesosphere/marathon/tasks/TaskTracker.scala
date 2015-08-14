@@ -3,7 +3,6 @@ package mesosphere.marathon.tasks
 import java.io._
 import javax.inject.Inject
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.metrics.Metrics
@@ -222,7 +221,7 @@ class TaskTracker @Inject() (
         for (task <- taskOption) {
           // Update the in-memory storage.
           val internalApp = apps.getOrElseUpdate(appId, new InternalApp(appId, TrieMap(), false))
-          internalApp.tasks.putIfAbsent(taskKey, task)
+          internalApp.tasks.putIfAbsent(taskKey.stripPrefix(getKeyPrefix(appId)), task)
         }
 
         taskOption
