@@ -1,12 +1,12 @@
 <!doctype html>
 <html class="no-js" lang="">
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <title>Observation Deck</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>Observation Deck</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
 </head>
 <body>
 <div id="content"></div>
@@ -17,8 +17,11 @@
   <div class="wrap">
     <p id="total-instances" class="big-number" data-value="0">0</p>
     <p class="label">RUNNING CONTAINERS</p>
-    <p id="total-staged" class="big-number" data-value="0">0</p>
-    <p class="label small">STAGED CONTAINERS</p>
+    <span class="hairline"></span>
+    <p id="timer" class="big-number" data-value="0">00:00:00</p>
+    <p class="label small">STOPWATCH</p>
+    <p class="big-number" data-value="0"><span id="peak" data-value="0">0</span>/s</p>
+    <p class="label small">PEAK CONTAINERS</p>
     <span class="hairline"></span>
     <!-- .app nodes will be appended here -->
   </div>
@@ -40,61 +43,64 @@
     <label for="toggle-fly-cam"></label>
   </div>
 </div>
-<img src="./img/logo.png" id="logo"/>
+<div id="logos">
+  <img src="./img/logo.png"/>
+  <img src="./img/verizon.png"/>
+</div>
 <script type="x-shader/x-vertex" id="vertexshader">
-    // MIT License.
-    // Copyright Ian Webster 2012 (asterank.com)
-    // https://github.com/typpo/asterank/blob/master/LICENSE
-    #define pi 3.141592653589793238462643383279
+  // MIT License.
+  // Copyright Ian Webster 2012 (asterank.com)
+  // https://github.com/typpo/asterank/blob/master/LICENSE
+  #define pi 3.141592653589793238462643383279
 
-    attribute vec3 value_color;
-    varying vec3 vColor;
+  attribute vec3 value_color;
+  varying vec3 vColor;
 
-    attribute float value_alpha;
-    varying float vAlpha;
+  attribute float value_alpha;
+  varying float vAlpha;
 
-    attribute float size;
+  attribute float size;
 
-    uniform float jed;
+  uniform float jed;
 
-    attribute float phi;
-    attribute float radius;
-    attribute float theta;
-    attribute float speed;
+  attribute float phi;
+  attribute float radius;
+  attribute float theta;
+  attribute float speed;
 
-    vec3 getAstroPos() {
-      float phi_rad = (phi) * pi/180.0; // longitude of ascending node
-      float theta_rad = (theta) * pi/180.0; // LONGITUDE of perihelion
+  vec3 getAstroPos() {
+    float phi_rad = (phi) * pi/180.0; // longitude of ascending node
+    float theta_rad = (theta) * pi/180.0; // LONGITUDE of perihelion
 
-      float t = mod(jed, speed) / speed * 2.0 * pi;
-      float X = radius * sin(phi_rad + t);
-      float Y = radius * cos(phi_rad + t);
-      float Z = theta * cos(mod(theta, 2.0*pi) + t);
+    float t = mod(jed, speed) / speed * 2.0 * pi;
+    float X = radius * sin(phi_rad + t);
+    float Y = radius * cos(phi_rad + t);
+    float Z = theta * cos(mod(theta, 2.0*pi) + t);
 
-      return vec3(X, Y, Z);
-    }
+    return vec3(X, Y, Z);
+  }
 
-    void main() {
-      vColor = value_color;
-      vAlpha = value_alpha;
+  void main() {
+    vColor = value_color;
+    vAlpha = value_alpha;
 
-      vec3 newpos = getAstroPos();
-      vec4 mvPosition = modelViewMatrix * vec4(newpos, 1.0);
-      gl_Position = projectionMatrix * mvPosition;
-      gl_PointSize = size;
-    }
+    vec3 newpos = getAstroPos();
+    vec4 mvPosition = modelViewMatrix * vec4(newpos, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
+    gl_PointSize = size;
+  }
 </script>
 <script type="x-shader/x-fragment" id="fragmentshader">
-    // MIT License.
-    // Copyright Ian Webster 2012 (asterank.com)
-    // https://github.com/typpo/asterank/blob/master/LICENSE
-    varying vec3 vColor;
-    varying float vAlpha;
-    uniform sampler2D small_roid_texture;
+  // MIT License.
+  // Copyright Ian Webster 2012 (asterank.com)
+  // https://github.com/typpo/asterank/blob/master/LICENSE
+  varying vec3 vColor;
+  varying float vAlpha;
+  uniform sampler2D small_roid_texture;
 
-    void main() {
-      gl_FragColor = vec4(vColor, vAlpha) * texture2D(small_roid_texture, vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
-    }
+  void main() {
+    gl_FragColor = vec4(vColor, vAlpha) * texture2D(small_roid_texture, vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
+  }
 </script>
 
 <!-- lib -->

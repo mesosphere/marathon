@@ -9,11 +9,14 @@ body {
   font-weight: 100;
   background: #111;
 }
-#logo {
+#logos {
   position: absolute;
   bottom: 40pt;
   left: 40pt;
   opacity: 0.3;
+}
+#logos img:first-child {
+  margin-right: 10px;
 }
 #loading {
   position: absolute;
@@ -85,6 +88,8 @@ body {
 #hud .app .label {
   font-size: 11pt;
   line-height: 15pt;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #hud #total-staged {
   font-size: 32pt;

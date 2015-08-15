@@ -5,7 +5,8 @@ var Marathon = (function () {
   /////////////////////////////////////////////////////////
   var apiURL = "../v2";
   var withCredentials = false; // Set to TRUE for CORS
-  var timeout = 5000;
+  var pollInterval = 2000;
+  var timeout = 20000;
 
   /*global Qajax, Lazy*/
   var callbacks = {
@@ -168,10 +169,11 @@ var Marathon = (function () {
     setInterval(function () {
       nextGeneration++;
       fetchApps(nextGeneration);
-    }, 2000);
+    }, pollInterval);
   }
 
   return {
+    pollInterval: pollInterval,
     Events: Events,
     startPolling: startPolling
   };

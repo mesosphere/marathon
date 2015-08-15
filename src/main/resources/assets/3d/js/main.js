@@ -1,23 +1,34 @@
 (function() {
   /*global THREE, TWEEN, Marathon */
-  var scene = new THREE.Scene(),
+  var config = {
+      maxParticles: 100000,
+      cameraPositions: [
+        {x: 2000, y: -3200, z: 4500}, // start, "dawn on earth"
+        {x: -1850, y: 5500, z: -50}, // event horizon
+        {x: 0, y: 0, z: 12000}, // eye of sauron
+        {x: 0, y: 0, z: 3500} // end, zoomed in upfront
+      ],
+      stagingColor: new THREE.Color(0xcccccc),
+      colorScheme: {
+        "uranus": new THREE.Color(0x48B978), // green
+        "heliotrope": new THREE.Color(0x7F32DE), // purple
+        "mercury": new THREE.Color(0xE82A78), // magenta
+        "neptune": new THREE.Color(0x20D5FF) // cyan
+        //"venus": new THREE.Color(0xF4B826), // yellow
+        //"earth": new THREE.Color(0x2F81F7) // blue
+      }
+    },
+    scene = new THREE.Scene(),
     renderer = new THREE.WebGLRenderer(),
     geometry = new THREE.Geometry(),
     container = document.getElementById("content"),
     camera,
     cameraControls,
-    cameraPositions = [
-      {x: 2000, y: -3200, z: 4500}, // start, "dawn on earth"
-      {x: -1850, y: 5500, z: -50}, // event horizon
-      {x: 0, y: 0, z: 12000}, // eye of sauron
-      {x: 0, y: 0, z: 3500} // end, zoomed in upfront
-    ],
     flyCamera = false,
     cameraIsMoving = false,
     viewportHeight = window.innerHeight,
     viewportWidth = window.innerWidth,
     jed = toJED(new Date()),
-    maxParticles = 100000,
     particlesPointers = [],
     initialParticles = [],
     added_objects = [],
@@ -26,23 +37,15 @@
     particleUniforms,
     taskIdLookupTable = {},
     particleTexture = THREE.ImageUtils.loadTexture("./img/particle.png"),
-    stagingColor = new THREE.Color(0xcccccc),
-    colorScheme = {
-      "uranus": new THREE.Color(0x48B978), // green
-      "heliotrope": new THREE.Color(0x7F32DE), // purple
-      "mercury": new THREE.Color(0xE82A78), // magenta
-      "neptune": new THREE.Color(0x20D5FF) // cyan
-      //"venus": new THREE.Color(0xF4B826), // yellow
-      //"earth": new THREE.Color(0x2F81F7) // blue
-    },
     pointCloudRadiusMin = 500,
     pointCloudRadiusMax = 10000,
     animationDirections = {
       alpha: []
     },
     hudElements = {
+      timer: document.getElementById("timer"),
+      peak: document.getElementById("peak"),
       totalInstancesCounter: document.getElementById("total-instances"),
-      totalStagedCounter: document.getElementById("total-staged"),
       individualAppCounters: [],
       individualAppToggles: [],
       individualAppLabels: [],
@@ -55,9 +58,12 @@
     ease = 0.1,
     appIds = [],
     individualAppCounters = [],
-    maxApps = Object.keys(colorScheme).length,
-    totalStagedCounter = 0,
+    maxApps = Object.keys(config.colorScheme).length,
+    currentTotalCounter = 0,
+    targetRunningTasks = null,
+    lastPeak = 0,
     isToggleGroupedActive = false,
+    startTime = null,
     lastCameraPos = null;
 
   function createIndividualAppHUDElements() {
@@ -105,6 +111,19 @@
     hudElements.toggleFlyCam.checked = false;
   }
 
+  function updateTimer() {
+    var currentTotal = config.maxParticles - particlesPointers.length;
+    if (startTime &&  currentTotal < targetRunningTasks) {
+      var d = new Date(new Date().getTime() - startTime);
+      // Dammit, chrome! No Date.format()!
+      var mm = ("0" + d.getMinutes().toString()).slice(-2);
+      var ss = ("0" + d.getSeconds().toString()).slice(-2);
+      var ms = d.getMilliseconds().toString().slice(0, 2);
+      var formatTime = `${mm}:${ss}:${ms}`;
+      hudElements.timer.textContent = formatTime;
+    }
+  }
+
   function doBindings() {
     // Toggle grouped apps view
     hudElements.toggleGrouped.addEventListener("click", function (e) {
@@ -149,12 +168,12 @@
     document.addEventListener("keydown", function (e) {
       if (e.keyCode < 49 || e.keyCode > 57) return;
       var cameraIndex = parseInt(e.keyCode) - 49; // start at 0
-      if (cameraIndex < cameraPositions.length) {
+      if (cameraIndex < config.cameraPositions.length) {
         toggleFlyCam();
         cameraIsMoving = true;
         TWEEN.removeAll();
         new TWEEN.Tween(camera.position)
-          .to(cameraPositions[cameraIndex], 4000)
+          .to(config.cameraPositions[cameraIndex], 4000)
           .easing(TWEEN.Easing.Cubic.InOut)
           .onUpdate(function () {
             camera.updateProjectionMatrix();
@@ -174,7 +193,7 @@
       toggle.addEventListener("change", function (e) {
         var index = parseInt(e.target.dataset.index) - 1;
         var checked = e.target.checked;
-        for (var i = 0; i < maxParticles; i++) {
+        for (var i = 0; i < config.maxParticles; i++) {
           var p = initialParticles[i];
           if (p.id === index) {
             initialParticles[i].visible = checked;
@@ -186,10 +205,10 @@
   }
 
   function setCameraPosition(i) {
-    if (cameraPositions[i] === undefined) i = 0;
-    camera.position.x = cameraPositions[i].x;
-    camera.position.y = cameraPositions[i].y;
-    camera.position.z = cameraPositions[i].z;
+    if (config.cameraPositions[i] === undefined) i = 0;
+    camera.position.x = config.cameraPositions[i].x;
+    camera.position.y = config.cameraPositions[i].y;
+    camera.position.z = config.cameraPositions[i].z;
   }
 
   function init() {
@@ -219,7 +238,7 @@
 
     // Generate total amount of "invisible" particles
     var radiusStep = pointCloudRadiusMax / maxApps;
-    for (var i = 0; i < maxParticles; i++) {
+    for (var i = 0; i < config.maxParticles; i++) {
       var randomAlpha = Math.random() * (0.9 - 0.7) + 0.7;
 
       // Ungrouped orbits
@@ -234,13 +253,13 @@
           theta: Math.random() * 1000 - 200,
           radius: 0,
           speed: Math.random() * 5000 + 250,
-          value_color: stagingColor,
+          value_color: config.stagingColor,
           value_alpha: 0.0,
           locked: 0
         },
         running: 0,
         targetAlpha: parseFloat(randomAlpha.toFixed(2)),
-        targetColor: stagingColor,
+        targetColor: config.stagingColor,
         initialRadius: radius,
         groupedRadius: radius,
         transitionEnd: {
@@ -252,7 +271,7 @@
       };
     }
 
-    for (var i = 0; i < maxParticles; i++) {
+    for (var i = 0; i < config.maxParticles; i++) {
       // Populate particle index pointers array
       particlesPointers.push(i.toString());
       // Create Orbit3D objects
@@ -327,17 +346,32 @@
     scene.add(particleSystem);
 
     Marathon.Events.success(function (apps) {
-      totalStagedCounter = 0;
+      var totalRunning = 0;
+      var totalInstances = 0;
       apps.forEach(function (appData) {
-        totalStagedCounter += appData.tasksStaged;
+        totalRunning += appData.tasksRunning;
+        totalInstances += appData.instances;
       });
+      // Update target instances
+      if (!targetRunningTasks) {
+        targetRunningTasks = totalInstances;
+      }
+      var peak = totalRunning - currentTotalCounter;
+      peak = Math.floor(peak / (Marathon.pollInterval / 1000));
+      if (peak > lastPeak && currentTotalCounter < targetRunningTasks) {
+        lastPeak = peak;
+      }
+      currentTotalCounter = totalRunning;
       hudElements.loading.className = "";
+      if (!startTime && currentTotalCounter > 0) {
+        startTime = new Date().getTime();
+      }
     });
 
     Marathon.Events.created(function (task) {
       var taskId = task.id;
       var groupedRadius = null;
-      var targetColor = stagingColor;
+      var targetColor = config.stagingColor;
       var j = taskIdLookupTable[taskId];
       if (j === undefined) {
         // pick a new particle
@@ -357,7 +391,7 @@
         }
       }
       if (pos > -1) {
-        targetColor = colorScheme[Object.keys(colorScheme)[pos]];
+        targetColor = config.colorScheme[Object.keys(config.colorScheme)[pos]];
         // Grouped by color
         var minR = pointCloudRadiusMin;
         var maxR = pointCloudRadiusMax - ((maxApps - pos) * radiusStep) + radiusStep;
@@ -381,7 +415,7 @@
 
     Marathon.Events.updated(function (task) {
       var taskId = task.id;
-      var targetColor = stagingColor;
+      var targetColor = config.stagingColor;
       var groupedRadius = null;
       var j = taskIdLookupTable[taskId];
       if (j === undefined) {
@@ -391,7 +425,7 @@
       }
       var pos = appIds.indexOf(task.appId);
       if (pos > -1) {
-        targetColor = colorScheme[Object.keys(colorScheme)[pos]];
+        targetColor = config.colorScheme[Object.keys(config.colorScheme)[pos]];
         // Grouped by color
         var minR = pointCloudRadiusMin;
         var maxR = pointCloudRadiusMax - ((maxApps - pos) * radiusStep) + radiusStep;
@@ -420,8 +454,9 @@
       hudElements.loading.className = "";
     });
 
-    Marathon.Events.error(function () {
+    Marathon.Events.error(function (err) {
       hudElements.loading.className = "active";
+      console.error(err.responseText);
     });
 
     // Kaboom
@@ -476,7 +511,7 @@
     //}
 
     // Animation loop
-    for (var i = 0; i < maxParticles; i++) {
+    for (var i = 0; i < config.maxParticles; i++) {
       var p = initialParticles[i];
 
       // Animate to light
@@ -525,13 +560,12 @@
       if (parseInt(p.running) === 1) {
         particleAttributes.value_color.value[i] = p.targetColor;
       } else {
-        particleAttributes.value_color.value[i] = stagingColor;
+        particleAttributes.value_color.value[i] = config.stagingColor;
       }
     }
 
     // Update global counter
-    var currentTotalCounter = parseInt(hudElements.totalInstancesCounter.dataset.value);
-    var totalCounter = maxParticles -particlesPointers.length;
+    var totalCounter = parseInt(hudElements.totalInstancesCounter.dataset.value);
     if (currentTotalCounter !== totalCounter) {
       var dct = totalCounter - currentTotalCounter;
       var vct = dct * ease;
@@ -540,14 +574,14 @@
       hudElements.totalInstancesCounter.textContent = tot.toLocaleString();
     }
 
-    // Update staged counter
-    var currentStagedCounter = parseInt(hudElements.totalStagedCounter.dataset.value);
-    if (currentStagedCounter !== totalStagedCounter) {
-      var dct = totalStagedCounter - currentStagedCounter;
-      var vct = dct * ease;
-      var tot = Math.floor(currentStagedCounter + vct);
-      hudElements.totalStagedCounter.dataset.value = tot;
-      hudElements.totalStagedCounter.textContent = tot.toLocaleString();
+    // Update peak counter
+    var currentPeak = parseInt(hudElements.peak.dataset.value);
+    if (lastPeak !== currentPeak) {
+      var dp = lastPeak - currentPeak;
+      var vp = dp * ease;
+      var tot = Math.ceil(currentPeak + vp);
+      hudElements.peak.dataset.value = tot;
+      hudElements.peak.textContent = tot.toLocaleString();
     }
 
     // Update individual app counters
@@ -562,6 +596,8 @@
         hudElements.individualAppCounters[i].textContent = tot.toLocaleString();
       }
     }
+    // Update timer
+    updateTimer();
 
     // Sorry, GPU
     geometry.__dirtyVertices = true;
