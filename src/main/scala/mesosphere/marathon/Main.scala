@@ -49,10 +49,7 @@ class MarathonApp extends App {
 
   def modules(): Seq[Module] = {
     Seq(
-      new HttpModule(conf) {
-        // burst browser cache for assets
-        protected override val resourceCacheControlHeader = Some("max-age=0, must-revalidate")
-      },
+      new HttpModule(conf),
       new MetricsModule,
       new MarathonModule(conf, conf, zk),
       new MarathonRestModule,

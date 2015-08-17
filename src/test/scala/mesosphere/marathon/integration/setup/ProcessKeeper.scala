@@ -63,7 +63,7 @@ object ProcessKeeper {
 
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String],
                     mainClass: String = "mesosphere.marathon.Main",
-                    startupLine: String = "Started SelectChannelConnector"): Process = {
+                    startupLine: String = "Started ServerConnector"): Process = {
 
     val argsWithMain = mainClass :: arguments
 

@@ -78,7 +78,7 @@ object ForwarderService {
       s"app_${conf.httpPort()}",
       heapInMegs = 128,
       arguments = List(ForwarderService.className, "helloApp") ++ args,
-      upWhen = _.contains("Started SelectChannelConnector"))
+      upWhen = _.contains("Started ServerConnector"))
   }
 
   def startForwarderProcess(forwardToPort: Int, args: String*): Unit = {
@@ -88,7 +88,7 @@ object ForwarderService {
       s"forwarder_${conf.httpPort()}",
       heapInMegs = 128,
       arguments = List(ForwarderService.className, "forwarder", forwardToPort.toString) ++ args,
-      upWhen = _.contains("SelectChannelConnector@"))
+      upWhen = _.contains("ServerConnector@"))
   }
 
   def main(args: Array[String]) {
