@@ -77,7 +77,7 @@ object ForwarderService {
     ProcessKeeper.startJavaProcess(
       s"app_${conf.httpPort()}",
       arguments = List(ForwarderService.className, "helloApp") ++ args,
-      upWhen = _.contains("Started SelectChannelConnector"))
+      upWhen = _.contains("Started ServerConnector"))
   }
 
   def startForwarderProcess(forwardToPort: Int, args: String*): Unit = {
@@ -86,7 +86,7 @@ object ForwarderService {
     ProcessKeeper.startJavaProcess(
       s"forwarder_${conf.httpPort()}",
       arguments = List(ForwarderService.className, "forwarder", forwardToPort.toString) ++ args,
-      upWhen = _.contains("SelectChannelConnector@"))
+      upWhen = _.contains("ServerConnector@"))
   }
 
   def main(args: Array[String]) {
