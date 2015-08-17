@@ -1,14 +1,16 @@
 package mesosphere.marathon.event
 
-import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import org.rogach.scallop.ScallopConf
-import com.google.inject.{ Inject, Singleton, Provides, AbstractModule }
-import akka.event.EventStream
 import javax.inject.Named
-import org.apache.log4j.Logger
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+
 import akka.actor.ActorSystem
+import akka.event.{EventStream, Logging}
+import com.google.inject.{AbstractModule, Inject, Provides, Singleton}
+import mesosphere.marathon.DebugConf
+import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.upgrade.{DeploymentPlan, DeploymentStep}
+import org.apache.log4j.Logger
+import org.rogach.scallop.ScallopConf
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
   def configuration(): Class[C]
@@ -24,7 +26,7 @@ trait EventConfiguration extends ScallopConf {
     noshort = true)
 }
 
-class EventModule(conf: EventConfiguration) extends AbstractModule {
+class EventModule(conf: EventConfiguration with DebugConf) extends AbstractModule {
 
   val log = Logger.getLogger(getClass.getName)
   def configure() {}
@@ -33,7 +35,10 @@ class EventModule(conf: EventConfiguration) extends AbstractModule {
   @Provides
   @Singleton
   @Inject
-  def provideEventBus(system: ActorSystem): EventStream = system.eventStream
+  def provideEventBus(system: ActorSystem): EventStream = {
+    conf.logLevel.get.flatMap(Logging.levelFor).foreach(system.eventStream.setLogLevel)
+    system.eventStream
+  }
 }
 
 object EventModule {
