@@ -4,17 +4,20 @@ title: Running Docker Containers on Marathon
 
 # Running Docker Containers on Marathon
 
-This document describes how to run [Docker](https://docker.com/) containers using
-the native Docker support added in Apache Mesos version 0.20.0
+This document describes how to run [Docker](https://docker.com/) containers on
+Marathon using the native Docker support added in Apache Mesos version 0.20.0
 (released August 2014).
 
-### Prerequisites
+## Configuration
 
-## Docker
+Note that DCOS clusters are already configured to run Docker containers, so 
+DCOS users do not need to follow the steps below.
 
-Docker version 1.0.0 or later installed on each slave node.
+#### Prerequisites
 
-### Configure mesos-slave
++ Docker version 1.0.0 or later installed on each slave node.
+
+#### Configure mesos-slave
 
   <div class="alert alert-info">
     <strong>Note:</strong> All commands below assume `mesos-slave` is being run
@@ -42,15 +45,12 @@ Docker version 1.0.0 or later installed on each slave node.
 
 3. Restart `mesos-slave` process to load the new configuration
 
-### Configure Marathon
+#### Configure Marathon
 
 1. Increase the Marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html)
 `--task_launch_timeout` to at least the executor timeout, in milliseconds, 
 you set on your slaves in the previous step.
 
-### Resources
-
-- [Mesos Docker Containerizer](http://mesos.apache.org/documentation/latest/docker-containerizer)
 
 ## Overview
 
@@ -280,3 +280,6 @@ the future, as Mesos may not always interact with Docker via the CLI.
 }
 ```
 
+## Resources
+
+- [Mesos Docker Containerizer](http://mesos.apache.org/documentation/latest/docker-containerizer)
