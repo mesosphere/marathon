@@ -3,12 +3,12 @@ package mesosphere.marathon.event
 import javax.inject.Named
 
 import akka.actor.ActorSystem
-import akka.event.{EventStream, Logging}
-import com.google.inject.{AbstractModule, Inject, Provides, Singleton}
+import akka.event.{ EventStream, Logging }
+import com.google.inject.{ AbstractModule, Inject, Provides, Singleton }
 import mesosphere.marathon.DebugConf
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
-import mesosphere.marathon.upgrade.{DeploymentPlan, DeploymentStep}
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.apache.log4j.Logger
 import org.rogach.scallop.ScallopConf
 

@@ -1,11 +1,15 @@
 package mesosphere.marathon
 
+import java.lang.management.ManagementFactory
+
+import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.jvm.{ BufferPoolMetricSet, GarbageCollectorMetricSet, MemoryUsageGaugeSet, ThreadStatesGaugeSet }
 import com.google.inject.Module
 import com.twitter.common.quantity.{ Amount, Time }
 import com.twitter.common.zookeeper.ZooKeeperClient
-import mesosphere.chaos.{ App, AppConfiguration }
 import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
+import mesosphere.chaos.{ App, AppConfiguration }
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.event.http.{ HttpEventConfiguration, HttpEventModule }
 import mesosphere.marathon.event.{ EventConfiguration, EventModule }
@@ -52,7 +56,16 @@ class MarathonApp extends App {
         // burst browser cache for assets
         protected override val resourceCacheControlHeader = Some("max-age=0, must-revalidate")
       },
-      new MetricsModule,
+      new MetricsModule {
+        override def configure(): Unit = {
+          val registry = new MetricRegistry
+          registry.register("jvm.gc", new GarbageCollectorMetricSet())
+          registry.register("jvm.buffers", new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer))
+          registry.register("jvm.memory", new MemoryUsageGaugeSet())
+          registry.register("jvm.threads", new ThreadStatesGaugeSet())
+          bind(classOf[MetricRegistry]).toInstance(registry)
+        }
+      },
       new MarathonModule(conf, conf, zk),
       new MarathonRestModule,
       new EventModule(conf),
