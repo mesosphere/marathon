@@ -54,6 +54,7 @@ class AppsResource @Inject() (
       case EmbedTasks =>
         apps.map { app =>
           val enrichedApp = app.withTasksAndDeployments(
+            taskTracker.get(app.id),
             enrichedTasks(app),
             healthCounts(app),
             runningDeployments
@@ -65,6 +66,7 @@ class AppsResource @Inject() (
         apps.map { app =>
           WithTasksAndDeploymentsAndFailuresWrites.writes(
             app.withTasksAndDeploymentsAndFailures(
+              taskTracker.get(app.id),
               enrichedTasks(app),
               healthCounts(app),
               runningDeployments,
@@ -76,7 +78,7 @@ class AppsResource @Inject() (
       case _ =>
         apps.map { app =>
           val enrichedApp = app.withTaskCountsAndDeployments(
-            enrichedTasks(app),
+            taskTracker.get(app.id),
             healthCounts(app),
             runningDeployments
           )
@@ -136,6 +138,7 @@ class AppsResource @Inject() (
     )
 
     val managedAppWithDeployments = managedApp.withTasksAndDeployments(
+      marathonTasks = Set.empty,
       appTasks = Nil,
       healthCounts = HealthCounts(0, 0, 0),
       runningDeployments = Seq(deploymentPlan)
@@ -153,6 +156,7 @@ class AppsResource @Inject() (
       val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
       val withTasks = apps.map { app =>
         val enrichedApp = app.withTasksAndDeploymentsAndFailures(
+          taskTracker.get(app.id),
           enrichedTasks(app),
           healthCounts(app),
           runningDeployments,
@@ -166,6 +170,7 @@ class AppsResource @Inject() (
     def app(): Response = service.getApp(id.toRootPath) match {
       case Some(app) =>
         val mapped = app.withTasksAndDeploymentsAndFailures(
+          taskTracker.get(app.id),
           enrichedTasks(app),
           healthCounts(app),
           runningDeployments,
@@ -296,7 +301,9 @@ class AppsResource @Inject() (
     } yield EnrichedTask(app.id, task, results)
   }
 
-  private def healthCounts(app: AppDefinition): HealthCounts = result(healthCheckManager.healthCounts(app.id))
+  private def healthCounts(app: AppDefinition): HealthCounts = {
+    if (app.healthChecks.isEmpty) HealthCounts(0, 0, 0) else result(healthCheckManager.healthCounts(app.id))
+  }
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
     eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))

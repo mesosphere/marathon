@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import java.lang.{ Double => JDouble, Integer => JInt }
 
 import com.fasterxml.jackson.annotation.{ JsonIgnore, JsonIgnoreProperties, JsonProperty }
-import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidAppDefinition }
@@ -243,22 +243,24 @@ case class AppDefinition(
   }
 
   def withTaskCountsAndDeployments(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
+    appTasks: Set[MarathonTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTaskCountsAndDeployments = {
     new AppDefinition.WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, this)
   }
 
   def withTasksAndDeployments(
+    marathonTasks: Set[MarathonTask],
     appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan]): AppDefinition.WithTasksAndDeployments =
-    new AppDefinition.WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, this)
+    new AppDefinition.WithTasksAndDeployments(marathonTasks, appTasks, healthCounts, runningDeployments, this)
 
   def withTasksAndDeploymentsAndFailures(
+    marathonTasks: Set[MarathonTask],
     appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     taskFailure: Option[TaskFailure]): AppDefinition.WithTasksAndDeploymentsAndTaskFailures =
     new AppDefinition.WithTasksAndDeploymentsAndTaskFailures(
-      appTasks, healthCounts,
+      marathonTasks, appTasks, healthCounts,
       runningDeployments, taskFailure, this
     )
 
@@ -331,7 +333,7 @@ object AppDefinition {
     AppDefinition().mergeFromProto(proto)
 
   protected[marathon] class WithTaskCountsAndDeployments(
-    appTasks: Seq[EnrichedTask],
+    appTasks: Set[MarathonTask],
     healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
@@ -348,17 +350,16 @@ object AppDefinition {
       * for this app
       */
     @JsonProperty
-    val tasksStaged: Int = appTasks.count { eTask =>
-      eTask.task.getStagedAt != 0 && eTask.task.getStartedAt == 0
+    val tasksStaged: Int = appTasks.count { task =>
+      task.getStagedAt != 0 && task.getStartedAt == 0
     }
 
     /**
       * Snapshot of the number of running tasks for this app
       */
     @JsonProperty
-    val tasksRunning: Int = appTasks.count { eTask =>
-      eTask.task.hasStatus &&
-        eTask.task.getStatus.getState == mesos.TaskState.TASK_RUNNING
+    val tasksRunning: Int = appTasks.count { task =>
+      task.hasStatus && task.getStatus.getState == mesos.TaskState.TASK_RUNNING
     }
 
     /**
@@ -385,21 +386,23 @@ object AppDefinition {
   }
 
   protected[marathon] class WithTasksAndDeployments(
+    marathonTasks: Set[MarathonTask],
     appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     private val app: AppDefinition)
-      extends WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, app) {
+      extends WithTaskCountsAndDeployments(marathonTasks, healthCounts, runningDeployments, app) {
 
     @JsonProperty
     def tasks: Seq[EnrichedTask] = appTasks
   }
 
   protected[marathon] class WithTasksAndDeploymentsAndTaskFailures(
+    marathonTasks: Set[MarathonTask],
     appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
     runningDeployments: Seq[DeploymentPlan],
     taskFailure: Option[TaskFailure],
     private val app: AppDefinition)
-      extends WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, app) {
+      extends WithTasksAndDeployments(marathonTasks, appTasks, healthCounts, runningDeployments, app) {
 
     @JsonProperty
     def lastTaskFailure: Option[TaskFailure] = taskFailure

@@ -7,15 +7,15 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.google.common.collect.Lists
 import mesosphere.jackson.CaseClassModule
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
+import mesosphere.marathon.Protos.{Constraint, ServiceDefinition}
 import mesosphere.marathon.api.ModelValidation
-import mesosphere.marathon.api.v2.json.{ EnrichedTask, MarathonModule }
-import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
+import mesosphere.marathon.api.v2.json.{EnrichedTask, MarathonModule}
+import mesosphere.marathon.health.{HealthCheck, HealthCounts}
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ MarathonSpec, Protos }
-import org.apache.mesos.{ Protos => mesos }
+import mesosphere.marathon.{MarathonSpec, Protos}
+import org.apache.mesos.{Protos => mesos}
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
@@ -440,7 +440,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val readResult3 = schemaMapper.readValue(json3, classOf[AppDefinition])
     assert(readResult3 == app3)
 
-    import java.lang.{ Integer => JInt }
+    import java.lang.{Integer => JInt}
 
     import mesosphere.marathon.state.Container.Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
@@ -600,7 +600,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       .build()
 
     val appGroup = Group(PathId("/foo"), Set(app))
-    val enrichedApp = app.withTaskCountsAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
+    val enrichedApp = app.withTaskCountsAndDeployments(Set(task), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
 
     import mesosphere.marathon.api.v2.AppsResource.WithTaskCountsAndDeploymentsWrites
 
@@ -629,7 +629,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     val appGroup = Group(PathId("/foo"), Set(app))
 
-    val enrichedApp = app.withTasksAndDeployments(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
+    val enrichedApp = app.withTasksAndDeployments(Set.empty, Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)))
 
     import mesosphere.marathon.api.v2.AppsResource.WithTasksAndDeploymentsWrites
 
@@ -664,7 +664,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       mesos.TaskState.TASK_FAILED
     )
 
-    val enrichedApp = app.withTasksAndDeploymentsAndFailures(Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)), Some(failure))
+    val enrichedApp = app.withTasksAndDeploymentsAndFailures(Set.empty, Seq(EnrichedTask(app.id, task, Nil, Nil)), HealthCounts(0, 0, 0), Seq(DeploymentPlan(Group.empty, appGroup)), Some(failure))
 
     import mesosphere.marathon.api.v2.AppsResource.WithTasksAndDeploymentsAndFailuresWrites
 

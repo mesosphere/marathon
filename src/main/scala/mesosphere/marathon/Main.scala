@@ -3,7 +3,7 @@ package mesosphere.marathon
 import java.lang.management.ManagementFactory
 
 import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.jvm.{ BufferPoolMetricSet, GarbageCollectorMetricSet, MemoryUsageGaugeSet, ThreadStatesGaugeSet }
+import com.codahale.metrics.jvm._
 import com.google.inject.Module
 import com.twitter.common.quantity.{ Amount, Time }
 import com.twitter.common.zookeeper.ZooKeeperClient

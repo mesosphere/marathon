@@ -105,8 +105,8 @@ class TaskTracker @Inject() (
     appTasks.get(taskId) match {
       case Some(task) =>
         app.tasks.remove(task.getId)
-
         timedWrite { Await.result(store.delete(getKey(appId, taskId)), timeout) }
+        app.tasks.remove(task.getId) //just to make sure
 
         log.info(s"Task $taskId expunged and removed from TaskTracker")
 
