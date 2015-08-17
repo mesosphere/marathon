@@ -6,7 +6,7 @@ var Marathon = (function () {
   var apiURL = "../v2";
   var withCredentials = false; // Set to TRUE for CORS
   var pollInterval = 2000;
-  var timeout = 20000;
+  var timeout = 200000;
 
   /*global Qajax, Lazy*/
   var callbacks = {
