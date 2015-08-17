@@ -84,6 +84,6 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
 
   private[this] val mimes = new MimeTypes()
   def mediaMime(path: String): String =
-    Option(mimes.getMimeByExtension(path)).map(_.toString("UTF-8")).getOrElse("application/octet-stream")
+    Option(mimes.getMimeByExtension(path)).getOrElse("application/octet-stream")
 
 }
