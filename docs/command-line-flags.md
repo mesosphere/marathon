@@ -112,6 +112,11 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     authentication
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret
     file containing the authentication secret
+* `--mesos_leader_ui_url` (Optional.): The URL to the Mesos master facade. By default this
+    value is detected automatically when framework is registered or new Mesos leader is
+    elected.
+    Format: `protocol://host:port/`
+    _Note: When this option is set given url should always load balance to current Mesos master
 * `--marathon_store_timeout` (Optional. Default: 2000 (2 seconds)): Maximum time
     in milliseconds, to wait for persistent storage operations to complete.
 * <span class="label label-default">v0.10.0</span> `--env_vars_prefix` (Optional. Default: None):
@@ -125,7 +130,47 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
 available resources of a single node in the cluster. Before this <span class="label label-default">v0.8.2</span>,
 Marathon would only start a single task per
-resource offer, which led to slow task launching in smaller clusters. In order to speed up task launching and use the
+resource offer, which led to slow task launching in smaller clusters. 
+
+### Marathon after 0.11.0 (including)
+
+In order to speed up task launching and use the
+resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm which tries
+to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is 
+configurable with the following startup parameters:
+
+* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
+    number of tasks per Mesos offer. Usually,
+    there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
+
+To prevent overloading Mesos itself, you can also restrict how many tasks Marathon launches per time interval.
+By default, we allow 1000 unconfirmed task launches every 30 seconds. In addition, Marathon launches
+more tasks when it gets feedback about running and healthy tasks from Mesos.
+    
+* <span class="label label-default">v0.11.0</span> `--launch_token_refresh_interval` (Optional. Default: 30000): 
+    The interval (ms) in which to refresh the launch tokens to `--launch_token_count`.
+* <span class="label label-default">v0.11.0</span> `--launch_tokens` (Optional. Default: 1000): 
+    Launch tokens per interval.
+    
+To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
+incoming resource offer.
+
+* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 1000): 
+    Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
+    All already matched tasks are launched.
+
+When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
+Marathon can request all available offers from Mesos again -- even those that it has recently rejected. To avoid
+calling the underlying `reviveOffers` API call to often, you can configure the minimal delay between subsequent
+invocations of this call.
+
+* <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 5000): 
+    Do not ask for all offers (also already seen ones) more often than this interval (ms).
+
+
+### Marathon after 0.8.2 (including) and before 0.11.0
+
+In order to speed up task launching and use the
 resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm which tries
 to start as many tasks as possible per task offer cycle. The maximum number of tasks to start is configurable with
 the following startup parameters:
@@ -208,4 +253,3 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * <span class="label label-default">v0.8.2</span> `--enable_tracing` (Optional.):
     Enable tracing for all service method calls.
     Around the execution of every service method a trace log message is issued.
-    

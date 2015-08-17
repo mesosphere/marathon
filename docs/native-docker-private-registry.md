@@ -1,14 +1,14 @@
 ---
-title: Using a Private Docker Repository
+title: Using a Private Docker Registry
 ---
 
-# Using a Private Docker Repository
+# Using a Private Docker Registry
 
 This document describes how to initiate a [Docker](https://docker.com/) pull from
 an authenticated private registry.
 
 ## Registry  1.0 - Docker pre 1.6 
-To supply credentials to pull from a private repository, add a `.dockercfg` to
+To supply credentials to pull from a private registry, add a `.dockercfg` to
 the `uris` field of your app. The `$HOME` environment variable will then be set
 to the same value as `$MESOS_SANDBOX` so Docker can automatically pick up the
 config file.
@@ -16,13 +16,13 @@ config file.
 
 ## Registry  2.0 - Docker 1.6 and up
 
-To supply credentials to pull from a private repository, add a `docker.tar.gz` file to
+To supply credentials to pull from a private registry, add a `docker.tar.gz` file to
 the `uris` field of your app. The `docker.tar.gz` file should include the `.docker` folder and the contained `.docker/config.json` 
 
 
 ### Step 1: Tar/Gzip credentials
 
-1. Login to the private repository manually. Login creates a `.docker` folder and a `.docker/config.json` in the users home directoy
+1. Login to the private registry manually. Login creates a `.docker` folder and a `.docker/config.json` in the users home directoy
 
     ```bash
     $ docker login some.docker.host.com
@@ -63,7 +63,7 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
 ### Step 2: Mesos/Marathon config
 
-1. Add the path to the gziped login credentials to your marathon app definition
+1. Add the path to the gzipped login credentials to your Marathon app definition
 
     ```bash
     "uris": [
