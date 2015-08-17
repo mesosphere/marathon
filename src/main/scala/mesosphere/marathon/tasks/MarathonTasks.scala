@@ -20,7 +20,7 @@ object MarathonTasks {
       .setVersion(version.toString())
       .addAllPorts(ports.map(i => i.toInt: java.lang.Integer).asJava)
       .addAllAttributes(attributes.asJava)
-      .setStagedAt(System.currentTimeMillis)
+      .setStagedAt(version.toDateTime.getMillis + 1000)
       .setSlaveId(slaveId)
       .build
   }
