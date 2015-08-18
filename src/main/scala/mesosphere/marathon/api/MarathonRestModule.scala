@@ -75,6 +75,9 @@ class MarathonRestModule extends RestModule {
     bind(classOf[HttpEventStreamServlet]).asEagerSingleton()
     serve("/v2/events").`with`(classOf[HttpEventStreamServlet])
 
+    bind(classOf[WebJarServlet]).in(Scopes.SINGLETON)
+    serve("/", "/ui", "/ui/*").`with`(classOf[WebJarServlet])
+
     super.configureServlets()
   }
 
