@@ -1,6 +1,9 @@
 # Testing server
 
+NB the package.json is now in the root folder; installation and commands
+should be run from the root directory.
+
   npm install
-  node index.js --apps=5 --tasks=1000
+  npm run start
 
 Serves on port 3000 with open CORS headers.

@@ -2,11 +2,17 @@
   /*global THREE, TWEEN, Marathon */
   var config = {
       maxParticles: 100000,
+      targetRunningTasks: 50000, // null if should be computed by # of instances
+      targetStopwatchSeconds: 100000, // 100s
+      maxApps: 4,
       cameraPositions: [
         {x: 2000, y: -3200, z: 4500}, // start, "dawn on earth"
         {x: -1850, y: 5500, z: -50}, // event horizon
         {x: 0, y: 0, z: 12000}, // eye of sauron
-        {x: 0, y: 0, z: 3500} // end, zoomed in upfront
+        {x: 0, y: 0, z: 3500}, // end, zoomed in upfront
+        {x: 1900, y: -5620, z: 1045}, // skewed
+        {x: 1966, y: -11653, z: 4072}, // sideways
+        {x: -902, y: -1144, z: 647} // angled closeup
       ],
       stagingColor: new THREE.Color(0xcccccc),
       colorScheme: {
@@ -26,6 +32,7 @@
     cameraControls,
     flyCamera = false,
     cameraIsMoving = false,
+    lastCameraPos = null,
     viewportHeight = window.innerHeight,
     viewportWidth = window.innerWidth,
     jed = toJED(new Date()),
@@ -58,17 +65,17 @@
     ease = 0.1,
     appIds = [],
     individualAppCounters = [],
-    maxApps = Object.keys(config.colorScheme).length,
     currentTotalCounter = 0,
-    targetRunningTasks = null,
+    targetRunningTasks = config.targetRunningTasks,
     lastPeak = 0,
     isToggleGroupedActive = false,
     startTime = null,
-    lastCameraPos = null;
+    targetTime = null,
+    finalTime = null;
 
   function createIndividualAppHUDElements() {
     var parent = document.getElementById("hud").firstElementChild;
-    for (var i = 1; i < maxApps + 1; i++) {
+    for (var i = 1; i < config.maxApps + 1; i++) {
       var html = `
        <div class="app" id="app-${i}">
          <div class="switch">
@@ -113,13 +120,25 @@
 
   function updateTimer() {
     var currentTotal = config.maxParticles - particlesPointers.length;
-    if (startTime &&  currentTotal < targetRunningTasks) {
-      var d = new Date(new Date().getTime() - startTime);
+    if (!startTime || finalTime || currentTotal > targetRunningTasks) {
+      return;
+    }
+    var d = new Date(new Date().getTime() - startTime);
+    var currentTime = startTime + d.getTime();
+
+    if (currentTime <= targetTime) {
       // Dammit, chrome! No Date.format()!
       var mm = ("0" + d.getMinutes().toString()).slice(-2);
       var ss = ("0" + d.getSeconds().toString()).slice(-2);
       var ms = d.getMilliseconds().toString().slice(0, 2);
       var formatTime = `${mm}:${ss}:${ms}`;
+      hudElements.timer.textContent = formatTime;
+    } else {
+      // Inaccuracies on the ms count due to requestAnimationFrame
+      finalTime = new Date(targetTime - startTime);
+      var mm = ("0" + finalTime.getMinutes().toString()).slice(-2);
+      var ss = ("0" + finalTime.getSeconds().toString()).slice(-2);
+      var formatTime = `${mm}:${ss}:00`;
       hudElements.timer.textContent = formatTime;
     }
   }
@@ -164,7 +183,7 @@
       }
     });
 
-    // Reset camera to start position
+    // Move camera to desired position
     document.addEventListener("keydown", function (e) {
       if (e.keyCode < 49 || e.keyCode > 57) return;
       var cameraIndex = parseInt(e.keyCode) - 49; // start at 0
@@ -173,7 +192,7 @@
         cameraIsMoving = true;
         TWEEN.removeAll();
         new TWEEN.Tween(camera.position)
-          .to(config.cameraPositions[cameraIndex], 4000)
+          .to(config.cameraPositions[cameraIndex], 2500)
           .easing(TWEEN.Easing.Cubic.InOut)
           .onUpdate(function () {
             camera.updateProjectionMatrix();
@@ -237,7 +256,7 @@
     cameraControls.dynamicDampingFactor = 0.5;
 
     // Generate total amount of "invisible" particles
-    var radiusStep = pointCloudRadiusMax / maxApps;
+    var radiusStep = pointCloudRadiusMax / config.maxApps;
     for (var i = 0; i < config.maxParticles; i++) {
       var randomAlpha = Math.random() * (0.9 - 0.7) + 0.7;
 
@@ -356,19 +375,25 @@
       if (!targetRunningTasks) {
         targetRunningTasks = totalInstances;
       }
-      var peak = totalRunning - currentTotalCounter;
-      peak = Math.floor(peak / (Marathon.pollInterval / 1000));
-      if (peak > lastPeak && currentTotalCounter < targetRunningTasks) {
-        lastPeak = peak;
-      }
       currentTotalCounter = totalRunning;
       hudElements.loading.className = "";
-      if (!startTime && currentTotalCounter > 0) {
+      // Set starting timers
+      if (!startTime && totalInstances) {
         startTime = new Date().getTime();
+        targetTime = startTime + config.targetStopwatchSeconds;
+      }
+      // Update containers per second
+      if (startTime && currentTotalCounter < config.targetRunningTasks) {
+        var since = new Date(new Date().getTime() - startTime + 1000).getSeconds();
+        lastPeak = currentTotalCounter / since;
       }
     });
 
     Marathon.Events.created(function (task) {
+      // Stop adding particles if we're in overtime
+      if (finalTime) {
+        return;
+      }
       var taskId = task.id;
       var groupedRadius = null;
       var targetColor = config.stagingColor;
@@ -381,7 +406,7 @@
       // Update app labels in HUD
       var pos = appIds.indexOf(task.appId);
       if (pos === -1) {
-        if (appIds.length < maxApps) {
+        if (appIds.length < config.maxApps) {
           pos = appIds.push(task.appId) - 1;
           if (hudElements.individualAppLabels[pos]) {
             hudElements.individualAppLabels[pos].textContent = task.appId
@@ -394,9 +419,14 @@
         targetColor = config.colorScheme[Object.keys(config.colorScheme)[pos]];
         // Grouped by color
         var minR = pointCloudRadiusMin;
-        var maxR = pointCloudRadiusMax - ((maxApps - pos) * radiusStep) + radiusStep;
+        var maxR = pointCloudRadiusMax - ((config.maxApps - pos) * radiusStep) + radiusStep;
         groupedRadius = minR + maxR + Math.random() * radiusStep - radiusStep;
-        individualAppCounters[pos]++;
+        // Set a cap to the target value
+        var targetAppCounter = individualAppCounters[pos] + 1;
+        individualAppCounters[pos] =
+          targetAppCounter > config.targetRunningTasks / config.maxApps
+            ? config.targetRunningTasks / config.maxApps
+            : targetAppCounter;
         // Set app index
         initialParticles[j].id = pos;
       }
@@ -410,47 +440,6 @@
       initialParticles[j].transitionEnd.alpha = false;
       initialParticles[j].transitionEnd.initialRadius = !!isToggleGroupedActive;
       initialParticles[j].transitionEnd.groupedRadius = !isToggleGroupedActive;
-      hudElements.loading.className = "";
-    });
-
-    Marathon.Events.updated(function (task) {
-      var taskId = task.id;
-      var targetColor = config.stagingColor;
-      var groupedRadius = null;
-      var j = taskIdLookupTable[taskId];
-      if (j === undefined) {
-        // pick a new particle
-        j = parseInt(particlesPointers.pop());
-        taskIdLookupTable[taskId] = j;
-      }
-      var pos = appIds.indexOf(task.appId);
-      if (pos > -1) {
-        targetColor = config.colorScheme[Object.keys(config.colorScheme)[pos]];
-        // Grouped by color
-        var minR = pointCloudRadiusMin;
-        var maxR = pointCloudRadiusMax - ((maxApps - pos) * radiusStep) + radiusStep;
-        groupedRadius = minR + maxR + Math.random() * radiusStep - radiusStep;
-        // Set app index
-        initialParticles[j].id = pos;
-      }
-      initialParticles[j].visible = pos > -1
-        ? hudElements.individualAppToggles[pos].checked
-        : true;
-      initialParticles[j].running = task.running;
-      initialParticles[j].targetColor = targetColor;
-      if (groupedRadius) initialParticles[j].groupedRadius = groupedRadius;
-      initialParticles[j].transitionEnd.alpha = false;
-      initialParticles[j].transitionEnd.initialRadius = !!isToggleGroupedActive;
-      initialParticles[j].transitionEnd.groupedRadius = !isToggleGroupedActive;
-      hudElements.loading.className = "";
-    });
-
-    Marathon.Events.deleted(function (task) {
-      var taskId = task.id;
-      var j = taskIdLookupTable[taskId];
-      particlesPointers.push(j.toString());
-      initialParticles[j].visible = false;
-      initialParticles[j].running = 0;
       hudElements.loading.className = "";
     });
 
@@ -497,7 +486,7 @@
     requestAnimationFrame(animate);
 
     particleUniforms.jed.value = jed;
-    jed += 0.12;
+    jed += 0.25;
 
     if (flyCamera) {
       moveCamera();
@@ -556,17 +545,15 @@
           initialParticles[i].transitionEnd.initialRadius = true;
         }
       }
-      // Update color for running tasks
-      if (parseInt(p.running) === 1) {
         particleAttributes.value_color.value[i] = p.targetColor;
-      } else {
-        particleAttributes.value_color.value[i] = config.stagingColor;
-      }
     }
 
     // Update global counter
     var totalCounter = parseInt(hudElements.totalInstancesCounter.dataset.value);
-    if (currentTotalCounter !== totalCounter) {
+    if (currentTotalCounter !== totalCounter && !finalTime) {
+      if (currentTotalCounter > config.targetRunningTasks) {
+        currentTotalCounter = config.targetRunningTasks;
+      }
       var dct = totalCounter - currentTotalCounter;
       var vct = dct * ease;
       var tot = Math.ceil(currentTotalCounter + vct);
@@ -576,7 +563,7 @@
 
     // Update peak counter
     var currentPeak = parseInt(hudElements.peak.dataset.value);
-    if (lastPeak !== currentPeak) {
+    if (lastPeak !== currentPeak && lastPeak > 0 && !finalTime) {
       var dp = lastPeak - currentPeak;
       var vp = dp * ease;
       var tot = Math.ceil(currentPeak + vp);
@@ -585,10 +572,10 @@
     }
 
     // Update individual app counters
-    for (var i = 0; i < maxApps; i++) {
+    for (var i = 0; i < config.maxApps; i++) {
       var currentAppCounter = parseInt(hudElements.individualAppCounters[i].dataset.value);
       var targetAppCounter = individualAppCounters[i];
-      if (currentAppCounter !== targetAppCounter) {
+      if (currentAppCounter !== targetAppCounter && !finalTime) {
         var dct = targetAppCounter - currentAppCounter;
         var vct = dct * ease;
         var tot = Math.ceil(currentAppCounter + vct);
