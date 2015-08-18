@@ -79,3 +79,16 @@ trait PersistentStore {
   def allIds(): Future[Seq[ID]]
 }
 
+/**
+  * Optional interface if the store also has management infrastructure.
+  */
+trait PersistentStoreManagement {
+
+  /**
+    * Initialize the store.
+    * This method is called before any PersistentStore operation is called.
+    * Specific setup logic should be performed here.
+    * @return A future to indicate when the initialization logic is finished.
+    */
+  def initialize(): Future[Unit]
+}

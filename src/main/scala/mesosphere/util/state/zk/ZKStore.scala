@@ -9,20 +9,17 @@ import com.twitter.zk.{ ZNode, ZkClient }
 import mesosphere.marathon.{ Protos, StoreCommandFailedException }
 import mesosphere.util.ThreadPoolContext
 import mesosphere.util.state.zk.ZKStore._
-import mesosphere.util.state.{ PersistentEntity, PersistentStore }
+import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
 import org.apache.log4j.Logger
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.{ NodeExistsException, NoNodeException }
+import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{ Future, Promise }
 
-class ZKStore(val client: ZkClient, rootNode: ZNode) extends PersistentStore {
+class ZKStore(val client: ZkClient, root: ZNode) extends PersistentStore with PersistentStoreManagement {
 
   private[this] val log = Logger.getLogger(getClass)
   private[this] implicit val ec = ThreadPoolContext.context
-
-  val root = createPathBlocking(rootNode)
 
   /**
     * Fetch data and return entity.
@@ -90,22 +87,26 @@ class ZKStore(val client: ZkClient, rootNode: ZNode) extends PersistentStore {
     }
   }
 
-  private[this] def createPathBlocking(path: ZNode): ZNode = {
-    def createParent(node: ZNode): ZNode = {
-      val exists = Await.result(node.exists().asScala.map(_ => true)
-        .recover { case ex: NoNodeException => false }
-        .recover(exceptionTransform("Can not query for exists")), Duration.Inf)
+  private[this] def createPath(path: ZNode): Future[ZNode] = {
+    def nodeExists(node: ZNode): Future[Boolean] = node.exists().asScala
+      .map(_ => true)
+      .recover { case ex: NoNodeException => false }
+      .recover(exceptionTransform("Can not query for exists"))
 
-      if (!exists) {
-        createParent(node.parent)
-        Await.result(node.create().asScala
-          .recover { case ex: NodeExistsException => node }
-          .recover(exceptionTransform("Can not create")), Duration.Inf)
+    def createNode(node: ZNode): Future[ZNode] = node.create().asScala
+      .recover { case ex: NodeExistsException => node }
+      .recover(exceptionTransform("Can not create"))
+
+    def createPath(node: ZNode): Future[ZNode] = {
+      nodeExists(node).flatMap {
+        case true  => Future.successful(node)
+        case false => createPath(node.parent).flatMap(_ => createNode(node))
       }
-      node
     }
-    createParent(path)
+    createPath(path)
   }
+
+  override def initialize(): Future[Unit] = createPath(root).map(_ => ())
 }
 
 case class ZKEntity(node: ZNode, data: ZKData, version: Option[Int] = None) extends PersistentEntity {
