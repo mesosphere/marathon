@@ -70,7 +70,7 @@ body {
   margin: 20px 0;
   border: 1px solid #2E3343;
 }
-#containers-per-sec {
+#containers-per-sec.big-number {
   margin-top: 10px;
 }
 #hud .app {
