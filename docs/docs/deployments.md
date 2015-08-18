@@ -98,6 +98,8 @@ There are circumstances where a step will never finish successfully. For example
 - the new application does not become healthy
 - a dependency of the new application was not declared and is not available
 - the capacity of the cluster is exhausted  
+- the app uses a Docker container and the changes listed at [Running Docker Containers on Marathon]
+(https://mesosphere.github.io/marathon/docs/native-docker.html) were not followed
 - ...
 
 The deployment in this case would take forever.
