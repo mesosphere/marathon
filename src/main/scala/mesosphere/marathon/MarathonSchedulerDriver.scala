@@ -22,6 +22,7 @@ object MarathonSchedulerDriver {
       .setFailoverTimeout(config.mesosFailoverTimeout().toDouble)
       .setUser(config.mesosUser())
       .setCheckpoint(config.checkpoint())
+      .setHostname(config.hostname())
 
     // Set the role, if provided.
     config.mesosRole.get.foreach(frameworkInfoBuilder.setRole)

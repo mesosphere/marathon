@@ -55,8 +55,8 @@ trait MarathonConf
     default = Some("//cmd"))
 
   lazy val hostname = opt[String]("hostname",
-    descr = "The advertised hostname stored in ZooKeeper so another standby " +
-      "host can redirect to this elected leader",
+    descr = "The advertised hostname that is used for the communication with the mesos master. " +
+      "The value is also stored in the persistent store so another standby host can redirect to the elected leader.",
     default = Some(java.net.InetAddress.getLocalHost.getHostName))
 
   lazy val webuiUrl = opt[String]("webui_url",

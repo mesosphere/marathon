@@ -54,7 +54,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Allows starting an arbitrary number of other Marathons but all need to be
     started in HA mode. This mode requires a running ZooKeeper. See `--master`.
 * `--hostname` (Optional. Default: hostname of machine): The advertised hostname
-    stored in ZooKeeper so another standby host can redirect to the elected leader.
+    that is used for the communication with the mesos master. 
+    The value is also stored in the persistent store so another standby host can redirect to the elected leader.
     _Note: Default is determined by
     [`InetAddress.getLocalHost`](http://docs.oracle.com/javase/7/docs/api/java/net/InetAddress.html#getLocalHost())._
 * `--webui_url` (Optional. Default: None): The url of the Marathon web ui. It
