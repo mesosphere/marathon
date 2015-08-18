@@ -9,6 +9,7 @@ import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event._
 import mesosphere.marathon.health.HealthCheckManager
@@ -180,6 +181,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
 
+    when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
     when(tracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
     when(tracker.list).thenReturn(
@@ -209,6 +211,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   test("ScaleApp") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
 
+    when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(tracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
 
@@ -235,6 +238,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
 
+    when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(tracker.get(app.id)).thenReturn(Set[MarathonTask](taskA))
     when(tracker.fetchTask(app.id, taskA.getId))
@@ -281,6 +285,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
 
+    when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(tracker.get(app.id)).thenReturn(Set[MarathonTask](taskA))
     when(tracker.fetchTask(app.id, taskA.getId))

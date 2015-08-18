@@ -22,10 +22,10 @@ private[launchqueue] class LaunchQueueDelegate(
       .asInstanceOf[Seq[QueuedTaskCount]]
   }
 
-  override def count(appId: PathId): Int = {
-    askQueueActor("count")(LaunchQueueDelegate.Count(appId))
-      .asInstanceOf[Option[QueuedTaskCount]].map(_.tasksLeftToLaunch).getOrElse(0)
-  }
+  override def get(appId: PathId): Option[QueuedTaskCount] =
+    askQueueActor("get")(LaunchQueueDelegate.Count(appId)).asInstanceOf[Option[QueuedTaskCount]]
+
+  override def count(appId: PathId): Int = get(appId).map(_.tasksLeftToLaunch).getOrElse(0)
 
   override def listApps: Seq[AppDefinition] = list.map(_.app)
 
