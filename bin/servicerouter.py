@@ -806,7 +806,7 @@ def run_server(marathon, callback_url, config_file, groups):
         port = int(callback_url.split(':')[-1])
     except ValueError:
         port = 8000  # no port or invalid port specified
-    logger.info("Serving on port {}...".format(port))
+    logger.info("Serving on port {0}...".format(port))
     httpd = make_server('', port, wsgi_app)
     httpd.serve_forever()
 
