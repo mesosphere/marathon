@@ -152,6 +152,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [PayPal](https://www.paypal.com)
 * [Qubit](http://www.qubitproducts.com/)
 * [RelateIQ](http://relateiq.com/)
+* [Refinery29](https://www.refinery29.com)
 * [Sailthru](http://www.sailthru.com/)
 * [sloppy.io](http://sloppy.io/)
 * [SmartProcure](https://smartprocure.us/)
