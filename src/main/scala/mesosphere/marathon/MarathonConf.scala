@@ -184,6 +184,12 @@ trait MarathonConf
     noshort = true
   )
 
+  lazy val shiroConfigPath = opt[String]("shiro_config_path",
+    descr = "Path to Shiro configuration file",
+    noshort = true,
+    default = None
+  )
+
   //Internal settings, that are not intended for external use
   lazy val internalStoreBackend = opt[String]("internal_store_backend",
     descr = "The backend storage system to use. One of zk, mesos_zk, mem",
