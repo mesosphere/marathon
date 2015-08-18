@@ -5,7 +5,7 @@ var Marathon = (function () {
   /////////////////////////////////////////////////////////
   var apiURL = "../v2";
   var withCredentials = false; // Set to TRUE for CORS
-  var pollInterval = 2000;
+  var pollInterval = 1000;
   var timeout = 200000;
 
   /*global Qajax, Lazy*/
@@ -92,7 +92,7 @@ var Marathon = (function () {
 
     //deleteTasks(tasks, app, oldApp);
     createTasks(tasks, app, oldApp, generation);
-    updateTasks(tasks, app, oldApp, generation);
+    //updateTasks(tasks, app, oldApp, generation);
 
     app.tasks = tasks;
     Apps[app.id] = app;

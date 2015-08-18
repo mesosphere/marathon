@@ -11,7 +11,7 @@ nconf.argv().env().defaults({
   generation: 0
 });
 
-var loggedDataResponses = fs.readFileSync('data.log').toString().split("\n");
+var loggedDataResponses = fs.readFileSync('server/data.log').toString().split("\n");
 var app = express();
 var generation = nconf.get("generation");
 
@@ -75,6 +75,8 @@ app.get("/replay/apps", function (req, res) {
     generation++;
   }
 });
+
+app.use(express.static("."));
 
 var server = app.listen(3000, function () {
   var host = server.address().address;

@@ -54,6 +54,9 @@ body {
   line-height: 1.1em;
 }
 .big-number {
+  font-size: 22pt;
+}
+#total-instances.big-number {
   font-size: 32pt;
 }
 #hud p.label {
@@ -64,10 +67,12 @@ body {
 }
 .hairline {
   display: block;
-  margin: 30px 0;
+  margin: 20px 0;
   border: 1px solid #2E3343;
 }
-
+#containers-per-sec {
+  margin-top: 10px;
+}
 #hud .app {
   clear: left;
   margin-bottom: 10pt;
