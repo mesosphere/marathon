@@ -22,6 +22,7 @@ object LaunchQueue {
       tasksLaunchedOrRunning: Int,
       backOffUntil: Timestamp) {
     def waiting: Boolean = tasksLeftToLaunch != 0 || taskLaunchesInFlight != 0
+    def totalTaskCount: Int = tasksLeftToLaunch + tasksLaunchedOrRunning + taskLaunchesInFlight
   }
 }
 
@@ -37,8 +38,13 @@ trait LaunchQueue {
 
   /** Request to launch `count` additional tasks conforming to the given app definition. */
   def add(app: AppDefinition, count: Int = 1): Unit
+
+  /** Get information for the given appId. */
+  def get(appId: PathId): Option[QueuedTaskCount]
+
   /** Return how many tasks are still to be launched for this PathId. */
   def count(appId: PathId): Int
+
   /** Remove all task launch requests for the given PathId from this queue. */
   def purge(appId: PathId): Unit
 

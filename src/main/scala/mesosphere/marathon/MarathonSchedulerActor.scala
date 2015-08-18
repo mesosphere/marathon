@@ -3,7 +3,7 @@ package mesosphere.marathon
 import java.util.concurrent.TimeoutException
 
 import akka.actor._
-import akka.event.EventStream
+import akka.event.{ LoggingReceive, EventStream }
 import akka.pattern.ask
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.LeaderInfo
@@ -64,7 +64,7 @@ class MarathonSchedulerActor private (
 
   def receive: Receive = suspended
 
-  def suspended: Receive = {
+  def suspended: Receive = LoggingReceive.withLabel("suspended"){
     case LocalLeadershipEvent.ElectedAsLeader =>
       log.info("Starting scheduler actor")
       deploymentRepository.all() onComplete {
@@ -91,7 +91,7 @@ class MarathonSchedulerActor private (
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
-  def started: Receive = sharedHandlers orElse {
+  def started: Receive = LoggingReceive.withLabel("started")(sharedHandlers orElse {
     case LocalLeadershipEvent.Standby =>
       log.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
@@ -119,7 +119,7 @@ class MarathonSchedulerActor private (
           res.sendAnswer(origSender, cmd)
 
         res andThen {
-          case _ => self ! cmd.answer
+          case _ => self ! cmd.answer // unlock app
         }
       }
 
@@ -141,12 +141,12 @@ class MarathonSchedulerActor private (
         } yield schedulerActions.scale(driver, app)
 
         res onComplete { _ =>
-          self ! cmd.answer
+          self ! cmd.answer // unlock app
         }
 
         res.sendAnswer(origSender, cmd)
       }
-  }
+  })
 
   /**
     * handlers for messages that unlock apps and to retrieve running deployments
@@ -518,15 +518,15 @@ class SchedulerActions(
     if (targetCount > currentCount) {
       log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
 
-      val queuedCount = taskQueue.count(app.id)
-      val toQueue = targetCount - (currentCount + queuedCount)
+      val queuedOrRunning = taskQueue.get(app.id).map(_.totalTaskCount).getOrElse(currentCount)
+      val toQueue = targetCount - queuedOrRunning
 
       if (toQueue > 0) {
-        log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedCount queued)")
+        log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedOrRunning queued or running)")
         taskQueue.add(app, toQueue)
       }
       else {
-        log.info(s"Already queued $queuedCount tasks for ${app.id}. Not scaling.")
+        log.info(s"Already queued or started $queuedOrRunning tasks for ${app.id}. Not scaling.")
       }
     }
     else if (targetCount < currentCount) {
