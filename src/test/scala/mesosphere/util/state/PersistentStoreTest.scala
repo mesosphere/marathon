@@ -92,6 +92,10 @@ trait PersistentStoreTest extends IntegrationFunSuite with Matchers with BeforeA
   }
 
   before {
+    persistentStore match {
+      case manager: PersistentStoreManagement => manager.initialize().futureValue
+      case _                                  => //ignore
+    }
     persistentStore.allIds().futureValue.foreach { entry =>
       persistentStore.delete(entry).futureValue
     }

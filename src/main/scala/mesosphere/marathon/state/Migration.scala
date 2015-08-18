@@ -12,7 +12,7 @@ import mesosphere.marathon.tasks.TaskTracker.InternalApp
 import mesosphere.marathon.{ BuildInfo, MarathonConf }
 import mesosphere.util.Logging
 import mesosphere.util.ThreadPoolContext.context
-import mesosphere.util.state.{ PersistentEntity, PersistentStore }
+import mesosphere.util.state.{ PersistentStoreManagement, PersistentEntity, PersistentStore }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -60,8 +60,14 @@ class Migration @Inject() (
     Future.sequence(result)
   }
 
+  def initializeStore(): Future[Unit] = store match {
+    case manager: PersistentStoreManagement => manager.initialize()
+    case _: PersistentStore                 => Future.successful(())
+  }
+
   def migrate(): StorageVersion = {
     val result = for {
+      _ <- initializeStore()
       changes <- currentStorageVersion.flatMap(applyMigrationSteps)
       storedVersion <- storeCurrentVersion
     } yield storedVersion

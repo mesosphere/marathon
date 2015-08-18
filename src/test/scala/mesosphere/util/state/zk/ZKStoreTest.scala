@@ -8,12 +8,14 @@ import mesosphere.marathon.integration.setup.StartedZookeeper
 import mesosphere.util.state.PersistentStoreTest
 import mesosphere.util.state.mesos.MesosStateStore
 import org.apache.mesos.state.ZooKeeperState
+import org.apache.zookeeper.KeeperException.NoNodeException
 import org.apache.zookeeper.ZooDefs.Ids
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
+import ZKStore._
 
 class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matchers {
 
@@ -47,6 +49,25 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
     val zkLoadUpdated = persistentStore.load("foo").futureValue
     zkLoadUpdated should be('defined)
     zkLoadUpdated.get.bytes should be("Hello again".getBytes)
+  }
+
+  test("Deeply nested paths are created") {
+    val client = persistentStore.client
+    val path = client("/s/o/m/e/d/e/e/p/ly/n/e/s/t/e/d/p/a/t/h")
+    val store = new ZKStore(client, path)
+    path.exists().asScala.failed.futureValue shouldBe a[NoNodeException]
+    store.initialize().futureValue
+    path.exists().asScala.futureValue.stat.getVersion should be(0)
+  }
+
+  test("Already existing paths are not created") {
+    val client = persistentStore.client
+    val path = client("/some/deeply/nested/path")
+    path.exists().asScala.failed.futureValue shouldBe a[NoNodeException]
+    new ZKStore(client, path).initialize().futureValue
+    path.exists().asScala.futureValue.stat.getVersion should be(0)
+    new ZKStore(client, path).initialize().futureValue
+    path.exists().asScala.futureValue.stat.getVersion should be(0)
   }
 
   lazy val persistentStore: ZKStore = {
