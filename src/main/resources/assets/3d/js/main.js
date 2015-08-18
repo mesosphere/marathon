@@ -384,8 +384,8 @@
       }
       // Update containers per second
       if (startTime && currentTotalCounter < config.targetRunningTasks) {
-        var since = new Date(new Date().getTime() - startTime + 1000).getSeconds();
-        lastPeak = currentTotalCounter / since;
+        var since = Math.floor((new Date().getTime() - startTime + 1000) / 1000);
+        lastPeak = Math.floor(currentTotalCounter / since);
       }
     });
 
@@ -545,7 +545,7 @@
           initialParticles[i].transitionEnd.initialRadius = true;
         }
       }
-        particleAttributes.value_color.value[i] = p.targetColor;
+      particleAttributes.value_color.value[i] = p.targetColor;
     }
 
     // Update global counter
@@ -563,10 +563,10 @@
 
     // Update peak counter
     var currentPeak = parseInt(hudElements.peak.dataset.value);
-    if (lastPeak !== currentPeak && lastPeak > 0 && !finalTime) {
+    if (lastPeak !== currentPeak && !finalTime) {
       var dp = lastPeak - currentPeak;
       var vp = dp * ease;
-      var tot = Math.ceil(currentPeak + vp);
+      var tot = Math.floor(currentPeak + vp);
       hudElements.peak.dataset.value = tot;
       hudElements.peak.textContent = tot.toLocaleString();
     }
