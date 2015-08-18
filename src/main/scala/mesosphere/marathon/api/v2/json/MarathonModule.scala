@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.Module.SetupContext
 import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.ser.Serializers
+import mesosphere.marathon.api.v2.json.V2AppDefinition.VersionInfo
 import org.apache.mesos.{ Protos => mesos }
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.validation.FieldConstraints._

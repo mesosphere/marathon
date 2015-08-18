@@ -7,12 +7,15 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.AppDefinition.VersionInfo
+import mesosphere.marathon.state.AppDefinition.VersionInfo.{ OnlyVersion, FullVersionInfo }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.apache.mesos.{ Protos => mesos }
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
@@ -68,8 +71,9 @@ case class AppDefinition(
 
   acceptedResourceRoles: Option[Set[String]] = None,
 
-  version: Timestamp = Timestamp.now()) extends MarathonState[Protos.ServiceDefinition, AppDefinition]
-    with Timestamped {
+  versionInfo: VersionInfo = VersionInfo.NoVersion)
+
+    extends MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -90,6 +94,7 @@ case class AppDefinition(
     }
   }
 
+  //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(
       app = this,
@@ -124,7 +129,6 @@ case class AppDefinition(
       .addResources(memResource)
       .addResources(diskResource)
       .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
-      .setVersion(version.toString)
       .setUpgradeStrategy(upgradeStrategy.toProto)
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
@@ -136,6 +140,14 @@ case class AppDefinition(
       val roles = Protos.ResourceRoles.newBuilder()
       acceptedResourceRoles.seq.foreach(roles.addRole)
       builder.setAcceptedResourceRoles(roles)
+    }
+
+    builder.setVersion(version.toString)
+    versionInfo match {
+      case fullInfo: FullVersionInfo =>
+        builder.setLastScalingAt(fullInfo.lastScalingAt.toDateTime.getMillis)
+        builder.setLastConfigChangeAt(fullInfo.lastConfigChangeAt.toDateTime.getMillis)
+      case _ => // ignore
     }
 
     builder.build
@@ -180,6 +192,16 @@ case class AppDefinition(
       else
         None
 
+    val versionInfoFromProto =
+      if (proto.hasLastScalingAt)
+        FullVersionInfo(
+          version = Timestamp(proto.getVersion),
+          lastScalingAt = Timestamp(proto.getLastScalingAt),
+          lastConfigChangeAt = Timestamp(proto.getLastConfigChangeAt)
+        )
+      else
+        OnlyVersion(Timestamp(proto.getVersion))
+
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -203,7 +225,7 @@ case class AppDefinition(
       container = containerOption,
       healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
       labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
-      version = Timestamp(proto.getVersion),
+      versionInfo = versionInfoFromProto,
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
@@ -211,7 +233,6 @@ case class AppDefinition(
     )
   }
 
-  @JsonIgnore
   def portMappings: Option[Seq[PortMapping]] =
     for {
       c <- container
@@ -220,23 +241,18 @@ case class AppDefinition(
       pms <- d.portMappings
     } yield pms
 
-  @JsonIgnore
   def containerHostPorts: Option[Seq[Int]] =
     for (pms <- portMappings) yield pms.map(_.hostPort.toInt)
 
-  @JsonIgnore
   def containerServicePorts: Option[Seq[Int]] =
     for (pms <- portMappings) yield pms.map(_.servicePort.toInt)
 
-  @JsonIgnore
   def hostPorts: Seq[Int] =
     containerHostPorts.getOrElse(ports.map(_.toInt))
 
-  @JsonIgnore
   def servicePorts: Seq[Int] =
     containerServicePorts.getOrElse(ports.map(_.toInt))
 
-  @JsonIgnore
   def hasDynamicPort: Boolean = servicePorts.contains(0)
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
@@ -244,16 +260,66 @@ case class AppDefinition(
     mergeFromProto(proto)
   }
 
-  def withNormalizedVersion: AppDefinition = copy(version = Timestamp(0))
+  def version: Timestamp = versionInfo.version
+
+  def withNormalizedVersion: AppDefinition = copy(versionInfo = VersionInfo.NoVersion)
 
   def isOnlyScaleChange(to: AppDefinition): Boolean =
     !isUpgrade(to) && (instances != to.instances)
 
   def isUpgrade(to: AppDefinition): Boolean =
-    this != to.copy(instances = instances, version = version)
+    this != to.copy(instances = instances, versionInfo = versionInfo)
 }
 
 object AppDefinition {
+
+  sealed trait VersionInfo {
+    def version: Timestamp
+
+    def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
+      LoggerFactory.getLogger(getClass).info("new version")
+      VersionInfo.forNewConfig(version).withScaleOrRestartChange(newVersion)
+    }
+
+    def withConfigChange(newVersion: Timestamp): VersionInfo = {
+      LoggerFactory.getLogger(getClass).info("new version 2")
+      VersionInfo.forNewConfig(newVersion)
+    }
+  }
+
+  object VersionInfo {
+    case object NoVersion extends VersionInfo {
+      def version: Timestamp = Timestamp(0)
+    }
+
+    /**
+      * Only contains a version timestamp. Will be converted to a FullVersionInfo before stored.
+      */
+    case class OnlyVersion(version: Timestamp) extends VersionInfo
+
+    /**
+      * @param version The versioning timestamp (we are currently assuming that this is the same as lastChangeAt)
+      * @param lastScalingAt The time stamp of the last change including scaling or restart changes
+      * @param lastConfigChangeAt The time stamp of the last change that changed configuration
+      *                               besides scaling or restarting
+      */
+    case class FullVersionInfo(
+        version: Timestamp,
+        lastScalingAt: Timestamp,
+        lastConfigChangeAt: Timestamp) extends VersionInfo {
+
+      override def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
+        LoggerFactory.getLogger(getClass).info("restart")
+        copy(version = newVersion, lastScalingAt = newVersion)
+      }
+    }
+
+    def forNewConfig(newVersion: Timestamp): FullVersionInfo = FullVersionInfo(
+      version = newVersion,
+      lastScalingAt = newVersion,
+      lastConfigChangeAt = newVersion
+    )
+  }
 
   val RandomPortValue: Int = 0
 

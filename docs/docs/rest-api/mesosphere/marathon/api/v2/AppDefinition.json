@@ -284,6 +284,20 @@
         "version": {
             "format": "date-time",
             "type": "string"
+        },
+        "versionInfo": {
+            "additionalProperties": false,
+            "properties": {
+                "lastScalingAt": {
+                    "format": "date-time",
+                    "type": "string"
+                },
+                "lastConfigChangeAt": {
+                    "format": "date-time",
+                    "type": "string"
+                }
+            },
+            "type": "object"
         }
     },
     "required": [

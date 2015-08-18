@@ -13,8 +13,10 @@ import mesosphere.marathon.{ BuildInfo, MarathonConf }
 import mesosphere.util.Logging
 import mesosphere.util.ThreadPoolContext.context
 import mesosphere.util.state.{ PersistentStoreManagement, PersistentEntity, PersistentStore }
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.collection.SortedSet
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success }
@@ -35,16 +37,21 @@ class Migration @Inject() (
     * They get applied after the master has been elected.
     */
   def migrations: List[MigrationAction] = List(
-    StorageVersions(0, 5, 0) -> {
-      () => changeApps(app => app.copy(id = app.id.toString.toLowerCase.replaceAll("_", "-").toRootPath))
+    StorageVersions(0, 5, 0) -> { () =>
+      changeApps(app => app.copy(id = app.id.toString.toLowerCase.replaceAll("_", "-").toRootPath))
     },
-    StorageVersions(0, 7, 0) -> {
-      () =>
-        for {
-          _ <- changeTasks(app => new InternalApp(app.appName.canonicalPath(), app.tasks, app.shutdown))
-          _ <- changeApps(app => app.copy(id = app.id.canonicalPath()))
-          _ <- putAppsIntoGroup()
-        } yield ()
+    StorageVersions(0, 7, 0) -> { () =>
+      for {
+        _ <- changeTasks(app => new InternalApp(app.appName.canonicalPath(), app.tasks, app.shutdown))
+        _ <- changeApps(app => app.copy(id = app.id.canonicalPath()))
+        _ <- putAppsIntoGroup()
+      } yield ()
+    },
+    StorageVersions(0, 11, 0) -> { () =>
+      for {
+        _ <- new AddVersionInfoToAppsMigration(appRepo).migrateApps()
+        _ <- putAppsIntoGroup()
+      } yield ()
     }
   )
 
@@ -139,6 +146,54 @@ class Migration @Inject() (
         groupRepo.store("root", updatedGroup)
       }
     }
+  }
+}
+
+class AddVersionInfoToAppsMigration(appRepository: AppRepository) {
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
+  def migrateApps(): Future[Unit] = {
+    val appIds = appRepository.allPathIds()
+
+    appIds.flatMap { appIds =>
+      appIds.foldLeft(Future.successful(())) { (otherStores, appId) =>
+        addVersionInfo(appId).map(_ => ())
+      }
+    }
+  }
+
+  private[this] def addVersionInfo(id: PathId): Future[Option[AppDefinition]] = {
+    def addVersionInfoToVersioned(
+      maybeLastApp: Option[AppDefinition],
+      nextVersion: Timestamp,
+      maybeNextApp: Option[AppDefinition]): Option[AppDefinition] =
+      {
+        maybeNextApp.map { nextApp =>
+          maybeLastApp match {
+            case Some(lastApp) if !lastApp.isUpgrade(nextApp) =>
+              log.info(s"Adding versionInfo to ${nextApp.id} (${nextApp.version}): scaling or restart")
+              nextApp.copy(versionInfo = lastApp.versionInfo.withScaleOrRestartChange(nextApp.version))
+            case _ =>
+              log.info(s"Adding versionInfo to ${nextApp.id} (${nextApp.version}): new config")
+              nextApp.copy(versionInfo = AppDefinition.VersionInfo.forNewConfig(nextApp.version))
+          }
+        }
+      }
+
+    val sortedVersions = appRepository.listVersions(id).map(_.toSeq.sorted)
+    sortedVersions.flatMap { sortedVersions =>
+      sortedVersions.foldLeft(Future.successful[Option[AppDefinition]](None)) { (maybeLastAppFuture, nextVersion) =>
+        for {
+          maybeLastApp <- maybeLastAppFuture
+          maybeNextApp <- appRepository.app(id, nextVersion)
+          withVersionInfo = addVersionInfoToVersioned(maybeLastApp, nextVersion, maybeNextApp)
+          storedResult <- withVersionInfo
+            .map((newApp: AppDefinition) => appRepository.store(newApp).map(Some(_)))
+            .getOrElse(maybeLastAppFuture)
+        } yield storedResult
+      }
+    }
+
   }
 }
 

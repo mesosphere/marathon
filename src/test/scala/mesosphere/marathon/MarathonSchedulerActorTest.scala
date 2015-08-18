@@ -323,10 +323,19 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   test("Deployment") {
     val probe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(
+      id = PathId("app1"),
+      cmd = Some("cmd"),
+      instances = 2,
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(0))
+    )
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
-    val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
+    val appNew = app.copy(
+      cmd = Some("cmd new"),
+      versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(1000))
+    )
 
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
@@ -353,7 +362,13 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   test("Deployment resets rate limiter for affected apps") {
     val probe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(
+      id = PathId("app1"),
+      cmd = Some("cmd"),
+      instances = 2,
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(0))
+    )
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val origGroup = Group(PathId("/foo/bar"), Set(app))
     val targetGroup = Group(PathId("/foo/bar"), Set())
@@ -361,8 +376,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
     when(tracker.get(app.id)).thenReturn(Set(taskA))
-    when(repo.store(any())).thenReturn(Future.successful(app))
-    when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
 
     when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -380,20 +393,25 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       expectMsg(DeploymentStarted(plan))
 
-      Mockito.verify(queue, timeout(1000)).resetDelay(app)
+      Mockito.verify(queue, timeout(1000)).purge(app.id)
+      Mockito.verify(queue, timeout(1000)).resetDelay(app.copy(instances = 0))
 
       system.eventStream.unsubscribe(probe.ref)
     }
     finally {
       stopActor(schedulerActor)
     }
-
-    Mockito.verify(queue).resetDelay(app)
   }
 
   test("Stopping an app sets instance count to 0 before removing the app completely") {
     val probe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(
+      id = PathId("app1"),
+      cmd = Some("cmd"),
+      instances = 2,
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(0))
+    )
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val origGroup = Group(PathId("/foo/bar"), Set(app))
     val targetGroup = Group(PathId("/foo/bar"), Set())
@@ -401,8 +419,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
     when(tracker.get(app.id)).thenReturn(Set(taskA))
-    when(repo.store(any())).thenReturn(Future.successful(app))
-    when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
 
     when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -419,8 +435,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
-
-      verify(repo, timeout(1000)).store(app.copy(instances = 0))
 
       system.eventStream.unsubscribe(probe.ref)
     }
@@ -430,7 +444,13 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("Deployment fail to acquire lock") {
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(
+      id = PathId("app1"),
+      cmd = Some("cmd"),
+      instances = 2,
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(0))
+    )
     val group = Group(PathId("/foo/bar"), Set(app))
 
     val plan = DeploymentPlan(Group.empty, group)
@@ -460,7 +480,13 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("Restart deployments after failover") {
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(
+      id = PathId("app1"),
+      cmd = Some("cmd"),
+      instances = 2,
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(0))
+    )
     val group = Group(PathId("/foo/bar"), Set(app))
 
     val plan = DeploymentPlan(Group.empty, group)
@@ -503,7 +529,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("Forced deployment") {
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
     val group = Group(PathId("/foo/bar"), Set(app))
 
     val plan = DeploymentPlan(Group.empty, group)
@@ -531,7 +557,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("Cancellation timeout") {
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
     val group = Group(PathId("/foo/bar"), Set(app))
 
     val plan = DeploymentPlan(Group.empty, group)

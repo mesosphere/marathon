@@ -130,12 +130,16 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
   test("Don't store invalid groups") {
     val scheduler = mock[MarathonSchedulerService]
     val taskTracker = mock[TaskTracker]
+    val appRepo = mock[AppRepository]
     val groupRepo = mock[GroupRepository]
     val eventBus = mock[EventStream]
     val provider = mock[StorageProvider]
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
-    val manager = new GroupManager(serializeExecutions(), scheduler, taskTracker, groupRepo, provider, config, eventBus)
+    val manager = new GroupManager(
+      serializeUpdates = serializeExecutions(), scheduler = scheduler,
+      taskTracker = taskTracker, groupRepo = groupRepo, appRepo = appRepo,
+      storage = provider, config = config, eventBus = eventBus)
 
     val group = Group(PathId.empty, Set(AppDefinition("/app1".toPath)), Set(Group("/group1".toPath)))
 
@@ -155,9 +159,13 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
     config.afterInit()
     val scheduler = mock[MarathonSchedulerService]
     val taskTracker = mock[TaskTracker]
+    val appRepo = mock[AppRepository]
     val groupRepo = mock[GroupRepository]
     val eventBus = mock[EventStream]
     val provider = mock[StorageProvider]
-    new GroupManager(serializeExecutions(), scheduler, taskTracker, groupRepo, provider, config, eventBus)
+    new GroupManager(
+      serializeUpdates = serializeExecutions(), scheduler = scheduler, taskTracker = taskTracker,
+      groupRepo = groupRepo, appRepo = appRepo,
+      storage = provider, config = config, eventBus = eventBus)
   }
 }

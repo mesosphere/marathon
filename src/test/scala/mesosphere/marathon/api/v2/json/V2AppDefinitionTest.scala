@@ -15,7 +15,7 @@ import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsNull, JsObject, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -477,9 +477,11 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     mapper.registerModule(new MarathonModule)
     mapper.registerModule(CaseClassModule)
 
-    val playRes = Json.parse(Json.toJson(enrichedApp).toString())
+    val playRes = Json.parse(Json.toJson(enrichedApp).toString()).as[JsObject]
+    (playRes \ "versionInfo").asOpt[JsObject] should be('empty)
     val jacksonRes = Json.parse(mapper.writeValueAsString(enrichedApp))
-    assert(playRes == jacksonRes)
+    // the play json differs in its handling of the versionInfo, we ignore that
+    assert(playRes + ("versionInfo" -> JsNull) == jacksonRes)
   }
 
   test("V2AppDefinition.WithTasksAndDeploymentsWrites output of play-json matches jackson") {
@@ -513,9 +515,11 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     mapper.registerModule(new MarathonModule)
     mapper.registerModule(CaseClassModule)
 
-    val playRes = Json.parse(Json.toJson(enrichedApp).toString())
+    val playRes = Json.parse(Json.toJson(enrichedApp).toString()).as[JsObject]
+    (playRes \ "versionInfo").asOpt[JsObject] should be('empty)
     val jacksonRes = Json.parse(mapper.writeValueAsString(enrichedApp))
-    assert(playRes == jacksonRes)
+    // the play json differs in its handling of the versionInfo, we ignore that
+    assert(playRes + ("versionInfo" -> JsNull) == jacksonRes)
   }
 
   test("V2AppDefinition.WithTasksAndDeploymentsAndFailuresWrites output of play-json matches jackson") {
@@ -556,9 +560,11 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     mapper.registerModule(new MarathonModule)
     mapper.registerModule(CaseClassModule)
 
-    val playRes = Json.parse(Json.toJson(enrichedApp).toString())
+    val playRes = Json.parse(Json.toJson(enrichedApp).toString()).as[JsObject]
+    (playRes \ "versionInfo").asOpt[JsObject] should be('empty)
     val jacksonRes = Json.parse(mapper.writeValueAsString(enrichedApp))
-    assert(playRes == jacksonRes)
+    // the play json differs in its handling of the versionInfo, we ignore that
+    assert(playRes + ("versionInfo" -> JsNull) == jacksonRes)
   }
 
 }

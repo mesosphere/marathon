@@ -2683,6 +2683,26 @@ public final class Protos {
      * <code>optional .mesosphere.marathon.ResourceRoles acceptedResourceRoles = 22;</code>
      */
     mesosphere.marathon.Protos.ResourceRolesOrBuilder getAcceptedResourceRolesOrBuilder();
+
+    // optional int64 last_scaling_at = 23;
+    /**
+     * <code>optional int64 last_scaling_at = 23;</code>
+     */
+    boolean hasLastScalingAt();
+    /**
+     * <code>optional int64 last_scaling_at = 23;</code>
+     */
+    long getLastScalingAt();
+
+    // optional int64 last_config_change_at = 24;
+    /**
+     * <code>optional int64 last_config_change_at = 24;</code>
+     */
+    boolean hasLastConfigChangeAt();
+    /**
+     * <code>optional int64 last_config_change_at = 24;</code>
+     */
+    long getLastConfigChangeAt();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -2912,6 +2932,16 @@ public final class Protos {
                 acceptedResourceRoles_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00002000;
+              break;
+            }
+            case 184: {
+              bitField0_ |= 0x00004000;
+              lastScalingAt_ = input.readInt64();
+              break;
+            }
+            case 192: {
+              bitField0_ |= 0x00008000;
+              lastConfigChangeAt_ = input.readInt64();
               break;
             }
           }
@@ -3604,6 +3634,38 @@ public final class Protos {
       return acceptedResourceRoles_;
     }
 
+    // optional int64 last_scaling_at = 23;
+    public static final int LAST_SCALING_AT_FIELD_NUMBER = 23;
+    private long lastScalingAt_;
+    /**
+     * <code>optional int64 last_scaling_at = 23;</code>
+     */
+    public boolean hasLastScalingAt() {
+      return ((bitField0_ & 0x00004000) == 0x00004000);
+    }
+    /**
+     * <code>optional int64 last_scaling_at = 23;</code>
+     */
+    public long getLastScalingAt() {
+      return lastScalingAt_;
+    }
+
+    // optional int64 last_config_change_at = 24;
+    public static final int LAST_CONFIG_CHANGE_AT_FIELD_NUMBER = 24;
+    private long lastConfigChangeAt_;
+    /**
+     * <code>optional int64 last_config_change_at = 24;</code>
+     */
+    public boolean hasLastConfigChangeAt() {
+      return ((bitField0_ & 0x00008000) == 0x00008000);
+    }
+    /**
+     * <code>optional int64 last_config_change_at = 24;</code>
+     */
+    public long getLastConfigChangeAt() {
+      return lastConfigChangeAt_;
+    }
+
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -3626,6 +3688,8 @@ public final class Protos {
       labels_ = java.util.Collections.emptyList();
       maxLaunchDelay_ = 3600000L;
       acceptedResourceRoles_ = mesosphere.marathon.Protos.ResourceRoles.getDefaultInstance();
+      lastScalingAt_ = 0L;
+      lastConfigChangeAt_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3764,6 +3828,12 @@ public final class Protos {
       if (((bitField0_ & 0x00002000) == 0x00002000)) {
         output.writeMessage(22, acceptedResourceRoles_);
       }
+      if (((bitField0_ & 0x00004000) == 0x00004000)) {
+        output.writeInt64(23, lastScalingAt_);
+      }
+      if (((bitField0_ & 0x00008000) == 0x00008000)) {
+        output.writeInt64(24, lastConfigChangeAt_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -3871,6 +3941,14 @@ public final class Protos {
       if (((bitField0_ & 0x00002000) == 0x00002000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(22, acceptedResourceRoles_);
+      }
+      if (((bitField0_ & 0x00004000) == 0x00004000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(23, lastScalingAt_);
+      }
+      if (((bitField0_ & 0x00008000) == 0x00008000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(24, lastConfigChangeAt_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4075,6 +4153,10 @@ public final class Protos {
           acceptedResourceRolesBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00100000);
+        lastScalingAt_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00200000);
+        lastConfigChangeAt_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00400000);
         return this;
       }
 
@@ -4232,6 +4314,14 @@ public final class Protos {
         } else {
           result.acceptedResourceRoles_ = acceptedResourceRolesBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00200000) == 0x00200000)) {
+          to_bitField0_ |= 0x00004000;
+        }
+        result.lastScalingAt_ = lastScalingAt_;
+        if (((from_bitField0_ & 0x00400000) == 0x00400000)) {
+          to_bitField0_ |= 0x00008000;
+        }
+        result.lastConfigChangeAt_ = lastConfigChangeAt_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4431,6 +4521,12 @@ public final class Protos {
         }
         if (other.hasAcceptedResourceRoles()) {
           mergeAcceptedResourceRoles(other.getAcceptedResourceRoles());
+        }
+        if (other.hasLastScalingAt()) {
+          setLastScalingAt(other.getLastScalingAt());
+        }
+        if (other.hasLastConfigChangeAt()) {
+          setLastConfigChangeAt(other.getLastConfigChangeAt());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -6869,6 +6965,72 @@ public final class Protos {
           acceptedResourceRoles_ = null;
         }
         return acceptedResourceRolesBuilder_;
+      }
+
+      // optional int64 last_scaling_at = 23;
+      private long lastScalingAt_ ;
+      /**
+       * <code>optional int64 last_scaling_at = 23;</code>
+       */
+      public boolean hasLastScalingAt() {
+        return ((bitField0_ & 0x00200000) == 0x00200000);
+      }
+      /**
+       * <code>optional int64 last_scaling_at = 23;</code>
+       */
+      public long getLastScalingAt() {
+        return lastScalingAt_;
+      }
+      /**
+       * <code>optional int64 last_scaling_at = 23;</code>
+       */
+      public Builder setLastScalingAt(long value) {
+        bitField0_ |= 0x00200000;
+        lastScalingAt_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 last_scaling_at = 23;</code>
+       */
+      public Builder clearLastScalingAt() {
+        bitField0_ = (bitField0_ & ~0x00200000);
+        lastScalingAt_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional int64 last_config_change_at = 24;
+      private long lastConfigChangeAt_ ;
+      /**
+       * <code>optional int64 last_config_change_at = 24;</code>
+       */
+      public boolean hasLastConfigChangeAt() {
+        return ((bitField0_ & 0x00400000) == 0x00400000);
+      }
+      /**
+       * <code>optional int64 last_config_change_at = 24;</code>
+       */
+      public long getLastConfigChangeAt() {
+        return lastConfigChangeAt_;
+      }
+      /**
+       * <code>optional int64 last_config_change_at = 24;</code>
+       */
+      public Builder setLastConfigChangeAt(long value) {
+        bitField0_ |= 0x00400000;
+        lastConfigChangeAt_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 last_config_change_at = 24;</code>
+       */
+      public Builder clearLastConfigChangeAt() {
+        bitField0_ = (bitField0_ & ~0x00400000);
+        lastConfigChangeAt_ = 0L;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
@@ -21163,7 +21325,7 @@ public final class Protos {
       "lures\030\007 \001(\r:\0013\022#\n\007command\030\010 \001(\0132\022.mesos." +
       "CommandInfo\022\034\n\rignoreHttp1xx\030\t \001(\010:\005fals" +
       "e\"5\n\010Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMM" +
-      "AND\020\002\022\t\n\005HTTPS\020\003\"\233\006\n\021ServiceDefinition\022\n" +
+      "AND\020\002\022\t\n\005HTTPS\020\003\"\323\006\n\021ServiceDefinition\022\n" +
       "\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandI" +
       "nfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(" +
       "\0132\017.mesos.Resource\022\023\n\013description\030\005 \001(\t\022" +
@@ -21183,53 +21345,54 @@ public final class Protos {
       "\022 \n\006labels\030\024 \003(\0132\020.mesos.Parameter\022\037\n\016ma" +
       "xLaunchDelay\030\025 \001(\003:\0073600000\022A\n\025acceptedR" +
       "esourceRoles\030\026 \001(\0132\".mesosphere.marathon" +
-      ".ResourceRoles\"\035\n\rResourceRoles\022\014\n\004role\030" +
-      "\001 \003(\t\"\241\002\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004ho" +
-      "st\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004 " +
-      "\003(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001(\003" +
-      "\022\022\n\nstarted_at\030\006 \001(\003\022,\n\021OBSOLETE_statuse",
-      "s\030\007 \003(\0132\021.mesos.TaskStatus\022)\n\007version\030\010 " +
-      "\001(\t:\0301970-01-01T00:00:00.000Z\022!\n\006status\030" +
-      "\t \001(\0132\021.mesos.TaskStatus\022\037\n\007slaveId\030\n \001(" +
-      "\0132\016.mesos.SlaveID\"M\n\013MarathonApp\022\014\n\004name" +
-      "\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.marat" +
-      "hon.MarathonTask\"1\n\rContainerInfo\022\017\n\005ima" +
-      "ge\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\237\004\n\025Extended" +
-      "ContainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Cont" +
-      "ainerInfo.Type\022\036\n\007volumes\030\002 \003(\0132\r.mesos." +
-      "Volume\022E\n\006docker\030\003 \001(\01325.mesosphere.mara",
-      "thon.ExtendedContainerInfo.DockerInfo\032\365\002" +
-      "\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022>\n\007network\030\002" +
-      " \001(\0162\'.mesos.ContainerInfo.DockerInfo.Ne" +
-      "twork:\004HOST\022X\n\rport_mappings\030\003 \003(\0132A.mes" +
-      "osphere.marathon.ExtendedContainerInfo.D" +
-      "ockerInfo.PortMapping\022\031\n\nprivileged\030\004 \001(" +
-      "\010:\005false\022$\n\nparameters\030\005 \003(\0132\020.mesos.Par" +
-      "ameter\022\030\n\020force_pull_image\030\006 \001(\010\032c\n\013Port" +
-      "Mapping\022\021\n\thost_port\030\001 \002(\r\022\026\n\016container_" +
-      "port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\027\n\014service_",
-      "port\030d \001(\r:\0010\")\n\020EventSubscribers\022\025\n\rcal" +
-      "lback_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005ma" +
-      "jor\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"" +
-      "Z\n\031UpgradeStrategyDefinition\022\035\n\025minimumH" +
-      "ealthCapacity\030\001 \002(\001\022\036\n\023maximumOverCapaci" +
-      "ty\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 " +
-      "\002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mes" +
-      "osphere.marathon.ServiceDefinition\0224\n\006gr" +
-      "oups\030\004 \003(\0132$.mesosphere.marathon.GroupDe" +
-      "finition\022\024\n\014dependencies\030\005 \003(\t\"\245\001\n\030Deplo",
-      "ymentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versi" +
-      "on\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosphere." +
-      "marathon.GroupDefinition\0224\n\006target\030\005 \002(\013" +
-      "2$.mesosphere.marathon.GroupDefinition\"\306" +
-      "\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_i" +
-      "d\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020." +
-      "mesos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004ho" +
-      "st\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp" +
-      "\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"" +
-      "9\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 ",
-      "\002(\014\022\r\n\005value\030\003 \002(\014B\035\n\023mesosphere.maratho" +
-      "nB\006Protos"
+      ".ResourceRoles\022\027\n\017last_scaling_at\030\027 \001(\003\022" +
+      "\035\n\025last_config_change_at\030\030 \001(\003\"\035\n\rResour" +
+      "ceRoles\022\014\n\004role\030\001 \003(\t\"\241\002\n\014MarathonTask\022\n" +
+      "\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022" +
+      "$\n\nattributes\030\004 \003(\0132\020.mesos.Attribute\022\021\n",
+      "\tstaged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022,\n\021" +
+      "OBSOLETE_statuses\030\007 \003(\0132\021.mesos.TaskStat" +
+      "us\022)\n\007version\030\010 \001(\t:\0301970-01-01T00:00:00" +
+      ".000Z\022!\n\006status\030\t \001(\0132\021.mesos.TaskStatus" +
+      "\022\037\n\007slaveId\030\n \001(\0132\016.mesos.SlaveID\"M\n\013Mar" +
+      "athonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!." +
+      "mesosphere.marathon.MarathonTask\"1\n\rCont" +
+      "ainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 " +
+      "\003(\014\"\237\004\n\025ExtendedContainerInfo\022\'\n\004type\030\001 " +
+      "\002(\0162\031.mesos.ContainerInfo.Type\022\036\n\007volume",
+      "s\030\002 \003(\0132\r.mesos.Volume\022E\n\006docker\030\003 \001(\01325" +
+      ".mesosphere.marathon.ExtendedContainerIn" +
+      "fo.DockerInfo\032\365\002\n\nDockerInfo\022\r\n\005image\030\001 " +
+      "\002(\t\022>\n\007network\030\002 \001(\0162\'.mesos.ContainerIn" +
+      "fo.DockerInfo.Network:\004HOST\022X\n\rport_mapp" +
+      "ings\030\003 \003(\0132A.mesosphere.marathon.Extende" +
+      "dContainerInfo.DockerInfo.PortMapping\022\031\n" +
+      "\nprivileged\030\004 \001(\010:\005false\022$\n\nparameters\030\005" +
+      " \003(\0132\020.mesos.Parameter\022\030\n\020force_pull_ima" +
+      "ge\030\006 \001(\010\032c\n\013PortMapping\022\021\n\thost_port\030\001 \002",
+      "(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010protocol\030\003" +
+      " \001(\t\022\027\n\014service_port\030d \001(\r:\0010\")\n\020EventSu" +
+      "bscribers\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016Stor" +
+      "ageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r" +
+      "\022\r\n\005patch\030\003 \002(\r\"Z\n\031UpgradeStrategyDefini" +
+      "tion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023m" +
+      "aximumOverCapacity\030\002 \001(\001:\0011\"\260\001\n\017GroupDef" +
+      "inition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004" +
+      "apps\030\003 \003(\0132&.mesosphere.marathon.Service" +
+      "Definition\0224\n\006groups\030\004 \003(\0132$.mesosphere.",
+      "marathon.GroupDefinition\022\024\n\014dependencies" +
+      "\030\005 \003(\t\"\245\001\n\030DeploymentPlanDefinition\022\n\n\002i" +
+      "d\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010original\030\004 \002" +
+      "(\0132$.mesosphere.marathon.GroupDefinition" +
+      "\0224\n\006target\030\005 \002(\0132$.mesosphere.marathon.G" +
+      "roupDefinition\"\306\001\n\013TaskFailure\022\016\n\006app_id" +
+      "\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037" +
+      "\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007messa" +
+      "ge\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 " +
+      "\002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132",
+      "\016.mesos.SlaveID\"9\n\014ZKStoreEntry\022\014\n\004name\030" +
+      "\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014B\035\n\023me" +
+      "sosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21253,7 +21416,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", });
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", });
           internal_static_mesosphere_marathon_ResourceRoles_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_mesosphere_marathon_ResourceRoles_fieldAccessorTable = new

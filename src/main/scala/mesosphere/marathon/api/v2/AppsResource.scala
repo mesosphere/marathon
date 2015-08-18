@@ -211,7 +211,7 @@ class AppsResource @Inject() (
     val appId = id.toRootPath
     val newVersion = Timestamp.now()
     def setVersionOrThrow(opt: Option[AppDefinition]) = opt
-      .map(_.copy(version = newVersion))
+      .map(app => app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(newVersion)))
       .getOrElse(throw new UnknownAppException(appId))
 
     def restartApp(versionChange: DeploymentPlan): DeploymentPlan = {
@@ -239,7 +239,16 @@ class AppsResource @Inject() (
     def updateApp(current: AppDefinition) = validateApp(appUpdate(current))
     def rollback(version: Timestamp) = service.getApp(appId, version).getOrElse(throw new UnknownAppException(appId))
     def updateOrRollback(current: AppDefinition) = appUpdate.version.map(rollback).getOrElse(updateApp(current))
-    existing.map(updateOrRollback).getOrElse(createApp()).copy(version = newVersion)
+
+    val newApp = existing match {
+      case Some(app) =>
+        // we can only rollback existing apps because we deleted all old versions when dropping an app
+        updateOrRollback(app)
+      case None =>
+        createApp()
+    }
+
+    newApp.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(newVersion))
   }
 
   private def validateApp(app: AppDefinition): AppDefinition = {
