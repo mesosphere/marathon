@@ -378,7 +378,7 @@
       currentTotalCounter = totalRunning;
       hudElements.loading.className = "";
       // Set starting timers
-      if (!startTime && totalInstances) {
+      if (!startTime && totalInstances && totalRunning > 0) {
         startTime = new Date().getTime();
         targetTime = startTime + config.targetStopwatchSeconds;
       }
