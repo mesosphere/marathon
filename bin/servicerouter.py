@@ -761,13 +761,14 @@ def get_arg_parser():
                              "script back at (http://lb1:8080)"
                         )
 
-    
+
     default_log_socket = "/dev/log"
     if sys.platform == "darwin":
         default_log_socket = "/var/run/syslog"
 
     parser.add_argument("--syslog-socket",
-                        help="Socket to write syslog messages to",
+                        help="Socket to write syslog messages to. "
+                        "Use '/dev/null' to disable logging to syslog",
                         default=default_log_socket
                         )
     parser.add_argument("--haproxy-config",
@@ -814,14 +815,16 @@ def run_server(marathon, callback_url, config_file, groups):
 def setup_logging(syslog_socket):
     logger.setLevel(logging.DEBUG)
 
-    syslogHandler = SysLogHandler(args.syslog_socket)
-    consoleHandler = logging.StreamHandler()
     formatter = logging.Formatter('%(name)s: %(message)s')
-    syslogHandler.setFormatter(formatter)
+
+    consoleHandler = logging.StreamHandler()
     consoleHandler.setFormatter(formatter)
-    # syslogHandler.setLevel(logging.ERROR)
-    logger.addHandler(syslogHandler)
     logger.addHandler(consoleHandler)
+
+    if args.syslog_socket != '/dev/null':
+        syslogHandler = SysLogHandler(args.syslog_socket)
+        syslogHandler.setFormatter(formatter)
+        logger.addHandler(syslogHandler)
 
 
 if __name__ == '__main__':
