@@ -761,7 +761,6 @@ def get_arg_parser():
                              "script back at (http://lb1:8080)"
                         )
 
-
     default_log_socket = "/dev/log"
     if sys.platform == "darwin":
         default_log_socket = "/var/run/syslog"
