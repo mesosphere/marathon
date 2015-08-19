@@ -18,6 +18,7 @@ import org.apache.log4j.Logger
 import scala.concurrent.Future
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
+@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppTasksResource @Inject() (service: MarathonSchedulerService,
                                   taskTracker: TaskTracker,
                                   taskKiller: TaskKiller,
@@ -29,7 +30,6 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
   @GET
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   @Timed
   def indexJson(@PathParam("appId") appId: String): Response = {
 
