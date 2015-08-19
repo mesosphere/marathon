@@ -142,6 +142,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [GSShop](http://www.gsshop.com/)
 * [HolidayCheck](http://www.holidaycheck.com/)
 * [Human API](https://humanapi.co/)
+* [Indix](http://www.indix.com/)
 * [ING](http://www.ing.com/)
 * [iQIYI](http://www.iqiyi.com/)
 * [Measurence](http://www.measurence.com/)
