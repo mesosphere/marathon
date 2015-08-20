@@ -3,7 +3,7 @@
   var config = {
       maxParticles: 100000,
       targetRunningTasks: 50000, // null if should be computed by # of instances
-      targetStopwatchSeconds: 100000, // 100s
+      targetStopwatchSeconds: 4294967295, // 100s
       maxApps: 4,
       cameraPositions: [
         {x: 2000, y: -3200, z: 4500}, // start, "dawn on earth"
