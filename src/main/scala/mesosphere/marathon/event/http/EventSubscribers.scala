@@ -1,14 +1,11 @@
 package mesosphere.marathon.event.http
 
-import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos
-import collection.JavaConversions._
+import mesosphere.marathon.state.MarathonState
 
-import mesosphere.marathon.api.validation.FieldConstraints.FieldJsonProperty
-import mesosphere.marathon.Protos.StorageVersion
+import scala.collection.JavaConversions._
 
-case class EventSubscribers(
-  @FieldJsonProperty("callbackUrls") urls: Set[String] = Set.empty[String])
+case class EventSubscribers(urls: Set[String] = Set.empty[String])
     extends MarathonState[Protos.EventSubscribers, EventSubscribers] {
 
   override def mergeFromProto(message: Protos.EventSubscribers): EventSubscribers =

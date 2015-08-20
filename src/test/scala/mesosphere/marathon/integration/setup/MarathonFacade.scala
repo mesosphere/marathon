@@ -4,14 +4,14 @@ import java.io.File
 import java.util.Date
 
 import akka.actor.ActorSystem
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppDefinitionWrapper, V2AppUpdate, V2Group, V2GroupUpdate }
+import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate, V2Group, V2GroupUpdate }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.slf4j.LoggerFactory
 import spray.client.pipelining._
 import spray.http._
+import spray.httpx.PlayJsonSupport
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
@@ -21,15 +21,14 @@ import scala.concurrent.duration._
   * GET /apps will deliver something like Apps instead of List[App]
   * Needed for dumb jackson.
   */
+case class ITAppDefinition(app: V2AppDefinition)
 case class ITListAppsResult(apps: Seq[V2AppDefinition])
 case class ITAppVersions(versions: Seq[Timestamp])
 case class ITListTasks(tasks: Seq[ITEnrichedTask])
-@JsonIgnoreProperties(ignoreUnknown = true)
 case class ITDeploymentPlan(version: String, deploymentId: String)
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
-@JsonIgnoreProperties(ignoreUnknown = true)
-case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Integer], startedAt: Date, stagedAt: Date, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
+case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Int], startedAt: Date, stagedAt: Date, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
 case class ITLeaderResult(leader: String)
 
 case class ITListDeployments(deployments: Seq[ITDeployment])
@@ -38,7 +37,6 @@ case class ITQueueDelay(timeLeftSeconds: Int, overdue: Boolean)
 case class ITQueueItem(app: V2AppDefinition, count: Int, delay: ITQueueDelay)
 case class ITTaskQueue(queue: List[ITQueueItem])
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 case class ITDeployment(id: String, affectedApps: Seq[String])
 
 /**
@@ -46,18 +44,31 @@ case class ITDeployment(id: String, affectedApps: Seq[String])
   * with all local domain objects.
   * @param url the url of the remote marathon instance
   */
-class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends JacksonSprayMarshaller {
+class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends PlayJsonSupport {
+  import SprayHttpResponse._
   import mesosphere.util.ThreadPoolContext.context
 
   require(baseGroup.absolute)
 
-  implicit val v2appDefWrapperMarshaller = marshaller[V2AppDefinitionWrapper]
-  implicit val v2appDefMarshaller = marshaller[V2AppDefinition]
-  implicit val deploymentPlanMarshaller = marshaller[ITDeploymentPlan]
-  implicit val appUpdateMarshaller = marshaller[V2AppUpdate]
-  implicit val v2groupMarshaller = marshaller[V2Group]
-  implicit val groupUpdateMarshaller = marshaller[V2GroupUpdate]
-  implicit val versionMarshaller = marshaller[ITDeploymentResult]
+  import mesosphere.marathon.api.v2.json.Formats._
+  import mesosphere.marathon.integration.setup.V2TestFormats._
+  import play.api.libs.json._
+
+  implicit lazy val itAppDefinitionFormat = Json.format[ITAppDefinition]
+  implicit lazy val appUpdateMarshaller = playJsonMarshaller[V2AppUpdate]
+  implicit lazy val itListAppsResultFormat = Json.format[ITListAppsResult]
+  implicit lazy val itAppVersionsFormat = Json.format[ITAppVersions]
+  implicit lazy val itEnrichedTaskFormat = Json.format[ITEnrichedTask]
+  implicit lazy val itListTasksFormat = Json.format[ITListTasks]
+  implicit lazy val itDeploymentPlanFormat = Json.format[ITDeploymentPlan]
+  implicit lazy val itHealthCheckResultFormat = Json.format[ITHealthCheckResult]
+  implicit lazy val itDeploymentResultFormat = Json.format[ITDeploymentResult]
+  implicit lazy val itLeaderResultFormat = Json.format[ITLeaderResult]
+  implicit lazy val itDeploymentFormat = Json.format[ITDeployment]
+  implicit lazy val itListDeploymentsFormat = Json.format[ITListDeployments]
+  implicit lazy val itQueueDelayFormat = Json.format[ITQueueDelay]
+  implicit lazy val itQueueItemFormat = Json.format[ITQueueItem]
+  implicit lazy val itTaskQueueFormat = Json.format[ITTaskQueue]
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)
@@ -75,9 +86,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     res.map(_.apps.toList.filter(app => isInBaseGroup(app.id)))
   }
 
-  def app(id: PathId): RestResult[V2AppDefinitionWrapper] = {
+  def app(id: PathId): RestResult[ITAppDefinition] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[V2AppDefinitionWrapper]
+    val pipeline = sendReceive ~> read[ITAppDefinition]
     val getUrl: String = s"$url/v2/apps$id"
     LoggerFactory.getLogger(getClass).info(s"get url = $getUrl")
     result(pipeline(Get(getUrl)), waitTime)
@@ -116,9 +127,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Get(s"$url/v2/apps$id/versions")), waitTime)
   }
 
-  def appVersion(id: PathId, version: Timestamp): RestResult[AppDefinition] = {
+  def appVersion(id: PathId, version: Timestamp): RestResult[V2AppDefinition] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[AppDefinition]
+    val pipeline = sendReceive ~> read[V2AppDefinition]
     result(pipeline(Get(s"$url/v2/apps$id/versions/$version")), waitTime)
   }
 
@@ -151,21 +162,21 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   //group resource -------------------------------------------
 
-  def listGroupsInBaseGroup: RestResult[Set[Group]] = {
-    val pipeline = sendReceive ~> read[Group]
+  def listGroupsInBaseGroup: RestResult[Set[V2Group]] = {
+    val pipeline = sendReceive ~> read[V2Group]
     val root = result(pipeline(Get(s"$url/v2/groups")), waitTime)
     root.map(_.groups.filter(group => isInBaseGroup(group.id)))
   }
 
   def listGroupVersions(id: PathId): RestResult[List[String]] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[Array[String]] ~> toList[String]
+    val pipeline = sendReceive ~> read[List[String]]
     result(pipeline(Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
-  def group(id: PathId): RestResult[Group] = {
+  def group(id: PathId): RestResult[V2Group] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[Group]
+    val pipeline = sendReceive ~> read[V2Group]
     result(pipeline(Get(s"$url/v2/groups$id")), waitTime)
   }
 
@@ -200,7 +211,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   //deployment resource ------
 
   def listDeploymentsForBaseGroup(): RestResult[List[ITDeployment]] = {
-    val pipeline = sendReceive ~> read[Array[ITDeployment]] ~> toList[ITDeployment]
+    val pipeline = sendReceive ~> read[List[ITDeployment]]
     result(pipeline(Get(s"$url/v2/deployments")), waitTime).map { deployments =>
       deployments.filter { deployment =>
         deployment.affectedApps.map(PathId(_)).exists(id => isInBaseGroup(id))

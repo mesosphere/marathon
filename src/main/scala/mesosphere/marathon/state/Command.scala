@@ -1,13 +1,10 @@
 package mesosphere.marathon.state
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import org.apache.mesos.{ Protos => MesosProtos }
 
 // TODO (if supported in the future):
 //   - user
 //   - URIs
-
-@JsonIgnoreProperties(ignoreUnknown = true)
 case class Command(value: String)
     extends MarathonState[MesosProtos.CommandInfo, Command] {
 

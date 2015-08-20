@@ -2,10 +2,8 @@ package mesosphere.marathon.health
 
 import java.lang.{ Integer => JInt }
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.ValidHealthCheck
 import mesosphere.marathon.state.{ Command, MarathonState }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -13,10 +11,9 @@ import org.apache.mesos.{ Protos => MesosProtos }
 import scala.concurrent.duration._
 
 @ValidHealthCheck
-@JsonIgnoreProperties(ignoreUnknown = true)
 case class HealthCheck(
 
-  @FieldJsonDeserialize(contentAs = classOf[java.lang.String]) path: Option[String] = HealthCheck.DefaultPath,
+  path: Option[String] = HealthCheck.DefaultPath,
 
   protocol: Protocol = HealthCheck.DefaultProtocol,
 
@@ -24,11 +21,11 @@ case class HealthCheck(
 
   command: Option[Command] = HealthCheck.DefaultCommand,
 
-  @FieldJsonProperty("gracePeriodSeconds") gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
 
-  @FieldJsonProperty("intervalSeconds") interval: FiniteDuration = HealthCheck.DefaultInterval,
+  interval: FiniteDuration = HealthCheck.DefaultInterval,
 
-  @FieldJsonProperty("timeoutSeconds") timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
 
   maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures,
 

@@ -6,6 +6,7 @@ import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, EndpointsHelper, RestResource }
 import mesosphere.marathon.health.HealthCheckManager
@@ -14,6 +15,7 @@ import mesosphere.marathon.state.{ GroupManager, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
 import org.apache.log4j.Logger
+import play.api.libs.json.Json
 
 import scala.concurrent.Future
 
@@ -49,7 +51,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
 
     val running = matchingApps.filter(taskTracker.contains)
 
-    if (running.isEmpty) unknownApp(appId.toRootPath) else ok(Map("tasks" -> tasks(running)))
+    if (running.isEmpty) unknownApp(appId.toRootPath) else ok(jsonObjString("tasks" -> tasks(running)))
   }
 
   @GET
@@ -78,7 +80,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
     }
     else {
       reqToResponse(taskKiller.kill(pathId, findToKill, scale)) {
-        tasks => ok(Map("tasks" -> tasks))
+        tasks => ok(jsonObjString("tasks" -> tasks))
       }
     }
   }
@@ -98,7 +100,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
     }
     else {
       reqToResponse(taskKiller.kill(pathId, findToKill, force = true)) {
-        tasks => tasks.headOption.fold(unknownTask(id))(task => ok(Map("task" -> task)))
+        tasks => tasks.headOption.fold(unknownTask(id))(task => ok(jsonObjString("task" -> task)))
       }
     }
   }

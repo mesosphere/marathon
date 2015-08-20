@@ -7,55 +7,48 @@ import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.Matchers
 import org.apache.mesos.{ Protos => mesos }
+import play.api.libs.json.Json
 
 class TaskFailureTest extends MarathonSpec with Matchers {
 
-  class Fixture {
-    lazy val taskFailure = TaskFailure(
-      appId = "/group/app".toPath,
-      taskId = mesos.TaskID.newBuilder.setValue("group_app-12345").build,
-      state = mesos.TaskState.TASK_FAILED,
-      message = "Process exited with status [1]",
-      host = "slave5.mega.co",
-      version = Timestamp(1000),
-      timestamp = Timestamp(2000)
-    )
-  }
-
-  def fixture(): Fixture = new Fixture
+  lazy val taskFailure = TaskFailure(
+    appId = "/group/app".toPath,
+    taskId = mesos.TaskID.newBuilder.setValue("group_app-12345").build,
+    state = mesos.TaskState.TASK_FAILED,
+    message = "Process exited with status [1]",
+    host = "slave5.mega.co",
+    version = Timestamp(1000),
+    timestamp = Timestamp(2000)
+  )
 
   test("ToProto") {
-    val f = fixture()
-    val proto = f.taskFailure.toProto
-    assert(proto.getAppId == f.taskFailure.appId.toString)
-    assert(proto.getTaskId == f.taskFailure.taskId)
-    assert(proto.getState == f.taskFailure.state)
-    assert(proto.getMessage == f.taskFailure.message)
-    assert(proto.getHost == f.taskFailure.host)
-    assert(Timestamp(proto.getVersion) == f.taskFailure.version)
-    assert(Timestamp(proto.getTimestamp) == f.taskFailure.timestamp)
+    val proto = taskFailure.toProto
+    assert(proto.getAppId == taskFailure.appId.toString)
+    assert(proto.getTaskId == taskFailure.taskId)
+    assert(proto.getState == taskFailure.state)
+    assert(proto.getMessage == taskFailure.message)
+    assert(proto.getHost == taskFailure.host)
+    assert(Timestamp(proto.getVersion) == taskFailure.version)
+    assert(Timestamp(proto.getTimestamp) == taskFailure.timestamp)
   }
 
   test("ConstructFromProto") {
-    val f = fixture()
-
     val proto = Protos.TaskFailure.newBuilder
-      .setAppId(f.taskFailure.appId.toString)
-      .setTaskId(f.taskFailure.taskId)
-      .setState(f.taskFailure.state)
-      .setMessage(f.taskFailure.message)
-      .setHost(f.taskFailure.host)
-      .setVersion(f.taskFailure.version.toString)
-      .setTimestamp(f.taskFailure.timestamp.toString)
+      .setAppId(taskFailure.appId.toString)
+      .setTaskId(taskFailure.taskId)
+      .setState(taskFailure.state)
+      .setMessage(taskFailure.message)
+      .setHost(taskFailure.host)
+      .setVersion(taskFailure.version.toString)
+      .setTimestamp(taskFailure.timestamp.toString)
       .build
 
-    val taskFailure = TaskFailure(proto)
-    assert(taskFailure == f.taskFailure)
+    val taskFailureFromProto = TaskFailure(proto)
+    assert(taskFailureFromProto == taskFailure)
   }
 
   test("ConstructFromProto with SlaveID") {
-    val taskFailureFixture = new Fixture()
-      .taskFailure.copy(slaveId = Option(slaveIDToProto(SlaveID("slave id"))))
+    val taskFailureFixture = taskFailure.copy(slaveId = Some(slaveIDToProto(SlaveID("slave id"))))
 
     val proto = Protos.TaskFailure.newBuilder
       .setAppId(taskFailureFixture.appId.toString)
@@ -68,26 +61,28 @@ class TaskFailureTest extends MarathonSpec with Matchers {
       .setSlaveId(taskFailureFixture.slaveId.get)
       .build
 
-    val taskFailure = TaskFailure(proto)
-    assert(taskFailure == taskFailureFixture)
+    val taskFailureFromProto = TaskFailure(proto)
+    assert(taskFailureFromProto == taskFailureFixture)
   }
 
-  test("SerializationRoundtrip") {
-    import com.fasterxml.jackson.databind.ObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
+  test("Json serialization") {
+    import mesosphere.marathon.api.v2.json.Formats._
 
-    val f = fixture()
-
-    val mapper = new ObjectMapper
-    mapper.registerModule(DefaultScalaModule)
-    mapper.registerModule(new MarathonModule)
-    mapper.registerModule(CaseClassModule)
-
-    val json = mapper.writeValueAsString(f.taskFailure)
-    val readResult = mapper.readValue(json, classOf[TaskFailure])
-    assert(readResult == f.taskFailure)
+    val json = Json.toJson(taskFailure.copy(slaveId = Some(slaveIDToProto(SlaveID("slave id")))))
+    val expectedJson = Json.parse(
+      """
+        |{
+        |  "appId":"/group/app",
+        |  "host":"slave5.mega.co",
+        |  "message":"Process exited with status [1]",
+        |  "state":"TASK_FAILED",
+        |  "taskId":"group_app-12345",
+        |  "timestamp":"1970-01-01T00:00:02.000Z",
+        |  "version":"1970-01-01T00:00:01.000Z",
+        |  "slaveId":"slave id"
+        |}
+      """.stripMargin)
+    assert(expectedJson == json)
   }
 
 }

@@ -7,10 +7,13 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 import com.google.inject.Inject
 
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.event.http.HttpCallbackSubscriptionService
-import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
+import mesosphere.marathon.event.{ MarathonEvent, Subscribe, Unsubscribe }
 import mesosphere.marathon.{ BadRequestException, MarathonConf }
+
+import scala.concurrent.Future
 
 @Path("v2/eventSubscriptions")
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -25,15 +28,15 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf) extends Re
   @Timed
   def listSubscribers(@Context req: HttpServletRequest): Response = {
     validateSubscriptionService()
-    ok(result(service.getSubscribers))
+    ok(jsonString(result(service.getSubscribers)))
   }
 
   @POST
   @Timed
   def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response = {
     validateSubscriptionService()
-    val future = service.handleSubscriptionEvent(Subscribe(req.getRemoteAddr, callbackUrl))
-    ok(result(future))
+    val future: Future[MarathonEvent] = service.handleSubscriptionEvent(Subscribe(req.getRemoteAddr, callbackUrl))
+    ok(jsonString(eventToJson(result(future))))
   }
 
   @DELETE
@@ -41,7 +44,7 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf) extends Re
   def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response = {
     validateSubscriptionService()
     val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
-    ok(result(future))
+    ok(jsonString(eventToJson(result(future))))
   }
 
   private def validateSubscriptionService(): Unit = {

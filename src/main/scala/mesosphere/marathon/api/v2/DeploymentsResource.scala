@@ -5,12 +5,14 @@ import javax.ws.rs._
 import javax.ws.rs.core.Response.Status._
 import javax.ws.rs.core.{ MediaType, Response }
 
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentPlan }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.util.Logging
+import play.api.libs.json.{ Json, JsObject, JsValue }
 
 @Path("v2/deployments")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -23,9 +25,9 @@ class DeploymentsResource @Inject() (
     with Logging {
 
   @GET
-  def running(): Response = ok(result(service.listRunningDeployments()).map {
+  def running(): Response = ok(jsonString(result(service.listRunningDeployments()).map {
     case (plan, currentStep) => toInfo(plan, currentStep)
-  })
+  }))
 
   @DELETE
   @Path("{id}")
@@ -51,16 +53,19 @@ class DeploymentsResource @Inject() (
 
   private def toInfo(
     deployment: DeploymentPlan,
-    currentStepInfo: DeploymentStepInfo): Map[String, Any] =
-    Map(
+    currentStepInfo: DeploymentStepInfo): JsObject = {
+
+    val steps = deployment.steps.map(step => step.actions.map(actionToMap)).map(Json.toJson(_))
+    Json.obj(
       "id" -> deployment.id,
       "version" -> deployment.version,
       "affectedApps" -> deployment.affectedApplicationIds.map(_.toString),
-      "steps" -> deployment.steps.map(step => step.actions.map(actionToMap)),
+      "steps" -> steps,
       "currentActions" -> currentStepInfo.step.actions.map(actionToMap),
       "currentStep" -> currentStepInfo.nr,
       "totalSteps" -> deployment.steps.size
     )
+  }
 
   def actionToMap(action: DeploymentAction): Map[String, String] =
     Map(

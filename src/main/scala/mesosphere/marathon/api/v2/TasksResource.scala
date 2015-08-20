@@ -7,6 +7,7 @@ import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, EndpointsHelper, RestResource }
 import mesosphere.marathon.health.HealthCheckManager
@@ -72,7 +73,7 @@ class TasksResource @Inject() (
       )
     }
 
-    ok(Map(
+    ok(jsonObjString(
       "tasks" -> enrichedTasks
     ))
   }

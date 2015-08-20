@@ -1,22 +1,11 @@
 package mesosphere.marathon.state
 
-import javax.validation.Validation
-
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.google.common.collect.Lists
-import mesosphere.jackson.CaseClassModule
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
-import mesosphere.marathon.api.v2.json.{ EnrichedTask, MarathonModule }
-import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
-import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonSpec, Protos }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
-import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq

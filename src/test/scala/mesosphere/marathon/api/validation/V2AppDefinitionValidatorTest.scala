@@ -1,16 +1,12 @@
 package mesosphere.marathon.api.validation
 
-import com.github.fge.jackson.JsonLoader
-
 import javax.validation.ConstraintValidatorContext
 
-import mesosphere.jackson.CaseClassModule
+import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.HealthCheckDefinition
-import mesosphere.marathon.api.v2.json.{ MarathonModule, V2AppDefinition }
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ Command, Container, PathId, AppDefinition }
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.state.{ Command, Container, PathId }
 
 class V2AppDefinitionValidatorTest extends MarathonSpec {
   var validator: V2AppDefinitionValidator = _

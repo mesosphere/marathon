@@ -2,7 +2,6 @@ package mesosphere.marathon.state
 
 import java.lang.{ Double => JDouble, Integer => JInt }
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
@@ -211,7 +210,6 @@ case class AppDefinition(
     )
   }
 
-  @JsonIgnore
   def portMappings: Option[Seq[PortMapping]] =
     for {
       c <- container
@@ -220,23 +218,18 @@ case class AppDefinition(
       pms <- d.portMappings
     } yield pms
 
-  @JsonIgnore
   def containerHostPorts: Option[Seq[Int]] =
     for (pms <- portMappings) yield pms.map(_.hostPort.toInt)
 
-  @JsonIgnore
   def containerServicePorts: Option[Seq[Int]] =
     for (pms <- portMappings) yield pms.map(_.servicePort.toInt)
 
-  @JsonIgnore
   def hostPorts: Seq[Int] =
     containerHostPorts.getOrElse(ports.map(_.toInt))
 
-  @JsonIgnore
   def servicePorts: Seq[Int] =
     containerServicePorts.getOrElse(ports.map(_.toInt))
 
-  @JsonIgnore
   def hasDynamicPort: Boolean = servicePorts.contains(0)
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {

@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.event._
+import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container.{ Docker, Volume }
@@ -19,7 +20,6 @@ import play.api.libs.json._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
 
 object Formats extends Formats {
 
@@ -49,7 +49,8 @@ trait Formats
     with HealthCheckFormats
     with ContainerFormats
     with DeploymentFormats
-    with EventFormats {
+    with EventFormats
+    with EventSubscribersFormats {
   import scala.collection.JavaConverters._
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
@@ -312,6 +313,15 @@ trait EventFormats {
   //scalastyle:on
 }
 
+trait EventSubscribersFormats {
+
+  implicit lazy val EventSubscribersWrites: Writes[EventSubscribers] = Writes { eventSubscribers =>
+    Json.obj(
+      "callbackUrls" -> eventSubscribers.urls
+    )
+  }
+}
+
 trait HealthCheckFormats {
   import Formats._
 
@@ -477,7 +487,7 @@ trait V2Formats {
 
   implicit lazy val WithTaskCountsAndDeploymentsWrites: Writes[WithTaskCountsAndDeployments] =
     Writes { app =>
-      val appJson = V2AppDefinitionWrites.writes(app).as[JsObject]
+      val appJson = V2AppDefinitionWrites.writes(app.app).as[JsObject]
 
       appJson ++ Json.obj(
         "tasksStaged" -> app.tasksStaged,

@@ -1,13 +1,15 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.{ MarathonSpec, Protos }
-import mesosphere.marathon.state.Command
-import mesosphere.jackson.CaseClassModule
-import Protos.HealthCheckDefinition.Protocol
-import scala.concurrent.duration._
-import scala.collection.JavaConverters._
-import java.util.concurrent.TimeUnit.SECONDS
 import javax.validation.Validation
+
+import mesosphere.jackson.CaseClassModule
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.state.Command
+import mesosphere.marathon.{ MarathonSpec, Protos }
+import play.api.libs.json.Json
+
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 class HealthCheckTest extends MarathonSpec {
 
@@ -126,26 +128,25 @@ class HealthCheckTest extends MarathonSpec {
     assert(mergeResult == expectedResult)
   }
 
-  test("SerializationRoundtrip") {
-    import com.fasterxml.jackson.databind.ObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
+  private[this] def toJson(healthCheck: HealthCheck): String = {
+    import mesosphere.marathon.api.v2.json.Formats._
+    Json.prettyPrint(Json.toJson(healthCheck))
+  }
+  private[this] def fromJson(json: String): HealthCheck = {
+    import mesosphere.marathon.api.v2.json.Formats._
+    Json.fromJson[HealthCheck](Json.parse(json)).get
+  }
 
-    val mapper = new ObjectMapper
-    mapper.registerModule(DefaultScalaModule)
-    mapper.registerModule(new MarathonModule)
-    mapper.registerModule(CaseClassModule)
+  test("SerializationRoundtrip empty") {
+    val original = HealthCheck()
+    val json = toJson(original)
+    val readResult = fromJson(json)
+    assert(readResult == original)
+  }
 
-    {
-      val original = HealthCheck()
-      val json = mapper.writeValueAsString(original)
-      val readResult = mapper.readValue(json, classOf[HealthCheck])
-      assert(readResult == original)
-    }
-
-    {
-      val json =
-        """
+  test("Read COMMAND health check") {
+    val json =
+      """
         {
           "protocol": "COMMAND",
           "portIndex": 0,
@@ -155,39 +156,14 @@ class HealthCheckTest extends MarathonSpec {
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 3
         }
-        """
-      val expected =
-        HealthCheck(
-          protocol = Protocol.COMMAND,
-          command = Some(Command("echo healthy"))
-        )
-      val readResult = mapper.readValue(json, classOf[HealthCheck])
-      assert(readResult == expected)
-    }
-
-    {
-      val json =
-        """
-        {
-          "protocol": "COMMAND",
-          "portIndex": 0,
-          "command": { "value": "echo healthy" },
-          "gracePeriodSeconds": 300,
-          "intervalSeconds": 60,
-          "timeoutSeconds": 20,
-          "maxConsecutiveFailures": 3
-        }
-        """
-      val expected =
-        HealthCheck(
-          protocol = Protocol.COMMAND,
-          command = Some(Command("echo healthy")),
-          path = Some("/")
-        )
-      val readResult = mapper.readValue(json, classOf[HealthCheck])
-      assert(readResult == expected)
-    }
-
+      """
+    val expected =
+      HealthCheck(
+        protocol = Protocol.COMMAND,
+        command = Some(Command("echo healthy"))
+      )
+    val readResult = fromJson(json)
+    assert(readResult == expected)
   }
 
   test("Validation") {

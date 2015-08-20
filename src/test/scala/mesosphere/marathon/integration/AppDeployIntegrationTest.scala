@@ -15,6 +15,7 @@ import play.api.libs.json.JsArray
 import spray.httpx.UnsuccessfulResponseException
 
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
 class AppDeployIntegrationTest
     extends IntegrationFunSuite
@@ -448,16 +449,19 @@ class AppDeployIntegrationTest
     }
 
     Then("the app should also be gone")
-    val result = intercept[UnsuccessfulResponseException] {
-      marathon.app(appId).code should be (404)
-    }
-    result.response.status.intValue should be(404)
+    marathon.app(appId).code should be (404)
   }
 
   def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)
 
   def extractDeploymentIds(app: RestResult[V2AppDefinition]): Seq[String] = {
-    for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
-      yield (deployment \ "id").as[String]
+    try {
+      for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
+        yield (deployment \ "id").as[String]
+    }
+    catch {
+      case NonFatal(e) =>
+        throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
+    }
   }
 }
