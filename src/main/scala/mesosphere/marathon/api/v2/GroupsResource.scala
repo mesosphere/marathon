@@ -34,7 +34,7 @@ class GroupsResource @Inject() (
     */
   @GET
   @Timed
-  def root(): Group = result(groupManager.rootGroup())
+  def root(): V2Group = V2Group(result(groupManager.rootGroup()))
 
   /**
     * Get a specific group, optionally with specific version
