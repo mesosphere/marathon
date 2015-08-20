@@ -58,14 +58,15 @@ class DeploymentActorTest
     implicit val system = ActorSystem("TestSystem")
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, version = Timestamp(0))
-    val app2 = AppDefinition(id = PathId("app2"), cmd = Some("cmd"), instances = 1, version = Timestamp(0))
-    val app3 = AppDefinition(id = PathId("app3"), cmd = Some("cmd"), instances = 1, version = Timestamp(0))
-    val app4 = AppDefinition(id = PathId("app4"), cmd = Some("cmd"), version = Timestamp(0))
+    val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2)
+    val app2 = AppDefinition(id = PathId("app2"), cmd = Some("cmd"), instances = 1)
+    val app3 = AppDefinition(id = PathId("app3"), cmd = Some("cmd"), instances = 1)
+    val app4 = AppDefinition(id = PathId("app4"), cmd = Some("cmd"))
     val origGroup = Group(PathId("/foo/bar"), Set(app1, app2, app4))
 
-    val app1New = app1.copy(instances = 1, version = Timestamp(1000))
-    val app2New = app2.copy(instances = 2, cmd = Some("otherCmd"), version = Timestamp(1000))
+    val version2 = AppDefinition.VersionInfo.OnlyVersion(Timestamp(1000))
+    val app1New = app1.copy(instances = 1, versionInfo = version2)
+    val app2New = app2.copy(instances = 2, cmd = Some("otherCmd"), versionInfo = version2)
 
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New, app2New, app3))
 
@@ -157,7 +158,7 @@ class DeploymentActorTest
 
       verify(scheduler).startApp(driver, app3.copy(instances = 0))
       verify(driver, times(1)).killTask(TaskID(task1_2.getId))
-      verify(scheduler).stopApp(driver, app4)
+      verify(scheduler).stopApp(driver, app4.copy(instances = 0))
     }
     finally {
       system.shutdown()
@@ -168,10 +169,11 @@ class DeploymentActorTest
     implicit val system = ActorSystem("TestSystem")
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2)
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
-    val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
+    val version2 = AppDefinition.VersionInfo.OnlyVersion(Timestamp(1000))
+    val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
 
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
@@ -247,10 +249,11 @@ class DeploymentActorTest
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
 
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 0, version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 0)
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
-    val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
+    val version2 = AppDefinition.VersionInfo.OnlyVersion(Timestamp(1000))
+    val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
@@ -287,10 +290,11 @@ class DeploymentActorTest
     implicit val system = ActorSystem("TestSystem")
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 3, version = Timestamp(0))
+    val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 3)
     val origGroup = Group(PathId("/foo/bar"), Set(app1))
 
-    val app1New = app1.copy(instances = 2, version = Timestamp(1000))
+    val version2 = AppDefinition.VersionInfo.OnlyVersion(Timestamp(1000))
+    val app1New = app1.copy(instances = 2, versionInfo = version2)
 
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New))
 

@@ -2,6 +2,7 @@ package mesosphere.marathon
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.fge.jackson.JsonLoader
+import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.api.v2.json.V2AppDefinition
 
@@ -140,7 +141,8 @@ trait MarathonTestHelper {
 
   def validateJsonSchemaForString(appStr: String, valid: Boolean): Unit = {
     val appJson = JsonLoader.fromString(appStr)
-    assert(appSchema.validate(appJson).isSuccess == valid)
+    val validationResult: ProcessingReport = appSchema.validate(appJson)
+    assert(validationResult.isSuccess == valid, s"validation failed: $validationResult")
   }
 }
 

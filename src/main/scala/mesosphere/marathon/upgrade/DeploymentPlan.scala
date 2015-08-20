@@ -5,6 +5,8 @@ import java.util.UUID
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.state.AppDefinition.VersionInfo
+import mesosphere.marathon.state.AppDefinition.VersionInfo.{ OnlyVersion, FullVersionInfo, NoVersion }
 import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory
 
@@ -207,6 +209,14 @@ object DeploymentPlan {
     }.to[Seq]
   }
 
+  /**
+    * @param original the root group before the deployment
+    * @param target the root group after the deployment
+    * @param resolveArtifacts artifacts to resolve
+    * @param version the version to use for new AppDefinitions (should be very close to now)
+    * @param toKill specific tasks that should be killed
+    * @return The deployment plan containing the steps necessary to get from the original to the target group definition
+    */
   //scalastyle:off method.length
   def apply(
     original: Group,
@@ -214,12 +224,14 @@ object DeploymentPlan {
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
     toKill: Map[PathId, Set[MarathonTask]] = Map.empty): DeploymentPlan = {
-    log.info(s"Compute DeploymentPlan from $original to $target")
 
-    // Lookup maps for original and target apps.
+    log.info(s"Compute DeploymentPlan from:\n $original\nto: \n$target")
+
+    // Lookup map for original apps
     val originalApps: Map[PathId, AppDefinition] =
       original.transitiveApps.map(app => app.id -> app).toMap
 
+    // Lookup map for target apps.
     val targetApps: Map[PathId, AppDefinition] =
       target.transitiveApps.map(app => app.id -> app).toMap
 
@@ -260,12 +272,12 @@ object DeploymentPlan {
     steps ++= dependencyOrderedSteps(original, target, toKill)
 
     // Build the result.
-    val result = DeploymentPlan(
-      UUID.randomUUID().toString,
-      original,
-      target,
-      steps.result().filter(_.actions.nonEmpty),
-      version
+    val result = new DeploymentPlan(
+      id = UUID.randomUUID().toString,
+      original = original,
+      target = target,
+      steps = steps.result().filter(_.actions.nonEmpty),
+      version = version
     )
 
     log.info(s"Computed new deployment plan: $result")

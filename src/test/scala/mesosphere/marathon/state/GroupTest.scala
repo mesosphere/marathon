@@ -4,6 +4,7 @@ import javax.validation.ConstraintViolation
 
 import mesosphere.marathon.api.v2.{ ModelValidation, BeanValidation }
 import mesosphere.marathon.api.v2.json.V2Group
+import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
@@ -193,10 +194,16 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
     it("can marshal and unmarshal from to protos") {
       Given("a group with subgroups")
+      val now = Timestamp(11)
+      val fullVersion = VersionInfo.forNewConfig(now)
       val current = Group.empty.copy(groups = Set(
         Group("/test".toPath, groups = Set(
-          Group("/test/group1".toPath, Set(AppDefinition("/test/group1/app1".toPath, args = Some(Seq("a", "b", "c"))))),
-          Group("/test/group2".toPath, Set(AppDefinition("/test/group2/app2".toPath, args = Some(Seq("a", "b")))))
+          Group("/test/group1".toPath, Set(
+            AppDefinition("/test/group1/app1".toPath, args = Some(Seq("a", "b", "c")), versionInfo = fullVersion)
+          )),
+          Group("/test/group2".toPath, Set(
+            AppDefinition("/test/group2/app2".toPath, args = Some(Seq("a", "b")), versionInfo = fullVersion)
+          ))
         ))))
 
       When("the group is marshalled and unmarshalled again")

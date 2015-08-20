@@ -148,8 +148,9 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
   test("healthCounts") {
     val appId = "test".toRootPath
-    val version = Timestamp(1024)
-    appRepository.store(AppDefinition(id = appId, version = version))
+    val app: AppDefinition = AppDefinition(id = appId)
+    appRepository.store(app)
+    val version = app.version
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
     hcManager.add(appId, version, healthCheck)
@@ -184,8 +185,9 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
   test("statuses") {
     val appId = "test".toRootPath
-    val version = Timestamp(1024)
-    appRepository.store(AppDefinition(id = appId, version = version))
+    val app: AppDefinition = AppDefinition(id = appId)
+    appRepository.store(app)
+    val version = app.version
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
     hcManager.add(appId, version, healthCheck)
@@ -261,7 +263,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     def startTask(appId: PathId, task: MarathonTask, version: Timestamp, healthChecks: Set[HealthCheck]) = {
       Await.result(appRepository.store(AppDefinition(
         id = appId,
-        version = version,
+        versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )), 2.second)
       taskTracker.created(appId, task)

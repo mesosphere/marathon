@@ -32,6 +32,7 @@ class GroupManager @Singleton @Inject() (
     scheduler: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
+    appRepo: AppRepository,
     storage: StorageProvider,
     config: MarathonConf,
     @Named(EventModule.busName) eventBus: EventStream) extends PathFun {
@@ -133,19 +134,66 @@ class GroupManager @Singleton @Inject() (
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
     toKill: Map[PathId, Set[MarathonTask]] = Map.empty): Future[DeploymentPlan] = serializeUpdates {
-    log.info(s"Upgrade id:$gid version:$version with force:$force")
 
-    def deploy(from: Group, to: Group, resolve: Seq[ResolveArtifacts]): Future[DeploymentPlan] = {
-      val plan = DeploymentPlan(from, to, resolve, version, toKill)
-      scheduler.deploy(plan, force).map(_ => plan)
+    log.info(s"Upgrade group id:$gid version:$version with force:$force")
+
+    /**
+      * The VersionInfo contains information relating to the last change of a certain type.
+      * This methods makes sure that the version info is calculated correctly.
+      */
+    def updateAppVersionInfo(maybeOldApp: Option[AppDefinition], newApp: AppDefinition): AppDefinition = {
+      val newVersionInfo = maybeOldApp match {
+        case None =>
+          log.info(s"[${newApp.id}]: new app detected")
+          AppDefinition.VersionInfo.forNewConfig(newVersion = version)
+        case Some(oldApp) =>
+          if (oldApp.isUpgrade(newApp)) {
+            log.info(s"[${newApp.id}]: upgrade detected for app (oldVersion ${oldApp.versionInfo})")
+            oldApp.versionInfo.withConfigChange(newVersion = version)
+          }
+          else {
+            log.info(s"[${newApp.id}]: scaling op detected for app (oldVersion ${oldApp.versionInfo})")
+            oldApp.versionInfo.withScaleOrRestartChange(newVersion = version)
+          }
+      }
+
+      log.info(s"[${newApp.id}]: new version ${newVersionInfo}")
+      newApp.copy(versionInfo = newVersionInfo)
+    }
+
+    def updateVersionInfo(from: Group, to: Group): Group = {
+      val originalApps = from.transitiveApps.map(app => app.id -> app).toMap
+      val updatedTargetApps = to.transitiveApps.map { newApp =>
+        updateAppVersionInfo(originalApps.get(newApp.id), newApp)
+      }
+      updatedTargetApps.foldLeft(to) { (resultGroup, updatedApp) =>
+        resultGroup.updateApp(updatedApp.id, _ => updatedApp, version)
+      }
+    }
+
+    def storeUpdatedApps(plan: DeploymentPlan): Future[Unit] = {
+      plan.affectedApplicationIds.foldLeft(Future.successful(())) { (savedFuture, currentId) =>
+        plan.target.app(currentId) match {
+          case Some(newApp) =>
+            log.info(s"[${newApp.id}] storing new app version ${newApp.version}")
+            appRepo.store(newApp).map (_ => ())
+          case None =>
+            log.info(s"[$currentId] expunging app")
+            // remove??
+            appRepo.expunge(currentId).map (_ => ())
+        }
+      }
     }
 
     val deployment = for {
       from <- rootGroup()
-      (to, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
+      (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
+      to = updateVersionInfo(from, toUnversioned)
       _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty))
-      plan <- deploy(from, to, resolve)
-      _ <- groupRepo.store(zkName, to)
+      plan = DeploymentPlan(from, to, resolve, version, toKill)
+      _ <- scheduler.deploy(plan, force)
+      _ <- storeUpdatedApps(plan)
+      _ <- groupRepo.store(zkName, plan.target)
     } yield plan
 
     deployment.onComplete {

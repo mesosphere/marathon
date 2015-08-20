@@ -84,10 +84,10 @@ class DeploymentActor(
       val futures = step.actions.map { action =>
         healthCheckManager.addAllFor(action.app) // ensure health check actors are in place before tasks are launched
         action match {
-          case StartApplication(app, scaleTo)         => storeAndThen(app) { startApp(app, scaleTo) }
-          case ScaleApplication(app, scaleTo, toKill) => storeAndThen(app) { scaleApp(app, scaleTo, toKill) }
-          case RestartApplication(app)                => storeAndThen(app) { restartApp(app) }
-          case StopApplication(app)                   => storeAndThen(app.copy(instances = 0)) { stopApp(app) }
+          case StartApplication(app, scaleTo)         => startApp(app, scaleTo)
+          case ScaleApplication(app, scaleTo, toKill) => scaleApp(app, scaleTo, toKill)
+          case RestartApplication(app)                => restartApp(app)
+          case StopApplication(app)                   => stopApp(app.copy(instances = 0))
           case ResolveArtifacts(app, urls)            => resolveArtifacts(app, urls)
         }
       }
@@ -187,10 +187,6 @@ class DeploymentActor(
     val promise = Promise[Boolean]()
     context.actorOf(Props(classOf[ResolveArtifactsActor], app, urls, promise, storage))
     promise.future.map(_ => ())
-  }
-
-  def storeAndThen[A](app: AppDefinition)(cont: => Future[A]): Future[A] = {
-    appRepository.store(app) flatMap { _ => cont }
   }
 }
 

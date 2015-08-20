@@ -23,6 +23,8 @@ import scala.collection.immutable.Seq
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
 
+  val fullVersion = AppDefinition.VersionInfo.forNewConfig(Timestamp(1))
+
   test("ToProto") {
     val app1 = AppDefinition(
       id = "play".toPath,
@@ -86,7 +88,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
   test("CMD to proto and back again") {
     val app = AppDefinition(
       id = "play".toPath,
-      cmd = Some("bash foo-*/start -Dhttp.port=$PORT")
+      cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
+      versionInfo = fullVersion
     )
 
     val proto = app.toProto
@@ -102,7 +105,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
   test("ARGS to proto and back again") {
     val app = AppDefinition(
       id = "play".toPath,
-      args = Some(Seq("bash", "foo-*/start", "-Dhttp.port=$PORT"))
+      args = Some(Seq("bash", "foo-*/start", "-Dhttp.port=$PORT")),
+      versionInfo = fullVersion
     )
 
     val proto = app.toProto
@@ -149,12 +153,17 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         "one" -> "aaa",
         "two" -> "bbb",
         "three" -> "ccc"
-      )
+      ),
+      versionInfo = fullVersion
     )
     val result1 = AppDefinition().mergeFromProto(app1.toProto)
     assert(result1 == app1)
 
-    val app2 = AppDefinition(cmd = None, args = Some(Seq("a", "b", "c")))
+    val app2 = AppDefinition(
+      cmd = None,
+      args = Some(Seq("a", "b", "c")),
+      versionInfo = fullVersion
+    )
     val result2 = AppDefinition().mergeFromProto(app2.toProto)
     assert(result2 == app2)
   }
