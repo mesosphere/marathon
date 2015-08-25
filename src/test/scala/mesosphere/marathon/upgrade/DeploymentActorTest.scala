@@ -34,7 +34,6 @@ class DeploymentActorTest
     with BeforeAndAfterAll
     with MockitoSugar {
 
-  var repo: AppRepository = _
   var tracker: TaskTracker = _
   var queue: LaunchQueue = _
   var driver: SchedulerDriver = _
@@ -46,7 +45,6 @@ class DeploymentActorTest
 
   before {
     driver = mock[SchedulerDriver]
-    repo = mock[AppRepository]
     tracker = mock[TaskTracker]
     queue = mock[LaunchQueue]
     scheduler = mock[SchedulerActions]
@@ -83,9 +81,6 @@ class DeploymentActorTest
     when(tracker.get(app2.id)).thenReturn(Set(task2_1))
     when(tracker.get(app3.id)).thenReturn(Set(task3_1))
     when(tracker.get(app4.id)).thenReturn(Set(task4_1))
-
-    // the AppDefinition is never used, so it does not mater which one we return
-    when(repo.store(any())).thenReturn(Future.successful(AppDefinition()))
 
     when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -133,11 +128,9 @@ class DeploymentActorTest
 
     try {
       TestActorRef(
-        Props(
-          classOf[DeploymentActor],
+        DeploymentActor.props(
           managerProbe.ref,
           receiverProbe.ref,
-          repo,
           driver,
           scheduler,
           plan,
@@ -157,7 +150,7 @@ class DeploymentActorTest
 
       verify(scheduler).startApp(driver, app3.copy(instances = 0))
       verify(driver, times(1)).killTask(TaskID(task1_2.getId))
-      verify(scheduler).stopApp(driver, app4)
+      verify(scheduler).stopApp(driver, app4.copy(instances = 0))
     }
     finally {
       system.shutdown()
@@ -211,15 +204,11 @@ class DeploymentActorTest
       }
     })
 
-    when(repo.store(appNew)).thenReturn(Future.successful(appNew))
-
     try {
       TestActorRef(
-        Props(
-          classOf[DeploymentActor],
+        DeploymentActor.props(
           managerProbe.ref,
           receiverProbe.ref,
-          repo,
           driver,
           scheduler,
           plan,
@@ -256,15 +245,12 @@ class DeploymentActorTest
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
     when(tracker.get(app.id)).thenReturn(Set[MarathonTask]())
-    when(repo.store(appNew)).thenReturn(Future.successful(appNew))
 
     try {
       TestActorRef(
-        Props(
-          classOf[DeploymentActor],
+        DeploymentActor.props(
           managerProbe.ref,
           receiverProbe.ref,
-          repo,
           driver,
           scheduler,
           plan,
@@ -287,7 +273,7 @@ class DeploymentActorTest
     implicit val system = ActorSystem("TestSystem")
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 3, version = Timestamp(0))
+    val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 3)
     val origGroup = Group(PathId("/foo/bar"), Set(app1))
 
     val app1New = app1.copy(instances = 2, version = Timestamp(1000))
@@ -303,9 +289,6 @@ class DeploymentActorTest
 
     when(tracker.get(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
 
-    // the AppDefinition is never used, so it does not mater which one we return
-    when(repo.store(any())).thenReturn(Future.successful(AppDefinition()))
-
     when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent("", "task1_2", "TASK_KILLED", "", app1.id, "", Nil, app1New.version.toString))
@@ -315,11 +298,9 @@ class DeploymentActorTest
 
     try {
       TestActorRef(
-        Props(
-          classOf[DeploymentActor],
+        DeploymentActor.props(
           managerProbe.ref,
           receiverProbe.ref,
-          repo,
           driver,
           scheduler,
           plan,

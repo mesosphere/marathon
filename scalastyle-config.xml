@@ -84,7 +84,11 @@
  </check>
  <check level="error" class="org.scalastyle.scalariform.MethodLengthChecker" enabled="true">
   <parameters>
-   <parameter name="maxLength"><![CDATA[50]]></parameter>
+   <!--
+   Unfortunately, nested methods are included in the length calculation which is not so useful
+   since our programming style encourages nesting functions that are not used elsewhere.
+   -->
+   <parameter name="maxLength"><![CDATA[200]]></parameter>
   </parameters>
  </check>
  <check level="error" class="org.scalastyle.scalariform.MethodNamesChecker" enabled="true">

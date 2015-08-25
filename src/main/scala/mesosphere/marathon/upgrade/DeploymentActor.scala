@@ -20,10 +20,9 @@ import mesosphere.marathon.state.{ PathId, AppDefinition, AppRepository }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentStepInfo, DeploymentFinished }
 
-class DeploymentActor(
+private class DeploymentActor(
     parent: ActorRef,
     receiver: ActorRef,
-    appRepository: AppRepository,
     driver: SchedulerDriver,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
@@ -84,10 +83,10 @@ class DeploymentActor(
       val futures = step.actions.map { action =>
         healthCheckManager.addAllFor(action.app) // ensure health check actors are in place before tasks are launched
         action match {
-          case StartApplication(app, scaleTo)         => storeAndThen(app) { startApp(app, scaleTo) }
-          case ScaleApplication(app, scaleTo, toKill) => storeAndThen(app) { scaleApp(app, scaleTo, toKill) }
-          case RestartApplication(app)                => storeAndThen(app) { restartApp(app) }
-          case StopApplication(app)                   => storeAndThen(app.copy(instances = 0)) { stopApp(app) }
+          case StartApplication(app, scaleTo)         => startApp(app, scaleTo)
+          case ScaleApplication(app, scaleTo, toKill) => scaleApp(app, scaleTo, toKill)
+          case RestartApplication(app)                => restartApp(app)
+          case StopApplication(app)                   => stopApp(app.copy(instances = 0))
           case ResolveArtifacts(app, urls)            => resolveArtifacts(app, urls)
         }
       }
@@ -188,10 +187,6 @@ class DeploymentActor(
     context.actorOf(Props(classOf[ResolveArtifactsActor], app, urls, promise, storage))
     promise.future.map(_ => ())
   }
-
-  def storeAndThen[A](app: AppDefinition)(cont: => Future[A]): Future[A] = {
-    appRepository.store(app) flatMap { _ => cont }
-  }
 }
 
 object DeploymentActor {
@@ -199,4 +194,32 @@ object DeploymentActor {
   case object Finished
   final case class Cancel(reason: Throwable)
   final case class Fail(reason: Throwable)
+
+  // scalastyle:off parameter.number
+  def props(
+    parent: ActorRef,
+    receiver: ActorRef,
+    driver: SchedulerDriver,
+    scheduler: SchedulerActions,
+    plan: DeploymentPlan,
+    taskTracker: TaskTracker,
+    taskQueue: LaunchQueue,
+    storage: StorageProvider,
+    healthCheckManager: HealthCheckManager,
+    eventBus: EventStream): Props = {
+    // scalastyle:on parameter.number
+
+    Props(new DeploymentActor(
+      parent,
+      receiver,
+      driver,
+      scheduler,
+      plan,
+      taskTracker,
+      taskQueue,
+      storage,
+      healthCheckManager,
+      eventBus
+    ))
+  }
 }

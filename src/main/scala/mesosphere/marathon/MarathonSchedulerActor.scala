@@ -395,36 +395,28 @@ class SchedulerActions(
 
   // TODO move stuff below out of the scheduler
 
-  def startApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
-    currentAppVersion(app.id).flatMap { appOption =>
-      require(appOption.isEmpty, s"Already started app '${app.id}'")
-
-      appRepository.store(app).map { _ =>
-        log.info(s"Starting app ${app.id}")
-        scale(driver, app)
-      }
-    }
+  def startApp(driver: SchedulerDriver, app: AppDefinition): Unit = {
+    log.info(s"Starting app ${app.id}")
+    scale(driver, app)
   }
 
   def stopApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
-    appRepository.expunge(app.id).map { _ =>
+    healthCheckManager.removeAllFor(app.id)
 
-      healthCheckManager.removeAllFor(app.id)
+    log.info(s"Stopping app ${app.id}")
+    val tasks = taskTracker.get(app.id)
 
-      log.info(s"Stopping app ${app.id}")
-      val tasks = taskTracker.get(app.id)
-
-      for (task <- tasks) {
-        log.info(s"Killing task ${task.getId}")
-        driver.killTask(protos.TaskID(task.getId))
-      }
-      taskQueue.purge(app.id)
-      taskTracker.shutdown(app.id)
-      taskQueue.resetDelay(app)
-      // TODO after all tasks have been killed we should remove the app from taskTracker
-
-      eventBus.publish(AppTerminatedEvent(app.id))
+    for (task <- tasks) {
+      log.info(s"Killing task ${task.getId}")
+      driver.killTask(protos.TaskID(task.getId))
     }
+    taskQueue.purge(app.id)
+    taskTracker.shutdown(app.id)
+    taskQueue.resetDelay(app)
+    // TODO after all tasks have been killed we should remove the app from taskTracker
+
+    eventBus.publish(AppTerminatedEvent(app.id))
+    Future.successful(())
   }
 
   def scaleApps(): Future[Unit] = {

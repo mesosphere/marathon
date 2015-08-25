@@ -363,6 +363,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     scheduler: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
+    appRepo: AppRepository,
     storage: StorageProvider,
     config: MarathonConf,
     @Named(EventModule.busName) eventBus: EventStream,
@@ -372,6 +373,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       scheduler,
       taskTracker,
       groupRepo,
+      appRepo,
       storage,
       config,
       eventBus

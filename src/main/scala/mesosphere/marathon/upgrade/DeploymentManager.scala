@@ -85,11 +85,9 @@ class DeploymentManager(
 
     case PerformDeployment(driver, plan) if !runningDeployments.contains(plan.id) =>
       val ref = context.actorOf(
-        Props(
-          classOf[DeploymentActor],
+        DeploymentActor.props(
           self,
           sender(),
-          appRepository,
           driver,
           scheduler,
           plan,

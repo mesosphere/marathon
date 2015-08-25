@@ -32,6 +32,7 @@ class GroupManager @Singleton @Inject() (
     scheduler: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
+    appRepo: AppRepository,
     storage: StorageProvider,
     config: MarathonConf,
     @Named(EventModule.busName) eventBus: EventStream) extends PathFun {
@@ -133,19 +134,30 @@ class GroupManager @Singleton @Inject() (
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
     toKill: Map[PathId, Set[MarathonTask]] = Map.empty): Future[DeploymentPlan] = serializeUpdates {
-    log.info(s"Upgrade id:$gid version:$version with force:$force")
 
-    def deploy(from: Group, to: Group, resolve: Seq[ResolveArtifacts]): Future[DeploymentPlan] = {
-      val plan = DeploymentPlan(from, to, resolve, version, toKill)
-      scheduler.deploy(plan, force).map(_ => plan)
+    def storeUpdatedApps(plan: DeploymentPlan): Future[Unit] = {
+      plan.affectedApplicationIds.foldLeft(Future.successful(())) { (savedFuture, currentId) =>
+        plan.target.app(currentId) match {
+          case Some(newApp) =>
+            log.info(s"[${newApp.id}] storing new app version ${newApp.version}")
+            appRepo.store(newApp).map (_ => ())
+          case None =>
+            log.info(s"[$currentId] expunging app")
+            // this means that destroyed apps are immediately gone -- even if there are still tasks running for
+            // this app. We should improve this in the future.
+            appRepo.expunge(currentId).map (_ => ())
+        }
+      }
     }
 
     val deployment = for {
       from <- rootGroup()
       (to, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
       _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty))
-      plan <- deploy(from, to, resolve)
-      _ <- groupRepo.store(zkName, to)
+      plan = DeploymentPlan(from, to, resolve, version, toKill)
+      _ <- scheduler.deploy(plan, force)
+      _ <- storeUpdatedApps(plan)
+      _ <- groupRepo.store(zkName, plan.target)
     } yield plan
 
     deployment.onComplete {
