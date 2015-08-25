@@ -74,7 +74,8 @@ trait SingleMarathonIntegrationTest
       val parameters = List(
         "--master", config.master,
         "--event_subscriber", "http_callback",
-        "--access_control_allow_origin", "*"
+        "--access_control_allow_origin", "*",
+        "--min_revive_offers_interval", "100"
       ) ++ extraMarathonParameters
       startMarathon(config.marathonBasePort, parameters: _*)
 

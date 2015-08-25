@@ -167,6 +167,10 @@ invocations of this call.
 
 * <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 5000): 
     Do not ask for all offers (also already seen ones) more often than this interval (ms).
+    
+If you want to disable calling reviveOffers (not recommended), you can use:
+    
+* <span class="label label-default">v0.11.0</span> `--disable_revive_offers_for_new_apps`
 
 
 ### Marathon after 0.8.2 (including) and before 0.11.0
