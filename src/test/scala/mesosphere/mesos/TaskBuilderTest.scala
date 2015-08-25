@@ -17,7 +17,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{ NumericRange, Seq }
 
 class TaskBuilderTest extends MarathonSpec {
 
@@ -75,9 +75,7 @@ class TaskBuilderTest extends MarathonSpec {
     assert(resource("mem") == ScalarResource("mem", 64))
     assert(resource("disk") == ScalarResource("disk", 1))
     val portsResource: Resource = resource("ports")
-    assert(portsResource.getRanges.getRangeCount == 1)
-    val range: Value.Range = portsResource.getRanges.getRange(0)
-    assert(range.getEnd - range.getBegin == 1) // inclusive range contains two ports
+    assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
     assert(portsResource.getRole == "*")
   }
 
@@ -129,9 +127,7 @@ class TaskBuilderTest extends MarathonSpec {
     assert(resource("mem") == ScalarResource("mem", 64, "marathon"))
     assert(resource("disk") == ScalarResource("disk", 1, "marathon"))
     val portsResource: Resource = resource("ports")
-    assert(portsResource.getRanges.getRangeCount == 1)
-    val range: Value.Range = portsResource.getRanges.getRange(0)
-    assert(range.getEnd - range.getBegin == 1) // inclusive range contains two ports
+    assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
     assert(portsResource.getRole == "marathon")
   }
 
@@ -307,13 +303,11 @@ class TaskBuilderTest extends MarathonSpec {
     assert(task.isDefined)
 
     val (taskInfo, taskPorts) = task.get
-    val range = taskInfo.getResourcesList.asScala
+    val ports = taskInfo.getResourcesList.asScala
       .find(r => r.getName == Resource.PORTS)
-      .map(r => r.getRanges.getRange(0))
-    assert(range.isDefined)
-    assert(2 == taskPorts.size)
-    assert(taskPorts.head == range.get.getBegin.toInt)
-    assert(taskPorts(1) == range.get.getEnd.toInt)
+      .map(r => r.getRanges.getRangeList.asScala.flatMap(range => range.getBegin to range.getEnd))
+      .getOrElse(Seq.empty)
+    assert(ports == taskPorts)
 
     for (r <- taskInfo.getResourcesList.asScala) {
       assert("marathon" == r.getRole)
@@ -348,13 +342,11 @@ class TaskBuilderTest extends MarathonSpec {
     assert(task.isDefined)
 
     val (taskInfo, taskPorts) = task.get
-    val range = taskInfo.getResourcesList.asScala
+    val ports = taskInfo.getResourcesList.asScala
       .find(r => r.getName == Resource.PORTS)
-      .map(r => r.getRanges.getRange(0))
-    assert(range.isDefined)
-    assert(2 == taskPorts.size)
-    assert(taskPorts.head == range.get.getBegin.toInt)
-    assert(taskPorts(1) == range.get.getEnd.toInt)
+      .map(r => r.getRanges.getRangeList.asScala.flatMap(range => range.getBegin to range.getEnd))
+      .getOrElse(Seq.empty)
+    assert(ports == taskPorts)
 
     // In this case, the first roles are sufficient so we'll use those first.
     for (r <- taskInfo.getResourcesList.asScala) {
