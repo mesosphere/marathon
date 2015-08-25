@@ -333,7 +333,7 @@ trait HealthCheckFormats {
   implicit lazy val ProtocolFormat: Format[Protocol] =
     enumFormat(Protocol.valueOf, str => s"$str is not a valid protocol")
 
-  implicit lazy val HealtCheckFormat: Format[HealthCheck] = {
+  implicit lazy val HealthCheckFormat: Format[HealthCheck] = {
     import mesosphere.marathon.health.HealthCheck._
 
     (
