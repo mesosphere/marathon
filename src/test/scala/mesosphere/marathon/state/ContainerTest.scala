@@ -2,13 +2,16 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos
+import mesosphere.marathon.api.JsonTestHelper
 import org.scalatest.Matchers
 import org.apache.mesos.{ Protos => mesos }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 
 class ContainerTest extends MarathonSpec with Matchers {
+  import mesosphere.marathon.api.v2.json.Formats._
 
   class Fixture {
     lazy val volumes = Seq(
@@ -32,7 +35,8 @@ class ContainerTest extends MarathonSpec with Matchers {
           portMappings = Some(Seq(
             Container.Docker.PortMapping(8080, 32001, 9000, "tcp"),
             Container.Docker.PortMapping(8081, 32002, 9001, "udp")
-          ))
+          )
+          )
         )
       )
     )
@@ -99,7 +103,9 @@ class ContainerTest extends MarathonSpec with Matchers {
     assert(f.container3.docker.get.network == Some(proto3.getDocker.getNetwork))
     assert(f.container3.docker.get.privileged == proto3.getDocker.getPrivileged)
     assert(f.container3.docker.get.parameters.map(_.key) == proto3.getDocker.getParametersList.asScala.map(_.getKey))
-    assert(f.container3.docker.get.parameters.map(_.value) == proto3.getDocker.getParametersList.asScala.map(_.getValue))
+    assert(
+      f.container3.docker.get.parameters.map(_.value) == proto3.getDocker.getParametersList.asScala.map(_.getValue)
+    )
     assert(proto3.getDocker.hasForcePullImage)
     assert(f.container3.docker.get.forcePullImage == proto3.getDocker.getForcePullImage)
 
@@ -142,7 +148,9 @@ class ContainerTest extends MarathonSpec with Matchers {
     assert(f.container3.docker.get.network == Some(proto3.getDocker.getNetwork))
     assert(f.container3.docker.get.privileged == proto3.getDocker.getPrivileged)
     assert(f.container3.docker.get.parameters.map(_.key) == proto3.getDocker.getParametersList.asScala.map(_.getKey))
-    assert(f.container3.docker.get.parameters.map(_.value) == proto3.getDocker.getParametersList.asScala.map(_.getValue))
+    assert(
+      f.container3.docker.get.parameters.map(_.value) == proto3.getDocker.getParametersList.asScala.map(_.getValue)
+    )
     assert(proto3.getDocker.hasForcePullImage)
     assert(f.container3.docker.get.forcePullImage == proto3.getDocker.getForcePullImage)
   }
@@ -176,28 +184,21 @@ class ContainerTest extends MarathonSpec with Matchers {
     assert(container3 == f.container3)
   }
 
-  test("SerializationRoundtrip") {
-    import com.fasterxml.jackson.databind.ObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
-
-    val f = fixture()
-
-    val mapper = new ObjectMapper
-    mapper.registerModule(DefaultScalaModule)
-    mapper.registerModule(new MarathonModule)
-    mapper.registerModule(CaseClassModule)
-
+  test("SerializationRoundtrip empty") {
     val container1 = Container(`type` = mesos.ContainerInfo.Type.DOCKER)
-    val json1 = mapper.writeValueAsString(container1)
-    val readResult1 = mapper.readValue(json1, classOf[Container])
-    assert(readResult1 == container1)
+    JsonTestHelper.assertSerializationRoundtripWorks(container1)
+  }
 
-    val json2 = mapper.writeValueAsString(f.container)
-    val readResult2 = mapper.readValue(json2, classOf[Container])
-    assert(readResult2 == f.container)
+  test("SerializationRoundtrip with slightly more complex data") {
+    val f = fixture()
+    JsonTestHelper.assertSerializationRoundtripWorks(f.container)
+  }
 
+  private[this] def fromJson(json: String): Container = {
+    Json.fromJson[Container](Json.parse(json)).get
+  }
+
+  test("Reading JSON with volumes") {
     val json3 =
       """
       {
@@ -220,9 +221,11 @@ class ContainerTest extends MarathonSpec with Matchers {
       }
       """
 
-    val readResult3 = mapper.readValue(json3, classOf[Container])
-    assert(readResult3 == f.container)
-
+    val readResult3 = fromJson(json3)
+    val f = fixture()
+    assert (readResult3 == f.container)
+  }
+  test("Reading JSON with portMappings") {
     val json4 =
       """
       {
@@ -238,13 +241,16 @@ class ContainerTest extends MarathonSpec with Matchers {
       }
       """
 
-    val readResult4 = mapper.readValue(json4, classOf[Container])
+    val readResult4 = fromJson(json4)
+    val f = fixture()
     assert(readResult4 == f.container2)
+  }
 
-    val json5 = mapper.writeValueAsString(f.container3)
-    val readResult5 = mapper.readValue(json5, classOf[Container])
-    assert(readResult5 == f.container3)
+  test("SerializationRoundTrip  with privileged, networking and parameters") {
+    JsonTestHelper.assertSerializationRoundtripWorks(fixture().container3)
+  }
 
+  test("Reading JSON with privileged, networking and parameters") {
     val json6 =
       """
       {
@@ -261,10 +267,11 @@ class ContainerTest extends MarathonSpec with Matchers {
       }
       """
 
-    val readResult6 = mapper.readValue(json6, classOf[Container])
-    assert(readResult6 == f.container3)
+    val readResult6 = fromJson(json6)
+    assert(readResult6 == fixture().container3)
+  }
 
-    // Multiple values for a given key.
+  test("Reading JSON with multiple paramaters with the same name") {
     val json7 =
       """
       {
@@ -283,9 +290,8 @@ class ContainerTest extends MarathonSpec with Matchers {
       }
       """
 
-    val readResult7 = mapper.readValue(json7, classOf[Container])
-    assert(readResult7 == f.container4)
-
+    val readResult7 = fromJson(json7)
+    assert(readResult7 == fixture().container4)
   }
 
 }

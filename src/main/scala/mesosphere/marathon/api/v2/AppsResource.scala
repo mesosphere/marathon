@@ -9,6 +9,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
+import mesosphere.marathon.api.v2.json.V2AppDefinition.WithTasksAndDeployments
 import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, RestResource }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.{ EnrichedTask, V2AppDefinition, V2AppUpdate }
@@ -85,7 +86,7 @@ class AppsResource @Inject() (
         }
     }
 
-    Json.obj("apps" -> mapped).toString()
+    jsonObjString("apps" -> mapped)
   }
 
   @POST
@@ -101,14 +102,17 @@ class AppsResource @Inject() (
 
     val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
 
-    val appWithDeployments = V2AppDefinition(app).withTasksAndDeployments(
+    val appWithDeployments: WithTasksAndDeployments = V2AppDefinition(app).withTasksAndDeployments(
       appTasks = Nil,
       healthCounts = HealthCounts(0, 0, 0),
       runningDeployments = Seq(plan)
     )
 
-    maybePostEvent(req, appWithDeployments)
-    Response.created(new URI(app.id.toString)).entity(appWithDeployments).build()
+    maybePostEvent(req, appWithDeployments.app)
+    Response
+      .created(new URI(app.id.toString))
+      .entity(jsonString(appWithDeployments)(WithTaskCountsAndDeploymentsWrites))
+      .build()
   }
 
   @GET
@@ -128,7 +132,7 @@ class AppsResource @Inject() (
 
         WithTasksAndDeploymentsAndFailuresWrites.writes(enrichedApp)
       }
-      ok(Json.obj("*" -> withTasks).toString())
+      ok(jsonObjString("*" -> withTasks))
     }
     def app(): Future[Response] = groupManager.app(id.toRootPath).map {
       case Some(app) =>
@@ -138,7 +142,7 @@ class AppsResource @Inject() (
           runningDeployments,
           taskFailureRepository.current(app.id)
         )
-        ok(Json.obj("app" -> WithTasksAndDeploymentsAndFailuresWrites.writes(mapped)).toString())
+        ok(jsonObjString("app" -> WithTasksAndDeploymentsAndFailuresWrites.writes(mapped)).toString())
 
       case None => unknownApp(id.toRootPath)
     }

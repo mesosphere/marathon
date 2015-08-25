@@ -1,28 +1,25 @@
 package mesosphere.mesos
 
-import java.io.ByteArrayOutputStream
-
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
+import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
+import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => TaskID,
-                  config: MarathonConf,
-                  mapper: ObjectMapper = new ObjectMapper()) {
+                  config: MarathonConf) {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -149,9 +146,12 @@ class TaskBuilder(app: AppDefinition,
           .setCommand(command)
         containerProto.foreach(info.setContainer)
         builder.setExecutor(info)
-        val binary = new ByteArrayOutputStream()
-        mapper.writeValue(binary, app)
-        builder.setData(ByteString.copyFrom(binary.toByteArray))
+
+        import mesosphere.marathon.api.v2.json.Formats._
+        val appJson = Json.toJson(V2AppDefinition(app))
+        val appJsonString = Json.stringify(appJson)
+        val appJsonByteString = ByteString.copyFromUtf8(appJsonString)
+        builder.setData(appJsonByteString)
     }
 
     // Mesos supports at most one health check, and only COMMAND checks

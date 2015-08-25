@@ -3,6 +3,7 @@ package mesosphere.marathon.integration
 import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2GroupUpdate }
 import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationHealthCheck, SingleMarathonIntegrationTest, WaitTestSupport }
 import mesosphere.marathon.state.{ PathId, UpgradeStrategy }
+import org.apache.http.HttpStatus
 import org.scalatest._
 import spray.http.DateTime
 import spray.httpx.UnsuccessfulResponseException
@@ -64,12 +65,10 @@ class GroupDeployIntegrationTest
 
   test("delete a non existing group should give a 404 http response") {
     When("A non existing group is deleted")
-    val result = intercept[UnsuccessfulResponseException] {
-      val missing = marathon.deleteGroup("does_not_exist".toRootTestPath)
-    }
+    val result = marathon.deleteGroup("does_not_exist".toRootTestPath)
 
     Then("We get a 404 http response code")
-    result.response.status.intValue should be(404)
+    result.code should be(404)
   }
 
   test("create a group with applications to start") {
@@ -195,11 +194,10 @@ class GroupDeployIntegrationTest
     marathon.updateGroup(id, group.copy(apps = Some(Set(v2AppProxy(appId, "v2", 2)))))
 
     When("Another upgrade is triggered, while the old one is not completed")
-    intercept[UnsuccessfulResponseException] {
-      marathon.updateGroup(id, group.copy(apps = Some(Set(v2AppProxy(appId, "v3", 2)))))
-    }
+    val result = marathon.updateGroup(id, group.copy(apps = Some(Set(v2AppProxy(appId, "v3", 2)))))
 
     Then("An error is indicated")
+    result.code should be (HttpStatus.SC_CONFLICT)
     waitForEvent("group_change_failed")
 
     When("Another upgrade is triggered with force, while the old one is not completed")
@@ -219,11 +217,10 @@ class GroupDeployIntegrationTest
     val create = marathon.createGroup(group)
 
     When("Delete the group, while the deployment is in progress")
-    intercept[UnsuccessfulResponseException] {
-      marathon.deleteGroup(id)
-    }
+    val deleteResult = marathon.deleteGroup(id)
 
     Then("An error is indicated")
+    deleteResult.code should be (HttpStatus.SC_CONFLICT)
     waitForEvent("group_change_failed")
 
     When("Delete is triggered with force, while the deployment is not completed")
@@ -241,12 +238,10 @@ class GroupDeployIntegrationTest
     val group = V2GroupUpdate("test".toTestPath, Set(db, service, frontend))
 
     When("The group gets posted")
-    val exception = intercept[UnsuccessfulResponseException] {
-      marathon.createGroup(group)
-    }
+    val result = marathon.createGroup(group)
 
     Then("An unsuccessfull response has been posted, with an error indicating cyclic dependencies")
-    exception.response.entity.asString should include("cyclic dependencies")
+    (result.entityJson \\ "error").head.as[String] should include("cyclic dependencies")
   }
 
   test("Applications with dependencies get deployed in the correct order") {

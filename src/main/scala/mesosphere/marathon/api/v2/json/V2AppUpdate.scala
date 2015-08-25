@@ -12,12 +12,10 @@ import mesosphere.marathon.state.{
   UpgradeStrategy,
   Timestamp
 }
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 case class V2AppUpdate(
 
     id: Option[PathId] = None,
@@ -50,11 +48,11 @@ case class V2AppUpdate(
 
     requirePorts: Option[Boolean] = None,
 
-    @FieldJsonProperty("backoffSeconds") backoff: Option[FiniteDuration] = None,
+    backoff: Option[FiniteDuration] = None,
 
     backoffFactor: Option[JDouble] = None,
 
-    @FieldJsonProperty("maxLaunchDelaySeconds") maxLaunchDelay: Option[FiniteDuration] = None,
+    maxLaunchDelay: Option[FiniteDuration] = None,
 
     container: Option[Container] = None,
 

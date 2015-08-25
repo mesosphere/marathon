@@ -1,8 +1,9 @@
 package mesosphere.marathon
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.fge.jackson.JsonLoader
+import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
+import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.json.V2AppDefinition
 
 import mesosphere.marathon.state.AppDefinition
@@ -10,6 +11,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.{ CommandInfo, TaskID, TaskInfo, Offer }
 import org.rogach.scallop.ScallopConf
+import play.api.libs.json.Json
 
 trait MarathonTestHelper {
 
@@ -110,37 +112,26 @@ trait MarathonTestHelper {
     executor = "//cmd"
   )
 
-  def getSchemaMapper() = {
-    import com.fasterxml.jackson.annotation.JsonInclude
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
-
-    val schemaMapper = new ObjectMapper
-    schemaMapper.registerModule(DefaultScalaModule)
-    schemaMapper.registerModule(new MarathonModule)
-    schemaMapper.registerModule(CaseClassModule)
-    schemaMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
-    schemaMapper
-  }
-  val schemaMapper = getSchemaMapper()
-
-  def getAppSchema() = {
+  lazy val appSchema = {
     val appJson = "/mesosphere/marathon/api/v2/AppDefinition.json"
     val appDefinition = JsonLoader.fromResource(appJson)
     val factory = JsonSchemaFactory.byDefault()
     factory.getJsonSchema(appDefinition)
   }
-  val appSchema = getAppSchema()
 
   def validateJsonSchema(app: V2AppDefinition, valid: Boolean = true) {
-    val appStr = schemaMapper.writeValueAsString(app)
+    import mesosphere.marathon.api.v2.json.Formats._
+    // TODO: Revalidate the decision to disallow null values in schema
+    // Possible resolution: Do not render null values in our formats by default anymore.
+    val appStr = Json.prettyPrint(JsonTestHelper.removeNullFieldValues(Json.toJson(app)))
     validateJsonSchemaForString(appStr, valid)
   }
 
   def validateJsonSchemaForString(appStr: String, valid: Boolean): Unit = {
     val appJson = JsonLoader.fromString(appStr)
-    assert(appSchema.validate(appJson).isSuccess == valid)
+    val validationResult: ProcessingReport = appSchema.validate(appJson)
+    lazy val pretty = Json.prettyPrint(Json.parse(appStr))
+    assert(validationResult.isSuccess == valid, s"validation errors $validationResult for json:\n$pretty")
   }
 }
 

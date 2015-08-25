@@ -1,18 +1,15 @@
 package mesosphere.marathon.api
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.v2.json.MarathonModule
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.Protos.Constraint
+import play.api.libs.json.Json
 
 class ConstraintTest extends MarathonSpec {
 
   test("Deserialize") {
-    val mapper = new ObjectMapper
-    mapper.registerModule(new MarathonModule)
-
     def shouldMatch(json: String, field: String, operator: Constraint.Operator, value: String = "") {
-      val constraint = mapper.readValue(json, classOf[Constraint])
+      import mesosphere.marathon.api.v2.json.Formats._
+      val constraint = Json.fromJson[Constraint](Json.parse(json)).get
       assert(field == constraint.getField)
       assert(operator == constraint.getOperator)
       assert(value == constraint.getValue)
@@ -25,12 +22,9 @@ class ConstraintTest extends MarathonSpec {
   }
 
   test("Serialize") {
-    val mapper = new ObjectMapper
-    mapper.registerModule(new MarathonModule)
-
     def shouldMatch(expected: String, constraint: Constraint) {
-      val actual = mapper.writeValueAsString(constraint)
-      assert(expected == actual)
+      import mesosphere.marathon.api.v2.json.Formats._
+      JsonTestHelper.assertThatJsonOf(constraint).correspondsToJsonString(expected)
     }
 
     shouldMatch("""["hostname","UNIQUE"]""", Constraint.newBuilder.setField("hostname")

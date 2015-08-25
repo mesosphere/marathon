@@ -5,7 +5,7 @@ import javax.validation.ConstraintViolationException
 
 import akka.event.EventStream
 import mesosphere.marathon._
-import mesosphere.marathon.api.TaskKiller
+import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller }
 import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
@@ -14,7 +14,7 @@ import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsObject, JsValue, Json }
 
 import scala.concurrent.Future
 
@@ -37,7 +37,14 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
     Then("It is successful")
     response.getStatus should be(201)
-    response.getEntity should be(app)
+    val expectedJson: JsValue = Json.toJson(app).as[JsObject] ++ Json.obj(
+      "deployments" -> Seq.empty[JsObject],
+      "tasksHealthy" -> 0,
+      "tasksRunning" -> 0,
+      "tasksStaged" -> 0,
+      "tasksUnhealthy" -> 0
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expectedJson)
   }
 
   test("Create a new app fails with Validation errors") {

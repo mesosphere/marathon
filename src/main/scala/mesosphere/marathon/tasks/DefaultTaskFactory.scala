@@ -1,8 +1,5 @@
 package mesosphere.marathon.tasks
 
-import javax.inject.Named
-
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos.MarathonTask
@@ -16,8 +13,7 @@ import scala.collection.JavaConverters._
 
 class DefaultTaskFactory @Inject() (
   taskIdUtil: TaskIdUtil,
-  config: MarathonConf,
-  @Named("restMapper") mapper: ObjectMapper)
+  config: MarathonConf)
     extends TaskFactory {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -25,7 +21,7 @@ class DefaultTaskFactory @Inject() (
   def newTask(app: AppDefinition, offer: Offer, runningTasks: Set[MarathonTask]): Option[CreatedTask] = {
     log.debug("newTask")
 
-    new TaskBuilder(app, taskIdUtil.newTaskId, config, mapper).buildIfMatches(offer, runningTasks).map {
+    new TaskBuilder(app, taskIdUtil.newTaskId, config).buildIfMatches(offer, runningTasks).map {
       case (taskInfo, ports) =>
         CreatedTask(
           taskInfo,

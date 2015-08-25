@@ -39,7 +39,7 @@ class DefaultTaskFactoryTest extends MarathonSpec {
     taskIdUtil = mock[TaskIdUtil]
     taskTracker = mock[TaskTracker]
     config = MarathonTestHelper.defaultConfig()
-    taskFactory = new DefaultTaskFactory(taskIdUtil, config, MarathonTestHelper.getSchemaMapper())
+    taskFactory = new DefaultTaskFactory(taskIdUtil, config)
   }
 
 }

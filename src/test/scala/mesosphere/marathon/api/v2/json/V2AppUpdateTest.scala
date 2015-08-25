@@ -3,17 +3,21 @@ package mesosphere.marathon.api.v2.json
 import javax.validation.Validation
 
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
 import mesosphere.marathon.state.PathId._
 import org.apache.mesos.{ Protos => mesos }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 class V2AppUpdateTest extends MarathonSpec {
+  import Formats._
+  import mesosphere.marathon.integration.setup.V2TestFormats._
 
   test("Validation") {
     val validator = Validation.buildDefaultValidatorFactory().getValidator
@@ -37,25 +41,18 @@ class V2AppUpdateTest extends MarathonSpec {
       "ports",
       "Elements must be unique"
     )
-
   }
 
-  test("SerializationRoundtrip") {
-    import com.fasterxml.jackson.databind.ObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-    import mesosphere.jackson.CaseClassModule
-    import mesosphere.marathon.api.v2.json.MarathonModule
+  private[this] def fromJsonString(json: String): V2AppUpdate = {
+    Json.fromJson[V2AppUpdate](Json.parse(json)).get
+  }
 
-    val mapper = new ObjectMapper
-    mapper.registerModule(DefaultScalaModule)
-    mapper.registerModule(new MarathonModule)
-    mapper.registerModule(CaseClassModule)
-
+  test("SerializationRoundtrip for empty definition") {
     val update0 = V2AppUpdate(container = Some(Container.Empty))
-    val json0 = mapper.writeValueAsString(update0)
-    val readResult0 = mapper.readValue(json0, classOf[V2AppUpdate])
-    assert(readResult0 == update0)
+    JsonTestHelper.assertSerializationRoundtripWorks(update0)
+  }
 
+  test("SerializationRoundtrip for extended definition") {
     val update1 = V2AppUpdate(
       cmd = Some("sleep 60"),
       args = None,
@@ -65,7 +62,7 @@ class V2AppUpdateTest extends MarathonSpec {
       cpus = Some(2.0),
       mem = Some(256.0),
       disk = Some(1024.0),
-      executor = Some("http://dl.corp.org/executors/some.executor"),
+      executor = Some("/opt/executors/bin/some.executor"),
       constraints = Some(Set()),
       uris = Some(Seq("http://dl.corp.org/prodX-1.2.3.tgz")),
       ports = Some(Seq(0, 0)),
@@ -90,12 +87,13 @@ class V2AppUpdateTest extends MarathonSpec {
         )
       )
     )
-    val json1 = mapper.writeValueAsString(update1)
-    val readResult1 = mapper.readValue(json1, classOf[V2AppUpdate])
-    assert(readResult1 == update1)
+    JsonTestHelper.assertSerializationRoundtripWorks(update1)
+  }
 
-    val update2 = V2AppUpdate(container = Some(Container.Empty))
-    val json2 = """
+  test("Serialization result of empty container") {
+    val update2 = V2AppUpdate(container = None)
+    val json2 =
+      """
       {
         "cmd": null,
         "user": null,
@@ -116,19 +114,22 @@ class V2AppUpdateTest extends MarathonSpec {
         "version": null
       }
     """
-    val readResult2 = mapper.readValue(json2, classOf[V2AppUpdate])
+    val readResult2 = fromJsonString(json2)
     assert(readResult2 == update2)
+  }
 
+  test("Empty json corresponds to default instance") {
     val update3 = V2AppUpdate()
     val json3 = "{}"
-    val readResult3 = mapper.readValue(json3, classOf[V2AppUpdate])
+    val readResult3 = fromJsonString(json3)
     assert(readResult3 == update3)
+  }
 
+  test("Args are correctly read") {
     val update4 = V2AppUpdate(args = Some(Seq("a", "b", "c")))
     val json4 = """{ "args": ["a", "b", "c"] }"""
-    val readResult4 = mapper.readValue(json4, classOf[V2AppUpdate])
+    val readResult4 = fromJsonString(json4)
     assert(readResult4 == update4)
-
   }
 
   test("'version' field can only be combined with 'id'") {

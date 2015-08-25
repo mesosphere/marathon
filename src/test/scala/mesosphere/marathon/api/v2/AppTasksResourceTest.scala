@@ -1,7 +1,8 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.TaskKiller
+import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller }
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ GroupManager, PathId, Timestamp }
@@ -12,6 +13,7 @@ import mesosphere.mesos.protos.SlaveID
 import org.mockito.Matchers.{ any, anyBoolean, eq => equalTo }
 import org.mockito.Mockito._
 import org.scalatest.Matchers
+import play.api.libs.json.{ JsValue, Json }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -54,7 +56,9 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
 
     val response = appsTaskResource.deleteMany(appId, host, scale = false)
     response.getStatus shouldEqual 200
-    response.getEntity shouldEqual Map("tasks" -> toKill)
+    JsonTestHelper
+      .assertThatJsonString(response.getEntity.asInstanceOf[String])
+      .correspondsToJsonOf(Json.obj("tasks" -> toKill))
   }
 
   test("deleteOne") {
@@ -78,7 +82,9 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
 
     val response = appsTaskResource.deleteOne(appId.root, task1.getId, scale = false)
     response.getStatus shouldEqual 200
-    response.getEntity shouldEqual Map("task" -> toKill.head)
+    JsonTestHelper
+      .assertThatJsonString(response.getEntity.asInstanceOf[String])
+      .correspondsToJsonOf(Json.obj("task" -> toKill.head))
     verify(taskKiller, times(1)).kill(equalTo(appId.rootPath), any(), force = equalTo(true))
     verifyNoMoreInteractions(taskKiller)
   }
@@ -95,7 +101,6 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
       "task-2", host, ports = Nil, attributes = Nil, version = Timestamp.now(),
       slaveId = slaveId
     )
-    val toKill = Set(task1)
 
     when(config.zkTimeoutDuration).thenReturn(5.seconds)
     when(taskTracker.get(appId)).thenReturn(Set(task1, task2))
@@ -104,8 +109,17 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
 
     val response = appsTaskResource.indexJson("/my/app")
     response.getStatus shouldEqual 200
-    val enrichedTasks: Set[EnrichedTask] = response.getEntity.asInstanceOf[Map[String, Set[EnrichedTask]]]("tasks")
-    enrichedTasks.map(_.task) shouldEqual Set(task1, task2)
+    def toEnrichedTask(marathonTask: MarathonTask): EnrichedTask = {
+      EnrichedTask(
+        appId = PathId("/my/app"),
+        task = marathonTask,
+        healthCheckResults = Seq(),
+        servicePorts = Seq()
+      )
+    }
+    JsonTestHelper
+      .assertThatJsonString(response.getEntity.asInstanceOf[String])
+      .correspondsToJsonOf(Json.obj("tasks" -> Seq(task1, task2).map(toEnrichedTask)))
   }
 
 }

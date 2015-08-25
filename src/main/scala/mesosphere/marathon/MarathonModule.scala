@@ -10,12 +10,11 @@ import akka.actor._
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
 import com.codahale.metrics.Gauge
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup, ZooKeeperClient }
-import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
+import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -158,7 +157,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   @Inject
   def provideSchedulerActor(
-    @Named("restMapper") mapper: ObjectMapper,
     system: ActorSystem,
     appRepository: AppRepository,
     groupRepository: GroupRepository,

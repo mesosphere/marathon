@@ -3,13 +3,10 @@ package mesosphere.marathon.api
 import javax.inject.Named
 import javax.net.ssl.SSLContext
 
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.google.inject.servlet.ServletModule
-import com.google.inject.{ Singleton, Provides, Scopes }
-import mesosphere.chaos.http.{ HttpConf, RestModule }
-import mesosphere.jackson.CaseClassModule
+import com.google.inject.{ Provides, Scopes, Singleton }
+import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.v2.json.MarathonModule
 import mesosphere.marathon.event.http.HttpEventStreamServlet
 import mesosphere.marathon.io.SSLContextUtil
 
@@ -36,12 +33,7 @@ class LeaderProxyFilterModule extends ServletModule {
   }
 }
 
-class MarathonRestModule extends RestModule {
-
-  override val jacksonModules = Seq(
-    new DefaultScalaModule with CaseClassModule,
-    new MarathonModule
-  )
+class MarathonRestModule extends BaseRestModule {
 
   protected override def configureServlets() {
     // Map some exceptions to HTTP responses

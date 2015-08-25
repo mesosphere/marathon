@@ -188,7 +188,10 @@ trait SingleMarathonIntegrationTest
     ExternalMarathonIntegrationTest.healthChecks.clear()
 
     try {
-      waitForChange(marathon.deleteGroup(testBasePath, force = true))
+      val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteGroup(testBasePath, force = true)
+      if (deleteResult.code != 404) {
+        waitForChange(deleteResult)
+      }
     }
     catch {
       case e: spray.httpx.UnsuccessfulResponseException if e.response.status.intValue == 404 => // ignore

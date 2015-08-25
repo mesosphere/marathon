@@ -1,10 +1,9 @@
 package mesosphere.marathon.api.v2.json
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import mesosphere.marathon.state._
 import java.lang.{ Double => JDouble }
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+import mesosphere.marathon.state._
+
 case class V2GroupUpdate(
     id: Option[PathId],
     apps: Option[Set[V2AppDefinition]] = None,

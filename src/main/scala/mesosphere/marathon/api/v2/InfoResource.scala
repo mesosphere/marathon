@@ -5,11 +5,12 @@ import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.{ MarathonMediaType, LeaderInfo }
+import mesosphere.marathon.api.{ RestResource, MarathonMediaType, LeaderInfo }
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
 import mesosphere.marathon.{ BuildInfo, LeaderProxyConf, MarathonConf, MarathonSchedulerService }
 import mesosphere.util.state.MesosLeaderInfo
+import play.api.libs.json.{ JsObject, Json }
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -17,72 +18,76 @@ class InfoResource @Inject() (
     schedulerService: MarathonSchedulerService,
     mesosLeaderInfo: MesosLeaderInfo,
     leaderInfo: LeaderInfo,
-    conf: MarathonConf with HttpConf with EventConfiguration with HttpEventConfiguration with LeaderProxyConf) {
+    // format: OFF
+    protected val config: MarathonConf
+      with HttpConf with EventConfiguration with HttpEventConfiguration with LeaderProxyConf
+) extends RestResource {
+  // format: ON
 
   // Marathon configurations
-  private[this] lazy val marathonConfigValues = Map(
-    "master" -> conf.mesosMaster.get,
-    "failover_timeout" -> conf.mesosFailoverTimeout.get,
-    "framework_name" -> conf.frameworkName.get,
-    "ha" -> conf.highlyAvailable.get,
-    "checkpoint" -> conf.checkpoint.get,
-    "local_port_min" -> conf.localPortMin.get,
-    "local_port_max" -> conf.localPortMax.get,
-    "executor" -> conf.defaultExecutor.get,
-    "hostname" -> conf.hostname.get,
-    "webui_url" -> conf.webuiUrl.get,
-    "mesos_role" -> conf.mesosRole.get,
-    "task_launch_timeout" -> conf.taskLaunchTimeout.get,
-    "reconciliation_initial_delay" -> conf.reconciliationInitialDelay.get,
-    "reconciliation_interval" -> conf.reconciliationInterval.get,
-    "marathon_store_timeout" -> conf.marathonStoreTimeout.get,
-    "mesos_user" -> conf.mesosUser.get,
-    "leader_proxy_connection_timeout_ms" -> conf.leaderProxyConnectionTimeout.get,
-    "leader_proxy_read_timeout_ms" -> conf.leaderProxyReadTimeout.get)
+  private[this] lazy val marathonConfigValues = Json.obj(
+    "master" -> config.mesosMaster.get,
+    "failover_timeout" -> config.mesosFailoverTimeout.get,
+    "framework_name" -> config.frameworkName.get,
+    "ha" -> config.highlyAvailable.get,
+    "checkpoint" -> config.checkpoint.get,
+    "local_port_min" -> config.localPortMin.get,
+    "local_port_max" -> config.localPortMax.get,
+    "executor" -> config.defaultExecutor.get,
+    "hostname" -> config.hostname.get,
+    "webui_url" -> config.webuiUrl.get,
+    "mesos_role" -> config.mesosRole.get,
+    "task_launch_timeout" -> config.taskLaunchTimeout.get,
+    "reconciliation_initial_delay" -> config.reconciliationInitialDelay.get,
+    "reconciliation_interval" -> config.reconciliationInterval.get,
+    "marathon_store_timeout" -> config.marathonStoreTimeout.get,
+    "mesos_user" -> config.mesosUser.get,
+    "leader_proxy_connection_timeout_ms" -> config.leaderProxyConnectionTimeout.get,
+    "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.get)
 
   // Zookeeper congiurations
-  private[this] lazy val zookeeperConfigValues = Map[String, Any] (
-    "zk" -> conf.zooKeeperUrl(),
-    "zk_timeout" -> conf.zooKeeperTimeout(),
-    "zk_session_timeout" -> conf.zooKeeperSessionTimeout(),
-    "zk_max_versions" -> conf.zooKeeperMaxVersions()
+  private[this] lazy val zookeeperConfigValues = Json.obj(
+    "zk" -> config.zooKeeperUrl(),
+    "zk_timeout" -> config.zooKeeperTimeout(),
+    "zk_session_timeout" -> config.zooKeeperSessionTimeout(),
+    "zk_max_versions" -> config.zooKeeperMaxVersions()
   )
 
   private[this] lazy val eventHandlerConfigValues = {
-    def httpEventConfig: Map[String, Option[Seq[String]]] = Map(
-      "http_endpoints" -> conf.httpEventEndpoints.get
+    def httpEventConfig: JsObject = Json.obj(
+      "http_endpoints" -> config.httpEventEndpoints.get
     )
 
-    def eventConfig(): Map[String, Option[Seq[String]]] = conf.eventSubscriber.get match {
+    def eventConfig(): JsObject = config.eventSubscriber.get match {
       case Some("http_callback") => httpEventConfig
-      case _                     => Map()
+      case _                     => Json.obj()
     }
 
-    Map(
-      "type" -> conf.eventSubscriber.get
+    Json.obj(
+      "type" -> config.eventSubscriber.get
     ) ++ eventConfig
   }
 
-  private[this] lazy val httpConfigValues = Map(
-    "assets_path" -> conf.assetsFileSystemPath.get,
-    "http_port" -> conf.httpPort.get,
-    "https_port" -> conf.httpsPort.get
+  private[this] lazy val httpConfigValues = Json.obj(
+    "assets_path" -> config.assetsFileSystemPath.get,
+    "http_port" -> config.httpPort.get,
+    "https_port" -> config.httpsPort.get
   )
 
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def index(): Response = {
-    val mesosLeaderUiUrl = "mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl
+    val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
     Response.ok(
-      Map(
+      jsonObjString(
         "name" -> BuildInfo.name,
         "version" -> BuildInfo.version,
         "elected" -> leaderInfo.elected,
         "leader" -> leaderInfo.currentLeaderHostPort(),
         "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
-        "marathon_config" -> (marathonConfigValues + mesosLeaderUiUrl),
+        "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
         "zookeeper_config" -> zookeeperConfigValues,
-        "event_subscriber" -> conf.eventSubscriber.get.map(_ => eventHandlerConfigValues),
+        "event_subscriber" -> config.eventSubscriber.get.map(_ => eventHandlerConfigValues),
         "http_config" -> httpConfigValues)).build()
   }
 }

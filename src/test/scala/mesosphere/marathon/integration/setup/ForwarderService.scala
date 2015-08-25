@@ -52,7 +52,7 @@ object ForwarderService {
     }
   }
 
-  class ForwarderAppModule(myHostPort: String, httpConf: HttpConf, leaderProxyConf: LeaderProxyConf) extends RestModule {
+  class ForwarderAppModule(myHostPort: String, httpConf: HttpConf, leaderProxyConf: LeaderProxyConf) extends BaseRestModule {
     @Named(ModuleNames.NAMED_HOST_PORT)
     @Provides
     @Singleton

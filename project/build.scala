@@ -229,6 +229,7 @@ object Dependencies {
     hadoopCommon % "compile",
     beanUtils % "compile",
     scallop % "compile",
+    diffson % "test",
     playJson % "compile",
     jsonSchemaValidator % "compile",
     twitterZk % "compile",
@@ -260,6 +261,7 @@ object Dependency {
     val JGraphT = "0.9.1"
     val Hadoop = "2.4.1"
     val Scallop = "0.9.5"
+    val Diffson = "0.3"
     val PlayJson = "2.3.7"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
@@ -277,6 +279,7 @@ object Dependency {
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
+  val diffson = "org.gnieh" %% "diffson" % V.Diffson
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils

@@ -21,7 +21,7 @@ class LeaderResource @Inject() (
     leaderInfo.currentLeaderHostPort() match {
       case None => notFound("There is no leader")
       case Some(leader) =>
-        ok(Map("leader" -> leader))
+        ok(jsonObjString("leader" -> leader))
     }
   }
 
@@ -32,7 +32,7 @@ class LeaderResource @Inject() (
       case false => notFound("There is no leader")
       case true =>
         schedulerService.abdicateLeadership()
-        ok(Map("message" -> "Leadership abdicted"))
+        ok(jsonObjString("message" -> "Leadership abdicted"))
     }
   }
 }
