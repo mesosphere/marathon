@@ -217,7 +217,7 @@ for custom role, are available for all frameworks. Mesos assigns the special rol
 To register Marathon for a role, you need to specify the `--mesos_role` command line flag on startup.
 If you want to assign all resources of a
 slave to a role, you can use the `--default_role` argument when starting up the slave. If you need a more
-fine-grained configuration, you can use the `--resources' argument to specify resource shares per role. The Mesos master
+fine-grained configuration, you can use the `--resources` argument to specify resource shares per role. The Mesos master
 needs to be started with `--roles` followed by a comma-separated list of all roles you want to use across your cluster.
 See
 [the Mesos command line documentation](http://mesos.apache.org/documentation/latest/configuration/) for details.
