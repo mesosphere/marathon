@@ -16,7 +16,7 @@ import spray.http.{ ContentTypes, HttpEntity }
 import spray.httpx.UnsuccessfulResponseException
 import spray.http.HttpResponse
 import mesosphere.chaos.http.RestModule
-import mesosphere.marathon.api.MarathonRestModule
+import mesosphere.marathon.api.{ BaseRestModule, MarathonRestModule }
 
 /**
   * Result of an REST operation.
@@ -54,7 +54,7 @@ object RestResult {
 /**
   * Guava integration test module, which start a local http server.
   */
-class IntegrationTestModule extends RestModule {
+class HttpServiceTestModule extends RestModule {
   override def configureServlets(): Unit = {
     super.configureServlets()
     bind(classOf[CallbackEventHandler]).in(Scopes.SINGLETON)

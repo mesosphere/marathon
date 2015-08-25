@@ -4,6 +4,7 @@ import javax.validation.{ ConstraintViolation, ConstraintViolationException }
 import javax.ws.rs.ext.{ Provider, ExceptionMapper }
 import javax.ws.rs.core.{ MediaType, Response }
 import com.fasterxml.jackson.databind.JsonMappingException
+import com.google.inject.Singleton
 
 import scala.concurrent.TimeoutException
 import mesosphere.marathon.{
@@ -20,6 +21,7 @@ import org.apache.log4j.Logger
 import play.api.libs.json.{ Json, JsObject, JsResultException }
 
 @Provider
+@Singleton
 class MarathonExceptionMapper extends ExceptionMapper[Exception] {
 
   private[this] val log = Logger.getLogger(getClass.getName)
