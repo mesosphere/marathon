@@ -1,5 +1,10 @@
 ## Changes from 0.10.0 to 0.11.0
 
+### (Potentially) Breaking Changes
+
+* `--revive_offers_for_new_apps` is now the default. If you want to avoid resetting filters
+  if new tasks need to be started, you can disable this by `--disable_revive_offers_for_new_apps`.
+
 ### Overview
 
 #### New `MARATHON_APP_DOCKER_IMAGE` environment variable
