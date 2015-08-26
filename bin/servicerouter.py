@@ -96,6 +96,38 @@ Templates:
   HAPROXY_BACKEND_HTTP_OPTIONS
     Sets HTTP headers, for example X-Forwarded-For and X-Forwarded-Proto.
 
+  HAPROXY_BACKEND_HTTP_HEALTHCHECK_OPTIONS
+    Sets HTTP health check options, for example timeout check and httpchk GET.
+    Parameters of the first health check for this service are exposed as:
+      * healthCheckPortIndex
+      * healthCheckProtocol
+      * healthCheckPath
+      * healthCheckTimeoutSeconds
+      * healthCheckIntervalSeconds
+      * healthCheckIgnoreHttp1xx
+      * healthCheckGracePeriodSeconds
+      * healthCheckMaxConsecutiveFailures
+      * healthCheckFalls is set to healthCheckMaxConsecutiveFailures + 1
+    Defaults to empty string.
+    Example:
+      option  httpchk GET {healthCheckPath}
+      timeout check {healthCheckTimeoutSeconds}s
+
+
+  HAPROXY_BACKEND_TCP_HEALTHCHECK_OPTIONS
+    Sets TCP health check options, for example timeout check.
+    Parameters of the first health check for this service are exposed as:
+      * healthCheckPortIndex
+      * healthCheckProtocol
+      * healthCheckTimeoutSeconds
+      * healthCheckIntervalSeconds
+      * healthCheckGracePeriodSeconds
+      * healthCheckMaxConsecutiveFailures
+      * healthCheckFalls is set to healthCheckMaxConsecutiveFailures + 1
+    Defaults to empty string.
+    Example:
+      timeout check {healthCheckTimeoutSeconds}s
+
   HAPROXY_BACKEND_STICKY_OPTIONS
     Sets a cookie for services where HAPROXY_{n}_STICKY is true.
 
@@ -116,6 +148,37 @@ Templates:
 
   HAPROXY_BACKEND_SERVER_OPTIONS
     The options for each physical server added to a backend.
+
+
+  HAPROXY_BACKEND_SERVER_HTTP_HEALTHCHECK_OPTIONS
+    Sets HTTP health check options for a single server, e.g. check inter.
+    Parameters of the first health check for this service are exposed as:
+      * healthCheckPortIndex
+      * healthCheckProtocol
+      * healthCheckPath
+      * healthCheckTimeoutSeconds
+      * healthCheckIntervalSeconds
+      * healthCheckIgnoreHttp1xx
+      * healthCheckGracePeriodSeconds
+      * healthCheckMaxConsecutiveFailures
+      * healthCheckFalls is set to healthCheckMaxConsecutiveFailures + 1
+    Defaults to empty string.
+    Example:
+      check inter {healthCheckIntervalSeconds}s fall {healthCheckFalls}
+
+  HAPROXY_BACKEND_SERVER_TCP_HEALTHCHECK_OPTIONS
+    Sets TCP health check options for a single server, e.g. check inter.
+    Parameters of the first health check for this service are exposed as:
+      * healthCheckPortIndex
+      * healthCheckProtocol
+      * healthCheckTimeoutSeconds
+      * healthCheckIntervalSeconds
+      * healthCheckGracePeriodSeconds
+      * healthCheckMaxConsecutiveFailures
+      * healthCheckFalls is set to healthCheckMaxConsecutiveFailures + 1
+    Defaults to empty string.
+    Example:
+      check inter {healthCheckIntervalSeconds}s fall {healthCheckFalls}
 
   HAPROXY_FRONTEND_BACKEND_GLUE
     This option glues the backend to the frontend.
@@ -214,13 +277,19 @@ class ConfigTemplater(object):
   http-request add-header X-Forwarded-Proto https if { ssl_fc }
 '''
 
+    HAPROXY_BACKEND_HTTP_HEALTHCHECK_OPTIONS = ''
+    HAPROXY_BACKEND_TCP_HEALTHCHECK_OPTIONS = ''
+
     HAPROXY_BACKEND_STICKY_OPTIONS = '''\
   cookie mesosphere_server_id insert indirect nocache
 '''
 
     HAPROXY_BACKEND_SERVER_OPTIONS = '''\
-  server {serverName} {host}:{port}{cookieOptions}
+  server {serverName} {host}:{port}{cookieOptions}{healthCheckOptions}
 '''
+
+    HAPROXY_BACKEND_SERVER_HTTP_HEALTHCHECK_OPTIONS = ''
+    HAPROXY_BACKEND_SERVER_TCP_HEALTHCHECK_OPTIONS = ''
 
     HAPROXY_FRONTEND_BACKEND_GLUE = '''\
   use_backend {backend}
@@ -242,8 +311,12 @@ class ConfigTemplater(object):
             'HAPROXY_HTTP_FRONTEND_ACL',
             'HAPROXY_HTTPS_FRONTEND_ACL',
             'HAPROXY_BACKEND_HTTP_OPTIONS',
+            'HAPROXY_BACKEND_HTTP_HEALTHCHECK_OPTIONS',
+            'HAPROXY_BACKEND_TCP_HEALTHCHECK_OPTIONS',
             'HAPROXY_BACKEND_STICKY_OPTIONS',
             'HAPROXY_BACKEND_SERVER_OPTIONS',
+            'HAPROXY_BACKEND_SERVER_HTTP_HEALTHCHECK_OPTIONS',
+            'HAPROXY_BACKEND_SERVER_TCP_HEALTHCHECK_OPTIONS',
             'HAPROXY_FRONTEND_BACKEND_GLUE',
         ]
 
@@ -298,6 +371,14 @@ class ConfigTemplater(object):
         return self.HAPROXY_BACKEND_HTTP_OPTIONS
 
     @property
+    def haproxy_backend_http_healthcheck_options(self):
+        return self.HAPROXY_BACKEND_HTTP_HEALTHCHECK_OPTIONS
+
+    @property
+    def haproxy_backend_tcp_healthcheck_options(self):
+        return self.HAPROXY_BACKEND_TCP_HEALTHCHECK_OPTIONS
+
+    @property
     def haproxy_backend_sticky_options(self):
         return self.HAPROXY_BACKEND_STICKY_OPTIONS
 
@@ -306,8 +387,24 @@ class ConfigTemplater(object):
         return self.HAPROXY_BACKEND_SERVER_OPTIONS
 
     @property
+    def haproxy_backend_server_http_healthcheck_options(self):
+        return self.__blank_prefix_or_empty(
+            self.HAPROXY_BACKEND_SERVER_HTTP_HEALTHCHECK_OPTIONS.strip())
+
+    @property
+    def haproxy_backend_server_tcp_healthcheck_options(self):
+        return self.__blank_prefix_or_empty(
+            self.HAPROXY_BACKEND_SERVER_TCP_HEALTHCHECK_OPTIONS.strip())
+
+    @property
     def haproxy_frontend_backend_glue(self):
         return self.HAPROXY_FRONTEND_BACKEND_GLUE
+
+    def __blank_prefix_or_empty(self, s):
+        if s:
+            return ' ' + s
+        else:
+            return s
 
 
 def string_to_bool(s):
@@ -370,7 +467,7 @@ class MarathonBackend(object):
 
 class MarathonService(object):
 
-    def __init__(self, appId, servicePort):
+    def __init__(self, appId, servicePort, healthCheck):
         self.appId = appId
         self.servicePort = servicePort
         self.backends = set()
@@ -379,8 +476,12 @@ class MarathonService(object):
         self.redirectHttpToHttps = False
         self.sslCert = None
         self.bindAddr = '*'
-        self.mode = 'tcp'
         self.groups = frozenset()
+        self.mode = 'tcp'
+        self.healthCheck = healthCheck
+        if healthCheck:
+            if healthCheck['protocol'] == 'HTTP':
+                self.mode = 'http'
 
     def add_backend(self, host, port):
         self.backends.add(MarathonBackend(host, port))
@@ -563,6 +664,33 @@ def config(apps, groups):
             )
             backends += templater.haproxy_backend_http_options
 
+        if app.healthCheck:
+            health_check_options = None
+            if app.mode == 'tcp':
+                health_check_options = templater \
+                    .haproxy_backend_tcp_healthcheck_options
+            elif app.mode == 'http':
+                health_check_options = templater \
+                    .haproxy_backend_http_healthcheck_options
+            if health_check_options:
+                backends += health_check_options.format(
+                    healthCheck=app.healthCheck,
+                    healthCheckPortIndex=app.healthCheck['portIndex'],
+                    healthCheckProtocol=app.healthCheck['protocol'],
+                    healthCheckPath=app.healthCheck['path'],
+                    healthCheckTimeoutSeconds=app.healthCheck[
+                        'timeoutSeconds'],
+                    healthCheckIntervalSeconds=app.healthCheck[
+                        'intervalSeconds'],
+                    healthCheckIgnoreHttp1xx=app.healthCheck['ignoreHttp1xx'],
+                    healthCheckGracePeriodSeconds=app.healthCheck[
+                        'gracePeriodSeconds'],
+                    healthCheckMaxConsecutiveFailures=app.healthCheck[
+                        'maxConsecutiveFailures'],
+                    healthCheckFalls=app.healthCheck[
+                        'maxConsecutiveFailures'] + 1
+                )
+
         if app.sticky:
             logger.debug("turning on sticky sessions")
             backends += templater.haproxy_backend_sticky_options
@@ -580,13 +708,44 @@ def config(apps, groups):
                 r'[^a-zA-Z0-9\-]', '_',
                 backendServer.host + '_' + str(backendServer.port))
 
+            healthCheckOptions = None
+            if app.healthCheck:
+                server_health_check_options = None
+                if app.mode == 'tcp':
+                    server_health_check_options = templater \
+                        .haproxy_backend_server_tcp_healthcheck_options
+                elif app.mode == 'http':
+                    server_health_check_options = templater \
+                        .haproxy_backend_server_http_healthcheck_options
+                if server_health_check_options:
+                    healthCheckOptions = server_health_check_options.format(
+                        healthCheck=app.healthCheck,
+                        healthCheckPortIndex=app.healthCheck['portIndex'],
+                        healthCheckProtocol=app.healthCheck['protocol'],
+                        healthCheckPath=app.healthCheck['path'],
+                        healthCheckTimeoutSeconds=app.healthCheck[
+                            'timeoutSeconds'],
+                        healthCheckIntervalSeconds=app.healthCheck[
+                            'intervalSeconds'],
+                        healthCheckIgnoreHttp1xx=app.healthCheck[
+                            'ignoreHttp1xx'],
+                        healthCheckGracePeriodSeconds=app.healthCheck[
+                            'gracePeriodSeconds'],
+                        healthCheckMaxConsecutiveFailures=app.healthCheck[
+                            'maxConsecutiveFailures'],
+                        healthCheckFalls=app.healthCheck[
+                            'maxConsecutiveFailures'] + 1
+                    )
+
             backend_server_options = templater.haproxy_backend_server_options
             backends += backend_server_options.format(
                 host=backendServer.host,
                 port=backendServer.port,
                 serverName=serverName,
                 cookieOptions=' check cookie ' +
-                serverName if app.sticky else ''
+                serverName if app.sticky else '',
+                healthCheckOptions=healthCheckOptions
+                if healthCheckOptions else ''
             )
 
     config += http_frontends
@@ -663,6 +822,13 @@ def compareWriteAndReloadConfig(config, config_file):
         reloadConfig()
 
 
+def get_health_check(app, portIndex):
+    for check in app.app['healthChecks']:
+        if check['portIndex'] == portIndex:
+            return check
+    return None
+
+
 def get_apps(marathon):
     tasks = marathon.tasks()
 
@@ -695,7 +861,7 @@ def get_apps(marathon):
             app = apps[appId]
             if servicePort not in app.services:
                 app.services[servicePort] = MarathonService(
-                    appId, servicePort)
+                    appId, servicePort, get_health_check(app, i))
 
             service = app.services[servicePort]
             service.groups = app.groups
