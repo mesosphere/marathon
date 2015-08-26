@@ -939,6 +939,10 @@ def get_arg_parser():
                         "Use '/dev/null' to disable logging to syslog",
                         default=default_log_socket
                         )
+    parser.add_argument("--log-format",
+                        help="Set log message format",
+                        default="%(name)s: %(message)s"
+                        )
     parser.add_argument("--haproxy-config",
                         help="Location of haproxy configuration",
                         default="/etc/haproxy/haproxy.cfg"
@@ -985,10 +989,10 @@ def clear_callbacks(marathon, callback_url):
     marathon.remove_subscriber(callback_url)
 
 
-def setup_logging(syslog_socket):
+def setup_logging(syslog_socket, log_format):
     logger.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('%(name)s: %(message)s')
+    formatter = logging.Formatter(log_format)
 
     consoleHandler = logging.StreamHandler()
     consoleHandler.setFormatter(formatter)
@@ -1015,7 +1019,7 @@ if __name__ == '__main__':
             arg_parser.error('argument --marathon/-m is required')
 
     # Setup logging
-    setup_logging(args.syslog_socket)
+    setup_logging(args.syslog_socket, args.log_format)
 
     # Marathon API connector
     marathon = Marathon(args.marathon)
