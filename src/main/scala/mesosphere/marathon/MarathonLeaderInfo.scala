@@ -10,6 +10,9 @@ import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.event.{ LocalLeadershipEvent, EventModule }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.Timer
+import org.slf4j.LoggerFactory
+
+import scala.util.control.NonFatal
 
 class MarathonLeaderInfo @Inject() (
     @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
@@ -17,12 +20,21 @@ class MarathonLeaderInfo @Inject() (
     @Named(EventModule.busName) eventStream: EventStream,
     metrics: MarathonLeaderInfoMetrics) extends LeaderInfo {
 
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
   /** Query whether we are the current leader. This should be cheap. */
   override def elected: Boolean = leader.get()
 
   override def currentLeaderHostPort(): Option[String] = metrics.getLeaderDataTimer {
     candidate.flatMap { c =>
-      Option(c.getLeaderData.orNull()).map { data =>
+      val maybeLeaderData: Option[Array[Byte]] = try {
+        Option(c.getLeaderData.orNull())
+      } catch {
+        case NonFatal(e) =>
+          log.error("error while getting current leader", e)
+          None
+      }
+      maybeLeaderData.map { data =>
         new String(data, "UTF-8")
       }
     }
