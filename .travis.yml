@@ -8,10 +8,22 @@ cache:
   directories:
     - $HOME/.sbt
     - $HOME/.ivy2
-script: sbt clean coverage doc test
+addons:
+  apt:
+    packages:
+      - python
+      - python-pip
+      - python-virtualenv
+script:
+  - sbt clean coverage doc test
+  - source venv/bin/activate
+  - pep8 bin/servicerouter.py
 before_script: # the automated download fails sometimes
     - mkdir -p $HOME/.sbt/launchers/0.13.8/
     - test -r $HOME/.sbt/launchers/0.13.8/sbt-launch.jar || curl -L -o $HOME/.sbt/launchers/0.13.8/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.8/sbt-launch.jar
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install pep8
 after_success:
   - sbt coverageReport coveralls
 notifications:
