@@ -166,10 +166,6 @@ If you need more control and want to specify your host ports in advance, you can
  set `requirePorts` to `true`. This way the ports you have specified are used as host ports. That also
  means that Marathon can schedule the associated tasks only on hosts that have the specified ports available.
 
- The specified ports need to be in the local port range specified by the
- `--local_port_min` and `--local_port_max` flags. See
- [Command Line Flags doc page]({{ site.baseurl }}/docs/command-line-flags.html)).
-
 ##### instances (Integer)
 
 The number of instances of this application to start. Please note: this number can be changed everytime as needed to scale the application.
