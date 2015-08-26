@@ -205,6 +205,7 @@ import re
 import requests
 import subprocess
 import sys
+import time
 
 
 class ConfigTemplater(object):
@@ -882,6 +883,7 @@ def get_apps(marathon):
     for app in apps.values():
         for service in app.services.values():
             apps_list.append(service)
+
     return apps_list
 
 
@@ -903,8 +905,13 @@ class MarathonEventSubscriber(object):
         self.reset_from_tasks()
 
     def reset_from_tasks(self):
+        start_time = time.time()
+
         self.__apps = get_apps(self.__marathon)
         regenerate_config(self.__apps, self.__config_file, self.__groups)
+
+        logger.debug("updating tasks finished, took %s seconds",
+                     time.time() - start_time)
 
     def handle_event(self, event):
         if event['eventType'] == 'status_update_event':
