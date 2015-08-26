@@ -499,8 +499,8 @@ class MarathonService(object):
 
 class MarathonApp(object):
 
-    def __init__(self, marathon, appId):
-        self.app = marathon.get_app(appId)
+    def __init__(self, marathon, appId, app):
+        self.app = app
         self.groups = frozenset()
         self.appId = appId
 
@@ -523,11 +523,9 @@ class Marathon(object):
     def api_req_raw(self, method, path, body=None, **kwargs):
         for host in self.__hosts:
             path_str = os.path.join(host, 'v2')
-            if len(path) == 2:
-                assert(path[0] == 'apps')
-                path_str += '/apps/{0}'.format(path[1])
-            else:
-                path_str += '/' + path[0]
+
+            for path_elem in path:
+                path_str = path_str + "/" + path_elem
             response = requests.request(
                 method,
                 path_str,
@@ -537,6 +535,8 @@ class Marathon(object):
                 },
                 **kwargs
             )
+
+            logger.debug("%s %s", method, response.url)
             if response.status_code == 200:
                 break
         if 'message' in response.json():
@@ -559,7 +559,8 @@ class Marathon(object):
     # Lists all running apps.
     def list(self):
         logger.info('fetching apps')
-        return self.api_req('GET', ['apps'])["apps"]
+        return self.api_req('GET', ['apps'],
+                            params={'embed': 'apps.tasks'})["apps"]
 
     def tasks(self):
         logger.info('fetching tasks')
@@ -824,66 +825,71 @@ def compareWriteAndReloadConfig(config, config_file):
 
 
 def get_health_check(app, portIndex):
-    for check in app.app['healthChecks']:
+    for check in app['healthChecks']:
         if check['portIndex'] == portIndex:
             return check
     return None
 
 
 def get_apps(marathon):
-    tasks = marathon.tasks()
+    apps = marathon.list()
+    logger.debug("got apps %s", map(lambda app: app["id"], apps))
 
-    apps = dict()
+    marathon_apps = []
 
-    for task in tasks:
-        # For each task, extract the app it belongs to and add a
-        # backend for each service it provides
-        if 'servicePorts' not in task:
-            continue
+    for app in apps:
+        appId = app['id']
 
-        for i in xrange(len(task['servicePorts'])):
-            # Marathon 0.7.6 bug workaround
-            if len(task['host']) == 0:
-                logger.warning("Ignoring Marathon task without host " +
-                               task['id'])
-                continue
+        marathon_app = MarathonApp(marathon, appId, app)
+        if 'HAPROXY_GROUP' in marathon_app.app['env']:
+                    marathon_app.groups = \
+                            marathon_app.app['env']['HAPROXY_GROUP'].split(',')
+        marathon_apps.append(marathon_app)
 
-            servicePort = task['servicePorts'][i]
-            port = task['ports'][i] if len(task['ports']) else servicePort
-            appId = task['appId']
-
-            if appId not in apps:
-                app_tmp = MarathonApp(marathon, appId)
-                if 'HAPROXY_GROUP' in app_tmp.app['env']:
-                    app_tmp.groups = \
-                            app_tmp.app['env']['HAPROXY_GROUP'].split(',')
-                apps[appId] = app_tmp
-
-            app = apps[appId]
-            if servicePort not in app.services:
-                app.services[servicePort] = MarathonService(
-                    appId, servicePort, get_health_check(app, i))
-
-            service = app.services[servicePort]
-            service.groups = app.groups
+        service_ports = app['ports']
+        for i in xrange(len(service_ports)):
+            servicePort = service_ports[i]
+            service = MarathonService(
+                        appId, servicePort, get_health_check(app, i))
 
             # Load environment variable configuration
             # TODO(cmaloney): Move to labels once those are supported
             # throughout the stack
             for key_unformatted in env_keys:
                 key = key_unformatted.format(i)
-                if key in app.app[u'env']:
+                if key in marathon_app.app[u'env']:
                     func = env_keys[key_unformatted]
-                    func(service, app.app[u'env'][key])
+                    func(service, marathon_app.app[u'env'][key])
 
-            service.add_backend(task['host'], port)
+            marathon_app.services[servicePort] = service
+
+        for task in app['tasks']:
+            # Marathon 0.7.6 bug workaround
+            if len(task['host']) == 0:
+                logger.warning("Ignoring Marathon task without host " +
+                               task['id'])
+                continue
+
+            task_ports = task['ports']
+
+            # if different versions of app have different number of ports,
+            # try to match as many ports as possible
+            number_of_defined_ports = min(len(task_ports), len(service_ports))
+
+            for i in xrange(number_of_defined_ports):
+                task_port = task_ports[i]
+                service_port = service_ports[i]
+                service = marathon_app.services.get(service_port, None)
+                if service:
+                    service.groups = marathon_app.groups
+                    service.add_backend(task['host'], task_port)
 
     # Convert into a list for easier consumption
     apps_list = list()
-    for app in apps.values():
-        for service in app.services.values():
-            apps_list.append(service)
-
+    for marathon_app in marathon_apps:
+        for service in marathon_app.services.values():
+            if service.backends:
+                apps_list.append(service)
     return apps_list
 
 
