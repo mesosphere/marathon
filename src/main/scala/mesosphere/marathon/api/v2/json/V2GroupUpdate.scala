@@ -1,7 +1,6 @@
 package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble }
-
 import mesosphere.marathon.state._
 
 case class V2GroupUpdate(

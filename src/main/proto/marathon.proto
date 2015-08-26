@@ -68,6 +68,8 @@ message ServiceDefinition {
   repeated mesos.Parameter labels = 20;
   optional int64 maxLaunchDelay = 21 [default = 3600000]; // stored as Millis
   optional ResourceRoles acceptedResourceRoles = 22;
+  optional int64 last_scaling_at = 23;
+  optional int64 last_config_change_at = 24;
 }
 
 message ResourceRoles {

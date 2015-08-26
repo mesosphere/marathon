@@ -10,7 +10,7 @@ import scala.collection.SortedSet
 class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhenThen {
   private def normalizeVersions(group: Group): Group = {
     group.withNormalizedVersion.copy(
-      apps = group.apps.map(_.withNormalizedVersion),
+      apps = group.apps.map(_.copy(versionInfo = AppDefinition.VersionInfo.NoVersion)),
       groups = group.groups.map(normalizeVersions)
     )
   }

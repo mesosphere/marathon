@@ -2,6 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Integer => JInt, Double => JDouble }
 
+import mesosphere.marathon.api.v2.json.V2AppDefinition.VersionInfo
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
@@ -87,31 +88,31 @@ case class V2AppUpdate(
     * after updating its members with respect to this update request.
     */
   def apply(app: V2AppDefinition): V2AppDefinition = app.copy(
-    app.id,
-    cmd.orElse(app.cmd),
-    args.orElse(app.args),
-    user.orElse(app.user),
-    env.getOrElse(app.env),
-    instances.getOrElse(app.instances),
-    cpus.getOrElse(app.cpus),
-    mem.getOrElse(app.mem),
-    disk.getOrElse(app.disk),
-    executor.getOrElse(app.executor),
-    constraints.getOrElse(app.constraints),
-    uris.getOrElse(app.uris),
-    storeUrls.getOrElse(app.storeUrls),
-    ports.getOrElse(app.ports),
-    requirePorts.getOrElse(app.requirePorts),
-    backoff.getOrElse(app.backoff),
-    backoffFactor.getOrElse(app.backoffFactor),
-    maxLaunchDelay.getOrElse(app.maxLaunchDelay),
-    container.filterNot(_ == Container.Empty).orElse(app.container),
-    healthChecks.getOrElse(app.healthChecks),
-    dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
-    upgradeStrategy.getOrElse(app.upgradeStrategy),
-    labels.getOrElse(app.labels),
-    acceptedResourceRoles.orElse(app.acceptedResourceRoles),
-    version.getOrElse(Timestamp.now())
+    id = app.id,
+    cmd = cmd.orElse(app.cmd),
+    args = args.orElse(app.args),
+    user = user.orElse(app.user),
+    env = env.getOrElse(app.env),
+    instances = instances.getOrElse(app.instances),
+    cpus = cpus.getOrElse(app.cpus),
+    mem = mem.getOrElse(app.mem),
+    disk = disk.getOrElse(app.disk),
+    executor = executor.getOrElse(app.executor),
+    constraints = constraints.getOrElse(app.constraints),
+    uris = uris.getOrElse(app.uris),
+    storeUrls = storeUrls.getOrElse(app.storeUrls),
+    ports = ports.getOrElse(app.ports),
+    requirePorts = requirePorts.getOrElse(app.requirePorts),
+    backoff = backoff.getOrElse(app.backoff),
+    backoffFactor = backoffFactor.getOrElse(app.backoffFactor),
+    maxLaunchDelay = maxLaunchDelay.getOrElse(app.maxLaunchDelay),
+    container = container.filterNot(_ == Container.Empty).orElse(app.container),
+    healthChecks = healthChecks.getOrElse(app.healthChecks),
+    dependencies = dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
+    upgradeStrategy = upgradeStrategy.getOrElse(app.upgradeStrategy),
+    labels = labels.getOrElse(app.labels),
+    acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles),
+    version = version.getOrElse(app.version)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): V2AppUpdate = copy(

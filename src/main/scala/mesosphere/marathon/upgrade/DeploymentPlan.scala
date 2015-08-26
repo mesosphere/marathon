@@ -79,16 +79,33 @@ final case class DeploymentPlan(
     affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
   override def toString: String = {
-    def appString(app: AppDefinition): String = s"App(${app.id}, ${app.cmd}))"
-    def actionString(a: DeploymentAction): String = a match {
-      case StartApplication(app, scale)         => s"Start(${appString(app)}, $scale)"
-      case StopApplication(app)                 => s"Stop(${appString(app)})"
-      case ScaleApplication(app, scale, toKill) => s"Scale(${appString(app)}, $scale, $toKill})"
-      case RestartApplication(app)              => s"Restart(${appString(app)})"
-      case ResolveArtifacts(app, urls)          => s"Resolve(${appString(app)}, $urls})"
+    def appString(app: AppDefinition): String = {
+      val cmdString = app.cmd.fold("")(cmd => ", cmd=\"" + cmd + "\"")
+      val argsString = app.args.fold("")(args => ", args=\"" + args.mkString(" ") + "\"")
+      val maybeDockerImage: Option[String] = app.container.flatMap(_.docker.map(_.image))
+      val dockerImageString = maybeDockerImage.fold("")(image => ", image=\"" + image + "\"")
+
+      s"App(${app.id}$dockerImageString$cmdString$argsString))"
     }
-    val stepString = steps.map("Step(" + _.actions.map(actionString) + ")").mkString("(", ", ", ")")
-    s"DeploymentPlan($version, $stepString)"
+    def actionString(a: DeploymentAction): String = a match {
+      case StartApplication(app, scale) => s"Start(${appString(app)}, instances=$scale)"
+      case StopApplication(app)         => s"Stop(${appString(app)})"
+      case ScaleApplication(app, scale, toKill) =>
+        val killTasksString = toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.getId).mkString(",")).getOrElse("")
+        s"Scale(${appString(app)}, instances=$scale$killTasksString)"
+      case RestartApplication(app)     => s"Restart(${appString(app)})"
+      case ResolveArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
+    }
+    val stepString =
+      if (steps.nonEmpty) {
+        steps
+          .map { _.actions.map(actionString).mkString("  * ", "\n  * ", "") }
+          .zipWithIndex
+          .map { case (stepsString, index) => s"step ${index + 1}:\n$stepsString" }
+          .mkString("\n", "\n", "")
+      }
+      else " NO STEPS"
+    s"DeploymentPlan $version$stepString\n"
   }
 
   override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan =
@@ -193,8 +210,8 @@ object DeploymentPlan {
           case Some(oldApp) if oldApp.isOnlyScaleChange(newApp) =>
             Some(ScaleApplication(newApp, newApp.instances, toKill.get(newApp.id)))
 
-          // Update existing app.
-          case Some(oldApp) if oldApp.isUpgrade(newApp) =>
+          // Update or restart an existing app.
+          case Some(oldApp) if oldApp.needsRestart(newApp) =>
             Some(RestartApplication(newApp))
 
           // Other cases require no action.
@@ -207,6 +224,14 @@ object DeploymentPlan {
     }.to[Seq]
   }
 
+  /**
+    * @param original the root group before the deployment
+    * @param target the root group after the deployment
+    * @param resolveArtifacts artifacts to resolve
+    * @param version the version to use for new AppDefinitions (should be very close to now)
+    * @param toKill specific tasks that should be killed
+    * @return The deployment plan containing the steps necessary to get from the original to the target group definition
+    */
   //scalastyle:off method.length
   def apply(
     original: Group,
@@ -214,7 +239,6 @@ object DeploymentPlan {
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
     toKill: Map[PathId, Set[MarathonTask]] = Map.empty): DeploymentPlan = {
-    log.info(s"Compute DeploymentPlan from $original to $target")
 
     // Lookup maps for original and target apps.
     val originalApps: Map[PathId, AppDefinition] =
@@ -267,8 +291,6 @@ object DeploymentPlan {
       steps.result().filter(_.actions.nonEmpty),
       version
     )
-
-    log.info(s"Computed new deployment plan: $result")
 
     result
   }

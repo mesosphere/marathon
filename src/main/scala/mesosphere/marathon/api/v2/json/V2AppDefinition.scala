@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidV2AppDefinition }
 import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
+import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => mesos }
@@ -65,7 +66,9 @@ case class V2AppDefinition(
 
     acceptedResourceRoles: Option[Set[String]] = None,
 
-    version: Timestamp = Timestamp.now()) extends Timestamped {
+    version: Timestamp = Timestamp.now(),
+
+    versionInfo: Option[V2AppDefinition.VersionInfo] = None) extends Timestamped {
 
   assert(
     portIndicesAreValid(),
@@ -84,14 +87,23 @@ case class V2AppDefinition(
     * Returns the canonical internal representation of this API-specific
     * application defintion.
     */
-  def toAppDefinition: AppDefinition =
+  def toAppDefinition: AppDefinition = {
+    val appVersionInfo = versionInfo match {
+      case Some(V2AppDefinition.VersionInfo(lastScalingAt, lastChangeAt)) =>
+        AppDefinition.VersionInfo.FullVersionInfo(version, lastScalingAt, lastChangeAt)
+      case None =>
+        AppDefinition.VersionInfo.OnlyVersion(version)
+    }
     AppDefinition(
-      id, cmd, args, user, env, instances, cpus,
-      mem, disk, executor, constraints, uris,
-      storeUrls, ports, requirePorts, backoff,
-      backoffFactor, maxLaunchDelay, container,
-      healthChecks, dependencies, upgradeStrategy,
-      labels, acceptedResourceRoles, version)
+      id = id, cmd = cmd, args = args, user = user, env = env, instances = instances, cpus = cpus,
+      mem = mem, disk = disk, executor = executor, constraints = constraints, uris = uris,
+      storeUrls = storeUrls, ports = ports, requirePorts = requirePorts, backoff = backoff,
+      backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container,
+      healthChecks = healthChecks, dependencies = dependencies, upgradeStrategy = upgradeStrategy,
+      labels = labels, acceptedResourceRoles = acceptedResourceRoles,
+      versionInfo = appVersionInfo
+    )
+  }
 
   def withTaskCountsAndDeployments(
     appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
@@ -121,21 +133,34 @@ case class V2AppDefinition(
 
 object V2AppDefinition {
 
-  def apply(app: AppDefinition): V2AppDefinition =
+  case class VersionInfo(
+    lastScalingAt: Timestamp,
+    lastConfigChangeAt: Timestamp)
+
+  def apply(app: AppDefinition): V2AppDefinition = {
+    val maybeVersionInfo = app.versionInfo match {
+      case FullVersionInfo(_, lastScalingAt, lastConfigChangeAt) => Some(VersionInfo(lastScalingAt, lastConfigChangeAt))
+      case _ => None
+    }
+
     V2AppDefinition(
-      app.id, app.cmd, app.args, app.user, app.env, app.instances, app.cpus,
-      app.mem, app.disk, app.executor, app.constraints, app.uris,
-      app.storeUrls, app.ports, app.requirePorts, app.backoff,
-      app.backoffFactor, app.maxLaunchDelay, app.container,
-      app.healthChecks, app.dependencies, app.upgradeStrategy,
-      app.labels, app.acceptedResourceRoles, app.version)
+      id = app.id, cmd = app.cmd, args = app.args, user = app.user, env = app.env, instances = app.instances,
+      cpus = app.cpus,
+      mem = app.mem, disk = app.disk, executor = app.executor, constraints = app.constraints, uris = app.uris,
+      storeUrls = app.storeUrls, ports = app.ports, requirePorts = app.requirePorts, backoff = app.backoff,
+      backoffFactor = app.backoffFactor, maxLaunchDelay = app.maxLaunchDelay, container = app.container,
+      healthChecks = app.healthChecks, dependencies = app.dependencies, upgradeStrategy = app.upgradeStrategy,
+      labels = app.labels, acceptedResourceRoles = app.acceptedResourceRoles,
+      version = app.version,
+      versionInfo = maybeVersionInfo
+    )
+  }
 
   protected[marathon] class WithTaskCountsAndDeployments(
       appTasks: Seq[EnrichedTask],
       healthCounts: HealthCounts,
       runningDeployments: Seq[DeploymentPlan],
       val app: V2AppDefinition) {
-
     /**
       * Snapshot of the number of staged (but not running) tasks
       * for this app

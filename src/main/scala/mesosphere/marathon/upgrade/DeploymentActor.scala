@@ -1,24 +1,23 @@
 package mesosphere.marathon.upgrade
 
 import java.net.URL
-import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.event.{ DeploymentStatus, DeploymentStepSuccess, DeploymentStepFailure }
-import mesosphere.mesos.Constraints
-
-import scala.concurrent.{ Future, Promise }
-import scala.util.{ Failure, Success }
 
 import akka.actor._
 import akka.event.EventStream
-import org.apache.mesos.SchedulerDriver
-
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ PathId, AppDefinition, AppRepository }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentStepInfo, DeploymentFinished }
+import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
+import mesosphere.mesos.Constraints
+import org.apache.mesos.SchedulerDriver
+
+import scala.concurrent.{ Future, Promise }
+import scala.util.{ Failure, Success }
 
 private class DeploymentActor(
     parent: ActorRef,

@@ -26,6 +26,26 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
   val actorId = new AtomicInteger(0)
   def serializeExecutions() = SerializeExecution(system, s"serializeGroupUpdates${actorId.incrementAndGet()}")
 
+  class Fixture {
+    lazy val scheduler = mock[MarathonSchedulerService]
+    lazy val taskTracker = mock[TaskTracker]
+    lazy val appRepo = mock[AppRepository]
+    lazy val groupRepo = mock[GroupRepository]
+    lazy val eventBus = mock[EventStream]
+    lazy val provider = mock[StorageProvider]
+    lazy val config = {
+      val conf = new ScallopConf(Seq("--master", "foo")) with MarathonConf
+      conf.afterInit()
+      conf
+    }
+
+    lazy val manager = new GroupManager(
+      serializeUpdates = serializeExecutions(), scheduler = scheduler,
+      taskTracker = taskTracker, groupRepo = groupRepo, appRepo = appRepo,
+      storage = provider, config = config, eventBus = eventBus)
+
+  }
+
   test("Assign dynamic app ports") {
     val group = Group(PathId.empty, Set(
       AppDefinition("/app1".toPath, ports = Seq(0, 0, 0)),
@@ -128,44 +148,65 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
   }
 
   test("Don't store invalid groups") {
-    val scheduler = mock[MarathonSchedulerService]
-    val taskTracker = mock[TaskTracker]
-    val appRepo = mock[AppRepository]
-    val groupRepo = mock[GroupRepository]
-    val eventBus = mock[EventStream]
-    val provider = mock[StorageProvider]
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
-    val manager = new GroupManager(
-      serializeUpdates = serializeExecutions(), scheduler = scheduler,
-      taskTracker = taskTracker, groupRepo = groupRepo, appRepo = appRepo,
-      storage = provider, config = config, eventBus = eventBus)
+    val f = new Fixture
 
     val group = Group(PathId.empty, Set(AppDefinition("/app1".toPath)), Set(Group("/group1".toPath)))
 
-    when(groupRepo.group(groupRepo.zkRootName)).thenReturn(Future.successful(None))
+    when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
+    when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
 
     intercept[ConstraintViolationException] {
-      Await.result(manager.update(group.id, _ => group), 3.seconds)
+      Await.result(f.manager.update(group.id, _ => group), 3.seconds)
     }.printStackTrace()
 
-    verify(groupRepo, times(0)).store(any(), any())
+    verify(f.groupRepo, times(0)).store(any(), any())
+  }
+
+  test("Store new apps with correct version infos in groupRepo and appRepo") {
+    val f = new Fixture
+
+    val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), ports = Seq.empty)
+    val group = Group(PathId.empty, Set(app)).copy(version = Timestamp(1))
+    when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
+    when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
+    when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
+    val appWithVersionInfo = app.copy(versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1)))
+    val groupWithVersionInfo = Group(PathId.empty, Set(appWithVersionInfo)).copy(version = Timestamp(1))
+    when(f.appRepo.store(any())).thenReturn(Future.successful(appWithVersionInfo))
+    when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupWithVersionInfo))
+
+    Await.result(f.manager.update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
+
+    verify(f.groupRepo).store(GroupRepository.zkRootName, groupWithVersionInfo)
+    verify(f.appRepo).store(appWithVersionInfo)
+  }
+
+  test("Expunge removed apps from appRepo") {
+    val f = new Fixture
+
+    val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), ports = Seq.empty)
+    val group = Group(PathId.empty, Set(app)).copy(version = Timestamp(1))
+    val groupEmpty = group.copy(apps = Set(), version = Timestamp(2))
+    when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
+    when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(Some(group)))
+    when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
+    when(f.appRepo.expunge(any())).thenReturn(Future.successful(Seq(true)))
+    when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupEmpty))
+
+    Await.result(f.manager.update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
+
+    verify(f.groupRepo).store(GroupRepository.zkRootName, groupEmpty)
+    verify(f.appRepo).expunge(app.id)
   }
 
   def manager(minServicePort: Int, maxServicePort: Int) = {
-    val config = new ScallopConf(Seq(
-      "--master", "foo",
-      "--local_port_min", minServicePort.toString, "--local_port_max", maxServicePort.toString)) with MarathonConf
-    config.afterInit()
-    val scheduler = mock[MarathonSchedulerService]
-    val taskTracker = mock[TaskTracker]
-    val appRepo = mock[AppRepository]
-    val groupRepo = mock[GroupRepository]
-    val eventBus = mock[EventStream]
-    val provider = mock[StorageProvider]
-    new GroupManager(
-      serializeUpdates = serializeExecutions(), scheduler = scheduler, taskTracker = taskTracker,
-      groupRepo = groupRepo, appRepo = appRepo,
-      storage = provider, config = config, eventBus = eventBus)
+    val f = new Fixture {
+      override lazy val config = new ScallopConf(Seq(
+        "--master", "foo",
+        "--local_port_min", minServicePort.toString, "--local_port_max", maxServicePort.toString)) with MarathonConf
+    }
+
+    f.config.afterInit()
+    f.manager
   }
 }

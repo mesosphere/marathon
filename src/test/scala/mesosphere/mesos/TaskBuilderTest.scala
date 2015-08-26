@@ -558,9 +558,10 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("TaskContextEnv empty when no taskId given") {
+    val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
     val app = AppDefinition(
       id = PathId("/app"),
-      version = Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC))
+      versionInfo = version
     )
     val env = TaskBuilder.taskContextEnv(app = app, taskId = None)
 
@@ -568,9 +569,10 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("TaskContextEnv minimal") {
+    val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
     val app = AppDefinition(
       id = PathId("/app"),
-      version = Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC))
+      versionInfo = version
     )
     val env = TaskBuilder.taskContextEnv(app = app, taskId = Some(TaskID("taskId")))
 
@@ -584,10 +586,11 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("TaskContextEnv all fields") {
+    val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
     val taskId = TaskID("taskId")
     val app = AppDefinition(
       id = PathId("/app"),
-      version = Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)),
+      versionInfo = version,
       container = Some(Container(
         docker = Some(Docker(
           image = "myregistry/myimage:version"
@@ -612,7 +615,6 @@ class TaskBuilderTest extends MarathonSpec {
         app = AppDefinition(
           id = "/test".toPath,
           ports = Seq(8080, 8081),
-          version = Timestamp(0),
           container = Some(Container(
             docker = Some(Docker(
               image = "myregistry/myimage:version"
@@ -643,7 +645,6 @@ class TaskBuilderTest extends MarathonSpec {
         app = AppDefinition(
           id = "/test".toPath,
           ports = Seq(8080, 8081),
-          version = Timestamp(0),
           env = Map(
             "PORT" -> "1",
             "PORTS" -> "ports",

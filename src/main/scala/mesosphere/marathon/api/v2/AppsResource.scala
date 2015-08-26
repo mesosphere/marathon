@@ -1,7 +1,6 @@
 package mesosphere.marathon.api.v2
 
 import java.net.URI
-import java.util.UUID
 import javax.inject.{ Inject, Named }
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
@@ -9,16 +8,16 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.api.v2.json.V2AppDefinition.WithTasksAndDeployments
-import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, RestResource }
 import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.v2.json.V2AppDefinition.WithTasksAndDeployments
 import mesosphere.marathon.api.v2.json.{ EnrichedTask, V2AppDefinition, V2AppUpdate }
+import mesosphere.marathon.api.{ MarathonMediaType, RestResource, TaskKiller }
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.health.{ HealthCheckManager, HealthCounts }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, RestartApplication }
+import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException }
 import play.api.libs.json.Json
 
@@ -213,26 +212,15 @@ class AppsResource @Inject() (
   def restart(@PathParam("id") id: String,
               @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
     val appId = id.toRootPath
-    val newVersion = Timestamp.now()
-    def setVersionOrThrow(opt: Option[AppDefinition]) = opt
-      .map(_.copy(version = newVersion))
+
+    def markForRestartingOrThrow(opt: Option[AppDefinition]) = opt
+      .map(_.markedForRestarting)
       .getOrElse(throw new UnknownAppException(appId))
 
-    def restartApp(versionChange: DeploymentPlan): DeploymentPlan = {
-      val newApp = versionChange.target.app(appId).get
-      val plan = DeploymentPlan(
-        UUID.randomUUID().toString,
-        versionChange.original,
-        versionChange.target,
-        DeploymentStep(RestartApplication(newApp) :: Nil) :: Nil,
-        Timestamp.now())
-      result(service.deploy(plan, force = force))
-      plan
-    }
-    //this will create an empty deployment, since version chances do not trigger restarts
-    val versionChange = result(groupManager.updateApp(id.toRootPath, setVersionOrThrow, newVersion, force))
-    //create a restart app deployment plan manually
-    deploymentResult(restartApp(versionChange))
+    val newVersion = Timestamp.now()
+    val restartDeployment = result(groupManager.updateApp(id.toRootPath, markForRestartingOrThrow, newVersion, force))
+
+    deploymentResult(restartDeployment)
   }
 
   private def updateOrCreate(appId: PathId,
@@ -243,7 +231,14 @@ class AppsResource @Inject() (
     def updateApp(current: AppDefinition) = validateApp(appUpdate(current))
     def rollback(version: Timestamp) = service.getApp(appId, version).getOrElse(throw new UnknownAppException(appId))
     def updateOrRollback(current: AppDefinition) = appUpdate.version.map(rollback).getOrElse(updateApp(current))
-    existing.map(updateOrRollback).getOrElse(createApp()).copy(version = newVersion)
+
+    existing match {
+      case Some(app) =>
+        // we can only rollback existing apps because we deleted all old versions when dropping an app
+        updateOrRollback(app)
+      case None =>
+        createApp()
+    }
   }
 
   private def validateApp(app: AppDefinition): AppDefinition = {
