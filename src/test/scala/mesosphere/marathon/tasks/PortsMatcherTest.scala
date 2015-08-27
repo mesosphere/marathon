@@ -130,17 +130,6 @@ class PortsMatcherTest extends MarathonSpec {
     assert(!matcher.matches)
   }
 
-  test("get app ports if available") {
-    val app = AppDefinition(ports = Seq(80, 81, 82))
-    val offer = makeBasicOffer(beginPort = 80, endPort = 82).build
-    val matcher = new PortsMatcher(app, offer)
-
-    assert(
-      Some(Seq(RangesResource(Resource.PORTS, Seq(protos.Range(80, 82))))) ==
-        matcher.portRanges
-    )
-  }
-
   test("fail if required ports are not available") {
     val app = AppDefinition(ports = Seq(80, 81, 82), requirePorts = true)
     val offer = makeBasicOffer(beginPort = 31000, endPort = 32000).build

@@ -7,6 +7,13 @@
 
 ### Overview
 
+#### No pseudo-deterministic assignment of host ports anymore
+
+If you specify non-zero `"ports"` in your app JSON, they are used as service ports. The old code contained logic that 
+would assign these ports as host ports if available in the
+processed offer. That misled people into thinking that these ports corresponded to host ports. The new code always
+randomizes host ports assignment without `"requirePorts"` or explicit `"hostPort"` configuration.
+
 #### New `MARATHON_APP_DOCKER_IMAGE` environment variable
 
 Any task of an app definition with a docker image attribute (`container.docker.image`) will now be started with
