@@ -83,7 +83,7 @@ class MarathonApp extends App {
   override lazy val conf = new AllConf
 
   def runDefault(): Unit = {
-    log.info(s"Starting Marathon ${BuildInfo.version}")
+    log.info(s"Starting Marathon ${BuildInfo.version} with ${args.mkString(" ")}")
     run(
       classOf[HttpService],
       classOf[MarathonSchedulerService]
