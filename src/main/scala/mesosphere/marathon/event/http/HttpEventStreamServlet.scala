@@ -25,7 +25,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 
   override def close(): Unit = emitter.close()
 
-  override def sendMessage(message: String): Unit = blocking(emitter.data(message))
+  override def sendEvent(event: String, message: String): Unit = blocking(emitter.event(event, message))
 
   override def toString: String = s"HttpEventSSEHandle($id on $remoteAddress)"
 }

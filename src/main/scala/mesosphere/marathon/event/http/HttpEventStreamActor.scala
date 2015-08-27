@@ -17,7 +17,7 @@ import scala.util.Try
 trait HttpEventStreamHandle {
   def id: String
   def remoteAddress: String
-  def sendMessage(message: String): Unit
+  def sendEvent(event: String, message: String): Unit
   def close(): Unit
 }
 
