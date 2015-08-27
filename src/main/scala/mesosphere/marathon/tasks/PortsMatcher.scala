@@ -64,10 +64,6 @@ class PortsMatcher(
       case (appPorts, None) if app.requirePorts =>
         findPortsInOffer(appPorts, failLog = true)
 
-      case (appPorts, None) if !app.ports.contains(Integer.valueOf(0)) =>
-        // We try to use the user supplied ports as host ports if possible, fallback to dynamically assigned ports.
-        findPortsInOffer(appPorts, failLog = false).orElse(randomPorts(appPorts.size))
-
       case (appPorts, None) =>
         randomPorts(appPorts.size)
     }
