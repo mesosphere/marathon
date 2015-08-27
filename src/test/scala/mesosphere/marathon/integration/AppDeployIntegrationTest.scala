@@ -183,7 +183,7 @@ class AppDeployIntegrationTest
   test("scale an app up and down") {
     Given("a new app")
     val app = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
-    marathon.createAppV2(app)
+    marathon.createAppV2(app).code should be (201)
     waitForEvent("deployment_success")
 
     When("The app gets an update to be scaled up")
@@ -272,7 +272,8 @@ class AppDeployIntegrationTest
     val taskId = marathon.tasks(app.id).value.head.id
 
     When("a task of an app is killed")
-    marathon.killTask(app.id, taskId)
+    marathon.killTask(app.id, taskId).code should be (200)
+
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
 
     Then("All instances of the app get restarted")
@@ -288,7 +289,7 @@ class AppDeployIntegrationTest
     val taskId = marathon.tasks(app.id).value.head.id
 
     When("a task of an app is killed and scaled")
-    marathon.killTask(app.id, taskId, scale = true)
+    marathon.killTask(app.id, taskId, scale = true).code should be (200)
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
 
     Then("All instances of the app get restarted")
@@ -303,7 +304,7 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
 
     When("all task of an app are killed")
-    marathon.killAllTasks(app.id)
+    marathon.killAllTasks(app.id).code should be (200)
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
 
@@ -320,7 +321,10 @@ class AppDeployIntegrationTest
 
     When("all task of an app are killed")
     val result = marathon.killAllTasksAndScale(app.id)
+
+    result.code should be (200)
     result.value.version should not be empty
+
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
     waitForEvent("deployment_success")

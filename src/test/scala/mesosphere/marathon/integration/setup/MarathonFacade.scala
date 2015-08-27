@@ -78,17 +78,21 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     require(isInBaseGroup(pathId), s"pathId $pathId must be in baseGroup ($baseGroup)")
   }
 
+  def marathonSendReceive: SendReceive = {
+    addHeader("Accept", "*/*") ~> sendReceive
+  }
+
   //app resource ----------------------------------------------
 
   def listAppsInBaseGroup: RestResult[List[V2AppDefinition]] = {
-    val pipeline = sendReceive ~> read[ITListAppsResult]
+    val pipeline = marathonSendReceive ~> read[ITListAppsResult]
     val res = result(pipeline(Get(s"$url/v2/apps")), waitTime)
     res.map(_.apps.toList.filter(app => isInBaseGroup(app.id)))
   }
 
   def app(id: PathId): RestResult[ITAppDefinition] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[ITAppDefinition]
+    val pipeline = marathonSendReceive ~> read[ITAppDefinition]
     val getUrl: String = s"$url/v2/apps$id"
     LoggerFactory.getLogger(getClass).info(s"get url = $getUrl")
     result(pipeline(Get(getUrl)), waitTime)
@@ -96,19 +100,19 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   def createAppV2(app: V2AppDefinition): RestResult[V2AppDefinition] = {
     requireInBaseGroup(app.id)
-    val pipeline = sendReceive ~> read[V2AppDefinition]
+    val pipeline = marathonSendReceive ~> read[V2AppDefinition]
     result(pipeline(Post(s"$url/v2/apps", app)), waitTime)
   }
 
   def deleteApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    val pipeline = marathonSendReceive ~> read[ITDeploymentResult]
     result(pipeline(Delete(s"$url/v2/apps$id?force=$force")), waitTime)
   }
 
   def updateApp(id: PathId, app: V2AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    val pipeline = marathonSendReceive ~> read[ITDeploymentResult]
     val putUrl: String = s"$url/v2/apps$id?force=$force"
     LoggerFactory.getLogger(getClass).info(s"put url = $putUrl")
 
@@ -117,19 +121,19 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   def restartApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    val pipeline = marathonSendReceive ~> read[ITDeploymentResult]
     result(pipeline(Post(s"$url/v2/apps$id/restart?force=$force")), waitTime)
   }
 
   def listAppVersions(id: PathId): RestResult[ITAppVersions] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[ITAppVersions]
+    val pipeline = marathonSendReceive ~> read[ITAppVersions]
     result(pipeline(Get(s"$url/v2/apps$id/versions")), waitTime)
   }
 
   def appVersion(id: PathId, version: Timestamp): RestResult[V2AppDefinition] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[V2AppDefinition]
+    val pipeline = marathonSendReceive ~> read[V2AppDefinition]
     result(pipeline(Get(s"$url/v2/apps$id/versions/$version")), waitTime)
   }
 
@@ -137,69 +141,69 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
     requireInBaseGroup(appId)
-    val pipeline = addHeader("Accept", "application/json") ~> sendReceive ~> read[ITListTasks]
+    val pipeline = marathonSendReceive ~> read[ITListTasks]
     val res = result(pipeline(Get(s"$url/v2/apps$appId/tasks")), waitTime)
     res.map(_.tasks.toList)
   }
 
   def killAllTasks(appId: PathId, scale: Boolean = false): RestResult[ITListTasks] = {
     requireInBaseGroup(appId)
-    val pipeline = sendReceive ~> read[ITListTasks]
+    val pipeline = marathonSendReceive ~> read[ITListTasks]
     result(pipeline(Delete(s"$url/v2/apps$appId/tasks?scale=$scale")), waitTime)
   }
 
   def killAllTasksAndScale(appId: PathId): RestResult[ITDeploymentPlan] = {
     requireInBaseGroup(appId)
-    val pipeline = sendReceive ~> read[ITDeploymentPlan]
+    val pipeline = marathonSendReceive ~> read[ITDeploymentPlan]
     result(pipeline(Delete(s"$url/v2/apps$appId/tasks?scale=true")), waitTime)
   }
 
   def killTask(appId: PathId, taskId: String, scale: Boolean = false): RestResult[HttpResponse] = {
     requireInBaseGroup(appId)
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = marathonSendReceive ~> responseResult
     result(pipeline(Delete(s"$url/v2/apps$appId/tasks/$taskId?scale=$scale")), waitTime)
   }
 
   //group resource -------------------------------------------
 
   def listGroupsInBaseGroup: RestResult[Set[V2Group]] = {
-    val pipeline = sendReceive ~> read[V2Group]
+    val pipeline = marathonSendReceive ~> read[V2Group]
     val root = result(pipeline(Get(s"$url/v2/groups")), waitTime)
     root.map(_.groups.filter(group => isInBaseGroup(group.id)))
   }
 
   def listGroupVersions(id: PathId): RestResult[List[String]] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[List[String]]
+    val pipeline = marathonSendReceive ~> read[List[String]]
     result(pipeline(Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
   def group(id: PathId): RestResult[V2Group] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[V2Group]
+    val pipeline = marathonSendReceive ~> read[V2Group]
     result(pipeline(Get(s"$url/v2/groups$id")), waitTime)
   }
 
   def createGroup(group: V2GroupUpdate): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(group.groupId)
-    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    val pipeline = marathonSendReceive ~> read[ITDeploymentResult]
     result(pipeline(Post(s"$url/v2/groups", group)), waitTime)
   }
 
   def deleteGroup(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    val pipeline = marathonSendReceive ~> read[ITDeploymentResult]
     result(pipeline(Delete(s"$url/v2/groups$id?force=$force")), waitTime)
   }
 
   def deleteRoot(force: Boolean): RestResult[ITDeploymentResult] = {
-    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    val pipeline = marathonSendReceive ~> read[ITDeploymentResult]
     result(pipeline(Delete(s"$url/v2/groups?force=$force")), waitTime)
   }
 
   def updateGroup(id: PathId, group: V2GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
-    val pipeline = sendReceive ~> read[ITDeploymentResult]
+    val pipeline = marathonSendReceive ~> read[ITDeploymentResult]
     result(pipeline(Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
   }
 
@@ -211,7 +215,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   //deployment resource ------
 
   def listDeploymentsForBaseGroup(): RestResult[List[ITDeployment]] = {
-    val pipeline = sendReceive ~> read[List[ITDeployment]]
+    val pipeline = marathonSendReceive ~> read[List[ITDeployment]]
     result(pipeline(Get(s"$url/v2/deployments")), waitTime).map { deployments =>
       deployments.filter { deployment =>
         deployment.affectedApps.map(PathId(_)).exists(id => isInBaseGroup(id))
@@ -220,71 +224,71 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   }
 
   def deleteDeployment(id: String, force: Boolean = false): RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = marathonSendReceive ~> responseResult
     result(pipeline(Delete(s"$url/v2/deployments/$id?force=$force")), waitTime)
   }
 
   //event resource ---------------------------------------------
 
   def listSubscribers: RestResult[EventSubscribers] = {
-    val pipeline = sendReceive ~> read[EventSubscribers]
+    val pipeline = marathonSendReceive ~> read[EventSubscribers]
     result(pipeline(Get(s"$url/v2/eventSubscriptions")), waitTime)
   }
 
   def subscribe(callbackUrl: String): RestResult[Subscribe] = {
-    val pipeline = sendReceive ~> read[Subscribe]
+    val pipeline = marathonSendReceive ~> read[Subscribe]
     result(pipeline(Post(s"$url/v2/eventSubscriptions?callbackUrl=$callbackUrl")), waitTime)
   }
 
   def unsubscribe(callbackUrl: String): RestResult[Unsubscribe] = {
-    val pipeline = sendReceive ~> read[Unsubscribe]
+    val pipeline = marathonSendReceive ~> read[Unsubscribe]
     result(pipeline(Delete(s"$url/v2/eventSubscriptions?callbackUrl=$callbackUrl")), waitTime)
   }
 
   //metrics ---------------------------------------------
 
   def metrics(): RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = marathonSendReceive ~> responseResult
     result(pipeline(Get(s"$url/metrics")), waitTime)
   }
 
   //artifacts ---------------------------------------------
   def uploadArtifact(path: String, file: File): RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = marathonSendReceive ~> responseResult
     val payload = MultipartFormData(Seq(BodyPart(file, "file")))
     result(pipeline(Post(s"$url/v2/artifacts$path", payload)), waitTime)
   }
 
   def getArtifact(path: String): RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = marathonSendReceive ~> responseResult
     result(pipeline(Get(s"$url/v2/artifacts$path")), waitTime)
   }
 
   def deleteArtifact(path: String): RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = marathonSendReceive ~> responseResult
     result(pipeline(Delete(s"$url/v2/artifacts$path")), waitTime)
   }
 
   //leader ----------------------------------------------
   def leader(): RestResult[ITLeaderResult] = {
-    val pipeline = sendReceive ~> read[ITLeaderResult]
+    val pipeline = marathonSendReceive ~> read[ITLeaderResult]
     result(pipeline(Get(s"$url/v2/leader")), waitTime)
   }
 
   def abdicate(): RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = marathonSendReceive ~> responseResult
     result(pipeline(Delete(s"$url/v2/leader")), waitTime)
   }
 
   //info --------------------------------------------------
   def info: RestResult[HttpResponse] = {
-    val pipeline = sendReceive ~> responseResult
+    val pipeline = marathonSendReceive ~> responseResult
     result(pipeline(Get(s"$url/v2/info")), waitTime)
   }
 
   //task queue ------------------------------------------
   def taskQueue(): RestResult[ITTaskQueue] = {
-    val pipeline = sendReceive ~> read[ITTaskQueue]
+    val pipeline = marathonSendReceive ~> read[ITTaskQueue]
     result(pipeline(Get(s"$url/v2/queue")), waitTime)
   }
 }
