@@ -187,6 +187,8 @@ Templates:
 Operational Notes:
   - When a node in listening mode fails, remove the callback url for that
     node in marathon.
+  - If run in listening mode, DNS isn't re-resolved. Restart the process
+    periodically to force re-resolution if desired.
 """
 
 from logging.handlers import SysLogHandler
@@ -205,6 +207,7 @@ import re
 import requests
 import subprocess
 import sys
+import socket
 import time
 
 
@@ -286,7 +289,7 @@ class ConfigTemplater(object):
 '''
 
     HAPROXY_BACKEND_SERVER_OPTIONS = '''\
-  server {serverName} {host}:{port}{cookieOptions}{healthCheckOptions}
+  server {serverName} {host_ipv4}:{port}{cookieOptions}{healthCheckOptions}
 '''
 
     HAPROXY_BACKEND_SERVER_HTTP_HEALTHCHECK_OPTIONS = ''
@@ -593,6 +596,22 @@ def has_group(groups, app_groups):
 
     return False
 
+ip_cache = dict()
+
+
+def resolve_ip(host):
+    cached_ip = ip_cache.get(host, None)
+    if cached_ip:
+        return cached_ip
+    else:
+        try:
+            logger.debug("trying to resolve ip address for host %s", host)
+            ip = socket.gethostbyname(host)
+            ip_cache[host] = ip
+            return ip
+        except socket.gaierror:
+            return None
+
 
 def config(apps, groups):
     logger.info("generating config")
@@ -737,17 +756,25 @@ def config(apps, groups):
                         healthCheckFalls=app.healthCheck[
                             'maxConsecutiveFailures'] + 1
                     )
+            ipv4 = resolve_ip(backendServer.host)
 
-            backend_server_options = templater.haproxy_backend_server_options
-            backends += backend_server_options.format(
-                host=backendServer.host,
-                port=backendServer.port,
-                serverName=serverName,
-                cookieOptions=' check cookie ' +
-                serverName if app.sticky else '',
-                healthCheckOptions=healthCheckOptions
-                if healthCheckOptions else ''
-            )
+            if ipv4 is not None:
+                backend_server_options = templater\
+                    .haproxy_backend_server_options
+                backends += backend_server_options.format(
+                    host=backendServer.host,
+                    host_ipv4=ipv4,
+                    port=backendServer.port,
+                    serverName=serverName,
+                    cookieOptions=' check cookie ' +
+                    serverName if app.sticky else '',
+                    healthCheckOptions=healthCheckOptions
+                    if healthCheckOptions else ''
+                )
+            else:
+                logger.warn("Could not resolve ip for host %s, "
+                            "ignoring this backend",
+                            backendServer.host)
 
     config += http_frontends
     config += https_frontends
