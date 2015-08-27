@@ -29,7 +29,8 @@ class MarathonLeaderInfo @Inject() (
     candidate.flatMap { c =>
       val maybeLeaderData: Option[Array[Byte]] = try {
         Option(c.getLeaderData.orNull())
-      } catch {
+      }
+      catch {
         case NonFatal(e) =>
           log.error("error while getting current leader", e)
           None
