@@ -2,9 +2,10 @@ package mesosphere.marathon.core.appinfo.impl
 
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.appinfo.{ TaskCounts, AppInfo, EnrichedTask }
-import mesosphere.marathon.health.{ Health, HealthCheckManager, HealthCounts }
-import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, Identifiable, PathId, AppDefinition }
+import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
+import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
@@ -14,11 +15,13 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 class AppInfoBaseData(
+    clock: Clock,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
     marathonSchedulerService: MarathonSchedulerService,
     taskFailureRepository: TaskFailureRepository) {
   import AppInfoBaseData.log
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   lazy val runningDeploymentsByAppFuture: Future[Map[PathId, Seq[Identifiable]]] = {
@@ -58,6 +61,8 @@ class AppInfoBaseData(
             }
           case AppInfo.Embed.Tasks =>
             appData.enrichedTasksFuture.map(tasks => info.copy(maybeTasks = Some(tasks)))
+          case AppInfo.Embed.TaskStats =>
+            appData.taskStatsFuture.map(taskStats => info.copy(maybeTaskStats = Some(taskStats)))
         }
       }
     }
@@ -70,28 +75,45 @@ class AppInfoBaseData(
     * gets retrieved.
     */
   private[this] class AppData(app: AppDefinition) {
-    lazy val tasks: Set[MarathonTask] = {
+    lazy val now: Timestamp = clock.now()
+
+    lazy val tasks: Iterable[MarathonTask] = {
       log.debug(s"retrieving running tasks for app [${app.id}]")
-      taskTracker.get(app.id)
+      taskTracker.getTasks(app.id)
     }
 
-    lazy val tasksFuture: Future[Set[MarathonTask]] = Future.successful(tasks)
+    lazy val tasksFuture: Future[Iterable[MarathonTask]] = Future.successful(tasks)
 
-    lazy val healthCountsFuture: Future[HealthCounts] = {
+    lazy val healthCountsFuture: Future[Map[String, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
-      healthCheckManager.healthCounts(app.id)
+      healthCheckManager.statuses(app.id)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while retrieving health counts for app [${app.id}]", e)
     }
 
-    lazy val taskCountsFuture = {
-      log.debug(s"calculating task counts for app [${app.id}]")
+    lazy val tasksForStats: Future[Iterable[TaskForStatistics]] = {
       for {
         tasks <- tasksFuture
         healthCounts <- healthCountsFuture
-      } yield TaskCounts(tasks, healthCounts)
+      } yield TaskForStatistics.forTasks(now, tasks, healthCounts)
+    }.recover {
+      case NonFatal(e) => throw new RuntimeException(s"while calculating tasksForStats for app [${app.id}]", e)
+    }
+
+    lazy val taskCountsFuture: Future[TaskCounts] = {
+      log.debug(s"calculating task counts for app [${app.id}]")
+      for {
+        tasks <- tasksForStats
+      } yield TaskCounts(tasks)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while calculating task counts for app [${app.id}]", e)
+    }
+
+    lazy val taskStatsFuture: Future[TaskStatsByVersion] = {
+      log.debug(s"calculating task stats for app [${app.id}]")
+      for {
+        tasks <- tasksForStats
+      } yield TaskStatsByVersion(app.versionInfo, tasks)
     }
 
     lazy val enrichedTasksFuture: Future[Seq[EnrichedTask]] = {

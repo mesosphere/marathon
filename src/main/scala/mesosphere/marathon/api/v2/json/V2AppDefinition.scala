@@ -5,7 +5,7 @@ import java.lang.{ Double => JDouble, Integer => JInt }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidV2AppDefinition }
-import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }

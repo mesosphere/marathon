@@ -20,6 +20,7 @@ import org.apache.mesos.Protos.TaskStatus
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.collection.immutable.{ Seq, Map }
 
 class MarathonHealthCheckManager @Inject() (
     system: ActorSystem,
@@ -116,7 +117,7 @@ class MarathonHealthCheckManager @Inject() (
       case None => Future(())
       case Some(app) => appHealthChecks.writeLock { ahcs =>
         val versionTasksMap: Map[String, MarathonTask] =
-          taskTracker.get(app.id).map { task => task.getVersion -> task }.toMap
+          taskTracker.getTasks(app.id).iterator.map { task => task.getVersion -> task }.toMap
 
         // remove health checks for which the app version is not current and no tasks remain
         // since only current version tasks are launched.
@@ -182,10 +183,10 @@ class MarathonHealthCheckManager @Inject() (
     val maybeAppVersion: Option[Timestamp] = taskTracker.getVersion(appId, taskId)
 
     val taskHealth: Seq[Future[Health]] = maybeAppVersion.map { appVersion =>
-      listActive(appId, appVersion).toSeq.collect {
+      listActive(appId, appVersion).iterator.collect {
         case ActiveHealthCheck(_, actor) =>
           (actor ? GetTaskHealth(taskId)).mapTo[Health]
-      }
+      }.to[Seq]
     }.getOrElse(Nil)
 
     Future.sequence(taskHealth)
@@ -201,32 +202,12 @@ class MarathonHealthCheckManager @Inject() (
       Future.sequence(futureHealths) map { healths =>
         val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
 
-        taskTracker.get(appId).toSeq.map { task =>
+        taskTracker.getTasks(appId).iterator.map { task =>
           groupedHealth.get(task.getId) match {
             case Some(xs) => task.getId -> xs.toSeq
             case None     => task.getId -> Nil
           }
         }.toMap
-      }
-    }
-
-  override def healthCounts(appId: PathId): Future[HealthCounts] =
-    appHealthChecks.readLock { ahcs =>
-      statuses(appId).map { statusMap =>
-        val builder = HealthCounts.newBuilder
-        statusMap.values foreach { statuses =>
-          if (statuses.isEmpty) {
-            builder.incUnknown()
-          }
-          else if (statuses.forall(_.alive)) {
-            builder.incHealthy()
-          }
-          else {
-            builder.incUnhealthy()
-          }
-        }
-
-        builder.result()
       }
     }
 
