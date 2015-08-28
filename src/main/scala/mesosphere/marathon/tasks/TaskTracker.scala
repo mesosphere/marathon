@@ -3,7 +3,6 @@ package mesosphere.marathon.tasks
 import java.io._
 import javax.inject.Inject
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.metrics.Metrics
@@ -34,7 +33,7 @@ class TaskTracker @Inject() (
   val PREFIX = "task:"
   val ID_DELIMITER = ":"
 
-  private[this] val apps = TrieMap[PathId, InternalApp]()
+  private[tasks] val apps = TrieMap[PathId, InternalApp]()
 
   private[tasks] def fetchFromState(id: String): Option[PersistentEntity] = timedRead {
     Await.result(store.load(id), timeout)
@@ -269,6 +268,11 @@ class TaskTracker @Inject() (
       case None         => store.create(key, bytes)
     })
   }
+
+  /**
+    * Clear the in-memory state of the task tracker.
+    */
+  def clear(): Unit = apps.clear()
 
   private[tasks] def statusDidChange(statusA: TaskStatus, statusB: TaskStatus): Boolean = {
     val healthy = statusB.hasHealthy &&
