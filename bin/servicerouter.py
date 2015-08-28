@@ -83,6 +83,15 @@ Templates:
     An HTTP frontend that binds to port *:80 by default and gathers
     all virtual hosts as defined by the HAPROXY_{n}_VHOST variable.
 
+  HAPROXY_HTTP_FRONTEND_APPID_HEAD
+    An HTTP frontend that binds to port *:81 by default and gathers
+    all apps in http mode.
+    To use this frontend to forward to your app, configure the app with
+    "HAPROXY_0_MODE=http" then you can access it via a call to the :81 with
+    the header "X-Marathon-App-Id" set to the Marathon AppId.
+    Note multiple http ports being exposed by the same marathon app are not
+    supported. Only the first http port is available via this frontend.
+
   HAPROXY_HTTPS_FRONTEND_HEAD
     An HTTPS frontend for encrypted connections that binds to port *:443 by
     default and gathers all virtual hosts as defined by the
@@ -141,6 +150,10 @@ Templates:
   HAPROXY_HTTP_FRONTEND_ACL
     The ACL that glues a backend to the corresponding virtual host
     of the HAPROXY_HTTP_FRONTEND_HEAD.
+
+  HAPROXY_HTTP_FRONTEND_APPID_ACL
+    The ACL that glues a backend to the corresponding app
+    of the HAPROXY_HTTP_FRONTEND_APPID_HEAD.
 
   HAPROXY_HTTPS_FRONTEND_ACL
     The ACL that performs the SNI based hostname matching
@@ -242,6 +255,12 @@ class ConfigTemplater(object):
       mode http
     ''')
 
+    HAPROXY_HTTP_FRONTEND_APPID_HEAD = dedent('''
+    frontend marathon_http_appid_in
+      bind *:81
+      mode http
+    ''')
+
     # TODO(lloesche): make certificate path dynamic and allow multiple certs
     HAPROXY_HTTPS_FRONTEND_HEAD = dedent('''
     frontend marathon_https_in
@@ -269,6 +288,11 @@ class ConfigTemplater(object):
     HAPROXY_HTTP_FRONTEND_ACL = '''\
   acl host_{cleanedUpHostname} hdr(host) -i {hostname}
   use_backend {backend} if host_{cleanedUpHostname}
+'''
+
+    HAPROXY_HTTP_FRONTEND_APPID_ACL = '''\
+  acl app_{cleanedUpAppId} hdr(x-marathon-app-id) -i {appId}
+  use_backend {backend} if app_{cleanedUpAppId}
 '''
 
     HAPROXY_HTTPS_FRONTEND_ACL = '''\
@@ -308,11 +332,13 @@ class ConfigTemplater(object):
         variables = [
             'HAPROXY_HEAD',
             'HAPROXY_HTTP_FRONTEND_HEAD',
+            'HAPROXY_HTTP_FRONTEND_APPID_HEAD',
             'HAPROXY_HTTPS_FRONTEND_HEAD',
             'HAPROXY_FRONTEND_HEAD',
             'HAPROXY_BACKEND_REDIRECT_HTTP_TO_HTTPS',
             'HAPROXY_BACKEND_HEAD',
             'HAPROXY_HTTP_FRONTEND_ACL',
+            'HAPROXY_HTTP_FRONTEND_APPID_ACL',
             'HAPROXY_HTTPS_FRONTEND_ACL',
             'HAPROXY_BACKEND_HTTP_OPTIONS',
             'HAPROXY_BACKEND_HTTP_HEALTHCHECK_OPTIONS',
@@ -347,6 +373,10 @@ class ConfigTemplater(object):
         return self.HAPROXY_HTTP_FRONTEND_HEAD
 
     @property
+    def haproxy_http_frontend_appid_head(self):
+        return self.HAPROXY_HTTP_FRONTEND_APPID_HEAD
+
+    @property
     def haproxy_https_frontend_head(self):
         return self.HAPROXY_HTTPS_FRONTEND_HEAD
 
@@ -365,6 +395,10 @@ class ConfigTemplater(object):
     @property
     def haproxy_http_frontend_acl(self):
         return self.HAPROXY_HTTP_FRONTEND_ACL
+
+    @property
+    def haproxy_http_frontend_appid_acl(self):
+        return self.HAPROXY_HTTP_FRONTEND_APPID_ACL
 
     @property
     def haproxy_https_frontend_acl(self):
@@ -624,6 +658,8 @@ def config(apps, groups):
     https_frontends = templater.haproxy_https_frontend_head
     frontends = str()
     backends = str()
+    http_appid_frontends = templater.haproxy_http_frontend_appid_head
+    apps_with_http_appid_backend = []
 
     for app in sorted(apps, key=attrgetter('appId', 'servicePort')):
         # App only applies if we have it's group
@@ -676,13 +712,36 @@ def config(apps, groups):
             http_frontends += http_frontend_acl.format(
                 cleanedUpHostname=cleanedUpHostname,
                 hostname=app.hostname,
+                appId=app.appId,
                 backend=backend
             )
+
             https_frontend_acl = templater.haproxy_https_frontend_acl
             https_frontends += https_frontend_acl.format(
-               hostname=app.hostname,
-               backend=backend
+                cleanedUpHostname=cleanedUpHostname,
+                hostname=app.hostname,
+                appId=app.appId,
+                backend=backend
             )
+
+        # if app mode is http, we add the app to the second http frontend
+        # selecting apps by http header X-Marathon-App-Id
+        if app.mode == 'http' and \
+                app.appId not in apps_with_http_appid_backend:
+            logger.debug("adding virtual host for app with id %s", app.appId)
+            # remember appids to prevent multiple entries for the same app
+            apps_with_http_appid_backend += [app.appId]
+            cleanedUpAppId = re.sub(r'[^a-zA-Z0-9\-]', '_', app.appId)
+
+            http_appid_frontend_acl = templater.haproxy_http_frontend_appid_acl
+            http_appid_frontends += http_appid_frontend_acl.format(
+                cleanedUpAppId=cleanedUpAppId,
+                hostname=app.hostname,
+                appId=app.appId,
+                backend=backend
+            )
+
+        if app.mode == 'http':
             backends += templater.haproxy_backend_http_options
 
         if app.healthCheck:
@@ -778,6 +837,7 @@ def config(apps, groups):
                             backendServer.host)
 
     config += http_frontends
+    config += http_appid_frontends
     config += https_frontends
     config += frontends
     config += backends
@@ -921,7 +981,8 @@ def get_apps(marathon):
 
 
 def regenerate_config(apps, config_file, groups):
-    compareWriteAndReloadConfig(config(apps, groups), config_file)
+    compareWriteAndReloadConfig(config(apps, groups),
+                                config_file)
 
 
 class MarathonEventSubscriber(object):
@@ -941,7 +1002,9 @@ class MarathonEventSubscriber(object):
         start_time = time.time()
 
         self.__apps = get_apps(self.__marathon)
-        regenerate_config(self.__apps, self.__config_file, self.__groups)
+        regenerate_config(self.__apps,
+                          self.__config_file,
+                          self.__groups)
 
         logger.debug("updating tasks finished, took %s seconds",
                      time.time() - start_time)
@@ -1068,8 +1131,8 @@ if __name__ == '__main__':
     # just write the config.
     if args.listening:
         try:
-            run_server(marathon, args.listening,
-                       args.haproxy_config, args.group)
+            run_server(marathon, args.listening, args.haproxy_config,
+                       args.group)
         finally:
             clear_callbacks(marathon, args.listening)
     else:
