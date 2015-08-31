@@ -107,9 +107,7 @@ class DeploymentManager(
       sender() ! Status.Failure(new ConcurrentTaskUpgradeException("Deployment is already in progress"))
 
     case RetrieveRunningDeployments =>
-      val deployments: Iterable[(DeploymentPlan, DeploymentStepInfo)] =
-        deploymentStatus.values.map(step => step.plan -> step)
-      sender() ! RunningDeployments(deployments.to[Seq])
+      sender() ! RunningDeployments(deploymentStatus.values.to[Seq])
   }
 
   def stopActor(ref: ActorRef, reason: Throwable): Future[Boolean] = {

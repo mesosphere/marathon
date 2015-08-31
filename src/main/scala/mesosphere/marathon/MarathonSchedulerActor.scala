@@ -267,8 +267,11 @@ class MarathonSchedulerActor private (
           .mapTo[RunningDeployments]
           .foreach {
             case RunningDeployments(plans) =>
+              def intersectsWithNewPlan(existingPlan: DeploymentPlan): Boolean = {
+                existingPlan.affectedApplicationIds.intersect(plan.affectedApplicationIds).nonEmpty
+              }
               val relatedDeploymentIds: Seq[String] = plans.collect {
-                case (p, _) if p.affectedApplicationIds.intersect(plan.affectedApplicationIds).nonEmpty => p.id
+                case DeploymentStepInfo(p, _, _) if intersectsWithNewPlan(p) => p.id
               }
               origSender ! CommandFailed(cmd, AppLockedException(relatedDeploymentIds))
           }
@@ -359,7 +362,7 @@ object MarathonSchedulerActor {
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
   case class TasksKilled(appId: PathId, taskIds: Set[String]) extends Event
 
-  case class RunningDeployments(plans: Seq[(DeploymentPlan, DeploymentStepInfo)])
+  case class RunningDeployments(plans: Seq[DeploymentStepInfo])
 
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 

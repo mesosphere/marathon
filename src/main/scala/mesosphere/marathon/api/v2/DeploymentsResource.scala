@@ -25,8 +25,8 @@ class DeploymentsResource @Inject() (
     with Logging {
 
   @GET
-  def running(): Response = ok(jsonString(result(service.listRunningDeployments()).map {
-    case (plan, currentStep) => toInfo(plan, currentStep)
+  def running(): Response = ok(jsonString(result(service.listRunningDeployments()).map { currentStep =>
+    toInfo(currentStep.plan, currentStep)
   }))
 
   @DELETE
@@ -35,14 +35,15 @@ class DeploymentsResource @Inject() (
     @PathParam("id") id: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean): Response =
     result(service.listRunningDeployments())
-      .find(_._1.id == id)
+      .map(_.plan)
+      .find(_.id == id)
       .fold(notFound(s"DeploymentPlan $id does not exist")) {
-        case (plan, _) if force =>
+        case plan: DeploymentPlan if force =>
           // do not create a new deployment to return to the previous state
           log.info(s"Canceling deployment [$id]")
           service.cancelDeployment(id)
           status(ACCEPTED) // 202: Accepted
-        case (plan, _) =>
+        case plan: DeploymentPlan =>
           // create a new deployment to return to the previous state
           deploymentResult(result(groupManager.update(
             plan.original.id,

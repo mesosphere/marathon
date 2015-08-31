@@ -42,11 +42,14 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val shutdownHookModule = ShutdownHooks()
   private[this] lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
-  // CORE
-
   lazy val leadershipModule = new LeadershipModule(actorsModule.actorRefFactory)
+
+  // TASKS
+
   override lazy val taskBusModule = new TaskBusModule()
   override lazy val taskTrackerModule = new TaskTrackerModule(leadershipModule)
+
+  // OFFER MATCHING AND LAUNCHING TASKS
 
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
     // infrastructure

@@ -39,6 +39,17 @@ would assign these ports as host ports if available in the
 processed offer. That misled people into thinking that these ports corresponded to host ports. The new code always
 randomizes host ports assignment without `"requirePorts"` or explicit `"hostPort"` configuration.
 
+#### Specific "embed" parameters for app related information
+
+In this release, we introduce "embed" parameters for all GET requests in the
+app end-point that specify which information to embed. Right now, we deliver all
+information by default that we delivered before but we encourage you to specify
+embed parameters for the information that you need. 
+
+In the future, we will only 
+deliver information you explicitly requested by default, even though we will
+allow some compatibility configuration option. This improves performance by not
+returning information that you might not need.
 
 #### New `MARATHON_APP_DOCKER_IMAGE` environment variable
 

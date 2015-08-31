@@ -1,4 +1,4 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.health.Health

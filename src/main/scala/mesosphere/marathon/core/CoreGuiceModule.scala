@@ -8,6 +8,7 @@ import com.google.inject.name.Names
 import com.google.inject.{ AbstractModule, Inject, Provides, Scopes, Singleton }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.CoreGuiceModule.TaskStatusUpdateActorProvider
+import mesosphere.marathon.core.appinfo.{ AppInfoService, AppInfoModule }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -53,12 +54,17 @@ class CoreGuiceModule extends AbstractModule {
   @Provides @Singleton
   final def taskQueue(coreModule: CoreModule): LaunchQueue = coreModule.appOfferMatcherModule.taskQueue
 
+  @Provides @Singleton
+  final def appInfoService(appInfoModule: AppInfoModule): AppInfoService = appInfoModule.appInfoService
+
   override def configure(): Unit = {
     bind(classOf[CoreModule]).to(classOf[CoreModuleImpl]).in(Scopes.SINGLETON)
     bind(classOf[ActorRef])
       .annotatedWith(Names.named("taskStatusUpdate"))
       .toProvider(classOf[TaskStatusUpdateActorProvider])
       .asEagerSingleton()
+
+    bind(classOf[AppInfoModule]).asEagerSingleton()
   }
 }
 

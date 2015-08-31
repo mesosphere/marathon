@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v2
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller }
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.EnrichedTask
+import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ GroupManager, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }

@@ -1,16 +1,17 @@
 package mesosphere.marathon.api.v2
 
+import mesosphere.marathon.core.appinfo.AppSelector
 import mesosphere.marathon.state.AppDefinition
 import org.apache.log4j.Logger
 
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 
-case class LabelSelector(key: String, fn: String => Boolean, value: List[String]) {
+case class LabelSelector(key: String, fn: String => Boolean, value: List[String]) extends AppSelector {
   def matches(app: AppDefinition): Boolean = app.labels.contains(key) && fn(app.labels(key))
-
 }
-case class LabelSelectors(selectors: Seq[LabelSelector]) {
+
+case class LabelSelectors(selectors: Seq[LabelSelector]) extends AppSelector {
   def matches(app: AppDefinition): Boolean = selectors.forall(_.matches(app))
 }
 
