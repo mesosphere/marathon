@@ -7,8 +7,8 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import OfferMatcher.{ MatchedTasks, TaskWithSource }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig }
-import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.OfferData
+import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
+import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ MatchTimeout, OfferData }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.ResourceUtil
@@ -39,7 +39,8 @@ private[manager] object OfferMatcherManagerActor {
       sender: ActorRef,
       matcherQueue: Queue[OfferMatcher],
       tasks: Seq[TaskWithSource],
-      matchPasses: Int = 0) {
+      matchPasses: Int = 0,
+      resendThisOffer: Boolean = false) {
 
     def addMatcher(matcher: OfferMatcher): OfferData = copy(matcherQueue = matcherQueue.enqueue(matcher))
     def nextMatcherOpt: Option[(OfferMatcher, OfferData)] = {
@@ -59,6 +60,8 @@ private[manager] object OfferMatcherManagerActor {
       )
     }
   }
+
+  private case class MatchTimeout(offerId: OfferID)
 }
 
 private class OfferMatcherManagerActor private (
@@ -117,7 +120,7 @@ private class OfferMatcherManagerActor private (
   private[this] def receiveProcessOffer: Receive = {
     case ActorOfferMatcher.MatchOffer(deadline, offer: Offer) if !offersWanted =>
       log.debug(s"Ignoring offer ${offer.getId.getValue}: No one interested.")
-      sender() ! OfferMatcher.MatchedTasks(offer.getId, Seq.empty)
+      sender() ! OfferMatcher.MatchedTasks(offer.getId, Seq.empty, resendThisOffer = false)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer: Offer) =>
       log.debug(s"Start processing offer ${offer.getId.getValue}")
@@ -132,14 +135,14 @@ private class OfferMatcherManagerActor private (
       context.system.scheduler.scheduleOnce(
         clock.now().until(deadline),
         self,
-        OfferMatcher.MatchedTasks(offer.getId, Seq.empty))
+        MatchTimeout(offer.getId))
 
       // process offer for the first time
       scheduleNextMatcherOrFinish(data)
   }
 
   private[this] def receiveMatchedTasks: Receive = {
-    case OfferMatcher.MatchedTasks(offerId, addedTasks) =>
+    case OfferMatcher.MatchedTasks(offerId, addedTasks, resendOffer) =>
       def processAddedTasks(data: OfferData): OfferData = {
         val dataWithTasks = try {
           val (launchTasks, rejectedTasks) =
@@ -172,12 +175,18 @@ private class OfferMatcherManagerActor private (
 
       offerQueues.get(offerId) match {
         case Some(data) =>
-          val nextData = processAddedTasks(data.copy(matchPasses = data.matchPasses + 1))
+          val resend = data.resendThisOffer | resendOffer
+          val nextData = processAddedTasks(data.copy(matchPasses = data.matchPasses + 1, resendThisOffer = resend))
           scheduleNextMatcherOrFinish(nextData)
 
         case None =>
           addedTasks.foreach(_.reject(s"offer '${offerId.getValue}' already timed out"))
       }
+
+    case MatchTimeout(offerId) =>
+      // When the timeout is reached, we will answer with all matching tasks we found until then.
+      // Since we cannot be sure if we found all matching tasks, we set resendThisOffer to true.
+      offerQueues.get(offerId).foreach(sendMatchResult(_, resendThisOffer = true))
   }
 
   private[this] def scheduleNextMatcherOrFinish(data: OfferData): Unit = {
@@ -210,15 +219,18 @@ private class OfferMatcherManagerActor private (
           .recover {
             case NonFatal(e) =>
               log.warning("Received error from {}", e)
-              MatchedTasks(data.offer.getId, Seq.empty)
+              MatchedTasks(data.offer.getId, Seq.empty, resendThisOffer = true)
           }.pipeTo(self)
-      case None =>
-        data.sender ! OfferMatcher.MatchedTasks(data.offer.getId, data.tasks)
-        offerQueues -= data.offer.getId
-        log.info(s"Finished processing ${data.offer.getId.getValue}. " +
-          s"Matched ${data.tasks.size} tasks after ${data.matchPasses} passes. " +
-          s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala)} left.")
+      case None => sendMatchResult(data, data.resendThisOffer)
     }
+  }
+
+  private[this] def sendMatchResult(data: OfferData, resendThisOffer: Boolean): Unit = {
+    data.sender ! OfferMatcher.MatchedTasks(data.offer.getId, data.tasks, resendThisOffer)
+    offerQueues -= data.offer.getId
+    log.info(s"Finished processing ${data.offer.getId.getValue}. " +
+      s"Matched ${data.tasks.size} tasks after ${data.matchPasses} passes. " +
+      s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala)} left.")
   }
 }
 

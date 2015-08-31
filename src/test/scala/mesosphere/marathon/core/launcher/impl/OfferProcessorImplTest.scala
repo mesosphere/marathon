@@ -75,7 +75,7 @@ class OfferProcessorImplTest extends MarathonSpec {
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     verify(offerMatcher).matchOffer(deadline, offer)
-    verify(taskLauncher).declineOffer(offerId)
+    verify(taskLauncher).declineOffer(offerId, refuseSeconds = None)
   }
 
   test("match crashed => decline") {
@@ -89,7 +89,7 @@ class OfferProcessorImplTest extends MarathonSpec {
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     verify(offerMatcher).matchOffer(deadline, offer)
-    verify(taskLauncher).declineOffer(offerId)
+    verify(taskLauncher).declineOffer(offerId, refuseSeconds = None)
   }
 
   private[this] var clock: Clock = _
