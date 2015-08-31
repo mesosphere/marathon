@@ -1,11 +1,30 @@
 ## Changes from 0.10.0 to 0.11.0
 
-### (Potentially) Breaking Changes
+### Breaking Changes
+
+* Java 8 or higher is needed to run Marathon, since Java 6 and 7 support has reached end of life. 
 
 * `--revive_offers_for_new_apps` is now the default. If you want to avoid resetting filters
   if new tasks need to be started, you can disable this by `--disable_revive_offers_for_new_apps`.
   
 ### Overview
+
+#### Marathon uses Java 8 
+
+Java 8 has been out for more than a year now. The support for older versions of Java has reached end of life.
+We switched completely to the latest stable JVM release.
+We compile, test and run Marathon against Java 8.
+Note for the Marathon Docker image: the base image of Marathon is now the standard java:8-jdk docker image.
+
+#### Jetty 9 as Servlet Engine
+
+The latest Jetty servlet engine is used in this version of Marathon.
+Jetty 9 has a completely overhauled I/O layer, Servlet API 3.0, SPDY/3 and WebSocket support.
+
+#### Improved SSE handling
+
+As part of the Jetty 9 update, the SSE support for `/v2/events` has been improved.
+The event name `event: event-name` is added to every `data: json` entry for easier filtering and handling. 
 
 #### New versioning information in API and UI
 
