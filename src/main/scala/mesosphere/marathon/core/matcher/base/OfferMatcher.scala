@@ -24,8 +24,13 @@ object OfferMatcher {
     * A MatchedTasks reply does not guarantee that these tasks can actually be launched.
     * The launcher of message should setup some kind of timeout mechanism and handle
     * taskLaunchAccepted/taskLaunchRejected calls appropriately.
+    *
+    * @param offerId the identifier of the offer
+    * @param tasks the tasks that should be launched on that offer
+    * @param resendThisOffer true, if this offer could not be processed completely (e.g. timeout)
+    *                        and should be resend and processed again
     */
-  case class MatchedTasks(offerId: OfferID, tasks: Seq[TaskWithSource])
+  case class MatchedTasks(offerId: OfferID, tasks: Seq[TaskWithSource], resendThisOffer: Boolean = false)
 
   trait TaskLaunchSource {
     def taskLaunchAccepted(taskInfo: TaskInfo)

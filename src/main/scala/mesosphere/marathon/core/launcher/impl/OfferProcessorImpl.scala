@@ -42,9 +42,9 @@ private[launcher] class OfferProcessorImpl(
       .recover {
         case NonFatal(e) =>
           log.error(s"error while matching '${offer.getId.getValue}'", e)
-          MatchedTasks(offer.getId, Seq.empty)
+          MatchedTasks(offer.getId, Seq.empty, resendThisOffer = true)
       }.map {
-        case MatchedTasks(offerId, tasks) =>
+        case MatchedTasks(offerId, tasks, resendThisOffer) =>
           if (tasks.nonEmpty) {
             if (taskLauncher.launchTasks(offerId, tasks.map(_.taskInfo))) {
               log.debug("task launch successful for {}", offerId.getValue)
@@ -56,7 +56,9 @@ private[launcher] class OfferProcessorImpl(
             }
           }
           else {
-            taskLauncher.declineOffer(offerId)
+            //if the offer should be resent, than we ignore the configured decline offer duration
+            val duration: Option[Long] = if (resendThisOffer) None else conf.declineOfferDuration.get
+            taskLauncher.declineOffer(offerId, duration)
           }
       }
   }

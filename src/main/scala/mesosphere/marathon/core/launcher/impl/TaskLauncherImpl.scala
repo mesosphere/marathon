@@ -6,7 +6,7 @@ import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.TaskLauncher
 import org.apache.mesos.Protos.{ OfferID, Status, TaskInfo }
-import org.apache.mesos.SchedulerDriver
+import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.slf4j.LoggerFactory
 
 private[launcher] class TaskLauncherImpl(
@@ -21,9 +21,12 @@ private[launcher] class TaskLauncherImpl(
     }
   }
 
-  override def declineOffer(offerID: OfferID): Unit = {
+  override def declineOffer(offerID: OfferID, refuseSeconds: Option[Long]): Unit = {
     withDriver(s"declineOffer(${offerID.getValue})") {
-      _.declineOffer(offerID)
+      val filters = refuseSeconds
+        .map(seconds => Protos.Filters.newBuilder().setRefuseSeconds(seconds / 1000.0).build())
+        .getOrElse(Protos.Filters.getDefaultInstance)
+      _.declineOffer(offerID, filters)
     }
   }
 

@@ -17,5 +17,5 @@ trait TaskLauncher {
   /**
     * Decline the offer. We cannot use the offer afterwards anymore.
     */
-  def declineOffer(offerID: OfferID)
+  def declineOffer(offerID: OfferID, refuseSeconds: Option[Long])
 }
