@@ -37,8 +37,8 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
     **For Mesos 0.22.1+:**
 
     ``` bash
-    $ curl -O http://downloads.mesosphere.com/marathon/v0.10.0/marathon-0.10.0.tgz
-    $ tar xzf marathon-0.10.0.tgz
+    $ curl -O http://downloads.mesosphere.com/marathon/v0.10.1/marathon-0.10.1.tgz
+    $ tar xzf marathon-0.10.1.tgz
     ```
     
     We do not expect problems in combination with Mesos 0.21.* or 0.23.* but these combinations
