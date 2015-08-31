@@ -3,7 +3,7 @@ package mesosphere.marathon
 import java.util.concurrent.TimeoutException
 
 import akka.actor._
-import akka.event.{ LoggingReceive, EventStream }
+import akka.event.{ EventStream, LoggingReceive }
 import akka.pattern.ask
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.LeaderInfo
@@ -74,7 +74,7 @@ class MarathonSchedulerActor private (
 
     case RecoverDeployments(deployments) =>
       deployments.foreach { plan =>
-        log.info(s"Recovering deployment: $plan")
+        log.info(s"Recovering deployment:\n$plan")
         deploy(context.system.deadLetters, Deploy(plan, force = false))
       }
 

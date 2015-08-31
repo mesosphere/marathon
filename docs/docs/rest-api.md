@@ -274,11 +274,22 @@ Transfer-Encoding: chunked
             },
             "uris": [],
             "user": null,
-            "version": "2014-10-09T23:03:33.993Z"
+            "version": "2014-10-09T23:03:33.993Z",
+            "versionInfo": {
+                "lastConfigChangeAt": "2014-09-25T02:26:01.135Z",
+                "lastScalingAt": "2014-09-25T02:26:59.256Z"
+            }
         }
     ]
 }
 ```
+
+##### versionInfo with lastConfigChangeAt (Timestamp as String) and lastScalingAt (Timestamp as String)
+
+`"lastConfigChangeAt"` contains the time stamp of the last change to this app which was not simply a scaling
+or a restarting configuration.
+
+`"lastScalingAt"` contains the time stamp of the last change including changes like scaling or restarting the app.
 
 #### GET `/v2/apps/{appId}`
 
@@ -403,10 +414,21 @@ Transfer-Encoding: chunked
             "http://downloads.mesosphere.com/misc/toggle.tgz"
         ],
         "user": null,
-        "version": "2014-09-12T23:28:21.737Z"
+        "version": "2014-09-12T23:28:21.737Z",
+        "versionInfo": {
+            "lastConfigChangeAt": "2014-09-11T02:26:01.135Z",
+            "lastScalingAt": "2014-09-12T23:28:21.737Z"
+        }
     }
 }
 ```
+
+##### versionInfo with lastConfigChangeAt (Timestamp as String) and lastScalingAt (Timestamp as String)
+
+`"lastConfigChangeAt"` contains the time stamp of the last change to this app which was not simply a scaling
+or a restarting configuration.
+
+`"lastScalingAt"` contains the time stamp of the last change including changes like scaling or restarting the app.
 
 #### GET `/v2/apps/{appId}/versions`
 

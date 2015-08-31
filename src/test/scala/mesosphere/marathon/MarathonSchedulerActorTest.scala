@@ -323,10 +323,19 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   test("Deployment") {
     val probe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(
+      id = PathId("app1"),
+      cmd = Some("cmd"),
+      instances = 2,
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+    )
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
-    val appNew = app.copy(cmd = Some("cmd new"), version = Timestamp(1000))
+    val appNew = app.copy(
+      cmd = Some("cmd new"),
+      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
+    )
 
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
@@ -353,7 +362,13 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
   test("Deployment resets rate limiter for affected apps") {
     val probe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(
+      id = PathId("app1"),
+      cmd = Some("cmd"),
+      instances = 2,
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+    )
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val origGroup = Group(PathId("/foo/bar"), Set(app))
     val targetGroup = Group(PathId("/foo/bar"), Set())
@@ -389,7 +404,13 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("Deployment fail to acquire lock") {
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(
+      id = PathId("app1"),
+      cmd = Some("cmd"),
+      instances = 2,
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+    )
     val group = Group(PathId("/foo/bar"), Set(app))
 
     val plan = DeploymentPlan(Group.empty, group)
@@ -419,7 +440,13 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("Restart deployments after failover") {
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(
+      id = PathId("app1"),
+      cmd = Some("cmd"),
+      instances = 2,
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+    )
     val group = Group(PathId("/foo/bar"), Set(app))
 
     val plan = DeploymentPlan(Group.empty, group)
@@ -462,7 +489,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("Forced deployment") {
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
     val group = Group(PathId("/foo/bar"), Set(app))
 
     val plan = DeploymentPlan(Group.empty, group)
@@ -490,7 +517,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   }
 
   test("Cancellation timeout") {
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), version = Timestamp(0))
+    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
     val group = Group(PathId("/foo/bar"), Set(app))
 
     val plan = DeploymentPlan(Group.empty, group)

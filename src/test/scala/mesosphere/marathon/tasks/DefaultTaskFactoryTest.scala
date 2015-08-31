@@ -15,8 +15,7 @@ class DefaultTaskFactoryTest extends MarathonSpec {
       .setHostname("some_host")
       .setSlaveId(SlaveID("some slave ID"))
       .build()
-    val version: Timestamp = Timestamp(5)
-    val appDefinition: AppDefinition = AppDefinition(ports = List(), version = version)
+    val appDefinition: AppDefinition = AppDefinition(ports = List())
     val runningTasks: Set[MarathonTask] = Set(MarathonTask.newBuilder().setId("some task ID").build())
 
     when(taskIdUtil.newTaskId(appDefinition.id)).thenReturn(TaskID("some task ID"))
@@ -25,7 +24,7 @@ class DefaultTaskFactoryTest extends MarathonSpec {
 
     val expectedTask = MarathonTasks.makeTask(
       "some task ID", "some_host", List(),
-      List(), version, offer.getSlaveId
+      List(), appDefinition.version, offer.getSlaveId
     )
     assert(task.marathonTask == expectedTask)
   }

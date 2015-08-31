@@ -40,6 +40,8 @@ class V2AppDefinitionFormatsTest
     r1 \ "id" should equal (JsString("app1"))
     r1 \ "cmd" should equal (JsString("sleep 10"))
     r1 \ "version" should equal (JsString("1970-01-01T00:00:00.001Z"))
+    (r1 \ "versionInfo").asOpt[JsObject] should equal(None)
+
     // check default values
     r1 \ "args" should equal (JsNull)
     r1 \ "user" should equal (JsNull)
@@ -63,6 +65,17 @@ class V2AppDefinitionFormatsTest
     r1 \ "upgradeStrategy" should equal (Json.toJson(DefaultUpgradeStrategy))
   }
 
+  test("ToJson should serialize full version info") {
+    import Fixture._
+
+    val r1 = Json.toJson(a1.copy(versionInfo = Some(V2AppDefinition.VersionInfo(
+      lastScalingAt = Timestamp(2),
+      lastConfigChangeAt = Timestamp(1)
+    ))))
+    (r1 \ "versionInfo" \ "lastScalingAt").as[String] should equal("1970-01-01T00:00:00.002Z")
+    (r1 \ "versionInfo" \ "lastConfigChangeAt").as[String] should equal("1970-01-01T00:00:00.001Z")
+  }
+
   test("FromJson") {
     import Fixture._
     import AppDefinition._
@@ -72,6 +85,7 @@ class V2AppDefinitionFormatsTest
     r1.id should equal (a1.id)
     r1.cmd should equal (a1.cmd)
     r1.version should equal (Timestamp(1))
+    r1.versionInfo should equal (None)
     // check default values
     r1.args should equal (DefaultArgs)
     r1.user should equal (DefaultUser)
@@ -94,6 +108,20 @@ class V2AppDefinitionFormatsTest
     r1.dependencies should equal (DefaultDependencies)
     r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
     r1.acceptedResourceRoles should not be ('defined)
+  }
+
+  test("FromJSON should ignore VersionInfo") {
+    val app = Json.parse(
+      """{
+        |  "id": "test",
+        |  "version": "1970-01-01T00:00:00.002Z",
+        |  "versionInfo": {
+        |     "lastScalingAt": "1970-01-01T00:00:00.002Z",
+        |     "lastConfigChangeAt": "1970-01-01T00:00:00.001Z"
+        |  }
+        |}""".stripMargin).as[V2AppDefinition]
+
+    app.versionInfo should equal (None)
   }
 
   test("FromJSON should fail for empty id") {

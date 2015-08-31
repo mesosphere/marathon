@@ -5,13 +5,13 @@ import akka.event.EventStream
 import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder, MarathonConf, MarathonSpec }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, MarathonStore, PathId, Timestamp }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, MarathonStore, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.{ MarathonConf, MarathonScheduler, MarathonSchedulerDriverHolder, MarathonSpec }
 import mesosphere.util.Logging
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.{ Protos => mesos }
@@ -148,8 +148,9 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
   test("healthCounts") {
     val appId = "test".toRootPath
-    val version = Timestamp(1024)
-    appRepository.store(AppDefinition(id = appId, version = version))
+    val app: AppDefinition = AppDefinition(id = appId)
+    appRepository.store(app)
+    val version = app.version
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
     hcManager.add(appId, version, healthCheck)
@@ -184,8 +185,9 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
   test("statuses") {
     val appId = "test".toRootPath
-    val version = Timestamp(1024)
-    appRepository.store(AppDefinition(id = appId, version = version))
+    val app: AppDefinition = AppDefinition(id = appId)
+    appRepository.store(app)
+    val version = app.version
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
     hcManager.add(appId, version, healthCheck)
@@ -251,7 +253,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     val healthChecks = List(0, 1, 2).map { i =>
       (0 until i).map { j => HealthCheck(protocol = Protocol.COMMAND, gracePeriod = (i * 3 + j).seconds) }.toSet
     }
-    val versions = List(0: Long, 1, 2).map { Timestamp(_) }.toArray
+    val versions = List(0L, 1L, 2L).map { Timestamp(_) }.toArray
     val tasks = List(0, 1, 2).map { i =>
       MarathonTask.newBuilder
         .setId(TaskIdUtil.newTaskId(appId).getValue)
@@ -261,7 +263,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     def startTask(appId: PathId, task: MarathonTask, version: Timestamp, healthChecks: Set[HealthCheck]) = {
       Await.result(appRepository.store(AppDefinition(
         id = appId,
-        version = version,
+        versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )), 2.second)
       taskTracker.created(appId, task)

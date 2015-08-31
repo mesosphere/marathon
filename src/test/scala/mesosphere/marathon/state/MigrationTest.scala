@@ -29,6 +29,9 @@ class MigrationTest extends FunSuite with Mockito with Matchers {
     val appRepo = mock[AppRepository]
     val groupRepo = mock[GroupRepository]
     val config = mock[MarathonConf]
+    groupRepo.rootGroup() returns Future.successful(None)
+    groupRepo.store(any, any) returns Future.successful(Group.empty)
+
     store.load("internal:storage:version") returns Future.successful(None)
     store.create(any, any) returns Future.successful(mock[PersistentEntity])
     store.initialize() returns Future.successful(())

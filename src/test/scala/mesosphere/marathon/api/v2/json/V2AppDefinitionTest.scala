@@ -16,7 +16,7 @@ import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsNull, JsObject, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._

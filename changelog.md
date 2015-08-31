@@ -4,8 +4,14 @@
 
 * `--revive_offers_for_new_apps` is now the default. If you want to avoid resetting filters
   if new tasks need to be started, you can disable this by `--disable_revive_offers_for_new_apps`.
-
+  
 ### Overview
+
+#### New versioning information in API and UI
+
+We now have `"versionInfo"` with `"lastConfigChangeAt"` and `"lastScalingAt"` in the apps JSON of our API. 
+`"lastConfigChangeAt"` is the timestamp of the last change to the application that was not just a restart or
+a scaling operation. `"lastScalingAt"` is the time stamp of the last scaling or restart operation.
 
 #### No pseudo-deterministic assignment of host ports anymore
 
@@ -13,6 +19,7 @@ If you specify non-zero `"ports"` in your app JSON, they are used as service por
 would assign these ports as host ports if available in the
 processed offer. That misled people into thinking that these ports corresponded to host ports. The new code always
 randomizes host ports assignment without `"requirePorts"` or explicit `"hostPort"` configuration.
+
 
 #### New `MARATHON_APP_DOCKER_IMAGE` environment variable
 

@@ -441,7 +441,8 @@ trait V2Formats {
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             acceptedResourceRoles = extraFields.acceptedResourceRoles,
-            version = extraFields.version
+            version = extraFields.version,
+            versionInfo = None
           )
         }
       }
@@ -453,7 +454,7 @@ trait V2Formats {
     }
 
     Writes[V2AppDefinition] { app =>
-      Json.obj(
+      val appJson: JsObject = Json.obj(
         "id" -> app.id.toString,
         "cmd" -> app.cmd,
         "args" -> app.args,
@@ -482,8 +483,19 @@ trait V2Formats {
         "acceptedResourceRoles" -> app.acceptedResourceRoles,
         "version" -> app.version
       )
+
+      app.versionInfo.fold(appJson)(versionInfo => appJson + ("versionInfo" -> Json.toJson(versionInfo)))
     }
   }
+
+  implicit lazy val VersionInfoWrites: Writes[VersionInfo] =
+    Writes {
+      case VersionInfo(lastScalingAt, lastConfigChangeAt) =>
+        Json.obj(
+          "lastScalingAt" -> lastScalingAt,
+          "lastConfigChangeAt" -> lastConfigChangeAt
+        )
+    }
 
   implicit lazy val WithTaskCountsAndDeploymentsWrites: Writes[WithTaskCountsAndDeployments] =
     Writes { app =>

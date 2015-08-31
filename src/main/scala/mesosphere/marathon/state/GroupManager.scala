@@ -6,8 +6,8 @@ import javax.inject.{ Inject, Named }
 
 import akka.event.EventStream
 import com.google.inject.Singleton
-import mesosphere.marathon.api.v2.{ BeanValidation, ModelValidation }
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.api.v2.{ BeanValidation, ModelValidation }
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
@@ -135,6 +135,8 @@ class GroupManager @Singleton @Inject() (
     force: Boolean = false,
     toKill: Map[PathId, Set[MarathonTask]] = Map.empty): Future[DeploymentPlan] = serializeUpdates {
 
+    log.info(s"Upgrade group id:$gid version:$version with force:$force")
+
     def storeUpdatedApps(plan: DeploymentPlan): Future[Unit] = {
       plan.affectedApplicationIds.foldLeft(Future.successful(())) { (savedFuture, currentId) =>
         plan.target.app(currentId) match {
@@ -152,9 +154,11 @@ class GroupManager @Singleton @Inject() (
 
     val deployment = for {
       from <- rootGroup()
-      (to, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
+      (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
+      to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
       _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty))
       plan = DeploymentPlan(from, to, resolve, version, toKill)
+      _ = log.info(s"Computed new deployment plan:\n$plan")
       _ <- scheduler.deploy(plan, force)
       _ <- storeUpdatedApps(plan)
       _ <- groupRepo.store(zkName, plan.target)
@@ -162,7 +166,7 @@ class GroupManager @Singleton @Inject() (
 
     deployment.onComplete {
       case Success(plan) =>
-        log.info(s"Deployment acknowledged. Waiting to get processed: $plan")
+        log.info(s"Deployment acknowledged. Waiting to get processed:\n$plan")
         eventBus.publish(GroupChangeSuccess(gid, version.toString))
       case Failure(ex) =>
         log.warn(s"Deployment failed for change: $version", ex)

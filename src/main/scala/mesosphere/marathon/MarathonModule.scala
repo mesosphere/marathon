@@ -18,13 +18,13 @@ import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.event.{ HistoryActor, EventModule }
 import mesosphere.marathon.event.http.{
+  HttpEventStreamActor,
   HttpEventStreamActorMetrics,
-  HttpEventStreamHandleActor,
   HttpEventStreamHandle,
-  HttpEventStreamActor
+  HttpEventStreamHandleActor
 }
+import mesosphere.marathon.event.{ EventModule, HistoryActor }
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
@@ -32,10 +32,10 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker, _ }
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import mesosphere.util.SerializeExecution
+import mesosphere.util.state._
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.ZKStore
-import mesosphere.util.state._
 import org.apache.log4j.Logger
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
@@ -289,12 +289,11 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   def provideGroupRepository(
     store: PersistentStore,
-    appRepository: AppRepository,
     conf: MarathonConf,
     metrics: Metrics): GroupRepository = {
     new GroupRepository(
       new MarathonStore[Group](store, metrics, () => Group.empty, "group:"),
-      appRepository, conf.zooKeeperMaxVersions.get,
+      conf.zooKeeperMaxVersions.get,
       metrics
     )
   }
