@@ -16,12 +16,13 @@ import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ reset, spy, times, verify }
+import org.scalatest.Matchers
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.concurrent.ScalaFutures._
 
 import scala.collection._
 
-class TaskTrackerTest extends MarathonSpec {
+class TaskTrackerTest extends MarathonSpec with Matchers {
 
   val TEST_APP_NAME = "foo".toRootPath
   val TEST_TASK_ID = "sampleTask"
@@ -125,6 +126,16 @@ class TaskTrackerTest extends MarathonSpec {
     shouldContainTask(testAppTasks.values.toSet, task2)
     shouldContainTask(testAppTasks.values.toSet, task3)
     assert(testAppTasks.size == 3)
+  }
+
+  test("Clear state of TaskTracker") {
+    val taskId1 = taskIdUtil.taskId(TEST_APP_NAME)
+    val task1 = makeSampleTask(taskId1)
+    taskTracker.store(TEST_APP_NAME, task1).futureValue
+    val testAppTasks = taskTracker.get(TEST_APP_NAME)
+    taskTracker.apps should have size 1
+    taskTracker.clear()
+    taskTracker.apps should have size 0
   }
 
   test("TaskLifecycle") {
