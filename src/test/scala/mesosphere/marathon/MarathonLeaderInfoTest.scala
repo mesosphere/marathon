@@ -7,10 +7,9 @@ import com.codahale.metrics.MetricRegistry
 import com.twitter.common.zookeeper.Candidate
 import mesosphere.marathon.metrics.Metrics
 import org.mockito.Mockito
-import org.scalatest.{Matchers, GivenWhenThen}
+import org.scalatest.{ Matchers, GivenWhenThen }
 
-class MarathonLeaderInfoTest extends MarathonSpec with GivenWhenThen with Matchers
-{
+class MarathonLeaderInfoTest extends MarathonSpec with GivenWhenThen with Matchers {
   class Fixture {
     lazy val candidate = mock[Candidate]
     lazy val maybeCandidate = Some(candidate)
