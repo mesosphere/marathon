@@ -18,13 +18,8 @@ import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.event.{ HistoryActor, EventModule }
-import mesosphere.marathon.event.http.{
-  HttpEventStreamActorMetrics,
-  HttpEventStreamHandleActor,
-  HttpEventStreamHandle,
-  HttpEventStreamActor
-}
+import mesosphere.marathon.event.http._
+import mesosphere.marathon.event.{ EventModule, HistoryActor }
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
@@ -32,12 +27,12 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker, _ }
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import mesosphere.util.SerializeExecution
+import mesosphere.util.state._
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.ZKStore
-import mesosphere.util.state._
 import org.apache.log4j.Logger
-import org.apache.mesos.state.ZooKeeperState
+import org.apache.mesos.state.{ LogState, ZooKeeperState }
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.ZooDefs.Ids
 
@@ -143,11 +138,24 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       )
       new MesosStateStore(state, conf.zkTimeoutDuration)
     }
-    conf.internalStoreBackend.get match {
-      case Some("zk")              => directZK()
-      case Some("mesos_zk")        => mesosZK()
-      case Some("mem")             => new InMemoryStore()
-      case backend: Option[String] => throw new IllegalArgumentException(s"Storage backend $backend not known!")
+    def mesosLog(): PersistentStore = {
+      val state = new LogState(
+        conf.zkHosts,
+        conf.zkTimeoutDuration.toMillis,
+        TimeUnit.MILLISECONDS,
+        conf.storeMesosLogZkPath(),
+        conf.storeMesosLogQuorum(),
+        conf.storeMesosLogPath(),
+        conf.storeMesosLogDiffsBetweenSnapshot()
+      )
+      new MesosStateStore(state, conf.zkTimeoutDuration)
+    }
+    conf.storeBackend.get match {
+      case Some("zk")        => directZK()
+      case Some("mesos_zk")  => mesosZK()
+      case Some("mesos_log") => mesosLog()
+      case Some("mem")       => new InMemoryStore()
+      case backend: Any      => throw new IllegalArgumentException(s"Storage backend $backend not known!")
     }
   }
 
