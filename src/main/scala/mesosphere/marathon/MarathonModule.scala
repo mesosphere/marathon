@@ -256,19 +256,15 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     store: PersistentStore,
     conf: MarathonConf,
     metrics: Metrics): TaskFailureRepository = {
-    import mesosphere.marathon.state.PathId
-    import org.apache.mesos.{ Protos => mesos }
     new TaskFailureRepository(
       new MarathonStore[TaskFailure](
         store,
         metrics,
-        () => TaskFailure(
-          PathId.empty,
-          mesos.TaskID.newBuilder().setValue("").build,
-          mesos.TaskState.TASK_STAGING
-        )
+        () => TaskFailure.empty,
+        prefix = "taskFailure:"
       ),
-      conf.zooKeeperMaxVersions.get
+      conf.zooKeeperMaxVersions.get,
+      metrics
     )
   }
 
@@ -279,7 +275,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     conf: MarathonConf,
     metrics: Metrics): AppRepository = {
     new AppRepository(
-      new MarathonStore[AppDefinition](store, metrics, () => AppDefinition.apply()),
+      new MarathonStore[AppDefinition](store, metrics, () => AppDefinition.apply(), prefix = "app:"),
       maxVersions = conf.zooKeeperMaxVersions.get,
       metrics
     )

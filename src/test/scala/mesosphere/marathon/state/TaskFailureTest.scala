@@ -1,25 +1,13 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.Protos
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.Matchers
-import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.Json
 
 class TaskFailureTest extends MarathonSpec with Matchers {
-
-  lazy val taskFailure = TaskFailure(
-    appId = "/group/app".toPath,
-    taskId = mesos.TaskID.newBuilder.setValue("group_app-12345").build,
-    state = mesos.TaskState.TASK_FAILED,
-    message = "Process exited with status [1]",
-    host = "slave5.mega.co",
-    version = Timestamp(1000),
-    timestamp = Timestamp(2000)
-  )
+  import TaskFailureTestHelper.taskFailure
 
   test("ToProto") {
     val proto = taskFailure.toProto

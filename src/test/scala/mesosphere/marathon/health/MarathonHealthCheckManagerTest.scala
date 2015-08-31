@@ -42,7 +42,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     config.afterInit()
     taskTracker = new TaskTracker(new InMemoryStore, defaultConfig(), metrics)
     appRepository = new AppRepository(
-      new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition()),
+      new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), "app:"),
       None,
       metrics)
 

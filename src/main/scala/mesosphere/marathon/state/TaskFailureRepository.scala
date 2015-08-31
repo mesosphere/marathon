@@ -1,17 +1,22 @@
 package mesosphere.marathon.state
 
-import scala.collection.mutable
+import mesosphere.marathon.metrics.Metrics
 
-class TaskFailureRepository(store: EntityStore[TaskFailure], maxVersions: Option[Int] = Some(1)) {
+import scala.concurrent.Future
 
-  protected[this] val taskFailures = mutable.Map[PathId, TaskFailure]()
+/**
+  * Stores the last TaskFailure per app id.
+  */
+class TaskFailureRepository(
+  protected val store: EntityStore[TaskFailure],
+  protected val maxVersions: Option[Int] = Some(1),
+  protected val metrics: Metrics)
+    extends EntityRepository[TaskFailure] {
 
-  def store(id: PathId, value: TaskFailure): Unit =
-    synchronized { taskFailures(id) = value }
+  def store(id: PathId, value: TaskFailure): Future[TaskFailure] = super.storeByName(id.safePath, value)
 
-  def expunge(id: PathId): Unit =
-    synchronized { taskFailures -= id }
+  def expunge(id: PathId): Future[Iterable[Boolean]] = super.expunge(id.safePath)
 
-  def current(id: PathId): Option[TaskFailure] = taskFailures.get(id)
+  def current(id: PathId): Future[Option[TaskFailure]] = super.currentVersion(id.safePath)
 
 }

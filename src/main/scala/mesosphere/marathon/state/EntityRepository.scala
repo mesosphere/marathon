@@ -5,21 +5,21 @@ import scala.concurrent.Future
 trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
   import mesosphere.util.ThreadPoolContext.context
 
-  def store: EntityStore[T]
-  def maxVersions: Option[Int]
+  protected def store: EntityStore[T]
+  protected def maxVersions: Option[Int]
 
   protected val ID_DELIMITER = ":"
 
   /**
     * Returns the most recently stored entity with the supplied id.
     */
-  def currentVersion(id: String): Future[Option[T]] =
+  protected def currentVersion(id: String): Future[Option[T]] =
     timedRead { this.store.fetch(id) }
 
   /**
     * Returns the entity with the supplied id and version.
     */
-  def entity(id: String, version: Timestamp): Future[Option[T]] = timedRead {
+  protected def entity(id: String, version: Timestamp): Future[Option[T]] = timedRead {
     val key = id + ID_DELIMITER + version.toString
     this.store.fetch(key)
   }
@@ -38,7 +38,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
   /**
     * Returns the current version for all entities.
     */
-  def current(): Future[Iterable[T]] = timedRead {
+  protected def current(): Future[Iterable[T]] = timedRead {
     allIds().flatMap { names =>
       Future.sequence(names.map { name =>
         currentVersion(name)
@@ -73,7 +73,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
     }
   }
 
-  def limitNumberOfVersions(id: String): Future[Iterable[Boolean]] = timedWrite {
+  private[this] def limitNumberOfVersions(id: String): Future[Iterable[Boolean]] = timedWrite {
     val maximum = maxVersions.map { maximum =>
       listVersions(id).flatMap { versions =>
         Future.sequence(versions.drop(maximum).map(version => store.expunge(id + ID_DELIMITER + version)))
@@ -84,9 +84,16 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
 
   protected def storeWithVersion(id: String, version: Timestamp, t: T): Future[T] = {
     for {
-      alias <- this.store.store(id, t)
-      result <- this.store.store(id + ID_DELIMITER + version, t)
+      alias <- storeByName(id, t)
+      result <- storeByName(id + ID_DELIMITER + version, t)
       limit <- limitNumberOfVersions(id)
     } yield result
+  }
+
+  /**
+    * Stores the given entity directly under the given id without a second versioned store.
+    */
+  protected def storeByName(id: String, t: T): Future[T] = {
+    this.store.store(id, t)
   }
 }
