@@ -1,3 +1,6 @@
+import com.amazonaws.auth.InstanceProfileCredentialsProvider
+import ohnosequences.sbt.SbtS3Resolver
+import ohnosequences.sbt.SbtS3Resolver._
 import sbt._
 import Keys._
 import sbtassembly.Plugin._
@@ -13,32 +16,50 @@ import ReleasePlugin._
 import ReleaseStateTransformations._
 
 object MarathonBuild extends Build {
+  lazy val marathonInterface: Project = Project(
+    id = "marathon-interface",
+    base = file("marathon-interface"),
+    settings = baseSettings ++
+      asmSettings ++
+      formatSettings ++
+      scalaStyleSettings ++
+      publishSettings ++
+      Seq(
+        libraryDependencies ++= Dependencies.marathonInterface
+      )
+  )
+
   lazy val root: Project = Project(
     id = "marathon",
     base = file("."),
     settings = baseSettings ++
-               asmSettings ++
-               customReleaseSettings ++
-               formatSettings ++
-               scalaStyleSettings ++
-               revolverSettings ++
-               graphSettings ++
-               testSettings ++
-               integrationTestSettings ++
-               teamCitySetEnvSettings ++
-               Seq(
-                 unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
-                 libraryDependencies ++= Dependencies.root,
-                 parallelExecution in Test := false,
-                 fork in Test := true
-               )
-    )
+      buildInfoSettings ++
+      asmSettings ++
+      customReleaseSettings ++
+      formatSettings ++
+      scalaStyleSettings ++
+      revolverSettings ++
+      graphSettings ++
+      testSettings ++
+      integrationTestSettings ++
+      teamCitySetEnvSettings ++
+      Seq(
+        unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
+        libraryDependencies ++= Dependencies.root,
+        parallelExecution in Test := false,
+        sourceGenerators in Compile <+= buildInfo,
+        buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
+        buildInfoPackage := "mesosphere.marathon",
+        fork in Test := true
+      )
+  )
     .configs(IntegrationTest)
+    .dependsOn(marathonInterface)
     // run mesos-simulation/test:test when running test
-    .settings((test in Test) <<= (test in Test) dependsOn (test in Test in LocalProject("mesosSimulation")))
+    .settings((test in Test) <<= (test in Test) dependsOn (test in Test in LocalProject("mesos-simulation")))
 
   lazy val mesosSimulation: Project = Project(
-    id = "mesosSimulation",
+    id = "mesos-simulation",
     base = file("mesos-simulation"),
     settings = baseSettings ++
       formatSettings ++
@@ -87,7 +108,7 @@ object MarathonBuild extends Build {
 
   lazy val IntegrationTest = config("integration") extend Test
 
-  lazy val baseSettings = Defaults.defaultSettings ++ buildInfoSettings ++ Seq (
+  lazy val baseSettings = Defaults.defaultSettings ++ Seq (
     organization := "mesosphere",
     scalaVersion := "2.11.7",
     crossScalaVersions := Seq(scalaVersion.value),
@@ -110,10 +131,7 @@ object MarathonBuild extends Build {
       "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
       "Spray Maven Repository"    at "http://repo.spray.io/"
     ),
-    sourceGenerators in Compile <+= buildInfo,
-    fork in Test := true,
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
-    buildInfoPackage := "mesosphere.marathon"
+    fork in Test := true
   )
 
   lazy val asmSettings = assemblySettings ++ Seq(
@@ -201,10 +219,20 @@ object MarathonBuild extends Build {
       (onLoad in Global).value
     }
   )
+
+  lazy val publishSettings = S3Resolver.defaults ++ Seq(
+    publishTo := Some(s3resolver.value(
+      "Mesosphere Public Repo (S3)",
+      s3("downloads.mesosphere.io/maven")
+    )),
+    SbtS3Resolver.s3credentials := new InstanceProfileCredentialsProvider()
+  )
 }
 
 object Dependencies {
   import Dependency._
+
+  val marathonInterface = Seq.empty[ModuleID]
 
   val root = Seq(
     // runtime

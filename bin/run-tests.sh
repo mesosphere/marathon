@@ -129,5 +129,5 @@ docker run \
     marathon-buildbase:$BUILD_ID \
     bash -c '
     sbt -Dsbt.log.format=false test integration:test &&\
-    sbt -Dsbt.log.format=false "project mesosSimulation" integration:test "test:runMain mesosphere.mesos.scale.DisplayAppScalingResults"' \
+    sbt -Dsbt.log.format=false "project mesos-simulation" integration:test "test:runMain mesosphere.mesos.scale.DisplayAppScalingResults"' \
     || fatal "build/tests failed"
