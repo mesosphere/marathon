@@ -15,7 +15,7 @@ class MarathonStore[S <: MarathonState[_, S]](
     store: PersistentStore,
     metrics: Metrics,
     newState: () => S,
-    prefix: String = "app:")(implicit ct: ClassTag[S]) extends EntityStore[S] {
+    prefix: String)(implicit ct: ClassTag[S]) extends EntityStore[S] {
 
   import ThreadPoolContext.context
   private[this] val log = LoggerFactory.getLogger(getClass)

@@ -45,6 +45,14 @@ object TaskFailure {
 
   import mesosphere.marathon.event.MesosStatusUpdateEvent
 
+  def empty: TaskFailure = {
+    TaskFailure(
+      PathId.empty,
+      mesos.TaskID.newBuilder().setValue("").build,
+      mesos.TaskState.TASK_STAGING
+    )
+  }
+
   def apply(proto: Protos.TaskFailure): TaskFailure =
     TaskFailure(
       appId = proto.getAppId.toPath,

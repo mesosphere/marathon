@@ -69,7 +69,7 @@ class AppsResource @Inject() (
               enrichedTasks(app),
               healthCounts(app),
               runningDeployments,
-              taskFailureRepository.current(app.id)
+              result(taskFailureRepository.current(app.id))
             )
           )
         }
@@ -126,7 +126,7 @@ class AppsResource @Inject() (
           enrichedTasks(app),
           healthCounts(app),
           runningDeployments,
-          taskFailureRepository.current(app.id)
+          result(taskFailureRepository.current(app.id))
         )
 
         WithTasksAndDeploymentsAndFailuresWrites.writes(enrichedApp)
@@ -139,7 +139,7 @@ class AppsResource @Inject() (
           enrichedTasks(app),
           healthCounts(app),
           runningDeployments,
-          taskFailureRepository.current(app.id)
+          result(taskFailureRepository.current(app.id))
         )
         ok(jsonObjString("app" -> WithTasksAndDeploymentsAndFailuresWrites.writes(mapped)).toString())
 
