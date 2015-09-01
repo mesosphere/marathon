@@ -133,7 +133,7 @@ available resources of a single node in the cluster. Before this <span class="la
 Marathon would only start a single task per
 resource offer, which led to slow task launching in smaller clusters. 
 
-### Marathon after 0.11.0 (including)
+### Marathon after 0.10.0 (including)
 
 In order to speed up task launching and use the
 resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm which tries
@@ -148,32 +148,32 @@ To prevent overloading Mesos itself, you can also restrict how many tasks Marath
 By default, we allow 1000 unconfirmed task launches every 30 seconds. In addition, Marathon launches
 more tasks when it gets feedback about running and healthy tasks from Mesos.
     
-* <span class="label label-default">v0.11.0</span> `--launch_token_refresh_interval` (Optional. Default: 30000): 
+* <span class="label label-default">v0.10.0</span> `--launch_token_refresh_interval` (Optional. Default: 30000): 
     The interval (ms) in which to refresh the launch tokens to `--launch_token_count`.
-* <span class="label label-default">v0.11.0</span> `--launch_tokens` (Optional. Default: 1000): 
+* <span class="label label-default">v0.10.0</span> `--launch_tokens` (Optional. Default: 1000): 
     Launch tokens per interval.
     
 To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
 incoming resource offer.
 
-* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 1000): 
+* <span class="label label-default">v0.10.0</span> `--offer_matching_timeout` (Optional. Default: 1000): 
     Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
     All already matched tasks are launched.
 
 When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
 Marathon can request all available offers from Mesos again -- even those that it has recently rejected. To avoid
-calling the underlying `reviveOffers` API call to often, you can configure the minimal delay between subsequent
+calling the underlying `reviveOffers` API call too often, you can configure the minimal delay between subsequent
 invocations of this call.
 
-* <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 5000): 
+* <span class="label label-default">v0.10.0</span> `--min_revive_offers_interval` (Optional. Default: 5000): 
     Do not ask for all offers (also already seen ones) more often than this interval (ms).
     
 If you want to disable calling reviveOffers (not recommended), you can use:
     
-* <span class="label label-default">v0.11.0</span> `--disable_revive_offers_for_new_apps`
+* <span class="label label-default">v0.10.0</span> `--disable_revive_offers_for_new_apps`
 
 
-### Marathon after 0.8.2 (including) and before 0.11.0
+### Marathon after 0.8.2 (including) and before 0.10.0
 
 In order to speed up task launching and use the
 resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm which tries
