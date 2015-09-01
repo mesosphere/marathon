@@ -117,7 +117,7 @@ class MarathonSchedulerService @Inject() (
   def listAppVersions(appId: PathId): Iterable[Timestamp] =
     Await.result(appRepository.listVersions(appId), config.zkTimeoutDuration)
 
-  def listRunningDeployments(): Future[Seq[(DeploymentPlan, DeploymentStepInfo)]] =
+  def listRunningDeployments(): Future[Seq[DeploymentStepInfo]] =
     (schedulerActor ? RetrieveRunningDeployments)
       .recoverWith {
         case _: TimeoutException =>

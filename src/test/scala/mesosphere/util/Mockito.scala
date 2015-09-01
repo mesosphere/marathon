@@ -20,6 +20,10 @@ trait Mockito extends MockitoSugar {
   def atLeast(num: Int) = M.atLeast(num)
   def atMost(num: Int) = M.atMost(num)
 
+  def noMoreInteractions(mocks: AnyRef*): Unit = {
+    M.verifyNoMoreInteractions(mocks: _*)
+  }
+
   class MockAnswer[T](function: Array[AnyRef] => T) extends Answer[T] {
     def answer(invocation: InvocationOnMock): T = {
       function(invocation.getArguments)

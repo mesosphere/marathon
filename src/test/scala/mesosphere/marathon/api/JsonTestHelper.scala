@@ -15,7 +15,7 @@ object JsonTestHelper extends Assertions with Matchers {
   }
 
   def assertThatJsonOf[T](value: T)(implicit writes: Writes[T]): AssertThatJsonString = {
-    AssertThatJsonString(Json.stringify(Json.toJson(value)))
+    AssertThatJsonString(Json.prettyPrint(Json.toJson(value)))
   }
 
   def assertThatJsonString(actual: String): AssertThatJsonString = {
@@ -46,17 +46,20 @@ object JsonTestHelper extends Assertions with Matchers {
 
     def containsEverythingInJsonString(expected: String): Unit = {
       val diff = JsonDiff.diff(expected, actual)
-      require(diff.ops.forall(isAddition), s"unexpected differences in actual json: ${diff.ops.filter(!isAddition(_))}")
+      require(diff.ops.forall(isAddition), s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\n${diff.ops.filter(!isAddition(_))}")
+    }
+
+    def containsEverythingInJsonOf[T](expected: T)(implicit writes: Writes[T]): Unit = {
+      correspondsToJsonString(Json.prettyPrint(Json.toJson(expected)))
     }
 
     def correspondsToJsonString(expected: String): Unit = {
       val diff = JsonDiff.diff(expected, actual)
-      require(diff.ops.isEmpty, s"unexpected differences in actual json: $diff")
+      require(diff.ops.isEmpty, s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\n$diff")
     }
 
     def correspondsToJsonOf[T](expected: T)(implicit writes: Writes[T]): Unit = {
-      val diff = JsonDiff.diff(Json.stringify(Json.toJson(expected)), actual)
-      require(diff.ops.isEmpty, s"unexpected differences in actual json: $diff")
+      correspondsToJsonString(Json.prettyPrint(Json.toJson(expected)))
     }
   }
 

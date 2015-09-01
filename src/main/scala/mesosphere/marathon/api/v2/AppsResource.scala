@@ -9,16 +9,14 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.V2AppDefinition.WithTasksAndDeployments
-import mesosphere.marathon.api.v2.json.{ EnrichedTask, V2AppDefinition, V2AppUpdate }
-import mesosphere.marathon.api.{ MarathonMediaType, RestResource, TaskKiller }
+import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate }
+import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
+import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
-import mesosphere.marathon.health.{ HealthCheckManager, HealthCounts }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException }
+import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
@@ -29,61 +27,26 @@ import scala.concurrent.Future
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppsResource @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
+    appTasksRes: AppTasksResource,
     service: MarathonSchedulerService,
-    taskTracker: TaskTracker,
-    taskKiller: TaskKiller,
-    healthCheckManager: HealthCheckManager,
-    taskFailureRepository: TaskFailureRepository,
+    appInfoService: AppInfoService,
     val config: MarathonConf,
     groupManager: GroupManager) extends RestResource {
 
   import mesosphere.util.ThreadPoolContext.context
 
-  val ListApps = """^((?:.+/)|)\*$""".r
-  val EmbedTasks = "apps.tasks"
-  val EmbedTasksAndFailures = "apps.failures"
+  private[this] val log = LoggerFactory.getLogger(getClass)
+  private[this] val ListApps = """^((?:.+/)|)\*$""".r
 
   @GET
   @Timed
   def index(@QueryParam("cmd") cmd: String,
             @QueryParam("id") id: String,
             @QueryParam("label") label: String,
-            @QueryParam("embed") embed: String): String = {
-    val apps = search(Option(cmd), Option(id), Option(label))
-    val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
-    val mapped = embed match {
-      case EmbedTasks =>
-        apps.map { app =>
-          val enrichedApp = V2AppDefinition(app).withTasksAndDeployments(
-            enrichedTasks(app),
-            healthCounts(app),
-            runningDeployments
-          )
-          WithTasksAndDeploymentsWrites.writes(enrichedApp)
-        }
-
-      case EmbedTasksAndFailures =>
-        apps.map { app =>
-          WithTasksAndDeploymentsAndFailuresWrites.writes(
-            V2AppDefinition(app).withTasksAndDeploymentsAndFailures(
-              enrichedTasks(app),
-              healthCounts(app),
-              runningDeployments,
-              result(taskFailureRepository.current(app.id))
-            )
-          )
-        }
-
-      case _ =>
-        apps.map { app =>
-          val enrichedApp = V2AppDefinition(app).withTaskCountsAndDeployments(
-            enrichedTasks(app),
-            healthCounts(app),
-            runningDeployments
-          )
-          WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
-        }
-    }
+            @QueryParam("embed") embed: java.util.Set[String]): String = {
+    val selector = search(Option(cmd), Option(id), Option(label))
+    val resolvedEmbed = AppInfoEmbedResolver.resolve(embed) + /* deprecated */ AppInfo.Embed.Counts
+    val mapped = result(appInfoService.queryAll(selector, resolvedEmbed))
 
     jsonObjString("apps" -> mapped)
   }
@@ -101,49 +64,39 @@ class AppsResource @Inject() (
 
     val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
 
-    val appWithDeployments: WithTasksAndDeployments = V2AppDefinition(app).withTasksAndDeployments(
-      appTasks = Nil,
-      healthCounts = HealthCounts(0, 0, 0),
-      runningDeployments = Seq(plan)
+    val appWithDeployments = AppInfo(
+      app,
+      maybeCounts = Some(TaskCounts.zero),
+      maybeTasks = Some(Seq.empty),
+      maybeDeployments = Some(Seq(Identifiable(plan.id)))
     )
 
     maybePostEvent(req, appWithDeployments.app)
     Response
       .created(new URI(app.id.toString))
-      .entity(jsonString(appWithDeployments)(WithTaskCountsAndDeploymentsWrites))
+      .entity(jsonString(appWithDeployments))
       .build()
   }
 
   @GET
   @Path("""{id:.+}""")
   @Timed
-  def show(@PathParam("id") id: String): Response = {
-    def runningDeployments: Seq[DeploymentPlan] = result(service.listRunningDeployments()).map(r => r._1)
+  def show(@PathParam("id") id: String, @QueryParam("embed") embed: java.util.Set[String]): Response = {
+    val resolvedEmbed = AppInfoEmbedResolver.resolve(embed) ++ Set(
+      // deprecated. For compatability.
+      AppInfo.Embed.Counts, AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments
+    )
     def transitiveApps(gid: PathId): Response = {
-      val apps = result(groupManager.group(gid)).map(group => group.transitiveApps).getOrElse(Nil)
-      val withTasks = apps.map { app =>
-        val enrichedApp = V2AppDefinition(app).withTasksAndDeploymentsAndFailures(
-          enrichedTasks(app),
-          healthCounts(app),
-          runningDeployments,
-          result(taskFailureRepository.current(app.id))
-        )
-
-        WithTasksAndDeploymentsAndFailuresWrites.writes(enrichedApp)
-      }
+      val withTasks = result(appInfoService.queryAllInGroup(gid, resolvedEmbed))
       ok(jsonObjString("*" -> withTasks))
     }
-    def app(): Future[Response] = groupManager.app(id.toRootPath).map {
-      case Some(app) =>
-        val mapped = V2AppDefinition(app).withTasksAndDeploymentsAndFailures(
-          enrichedTasks(app),
-          healthCounts(app),
-          runningDeployments,
-          result(taskFailureRepository.current(app.id))
-        )
-        ok(jsonObjString("app" -> WithTasksAndDeploymentsAndFailuresWrites.writes(mapped)).toString())
+    def app(): Future[Response] = {
+      val maybeAppInfo = appInfoService.queryForAppId(id.toRootPath, resolvedEmbed)
 
-      case None => unknownApp(id.toRootPath)
+      maybeAppInfo.map {
+        case Some(appInfo) => ok(jsonObjString("app" -> appInfo))
+        case None          => unknownApp(id.toRootPath)
+      }
     }
     id match {
       case ListApps(gid) => transitiveApps(gid.toRootPath)
@@ -166,7 +119,7 @@ class AppsResource @Inject() (
     val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, newVersion), newVersion, force))
 
     val response = plan.original.app(appId).map(_ => Response.ok()).getOrElse(Response.created(new URI(appId.toString)))
-    maybePostEvent(req, V2AppDefinition(plan.target.app(appId).get))
+    maybePostEvent(req, plan.target.app(appId).get)
     deploymentResult(plan, response)
   }
 
@@ -201,8 +154,7 @@ class AppsResource @Inject() (
   }
 
   @Path("{appId:.+}/tasks")
-  def appTasksResource(): AppTasksResource =
-    new AppTasksResource(service, taskTracker, taskKiller, healthCheckManager, config, groupManager)
+  def appTasksResource(): AppTasksResource = appTasksRes
 
   @Path("{appId:.+}/versions")
   def appVersionsResource(): AppVersionsResource = new AppVersionsResource(service, config)
@@ -248,31 +200,16 @@ class AppsResource @Inject() (
     app
   }
 
-  private def enrichedTasks(app: AppDefinition): Seq[EnrichedTask] = {
-    val tasks = taskTracker.get(app.id).map { task =>
-      task.getId -> task
-    }.toMap
+  private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =
+    eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app))
 
-    for {
-      (taskId, results) <- result(healthCheckManager.statuses(app.id)).to[Seq]
-      task <- tasks.get(taskId)
-    } yield EnrichedTask(app.id, task, results)
-  }
-
-  private def healthCounts(app: AppDefinition): HealthCounts = result(healthCheckManager.healthCounts(app.id))
-
-  private def maybePostEvent(req: HttpServletRequest, app: V2AppDefinition) =
-    eventBus.publish(ApiPostEvent(req.getRemoteAddr, req.getRequestURI, app.toAppDefinition))
-
-  private[v2] def search(cmd: Option[String], id: Option[String], label: Option[String]): Iterable[AppDefinition] = {
+  private[v2] def search(cmd: Option[String], id: Option[String], label: Option[String]): AppSelector = {
     def containCaseInsensitive(a: String, b: String): Boolean = b.toLowerCase contains a.toLowerCase
-    val selectors = label.map(new LabelSelectorParsers().parsed)
-
-    result(groupManager.rootGroup()).transitiveApps.filter { app =>
-      val appMatchesCmd = cmd.fold(true)(c => app.cmd.exists(containCaseInsensitive(c, _)))
-      val appMatchesId = id.fold(true)(s => containCaseInsensitive(s, app.id.toString))
-      val appMatchesLabel = selectors.fold(true)(_.matches(app))
-      appMatchesCmd && appMatchesId && appMatchesLabel
-    }
+    val selectors = Seq[Option[AppSelector]](
+      cmd.map(c => AppSelector(_.cmd.exists(containCaseInsensitive(c, _)))),
+      id.map(s => AppSelector(app => containCaseInsensitive(s, app.id.toString))),
+      label.map(new LabelSelectorParsers().parsed)
+    ).flatten
+    AppSelector.forall(selectors)
   }
 }

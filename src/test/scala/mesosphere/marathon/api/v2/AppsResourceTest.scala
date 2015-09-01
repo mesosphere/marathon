@@ -5,16 +5,17 @@ import javax.validation.ConstraintViolationException
 
 import akka.event.EventStream
 import mesosphere.marathon._
-import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller }
 import mesosphere.marathon.api.v2.json.V2AppDefinition
+import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller }
+import mesosphere.marathon.core.appinfo.{ EnrichedTask, TaskCounts, AppInfo, AppInfoService }
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, JsValue, Json }
+import collection.immutable
 
 import scala.concurrent.Future
 
@@ -33,18 +34,18 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     groupManager.rootGroup() returns Future.successful(group)
 
     When("The create request is made")
-    val response = appsResource.create(req, body, false)
+    val response = appsResource.create(req, body, force = false)
 
     Then("It is successful")
     response.getStatus should be(201)
-    val expectedJson: JsValue = Json.toJson(app).as[JsObject] ++ Json.obj(
-      "deployments" -> Seq.empty[JsObject],
-      "tasksHealthy" -> 0,
-      "tasksRunning" -> 0,
-      "tasksStaged" -> 0,
-      "tasksUnhealthy" -> 0
+
+    val expected = AppInfo(
+      app.toAppDefinition,
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
     )
-    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expectedJson)
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
   }
 
   test("Create a new app fails with Validation errors") {
@@ -94,30 +95,34 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
   }
 
   test("Search apps can be filtered") {
-    val app1 = AppDefinition(id = "/app/service-a".toRootPath, cmd = Some("party hard"), labels = Map("a" -> "1", "b" -> "2"))
-    val app2 = AppDefinition(id = "/app/service-b".toRootPath, cmd = Some("work hard"), labels = Map("a" -> "1", "b" -> "3"))
-    val group = Group(id = PathId.empty, apps = Set(app1, app2))
-    groupManager.rootGroup() returns Future.successful(group)
+    val app1 = AppDefinition(id = PathId("/app/service-a"), cmd = Some("party hard"), labels = Map("a" -> "1", "b" -> "2"))
+    val app2 = AppDefinition(id = PathId("/app/service-b"), cmd = Some("work hard"), labels = Map("a" -> "1", "b" -> "3"))
+    val apps = Set(app1, app2)
 
-    appsResource.search(None, None, None).toSet should be(Set(app1, app2))
-    appsResource.search(Some(""), None, None).toSet should be(Set(app1, app2))
-    appsResource.search(Some("party"), None, None).toSet should be(Set(app1))
-    appsResource.search(Some("work"), None, None).toSet should be(Set(app2))
-    appsResource.search(Some("hard"), None, None).toSet should be(Set(app1, app2))
-    appsResource.search(Some("none"), None, None).toSet should be(Set.empty)
+    def search(cmd: Option[String], id: Option[String], label: Option[String]): Set[AppDefinition] = {
+      val selector = appsResource.search(cmd, id, label)
+      apps.filter(selector.matches(_))
+    }
 
-    appsResource.search(None, Some("app"), None).toSet should be(Set(app1, app2))
-    appsResource.search(None, Some("service-a"), None).toSet should be(Set(app1))
-    appsResource.search(Some("party"), Some("app"), None).toSet should be(Set(app1))
-    appsResource.search(Some("work"), Some("app"), None).toSet should be(Set(app2))
-    appsResource.search(Some("hard"), Some("service-a"), None).toSet should be(Set(app1))
-    appsResource.search(Some(""), Some(""), None).toSet should be(Set(app1, app2))
+    search(cmd = None, id = None, label = None) should be(Set(app1, app2))
+    search(cmd = Some(""), id = None, label = None) should be(Set(app1, app2))
+    search(cmd = Some("party"), id = None, label = None) should be(Set(app1))
+    search(cmd = Some("work"), id = None, label = None) should be(Set(app2))
+    search(cmd = Some("hard"), id = None, label = None) should be(Set(app1, app2))
+    search(cmd = Some("none"), id = None, label = None) should be(Set.empty)
 
-    appsResource.search(None, None, Some("b==2")).toSet should be(Set(app1))
-    appsResource.search(Some("party"), Some("app"), Some("a==1")).toSet should be(Set(app1))
-    appsResource.search(Some("work"), Some("app"), Some("a==1")).toSet should be(Set(app2))
-    appsResource.search(Some("hard"), Some("service-a"), Some("a==1")).toSet should be(Set(app1))
-    appsResource.search(Some(""), Some(""), Some("")).toSet should be(Set(app1, app2))
+    search(cmd = None, id = Some("app"), label = None) should be(Set(app1, app2))
+    search(cmd = None, id = Some("service-a"), label = None) should be(Set(app1))
+    search(cmd = Some("party"), id = Some("app"), label = None) should be(Set(app1))
+    search(cmd = Some("work"), id = Some("app"), label = None) should be(Set(app2))
+    search(cmd = Some("hard"), id = Some("service-a"), label = None) should be(Set(app1))
+    search(cmd = Some(""), id = Some(""), label = None) should be(Set(app1, app2))
+
+    search(cmd = None, id = None, label = Some("b==2")) should be(Set(app1))
+    search(cmd = Some("party"), id = Some("app"), label = Some("a==1")) should be(Set(app1))
+    search(cmd = Some("work"), id = Some("app"), label = Some("a==1")) should be(Set(app2))
+    search(cmd = Some("hard"), id = Some("service-a"), label = Some("a==1")) should be(Set(app1))
+    search(cmd = Some(""), id = Some(""), label = Some("")) should be(Set(app1, app2))
   }
 
   var eventBus: EventStream = _
@@ -128,6 +133,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
   var taskFailureRepo: TaskFailureRepository = _
   var config: MarathonConf = _
   var groupManager: GroupManager = _
+  var appInfoService: AppInfoService = _
   var appsResource: AppsResource = _
 
   before {
@@ -141,11 +147,9 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     groupManager = mock[GroupManager]
     appsResource = new AppsResource(
       eventBus,
+      mock[AppTasksResource],
       service,
-      taskTracker,
-      taskKiller,
-      healthCheckManager,
-      taskFailureRepo,
+      appInfoService,
       config,
       groupManager
     )

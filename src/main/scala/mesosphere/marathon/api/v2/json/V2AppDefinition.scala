@@ -8,7 +8,6 @@ import mesosphere.marathon.api.validation.{ PortIndices, ValidV2AppDefinition }
 import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state._
-import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.immutable.Seq
@@ -105,26 +104,6 @@ case class V2AppDefinition(
     )
   }
 
-  def withTaskCountsAndDeployments(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan]): V2AppDefinition.WithTaskCountsAndDeployments = {
-    new V2AppDefinition.WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, this)
-  }
-
-  def withTasksAndDeployments(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan]): V2AppDefinition.WithTasksAndDeployments =
-    new V2AppDefinition.WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, this)
-
-  def withTasksAndDeploymentsAndFailures(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan],
-    taskFailure: Option[TaskFailure]): V2AppDefinition.WithTasksAndDeploymentsAndTaskFailures =
-    new V2AppDefinition.WithTasksAndDeploymentsAndTaskFailures(
-      appTasks, healthCounts,
-      runningDeployments, taskFailure, this
-    )
-
   def withCanonizedIds(base: PathId = PathId.empty): V2AppDefinition = {
     val baseId = id.canonicalPath(base)
     copy(id = baseId, dependencies = dependencies.map(_.canonicalPath(baseId)))
@@ -145,74 +124,11 @@ object V2AppDefinition {
 
     V2AppDefinition(
       id = app.id, cmd = app.cmd, args = app.args, user = app.user, env = app.env, instances = app.instances,
-      cpus = app.cpus,
-      mem = app.mem, disk = app.disk, executor = app.executor, constraints = app.constraints, uris = app.uris,
-      storeUrls = app.storeUrls, ports = app.ports, requirePorts = app.requirePorts, backoff = app.backoff,
-      backoffFactor = app.backoffFactor, maxLaunchDelay = app.maxLaunchDelay, container = app.container,
-      healthChecks = app.healthChecks, dependencies = app.dependencies, upgradeStrategy = app.upgradeStrategy,
-      labels = app.labels, acceptedResourceRoles = app.acceptedResourceRoles,
-      version = app.version,
-      versionInfo = maybeVersionInfo
-    )
-  }
-
-  protected[marathon] class WithTaskCountsAndDeployments(
-      appTasks: Seq[EnrichedTask],
-      healthCounts: HealthCounts,
-      runningDeployments: Seq[DeploymentPlan],
-      val app: V2AppDefinition) {
-    /**
-      * Snapshot of the number of staged (but not running) tasks
-      * for this app
-      */
-    val tasksStaged: Int = appTasks.count { eTask =>
-      eTask.task.getStagedAt != 0 && eTask.task.getStartedAt == 0
-    }
-
-    /**
-      * Snapshot of the number of running tasks for this app
-      */
-    val tasksRunning: Int = appTasks.count { eTask =>
-      eTask.task.hasStatus &&
-        eTask.task.getStatus.getState == mesos.TaskState.TASK_RUNNING
-    }
-
-    /**
-      * Snapshot of the number of healthy tasks for this app
-      */
-    val tasksHealthy: Int = healthCounts.healthy
-
-    /**
-      * Snapshot of the number of unhealthy tasks for this app
-      */
-    val tasksUnhealthy: Int = healthCounts.unhealthy
-
-    /**
-      * Snapshot of the running deployments that affect this app
-      */
-    def deployments: Seq[Identifiable] = {
-      runningDeployments.collect {
-        case plan: DeploymentPlan if plan.affectedApplicationIds contains app.id => Identifiable(plan.id)
-      }
-    }
-  }
-
-  protected[marathon] class WithTasksAndDeployments(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan],
-    app: V2AppDefinition)
-      extends WithTaskCountsAndDeployments(appTasks, healthCounts, runningDeployments, app) {
-
-    def tasks: Seq[EnrichedTask] = appTasks
-  }
-
-  protected[marathon] class WithTasksAndDeploymentsAndTaskFailures(
-    appTasks: Seq[EnrichedTask], healthCounts: HealthCounts,
-    runningDeployments: Seq[DeploymentPlan],
-    taskFailure: Option[TaskFailure],
-    app: V2AppDefinition)
-      extends WithTasksAndDeployments(appTasks, healthCounts, runningDeployments, app) {
-
-    def lastTaskFailure: Option[TaskFailure] = taskFailure
+      cpus = app.cpus, mem = app.mem, disk = app.disk, executor = app.executor, constraints = app.constraints,
+      uris = app.uris, storeUrls = app.storeUrls, ports = app.ports, requirePorts = app.requirePorts,
+      backoff = app.backoff, backoffFactor = app.backoffFactor, maxLaunchDelay = app.maxLaunchDelay,
+      container = app.container, healthChecks = app.healthChecks, dependencies = app.dependencies,
+      upgradeStrategy = app.upgradeStrategy, labels = app.labels, acceptedResourceRoles = app.acceptedResourceRoles,
+      version = app.version, versionInfo = maybeVersionInfo)
   }
 }

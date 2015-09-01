@@ -5,6 +5,7 @@ import java.lang.{ Double => JDouble }
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
+import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts }
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
@@ -362,7 +363,6 @@ trait HealthCheckFormats {
 
 trait V2Formats {
   import Formats._
-  import mesosphere.marathon.api.v2.json.V2AppDefinition._
 
   implicit lazy val IdentifiableWrites = Json.writes[Identifiable]
 
@@ -488,42 +488,37 @@ trait V2Formats {
     }
   }
 
-  implicit lazy val VersionInfoWrites: Writes[VersionInfo] =
+  implicit lazy val VersionInfoWrites: Writes[V2AppDefinition.VersionInfo] =
     Writes {
-      case VersionInfo(lastScalingAt, lastConfigChangeAt) =>
+      case V2AppDefinition.VersionInfo(lastScalingAt, lastConfigChangeAt) =>
         Json.obj(
           "lastScalingAt" -> lastScalingAt,
           "lastConfigChangeAt" -> lastConfigChangeAt
         )
     }
 
-  implicit lazy val WithTaskCountsAndDeploymentsWrites: Writes[WithTaskCountsAndDeployments] =
-    Writes { app =>
-      val appJson = V2AppDefinitionWrites.writes(app.app).as[JsObject]
-
-      appJson ++ Json.obj(
-        "tasksStaged" -> app.tasksStaged,
-        "tasksRunning" -> app.tasksRunning,
-        "tasksHealthy" -> app.tasksHealthy,
-        "tasksUnhealthy" -> app.tasksUnhealthy,
-        "deployments" -> app.deployments
+  implicit lazy val TaskCountsWrites: Writes[TaskCounts] =
+    Writes { counts =>
+      Json.obj(
+        "tasksStaged" -> counts.tasksStaged,
+        "tasksRunning" -> counts.tasksRunning,
+        "tasksHealthy" -> counts.tasksHealthy,
+        "tasksUnhealthy" -> counts.tasksUnhealthy
       )
     }
 
-  implicit lazy val WithTasksAndDeploymentsWrites: Writes[WithTasksAndDeployments] =
-    Writes { app =>
-      val appJson = WithTaskCountsAndDeploymentsWrites.writes(app).as[JsObject]
-      appJson ++ Json.obj(
-        "tasks" -> app.tasks
-      )
-    }
+  implicit lazy val ExtendedAppInfoWrites: Writes[AppInfo] =
+    Writes { info =>
+      val appJson = V2AppDefinitionWrites.writes(V2AppDefinition(info.app)).as[JsObject]
 
-  implicit lazy val WithTasksAndDeploymentsAndFailuresWrites: Writes[WithTasksAndDeploymentsAndTaskFailures] =
-    Writes { app =>
-      val appJson = WithTasksAndDeploymentsWrites.writes(app).as[JsObject]
-      appJson ++ Json.obj(
-        "lastTaskFailure" -> app.lastTaskFailure
-      )
+      val maybeJson = Seq[Option[JsObject]](
+        info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
+        info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
+        info.maybeTasks.map(tasks => Json.obj("tasks" -> tasks)),
+        info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure))
+      ).flatten
+
+      maybeJson.foldLeft(appJson)((result, obj) => result ++ obj)
     }
 
   implicit lazy val V2AppUpdateReads: Reads[V2AppUpdate] = {
