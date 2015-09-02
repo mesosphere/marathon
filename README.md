@@ -106,7 +106,6 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 * [marathonctl](https://github.com/shoenig/marathonctl) A handy CLI tool for controlling Marathon
 * [Ruby gem and command line client](https://rubygems.org/gems/marathon-api)
 
-
     Running Chronos with the Ruby Marathon Client:
 
         marathon -M http://foo.bar:8080 start -i chronos -u https://s3.amazonaws.com/mesosphere-binaries-public/chronos/chronos.tgz \
