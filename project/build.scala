@@ -123,7 +123,7 @@ object MarathonBuild extends Build {
       {
         case "application.conf"                                             => MergeStrategy.concat
         case "META-INF/jersey-module-version"                               => MergeStrategy.first
-        case "log4j.properties"                                             => MergeStrategy.concat
+        case "log4j.properties"                                             => MergeStrategy.first
         case "org/apache/hadoop/yarn/util/package-info.class"               => MergeStrategy.first
         case "org/apache/hadoop/yarn/factories/package-info.class"          => MergeStrategy.first
         case "org/apache/hadoop/yarn/factory/providers/package-info.class"  => MergeStrategy.first
