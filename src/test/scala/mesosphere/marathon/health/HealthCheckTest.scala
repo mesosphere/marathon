@@ -31,6 +31,29 @@ class HealthCheckTest extends MarathonSpec {
     assert(10 == proto.getGracePeriodSeconds)
     assert(60 == proto.getIntervalSeconds)
     assert(0 == proto.getMaxConsecutiveFailures)
+    assert(!proto.hasOverridePort)
+  }
+
+  test("ToProtoOverridePort") {
+    val healthCheck = HealthCheck(
+      path = Some("/health"),
+      protocol = Protocol.HTTP,
+      portIndex = 0,
+      gracePeriod = 10.seconds,
+      interval = 60.seconds,
+      maxConsecutiveFailures = 0,
+      overridePort = Some(12345)
+    )
+
+    val proto = healthCheck.toProto
+
+    assert("/health" == proto.getPath)
+    assert(Protocol.HTTP == proto.getProtocol)
+    assert(0 == proto.getPortIndex)
+    assert(10 == proto.getGracePeriodSeconds)
+    assert(60 == proto.getIntervalSeconds)
+    assert(0 == proto.getMaxConsecutiveFailures)
+    assert(12345 == proto.getOverridePort)
   }
 
   test("ToProtoTcp") {
@@ -60,6 +83,7 @@ class HealthCheckTest extends MarathonSpec {
       .setIntervalSeconds(60)
       .setTimeoutSeconds(10)
       .setMaxConsecutiveFailures(10)
+      .setOverridePort(12345)
       .build
 
     val mergeResult = HealthCheck().mergeFromProto(proto)
@@ -71,7 +95,8 @@ class HealthCheckTest extends MarathonSpec {
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       timeout = 10.seconds,
-      maxConsecutiveFailures = 10
+      maxConsecutiveFailures = 10,
+      overridePort = Some(12345)
     )
 
     assert(mergeResult == expectedResult)

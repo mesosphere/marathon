@@ -49,10 +49,10 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   }
 
   def doCheck(task: MarathonTask, check: HealthCheck): Future[Option[HealthResult]] =
-    task.getPortsList.asScala.lift(check.portIndex) match {
-      case None =>
-        Future { Some(Unhealthy(task.getId, task.getVersion, "Invalid port index")) }
-
+    getPort(task, check) match {
+      case None => Future {
+        Some(Unhealthy(task.getId, task.getVersion, "Invalid port index and no override port specified"))
+      }
       case Some(port) => check.protocol match {
         case HTTP  => http(task, check, port)
         case TCP   => tcp(task, check, port)
@@ -72,6 +72,13 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
           }
       }
     }
+
+  def getPort(task: MarathonTask, check: HealthCheck): Option[Integer] = {
+    check.overridePort match {
+      case None       => task.getPortsList.asScala.lift(check.portIndex)
+      case Some(port) => Some(port)
+    }
+  }
 
   def http(task: MarathonTask, check: HealthCheck, port: Int): Future[Option[HealthResult]] = {
     val host = task.getHost
