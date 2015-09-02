@@ -87,6 +87,8 @@ more details.
 * `ignoreHttp1xx` (Optional. Default: false): Ignore HTTP informational status
 codes 100 to 199. If the HTTP health check returns one of these, the result is
 discarded and the health status of the task remains unchanged.
+* `overridePort` (Optional. Default: None): Send healthchecks to this port
+instead of using portIndex.
 
 #### Health Lifecycle
 
