@@ -167,6 +167,11 @@ Not in the list? Open a pull request and add yourself!
 
 ## Help
 
+Have you found an issue? Feel free to report it using our [Issues](https://github.com/mesosphere/marathon/issues) page.
+In order to speed up response times, we ask you to provide as much
+information on how to reproduce the problem as possible. If the issue is related
+ in any way to the web ui, we kindly ask you to use the `gui` label.
+
 If you have questions, please post on the
 [Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework)
 email list. You can find Marathon support in the `#marathon` channel, and Mesos
