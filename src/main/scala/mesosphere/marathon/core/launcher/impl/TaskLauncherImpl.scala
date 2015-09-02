@@ -21,9 +21,9 @@ private[launcher] class TaskLauncherImpl(
     }
   }
 
-  override def declineOffer(offerID: OfferID, refuseSeconds: Option[Long]): Unit = {
+  override def declineOffer(offerID: OfferID, refuseMilliseconds: Option[Long]): Unit = {
     withDriver(s"declineOffer(${offerID.getValue})") {
-      val filters = refuseSeconds
+      val filters = refuseMilliseconds
         .map(seconds => Protos.Filters.newBuilder().setRefuseSeconds(seconds / 1000.0).build())
         .getOrElse(Protos.Filters.getDefaultInstance)
       _.declineOffer(offerID, filters)
