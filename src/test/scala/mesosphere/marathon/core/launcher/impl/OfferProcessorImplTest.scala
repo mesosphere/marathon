@@ -75,7 +75,7 @@ class OfferProcessorImplTest extends MarathonSpec {
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     verify(offerMatcher).matchOffer(deadline, offer)
-    verify(taskLauncher).declineOffer(offerId, refuseSeconds = None)
+    verify(taskLauncher).declineOffer(offerId, refuseMilliseconds = Some(conf.declineOfferDuration()))
   }
 
   test("match crashed => decline") {
@@ -89,15 +89,16 @@ class OfferProcessorImplTest extends MarathonSpec {
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     verify(offerMatcher).matchOffer(deadline, offer)
-    verify(taskLauncher).declineOffer(offerId, refuseSeconds = None)
+    verify(taskLauncher).declineOffer(offerId, refuseMilliseconds = None)
   }
 
   private[this] var clock: Clock = _
   private[this] var offerMatcher: OfferMatcher = _
   private[this] var taskLauncher: TaskLauncher = _
+  private[this] var conf: OfferProcessorConfig = _
 
   private[this] def createProcessor(): OfferProcessor = {
-    val conf = new OfferProcessorConfig {}
+    conf = new OfferProcessorConfig {}
     conf.afterInit()
 
     clock = ConstantClock()

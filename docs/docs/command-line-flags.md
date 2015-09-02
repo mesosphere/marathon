@@ -154,7 +154,7 @@ more tasks when it gets feedback about running and healthy tasks from Mesos.
     Launch tokens per interval.
     
 To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
-incoming resource offer.
+incoming resource offer, i.e. finding suitable tasks to launch for incoming offers.
 
 * <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 1000): 
     Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
@@ -171,6 +171,12 @@ invocations of this call.
 If you want to disable calling reviveOffers (not recommended), you can use:
     
 * <span class="label label-default">v0.11.0</span> `--disable_revive_offers_for_new_apps`
+
+When Marathon has no current use for an offer, it will decline the offer for a configurable period. This period is
+configurable. A short duration might lead to resource starvation for other frameworks if you run many frameworks
+in your cluster. You should only need to reduce it if you use `--disable_revive_offers_for_new_apps`.
+
+* `--decline_offer_duration` (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.
 
 
 ### Marathon after 0.8.2 (including) and before 0.11.0

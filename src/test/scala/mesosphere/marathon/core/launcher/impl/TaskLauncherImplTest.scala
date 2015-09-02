@@ -47,11 +47,11 @@ class TaskLauncherImplTest extends MarathonSpec {
   test("declineOffer without driver") {
     driverHolder.driver = None
 
-    launcher.declineOffer(offerId, refuseSeconds = None)
+    launcher.declineOffer(offerId, refuseMilliseconds = None)
   }
 
   test("declineOffer with driver") {
-    launcher.declineOffer(offerId, refuseSeconds = None)
+    launcher.declineOffer(offerId, refuseMilliseconds = None)
 
     verify(driverHolder.driver.get).declineOffer(offerId, Protos.Filters.getDefaultInstance)
   }

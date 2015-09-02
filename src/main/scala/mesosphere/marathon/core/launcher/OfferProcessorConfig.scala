@@ -10,7 +10,7 @@ trait OfferProcessorConfig extends ScallopConf {
     default = Some(1000))
 
   lazy val declineOfferDuration = opt[Long]("decline_offer_duration",
-    descr = "(Default: Use mesos default of 5 seconds) " +
+    descr = "(Default: 120 seconds) " +
       "The duration (milliseconds) for which to decline offers by default",
-    default = None)
+    default = Some(120000))
 }
