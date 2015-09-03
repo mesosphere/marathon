@@ -35,9 +35,6 @@ class CoreGuiceModule extends AbstractModule {
     leadershipModule.coordinator()
 
   @Provides @Singleton
-  def clock(coreModule: CoreModule): Clock = coreModule.clock
-
-  @Provides @Singleton
   def offerProcessor(coreModule: CoreModule): OfferProcessor = coreModule.launcherModule.offerProcessor
 
   @Provides @Singleton
@@ -58,6 +55,7 @@ class CoreGuiceModule extends AbstractModule {
   final def appInfoService(appInfoModule: AppInfoModule): AppInfoService = appInfoModule.appInfoService
 
   override def configure(): Unit = {
+    bind(classOf[Clock]).toInstance(Clock())
     bind(classOf[CoreModule]).to(classOf[CoreModuleImpl]).in(Scopes.SINGLETON)
     bind(classOf[ActorRef])
       .annotatedWith(Names.named("taskStatusUpdate"))

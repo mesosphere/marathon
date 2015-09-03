@@ -2,9 +2,10 @@ package mesosphere.marathon.upgrade
 
 import java.util.UUID
 
-import akka.actor.{ ActorSystem, Props }
+import akka.actor.ActorSystem
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
@@ -13,7 +14,6 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
 import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ SlaveID, TaskID }
 import org.apache.mesos.Protos.Status
@@ -70,11 +70,11 @@ class DeploymentActorTest
 
     // setting started at to 0 to make sure this survives
     val slaveId = SlaveID("some slave id")
-    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(0).build()
-    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(1000).build()
-    val task2_1 = MarathonTasks.makeTask("task2_1", "", Nil, Nil, app2.version, slaveId)
-    val task3_1 = MarathonTasks.makeTask("task3_1", "", Nil, Nil, app3.version, slaveId)
-    val task4_1 = MarathonTasks.makeTask("task4_1", "", Nil, Nil, app4.version, slaveId)
+    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(0).build()
+    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(1000).build()
+    val task2_1 = MarathonTasks.makeTask("task2_1", "", Nil, Nil, app2.version, Timestamp.now(), slaveId)
+    val task3_1 = MarathonTasks.makeTask("task3_1", "", Nil, Nil, app3.version, Timestamp.now(), slaveId)
+    val task4_1 = MarathonTasks.makeTask("task4_1", "", Nil, Nil, app4.version, Timestamp.now(), slaveId)
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
@@ -171,8 +171,8 @@ class DeploymentActorTest
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
     val slaveId = SlaveID("some slave id")
-    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app.version, slaveId).toBuilder.setStartedAt(0).build()
-    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app.version, slaveId).toBuilder.setStartedAt(1000).build()
+    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(0).build()
+    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(1000).build()
 
     when(tracker.get(app.id)).thenReturn(Set(task1_1, task1_2))
 
@@ -285,9 +285,9 @@ class DeploymentActorTest
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New))
 
     val slaveId = SlaveID("some slave id")
-    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(0).build()
-    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(500).build()
-    val task1_3 = MarathonTasks.makeTask("task1_3", "", Nil, Nil, app1.version, slaveId).toBuilder.setStartedAt(1000).build()
+    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(0).build()
+    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(500).build()
+    val task1_3 = MarathonTasks.makeTask("task1_3", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(1000).build()
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 

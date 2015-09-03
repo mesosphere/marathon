@@ -33,11 +33,11 @@ class CoreModuleImpl @Inject() (
     appRepository: AppRepository,
     taskTracker: TaskTracker,
     taskFactory: TaskFactory,
-    leaderInfo: LeaderInfo) extends CoreModule {
+    leaderInfo: LeaderInfo,
+    clock: Clock) extends CoreModule {
 
   // INFRASTRUCTURE LAYER
 
-  override lazy val clock = Clock()
   private[this] lazy val random = Random
   private[this] lazy val shutdownHookModule = ShutdownHooks()
   private[this] lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
@@ -47,7 +47,7 @@ class CoreModuleImpl @Inject() (
   // TASKS
 
   override lazy val taskBusModule = new TaskBusModule()
-  override lazy val taskTrackerModule = new TaskTrackerModule(leadershipModule)
+  override lazy val taskTrackerModule = new TaskTrackerModule(leadershipModule, clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
 

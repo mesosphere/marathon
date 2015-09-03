@@ -3,18 +3,21 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Terminated }
 import akka.testkit.TestProbe
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec }
 import mesosphere.mesos.protos.TaskID
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._
+import org.mockito.Matchers.any
 
-class KillOverdueStagedTasksActorTest extends MarathonSpec {
+class KillOverdueTasksActorTest extends MarathonSpec {
   implicit var actorSystem: ActorSystem = _
   var taskTracker: TaskTracker = _
   var driver: SchedulerDriver = _
   var checkActor: ActorRef = _
+  val clock = ConstantClock()
 
   before {
     actorSystem = ActorSystem()
@@ -22,7 +25,7 @@ class KillOverdueStagedTasksActorTest extends MarathonSpec {
     driver = mock[SchedulerDriver]
     val driverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
-    checkActor = actorSystem.actorOf(KillOverdueStagedTasksActor.props(taskTracker, driverHolder), "check")
+    checkActor = actorSystem.actorOf(KillOverdueTasksActor.props(taskTracker, driverHolder, clock), "check")
   }
 
   after {
@@ -42,22 +45,22 @@ class KillOverdueStagedTasksActorTest extends MarathonSpec {
     verifyNoMoreInteractions(taskTracker, driver)
   }
 
-  test("no overdue staged tasks") {
-    when(taskTracker.checkStagedTasks).thenReturn(Seq.empty)
+  test("no overdue tasks") {
+    when(taskTracker.determineOverdueTasks(any())).thenReturn(Seq.empty)
 
-    checkActor ! KillOverdueStagedTasksActor.Check
+    checkActor ! KillOverdueTasksActor.Check
 
-    verify(taskTracker, Mockito.timeout(1000)).checkStagedTasks
+    verify(taskTracker, Mockito.timeout(1000)).determineOverdueTasks(any())
     // no interactions expected
   }
 
-  test("some overdue staged tasks") {
+  test("some overdue tasks") {
     val mockTask = MarathonTask.newBuilder().setId("someId").buildPartial()
-    when(taskTracker.checkStagedTasks).thenReturn(Seq(mockTask))
+    when(taskTracker.determineOverdueTasks(any())).thenReturn(Seq(mockTask))
 
-    checkActor ! KillOverdueStagedTasksActor.Check
+    checkActor ! KillOverdueTasksActor.Check
 
-    verify(taskTracker, Mockito.timeout(1000)).checkStagedTasks
+    verify(taskTracker, Mockito.timeout(1000)).determineOverdueTasks(any())
     import mesosphere.mesos.protos.Implicits._
     verify(driver, Mockito.timeout(1000)).killTask(TaskID("someId"))
   }
