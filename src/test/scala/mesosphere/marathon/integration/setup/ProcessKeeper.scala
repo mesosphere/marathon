@@ -65,6 +65,12 @@ object ProcessKeeper {
                     mainClass: String = "mesosphere.marathon.Main",
                     startupLine: String = "Started ServerConnector"): Process = {
 
+    val debugArgs = List(
+      "-Dakka.loglevel=DEBUG",
+      "-Dakka.actor.debug.receive=true",
+      "-Dakka.actor.debug.autoreceive=true",
+      "-Dakka.actor.debug.lifecycle=true"
+    )
     val argsWithMain = mainClass :: arguments
 
     val mesosWorkDir: String = "/tmp/marathon-itest-marathon"
@@ -73,7 +79,7 @@ object ProcessKeeper {
     FileUtils.forceMkdir(mesosWorkDirFile)
 
     startJavaProcess(
-      "marathon", heapInMegs = 512, argsWithMain, cwd,
+      "marathon", heapInMegs = 512, debugArgs ++ argsWithMain, cwd,
       env + (ENV_MESOS_WORK_DIR -> mesosWorkDir),
       upWhen = _.contains(startupLine))
   }

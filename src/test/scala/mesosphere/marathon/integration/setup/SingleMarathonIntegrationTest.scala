@@ -187,14 +187,9 @@ trait SingleMarathonIntegrationTest
     events.clear()
     ExternalMarathonIntegrationTest.healthChecks.clear()
 
-    try {
-      val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteGroup(testBasePath, force = true)
-      if (deleteResult.code != 404) {
-        waitForChange(deleteResult)
-      }
-    }
-    catch {
-      case e: spray.httpx.UnsuccessfulResponseException if e.response.status.intValue == 404 => // ignore
+    val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteGroup(testBasePath, force = true)
+    if (deleteResult.code != 404) {
+      waitForChange(deleteResult)
     }
 
     WaitTestSupport.waitUntil("cleanUp", maxWait) { marathon.listAppsInBaseGroup.value.isEmpty && marathon.listGroupsInBaseGroup.value.isEmpty }

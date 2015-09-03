@@ -290,9 +290,25 @@ private class AppTaskLauncherActor(
   private[this] def receiveAddCount: Receive = {
     case AppTaskLauncherActor.AddTasks(newApp, addCount) =>
       if (app != newApp) {
+        val configChange = app.isUpgrade(newApp)
         app = newApp
-        log.info("getting new app definition for '{}', version {} with {} initial tasks", app.id, app.version, addCount)
         tasksToLaunch = addCount
+
+        if (configChange) {
+          log.info(
+            "getting new app definition config for '{}', version {} with {} initial tasks",
+            app.id, app.version, addCount
+          )
+
+          suspendMatchingUntilWeGetBackoffDelayUpdate()
+
+        }
+        else {
+          log.info(
+            "scaling change for '{}', version {} with {} initial tasks",
+            app.id, app.version, addCount
+          )
+        }
       }
       else {
         tasksToLaunch += addCount
@@ -301,6 +317,17 @@ private class AppTaskLauncherActor(
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
       replyWithQueuedTaskCount()
+  }
+
+  private[this] def suspendMatchingUntilWeGetBackoffDelayUpdate(): Unit = {
+    // signal no interest in new offers until we get the back off delay.
+    // this makes sure that we see unused offers again that we rejected for the old configuration.
+    OfferMatcherRegistration.unregister()
+
+    // get new back off delay, don't do anything until we get that.
+    backOffUntil = None
+    rateLimiterActor ! RateLimiterActor.GetDelay(app)
+    context.become(waitForInitialDelay)
   }
 
   private[this] def replyWithQueuedTaskCount(): Unit = {
@@ -424,6 +451,7 @@ private class AppTaskLauncherActor(
 
     def unregister(): Unit = {
       if (registeredAsMatcher) {
+        log.info("Deregister as matcher.")
         offerMatcherManager.removeSubscription(myselfAsOfferMatcher)(context.dispatcher)
         registeredAsMatcher = false
       }
