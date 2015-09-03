@@ -1,22 +1,17 @@
 package mesosphere.marathon.api.v2.json
 
-import javax.validation.Validation
-
-import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ModelValidation
-import mesosphere.marathon.health.{ HealthCheck, HealthCounts }
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.mesos.protos.Implicits.slaveIDToProto
-import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
-import play.api.libs.json.{ JsNull, JsObject, Json }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._

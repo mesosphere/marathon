@@ -48,8 +48,6 @@ object MarathonBuild extends Build {
       integrationTestSettings
     ).dependsOn(root % "compile->compile; test->test").configs(IntegrationTest)
 
-  lazy val withFormatting = System.getProperty("sbt.log.format", "true").toBoolean
-
   /**
    * Determine scala test runner output. `-e` for reporting on standard error.
    *
@@ -65,7 +63,7 @@ object MarathonBuild extends Build {
    *
    * http://scalatest.org/user_guide/using_the_runner
    */
-  lazy val formattingTestArg = Tests.Argument(if (withFormatting) "-eDST" else "-eWUDST")
+  lazy val formattingTestArg = Tests.Argument("-eDFG")
 
   lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
     Seq(

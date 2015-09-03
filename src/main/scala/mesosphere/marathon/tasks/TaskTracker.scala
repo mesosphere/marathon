@@ -44,7 +44,11 @@ class TaskTracker @Inject() (
   }
 
   def get(appId: PathId): Set[MarathonTask] =
-    getInternal(appId).values.toSet
+    getTasks(appId).toSet
+
+  def getTasks(appId: PathId): Iterable[MarathonTask] = {
+    getInternal(appId).values
+  }
 
   def getVersion(appId: PathId, taskId: String): Option[Timestamp] =
     get(appId).collectFirst {
@@ -52,7 +56,7 @@ class TaskTracker @Inject() (
         Timestamp(mt.getVersion)
     }
 
-  private def getInternal(appId: PathId): TrieMap[String, MarathonTask] =
+  private[this] def getInternal(appId: PathId): TrieMap[String, MarathonTask] =
     apps.getOrElseUpdate(appId, fetchApp(appId)).tasks
 
   def list: Map[PathId, App] = apps.mapValues(_.toApp).toMap
@@ -61,7 +65,7 @@ class TaskTracker @Inject() (
 
   def contains(appId: PathId): Boolean = apps.contains(appId)
 
-  def take(appId: PathId, n: Int): Set[MarathonTask] = get(appId).take(n)
+  def take(appId: PathId, n: Int): Set[MarathonTask] = getTasks(appId).iterator.take(n).toSet
 
   def created(appId: PathId, task: MarathonTask): Unit = {
     // Keep this here so running() can pick it up

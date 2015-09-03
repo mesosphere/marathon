@@ -6,6 +6,7 @@ import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.concurrent.Future
+import scala.collection.immutable.{ Seq, Map }
 
 trait HealthCheckManager {
 
@@ -61,10 +62,4 @@ trait HealthCheckManager {
     * Returns the health status of all tasks of the supplied app.
     */
   def statuses(appId: PathId): Future[Map[String, Seq[Health]]]
-
-  /**
-    * Returns the health status counter for the supplied app.
-    */
-  def healthCounts(
-    appId: PathId): Future[HealthCounts]
 }

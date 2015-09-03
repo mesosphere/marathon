@@ -39,6 +39,63 @@ would assign these ports as host ports if available in the
 processed offer. That misled people into thinking that these ports corresponded to host ports. The new code always
 randomizes host ports assignment without `"requirePorts"` or explicit `"hostPort"` configuration.
 
+##### Additional task statistics in the `/v2/apps` and `/v2/apps/{app id}` endpoints (Optional)
+
+If you pass `embed=apps.taskStats`/`embed=app.taskStats` as a query parameter, you get additional taskStats
+embedded in you app JSON.
+ 
+Task statistics are provided for the following groups of tasks. If no tasks for the group exist, no statistics are
+offered:
+
+* `"withLatestConfig"` contains statistics about all tasks that run with the same config as the latest app version.
+* `"startedAfterLastScaling"` contains statistics about all tasks that were started after the last scaling or
+  restart operation.
+* `"withOutdatedConfig"` contains statistics about all tasks that were started before the last config change which
+  was not simply a restart or scaling operation.
+* `"totalSummary"` contains statistics about all tasks.
+
+Example JSON:
+
+```javascript
+{
+  // ...
+  "taskStats": {
+    {
+      "startedAfterLastScaling" : {
+        "stats" : {
+          "counts" : { // equivalent to tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy
+            "staged" : 1,
+            "running" : 100,
+            "healthy" : 90,
+            "unhealthy" : 4
+          },
+          // "lifeTime" is only included if there are running tasks.
+          "lifeTime" : { 
+            // Measured from `"startedAt"` (timestamp of the Mesos TASK_RUNNING status update) of each running task 
+            // until now.
+            "averageSeconds" : 20.0,
+            "medianSeconds" : 10.0
+          }
+        }
+      },
+      "withLatestConfig" : {
+        "stats" : { /* ... same structure as above ... */ }
+      },
+      "withOutdatedConfig" : {
+        "stats" : { /* ... same structure as above ... */ }
+      },
+      "totalSummary" : {
+        "stats" : { /* ... same structure as above ... */ }
+      }
+    }
+  }
+  // ...
+}
+```
+
+The calculation of these statistics is currently performed for every request and expensive if you have
+very many tasks.
+
 #### Specific "embed" parameters for app related information
 
 In this release, we introduce "embed" parameters for all GET requests in the

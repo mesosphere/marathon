@@ -1,30 +1,35 @@
 package mesosphere.marathon.core.appinfo.impl
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.appinfo.{ EnrichedTask, TaskCounts, AppInfo }
+import mesosphere.marathon.core.appinfo.{ TaskStatsByVersion, TaskStats, AppInfo, EnrichedTask, TaskCounts }
+import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
-import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
-import mesosphere.marathon.upgrade.{ DeploymentStep, DeploymentPlan }
-import mesosphere.marathon.{ MarathonSchedulerService, MarathonSpec }
-import mesosphere.marathon.health.{ Health, HealthCounts, MarathonHealthCheckManager, HealthCheckManager }
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
+import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
+import mesosphere.marathon.{ MarathonSchedulerService, MarathonSpec }
 import mesosphere.util.Mockito
 import org.apache.mesos.Protos
-import org.scalatest.{ Matchers, GivenWhenThen }
-import scala.collection.immutable.Seq
+import org.scalatest.{ GivenWhenThen, Matchers }
+import play.api.libs.json.Json
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
   import org.scalatest.concurrent.ScalaFutures._
 
   class Fixture {
+    lazy val clock = ConstantClock()
     lazy val taskTracker = mock[TaskTracker]
     lazy val healthCheckManager = mock[HealthCheckManager]
     lazy val marathonSchedulerService = mock[MarathonSchedulerService]
     lazy val taskFailureRepository = mock[TaskFailureRepository]
 
     lazy val baseData = new AppInfoBaseData(
+      clock,
       taskTracker,
       healthCheckManager,
       marathonSchedulerService,
@@ -66,7 +71,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running2 = running1.toBuilder.setId("task2").buildPartial()
     val running3 = running1.toBuilder.setId("task3").buildPartial()
 
-    f.taskTracker.get(app.id) returns Set(running1, running2, running3)
+    f.taskTracker.getTasks(app.id) returns Set(running1, running2, running3)
 
     val alive = Health("task2", lastSuccess = Some(Timestamp(1)))
     val unhealthy = Health("task3", lastFailure = Some(Timestamp(1)))
@@ -83,7 +88,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Tasks)).futureValue
 
     Then("we get a tasks object in the appInfo")
-    appInfo.maybeTasks should not be (empty)
+    appInfo.maybeTasks should not be empty
     appInfo.maybeTasks.get.map(_.appId.toString) should have size (3)
     appInfo.maybeTasks.get.map(_.task.getId).toSet should be (Set("task1", "task2", "task3"))
 
@@ -96,7 +101,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).get(app.id)
+    verify(f.taskTracker, times(1)).getTasks(app.id)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -105,23 +110,29 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     f.verifyNoMoreInteractions()
   }
 
-  test("requesting task counts only retrieves tasks from taskTracker and health counts") {
+  test("requesting task counts only retrieves tasks from taskTracker and health stats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
     val staged = MarathonTask
       .newBuilder()
+      .setId("task1")
       .setStatus(Protos.TaskStatus.newBuilder().setState(Protos.TaskState.TASK_STAGING).buildPartial())
       .buildPartial()
     val running = MarathonTask
       .newBuilder()
+      .setId("task2")
       .setStatus(Protos.TaskStatus.newBuilder().setState(Protos.TaskState.TASK_RUNNING).buildPartial())
       .buildPartial()
-    val running2 = running.toBuilder.setId("some other").buildPartial()
+    val running2 = running.toBuilder.setId("task3").buildPartial()
 
-    f.taskTracker.get(app.id) returns Set(staged, running, running2)
+    f.taskTracker.getTasks(app.id) returns Set(staged, running, running2)
 
-    f.healthCheckManager.healthCounts(app.id) returns Future.successful(
-      HealthCounts(healthy = 3, unknown = 4, unhealthy = 5)
+    f.healthCheckManager.statuses(app.id) returns Future.successful(
+      Map(
+        "task1" -> Seq(),
+        "task2" -> Seq(Health("task2", lastFailure = Some(Timestamp(1)))),
+        "task3" -> Seq(Health("task3", lastSuccess = Some(Timestamp(2))))
+      )
     )
 
     When("requesting AppInfos with counts")
@@ -129,14 +140,14 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     Then("we get counts object in the appInfo")
     appInfo should be(AppInfo(app, maybeCounts = Some(
-      TaskCounts(tasksStaged = 1, tasksRunning = 2, tasksHealthy = 3, tasksUnhealthy = 5)
+      TaskCounts(tasksStaged = 1, tasksRunning = 2, tasksHealthy = 1, tasksUnhealthy = 1)
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).get(app.id)
+    verify(f.taskTracker, times(1)).getTasks(app.id)
 
     And("the healthCheckManager as well")
-    verify(f.healthCheckManager, times(1)).healthCounts(app.id)
+    verify(f.healthCheckManager, times(1)).statuses(app.id)
 
     And("we have no more interactions")
     f.verifyNoMoreInteractions()
@@ -223,6 +234,62 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     And("the taskFailureRepository should have been called to retrieve the failure")
     verify(f.taskFailureRepository, times(1)).current(app.id)
+
+    And("we have no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("requesting taskStats") {
+    val f = new Fixture
+    Given("one staged and two running tasks in the taskTracker")
+    val staged = MarathonTask
+      .newBuilder()
+      .setId("task1")
+      .setStatus(Protos.TaskStatus.newBuilder().setState(Protos.TaskState.TASK_STAGING).buildPartial())
+      .setStagedAt((f.clock.now() - 10.seconds).toDateTime.getMillis)
+      .buildPartial()
+    val running = MarathonTask
+      .newBuilder()
+      .setId("task2")
+      .setStatus(Protos.TaskStatus.newBuilder().setState(Protos.TaskState.TASK_RUNNING).buildPartial())
+      .setStagedAt((f.clock.now() - 11.seconds).toDateTime.getMillis)
+      .buildPartial()
+    val running2 = running.toBuilder.setId("task3").buildPartial()
+
+    val tasks: Set[MarathonTask] = Set(staged, running, running2)
+    f.taskTracker.getTasks(app.id) returns tasks
+
+    val statuses: Map[String, Seq[Health]] = Map(
+      "task1" -> Seq(),
+      "task2" -> Seq(Health("task2", lastFailure = Some(Timestamp(1)))),
+      "task3" -> Seq(Health("task3", lastSuccess = Some(Timestamp(2))))
+    )
+    f.healthCheckManager.statuses(app.id) returns Future.successful(statuses)
+
+    When("requesting AppInfos with taskStats")
+    val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.TaskStats)).futureValue
+
+    Then("we get taskStats object in the appInfo")
+    // we check the calculation of the stats in TaskStatsByVersionTest, so we only check some basic stats
+
+    import mesosphere.marathon.api.v2.json.Formats._
+    withClue(Json.prettyPrint(Json.toJson(appInfo))) {
+      appInfo.maybeTaskStats should not be empty
+      appInfo.maybeTaskStats.get.maybeTotalSummary should not be empty
+      appInfo.maybeTaskStats.get.maybeTotalSummary.get.counts.tasksStaged should be (1)
+      appInfo.maybeTaskStats.get.maybeTotalSummary.get.counts.tasksRunning should be (2)
+
+      appInfo should be(AppInfo(
+        app,
+        maybeTaskStats = Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, tasks, statuses))
+      ))
+    }
+
+    And("the taskTracker should have been called")
+    verify(f.taskTracker, times(1)).getTasks(app.id)
+
+    And("the healthCheckManager as well")
+    verify(f.healthCheckManager, times(1)).statuses(app.id)
 
     And("we have no more interactions")
     f.verifyNoMoreInteractions()

@@ -59,6 +59,10 @@ All filters can be applied at the same time.
             the response by default. This implies "apps.lastTaskFailure", "apps.tasks", "apps.counts" and
             "apps.deployments".
           </li>
+          <li>
+            <code>"apps.taskStats"</code>. <span class="label label-default">v0.11</span> This exposes some task
+            statatistics in the JSON.
+          </li>
         </ul>
       </td>
     </tr>
@@ -107,6 +111,63 @@ The objects in the list only contain the id of the deployment, e.g.:
     "id": "44c4ed48-ee53-4e0f-82dc-4df8b2a69057"
 }
 ```
+
+##### taskStats (Object) <span class="label label-default">v0.11</span>
+
+Provides task statistics. The "taskStats" object only gets embedded into the app JSON if 
+you pass an `embed=apps.taskStats` query argument.
+ 
+Task statistics are provided for the following groups of tasks. If no tasks for the group exist, no statistics are
+offered:
+
+* `"withLatestConfig"` contains statistics about all tasks that run with the same config as the latest app version.
+* `"startedAfterLastScaling"` contains statistics about all tasks that were started after the last scaling or
+  restart operation.
+* `"withOutdatedConfig"` contains statistics about all tasks that were started before the last config change which
+  was not simply a restart or scaling operation.
+* `"totalSummary"` contains statistics about all tasks.
+
+Example JSON:
+
+```javascript
+{
+  // ...
+  "taskStats": {
+    {
+      "startedAfterLastScaling" : {
+        "stats" : {
+          "counts" : { // equivalent to tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy
+            "staged" : 1,
+            "running" : 100,
+            "healthy" : 90,
+            "unhealthy" : 4
+          },
+          // "lifeTime" is only included if there are running tasks.
+          "lifeTime" : { 
+            // Measured from `"startedAt"` (timestamp of the Mesos TASK_RUNNING status update) of each running task 
+            // until now.
+            "averageSeconds" : 20.0,
+            "medianSeconds" : 10.0
+          }
+        }
+      },
+      "withLatestConfig" : {
+        "stats" : { /* ... same structure as above ... */ }
+      },
+      "withOutdatedConfig" : {
+        "stats" : { /* ... same structure as above ... */ }
+      },
+      "totalSummary" : {
+        "stats" : { /* ... same structure as above ... */ }
+      }
+    }
+  }
+  // ...
+}
+```
+
+The calculation of these statistics is currently performed for every request and expensive if you have
+very many tasks.
 
 ##### lastTaskFailure (Object)
 

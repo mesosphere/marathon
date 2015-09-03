@@ -146,43 +146,6 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(health3.lastSuccess > health3.lastFailure)
   }
 
-  test("healthCounts") {
-    val appId = "test".toRootPath
-    val app: AppDefinition = AppDefinition(id = appId)
-    appRepository.store(app)
-    val version = app.version
-
-    val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
-    hcManager.add(appId, version, healthCheck)
-
-    val task1 = makeRunningTask(appId, version)
-    val task2 = makeRunningTask(appId, version)
-    val task3 = makeRunningTask(appId, version)
-
-    var healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
-    assert(healthCounts == HealthCounts(0, 3, 0))
-
-    updateTaskHealth(task1, version, healthy = true)
-
-    healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
-    assert(healthCounts == HealthCounts(1, 2, 0))
-
-    updateTaskHealth(task2, version, healthy = true)
-
-    healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
-    assert(healthCounts == HealthCounts(2, 1, 0))
-
-    updateTaskHealth(task3, version, healthy = false)
-
-    healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
-    assert(healthCounts == HealthCounts(2, 0, 1))
-
-    updateTaskHealth(task1, version, healthy = false)
-
-    healthCounts = Await.result(hcManager.healthCounts(appId), 5.seconds)
-    assert(healthCounts == HealthCounts(1, 0, 2))
-  }
-
   test("statuses") {
     val appId = "test".toRootPath
     val app: AppDefinition = AppDefinition(id = appId)

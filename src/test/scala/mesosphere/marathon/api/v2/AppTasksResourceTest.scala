@@ -105,7 +105,9 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
     when(config.zkTimeoutDuration).thenReturn(5.seconds)
     when(taskTracker.get(appId)).thenReturn(Set(task1, task2))
     when(taskTracker.contains(appId)).thenReturn(true)
-    when(healthCheckManager.statuses(appId)).thenReturn(Future.successful(Map("" -> Seq())))
+    when(healthCheckManager.statuses(appId)).thenReturn(Future.successful(
+      collection.immutable.Map("" -> collection.immutable.Seq())
+    ))
 
     val response = appsTaskResource.indexJson("/my/app")
     response.getStatus shouldEqual 200
