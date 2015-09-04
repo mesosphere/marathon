@@ -60,8 +60,10 @@ class HealthCheckActor(
       appId,
       healthCheck
     )
-    val activeTaskIds = taskTracker.get(appId).map(_.getId)
-    taskHealth = taskHealth.filterKeys(activeTaskIds)
+    val activeTaskIds = taskTracker.getTasks(appId).map(_.getId).toSet
+    // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
+    // Therefore we materialize it into a new map.
+    taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
   }
 
   def scheduleNextHealthCheck(): Unit =
