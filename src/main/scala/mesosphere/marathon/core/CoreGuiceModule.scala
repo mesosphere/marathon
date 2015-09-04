@@ -13,6 +13,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusObservables }
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.event.EventModule
@@ -53,6 +54,9 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   final def appInfoService(appInfoModule: AppInfoModule): AppInfoService = appInfoModule.appInfoService
+
+  @Provides @Singleton
+  def pluginManager(coreModule: CoreModule): PluginManager = coreModule.pluginManager
 
   override def configure(): Unit = {
     bind(classOf[Clock]).toInstance(Clock())
