@@ -1,6 +1,7 @@
 package mesosphere.marathon.integration
 
 import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2GroupUpdate }
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationHealthCheck, SingleMarathonIntegrationTest, WaitTestSupport }
 import mesosphere.marathon.state.{ PathId, UpgradeStrategy }
 import org.apache.http.HttpStatus
