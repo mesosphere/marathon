@@ -5,12 +5,18 @@ import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.{ RestResource, MarathonMediaType, LeaderInfo }
+import mesosphere.marathon.api.{ LeaderInfo, MarathonMediaType, RestResource }
+import mesosphere.marathon.core.flow.LaunchTokenConfig
+import mesosphere.marathon.core.launcher.OfferProcessorConfig
+import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
+import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
-import mesosphere.marathon.{ BuildInfo, LeaderProxyConf, MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ BuildInfo, DebugConf, LeaderProxyConf, MarathonConf, MarathonSchedulerService }
+import mesosphere.util.ConfigToMap
 import mesosphere.util.state.MesosLeaderInfo
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.Json.{ toJsFieldJsValueWrapper }
+import play.api.libs.json.{ JsValue, Writes, JsObject, Json }
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -18,32 +24,26 @@ class InfoResource @Inject() (
     schedulerService: MarathonSchedulerService,
     mesosLeaderInfo: MesosLeaderInfo,
     leaderInfo: LeaderInfo,
-    // format: OFF
-    protected val config: MarathonConf
-      with HttpConf with EventConfiguration with HttpEventConfiguration with LeaderProxyConf
+  // format: OFF
+  protected val config: MarathonConf
+    with HttpConf
+    with EventConfiguration
+    with HttpEventConfiguration
+    with LeaderProxyConf
+    with OfferMatcherManagerConfig
+    with OfferProcessorConfig
+    with DebugConf
+    with LaunchQueueConfig
+    with LaunchTokenConfig
 ) extends RestResource {
   // format: ON
 
   // Marathon configurations
   private[this] lazy val marathonConfigValues = Json.obj(
-    "master" -> config.mesosMaster.get,
-    "failover_timeout" -> config.mesosFailoverTimeout.get,
-    "framework_name" -> config.frameworkName.get,
-    "ha" -> config.highlyAvailable.get,
-    "checkpoint" -> config.checkpoint.get,
-    "local_port_min" -> config.localPortMin.get,
-    "local_port_max" -> config.localPortMax.get,
-    "executor" -> config.defaultExecutor.get,
-    "hostname" -> config.hostname.get,
-    "webui_url" -> config.webuiUrl.get,
-    "mesos_role" -> config.mesosRole.get,
-    "task_launch_timeout" -> config.taskLaunchTimeout.get,
-    "reconciliation_initial_delay" -> config.reconciliationInitialDelay.get,
-    "reconciliation_interval" -> config.reconciliationInterval.get,
-    "marathon_store_timeout" -> config.marathonStoreTimeout.get,
-    "mesos_user" -> config.mesosUser.get,
-    "leader_proxy_connection_timeout_ms" -> config.leaderProxyConnectionTimeout.get,
-    "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.get)
+    ConfigToMap.convertToMap(config).map {
+      { case (x, y) => (x, toJsFieldJsValueWrapper(y)) }
+    }.toSeq: _*
+  )
 
   // Zookeeper congiurations
   private[this] lazy val zookeeperConfigValues = Json.obj(
