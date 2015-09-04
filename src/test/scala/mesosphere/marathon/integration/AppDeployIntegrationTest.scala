@@ -137,7 +137,7 @@ class AppDeployIntegrationTest
     tasks.value should have size 2
   }
 
-  test("create an app that fails to deploy") {
+  test("an unhealthy app fails to deploy") {
     Given("a new app that is not healthy")
     val appId = testBasePath / "failing"
     val check = appProxyCheck(appId, "v1", state = false)
@@ -146,11 +146,18 @@ class AppDeployIntegrationTest
     When("The app is deployed")
     val create = marathon.createAppV2(app)
 
-    Then("The deployment can not be finished")
+    Then("We receive a deployment created confirmation")
     create.code should be (201) //Created
     extractDeploymentIds(create) should have size 1
-    intercept[AssertionError] {
-      waitForEvent("deployment_success")
+
+    And("a number of failed health events but the deployment does not succeed")
+    def interestingEvent() = waitForEventMatching("failed_health_check_event or deployment_success")(callbackEvent =>
+      callbackEvent.eventType == "deployment_success" ||
+        callbackEvent.eventType == "failed_health_check_event"
+    )
+
+    for (event <- Iterator.continually(interestingEvent()).take(10)) {
+      event.eventType should be("failed_health_check_event")
     }
 
     When("The app is deleted")
