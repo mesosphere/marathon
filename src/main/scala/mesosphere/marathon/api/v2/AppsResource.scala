@@ -45,7 +45,8 @@ class AppsResource @Inject() (
             @QueryParam("label") label: String,
             @QueryParam("embed") embed: java.util.Set[String]): String = {
     val selector = search(Option(cmd), Option(id), Option(label))
-    val resolvedEmbed = AppInfoEmbedResolver.resolve(embed) + /* deprecated */ AppInfo.Embed.Counts
+    // additional embeds are deprecated!
+    val resolvedEmbed = AppInfoEmbedResolver.resolve(embed) + AppInfo.Embed.Counts + AppInfo.Embed.Deployments
     val mapped = result(appInfoService.queryAll(selector, resolvedEmbed))
 
     jsonObjString("apps" -> mapped)
