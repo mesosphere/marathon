@@ -5,7 +5,7 @@ import java.lang.{ Double => JDouble }
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
-import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts }
+import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
@@ -507,6 +507,49 @@ trait V2Formats {
       )
     }
 
+  lazy val TaskCountsWritesWithoutPrefix: Writes[TaskCounts] =
+    Writes { counts =>
+      Json.obj(
+        "staged" -> counts.tasksStaged,
+        "running" -> counts.tasksRunning,
+        "healthy" -> counts.tasksHealthy,
+        "unhealthy" -> counts.tasksUnhealthy
+      )
+    }
+
+  implicit lazy val TaskLifeTimeWrites: Writes[TaskLifeTime] =
+    Writes { lifeTime =>
+      Json.obj(
+        "averageSeconds" -> lifeTime.averageSeconds,
+        "medianSeconds" -> lifeTime.medianSeconds
+      )
+    }
+
+  implicit lazy val TaskStatsWrites: Writes[TaskStats] =
+    Writes { stats =>
+      val statsJson = Json.obj("counts" -> TaskCountsWritesWithoutPrefix.writes(stats.counts))
+      Json.obj(
+        "stats" -> stats.maybeLifeTime.fold(ifEmpty = statsJson)(lifeTime =>
+          statsJson ++ Json.obj("lifeTime" -> lifeTime)
+        )
+      )
+    }
+
+  implicit lazy val TaskStatsByVersionWrites: Writes[TaskStatsByVersion] =
+    Writes { byVersion =>
+      val maybeJsons = Seq[(String, Option[TaskStats])](
+        "startedAfterLastScaling" -> byVersion.maybeStartedAfterLastScaling,
+        "withLatestConfig" -> byVersion.maybeWithLatestConfig,
+        "withOutdatedConfig" -> byVersion.maybeWithOutdatedConfig,
+        "totalSummary" -> byVersion.maybeTotalSummary
+      )
+      Json.toJson(
+        maybeJsons.iterator.flatMap {
+          case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
+        }.toMap
+      )
+    }
+
   implicit lazy val ExtendedAppInfoWrites: Writes[AppInfo] =
     Writes { info =>
       val appJson = V2AppDefinitionWrites.writes(V2AppDefinition(info.app)).as[JsObject]
@@ -515,7 +558,8 @@ trait V2Formats {
         info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
         info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
         info.maybeTasks.map(tasks => Json.obj("tasks" -> tasks)),
-        info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure))
+        info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure)),
+        info.maybeTaskStats.map(taskStats => Json.obj("taskStats" -> taskStats))
       ).flatten
 
       maybeJson.foldLeft(appJson)((result, obj) => result ++ obj)

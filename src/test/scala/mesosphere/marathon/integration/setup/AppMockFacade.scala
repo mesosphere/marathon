@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory
 import spray.client.pipelining._
 
 import scala.concurrent.duration.{ Duration, _ }
-import scala.util.control.NonFatal
+import scala.util.Try
 
 class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(implicit system: ActorSystem) {
   import mesosphere.util.ThreadPoolContext.context
@@ -13,15 +13,12 @@ class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(imp
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   private[this] def retry[T](retries: Int = 50, waitForNextTry: Duration = 50.milliseconds)(block: => T): T = {
-    try {
+    val attempts = Iterator(Try(block)) ++ Iterator.continually(Try {
+      Thread.sleep(waitForNextTry.toMillis)
       block
-    }
-    catch {
-      case NonFatal(e) =>
-        log.info("will retry after {}", waitForNextTry: Any, e: Any)
-        Thread.sleep(waitForNextTry.toMillis)
-        retry(retries = retries - 1, waitForNextTry = waitForNextTry)(block)
-    }
+    })
+    val firstSuccess = attempts.take(retries - 1).find(_.isSuccess).flatMap(_.toOption)
+    firstSuccess.getOrElse(block)
   }
 
   val pipeline = sendReceive

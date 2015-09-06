@@ -48,8 +48,6 @@ object MarathonBuild extends Build {
       integrationTestSettings
     ).dependsOn(root % "compile->compile; test->test").configs(IntegrationTest)
 
-  lazy val withFormatting = System.getProperty("sbt.log.format", "true").toBoolean
-
   /**
    * Determine scala test runner output. `-e` for reporting on standard error.
    *
@@ -65,7 +63,7 @@ object MarathonBuild extends Build {
    *
    * http://scalatest.org/user_guide/using_the_runner
    */
-  lazy val formattingTestArg = Tests.Argument(if (withFormatting) "-eDST" else "-eWUDST")
+  lazy val formattingTestArg = Tests.Argument("-eDFG")
 
   lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
     Seq(
@@ -265,7 +263,7 @@ object Dependency {
     val PlayJson = "2.3.7"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
-    val MarathonUI = "0.11.0-SNAPSHOT"
+    val MarathonUI = "0.11.0"
 
     // test deps versions
     val Mockito = "1.9.5"

@@ -7,17 +7,20 @@ import akka.event.EventStream
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller }
-import mesosphere.marathon.core.appinfo.{ EnrichedTask, TaskCounts, AppInfo, AppInfoService }
+import mesosphere.marathon.core.appinfo.AppInfo.Embed
+import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, TaskCounts }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
-import play.api.libs.json.{ JsObject, JsValue, Json }
-import collection.immutable
+import play.api.libs.json.{ JsNumber, Json }
 
+import scala.collection.immutable
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
+import scala.language.postfixOps
 
 class AppsResourceTest extends MarathonSpec with Matchers with Mockito with GivenWhenThen {
 
@@ -94,6 +97,23 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     intercept[UnknownAppException] { appsResource.restart(missing.toString, force = true) }
   }
 
+  test("Index has counts and deployments by default (regression for #2171)") {
+    Given("An app and group")
+    val req = mock[HttpServletRequest]
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
+    val appInfo = AppInfo(app, maybeDeployments = Some(Seq(Identifiable("deployment-123"))), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
+    appInfoService.queryAll(any, eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
+
+    When("The the index is fetched without any filters")
+    val response = appsResource.index(null, null, null, new java.util.HashSet())
+
+    Then("The response holds counts and deployments")
+    val appJson = Json.parse(response)
+    (appJson \ "apps" \\ "deployments" head) should be (Json.arr(Json.obj("id" -> "deployment-123")))
+    (appJson \ "apps" \\ "tasksStaged" head) should be (JsNumber(1))
+  }
+
   test("Search apps can be filtered") {
     val app1 = AppDefinition(id = PathId("/app/service-a"), cmd = Some("party hard"), labels = Map("a" -> "1", "b" -> "2"))
     val app2 = AppDefinition(id = PathId("/app/service-b"), cmd = Some("work hard"), labels = Map("a" -> "1", "b" -> "3"))
@@ -145,6 +165,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     taskFailureRepo = mock[TaskFailureRepository]
     config = mock[MarathonConf]
     groupManager = mock[GroupManager]
+    appInfoService = mock[AppInfoService]
     appsResource = new AppsResource(
       eventBus,
       mock[AppTasksResource],

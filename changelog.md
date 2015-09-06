@@ -11,20 +11,18 @@
 
 #### Marathon uses Java 8 
 
-Java 8 has been out for more than a year now. The support for older versions of Java has reached end of life.
+Java 8 has been out for more than a year now. The support for older versions of Java has reached end of life. 
 We switched completely to the latest stable JVM release.
 We compile, test and run Marathon against Java 8.
 Note for the Marathon Docker image: the base image of Marathon is now the standard java:8-jdk docker image.
 
-#### Jetty 9 as Servlet Engine
+#### Faster reconciliation and links to task Mesos sandboxes
 
-The latest Jetty servlet engine is used in this version of Marathon.
-Jetty 9 has a completely overhauled I/O layer, Servlet API 3.0, SPDY/3 and WebSocket support.
+Marathon now saves the slaveID of newly launched tasks.
+That leads to faster reconciliation for lost tasks and allows the UI to link to the mesos UI.
 
-#### Improved SSE handling
-
-As part of the Jetty 9 update, the SSE support for `/v2/events` has been improved.
-The event name `event: event-name` is added to every `data: json` entry for easier filtering and handling. 
+If the auto-discovered mesos UI is not reachable from wherever you access the Marathon UI from, you can
+use the `--mesos_leader_ui_url` configuration to change the base URL of these links.
 
 #### New versioning information in API and UI
 
@@ -32,12 +30,62 @@ We now have `"versionInfo"` with `"lastConfigChangeAt"` and `"lastScalingAt"` in
 `"lastConfigChangeAt"` is the timestamp of the last change to the application that was not just a restart or
 a scaling operation. `"lastScalingAt"` is the time stamp of the last scaling or restart operation.
 
-#### No pseudo-deterministic assignment of host ports anymore
+##### Additional task statistics in the `/v2/apps` and `/v2/apps/{app id}` endpoints (Optional)
 
-If you specify non-zero `"ports"` in your app JSON, they are used as service ports. The old code contained logic that 
-would assign these ports as host ports if available in the
-processed offer. That misled people into thinking that these ports corresponded to host ports. The new code always
-randomizes host ports assignment without `"requirePorts"` or explicit `"hostPort"` configuration.
+If you pass `embed=apps.taskStats`/`embed=app.taskStats` as a query parameter, you get additional taskStats
+embedded in you app JSON.
+ 
+Task statistics are provided for the following groups of tasks. If no tasks for the group exist, no statistics are
+offered:
+
+* `"withLatestConfig"` contains statistics about all tasks that run with the same config as the latest app version.
+* `"startedAfterLastScaling"` contains statistics about all tasks that were started after the last scaling or
+  restart operation.
+* `"withOutdatedConfig"` contains statistics about all tasks that were started before the last config change which
+  was not simply a restart or scaling operation.
+* `"totalSummary"` contains statistics about all tasks.
+
+Example JSON:
+
+```javascript
+{
+  // ...
+  "taskStats": {
+    {
+      "startedAfterLastScaling" : {
+        "stats" : {
+          "counts" : { // equivalent to tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy
+            "staged" : 1,
+            "running" : 100,
+            "healthy" : 90,
+            "unhealthy" : 4
+          },
+          // "lifeTime" is only included if there are running tasks.
+          "lifeTime" : { 
+            // Measured from `"startedAt"` (timestamp of the Mesos TASK_RUNNING status update) of each running task 
+            // until now.
+            "averageSeconds" : 20.0,
+            "medianSeconds" : 10.0
+          }
+        }
+      },
+      "withLatestConfig" : {
+        "stats" : { /* ... same structure as above ... */ }
+      },
+      "withOutdatedConfig" : {
+        "stats" : { /* ... same structure as above ... */ }
+      },
+      "totalSummary" : {
+        "stats" : { /* ... same structure as above ... */ }
+      }
+    }
+  }
+  // ...
+}
+```
+
+The calculation of these statistics is currently performed for every request and expensive if you have
+very many tasks.
 
 #### Specific "embed" parameters for app related information
 
@@ -51,17 +99,219 @@ deliver information you explicitly requested by default, even though we will
 allow some compatibility configuration option. This improves performance by not
 returning information that you might not need.
 
+#### Smarter resource offer handling
+
+When Marathon needed to launch tasks for multiple apps, it would first launch all needed tasks for the first one
+and then proceed to the next app. One big deployment could block all others. In this new version, Marathon
+will spread the offers among all apps that currently need to launch tasks.
+
+When Marathon detects new tasks that it has to launch, it will now explicitly request new offers
+with the `reviveOffers` Mesos scheduler API call. This should result in more speedy task launches. If
+for any reason you dislike this behavior, you can disable it with `--disable_revive_offers_for_new_apps`
+(not recommended).
+
+When Marathon has no current use for an offer, it will decline the offer for a configurable period. A short duration 
+might lead to resource starvation for other frameworks if you run many frameworks
+in your cluster. You should only need to reduce it if you use `--disable_revive_offers_for_new_apps`.
+
+* `--decline_offer_duration` (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default
+
+#### New task launching tuning parameters
+
+To prevent overloading Mesos itself, you can now restrict how many tasks Marathon launches per time interval.
+By default, we allow 1000 unconfirmed task launches every 30 seconds. In addition, Marathon
+considers `TASK_RUNNING` status updates from Mesos as launch confirmations and allows launching one more task 
+for every confirmed launch.
+    
+* `--launch_token_refresh_interval` (Optional. Default: 30000): 
+    The interval (ms) in which to refresh the launch tokens to `--launch_token_count`.
+* `--launch_tokens` (Optional. Default: 1000): Launch tokens per interval.
+
+As a result of this, the `--max_tasks_per_offer_cycle` options is deprecated and has no effect anymore.
+
+To prevent overloading Marathon and maintain speedy offer processing, there is also a timeout for matching each
+incoming resource offer, i.e. finding suitable tasks to launch for incoming offers.
+
+* `--offer_matching_timeout` (Optional. Default: 1000): 
+    Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
+    All already matched tasks are launched.
+
+
+#### No pseudo-deterministic assignment of host ports anymore
+
+If you specify non-zero `"ports"` in your app JSON, they are used as service ports. The old code contained logic that 
+would assign these ports as host ports if available in the
+processed offer. That misled people into thinking that these ports corresponded to host ports. The new code always
+randomizes host ports assignment without `"requirePorts"` or explicit `"hostPort"` configuration.
+
+#### Last task failures are persisted
+
+Marathon has exposed the `"lastTaskFailure"` via the API for a while but this information was not persisted
+ across restarts or on fail over. Now it is.
+ 
+#### Logging command line parameters on startup
+
+Marathon will now log all command line parameters on startup. Example:
+
+```
+2015-08-02 11:48:08,047] INFO Starting Marathon 0.11.0-SNAPSHOT with --zk zk://master.mesos:2181/marathon --master master.mesos:5050
+```
+
+#### Improved logging of deployment plans
+
+Example:
+
+```
+DeploymentPlan 2015-09-02T07:56:12.105Z
+step 1:
+  * Start(App(app1, cmd="cmd")), instances=0)
+step 2:
+  * Scale(App(app1, cmd="cmd")), instances=2)
+```
+
+#### Improved logging of offer rejections
+
+Example for missing port:
+
+```
+[2015-08-04 20:11:20,510] INFO Offer [20150804-173037-16777343-5050-4340-O110]. Cannot find range with host port 8080 for app [/product/frontend]
+[2015-08-04 20:11:29,422] INFO Offer [20150804-173037-16777343-5050-4340-O110]. Insufficient resources for [/product/frontend] (need cpus=1.0, mem=64.0, disk=1.0, ports=([8080] required + 1 dynamic), available in offer:
+...
+```
+
+Example for missing basic resources:
+
+```
+[2015-08-04 20:17:27,986] INFO Offer [20150804-173037-16777343-5050-4340-O110]. Not all basic resources satisfied: cpu NOT SATISFIED (30.0 > 8.0), disk SATISFIED (0.0 <= 0.0), mem SATISFIED (16.0 <= 15360.0)
+[2015-08-04 20:17:27,989] INFO Offer [20150804-173037-16777343-5050-4340-O110]. Insufficient for [/test] (need cpus=30.0, mem=16.0, disk=0.0, ports=(1 dynamic), available in offer:
+...
+```
+
+#### Immediately store changed apps
+
+In the past, Marathon would update the data for the group endpoint when it accepted a new deployment request
+like a change an app configuration. Marathon would only update the data in the app endpoint when it started
+the related deployment step. This could cause confusion for our users and thus we will now update both
+immediately when accepting the deployment.
+
+#### No automatic reset of the app backoff when detecting a running task
+
+When encountering task failures, Marathon uses the backoff duration to throttle launching tasks.
+See `"backoffSeconds"`, `"backoffFactor"` and `"maxLaunchDelaySeconds"` in the REST API documentation 
+for further information.
+
+There was an undocumented feature that reset the backoff completely whenever Marathon received a TASK_RUNNING
+ notification from Mesos. This led to problems when an application crashed fast after startup.
+ 
+In the new Marathon version, the backoff delay is never reset automatically. You can reset it manually, though.
+
 #### New `MARATHON_APP_DOCKER_IMAGE` environment variable
 
 Any task of an app definition with a docker image attribute (`container.docker.image`) will now be started with
 an environment variable `MARATHON_APP_DOCKER_IMAGE` containing its value.
 
+### Important bug fixes
+
+* \#1553 - 
+  Marathon will now correctly reload task state information after a fail over
+* \#1924 - 
+  Marathon will accept offers without disk resources if no disk resources are required
+* \#1671 - Mesos will now use the hostname given 
+  by the `--hostname` parameter to communicate with Marathon
+* \#1926 - 
+  Our leader proxy code used buffered IO without intermediate flushing which did not play well with
+  streaming events from our `/v2/events` endpoint
+* \#1877 -
+  Marathon will now exit on startup failures instead of keeping running without being able to answer to requests.
+  For example: Marathon will now exit if the specified http port is already used for something else.
+
 ### Under the Hood
+
+#### Jetty 9 as Servlet Engine
+
+The latest Jetty servlet engine is used in this version of Marathon.
+Jetty 9 has a completely overhauled I/O layer, Servlet API 3.0, SPDY/3 and WebSocket support.
+
+#### Improved SSE handling
+
+As part of the Jetty 9 update, the SSE support for `/v2/events` has been improved.
+The event name `event: event-name` is added to every `data: json` entry for easier filtering and handling. 
 
 #### Play JSON everywhere
 
-The finished our transition from Jackson JSON serialization to Play JSON. Play JSON provides a type safe
+We finished our transition from Jackson JSON serialization to Play JSON. Play JSON provides a type safe
 interface which make it easier to write correct code.
+
+### Details for Marathon UI
+
+#### Added
+- \#1204 - Please add a search bar to the applications overview to filter the
+  list of applications
+- \#1137 - Add tooltip on hover to progress bars
+  * A tooltip that displays the individual health statuses is now shown when
+    the mouse is over the progress bars in the apps overview page.
+- \#1864 - Add a link to the app detail page from the deployments tab
+- \#1756 - Create a "Not found page"
+- \#878 - Jump to Mesos sandbox from UI
+  * You can go directly to the Mesos tasks sandbox from the tasks detail page.
+- \#968 - Expose a way to identify "fragile" marathon apps in the web UI
+  * If there is a lastTaskFailure this information will be shown in a tab
+    called "Last task failure" on the app page.
+- \#1937 - Display version string also in local time
+- \#1058 - Add sorting to the health column in the app list
+- \#1993 - Show Marathon UI version in about modal
+  * The Marathon UI version will be shown on mouse hovering
+    above the API version field. Second way is pressing "g v" on the keyboard.
+- \#808 - Make app configuration fields editable
+  * A selected application version can now be edited
+    by pressing on the "Edit these settings"-button.
+- \#124 - Expose environment variables in app modal dialog
+- \#2010 - Show task life time and states in debug tab
+- \#2012 - Show summary about the most recent configuration change
+- \#2133 - Display health checks settings in the application configuration tab
+
+#### Changed
+- \#124 - Expose all /v2 App attributes in UI
+  * The optional settings inside the new application modal dialog are now
+    grouped together
+  * It is now possible to specify Docker container settings
+- \#1673 - Prerequisites to deploy a webjar via TeamCity
+  * In a production environment, the API will be requested by ../v2/ instead of
+    ./v2/, because the UI is now served in an "/ui/"-path via Marathon.
+    Also the dist-folder isn't needed in the repository anymore, the files will
+    be generated on-the-fly.
+- \#1251 - Show total resource usage in app list
+- \#2039 - Updated app config edit button styles
+- \#2071 - Replace native alert, prompt and confirm with custom modals
+- \#2116 - Adjust refresh button style
+
+#### Fixed
+- \#548 - UI showing empty list after scaling when on page > 1
+  * The task list shows the last available page
+    if tasks count decreases after scaling.
+- \#1872 - Kill & Scale should be available for more than one task
+- \#1960 - Task detail error message doesn't show up on non existent task
+- \#1989 - HealthBar isn't working correctly on non existing health data
+- \#2014 - Avoid concurrent http requests on same endpoint
+- \#1996 - Duplicable fields in app creation modal can send null values
+- \#2030 - Shortcut for app creation no longer works
+- \#2062 - Resetting app delay can block all network requests in Firefox
+- \#2123 - Health check information isn't shown on task in task list
+           and task detail
+
+### List of Contributors
+
+Commits | Contributor
+-------------|----------------
+169 | Felix Gertz
+70 |  Philip Norman
+50 | Pierluigi Cau
+5 | Sp3c1
+4 | Kamil Warguła
+4 | Daniel Fuentes
+
+Generated by `git shortlog -s -n --no-merges v0.10.0..v0.11.0` for the marathon-ui repository
+
 
 ## Changes from 0.9.0 to 0.10.0
 

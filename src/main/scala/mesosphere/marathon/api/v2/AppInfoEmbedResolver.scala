@@ -21,6 +21,7 @@ private[v2] object AppInfoEmbedResolver {
   private[this] val EmbedTasksAndFailures = "failures"
   private[this] val EmbedLastTaskFailure = "lastTaskFailure"
   private[this] val EmbedCounts = "counts"
+  private[this] val EmbedTaskStats = "taskStats"
 
   /**
     * Converts embed arguments to our internal representation.
@@ -38,6 +39,7 @@ private[v2] object AppInfoEmbedResolver {
       case EmbedDeployments     => Set(AppInfo.Embed.Deployments)
       case EmbedLastTaskFailure => Set(AppInfo.Embed.LastTaskFailure)
       case EmbedCounts          => Set(AppInfo.Embed.Counts)
+      case EmbedTaskStats       => Set(AppInfo.Embed.TaskStats)
       case unknown: String =>
         log.warn(s"unknown embed argument: $prefix$unknown")
         Set.empty
