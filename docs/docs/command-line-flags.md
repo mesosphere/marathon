@@ -168,6 +168,14 @@ invocations of this call.
 * <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 5000): 
     Do not ask for all offers (also already seen ones) more often than this interval (ms).
     
+The order in which mesos receives `reviveOffers` and `declineOffer` calls is not guaranteed. Therefore, as
+long as we still need offers to launch tasks, we repeat the `reviveOffers` call for `--revive_offers_repetitions`
+times so that our last `reviveOffers` will be received after all relevant `declineOffer` calls with high
+probability. 
+
+* <span class="label label-default">v0.11.0</span> `--revive_offers_repetitions` (Optional. Default: 3): 
+    Repeat every reviveOffer request this many times, delayed by the `--min_revive_offers_interval`.
+
 If you want to disable calling reviveOffers (not recommended), you can use:
     
 * <span class="label label-default">v0.11.0</span> `--disable_revive_offers_for_new_apps`

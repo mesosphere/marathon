@@ -110,6 +110,14 @@ with the `reviveOffers` Mesos scheduler API call. This should result in more spe
 for any reason you dislike this behavior, you can disable it with `--disable_revive_offers_for_new_apps`
 (not recommended).
 
+The order in which mesos receives `reviveOffers` and `declineOffer` calls is not guaranteed. Therefore, as
+long as we still need offers to launch tasks, we repeat the `reviveOffers` call for `--revive_offers_repetitions`
+times so that our last `reviveOffers` will be received after all relevant `declineOffer` calls with high
+probability. 
+
+* `--revive_offers_repetitions` (Optional. Default: 3): 
+    Repeat every reviveOffer request this many times, delayed by the `--min_revive_offers_interval`.
+
 When Marathon has no current use for an offer, it will decline the offer for a configurable period. A short duration 
 might lead to resource starvation for other frameworks if you run many frameworks
 in your cluster. You should only need to reduce it if you use `--disable_revive_offers_for_new_apps`.
