@@ -374,10 +374,10 @@ private class AppTaskLauncherActor(
               }
           }
 
+          updateActorState()
+
           log.info("Request to launch task with id '{}', version '{}'. {}",
             mesosTask.getTaskId.getValue, app.version, status)
-
-          updateActorState()
 
           import context.dispatcher
           saveTask()
