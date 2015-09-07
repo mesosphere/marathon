@@ -100,7 +100,7 @@ fi
 function cleanup {
     echo Cleaning up volumes
     docker rmi marathon-buildbase:$BUILD_ID 2>/dev/null
-    docker rm -v marathon-itests-$BUILD_ID 2>/dev/null
+    docker rm -v -f marathon-itests-$BUILD_ID 2>/dev/null
 }
 
 cleanup
