@@ -21,3 +21,7 @@ Once `hostname -f` returns successfully, Marathon should be able to start.
 # Task Timeout using Docker Containerizer
 
 The default executor timeout on mesos slaves or Marathon's `task_launch_timeout` are too low for Docker containerizers (docker pull can take some time...). Refer to the docs on [Docker Containers]({{ site.baseurl }}/docs/native-docker.html)
+
+# Error reading authentication secret from file
+
+When using framework-authentication on the master, be sure to set a secret that has a minimum of eight characters. Secrets shorter than that length may not be accepted by Marathon.
