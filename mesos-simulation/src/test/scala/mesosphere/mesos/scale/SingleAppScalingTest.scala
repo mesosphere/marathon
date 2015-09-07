@@ -87,9 +87,12 @@ class SingleAppScalingTest
     var metrics = Seq.newBuilder[JsValue]
     var appInfos = Seq.newBuilder[JsValue]
 
+    WaitTestSupport.waitUntil("application created", 5.seconds) {
+      marathon.listAppsInBaseGroup.value.nonEmpty
+    }
+
     for (i <- 1 to 20) {
       Thread.sleep(startTime + i * 1000 - System.currentTimeMillis())
-      //      val currentApp = marathon.app(appIdPath)
       val appJson =
         (marathon.listAppsInBaseGroup.entityJson \ "apps")
           .as[Seq[JsObject]]
@@ -113,7 +116,7 @@ class SingleAppScalingTest
     val result = marathon.updateApp(appWithManyInstances.id, V2AppUpdate(instances = Some(0)), force = true).originalResponse
     log.info(s"XXX ${result.status}: ${result.entity}")
 
-    WaitTestSupport.waitFor("app suspension", 10.seconds) {
+    WaitTestSupport.waitUntil("app suspended", 10.seconds) {
       val currentApp = marathon.app(appIdPath)
 
       val instances = (currentApp.entityJson \ "app" \ "instances").as[Int]
@@ -123,12 +126,12 @@ class SingleAppScalingTest
       log.info(s"XXX (suspend) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
 
       if (instances == 0) {
-        Some(())
+        true
       }
       else {
         // slow down
         Thread.sleep(1000)
-        None
+        false
       }
     }
 
