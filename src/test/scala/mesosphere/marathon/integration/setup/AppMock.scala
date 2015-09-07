@@ -23,7 +23,8 @@ class AppMock(appId: String, version: String, url: String) extends AbstractHandl
     val server = new Server(port)
     server.setHandler(this)
     server.start()
-    println(s"AppMock[$appId $version]: has taken the stage at port $port. Will query $url for health status.")
+    val taskId = System.getenv().getOrDefault("MESOS_TASK_ID", "<UNKNOWN>")
+    println(s"AppMock[$appId $version]: $taskId has taken the stage at port $port. Will query $url for health status.")
     server.join()
     println(s"AppMock[$appId $version]: says goodbye")
   }
