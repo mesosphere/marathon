@@ -86,11 +86,12 @@ object ProcessKeeper {
 
   def startJavaProcess(name: String, heapInMegs: Int, arguments: List[String],
                        cwd: File = new File("."), env: Map[String, String] = Map.empty, upWhen: String => Boolean): Process = {
-    log.info(s"Start java process $name with args: $arguments")
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes")
     val memSettings = s"-Xmx${heapInMegs}m"
-    val builder = Process(javaExecutable :: memSettings :: "-classpath" :: classPath :: arguments, cwd, env.toList: _*)
+    val command: List[String] = javaExecutable :: memSettings :: "-classpath" :: classPath :: arguments
+    log.info(s"Start java process $name with command: ${command.mkString(" ")}")
+    val builder = Process(command, cwd, env.toList: _*)
     val process = startProcess(name, builder, upWhen)
     log.info(s"Java process $name up and running!")
     process
@@ -151,10 +152,20 @@ object ProcessKeeper {
     }
   }
 
-  def stopOSProcesses(grep: String): Unit = {
-    val PIDRE = """\s*(\d+)\s.*""".r
-    val processes = ("ps -x" #| s"grep $grep").!!.split("\n").map { case PIDRE(pid) => pid }
-    processes.foreach(p => s"kill -9 $p".!)
+  val PIDRE = """^\s*(\d+)\s+(\S*)$""".r
+
+  def stopJavaProcesses(wantedMainClass: String): Unit = {
+    val pids = "jps -l".!!.split("\n").collect {
+      case PIDRE(pid, mainClass) if mainClass.contains(wantedMainClass) => pid
+    }
+    if (pids.nonEmpty) {
+      val killCommand = s"kill -9 ${pids.mkString(" ")}"
+      log.warn(s"Left over processes, executing: $killCommand")
+      val ret = killCommand.!
+      if (ret != 0) {
+        log.error(s"kill returned $ret")
+      }
+    }
   }
 
   def stopAllProcesses(): Unit = {

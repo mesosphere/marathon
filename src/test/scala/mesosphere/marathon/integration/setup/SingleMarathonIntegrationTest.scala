@@ -91,12 +91,12 @@ trait SingleMarathonIntegrationTest
 
   override protected def afterAll(configMap: ConfigMap): Unit = {
     super.afterAll(configMap)
-    log.info("Cleaning up local mesos/marathon structure...")
     cleanUp(withSubscribers = !config.useExternalSetup)
+
+    log.info("Cleaning up local mesos/marathon structure...")
     ExternalMarathonIntegrationTest.healthChecks.clear()
-    ProcessKeeper.stopAllServices()
-    ProcessKeeper.stopAllProcesses()
-    ProcessKeeper.stopOSProcesses("mesosphere.marathon.integration.setup.AppMock")
+    ProcessKeeper.shutdown()
+    ProcessKeeper.stopJavaProcesses("mesosphere.marathon.integration.setup.AppMock")
     system.shutdown()
     system.awaitTermination()
     log.info("Cleaning up local mesos/marathon structure: done.")
@@ -184,6 +184,7 @@ trait SingleMarathonIntegrationTest
   }
 
   def cleanUp(withSubscribers: Boolean = false, maxWait: FiniteDuration = 30.seconds) {
+    log.info("Starting to CLEAN UP !!!!!!!!!!")
     events.clear()
     ExternalMarathonIntegrationTest.healthChecks.clear()
 
@@ -193,7 +194,11 @@ trait SingleMarathonIntegrationTest
     }
 
     WaitTestSupport.waitUntil("cleanUp", maxWait) { marathon.listAppsInBaseGroup.value.isEmpty && marathon.listGroupsInBaseGroup.value.isEmpty }
+    ProcessKeeper.stopJavaProcesses("mesosphere.marathon.integration.setup.AppMock")
+
     if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
     events.clear()
+    ExternalMarathonIntegrationTest.healthChecks.clear()
+    log.info("CLEAN UP finished !!!!!!!!!")
   }
 }
