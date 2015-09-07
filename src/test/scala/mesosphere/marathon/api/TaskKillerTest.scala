@@ -52,12 +52,13 @@ class TaskKillerTest extends MarathonSpec
 
   test("KillRequested with scaling") {
     val appId = PathId(List("my", "app"))
+    val now = Timestamp.now()
     val task1 = MarathonTasks.makeTask(
-      "task-1", "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      "task-1", "host", ports = Nil, attributes = Nil, version = now, now = now,
       slaveId = SlaveID("1")
     )
     val task2 = MarathonTasks.makeTask(
-      "task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      "task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
       slaveId = SlaveID("1")
     )
     val tasksToKill = Set(task1, task2)
@@ -100,12 +101,13 @@ class TaskKillerTest extends MarathonSpec
 
   test("Kill and scale w/o force should fail if there is a deployment") {
     val appId = PathId(List("my", "app"))
+    val now = Timestamp.now()
     val task1 = MarathonTasks.makeTask(
-      "task-1", "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      "task-1", "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
       slaveId = SlaveID("1")
     )
     val task2 = MarathonTasks.makeTask(
-      "task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      "task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
       slaveId = SlaveID("1")
     )
     val tasksToKill = Set(task1, task2)

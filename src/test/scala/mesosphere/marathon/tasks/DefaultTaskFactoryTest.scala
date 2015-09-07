@@ -1,7 +1,8 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.core.base.{ Clock, ConstantClock }
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits.{ slaveIDToProto, taskIDToProto }
 import mesosphere.mesos.protos.{ SlaveID, TaskID }
@@ -23,8 +24,13 @@ class DefaultTaskFactoryTest extends MarathonSpec {
     val task = taskFactory.newTask(appDefinition, offer, runningTasks).get
 
     val expectedTask = MarathonTasks.makeTask(
-      "some task ID", "some_host", List(),
-      List(), appDefinition.version, offer.getSlaveId
+      id = "some task ID",
+      host = "some_host",
+      ports = List(),
+      attributes = List(),
+      version = appDefinition.version,
+      now = clock.now(),
+      slaveId = offer.getSlaveId
     )
     assert(task.marathonTask == expectedTask)
   }
@@ -33,12 +39,14 @@ class DefaultTaskFactoryTest extends MarathonSpec {
   var taskTracker: TaskTracker = _
   var config: MarathonConf = _
   var taskFactory: DefaultTaskFactory = _
+  var clock: Clock = _
 
   before {
+    clock = ConstantClock()
     taskIdUtil = mock[TaskIdUtil]
     taskTracker = mock[TaskTracker]
     config = MarathonTestHelper.defaultConfig()
-    taskFactory = new DefaultTaskFactory(taskIdUtil, config)
+    taskFactory = new DefaultTaskFactory(taskIdUtil, config, clock)
   }
 
 }

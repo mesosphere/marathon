@@ -1,8 +1,8 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller }
 import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ GroupManager, PathId, Timestamp }
@@ -13,7 +13,7 @@ import mesosphere.mesos.protos.SlaveID
 import org.mockito.Matchers.{ any, anyBoolean, eq => equalTo }
 import org.mockito.Mockito._
 import org.scalatest.Matchers
-import play.api.libs.json.{ JsValue, Json }
+import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -65,12 +65,13 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
     val host = "host"
     val appId = PathId("/my/app")
     val slaveId = SlaveID("some slave ID")
+    val now = Timestamp.now()
     val task1 = MarathonTasks.makeTask(
-      "task-1", host, ports = Nil, attributes = Nil, version = Timestamp.now(),
+      "task-1", host, ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
       slaveId = slaveId
     )
     val task2 = MarathonTasks.makeTask(
-      "task-2", host, ports = Nil, attributes = Nil, version = Timestamp.now(),
+      "task-2", host, ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
       slaveId = slaveId
     )
     val toKill = Set(task1)
@@ -93,12 +94,13 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
     val host = "host"
     val appId = PathId("/my/app")
     val slaveId = SlaveID("some slave ID")
+    val now = Timestamp.now()
     val task1 = MarathonTasks.makeTask(
-      "task-1", host, ports = Nil, attributes = Nil, version = Timestamp.now(),
+      "task-1", host, ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
       slaveId = slaveId
     )
     val task2 = MarathonTasks.makeTask(
-      "task-2", host, ports = Nil, attributes = Nil, version = Timestamp.now(),
+      "task-2", host, ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
       slaveId = slaveId
     )
 

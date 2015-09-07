@@ -3,19 +3,20 @@ package mesosphere.marathon.core.task.tracker
 import akka.actor.ActorRef
 import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerDriverHolder
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.bus.TaskStatusObservables
-import mesosphere.marathon.core.task.tracker.impl.{ TaskStatusUpdateActor, KillOverdueStagedTasksActor }
+import mesosphere.marathon.core.task.tracker.impl.{ TaskStatusUpdateActor, KillOverdueTasksActor }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 
 /**
   * This module provides some glue between the task tracker, status updates and various components in the application.
   */
-class TaskTrackerModule(leadershipModule: LeadershipModule) {
+class TaskTrackerModule(leadershipModule: LeadershipModule, clock: Clock) {
   def killOverdueTasks(taskTracker: TaskTracker, marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder): Unit = {
     leadershipModule.startWhenLeader(
-      KillOverdueStagedTasksActor.props(taskTracker, marathonSchedulerDriverHolder),
+      KillOverdueTasksActor.props(taskTracker, marathonSchedulerDriverHolder, clock),
       "killOverdueStagedTasks")
   }
 

@@ -8,11 +8,19 @@ import org.apache.mesos.Protos.Attribute
 import scala.collection.JavaConverters._
 
 object MarathonTasks {
+
+  /*
+   * Despite its name, stagedAt is set on task creation and before the TASK_STAGED notification from Mesos. This is
+   * important because we periodically check for any tasks with an old stagedAt timestamp and kill them (See
+   * KillOverdueTasksActor). If stagedAt remains 0 and this check is executed, the task will be killed
+   * after being created, given that the check is triggered before we receive a TASK_STAGED notification.
+   */
   def makeTask(id: String,
                host: String,
                ports: Iterable[Long],
                attributes: Iterable[Attribute],
                version: Timestamp,
+               now: Timestamp,
                slaveId: Protos.SlaveID): MarathonTask = {
     MarathonTask.newBuilder()
       .setId(id)
@@ -20,7 +28,7 @@ object MarathonTasks {
       .setVersion(version.toString())
       .addAllPorts(ports.map(i => i.toInt: java.lang.Integer).asJava)
       .addAllAttributes(attributes.asJava)
-      .setStagedAt(version.toDateTime.getMillis + 1000)
+      .setStagedAt(now.toDateTime.getMillis + 1000)
       .setSlaveId(slaveId)
       .build
   }

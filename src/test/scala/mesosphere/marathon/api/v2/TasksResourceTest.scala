@@ -49,12 +49,13 @@ class TasksResourceTest extends MarathonSpec with Matchers {
     val taskId1 = "task-1"
     val taskId2 = "task-2"
     val slaveId = SlaveID("some slave ID")
+    val now = Timestamp.now()
     val task1 = MarathonTasks.makeTask(
-      taskId1, "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      taskId1, "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
       slaveId = slaveId
     )
     val task2 = MarathonTasks.makeTask(
-      taskId2, "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      taskId2, "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
       slaveId = slaveId
     )
     val app1 = PathId("/my/app-1")

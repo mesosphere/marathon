@@ -7,17 +7,17 @@ import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, MarathonTasks, TaskTracker }
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import mesosphere.mesos.protos.{ Resource, TaskID, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.apache.mesos.Protos.{ Offer, _ }
-import org.joda.time.{ DateTimeZone, DateTime }
+import org.joda.time.{ DateTime, DateTimeZone }
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.{ NumericRange, Seq }
+import scala.collection.immutable.Seq
 
 class TaskBuilderTest extends MarathonSpec {
 
@@ -446,12 +446,13 @@ class TaskBuilderTest extends MarathonSpec {
       val tupleOption = builder.buildIfMatches(offer, taskTracker.get(app.id))
       assert(tupleOption.isDefined, message)
       val marathonTask = MarathonTasks.makeTask(
-        tupleOption.get._1.getTaskId.getValue,
-        offer.getHostname,
-        tupleOption.get._2,
-        offer.getAttributesList.asScala.toList,
-        Timestamp.now(),
-        offer.slaveId)
+        id = tupleOption.get._1.getTaskId.getValue,
+        host = offer.getHostname,
+        ports = tupleOption.get._2,
+        attributes = offer.getAttributesList.asScala.toList,
+        version = Timestamp.now(),
+        now = Timestamp.now(),
+        slaveId = offer.slaveId)
       runningTasks += marathonTask
     }
 
@@ -508,11 +509,13 @@ class TaskBuilderTest extends MarathonSpec {
       val tupleOption = builder.buildIfMatches(offer, taskTracker.get(app.id))
       assert(tupleOption.isDefined, message)
       val marathonTask = MarathonTasks.makeTask(
-        tupleOption.get._1.getTaskId.getValue,
-        offer.getHostname,
-        tupleOption.get._2,
-        offer.getAttributesList.asScala.toList, Timestamp.now(),
-        offer.slaveId)
+        id = tupleOption.get._1.getTaskId.getValue,
+        host = offer.getHostname,
+        ports = tupleOption.get._2,
+        attributes = offer.getAttributesList.asScala.toList,
+        version = Timestamp.now(),
+        now = Timestamp.now(),
+        slaveId = offer.slaveId)
       runningTasks += marathonTask
     }
 
