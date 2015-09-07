@@ -145,6 +145,7 @@ trait SingleMarathonIntegrationTest
 
     FileUtils.write(file,
       s"""#!/bin/sh
+         |set -x
          |exec $appProxyMainInvocationImpl $$*""".stripMargin)
     file.setExecutable(true)
 
@@ -156,7 +157,7 @@ trait SingleMarathonIntegrationTest
 
   private[this] def appProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean, dependencies: Set[PathId]): AppDefinition = {
     val mainInvocation = appProxyMainInvocation
-    val exec = Some(s"""$mainInvocation $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId""")
+    val exec = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $mainInvocation $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId""")
     val health = if (withHealth) Set(HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)) else Set.empty[HealthCheck]
     AppDefinition(appId, exec, executor = "//cmd", instances = instances, cpus = 0.5, mem = 128.0, healthChecks = health, dependencies = dependencies)
   }
@@ -193,7 +194,10 @@ trait SingleMarathonIntegrationTest
       waitForChange(deleteResult)
     }
 
-    WaitTestSupport.waitUntil("cleanUp", maxWait) { marathon.listAppsInBaseGroup.value.isEmpty && marathon.listGroupsInBaseGroup.value.isEmpty }
+    val apps = marathon.listAppsInBaseGroup
+    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+    val groups = marathon.listGroupsInBaseGroup
+    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
     ProcessKeeper.stopJavaProcesses("mesosphere.marathon.integration.setup.AppMock")
 
     if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
