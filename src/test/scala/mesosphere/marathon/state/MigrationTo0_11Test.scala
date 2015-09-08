@@ -4,7 +4,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.util.state.memory.InMemoryStore
-import org.scalatest.concurrent.Futures
+import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Await
@@ -26,6 +26,8 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
   }
 
   val emptyGroup = Group.empty
+
+  implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(3, Seconds))
 
   test("empty migration does (nearly) nothing") {
     Given("no apps/groups")
