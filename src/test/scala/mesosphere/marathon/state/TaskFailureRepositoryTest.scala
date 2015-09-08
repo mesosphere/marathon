@@ -8,7 +8,7 @@ import org.scalatest.{ Matchers, GivenWhenThen }
 
 class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Matchers {
   import TaskFailureTestHelper.taskFailure
-  import org.scalatest.concurrent.ScalaFutures._
+  import mesosphere.FutureTestSupport._
 
   test("store and fetch") {
     Given("an empty repo")

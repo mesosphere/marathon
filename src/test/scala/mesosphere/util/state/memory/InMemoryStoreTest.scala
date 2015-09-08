@@ -2,7 +2,7 @@ package mesosphere.util.state.memory
 
 import mesosphere.util.state.{ PersistentStore, PersistentStoreTest }
 import org.scalatest.Matchers
-import org.scalatest.concurrent.ScalaFutures._
+import mesosphere.FutureTestSupport._
 
 class InMemoryStoreTest extends PersistentStoreTest with Matchers {
 

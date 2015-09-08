@@ -2,7 +2,7 @@ package mesosphere.util.state
 
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.integration.setup.IntegrationFunSuite
-import org.scalatest.concurrent.ScalaFutures._
+import mesosphere.FutureTestSupport._
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ BeforeAndAfter, Matchers }
 

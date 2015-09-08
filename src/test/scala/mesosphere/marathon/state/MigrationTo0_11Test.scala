@@ -11,7 +11,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers {
-  import org.scalatest.concurrent.ScalaFutures._
+  import mesosphere.FutureTestSupport._
 
   class Fixture {
     lazy val metrics = new Metrics(new MetricRegistry)

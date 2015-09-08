@@ -20,7 +20,7 @@ import org.mockito.Matchers.any
 import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.concurrent.ScalaFutures._
+import mesosphere.FutureTestSupport._
 
 import scala.collection._
 import scala.concurrent.duration._

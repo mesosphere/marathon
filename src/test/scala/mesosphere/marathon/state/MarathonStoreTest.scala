@@ -11,7 +11,7 @@ import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Matchers
-import org.scalatest.concurrent.ScalaFutures._
+import mesosphere.FutureTestSupport._
 
 import scala.collection.immutable.Seq
 import scala.concurrent._
