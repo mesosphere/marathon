@@ -9,7 +9,7 @@ import org.scalatest.{ Matchers, GivenWhenThen }
 import scala.concurrent.Future
 
 class DefaultAppInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
-  import org.scalatest.concurrent.ScalaFutures._
+  import mesosphere.FutureTestSupport._
 
   class Fixture {
     lazy val groupManager = mock[GroupManager]

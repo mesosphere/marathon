@@ -11,7 +11,7 @@ import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.KeeperException.NoNodeException
 import org.apache.zookeeper.ZooDefs.Ids
 import org.scalatest._
-import org.scalatest.concurrent.ScalaFutures._
+import mesosphere.FutureTestSupport._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._

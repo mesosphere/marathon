@@ -19,7 +19,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
-  import org.scalatest.concurrent.ScalaFutures._
+  import mesosphere.FutureTestSupport._
 
   class Fixture {
     lazy val clock = ConstantClock()
