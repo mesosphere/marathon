@@ -209,11 +209,17 @@ object ProcessKeeper {
 
   def stopAllServices(): Unit = {
     services.foreach(_.stopAsync())
-    services.par.foreach(_.awaitTerminated(5, TimeUnit.SECONDS))
+    services.par.foreach { service =>
+      try { service.awaitTerminated(5, TimeUnit.SECONDS) }
+      catch {
+        case NonFatal(ex) => log.error(s"Could not stop service $service", ex)
+      }
+    }
     services = Nil
   }
 
   def shutdown(): Unit = {
+    log.info(s"Cleaning up Processes $processes and Services $services")
     stopAllProcesses()
     stopAllServices()
   }
