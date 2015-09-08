@@ -110,7 +110,7 @@ object IntegrationTestConfig {
     }
 
     val zkHost = string("zkHost", unusedForExternalSetup("localhost"))
-    val zkPort = int("zkPort", 2183)
+    val zkPort = int("zkPort", 2183 + (math.random * 100).toInt)
     val master = string("master", unusedForExternalSetup("127.0.0.1:5050"))
     val mesosLib = string("mesosLib", unusedForExternalSetup(defaultMesosLibConfig))
     val httpPort = int("httpPort", 11211 + (math.random * 100).toInt)

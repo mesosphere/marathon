@@ -65,8 +65,10 @@ trait SingleMarathonIntegrationTest
     super.beforeAll(configMap)
 
     if (!config.useExternalSetup) {
-      log.info("Setting up local mesos/marathon infrastructure...")
+      //make sure last test cleared everything
+      ProcessKeeper.shutdown()
 
+      log.info("Setting up local mesos/marathon infrastructure...")
       ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo/single")
       ProcessKeeper.startMesosLocal()
       cleanMarathonState()
