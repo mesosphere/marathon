@@ -41,92 +41,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     with Matchers
     with ImplicitSender {
 
-  var repo: AppRepository = _
-  var groupRepo: GroupRepository = _
-  var deploymentRepo: DeploymentRepository = _
-  var hcManager: HealthCheckManager = _
-  var tracker: TaskTracker = _
-  var queue: LaunchQueue = _
-  var frameworkIdUtil: FrameworkIdUtil = _
-  var driver: SchedulerDriver = _
-  var holder: MarathonSchedulerDriverHolder = _
-  var storage: StorageProvider = _
-  var taskFailureEventRepository: TaskFailureRepository = _
-  var leaderInfo: LeaderInfo = _
-  var schedulerActions: ActorRef => SchedulerActions = _
-  var deploymentManagerProps: SchedulerActions => Props = _
-  var historyActorProps: Props = _
-
-  implicit val defaultTimeout: Timeout = 5.seconds
-
-  before {
-    driver = mock[SchedulerDriver]
-    holder = new MarathonSchedulerDriverHolder
-    holder.driver = Some(driver)
-    repo = mock[AppRepository]
-    groupRepo = mock[GroupRepository]
-    deploymentRepo = mock[DeploymentRepository]
-    hcManager = mock[HealthCheckManager]
-    tracker = mock[TaskTracker]
-    queue = mock[LaunchQueue]
-    frameworkIdUtil = mock[FrameworkIdUtil]
-    storage = mock[StorageProvider]
-    taskFailureEventRepository = mock[TaskFailureRepository]
-    leaderInfo = mock[LeaderInfo]
-    deploymentManagerProps = schedulerActions => Props(new DeploymentManager(
-      repo,
-      tracker,
-      queue,
-      schedulerActions,
-      storage,
-      hcManager,
-      system.eventStream
-    ))
-    historyActorProps = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
-    schedulerActions = ref => new SchedulerActions(
-      repo, groupRepo, hcManager, tracker, queue, new EventStream(), ref, mock[MarathonConf])(system.dispatcher)
-
-    when(deploymentRepo.store(any())).thenAnswer(new Answer[Future[DeploymentPlan]] {
-      override def answer(p1: InvocationOnMock): Future[DeploymentPlan] = {
-        Future.successful(p1.getArguments()(0).asInstanceOf[DeploymentPlan])
-      }
-    })
-
-    when(deploymentRepo.expunge(any())).thenReturn(Future.successful(Seq(true)))
-    when(deploymentRepo.all()).thenReturn(Future.successful(Nil))
-    when(repo.apps()).thenReturn(Future.successful(Nil))
-    when(groupRepo.rootGroup()).thenReturn(Future.successful(None))
-
-  }
-
-  def createActor() = {
-    system.actorOf(
-      MarathonSchedulerActor.props(
-        schedulerActions,
-        deploymentManagerProps,
-        historyActorProps,
-        repo,
-        deploymentRepo,
-        hcManager,
-        tracker,
-        queue,
-        holder,
-        leaderInfo,
-        system.eventStream
-      )
-    )
-  }
-
-  def stopActor(ref: ActorRef): Unit = {
-    watch(ref)
-    system.stop(ref)
-    expectTerminated(ref)
-  }
-
-  override def afterAll(): Unit = {
-    system.shutdown()
-  }
-
   test("RecoversDeploymentsAndReconcilesHealthChecksOnStart") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     when(groupRepo.rootGroup()).thenReturn(Future.successful(Some(Group.apply(PathId.empty, apps = Set(app)))))
@@ -560,4 +474,92 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       stopActor(schedulerActor)
     }
   }
+
+  var repo: AppRepository = _
+  var groupRepo: GroupRepository = _
+  var deploymentRepo: DeploymentRepository = _
+  var hcManager: HealthCheckManager = _
+  var tracker: TaskTracker = _
+  var queue: LaunchQueue = _
+  var frameworkIdUtil: FrameworkIdUtil = _
+  var driver: SchedulerDriver = _
+  var holder: MarathonSchedulerDriverHolder = _
+  var storage: StorageProvider = _
+  var taskFailureEventRepository: TaskFailureRepository = _
+  var leaderInfo: LeaderInfo = _
+  var schedulerActions: ActorRef => SchedulerActions = _
+  var deploymentManagerProps: SchedulerActions => Props = _
+  var historyActorProps: Props = _
+
+  implicit val defaultTimeout: Timeout = 5.seconds
+
+  before {
+    driver = mock[SchedulerDriver]
+    holder = new MarathonSchedulerDriverHolder
+    holder.driver = Some(driver)
+    repo = mock[AppRepository]
+    groupRepo = mock[GroupRepository]
+    deploymentRepo = mock[DeploymentRepository]
+    hcManager = mock[HealthCheckManager]
+    tracker = mock[TaskTracker]
+    queue = mock[LaunchQueue]
+    frameworkIdUtil = mock[FrameworkIdUtil]
+    storage = mock[StorageProvider]
+    taskFailureEventRepository = mock[TaskFailureRepository]
+    leaderInfo = mock[LeaderInfo]
+    deploymentManagerProps = schedulerActions => Props(new DeploymentManager(
+      repo,
+      tracker,
+      queue,
+      schedulerActions,
+      storage,
+      hcManager,
+      system.eventStream
+    ))
+    historyActorProps = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
+    schedulerActions = ref => new SchedulerActions(
+      repo, groupRepo, hcManager, tracker, queue, new EventStream(), ref, mock[MarathonConf])(system.dispatcher)
+
+    when(deploymentRepo.store(any())).thenAnswer(new Answer[Future[DeploymentPlan]] {
+      override def answer(p1: InvocationOnMock): Future[DeploymentPlan] = {
+        Future.successful(p1.getArguments()(0).asInstanceOf[DeploymentPlan])
+      }
+    })
+
+    when(deploymentRepo.expunge(any())).thenReturn(Future.successful(Seq(true)))
+    when(deploymentRepo.all()).thenReturn(Future.successful(Nil))
+    when(repo.apps()).thenReturn(Future.successful(Nil))
+    when(groupRepo.rootGroup()).thenReturn(Future.successful(None))
+    when(queue.get(any[PathId])).thenReturn(None)
+    when(tracker.count(any[PathId])).thenReturn(0)
+  }
+
+  def createActor() = {
+    system.actorOf(
+      MarathonSchedulerActor.props(
+        schedulerActions,
+        deploymentManagerProps,
+        historyActorProps,
+        repo,
+        deploymentRepo,
+        hcManager,
+        tracker,
+        queue,
+        holder,
+        leaderInfo,
+        system.eventStream
+      )
+    )
+  }
+
+  def stopActor(ref: ActorRef): Unit = {
+    watch(ref)
+    system.stop(ref)
+    expectTerminated(ref)
+  }
+
+  override def afterAll(): Unit = {
+    system.shutdown()
+  }
+
 }
