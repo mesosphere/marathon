@@ -222,13 +222,10 @@ private class AppTaskLauncherActor(
 
   private[this] def receiveTaskLaunchNotification: Receive = {
     case TaskLaunchSourceDelegate.TaskLaunchRejected(taskInfo, reason) if inFlight(taskInfo) =>
-      // This task is not yet known to mesos, so there will be no event that removes
-      // it automatically from the taskTracker.
-      taskTracker.terminated(app.id, taskInfo.getTaskId.getValue)
       removeTask(taskInfo.getTaskId)
       tasksToLaunch += 1
       log.info(
-        "Task launch for '{}' was denied, reason '{}', rescheduling. {}",
+        "Task launch for '{}' was REJECTED, reason '{}', rescheduling. {}",
         taskInfo.getTaskId.getValue, reason, status)
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
@@ -357,32 +354,15 @@ private class AppTaskLauncherActor(
             tasksToLaunch -= 1
             OfferMatcherRegistration.manageOfferMatcherStatus()
           }
-          def saveTask(): Future[Seq[TaskInfo]] = {
-            taskTracker.created(app.id, marathonTask)
-            val context = this.context
-            import context.dispatcher
-            taskTracker
-              .store(app.id, marathonTask)
-              .map { _ =>
-                self ! AppTaskLauncherActor.ScheduleTaskLaunchNotificationTimeout(mesosTask)
-                Seq(mesosTask)
-              }.recover {
-                case NonFatal(e) =>
-                  log.error(e, "While storing task '{}'", mesosTask.getTaskId.getValue)
-                  self ! TaskLaunchSourceDelegate.TaskLaunchRejected(mesosTask, "could not save task")
-                  Seq.empty
-              }
-          }
 
           updateActorState()
 
           log.info("Request to launch task with id '{}', version '{}'. {}",
             mesosTask.getTaskId.getValue, app.version, status)
 
-          import context.dispatcher
-          saveTask()
-            .map(mesosTasks => MatchedTasks(offer.getId, mesosTasks.map(TaskWithSource(myselfAsLaunchSource, _))))
-            .pipeTo(sender())
+          self ! AppTaskLauncherActor.ScheduleTaskLaunchNotificationTimeout(mesosTask)
+
+          sender() ! MatchedTasks(offer.getId, Seq(TaskWithSource(myselfAsLaunchSource, mesosTask, marathonTask)))
 
         case None => sender() ! MatchedTasks(offer.getId, Seq.empty)
       }

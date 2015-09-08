@@ -3,7 +3,9 @@ package mesosphere.marathon.core.launcher.impl
 import java.util
 import java.util.Collections
 
+import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSchedulerDriverHolder, MarathonSpec }
 import mesosphere.marathon.core.launcher.TaskLauncher
 import mesosphere.mesos.protos.OfferID
@@ -66,9 +68,10 @@ class TaskLauncherImplTest extends MarathonSpec {
   var launcher: TaskLauncher = _
 
   before {
+    val metrics = new Metrics(new MetricRegistry)
     driverHolder = new MarathonSchedulerDriverHolder
     driverHolder.driver = Some(mock[SchedulerDriver])
-    launcher = new TaskLauncherImpl(driverHolder, ConstantClock())
+    launcher = new TaskLauncherImpl(metrics, driverHolder, ConstantClock())
   }
 
   after {

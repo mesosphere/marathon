@@ -1,12 +1,13 @@
 package mesosphere.marathon.core.matcher.base
 
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.{ Offer, OfferID, TaskInfo }
 
 import scala.concurrent.Future
 
 object OfferMatcher {
-  case class TaskWithSource(source: TaskLaunchSource, taskInfo: TaskInfo) {
+  case class TaskWithSource(source: TaskLaunchSource, taskInfo: TaskInfo, marathonTask: MarathonTask) {
     def accept(): Unit = source.taskLaunchAccepted(taskInfo)
     def reject(reason: String): Unit = source.taskLaunchRejected(taskInfo, reason)
   }

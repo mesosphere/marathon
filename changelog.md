@@ -144,6 +144,12 @@ incoming resource offer, i.e. finding suitable tasks to launch for incoming offe
     Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
     All already matched tasks are launched.
 
+All launched tasks are stored before launching them. There is also a new timeout for this:
+    
+* <span class="label label-default">v0.11.0</span> `--save_tasks_to_launch_timeout` (Optional. Default: 3000): 
+    Timeout (ms) after matching an offer for saving all matched tasks that we are about to launch.
+    When reaching the timeout, only the tasks that we could save within the timeout are also launched.
+    All other task launches are temporarily rejected and retried later.
 
 #### No pseudo-deterministic assignment of host ports anymore
 

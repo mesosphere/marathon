@@ -21,6 +21,8 @@ trait Mockito extends MockitoSugar {
   def atLeast(num: Int) = M.atLeast(num)
   def atMost(num: Int) = M.atMost(num)
 
+  def inOrder(mocks: AnyRef*) = M.inOrder(mocks: _*)
+
   def noMoreInteractions(mocks: AnyRef*): Unit = {
     M.verifyNoMoreInteractions(mocks: _*)
   }

@@ -162,6 +162,7 @@ class GroupManager @Singleton @Inject() (
       _ <- scheduler.deploy(plan, force)
       _ <- storeUpdatedApps(plan)
       _ <- groupRepo.store(zkName, plan.target)
+      _ = log.info(s"Updated groups/apps according to deployment plan ${plan.id}")
     } yield plan
 
     deployment.onComplete {

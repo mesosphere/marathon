@@ -1,8 +1,10 @@
 package mesosphere.marathon.core.matcher.manager.impl
 
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonTestHelper }
 import mesosphere.marathon.core.base.{ Clock, ShutdownHooks }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -158,7 +160,8 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter {
     protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks()
 
     override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedTasks] = {
-      val result = MatchedTasks(offer.getId, matchTasks(deadline, offer).map(TaskWithSource(source, _)))
+      val result = MatchedTasks(offer.getId, matchTasks(deadline, offer).map(task =>
+        TaskWithSource(source, task, MarathonTestHelper.makeTaskFromTaskInfo(task, offer))))
       results :+= result
       Future.successful(result)
     }

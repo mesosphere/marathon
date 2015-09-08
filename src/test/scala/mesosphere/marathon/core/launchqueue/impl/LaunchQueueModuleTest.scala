@@ -149,7 +149,6 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
     Given("An app in the queue")
     call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
     call(taskFactory.newTask(app, offer, Set.empty[MarathonTask])).thenReturn(Some(createdTask))
-    call(taskTracker.store(app.id, marathonTask)).thenReturn(Future.successful(mock[PersistentEntity]))
     taskQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
@@ -165,39 +164,6 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
     assert(matchedTasks.tasks.map(_.taskInfo) == Seq(mesosTask))
 
     verify(taskTracker).get(app.id)
-    verify(taskTracker).created(app.id, marathonTask)
-    verify(taskTracker).store(app.id, marathonTask)
-  }
-
-  test("an offer gets successfully matched against an item in the queue BUT storing fails") {
-    val offer = MarathonTestHelper.makeBasicOffer().build()
-    val taskId: TaskID = TaskIdUtil.newTaskId(app.id)
-    val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId).build()
-    val marathonTask = MarathonTask.newBuilder().setId(taskId.getValue).build()
-    val createdTask = CreatedTask(mesosTask, marathonTask)
-
-    Given("An app in the queue")
-    call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
-    call(taskFactory.newTask(app, offer, Set.empty[MarathonTask])).thenReturn(Some(createdTask))
-    call(taskTracker.store(app.id, marathonTask)).thenReturn(Future.failed(new RuntimeException("storing failed")))
-    taskQueue.add(app)
-    WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
-      offerMatcherManager.offerMatchers.size == 1
-    }
-
-    When("we ask for matching an offer ")
-    val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
-    val matchedTasks = Await.result(matchFuture, 3.seconds)
-
-    Then("the offer gets passed to the task factory but not included in the answer")
-    verify(taskFactory).newTask(app, offer, Set.empty[MarathonTask])
-    assert(matchedTasks.offerId == offer.getId)
-    assert(matchedTasks.tasks.isEmpty)
-
-    verify(taskTracker).get(app.id)
-    verify(taskTracker).created(app.id, marathonTask)
-    verify(taskTracker).store(app.id, marathonTask)
-    verify(taskTracker, Mockito.timeout(1000)).terminated(app.id, marathonTask.getId)
   }
 
   private[this] val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
