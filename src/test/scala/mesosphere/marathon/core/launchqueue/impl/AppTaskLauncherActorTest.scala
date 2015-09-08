@@ -16,13 +16,14 @@ import mesosphere.marathon.core.matcher.base.util.{ TaskLaunchSourceDelegate, Ac
 import mesosphere.marathon.core.task.bus.{ TaskStatusUpdateTestHelper, TaskStatusObservables }
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.integration.setup.WaitTestSupport
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{ Timestamp, AppDefinition, PathId }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
 import mesosphere.marathon.{ Protos, MarathonSpec, MarathonTestHelper }
 import mesosphere.util.state.PersistentEntity
+import org.mockito
 import org.mockito.Mockito
-import org.scalatest.GivenWhenThen
+import org.scalatest.{ Matchers, GivenWhenThen }
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 import scala.concurrent.{ Future, Await }
@@ -54,6 +55,70 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     assert(counts.tasksLeftToLaunch == 0)
 
     Mockito.verify(taskTracker).get(app.id)
+  }
+
+  test("Upgrading an app updates app definition in actor and requeries backoff") {
+    Given("an entry for an app")
+    Mockito.when(taskTracker.get(app.id)).thenReturn(Set(marathonTask))
+    val launcherRef = createLauncherRef(instances = 3)
+    rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(app))
+    rateLimiterActor.reply(RateLimiterActor.DelayUpdate(app, clock.now()))
+    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+    assert(counts.tasksLaunchedOrRunning == 1)
+    Mockito.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
+    Mockito.reset(offerMatcherManager)
+
+    When("upgrading the app")
+    val upgradedApp = app.copy(cmd = Some("new command"))
+    launcherRef ! AppTaskLauncherActor.AddTasks(upgradedApp, 1)
+
+    Then("the actor requeries the backoff delay")
+    rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
+    val newDelay: Timestamp = clock.now() + 5.seconds
+    rateLimiterActor.reply(RateLimiterActor.DelayUpdate(upgradedApp, newDelay))
+    val counts2 = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+    assert(counts2.backOffUntil == newDelay)
+
+    And("the actor knows the new app definition")
+    assert(counts2.app == upgradedApp)
+    And("resets the task to launch according to the new add command")
+    assert(counts2.tasksLeftToLaunch == 1)
+
+    And("removes its offer subscription because of the backoff delay")
+    Mockito.verify(offerMatcherManager).removeSubscription(mockito.Matchers.any())(mockito.Matchers.any())
+
+    // We don't care about these:
+    Mockito.reset(taskTracker)
+  }
+
+  test("Upgrading an app updates reregisters the offerMatcher at the manager") {
+    Given("an entry for an app")
+    Mockito.when(taskTracker.get(app.id)).thenReturn(Set(marathonTask))
+    val launcherRef = createLauncherRef(instances = 1)
+    rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(app))
+    rateLimiterActor.reply(RateLimiterActor.DelayUpdate(app, clock.now()))
+    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+    assert(counts.tasksLaunchedOrRunning == 1)
+
+    // We don't care about interactions until this point
+    Mockito.reset(offerMatcherManager)
+
+    When("upgrading the app")
+    val upgradedApp = app.copy(cmd = Some("new command"))
+    launcherRef ! AppTaskLauncherActor.AddTasks(upgradedApp, 1)
+    rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
+    rateLimiterActor.reply(RateLimiterActor.DelayUpdate(upgradedApp, clock.now()))
+
+    // wait for message being processed
+    Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+
+    Then("the actor reregisters itself for at the offerMatcher")
+    val inOrder = Mockito.inOrder(offerMatcherManager)
+    inOrder.verify(offerMatcherManager).removeSubscription(mockito.Matchers.any())(mockito.Matchers.any())
+    inOrder.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
+
+    // We don't care about these:
+    Mockito.reset(taskTracker)
   }
 
   test("Process task launch") {

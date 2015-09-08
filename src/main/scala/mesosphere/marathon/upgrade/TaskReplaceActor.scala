@@ -53,6 +53,9 @@ class TaskReplaceActor(
     }
 
     conciliateNewTasks()
+
+    log.info("Resetting the backoff delay before restarting the app")
+    taskQueue.resetDelay(app)
   }
 
   override def postStop(): Unit = {

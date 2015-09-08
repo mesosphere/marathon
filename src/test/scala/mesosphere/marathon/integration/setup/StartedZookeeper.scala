@@ -21,6 +21,6 @@ trait StartedZookeeper extends BeforeAndAfterAllConfigMap { self: IntegrationFun
 
   override protected def afterAll(configMap: ConfigMap): Unit = {
     super.afterAll(configMap)
-    ProcessKeeper.stopAllProcesses()
+    ProcessKeeper.shutdown()
   }
 }

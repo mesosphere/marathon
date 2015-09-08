@@ -12,6 +12,7 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate }
 import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -26,6 +27,7 @@ import scala.concurrent.Future
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppsResource @Inject() (
+    clock: Clock,
     @Named(EventModule.busName) eventBus: EventStream,
     appTasksRes: AppTasksResource,
     service: MarathonSchedulerService,
@@ -57,13 +59,16 @@ class AppsResource @Inject() (
   def create(@Context req: HttpServletRequest, body: Array[Byte],
              @DefaultValue("false")@QueryParam("force") force: Boolean): Response = {
 
-    val app = validateApp(Json.parse(body).as[V2AppDefinition].withCanonizedIds().toAppDefinition)
+    val now = clock.now()
+    val app =
+      validateApp(Json.parse(body).as[V2AppDefinition].withCanonizedIds().toAppDefinition)
+        .copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(now))
 
     def createOrThrow(opt: Option[AppDefinition]) = opt
       .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
       .getOrElse(app)
 
-    val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
+    val plan = result(groupManager.updateApp(app.id, createOrThrow, version = app.version, force))
 
     val appWithDeployments = AppInfo(
       app,
@@ -116,7 +121,7 @@ class AppsResource @Inject() (
     val appUpdate = Json.parse(body).as[V2AppUpdate].copy(id = Some(appId))
     BeanValidation.requireValid(ModelValidation.checkUpdate(appUpdate, needsId = false))
 
-    val newVersion = Timestamp.now()
+    val newVersion = clock.now()
     val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, newVersion), newVersion, force))
 
     val response = plan.original.app(appId).map(_ => Response.ok()).getOrElse(Response.created(new URI(appId.toString)))
@@ -129,7 +134,7 @@ class AppsResource @Inject() (
   def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean, body: Array[Byte]): Response = {
     val updates = Json.parse(body).as[Seq[V2AppUpdate]].map(_.withCanonizedIds())
     BeanValidation.requireValid(ModelValidation.checkUpdates(updates))
-    val version = Timestamp.now()
+    val version = clock.now()
     def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
       update.id match {
         case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, version), version)
@@ -170,7 +175,7 @@ class AppsResource @Inject() (
       .map(_.markedForRestarting)
       .getOrElse(throw new UnknownAppException(appId))
 
-    val newVersion = Timestamp.now()
+    val newVersion = clock.now()
     val restartDeployment = result(groupManager.updateApp(id.toRootPath, markForRestartingOrThrow, newVersion, force))
 
     deploymentResult(restartDeployment)

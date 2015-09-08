@@ -88,7 +88,10 @@ class SingleAppScalingTest
     var appInfos = Seq.newBuilder[JsValue]
 
     for (i <- 1 to 20) {
-      Thread.sleep(startTime + i * 1000 - System.currentTimeMillis())
+      val waitTime: Long = startTime + i * 1000 - System.currentTimeMillis()
+      if (waitTime > 0) {
+        Thread.sleep(waitTime)
+      }
       //      val currentApp = marathon.app(appIdPath)
       val appJson =
         (marathon.listAppsInBaseGroup.entityJson \ "apps")

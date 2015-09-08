@@ -63,6 +63,7 @@ class TaskReplaceActorTest
       ref ! MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString)
 
     Await.result(promise.future, 5.seconds)
+    verify(queue).resetDelay(app)
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
 
@@ -101,6 +102,7 @@ class TaskReplaceActorTest
       ref ! HealthStatusChanged(app.id, s"task_$i", app.version.toString, alive = true)
 
     Await.result(promise.future, 5.seconds)
+    verify(queue).resetDelay(app)
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
 
@@ -140,6 +142,7 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
 
     eventually { verify(driver, times(3)).killTask(_) }
+    verify(queue).resetDelay(app)
 
     expectTerminated(ref)
   }
@@ -272,6 +275,7 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
+    verify(queue).resetDelay(app)
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskC.getId).build())

@@ -42,6 +42,90 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 1) //make sure, the app has really started
   }
 
+  test("backoff delays are reset on configuration changes") {
+    val app: V2AppDefinition = createAFailingAppResultingInBackOff()
+
+    When("we force deploy a working configuration")
+    val deployment2 = marathon.updateApp(app.id, V2AppUpdate(cmd = Some("sleep 120; true")), force = true)
+
+    Then("The app deployment is created")
+    deployment2.code should be (200) //Created
+
+    And("and the app gets deployed immediately")
+    waitForEvent("deployment_success")
+    waitForTasks(app.id, 1)
+  }
+
+  test("backoff delays are NOT reset on scaling changes") {
+    val app: V2AppDefinition = createAFailingAppResultingInBackOff()
+
+    When("we force deploy a scale change")
+    val deployment2 = marathon.updateApp(app.id, V2AppUpdate(instances = Some(3)), force = true)
+
+    Then("The app deployment is created")
+    deployment2.code should be (200) //Created
+
+    And("BUT our app still has a backoff delay")
+    val queueAfterScaling: List[ITQueueItem] = marathon.taskQueue().value.queue
+    queueAfterScaling should have size 1
+    queueAfterScaling.map(_.delay.overdue) should contain(false)
+  }
+
+  test("restarting an app with backoff delay starts immediately") {
+    val app: V2AppDefinition = createAFailingAppResultingInBackOff()
+
+    When("we force a restart")
+    val deployment2 = marathon.restartApp(app.id, force = true)
+
+    Then("The app deployment is created")
+    deployment2.code should be (200) //Created
+
+    And("the task eventually fails AGAIN")
+    val events2 = waitForEvents("status_update_event", "status_update_event")()
+    val statuses2 = events2.values.flatMap(_.map(_.info("taskStatus")))
+    statuses2 should contain("TASK_RUNNING")
+    statuses2 should contain("TASK_FAILED")
+  }
+
+  private[this] def createAFailingAppResultingInBackOff(): V2AppDefinition = {
+    Given("a new app")
+    val app =
+      v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+        .copy(
+          cmd = Some("false"),
+          backoff = 1.hour,
+          maxLaunchDelay = 1.hour
+        )
+
+    When("we request to deploy the app")
+    val result = marathon.createAppV2(app)
+
+    Then("The app deployment is created")
+    result.code should be(201) //Created
+
+    And("the task eventually fails")
+    val events = waitForEvents("status_update_event", "status_update_event")()
+    val statuses = events.values.flatMap(_.map(_.info("taskStatus")))
+    statuses should contain("TASK_RUNNING")
+    statuses should contain("TASK_FAILED")
+
+    And("our app gets a backoff delay")
+    WaitTestSupport.waitUntil("queue item", 10.seconds) {
+      try {
+        val queue: List[ITQueueItem] = marathon.taskQueue().value.queue
+        queue should have size 1
+        queue.map(_.delay.overdue) should contain(false)
+        true
+      }
+      catch {
+        case NonFatal(e) =>
+          log.info("while querying queue", e)
+          false
+      }
+    }
+    app
+  }
+
   test("increase the app count metric when an app is created") {
     Given("a new app")
     val app = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)

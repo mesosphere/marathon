@@ -8,9 +8,15 @@ import org.apache.log4j.Logger
 
 import scala.concurrent.duration._
 
+/**
+  * Manages the task launch delays for every app and config version.
+  *
+  * We do not keep the delays for every version because that would include scaling changes or manual restarts.
+  */
 private[launchqueue] class RateLimiter(clock: Clock) {
   import RateLimiter._
 
+  /** The task launch delays per app and their last config change. */
   private[this] var taskLaunchDelays = Map[(PathId, Timestamp), Delay]()
 
   def cleanUpOverdueDelays(): Unit = {
@@ -20,7 +26,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
   }
 
   def getDelay(app: AppDefinition): Timestamp =
-    taskLaunchDelays.get(app.id -> app.version).map(_.deadline) getOrElse clock.now()
+    taskLaunchDelays.get(app.id -> app.versionInfo.lastConfigChangeVersion).map(_.deadline) getOrElse clock.now()
 
   def addDelay(app: AppDefinition): Timestamp = {
     setNewDelay(app, "Increasing delay") {
@@ -31,7 +37,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
 
   private[this] def setNewDelay(app: AppDefinition, message: String)(
     calcDelay: Option[Delay] => Option[Delay]): Timestamp = {
-    val maybeDelay: Option[Delay] = taskLaunchDelays.get(app.id -> app.version)
+    val maybeDelay: Option[Delay] = taskLaunchDelays.get(app.id -> app.versionInfo.lastConfigChangeVersion)
     calcDelay(maybeDelay) match {
       case Some(newDelay) =>
         import mesosphere.util.DurationToHumanReadable
@@ -44,7 +50,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
         }
         else {
           log.info(s"$message. Task launch delay for [${app.id}] changed from [$priorTimeLeft] to [$timeLeft].")
-          taskLaunchDelays += ((app.id, app.version) -> newDelay)
+          taskLaunchDelays += ((app.id, app.versionInfo.lastConfigChangeVersion) -> newDelay)
         }
         newDelay.deadline
 
@@ -55,9 +61,10 @@ private[launchqueue] class RateLimiter(clock: Clock) {
   }
 
   def resetDelay(app: AppDefinition): Unit = {
-    if (taskLaunchDelays contains (app.id -> app.version))
-      log.info(s"Task launch delay for [${app.id} - ${app.version}}] reset to zero")
-    taskLaunchDelays = taskLaunchDelays - (app.id -> app.version)
+    if (taskLaunchDelays contains (app.id -> app.versionInfo.lastConfigChangeVersion)) {
+      log.info(s"Task launch delay for [${app.id} - ${app.versionInfo.lastConfigChangeVersion}}] reset to zero")
+      taskLaunchDelays -= (app.id -> app.versionInfo.lastConfigChangeVersion)
+    }
   }
 }
 

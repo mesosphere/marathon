@@ -100,7 +100,7 @@ fi
 function cleanup {
     echo Cleaning up volumes
     docker rmi marathon-buildbase:$BUILD_ID 2>/dev/null
-    docker rm -v marathon-itests-$BUILD_ID 2>/dev/null
+    docker rm -v -f marathon-itests-$BUILD_ID 2>/dev/null
 }
 
 cleanup
@@ -117,6 +117,8 @@ fi
 docker run \
     --rm=$CLEANUP_CONTAINERS_ON_EXIT \
     --name marathon-itests-$BUILD_ID \
+    --memory 4g \
+    --memory-swap 6g \
     -e MARATHON_MAX_TASKS_PER_OFFER=$MARATHON_MAX_TASKS_PER_OFFER \
     -v "$SBT_DIR:/root/.sbt" \
     -v "$IVY2_DIR:/root/.ivy2" \

@@ -290,6 +290,7 @@ object AppDefinition {
 
   sealed trait VersionInfo {
     def version: Timestamp
+    def lastConfigChangeVersion: Timestamp
 
     def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
       VersionInfo.forNewConfig(version).withScaleOrRestartChange(newVersion)
@@ -302,13 +303,16 @@ object AppDefinition {
 
   object VersionInfo {
     case object NoVersion extends VersionInfo {
-      def version: Timestamp = Timestamp(0)
+      override def version: Timestamp = Timestamp(0)
+      override def lastConfigChangeVersion: Timestamp = version
     }
 
     /**
       * Only contains a version timestamp. Will be converted to a FullVersionInfo before stored.
       */
-    case class OnlyVersion(version: Timestamp) extends VersionInfo
+    case class OnlyVersion(version: Timestamp) extends VersionInfo {
+      override def lastConfigChangeVersion: Timestamp = version
+    }
 
     /**
       * @param version The versioning timestamp (we are currently assuming that this is the same as lastChangeAt)
@@ -320,6 +324,8 @@ object AppDefinition {
         version: Timestamp,
         lastScalingAt: Timestamp,
         lastConfigChangeAt: Timestamp) extends VersionInfo {
+
+      override def lastConfigChangeVersion: Timestamp = lastConfigChangeAt
 
       override def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
         copy(version = newVersion, lastScalingAt = newVersion)
