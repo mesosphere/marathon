@@ -122,6 +122,11 @@ trait MarathonConf
     true
   }
 
+  lazy val taskLaunchConfirmTimeout = opt[Long]("task_launch_confirm_timeout",
+    descr = "Time, in milliseconds, to wait for a task to enter " +
+      "the TASK_STAGING state before killing it.",
+    default = Some(10000L))
+
   lazy val taskLaunchTimeout = opt[Long]("task_launch_timeout",
     descr = "(deprecated) Time, in milliseconds, to wait for a task to enter " +
       "the TASK_RUNNING state before killing it. NOTE: this is a temporary " +

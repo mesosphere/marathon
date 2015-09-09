@@ -151,6 +151,12 @@ All launched tasks are stored before launching them. There is also a new timeout
     When reaching the timeout, only the tasks that we could save within the timeout are also launched.
     All other task launches are temporarily rejected and retried later.
 
+If the mesos master fails over or in other unusual circumstances, a launch task request might get lost.
+You can configure how long Marathon waits for the first `TASK_STAGING` update.
+    
+* <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 10000):
+  Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
+
 #### No pseudo-deterministic assignment of host ports anymore
 
 If you specify non-zero `"ports"` in your app JSON, they are used as service ports. The old code contained logic that 
