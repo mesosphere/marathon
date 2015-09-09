@@ -238,6 +238,11 @@ an environment variable `MARATHON_APP_DOCKER_IMAGE` containing its value.
   Marathon will now exit on startup failures instead of keeping running without being able to answer to requests.
   For example: Marathon will now exit if the specified http port is already used for something else.
 
+### Known issues
+
+Applications might not be returned for a little while even after `POST /v2/apps` returned 201. This is
+side-effect of storing the tasks information in ZooKeeper and we plan to fix it in the next releases.
+
 ### Under the Hood
 
 #### Jetty 9 as Servlet Engine
