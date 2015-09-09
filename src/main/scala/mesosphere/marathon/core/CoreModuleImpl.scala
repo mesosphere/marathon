@@ -62,6 +62,7 @@ class CoreModuleImpl @Inject() (
     clock, metrics, marathonConf,
 
     // external guicedependencies
+    taskTracker,
     marathonSchedulerDriverHolder,
 
     // internal core dependencies

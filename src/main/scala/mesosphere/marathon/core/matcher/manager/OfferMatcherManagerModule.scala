@@ -24,7 +24,7 @@ class OfferMatcherManagerModule(
   private[this] lazy val offersWanted: Subject[Boolean] = PublishSubject[Boolean]()
 
   private[this] val offerMatcherMultiplexer: ActorRef = {
-    val props = OfferMatcherManagerActor.props(random, clock, offerMatcherConfig, offersWanted)
+    val props = OfferMatcherManagerActor.props(metrics, random, clock, offerMatcherConfig, offersWanted)
     leadershipModule.startWhenLeader(props, "offerMatcherManager")
   }
 

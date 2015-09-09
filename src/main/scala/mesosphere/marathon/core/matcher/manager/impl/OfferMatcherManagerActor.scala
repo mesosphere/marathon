@@ -10,6 +10,8 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ MatchTimeout, OfferData }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
@@ -27,9 +29,10 @@ import scala.util.control.NonFatal
   */
 private[manager] object OfferMatcherManagerActor {
   def props(
+    metrics: Metrics,
     random: Random, clock: Clock,
     offerMatcherConfig: OfferMatcherManagerConfig, offersWanted: Observer[Boolean]): Props = {
-    Props(new OfferMatcherManagerActor(random, clock, offerMatcherConfig, offersWanted))
+    Props(new OfferMatcherManagerActor(metrics, random, clock, offerMatcherConfig, offersWanted))
   }
 
   private val log = LoggerFactory.getLogger(getClass)
@@ -65,8 +68,15 @@ private[manager] object OfferMatcherManagerActor {
 }
 
 private class OfferMatcherManagerActor private (
+  metrics: Metrics,
   random: Random, clock: Clock, conf: OfferMatcherManagerConfig, offersWantedObserver: Observer[Boolean])
     extends Actor with ActorLogging {
+
+  private[this] val launchTokenGauge: AtomicIntGauge =
+    metrics.gauge(metrics.name(MetricPrefixes.SERVICE, getClass, "launchTokens"), new AtomicIntGauge)
+  private[this] val currentOffersGauge: AtomicIntGauge =
+    metrics.gauge(metrics.name(MetricPrefixes.SERVICE, getClass, "currentOffers"), new AtomicIntGauge)
+
   private[this] var launchTokens: Int = 0
 
   private[this] var matchers: Set[OfferMatcher] = Set.empty
@@ -86,10 +96,12 @@ private class OfferMatcherManagerActor private (
     case OfferMatcherManagerDelegate.SetTaskLaunchTokens(tokens) =>
       val tokensBeforeSet = launchTokens
       launchTokens = tokens
+      launchTokenGauge.setValue(launchTokens)
       if (tokens > 0 && tokensBeforeSet <= 0)
         updateOffersWanted()
     case OfferMatcherManagerDelegate.AddTaskLaunchTokens(tokens) =>
       launchTokens += tokens
+      launchTokenGauge.setValue(launchTokens)
       if (tokens > 0 && launchTokens == tokens)
         updateOffersWanted()
   }
@@ -129,6 +141,7 @@ private class OfferMatcherManagerActor private (
       val randomizedMatchers = random.shuffle(matchers).to[Queue]
       val data = OfferMatcherManagerActor.OfferData(offer, deadline, sender(), randomizedMatchers, Seq.empty)
       offerQueues += offer.getId -> data
+      currentOffersGauge.setValue(offerQueues.size)
 
       // deal with the timeout
       import context.dispatcher
@@ -152,6 +165,7 @@ private class OfferMatcherManagerActor private (
 
           val newData: OfferData = data.addTasks(launchTasks)
           launchTokens -= launchTasks.size
+          launchTokenGauge.setValue(launchTokens)
           newData
         }
         catch {
@@ -228,6 +242,7 @@ private class OfferMatcherManagerActor private (
   private[this] def sendMatchResult(data: OfferData, resendThisOffer: Boolean): Unit = {
     data.sender ! OfferMatcher.MatchedTasks(data.offer.getId, data.tasks, resendThisOffer)
     offerQueues -= data.offer.getId
+    currentOffersGauge.setValue(offerQueues.size)
     log.info(s"Finished processing ${data.offer.getId.getValue}. " +
       s"Matched ${data.tasks.size} tasks after ${data.matchPasses} passes. " +
       s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala)} left.")

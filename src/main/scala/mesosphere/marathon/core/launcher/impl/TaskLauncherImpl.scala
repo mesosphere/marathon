@@ -5,28 +5,43 @@ import java.util.Collections
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.TaskLauncher
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.apache.mesos.Protos.{ OfferID, Status, TaskInfo }
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.slf4j.LoggerFactory
 
 private[launcher] class TaskLauncherImpl(
+    metrics: Metrics,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     clock: Clock) extends TaskLauncher {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
+  private[this] val usedOffersMeter = metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "usedOffers"))
+  private[this] val launchedTasksMeter = metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "launchedTasks"))
+  private[this] val declinedOffersMeter =
+    metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "declinedOffers"))
+
   override def launchTasks(offerID: OfferID, taskInfos: Seq[TaskInfo]): Boolean = {
-    withDriver(s"launchTasks($offerID)") { driver =>
+    val launched = withDriver(s"launchTasks($offerID)") { driver =>
       import scala.collection.JavaConverters._
       driver.launchTasks(Collections.singleton(offerID), taskInfos.asJava)
     }
+    if (launched) {
+      usedOffersMeter.mark()
+      launchedTasksMeter.mark(taskInfos.size.toLong)
+    }
+    launched
   }
 
   override def declineOffer(offerID: OfferID, refuseMilliseconds: Option[Long]): Unit = {
-    withDriver(s"declineOffer(${offerID.getValue})") {
+    val declined = withDriver(s"declineOffer(${offerID.getValue})") {
       val filters = refuseMilliseconds
         .map(seconds => Protos.Filters.newBuilder().setRefuseSeconds(seconds / 1000.0).build())
         .getOrElse(Protos.Filters.getDefaultInstance)
       _.declineOffer(offerID, filters)
+    }
+    if (declined) {
+      declinedOffersMeter.mark()
     }
   }
 

@@ -97,23 +97,28 @@ object DisplayAppScalingResults {
   }
 
   def displayTimers(timers: Map[String, JsObject]): Unit = {
-    val header = IndexedSeq("timer", "count", "mean", "min", "p50", "p75", "p95", "p98", "p99", "p999", "max", "stddev")
+    val header = IndexedSeq("timer", "count", "mean", "min", "p50", "p75", "p95", "p98", "p99", "p999", "max", "stddev", "mean_rate", "units")
     val rows: Seq[IndexedSeq[Any]] = timers.map {
       case (timer: String, jsObject: JsObject) =>
-        def d(fieldName: String): Any =
+        def d1000(fieldName: String): Any =
+          (jsObject \ fieldName).asOpt[Double].map(seconds => (seconds * 1000).round).getOrElse("-")
+        def dFull(fieldName: String): Any =
           (jsObject \ fieldName).asOpt[Double].map(_.round).getOrElse("-")
 
+        val rateUnits: String = (jsObject \ "rate_units").asOpt[String].getOrElse("-")
         IndexedSeq[Any](
           shortenName(timer),
-          d("count"), d("mean"),
-          d("min"), d("p50"), d("p75"), d("p95"), d("p98"), d("p99"), d("p999"), d("max"), d("stddev"))
+          dFull("count"), d1000("mean"),
+          d1000("min"), d1000("p50"), d1000("p75"), d1000("p95"), d1000("p98"),
+          d1000("p99"), d1000("p999"), d1000("max"), d1000("stddev"),
+          dFull("mean_rate"), rateUnits)
     }.toSeq
 
     val sortedRows = rows.sortBy(-_(1).asInstanceOf[Long])
 
     import DisplayHelpers.{ left, right }
     DisplayHelpers.printTable(
-      Seq(left, right, right, right, right, right, right, right, right, right, right, right),
+      Seq(left, right, right, right, right, right, right, right, right, right, right, right, right, left),
       DisplayHelpers.withUnderline(header) ++ sortedRows)
   }
 
