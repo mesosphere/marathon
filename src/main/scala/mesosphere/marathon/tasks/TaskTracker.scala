@@ -9,7 +9,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, StateMetrics, Timestamp }
 import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 import org.apache.log4j.Logger
-import org.apache.mesos.Protos.TaskStatus
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 
 import scala.collection.JavaConverters._
 import scala.collection._
@@ -157,7 +157,13 @@ class TaskTracker @Inject() (
 
   def determineOverdueTasks(now: Timestamp): Iterable[MarathonTask] = {
 
-    /*
+    val nowMillis = now.toDateTime.getMillis
+    // stagedAt is set when the task is created by the scheduler
+    val stagedExpire = nowMillis - config.taskLaunchTimeout()
+    val unconfirmedExpire = nowMillis - config.taskLaunchConfirmTimeout()
+
+    val toKill = apps.values.iterator.flatMap(_.tasks.values).filter { task =>
+      /*
      * One would think that !hasStagedAt would be better for querying these tasks. However, the current implementation
      * of [[MarathonTasks.makeTask]] will set stagedAt to a non-zero value close to the current system time. Therefore,
      * all tasks will return a non-zero value for stagedAt so that we cannot use that.
@@ -165,17 +171,24 @@ class TaskTracker @Inject() (
      * If, for some reason, a task was created (sent to mesos), but we never received a [[TaskStatus]] update event,
      * the task will also be killed after reaching the configured maximum.
      */
-    def notRunningTasks(): Iterable[MarathonTask] = apps.values.flatMap(_.tasks.values.filter(_.getStartedAt == 0))
+      if (task.getStartedAt != 0) {
+        false
+      }
+      else if (task.hasStatus && task.getStatus.getState == TaskState.TASK_STAGING && task.getStagedAt < stagedExpire) {
+        log.warn(s"Should kill: Task '${task.getId}' was staged ${(nowMillis - task.getStagedAt) / 1000}s" +
+          s" ago and has not yet started")
+        true
+      }
+      else if (task.getStagedAt < unconfirmedExpire) {
+        log.warn(s"Should kill: Task '${task.getId}' was launched ${(nowMillis - task.getStagedAt) / 1000}s ago " +
+          s"and was not confirmed yet"
+        )
+        true
+      }
+      else false
+    }
 
-    val nowMillis = now.toDateTime.getMillis
-    // stagedAt is set when the task is created by the scheduler
-    val expires = nowMillis - config.taskLaunchTimeout()
-    val toKill = notRunningTasks().filter(_.getStagedAt < expires)
-
-    toKill.foreach(t => {
-      log.warn(s"Task '${t.getId}' was staged ${(nowMillis - t.getStagedAt) / 1000}s ago and has not yet started")
-    })
-    toKill
+    toKill.toIterable
   }
 
   def expungeOrphanedTasks(): Unit = {
