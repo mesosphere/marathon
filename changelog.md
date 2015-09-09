@@ -292,16 +292,16 @@ A tooltip is displayed when the user hovers the application progress bar, showin
 In previous versions of Marathon, only an application's configuration and healthcheck status were available
 from the UI. Marathon 0.11 brings the following features:
 
-#### Debug app tab
+##### Debug app tab
 
 A new tab is available in the application detail view. It displays the most recent changes to the application
 configuration, the most recent task failure, and the relevant statistics.
 
-#### Health checks in configuration tab.
+##### Health checks in configuration tab.
 
 Application health checks are now shown in the application configuration tab.
 
-#### Direct Mesos sandbox access
+##### Direct Mesos sandbox access
 
 Where available, the new 'Mesos details' link in the task detail view shows a link to the relevant sandbox in
 the Mesos UI.
@@ -332,7 +332,6 @@ has had the side-effect that the ui is now served from the /ui/ endpoint instead
 
 #### Fixed issues
 
-#### Fixed
 - \#548 - UI showing empty list after scaling when on page > 1
   * The task list shows the last available page
     if tasks count decreases after scaling.
