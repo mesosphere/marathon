@@ -252,48 +252,86 @@ interface which make it easier to write correct code.
 
 ### Details for Marathon UI
 
-#### Added
-- \#1204 - Please add a search bar to the applications overview to filter the
-  list of applications
-- \#1137 - Add tooltip on hover to progress bars
-  * A tooltip that displays the individual health statuses is now shown when
-    the mouse is over the progress bars in the apps overview page.
-- \#1864 - Add a link to the app detail page from the deployments tab
-- \#1756 - Create a "Not found page"
-- \#878 - Jump to Mesos sandbox from UI
-  * You can go directly to the Mesos tasks sandbox from the tasks detail page.
-- \#968 - Expose a way to identify "fragile" marathon apps in the web UI
-  * If there is a lastTaskFailure this information will be shown in a tab
-    called "Last task failure" on the app page.
-- \#1937 - Display version string also in local time
-- \#1058 - Add sorting to the health column in the app list
-- \#1993 - Show Marathon UI version in about modal
-  * The Marathon UI version will be shown on mouse hovering
-    above the API version field. Second way is pressing "g v" on the keyboard.
-- \#808 - Make app configuration fields editable
-  * A selected application version can now be edited
-    by pressing on the "Edit these settings"-button.
-- \#124 - Expose environment variables in app modal dialog
-- \#2010 - Show task life time and states in debug tab
-- \#2012 - Show summary about the most recent configuration change
-- \#2133 - Display health checks settings in the application configuration tab
+#### New application modal, including Docker-specific fields
 
-#### Changed
-- \#124 - Expose all /v2 App attributes in UI
-  * The optional settings inside the new application modal dialog are now
-    grouped together
-  * It is now possible to specify Docker container settings
-- \#1673 - Prerequisites to deploy a webjar via TeamCity
-  * In a production environment, the API will be requested by ../v2/ instead of
-    ./v2/, because the UI is now served in an "/ui/"-path via Marathon.
-    Also the dist-folder isn't needed in the repository anymore, the files will
-    be generated on-the-fly.
-- \#1251 - Show total resource usage in app list
-- \#2039 - Updated app config edit button styles
-- \#2071 - Replace native alert, prompt and confirm with custom modals
-- \#2116 - Adjust refresh button style
+The application modal has undergone significant changes, simplifying the app creation process and giving the
+user access to more advanced features. In particular, a section of the form is dedicated to Docker specific
+fields, allowing the user to create Dockerized applications directly from the UI.
 
-#### Fixed
+#### Edit application configurations
+
+Previous versions of Marathon did not allow users to make modifications to application configurations after
+the application had been created. It's now possible to edit an application using the same improved modal that
+is used to create applications.
+
+#### Usability improvements to the applications view
+
+The applications view is the 'dashboard' for Marathon UI. This version brings significant improvements to its
+utility, especially by revealing more about application health.
+
+##### Search bar
+
+Applications can be filtered by name using the search bar in the top left-hand corner of the applications view.
+
+##### Show total resource usage
+
+Previously, only the configured resource usage was shown in the applications view, so an application with 100
+running tasks would show the same resource usage as an identical application with only 1 running task. Now, the
+combined resource usage is shown, allowing users to sort applications by their total assigned resources.
+
+##### Sort applications by health
+
+Unhealthy apps can be found quickly by sorting the application table by health status.
+
+##### Better progress information feedback
+
+A tooltip is displayed when the user hovers the application progress bar, showing individual health statuses.
+
+#### More information on applications and deployments
+
+In previous versions of Marathon, only an application's configuration and healthcheck status were available
+from the UI. Marathon 0.11 brings the following features:
+
+##### Debug app tab
+
+A new tab is available in the application detail view. It displays the most recent changes to the application
+configuration, the most recent task failure, and the relevant statistics.
+
+##### Health checks in configuration tab.
+
+Application health checks are now shown in the application configuration tab.
+
+##### Direct Mesos sandbox access
+
+Where available, the new 'Mesos details' link in the task detail view shows a link to the relevant sandbox in
+the Mesos UI.
+
+#### Other features
+
+##### User- and debug-friendly version strings
+
+The Marathon version string is now shown in the user's local time. In addition, The UI version string is
+available when the user hovers the version string, and in a separate alert when the user hits the 'g v'
+shortcut.
+
+##### Custom alerts
+
+Where browser-native dialogs were previously used, Marathon now uses custom dialogs which are consistent with
+the UI style and which do not interrupt the UI when in the foreground.
+
+##### Not Found page
+
+When the user follows a bad link, they encounter a Not Found page rather than being redirected to the
+applications view.
+
+#### UI build uses a webjar
+
+Instead of relying on git submodules, the UI is now released as a webjar which Marathon pulls in during its
+own build. This allows developers to use the latest stable UI assets and simplifies the build process. This
+has had the side-effect that the ui is now served from the /ui/ endpoint instead of the root.
+
+#### Fixed issues
+
 - \#548 - UI showing empty list after scaling when on page > 1
   * The task list shows the last available page
     if tasks count decreases after scaling.
