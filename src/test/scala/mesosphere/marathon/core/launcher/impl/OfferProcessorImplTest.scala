@@ -1,11 +1,10 @@
 package mesosphere.marathon.core.launcher.impl
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.base.{ Clock, ConstantClock }
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import OfferMatcher.{ MatchedTasks, TaskLaunchSource, TaskWithSource }
-import mesosphere.marathon.core.matcher.base.OfferMatcher
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskLaunchSource, TaskWithSource }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
@@ -13,7 +12,6 @@ import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.util.Mockito
 import mesosphere.util.state.PersistentEntity
 import org.apache.mesos.Protos.TaskInfo
-import org.mockito.Mockito.{ verify, when }
 import org.scalatest.GivenWhenThen
 
 import scala.concurrent.duration._
@@ -49,8 +47,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     Then("we saw the offerMatch request and the task launches")
-    verify(offerMatcher, times(1)).matchOffer(deadline, offer)
-    verify(taskLauncher, times(1)).launchTasks(offerId, tasks)
+    verify(offerMatcher).matchOffer(deadline, offer)
+    verify(taskLauncher).launchTasks(offerId, tasks)
 
     And("all task launches have been accepted")
     assert(dummySource.rejected.isEmpty)
@@ -59,8 +57,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("the tasks have been stored")
     for (task <- tasksWithSource) {
       val ordered = inOrder(taskTracker)
-      ordered.verify(taskTracker, times(1)).created(appId, task.marathonTask)
-      ordered.verify(taskTracker, times(1)).store(appId, task.marathonTask)
+      ordered.verify(taskTracker).created(appId, task.marathonTask)
+      ordered.verify(taskTracker).store(appId, task.marathonTask)
     }
   }
 
@@ -87,8 +85,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     Then("we saw the matchOffer request and the task launch attempt")
-    verify(offerMatcher, times(1)).matchOffer(deadline, offer)
-    verify(taskLauncher, times(1)).launchTasks(offerId, tasks)
+    verify(offerMatcher).matchOffer(deadline, offer)
+    verify(taskLauncher).launchTasks(offerId, tasks)
 
     And("all task launches were rejected")
     assert(dummySource.accepted.isEmpty)
@@ -97,9 +95,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("the tasks where first stored and then expunged again")
     for (task <- tasksWithSource) {
       val ordered = inOrder(taskTracker)
-      ordered.verify(taskTracker, times(1)).created(appId, task.marathonTask)
-      ordered.verify(taskTracker, times(1)).store(appId, task.marathonTask)
-      ordered.verify(taskTracker, times(1)).terminated(appId, task.marathonTask.getId)
+      ordered.verify(taskTracker).created(appId, task.marathonTask)
+      ordered.verify(taskTracker).store(appId, task.marathonTask)
+      ordered.verify(taskTracker).terminated(appId, task.marathonTask.getId)
     }
   }
 
@@ -123,14 +121,17 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     Then("we saw the matchOffer request")
-    verify(offerMatcher, times(1)).matchOffer(deadline, offer)
+    verify(offerMatcher).matchOffer(deadline, offer)
 
     And("all task launches were rejected")
     assert(dummySource.accepted.isEmpty)
     assert(dummySource.rejected.toSeq.map(_._1) == tasks)
 
+    And("the processor didn't try to launch the tasks")
+    verify(taskLauncher, never).launchTasks(offerId, tasks)
+
     And("no tasks where launched")
-    verify(taskLauncher, times(1)).declineOffer(offerId, refuseMilliseconds = None)
+    verify(taskLauncher).declineOffer(offerId, refuseMilliseconds = None)
     noMoreInteractions(taskLauncher)
 
     And("no tasks where stored")
@@ -165,8 +166,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     Then("we saw the matchOffer request and the task launch attempt for the first task")
-    verify(offerMatcher, times(1)).matchOffer(deadline, offer)
-    verify(taskLauncher, times(1)).launchTasks(offerId, tasks.take(1))
+    verify(offerMatcher).matchOffer(deadline, offer)
+    verify(taskLauncher).launchTasks(offerId, tasks.take(1))
 
     And("one task launch was accepted")
     assert(dummySource.accepted.toSeq == tasks.take(1))
@@ -177,8 +178,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("the first task was stored")
     for (task <- tasksWithSource.take(1)) {
       val ordered = inOrder(taskTracker)
-      ordered.verify(taskTracker, times(1)).created(appId, task.marathonTask)
-      ordered.verify(taskTracker, times(1)).store(appId, task.marathonTask)
+      ordered.verify(taskTracker).created(appId, task.marathonTask)
+      ordered.verify(taskTracker).store(appId, task.marathonTask)
     }
 
     And("and the second task was not stored")
@@ -193,8 +194,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
-    verify(offerMatcher, times(1)).matchOffer(deadline, offer)
-    verify(taskLauncher, times(1)).declineOffer(offerId, refuseMilliseconds = Some(conf.declineOfferDuration()))
+    verify(offerMatcher).matchOffer(deadline, offer)
+    verify(taskLauncher).declineOffer(offerId, refuseMilliseconds = Some(conf.declineOfferDuration()))
   }
 
   test("match crashed => decline") {
@@ -205,8 +206,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
-    verify(offerMatcher, times(1)).matchOffer(deadline, offer)
-    verify(taskLauncher, times(1)).declineOffer(offerId, refuseMilliseconds = None)
+    verify(offerMatcher).matchOffer(deadline, offer)
+    verify(taskLauncher).declineOffer(offerId, refuseMilliseconds = None)
   }
 
   private[this] var clock: ConstantClock = _

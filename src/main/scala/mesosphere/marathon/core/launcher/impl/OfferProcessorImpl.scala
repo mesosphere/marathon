@@ -7,7 +7,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskWi
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
-import org.apache.mesos.Protos.Offer
+import org.apache.mesos.Protos.{ OfferID, Offer }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -67,27 +67,29 @@ private[launcher] class OfferProcessorImpl(
             }
           }
       }.flatMap {
-        case MatchedTasks(offerId, tasks, resendThisOffer) =>
-          if (tasks.nonEmpty) {
-            if (taskLauncher.launchTasks(offerId, tasks.map(_.taskInfo))) {
-              log.debug("Offer [{}]. Task launch successful", offerId.getValue)
-              tasks.foreach(_.accept())
-              Future.successful(())
-            }
-            else {
-              log.warn("Offer [{}]. Task launch rejected", offerId.getValue)
-              tasks.foreach(_.reject("driver unavailable"))
-
-              removeTasks(tasks)
-            }
-          }
-          else {
-            //if the offer should be resent, than we ignore the configured decline offer duration
-            val duration: Option[Long] = if (resendThisOffer) None else conf.declineOfferDuration.get
-            taskLauncher.declineOffer(offerId, duration)
-            Future.successful(())
-          }
+        case MatchedTasks(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
+        case MatchedTasks(offerId, tasks, _)             => launchTasks(offerId, tasks)
       }
+  }
+
+  private[this] def declineOffer(offerId: OfferID, resendThisOffer: Boolean): Future[Unit] = {
+    //if the offer should be resent, than we ignore the configured decline offer duration
+    val duration: Option[Long] = if (resendThisOffer) None else conf.declineOfferDuration.get
+    taskLauncher.declineOffer(offerId, duration)
+    Future.successful(())
+  }
+
+  private[this] def launchTasks(offerId: OfferID, tasks: Seq[TaskWithSource]): Future[Unit] = {
+    if (taskLauncher.launchTasks(offerId, tasks.map(_.taskInfo))) {
+      log.debug("Offer [{}]. Task launch successful", offerId.getValue)
+      tasks.foreach(_.accept())
+      Future.successful(())
+    }
+    else {
+      log.warn("Offer [{}]. Task launch rejected", offerId.getValue)
+      tasks.foreach(_.reject("driver unavailable"))
+      removeTasks(tasks)
+    }
   }
 
   private[this] def removeTasks(tasks: Seq[TaskWithSource]): Future[Unit] = {

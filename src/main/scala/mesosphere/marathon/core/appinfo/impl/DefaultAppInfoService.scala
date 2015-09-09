@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.appinfo.impl
 
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
-import mesosphere.marathon.core.appinfo.{ AppInfo, AppSelector, AppInfoService }
-import mesosphere.marathon.state.{ AppDefinition, GroupManager, GroupRepository, AppRepository, PathId }
+import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupManager, PathId }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -16,7 +16,7 @@ private[appinfo] class DefaultAppInfoService(
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def queryForAppId(id: PathId, embed: Set[Embed]): Future[Option[AppInfo]] = {
-    log.info(s"queryForAppId $id")
+    log.debug(s"queryForAppId $id")
     appRepository.currentVersion(id).flatMap {
       case Some(app) => newBaseData().appInfoFuture(app, embed).map(Some(_))
       case None      => Future.successful(None)
@@ -24,14 +24,14 @@ private[appinfo] class DefaultAppInfoService(
   }
 
   override def queryAll(selector: AppSelector, embed: Set[Embed]): Future[Seq[AppInfo]] = {
-    log.info(s"queryAll")
+    log.debug(s"queryAll")
     groupManager.rootGroup()
-      .map(_.transitiveApps.filter(selector.matches(_)))
+      .map(_.transitiveApps.filter(selector.matches))
       .flatMap(resolveAppInfos(_, embed))
   }
 
   override def queryAllInGroup(groupId: PathId, embed: Set[Embed]): Future[Seq[AppInfo]] = {
-    log.info(s"queryAllInGroup $groupId")
+    log.debug(s"queryAllInGroup $groupId")
     groupManager
       .group(groupId)
       .map(_.map(_.transitiveApps).getOrElse(Seq.empty))

@@ -24,7 +24,7 @@ class AppInfoBaseData(
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  log.info(s"new AppInfoBaseData $this")
+  if (log.isDebugEnabled) log.debug(s"new AppInfoBaseData $this")
 
   lazy val runningDeploymentsByAppFuture: Future[Map[PathId, Seq[Identifiable]]] = {
     log.debug("Retrieving running deployments")
