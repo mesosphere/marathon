@@ -2,16 +2,15 @@
 
 ### Breaking Changes
 
-* Java 8 or higher is needed to run Marathon, since Java 6 and 7 support has reached end of life. 
-
+* Java 8 or higher is needed to run Marathon, since Java 6 and 7 support has reached end of life.
 * `--revive_offers_for_new_apps` is now the default. If you want to avoid resetting filters
   if new tasks need to be started, you can disable this by `--disable_revive_offers_for_new_apps`.
-  
+
 ### Overview
 
-#### Marathon uses Java 8 
+#### Marathon uses Java 8
 
-Java 8 has been out for more than a year now. The support for older versions of Java has reached end of life. 
+Java 8 has been out for more than a year now. The support for older versions of Java has reached end of life.
 We switched completely to the latest stable JVM release.
 We compile, test and run Marathon against Java 8.
 Note for the Marathon Docker image: the base image of Marathon is now the standard java:8-jdk docker image.
@@ -26,7 +25,7 @@ use the `--mesos_leader_ui_url` configuration to change the base URL of these li
 
 #### New versioning information in API and UI
 
-We now have `"versionInfo"` with `"lastConfigChangeAt"` and `"lastScalingAt"` in the apps JSON of our API. 
+We now have `"versionInfo"` with `"lastConfigChangeAt"` and `"lastScalingAt"` in the apps JSON of our API.
 `"lastConfigChangeAt"` is the timestamp of the last change to the application that was not just a restart or
 a scaling operation. `"lastScalingAt"` is the time stamp of the last scaling or restart operation.
 
@@ -34,7 +33,7 @@ a scaling operation. `"lastScalingAt"` is the time stamp of the last scaling or 
 
 If you pass `embed=apps.taskStats`/`embed=app.taskStats` as a query parameter, you get additional taskStats
 embedded in you app JSON.
- 
+
 Task statistics are provided for the following groups of tasks. If no tasks for the group exist, no statistics are
 offered:
 
@@ -61,8 +60,8 @@ Example JSON:
             "unhealthy" : 4
           },
           // "lifeTime" is only included if there are running tasks.
-          "lifeTime" : { 
-            // Measured from `"startedAt"` (timestamp of the Mesos TASK_RUNNING status update) of each running task 
+          "lifeTime" : {
+            // Measured from `"startedAt"` (timestamp of the Mesos TASK_RUNNING status update) of each running task
             // until now.
             "averageSeconds" : 20.0,
             "medianSeconds" : 10.0
@@ -92,9 +91,9 @@ very many tasks.
 In this release, we introduce "embed" parameters for all GET requests in the
 app end-point that specify which information to embed. Right now, we deliver all
 information by default that we delivered before but we encourage you to specify
-embed parameters for the information that you need. 
+embed parameters for the information that you need.
 
-In the future, we will only 
+In the future, we will only
 deliver information you explicitly requested by default, even though we will
 allow some compatibility configuration option. This improves performance by not
 returning information that you might not need.
@@ -113,12 +112,12 @@ for any reason you dislike this behavior, you can disable it with `--disable_rev
 The order in which mesos receives `reviveOffers` and `declineOffer` calls is not guaranteed. Therefore, as
 long as we still need offers to launch tasks, we repeat the `reviveOffers` call for `--revive_offers_repetitions`
 times so that our last `reviveOffers` will be received after all relevant `declineOffer` calls with high
-probability. 
+probability.
 
-* `--revive_offers_repetitions` (Optional. Default: 3): 
+* `--revive_offers_repetitions` (Optional. Default: 3):
     Repeat every reviveOffer request this many times, delayed by the `--min_revive_offers_interval`.
 
-When Marathon has no current use for an offer, it will decline the offer for a configurable period. A short duration 
+When Marathon has no current use for an offer, it will decline the offer for a configurable period. A short duration
 might lead to resource starvation for other frameworks if you run many frameworks
 in your cluster. You should only need to reduce it if you use `--disable_revive_offers_for_new_apps`.
 
@@ -128,10 +127,10 @@ in your cluster. You should only need to reduce it if you use `--disable_revive_
 
 To prevent overloading Mesos itself, you can now restrict how many tasks Marathon launches per time interval.
 By default, we allow 1000 unconfirmed task launches every 30 seconds. In addition, Marathon
-considers `TASK_RUNNING` status updates from Mesos as launch confirmations and allows launching one more task 
+considers `TASK_RUNNING` status updates from Mesos as launch confirmations and allows launching one more task
 for every confirmed launch.
-    
-* `--launch_token_refresh_interval` (Optional. Default: 30000): 
+
+* `--launch_token_refresh_interval` (Optional. Default: 30000):
     The interval (ms) in which to refresh the launch tokens to `--launch_token_count`.
 * `--launch_tokens` (Optional. Default: 1000): Launch tokens per interval.
 
@@ -140,20 +139,20 @@ As a result of this, the `--max_tasks_per_offer_cycle` options is deprecated and
 To prevent overloading Marathon and maintain speedy offer processing, there is also a timeout for matching each
 incoming resource offer, i.e. finding suitable tasks to launch for incoming offers.
 
-* `--offer_matching_timeout` (Optional. Default: 1000): 
+* `--offer_matching_timeout` (Optional. Default: 1000):
     Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
     All already matched tasks are launched.
 
 All launched tasks are stored before launching them. There is also a new timeout for this:
-    
-* <span class="label label-default">v0.11.0</span> `--save_tasks_to_launch_timeout` (Optional. Default: 3000): 
+
+* <span class="label label-default">v0.11.0</span> `--save_tasks_to_launch_timeout` (Optional. Default: 3000):
     Timeout (ms) after matching an offer for saving all matched tasks that we are about to launch.
     When reaching the timeout, only the tasks that we could save within the timeout are also launched.
     All other task launches are temporarily rejected and retried later.
 
 #### No pseudo-deterministic assignment of host ports anymore
 
-If you specify non-zero `"ports"` in your app JSON, they are used as service ports. The old code contained logic that 
+If you specify non-zero `"ports"` in your app JSON, they are used as service ports. The old code contained logic that
 would assign these ports as host ports if available in the
 processed offer. That misled people into thinking that these ports corresponded to host ports. The new code always
 randomizes host ports assignment without `"requirePorts"` or explicit `"hostPort"` configuration.
@@ -161,8 +160,8 @@ randomizes host ports assignment without `"requirePorts"` or explicit `"hostPort
 #### Last task failures are persisted
 
 Marathon has exposed the `"lastTaskFailure"` via the API for a while but this information was not persisted
- across restarts or on fail over. Now it is.
- 
+across restarts or on fail over. Now it is.
+
 #### Logging command line parameters on startup
 
 Marathon will now log all command line parameters on startup. Example:
@@ -211,12 +210,12 @@ immediately when accepting the deployment.
 #### No automatic reset of the app backoff when detecting a running task
 
 When encountering task failures, Marathon uses the backoff duration to throttle launching tasks.
-See `"backoffSeconds"`, `"backoffFactor"` and `"maxLaunchDelaySeconds"` in the REST API documentation 
+See `"backoffSeconds"`, `"backoffFactor"` and `"maxLaunchDelaySeconds"` in the REST API documentation
 for further information.
 
 There was an undocumented feature that reset the backoff completely whenever Marathon received a TASK_RUNNING
- notification from Mesos. This led to problems when an application crashed fast after startup.
- 
+notification from Mesos. This led to problems when an application crashed fast after startup.
+
 In the new Marathon version, the backoff delay is never reset automatically. You can reset it manually, though.
 
 #### New `MARATHON_APP_DOCKER_IMAGE` environment variable
@@ -226,18 +225,23 @@ an environment variable `MARATHON_APP_DOCKER_IMAGE` containing its value.
 
 ### Important bug fixes
 
-* \#1553 - 
+* \#1553 -
   Marathon will now correctly reload task state information after a fail over
-* \#1924 - 
+* \#1924 -
   Marathon will accept offers without disk resources if no disk resources are required
-* \#1671 - Mesos will now use the hostname given 
+* \#1671 - Mesos will now use the hostname given
   by the `--hostname` parameter to communicate with Marathon
-* \#1926 - 
+* \#1926 -
   Our leader proxy code used buffered IO without intermediate flushing which did not play well with
   streaming events from our `/v2/events` endpoint
 * \#1877 -
   Marathon will now exit on startup failures instead of keeping running without being able to answer to requests.
   For example: Marathon will now exit if the specified http port is already used for something else.
+
+### Known issues
+
+Applications might not be returned for a little while even after `POST /v2/apps` returned 201. This is
+side-effect of storing the tasks information in ZooKeeper and we plan to fix it in the next releases.
 
 ### Under the Hood
 
@@ -249,7 +253,7 @@ Jetty 9 has a completely overhauled I/O layer, Servlet API 3.0, SPDY/3 and WebSo
 #### Improved SSE handling
 
 As part of the Jetty 9 update, the SSE support for `/v2/events` has been improved.
-The event name `event: event-name` is added to every `data: json` entry for easier filtering and handling. 
+The event name `event: event-name` is added to every `data: json` entry for easier filtering and handling.
 
 #### Play JSON everywhere
 
@@ -464,7 +468,7 @@ This is done by making the amount of time for which an offer will be declined co
 If there is need for an offer (e.g., when a new app is added), then all already declined offers will be actively revived.
 `--decline_offer_duration` allows configuring the duration for which unused offers are declined.
 `--revive_offers_for_new_apps` if specified, then revive offers will be called when a new app is added to the TaskQueue
-`--min_revive_offers_interval` if `--revive_offers_for_new_apps` is specified, do not call reviveOffers more often than this interval. 
+`--min_revive_offers_interval` if `--revive_offers_for_new_apps` is specified, do not call reviveOffers more often than this interval.
 
 
 ### Fixed Issues
