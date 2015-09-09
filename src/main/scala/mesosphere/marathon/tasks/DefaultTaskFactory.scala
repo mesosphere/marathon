@@ -20,7 +20,7 @@ class DefaultTaskFactory @Inject() (
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  def newTask(app: AppDefinition, offer: Offer, runningTasks: Set[MarathonTask]): Option[CreatedTask] = {
+  def newTask(app: AppDefinition, offer: Offer, runningTasks: Iterable[MarathonTask]): Option[CreatedTask] = {
     log.debug("newTask")
 
     new TaskBuilder(app, taskIdUtil.newTaskId, config).buildIfMatches(offer, runningTasks).map {

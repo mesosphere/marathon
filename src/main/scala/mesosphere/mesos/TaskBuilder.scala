@@ -25,7 +25,7 @@ class TaskBuilder(app: AppDefinition,
 
   val log = Logger.getLogger(getClass.getName)
 
-  def buildIfMatches(offer: Offer, runningTasks: => Set[MarathonTask]): Option[(TaskInfo, Seq[Long])] = {
+  def buildIfMatches(offer: Offer, runningTasks: => Iterable[MarathonTask]): Option[(TaskInfo, Seq[Long])] = {
 
     val acceptedResourceRoles: Set[String] = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
 

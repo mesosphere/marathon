@@ -34,7 +34,7 @@ object ResourceMatcher {
   case class ResourceMatch(cpuRole: Role, memRole: Role, diskRole: Role, ports: Seq[RangesResource])
 
   //scalastyle:off method.length
-  def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Set[MarathonTask],
+  def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Iterable[MarathonTask],
                      acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {
 
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
