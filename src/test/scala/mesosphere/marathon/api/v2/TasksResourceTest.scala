@@ -1,7 +1,11 @@
 package mesosphere.marathon.api.v2
 
+import javax.servlet.http.{ HttpServletResponse, HttpServletRequest }
+
 import mesosphere.marathon.api.TaskKiller
+import mesosphere.marathon.core.auth.AuthAllowEverything
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.interface.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.state.{ GroupManager, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil, TaskTracker }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
@@ -23,6 +27,10 @@ class TasksResourceTest extends MarathonSpec with Matchers {
   var healthCheckManager: HealthCheckManager = _
   var taskResource: TasksResource = _
   var taskIdUtil: TaskIdUtil = _
+  var authenticator: Authenticator = _
+  var authorizer: Authorizer = _
+  var httpRequest: HttpServletRequest = _
+  var httpResponse: HttpServletResponse = _
 
   before {
     service = mock[MarathonSchedulerService]
@@ -32,6 +40,10 @@ class TasksResourceTest extends MarathonSpec with Matchers {
     groupManager = mock[GroupManager]
     healthCheckManager = mock[HealthCheckManager]
     taskIdUtil = mock[TaskIdUtil]
+    authenticator = AuthAllowEverything
+    authorizer = AuthAllowEverything
+    httpRequest = mock[HttpServletRequest]
+    httpResponse = mock[HttpServletResponse]
     taskResource = new TasksResource(
       service,
       taskTracker,
@@ -39,7 +51,9 @@ class TasksResourceTest extends MarathonSpec with Matchers {
       config,
       groupManager,
       healthCheckManager,
-      taskIdUtil
+      taskIdUtil,
+      authenticator,
+      authorizer
     )
   }
 
@@ -67,7 +81,7 @@ class TasksResourceTest extends MarathonSpec with Matchers {
     when(taskTracker.fetchTask(app1, taskId1)).thenReturn(Some(task1))
     when(taskTracker.fetchTask(app2, taskId2)).thenReturn(Some(task2))
 
-    val response = taskResource.killTasks(scale = false, body = bodyBytes)
+    val response = taskResource.killTasks(scale = false, body = bodyBytes, httpRequest, httpResponse)
     response.getStatus shouldEqual 200
     verify(taskIdUtil, atLeastOnce).appId(taskId1)
     verify(taskIdUtil, atLeastOnce).appId(taskId2)

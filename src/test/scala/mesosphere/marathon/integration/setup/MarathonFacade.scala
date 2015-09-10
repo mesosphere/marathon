@@ -291,4 +291,11 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     val pipeline = marathonSendReceive ~> read[ITTaskQueue]
     result(pipeline(Get(s"$url/v2/queue")), waitTime)
   }
+
+  //resources -------------------------------------------
+
+  def getPath(path: String): RestResult[HttpResponse] = {
+    val pipeline = marathonSendReceive ~> responseResult
+    result(pipeline(Get(s"$url$path")), waitTime)
+  }
 }

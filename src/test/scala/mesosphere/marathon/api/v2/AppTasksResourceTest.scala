@@ -1,10 +1,14 @@
 package mesosphere.marathon.api.v2
 
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller }
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.auth.AuthAllowEverything
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.interface.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.state.{ GroupManager, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
@@ -27,6 +31,10 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
   var config: MarathonConf = _
   var groupManager: GroupManager = _
   var appsTaskResource: AppTasksResource = _
+  var authenticator: Authenticator = _
+  var authorizer: Authorizer = _
+  var httpRequest: HttpServletRequest = _
+  var httpResponse: HttpServletResponse = _
 
   before {
     service = mock[MarathonSchedulerService]
@@ -35,13 +43,19 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
     healthCheckManager = mock[HealthCheckManager]
     config = mock[MarathonConf]
     groupManager = mock[GroupManager]
+    authenticator = AuthAllowEverything
+    authorizer = AuthAllowEverything
+    httpRequest = mock[HttpServletRequest]
+    httpResponse = mock[HttpServletResponse]
     appsTaskResource = new AppTasksResource(
       service,
       taskTracker,
       taskKiller,
       healthCheckManager,
       config,
-      groupManager
+      groupManager,
+      authorizer,
+      authenticator
     )
   }
 
@@ -54,7 +68,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
     when(taskKiller.kill(any[PathId](), any(), anyBoolean())).thenReturn(
       Future.successful(toKill))
 
-    val response = appsTaskResource.deleteMany(appId, host, scale = false)
+    val response = appsTaskResource.deleteMany(appId, host, scale = false, httpRequest, httpResponse)
     response.getStatus shouldEqual 200
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
@@ -81,7 +95,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
     when(taskKiller.kill(any[PathId](), any(), anyBoolean())).thenReturn(
       Future.successful(toKill))
 
-    val response = appsTaskResource.deleteOne(appId.root, task1.getId, scale = false)
+    val response = appsTaskResource.deleteOne(appId.root, task1.getId, scale = false, httpRequest, httpResponse)
     response.getStatus shouldEqual 200
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
@@ -111,7 +125,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers {
       collection.immutable.Map("" -> collection.immutable.Seq())
     ))
 
-    val response = appsTaskResource.indexJson("/my/app")
+    val response = appsTaskResource.indexJson("/my/app", httpRequest, httpResponse)
     response.getStatus shouldEqual 200
     def toEnrichedTask(marathonTask: MarathonTask): EnrichedTask = {
       EnrichedTask(
