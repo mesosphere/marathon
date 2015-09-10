@@ -207,6 +207,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
 
       connection.setConnectTimeout(leaderProxyConf.leaderProxyConnectionTimeout())
       connection.setReadTimeout(leaderProxyConf.leaderProxyReadTimeout())
+      connection.setInstanceFollowRedirects(false)
 
       connection
     }
