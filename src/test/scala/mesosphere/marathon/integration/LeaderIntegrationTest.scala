@@ -9,6 +9,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
     with MarathonClusterIntegrationTest
     with GivenWhenThen
     with Matchers {
+
   test("all nodes return the same leader") {
     Given("a leader has been elected")
     WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
@@ -21,6 +22,17 @@ class LeaderIntegrationTest extends IntegrationFunSuite
 
     And("they should all be the same")
     results.map(_.value).distinct should have length 1
+  }
+
+  test("all nodes return a redirect on GET /") {
+    Given("a leader has been elected")
+    WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
+
+    When("get / on all nodes of a cluster")
+    val results = marathonFacades.map(marathon => marathon.getPath("/"))
+
+    Then("all nodes send a redirect")
+    results.foreach(_.code should be (302))
   }
 
   test("the leader abdicates when it receives a DELETE") {
