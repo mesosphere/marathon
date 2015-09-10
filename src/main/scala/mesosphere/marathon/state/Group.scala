@@ -71,6 +71,10 @@ case class Group(
     fn(this.copy(groups = in(groups.toList).toSet, version = timestamp))
   }
 
+  def updateGroup(fn: Group => Option[Group]): Option[Group] = {
+    fn(this).map(_.copy(groups = groups.flatMap(_.updateGroup(fn))))
+  }
+
   /** Removes the group with the given gid if it exists */
   def remove(gid: PathId, timestamp: Timestamp = Timestamp.now()): Group = {
     copy(groups = groups.filter(_.id != gid).map(_.remove(gid, timestamp)), version = timestamp)
