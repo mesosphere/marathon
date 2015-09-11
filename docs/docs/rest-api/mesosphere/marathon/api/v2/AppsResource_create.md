@@ -145,7 +145,7 @@ The port array currently serves multiple roles:
   for details.
 
 Since this is confusing, we recommend to configure ports assignment for docker
-containers in `container.docker.portMappings` instead, see
+containers for `BRIDGE` networking in `container.docker.portMappings` instead, see
 [Docker Containers doc page]({{ site.baseurl }}/docs/native-docker.html#bridged-networking-mode)).
 
 Alternatively or if you use the Mesos Containerizer, pass zeros as port values to generate one or more arbitrary
