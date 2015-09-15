@@ -3,6 +3,7 @@ package mesosphere.marathon.core
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 
@@ -18,4 +19,5 @@ trait CoreModule {
   def taskTrackerModule: TaskTrackerModule
   def launcherModule: LauncherModule
   def appOfferMatcherModule: LaunchQueueModule
+  def pluginManager: PluginManager
 }

@@ -2,11 +2,11 @@ package mesosphere.marathon.io
 
 import java.io._
 import java.math.BigInteger
-import java.security.{ MessageDigest, DigestInputStream }
-import scala.annotation.tailrec
+import java.security.{ DigestInputStream, MessageDigest }
 
 import com.google.common.io.ByteStreams
 
+import scala.annotation.tailrec
 import scala.util.{ Failure, Success, Try }
 
 object IO {
