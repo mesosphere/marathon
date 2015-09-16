@@ -8,10 +8,3 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
 
 COPY . /marathon
 WORKDIR /marathon
-
-RUN sbt -Dsbt.log.format=false assembly && \
-    mv $(find target -name 'marathon-assembly-*.jar' | sort | tail -1) ./ && \
-    rm -rf target/* ~/.sbt ~/.ivy2 && \
-    mv marathon-assembly-*.jar target
-
-ENTRYPOINT ["./bin/start"]
