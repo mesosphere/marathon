@@ -40,7 +40,9 @@ class SingleAppScalingTest
 
     ProcessKeeper.startMarathon(cwd, env,
       List("--http_port", port.toString, "--zk", config.zk, "--enable_metrics",
-        "--max_tasks_per_offer", maxTasksPerOffer) ++ args.toList,
+        "--max_tasks_per_offer", maxTasksPerOffer,
+        "--task_launch_timeout", "20000",
+        "--task_launch_confirm_timeout", "1000") ++ args.toList,
       mainClass = "mesosphere.mesos.simulation.SimulateMesosMain")
   }
 

@@ -493,35 +493,53 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     assert(overdueUnstagedTask.getStagedAt == 0, "The stagedAt property of an unstaged task has a value of 0")
     assert(overdueUnstagedTask.getStartedAt == 0, "The startedAt property of an unstaged task has a value of 0")
 
+    val unconfirmedNotOverdueTask = MarathonTask.newBuilder()
+      .setId("unconfirmed")
+      .setStagedAt(now - config.taskLaunchConfirmTimeout().millis)
+      .build()
+
+    val unconfirmedOverdueTask = MarathonTask.newBuilder()
+      .setId("unconfirmedOverdue")
+      .setStagedAt(now - config.taskLaunchConfirmTimeout().millis - 1.millis)
+      .build()
+
     val overdueStagedTask = MarathonTask.newBuilder()
       .setId("overdueStagedTask")
       // When using MarathonTasks.makeTask, this would be set to a made up value
       // This test shall explicitly make sure that the task gets selected even if it is unlikely old
       .setStagedAt(now - 10.days)
-      .build()
+      .setStatus(TaskStatus.newBuilder().setState(TaskState.TASK_STAGING).buildPartial())
+      .buildPartial()
 
     val stagedTask = MarathonTask.newBuilder()
       .setId("staged")
+      .setStatus(TaskStatus.newBuilder().setState(TaskState.TASK_STAGING).buildPartial())
       .setStagedAt(now - 10.seconds)
-      .build()
+      .buildPartial()
 
     val runningTask = MarathonTask.newBuilder()
       .setId("running")
-      .setStagedAt(now - 2.seconds)
-      .setStartedAt(now - 5.seconds)
-      .build()
+      .setStatus(TaskStatus.newBuilder().setState(TaskState.TASK_RUNNING).buildPartial())
+      .setStagedAt(now - 5.seconds)
+      .setStartedAt(now - 2.seconds)
+      .buildPartial()
 
-    Given("An overdue unstaged, an overdue staged, a staged and a running task")
+    Given("Several somehow overdue tasks plus some not overdue tasks")
+    taskTracker.created(TEST_APP_NAME, unconfirmedOverdueTask)
+    taskTracker.created(TEST_APP_NAME, unconfirmedNotOverdueTask)
     taskTracker.created(TEST_APP_NAME, overdueUnstagedTask)
     taskTracker.created(TEST_APP_NAME, overdueStagedTask)
     taskTracker.created(TEST_APP_NAME, stagedTask)
     taskTracker.created(TEST_APP_NAME, runningTask)
 
-    When("We check which tasks should be killed because they're not yet staged")
-    val stagedTasks = taskTracker.determineOverdueTasks(now)
+    When("We check which tasks should be killed because they're not yet staged or unconfirmed")
+    val overdueTasks = taskTracker.determineOverdueTasks(now)
 
-    Then("Both the overdueUnstagedTask and the overdueStagedTask tasks are returned")
-    assert(stagedTasks == Seq(overdueStagedTask, overdueUnstagedTask))
+    Then("All somehow overdue tasks are returned")
+    assert(overdueTasks.map(_.getId).toSet ==
+      Set(overdueStagedTask, overdueUnstagedTask, unconfirmedOverdueTask).map(_.getId))
 
+    assert(overdueTasks.toSet ==
+      Set(overdueStagedTask, overdueUnstagedTask, unconfirmedOverdueTask))
   }
 }
