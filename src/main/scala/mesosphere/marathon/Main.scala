@@ -1,15 +1,17 @@
 package mesosphere.marathon
 
+import com.codahale.metrics.jetty9.InstrumentedHandler
 import com.google.inject.Module
 import com.twitter.common.quantity.{ Amount, Time }
 import com.twitter.common.zookeeper.ZooKeeperClient
-import mesosphere.chaos.{ App, AppConfiguration }
 import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
+import mesosphere.chaos.{ App, AppConfiguration }
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.event.http.{ HttpEventConfiguration, HttpEventModule }
 import mesosphere.marathon.event.{ EventConfiguration, EventModule }
 import org.apache.log4j.Logger
+import org.eclipse.jetty.server.handler.{ HandlerCollection, RequestLogHandler, ResourceHandler }
 import org.rogach.scallop.ScallopConf
 
 import scala.collection.JavaConverters._
@@ -48,7 +50,15 @@ class MarathonApp extends App {
 
   def modules(): Seq[Module] = {
     Seq(
-      new HttpModule(conf),
+      new HttpModule(conf) {
+        override def provideHandlerCollection(instrumentedHandler: InstrumentedHandler,
+                                              logHandler: RequestLogHandler,
+                                              resourceHandler: ResourceHandler): HandlerCollection = {
+          val handlers = new HandlerCollection()
+          handlers.setHandlers(Array(resourceHandler, instrumentedHandler, logHandler))
+          handlers
+        }
+      },
       new MetricsModule,
       new MarathonModule(conf, conf, zk),
       new MarathonRestModule,
