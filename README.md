@@ -200,6 +200,8 @@ the community.
 
 **YourKit, LLC**
 
+![YourKit, LLC](https://www.yourkit.com/images/yklogo.png)
+
 YourKit supports open source projects with its full-featured Java
 Profiler.
 YourKit, LLC is the creator of <a
