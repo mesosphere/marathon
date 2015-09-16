@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import java.lang.annotation.ElementType
+import java.util.Collections
 import javax.validation.{ ConstraintViolation, ConstraintViolationException, Validation }
 import scala.collection.JavaConverters._
 import scala.reflect.{ classTag, ClassTag }
@@ -23,7 +24,7 @@ object BeanValidation {
     msg: String): ConstraintViolation[Bean] = {
     //scalastyle:off null
     ConstraintViolationImpl.forParameterValidation[Bean](
-      msg, msg, classTag[Bean].runtimeClass.asInstanceOf[Class[Bean]], bean, prop, prop,
+      msg, Collections.emptyMap(), msg, classTag[Bean].runtimeClass.asInstanceOf[Class[Bean]], bean, prop, prop,
       PathImpl.createPathFromString(path),
       null, ElementType.FIELD, Array())
     //scalastyle:on
@@ -32,6 +33,7 @@ object BeanValidation {
   def withPath[T: ClassTag](bean: T, e: ConstraintViolation[_], path: String): ConstraintViolation[T] =
     ConstraintViolationImpl.forParameterValidation[T](
       e.getMessageTemplate,
+      Collections.emptyMap(),
       e.getMessage,
       classTag[T].runtimeClass.asInstanceOf[Class[T]],
       bean,
