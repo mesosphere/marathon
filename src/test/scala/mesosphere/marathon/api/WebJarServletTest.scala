@@ -20,7 +20,7 @@ class WebJarServletTest extends MarathonSpec with Mockito with GivenWhenThen wit
     servlet.doGet(request, response)
 
     Then("A redirect response is send")
-    verify(response, atLeastOnce).sendRedirect("/ui/")
+    verify(response, atLeastOnce).sendRedirect("ui/")
   }
 
   test("Get a directory without leading / will send a redirect") {

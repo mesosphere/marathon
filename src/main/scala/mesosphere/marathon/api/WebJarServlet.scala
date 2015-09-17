@@ -58,7 +58,7 @@ class WebJarServlet extends HttpServlet {
     }
 
     //special rule for accessing root -> redirect to ui main page
-    if (req.getRequestURI == "/") resp.sendRedirect("/ui/")
+    if (req.getRequestURI == "/") resp.sendRedirect("ui/")
     //if a directory is requested, redirect to trailing slash
     else if (!file.contains(".")) resp.sendRedirect(req.getRequestURI + "/") //request /ui -> /ui/
     //if we come here, it must be a resource
