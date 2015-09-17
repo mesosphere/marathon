@@ -1,7 +1,7 @@
 package mesosphere.marathon.metrics
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.codahale.metrics.{Gauge, MetricRegistry}
 import com.google.inject.Inject
@@ -41,6 +41,7 @@ class Metrics @Inject() (val registry: MetricRegistry) {
     new Histogram(registry.histogram(name))
   }
 
+  @throws[IllegalArgumentException]("if this function is called multiple times for the same name.")
   def gauge[G <: Gauge[_]](name: String, gauge: G): G = {
     registry.register(name, gauge)
     gauge
