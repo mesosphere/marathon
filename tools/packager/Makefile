@@ -30,7 +30,7 @@ FPM_OPTS_DEB := -t deb \
 	--after-remove marathon.postrm
 FPM_OPTS_DEB_INIT := --deb-init marathon.init
 FPM_OPTS_RPM := -t rpm \
-	-d coreutils -d 'java >= 1.8'
+	-d coreutils -d 'java >= 1:1.8.0'
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
 .PHONY: help
