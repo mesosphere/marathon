@@ -4,8 +4,12 @@ import akka.actor.ActorRef
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.manager.impl.{ OfferMatcherManagerDelegate, OfferMatcherManagerActor }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
+import mesosphere.marathon.core.matcher.manager.impl.{
+  OfferMatcherManagerActor,
+  OfferMatcherManagerActorMetrics,
+  OfferMatcherManagerDelegate
+}
 import mesosphere.marathon.metrics.Metrics
 import rx.lang.scala.subjects.PublishSubject
 import rx.lang.scala.{ Observable, Subject }
@@ -23,8 +27,11 @@ class OfferMatcherManagerModule(
 
   private[this] lazy val offersWanted: Subject[Boolean] = PublishSubject[Boolean]()
 
+  private[this] lazy val offerMatcherManagerMetrics = new OfferMatcherManagerActorMetrics(metrics)
+
   private[this] val offerMatcherMultiplexer: ActorRef = {
-    val props = OfferMatcherManagerActor.props(metrics, random, clock, offerMatcherConfig, offersWanted)
+    val props = OfferMatcherManagerActor.props(
+      offerMatcherManagerMetrics, random, clock, offerMatcherConfig, offersWanted)
     leadershipModule.startWhenLeader(props, "offerMatcherManager")
   }
 
