@@ -17,6 +17,15 @@ object ModelValidation {
 
   //scalastyle:off null
 
+  /**
+    * This regular expression is used to validate each path segment of an ID.
+    *
+    * If you change this, please also change "pathType" in AppDefinition.json and
+    * notify the maintainers of the DCOS CLI.
+    */
+  private[this] val ID_PATH_SEGMENT_PATTERN =
+    "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
+
   // TODO: Re-implement this method on it's own terms
   def checkGroup(
     group: Group,
@@ -227,8 +236,7 @@ object ModelValidation {
   }
 
   def idErrors[T: ClassTag](t: T, base: PathId, id: PathId, path: String): Iterable[ConstraintViolation[T]] = {
-    val p = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
-    val valid = id.path.forall(p.pattern.matcher(_).matches())
+    val valid = id.path.forall(ID_PATH_SEGMENT_PATTERN.pattern.matcher(_).matches())
     val errors =
       if (!valid)
         List(
