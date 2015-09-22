@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.launchqueue.impl
+package mesosphere.marathon
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.{ Clock, ShutdownHooks }
@@ -10,14 +10,14 @@ import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.{ AppRepository, PathId }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.tasks.{ TaskFactory, TaskIdUtil, TaskTracker }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
-import mesosphere.util.state.PersistentEntity
 import org.apache.mesos.Protos.TaskID
-import org.mockito.Mockito
+import org.hamcrest.{ BaseMatcher, Description }
+import org.mockito.Matchers
 import org.mockito.Mockito.{ when => call, _ }
+import org.mockito.internal.matchers.Equality
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen }
 
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenWhenThen {
@@ -32,7 +32,7 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
 
   test("An added queue item is returned in list") {
     Given("a task queue with one item")
-    call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    call(taskTracker.getTasks(app.id)).thenReturn(Iterable.empty[MarathonTask])
     taskQueue.add(app)
 
     When("querying its contents")
@@ -44,12 +44,12 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
     assert(list.head.tasksLeftToLaunch == 1)
     assert(list.head.tasksLaunchedOrRunning == 0)
     assert(list.head.taskLaunchesInFlight == 0)
-    verify(taskTracker).get(app.id)
+    verify(taskTracker).getTasks(app.id)
   }
 
   test("An added queue item is reflected via count") {
     Given("a task queue with one item")
-    call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    call(taskTracker.getTasks(app.id)).thenReturn(Iterable.empty[MarathonTask])
     taskQueue.add(app)
 
     When("querying its count")
@@ -57,12 +57,12 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
 
     Then("we get a count == 1")
     assert(count == 1)
-    verify(taskTracker).get(app.id)
+    verify(taskTracker).getTasks(app.id)
   }
 
   test("A purged queue item has a count of 0") {
     Given("a task queue with one item which is purged")
-    call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    call(taskTracker.getTasks(app.id)).thenReturn(Iterable.empty[MarathonTask])
     taskQueue.add(app)
     taskQueue.purge(app.id)
 
@@ -71,12 +71,12 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
 
     Then("we get a count == 0")
     assert(count == 0)
-    verify(taskTracker).get(app.id)
+    verify(taskTracker).getTasks(app.id)
   }
 
   test("A re-added queue item has a count of 1") {
     Given("a task queue with one item which is purged")
-    call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    call(taskTracker.getTasks(app.id)).thenReturn(Iterable.empty[MarathonTask])
     taskQueue.add(app)
     taskQueue.purge(app.id)
     taskQueue.add(app)
@@ -86,12 +86,12 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
 
     Then("we get a count == 1")
     assert(count == 1)
-    verify(taskTracker, times(2)).get(app.id)
+    verify(taskTracker, times(2)).getTasks(app.id)
   }
 
   test("adding a queue item registers new offer matcher") {
     Given("An empty task tracker")
-    call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    call(taskTracker.getTasks(app.id)).thenReturn(Iterable.empty[MarathonTask])
 
     When("Adding an app to the taskQueue")
     taskQueue.add(app)
@@ -100,12 +100,12 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
     }
-    verify(taskTracker).get(app.id)
+    verify(taskTracker).getTasks(app.id)
   }
 
   test("purging a queue item UNregisters offer matcher") {
     Given("An app in the queue")
-    call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    call(taskTracker.getTasks(app.id)).thenReturn(Iterable.empty[MarathonTask])
     taskQueue.add(app)
 
     When("The app is purged")
@@ -113,30 +113,30 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
 
     Then("No offer matchers remain registered")
     assert(offerMatcherManager.offerMatchers.isEmpty)
-    verify(taskTracker).get(app.id)
+    verify(taskTracker).getTasks(app.id)
   }
 
   test("an offer gets unsuccessfully matched against an item in the queue") {
     val offer = MarathonTestHelper.makeBasicOffer().build()
 
     Given("An app in the queue")
-    call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    call(taskTracker.getTasks(app.id)).thenReturn(Map.empty[String, MarathonTask].values)
     taskQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
     }
 
     When("we ask for matching an offer")
-    call(taskFactory.newTask(app, offer, Set.empty[MarathonTask])).thenReturn(None)
+    call(taskFactory.newTask(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(None)
     val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
     val matchedTasks = Await.result(matchFuture, 3.seconds)
 
     Then("the offer gets passed to the task factory and respects the answer")
-    verify(taskFactory).newTask(app, offer, Set.empty[MarathonTask])
+    verify(taskFactory).newTask(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
     assert(matchedTasks.offerId == offer.getId)
     assert(matchedTasks.tasks == Seq.empty)
 
-    verify(taskTracker).get(app.id)
+    verify(taskTracker).getTasks(app.id)
   }
 
   test("an offer gets successfully matched against an item in the queue") {
@@ -147,8 +147,8 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
     val createdTask = CreatedTask(mesosTask, marathonTask)
 
     Given("An app in the queue")
-    call(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
-    call(taskFactory.newTask(app, offer, Set.empty[MarathonTask])).thenReturn(Some(createdTask))
+    call(taskTracker.getTasks(app.id)).thenReturn(Iterable.empty[MarathonTask])
+    call(taskFactory.newTask(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(Some(createdTask))
     taskQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
@@ -159,11 +159,11 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
     val matchedTasks = Await.result(matchFuture, 3.seconds)
 
     Then("the offer gets passed to the task factory and respects the answer")
-    verify(taskFactory).newTask(app, offer, Set.empty[MarathonTask])
+    verify(taskFactory).newTask(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
     assert(matchedTasks.offerId == offer.getId)
     assert(matchedTasks.tasks.map(_.taskInfo) == Seq(mesosTask))
 
-    verify(taskTracker).get(app.id)
+    verify(taskTracker).getTasks(app.id)
   }
 
   private[this] val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))

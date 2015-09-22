@@ -103,10 +103,8 @@ private class AppTaskLauncherActor(
 
   /** Receive task updates to keep task list up-to-date. */
   private[this] var taskStatusUpdateSubscription: Subscription = _
-  /** Currently known running tasks or tasks that we have requested to be launched. */
-  private[this] var runningTasks: Set[MarathonTask] = _
-  /** Like runningTasks but indexed by the taskId String */
-  private[this] var runningTasksMap: Map[String, MarathonTask] = _
+  /** tasks that are in flight and those in the tracker */
+  private[this] var tasksMap: Map[String, MarathonTask] = _
 
   /** Decorator to use this actor as a [[base.OfferMatcher#TaskLaunchSource]] */
   private[this] val myselfAsLaunchSource = TaskLaunchSourceDelegate(self)
@@ -121,8 +119,8 @@ private class AppTaskLauncherActor(
       log.debug("update {}", update)
       self ! update
     }
-    runningTasks = taskTracker.get(app.id)
-    runningTasksMap = runningTasks.map(task => task.getId -> task).toMap
+    val runningTasks = taskTracker.getTasks(app.id)
+    tasksMap = runningTasks.map(task => task.getId -> task).toMap
 
     rateLimiterActor ! RateLimiterActor.GetDelay(app)
   }
@@ -253,7 +251,7 @@ private class AppTaskLauncherActor(
       }
 
     case TaskStatusUpdate(_, taskId, status) =>
-      runningTasksMap.get(taskId.getValue) match {
+      tasksMap.get(taskId.getValue) match {
         case None =>
           log.warning("ignore update of unknown task '{}'", taskId.getValue)
         case Some(task) =>
@@ -263,9 +261,7 @@ private class AppTaskLauncherActor(
           status.mesosStatus.foreach(taskBuilder.setStatus)
           val updatedTask = taskBuilder.build()
 
-          runningTasks -= task
-          runningTasks += updatedTask
-          runningTasksMap += taskId.getValue -> updatedTask
+          tasksMap += taskId.getValue -> updatedTask
       }
 
   }
@@ -273,10 +269,7 @@ private class AppTaskLauncherActor(
   private[this] def removeTask(taskId: TaskID): Unit = {
     inFlightTaskLaunches.get(taskId).foreach(_.foreach(_.cancel()))
     inFlightTaskLaunches -= taskId
-    runningTasksMap.get(taskId.getValue).foreach { marathonTask =>
-      runningTasksMap -= taskId.getValue
-      runningTasks -= marathonTask
-    }
+    tasksMap -= taskId.getValue
   }
 
   private[this] def receiveGetCurrentCount: Receive = {
@@ -332,7 +325,7 @@ private class AppTaskLauncherActor(
       app,
       tasksLeftToLaunch = tasksToLaunch,
       taskLaunchesInFlight = inFlightTaskLaunches.size,
-      tasksLaunchedOrRunning = runningTasks.size - inFlightTaskLaunches.size,
+      tasksLaunchedOrRunning = tasksMap.size - inFlightTaskLaunches.size,
       backOffUntil.getOrElse(clock.now())
     )
   }
@@ -344,12 +337,11 @@ private class AppTaskLauncherActor(
       sender ! MatchedTasks(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val newTaskOpt: Option[CreatedTask] = taskFactory.newTask(app, offer, runningTasks)
+      val newTaskOpt: Option[CreatedTask] = taskFactory.newTask(app, offer, tasksMap.values)
       newTaskOpt match {
         case Some(CreatedTask(mesosTask, marathonTask)) =>
           def updateActorState(): Unit = {
-            runningTasks += marathonTask
-            runningTasksMap += marathonTask.getId -> marathonTask
+            tasksMap += marathonTask.getId -> marathonTask
             inFlightTaskLaunches += mesosTask.getTaskId -> None
             tasksToLaunch -= 1
             OfferMatcherRegistration.manageOfferMatcherStatus()
@@ -400,7 +392,12 @@ private class AppTaskLauncherActor(
       case _ => "not backing off"
     }
 
-    s"$tasksToLaunch tasksToLaunch, ${inFlightTaskLaunches.size} in flight. $backoffStr"
+    val inFlight = inFlightTaskLaunches.size
+    val tasksLaunchedOrRunning = tasksMap.size - inFlight
+    val instanceCountDelta = tasksMap.size + tasksToLaunch - app.instances
+    val matchInstanceStr = if (instanceCountDelta == 0) "" else s"instance count delta $instanceCountDelta."
+    s"$tasksToLaunch tasksToLaunch, $inFlight in flight, " +
+      s"$tasksLaunchedOrRunning confirmed. $matchInstanceStr $backoffStr"
   }
 
   /** Manage registering this actor as offer matcher. Only register it if tasksToLaunch > 0. */
