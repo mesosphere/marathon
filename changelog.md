@@ -1,3 +1,9 @@
+## Changes from 0.11.0 to 0.12.0
+
+### Fixed Issues
+
+- #2294 - Make boolean command line flags use Scallop's 'toggle'
+
 ## Changes from 0.10.0 to 0.11.0
 
 ### Breaking Changes
@@ -152,7 +158,7 @@ All launched tasks are stored before launching them. There is also a new timeout
 
 If the mesos master fails over or in other unusual circumstances, a launch task request might get lost.
 You can configure how long Marathon waits for the first `TASK_STAGING` update.
-    
+
 * <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 10000):
   Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
 

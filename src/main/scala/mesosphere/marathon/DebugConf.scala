@@ -11,26 +11,31 @@ import org.rogach.scallop.ScallopConf
 
 /**
   * Options related to debugging marathon.
-  * All options should be optional and turned off by default.
   */
 trait DebugConf extends ScallopConf {
 
-  lazy val debugTracing = opt[Boolean]("enable_tracing",
-    descr = "Enable trace logging of service method calls",
+  lazy val debugTracing = toggle("tracing",
+    descrYes = "Enable trace logging of service method calls",
+    descrNo = "(Default) Disable trace logging of service method calls",
     default = Some(false),
-    noshort = true)
+    noshort = true,
+    prefix = "disable_")
 
-  @deprecated("Metrics are enabled by default. See disableMetrics.", "Since version 0.10.0")
-  lazy val enableMetrics = opt[Boolean]("enable_metrics",
-    descr = "Enable metric measurement of service method calls",
-    hidden = true,
+  lazy val deprecatedDebugTracing = opt[Boolean]("enable_tracing", hidden = true)
+
+  mutuallyExclusive(debugTracing, deprecatedDebugTracing)
+  lazy val enableDebugTracing = debugTracing() || deprecatedDebugTracing()
+
+  lazy val metrics = toggle("metrics",
+    descrYes = "(Default) Enable metric measurement of service method calls",
+    descrNo = "Disable metric measurement of service method calls",
     default = Some(true),
-    noshort = true)
+    noshort = true,
+    prefix = "disable_")
 
-  lazy val disableMetrics = opt[Boolean]("disable_metrics",
-    descr = "Disable metric measurement of service method calls",
-    default = Some(false),
-    noshort = true)
+  lazy val deprecatedEnableMetrics = opt[Boolean]("enable_metrics", default = Some(false), hidden = true)
+
+  mutuallyExclusive(metrics, deprecatedEnableMetrics)
 
   lazy val logLevel = opt[String]("logging_level",
     descr = "Set logging level to one of: off, fatal, error, warn, info, debug, trace, all",
@@ -81,8 +86,8 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
     //add behaviors
     val metricsProvider = getProvider(classOf[Metrics])
 
-    val tracingBehavior = conf.debugTracing.get.filter(identity).map(_ => new TracingBehavior(metricsProvider))
-    val metricsBehavior = conf.disableMetrics.get.filterNot(identity).map(_ => new MetricsBehavior(metricsProvider))
+    val tracingBehavior = if (conf.enableDebugTracing) Some(new TracingBehavior(metricsProvider)) else None
+    val metricsBehavior = conf.metrics.get.filter(identity).map(_ => new MetricsBehavior(metricsProvider))
 
     val behaviors = (tracingBehavior :: metricsBehavior :: Nil).flatten
     if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)

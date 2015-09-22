@@ -12,15 +12,14 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.{ CommandInfo, TaskID, TaskInfo, Offer }
-import org.rogach.scallop.ScallopConf
 import play.api.libs.json.Json
 
 trait MarathonTestHelper {
 
   import mesosphere.mesos.protos.Implicits._
 
-  def makeConfig(args: String*): MarathonConf = {
-    val opts = new ScallopConf(args) with MarathonConf {
+  def makeConfig(args: String*): AllConf = {
+    val opts = new AllConf(args) {
       // scallop will trigger sys exit
       override protected def onError(e: Throwable): Unit = throw e
     }
@@ -33,7 +32,7 @@ trait MarathonTestHelper {
     minReviveOffersInterval: Long = 100,
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
-    envVarsPrefix: Option[String] = None): MarathonConf = {
+    envVarsPrefix: Option[String] = None): AllConf = {
 
     var args = Seq(
       "--master", "127.0.0.1:5050",

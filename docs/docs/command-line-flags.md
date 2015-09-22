@@ -37,7 +37,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Comma separated list of allowed originating domains for HTTP requests.
     The origin(s) to allow in Marathon. Not set by default.
     Examples: `"*"`, or `"http://localhost:8888, http://domain.com"`.
-* `--checkpoint` (Optional. Default: true): Enable checkpointing of tasks.
+* <span class="label label-default">v0.12.0</span> `--[disable_]checkpoint` (Optional. Default: enabled):
+    Enable checkpointing of tasks.
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and Marathon scheduler failover.  See the
     description of `--failover_timeout`.
@@ -50,7 +51,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     enabled.
 * `--framework_name` (Optional. Default: marathon-VERSION): The framework name
     to register with Mesos.
-* `--ha` (Optional. Default: true): Runs Marathon in HA mode with leader election.
+* <span class="label label-default">v0.12.0</span> `--[disable_]ha` (Optional. Default: enabled):
+    Run Marathon in HA mode with leader election.
     Allows starting an arbitrary number of other Marathons but all need to be
     started in HA mode. This mode requires a running ZooKeeper. See `--master`.
 * `--hostname` (Optional. Default: hostname of machine): The advertised hostname
@@ -265,23 +267,15 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of
     concurrent http requests, that is allowed concurrently before requests get answered directly with a
     HTTP 503 Service Temporarily Unavailable.
-    
-
-
 
 ### Debug Flags
 
-* <span class="label label-default">v0.8.2</span> `--logging_level` (Optional.):
+* <span class="label label-default">v0.8.2</span> `--logging_level` (Optional):
     Set the logging level of the application.
     Use one of `off`, `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `all`.
-* <span class="label label-default">Deprecated</span> `--enable_metrics` (Optional.):
-    Enable metrics for all service method calls.
-    The execution time per method is available via the metrics endpoint.
-    This option is turned on by default since version 0.10.0.
-    To turn this feature off, you can use `--disable_metrics`.
-* <span class="label label-default">v0.10.0</span> `--disable_metrics` (Optional.):
-    Metrics are enabled by default, so that the execution time per method is available via the metrics endpoint.
-    This metrics measurement can be disabled with this option.
-* <span class="label label-default">v0.8.2</span> `--enable_tracing` (Optional.):
+* <span class="label label-default">v0.12.0</span> `--[disable_]metrics` (Optional. Default: enabled):
+    Expose the execution time per method via the metrics endpoint.
+    This metrics measurement can be disabled with --disable_metrics.
+* <span class="label label-default">v0.12.0</span> `--[disable_]tracing` (Optional. Default: disabled):
     Enable tracing for all service method calls.
-    Around the execution of every service method a trace log message is issued.
+    Log a trace message around the execution of every service method.
