@@ -54,7 +54,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Allows starting an arbitrary number of other Marathons but all need to be
     started in HA mode. This mode requires a running ZooKeeper. See `--master`.
 * `--hostname` (Optional. Default: hostname of machine): The advertised hostname
-    that is used for the communication with the mesos master. 
+    that is used for the communication with the mesos master.
     The value is also stored in the persistent store so another standby host can redirect to the elected leader.
     _Note: Default is determined by
     [`InetAddress.getLocalHost`](http://docs.oracle.com/javase/7/docs/api/java/net/InetAddress.html#getLocalHost())._
@@ -131,13 +131,13 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
 available resources of a single node in the cluster. Before this <span class="label label-default">v0.8.2</span>,
 Marathon would only start a single task per
-resource offer, which led to slow task launching in smaller clusters. 
+resource offer, which led to slow task launching in smaller clusters.
 
 ### Marathon after 0.11.0 (including)
 
 In order to speed up task launching and use the
 resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm which tries
-to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is 
+to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is
 configurable with the following startup parameters:
 
 * <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
@@ -147,29 +147,29 @@ configurable with the following startup parameters:
 To prevent overloading Mesos itself, you can also restrict how many tasks Marathon launches per time interval.
 By default, we allow 1000 unconfirmed task launches every 30 seconds. In addition, Marathon launches
 more tasks when it gets feedback about running and healthy tasks from Mesos.
-    
-* <span class="label label-default">v0.11.0</span> `--launch_token_refresh_interval` (Optional. Default: 30000): 
+
+* <span class="label label-default">v0.11.0</span> `--launch_token_refresh_interval` (Optional. Default: 30000):
     The interval (ms) in which to refresh the launch tokens to `--launch_token_count`.
-* <span class="label label-default">v0.11.0</span> `--launch_tokens` (Optional. Default: 1000): 
+* <span class="label label-default">v0.11.0</span> `--launch_tokens` (Optional. Default: 1000):
     Launch tokens per interval.
-    
+
 To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
 incoming resource offer, i.e. finding suitable tasks to launch for incoming offers.
 
-* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 1000): 
+* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 1000):
     Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
     All already matched tasks are launched.
-    
+
 All launched tasks are stored before launching them. There is also a timeout for this:
-    
-* <span class="label label-default">v0.11.0</span> `--save_tasks_to_launch_timeout` (Optional. Default: 3000): 
+
+* <span class="label label-default">v0.11.0</span> `--save_tasks_to_launch_timeout` (Optional. Default: 3000):
     Timeout (ms) after matching an offer for saving all matched tasks that we are about to launch.
     When reaching the timeout, only the tasks that we could save within the timeout are also launched.
     All other task launches are temporarily rejected and retried later.
 
 If the mesos master fails over or in other unusual circumstances, a launch task request might get lost.
 You can configure how long Marathon waits for the first `TASK_STAGING` update.
-    
+
 * <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 10000):
   Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
 
@@ -178,19 +178,19 @@ Marathon can request all available offers from Mesos again -- even those that it
 calling the underlying `reviveOffers` API call to often, you can configure the minimal delay between subsequent
 invocations of this call.
 
-* <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 5000): 
+* <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 5000):
     Do not ask for all offers (also already seen ones) more often than this interval (ms).
-    
+
 The order in which mesos receives `reviveOffers` and `declineOffer` calls is not guaranteed. Therefore, as
 long as we still need offers to launch tasks, we repeat the `reviveOffers` call for `--revive_offers_repetitions`
 times so that our last `reviveOffers` will be received after all relevant `declineOffer` calls with high
-probability. 
+probability.
 
-* <span class="label label-default">v0.11.0</span> `--revive_offers_repetitions` (Optional. Default: 3): 
+* <span class="label label-default">v0.11.0</span> `--revive_offers_repetitions` (Optional. Default: 3):
     Repeat every reviveOffer request this many times, delayed by the `--min_revive_offers_interval`.
 
 If you want to disable calling reviveOffers (not recommended), you can use:
-    
+
 * <span class="label label-default">v0.11.0</span> `--disable_revive_offers_for_new_apps`
 
 When Marathon has no current use for an offer, it will decline the offer for a configurable period. This period is
@@ -233,7 +233,7 @@ max_tasks_per_offer == max_tasks_per_offer_cycle `. E.g. in a cluster of 200 nod
 
 ## Web Site Flags
 
-The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API. They are inherited from the 
+The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API. They are inherited from the
 [Chaos](https://github.com/mesosphere/chaos) library upon which Marathon and its companion project [Chronos](https://github.com/mesos/chronos) are based.
 
 ### Optional Flags
@@ -245,7 +245,7 @@ The Web Site flags control the behavior of Marathon's web site, including the us
     for HTTP requests.
 * `--http_credentials` (Optional. Default: None): Credentials for accessing the
     HTTP service in the format of `username:password`. The username may not
-    contain a colon (:). May also be specified with the `MESOSPHERE_HTTP_CREDENTIALS` environment variable. 
+    contain a colon (:). May also be specified with the `MESOSPHERE_HTTP_CREDENTIALS` environment variable.
 * `--http_port` (Optional. Default: 8080): The port on which to listen for HTTP
     requests.
 * `--disable_http` (Optional.): Disable HTTP completely. This is only allowed if you configure HTTPS.
