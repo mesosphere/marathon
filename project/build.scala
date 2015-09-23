@@ -139,7 +139,6 @@ object MarathonBuild extends Build {
       {
         case "application.conf"                                             => MergeStrategy.concat
         case "META-INF/jersey-module-version"                               => MergeStrategy.first
-        case "log4j.properties"                                             => MergeStrategy.concat
         case "org/apache/hadoop/yarn/util/package-info.class"               => MergeStrategy.first
         case "org/apache/hadoop/yarn/factories/package-info.class"          => MergeStrategy.first
         case "org/apache/hadoop/yarn/factory/providers/package-info.class"  => MergeStrategy.first
@@ -260,6 +259,8 @@ object Dependencies {
     twitterZk % "compile",
     rxScala % "compile",
     marathonUI % "compile",
+    logback % "compile",
+    log4jOverSlf4j % "compile",
 
     // test
     diffson % "test",
@@ -272,7 +273,7 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Chaos = "0.7.0"
+    val Chaos = "0.8.0-SNAPSHOT"
     val JacksonCCM = "0.1.2"
     val MesosUtils = "0.22.1-1"
     val Akka = "2.3.9"
@@ -292,6 +293,8 @@ object Dependency {
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
     val MarathonUI = "0.11.0"
+    val Logback = "1.1.3"
+    val Log4jOverSlf4j = "1.7.12"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -300,6 +303,8 @@ object Dependency {
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
   val excludeJavaxServlet = ExclusionRule(organization = "javax.servlet")
+  val excludeSlf4jLog4j12 = ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
+  val excludeLog4j = ExclusionRule(organization = "log4j")
 
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
@@ -315,17 +320,22 @@ object Dependency {
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
-  val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
-  val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
+  val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons excludeAll (excludeSlf4jLog4j12,
+    excludeLog4j)
+  val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator excludeAll excludeLog4j
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
-  val hadoopHdfs = "org.apache.hadoop" % "hadoop-hdfs" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
-  val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
+  val hadoopHdfs = "org.apache.hadoop" % "hadoop-hdfs" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet,
+    excludeLog4j)
+  val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty,
+    excludeJavaxServlet, excludeSlf4jLog4j12, excludeLog4j)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.2"
   val scallop = "org.rogach" %% "scallop" % V.Scallop
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
-  val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk
+  val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk excludeAll(excludeSlf4jLog4j12, excludeLog4j)
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
+  val logback = "ch.qos.logback" % "logback-classic" % V.Logback
+  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % V.Log4jOverSlf4j
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

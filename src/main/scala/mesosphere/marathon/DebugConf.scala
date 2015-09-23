@@ -2,13 +2,13 @@ package mesosphere.marathon
 
 import javax.inject.Provider
 
+import ch.qos.logback.classic.Level
 import com.google.inject.AbstractModule
 import com.google.inject.matcher.{ AbstractMatcher, Matchers }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
-import org.apache.log4j.{ Level, Logger }
 import org.rogach.scallop.ScallopConf
-import org.slf4j.LoggerFactory
+import org.slf4j.{ Logger, LoggerFactory }
 
 /**
   * Options related to debugging marathon.
@@ -77,7 +77,10 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
 
   override def configure(): Unit = {
     //set trace log level
-    conf.logLevel.get.foreach(level => Logger.getRootLogger.setLevel(Level.toLevel(level.toUpperCase)))
+    conf.logLevel.get.foreach { level =>
+      val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
+      rootLogger.setLevel(Level.toLevel(level.toUpperCase))
+    }
 
     //add behaviors
     val metricsProvider = getProvider(classOf[Metrics])
