@@ -6,17 +6,16 @@ import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.PreparationMessages
-import mesosphere.marathon.core.task.bus.{ TaskStatusUpdateTestHelper, TaskStatusObservables }
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
+import mesosphere.marathon.core.task.bus.{ TaskStatusObservables, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ Timestamp, PathId }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSchedulerDriverHolder, MarathonSpec }
+import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.SchedulerDriver
-import org.mockito.internal.matchers.CapturingMatcher
-import org.mockito.{ ArgumentCaptor, Matchers, Mockito }
+import org.mockito.{ ArgumentCaptor, Mockito }
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 
@@ -35,7 +34,7 @@ class TaskStatusUpdateActorTest extends MarathonSpec {
   ) {
     test(s"Remove terminated task (${update.wrapped.status.getClass.getSimpleName})") {
 
-      Mockito.when(taskTracker.fetchTask(appId, update.wrapped.taskId.getValue))
+      Mockito.when(taskTracker.fetchTask(update.wrapped.taskId.getValue))
         .thenReturn(Some(marathonTask))
       Mockito.when(taskTracker.terminated(appId, update.wrapped.taskId.getValue))
         .thenReturn(Future.successful(Some(marathonTask)))
@@ -46,7 +45,7 @@ class TaskStatusUpdateActorTest extends MarathonSpec {
 
       allAppsStatus.onNext(update.wrapped)
 
-      Mockito.verify(taskTracker).fetchTask(appId, update.wrapped.taskId.getValue)
+      Mockito.verify(taskTracker).fetchTask(update.wrapped.taskId.getValue)
       val status: TaskStatus = update.wrapped.status.mesosStatus.get
       Mockito.verify(healthCheckManager).update(status, version)
       Mockito.verify(taskTracker).terminated(appId, update.wrapped.taskId.getValue)

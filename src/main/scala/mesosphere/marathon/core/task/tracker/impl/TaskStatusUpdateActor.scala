@@ -80,7 +80,7 @@ private class TaskStatusUpdateActor(
       val appId = taskIdUtil.appId(taskId)
 
       // forward health changes to the health check manager
-      val maybeTask = taskTracker.fetchTask(appId, taskId.getValue)
+      val maybeTask = taskTracker.fetchTask(taskId.getValue)
       for (marathonTask <- maybeTask)
         healthCheckManager.update(status, Timestamp(marathonTask.getVersion))
 

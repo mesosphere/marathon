@@ -10,7 +10,6 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.util.Mockito
-import mesosphere.util.state.PersistentEntity
 import org.apache.mesos.Protos.TaskInfo
 import org.scalatest.GivenWhenThen
 
@@ -21,8 +20,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] val offer = MarathonTestHelper.makeBasicOffer().build()
   private[this] val offerId = offer.getId
   private val appId: PathId = PathId("/testapp")
-  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(TaskIdUtil.taskId(appId)).build()
-  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(TaskIdUtil.taskId(appId)).build()
+  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(TaskIdUtil.newTaskId(appId).getValue).build()
+  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(TaskIdUtil.newTaskId(appId).getValue).build()
   private[this] val tasks = Seq(taskInfo1, taskInfo2)
 
   test("match successful, launch tasks successful") {
@@ -37,7 +36,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("a cooperative offerMatcher and taskTracker")
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTasks(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
-      taskTracker.store(appId, task.marathonTask) returns Future.successful(mock[PersistentEntity])
+      taskTracker.store(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
     }
 
     And("a working taskLauncher")
@@ -74,7 +73,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("a cooperative offerMatcher and taskTracker")
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTasks(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
-      taskTracker.store(appId, task.marathonTask) returns Future.successful(mock[PersistentEntity])
+      taskTracker.store(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
       taskTracker.terminated(appId, task.marathonTask.getId) returns Future.successful(Some(task.marathonTask))
     }
 
@@ -157,7 +156,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       taskTracker.store(appId, task.marathonTask) answers { args =>
         // simulate that stores are really slow
         clock += 1.hour
-        Future.successful(mock[PersistentEntity])
+        Future.successful(dummyTask(appId))
       }
       taskTracker.terminated(appId, task.marathonTask.getId) returns Future.successful(Some(task.marathonTask))
     }

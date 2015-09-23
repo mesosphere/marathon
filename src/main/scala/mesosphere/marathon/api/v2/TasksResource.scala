@@ -10,6 +10,7 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.{ Authorizer, Authenticator, KillTask }
@@ -115,8 +116,8 @@ class TasksResource @Inject() (
     }.toMap
 
     doIfAuthorized(req, resp, KillTask, taskToAppIds.values.toSeq: _*) { implicit identity =>
-      val groupedTasks = taskToAppIds
-        .flatMap { case (taskId, appId) => taskTracker.fetchTask(appId, taskId) }
+      taskToAppIds
+        .flatMap { case (taskId, appId) => taskTracker.fetchTask(taskId) }
         .groupBy { x => taskIdUtil.appId(x.getId) }
         .foreach {
           case (appId, tasks) =>
@@ -128,6 +129,7 @@ class TasksResource @Inject() (
       // TODO: does anyone expect a response with all the deployment plans in case of scaling?
       Response.ok().build()
     }
+
   }
 
   private def toTaskState(state: String): Option[TaskState] = state.toLowerCase match {
