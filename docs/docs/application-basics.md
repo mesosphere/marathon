@@ -133,7 +133,7 @@ In the following example application definition, we will focus on a simple Docke
 Since launching Docker-based apps is currently not directly supported by the Marathon UI, we will use the [HTTP API]({{ site.baseurl }}/docs/rest-api.html) to deploy the app `basic-3`:
 
 ```sh
-curl -X POST http://10.141.141.10/service/marathon/v2/apps -d @basic-3.json -H "Content-type: application/json"
+curl -X POST http://10.141.141.10:8080/v2/apps -d @basic-3.json -H "Content-type: application/json"
 ```
 
 This assumes that you've pasted the example JSON into a file called `basic-3.json` and you're using [playa-mesos](https://github.com/mesosphere/playa-mesos), a Mesos sandbox environment based on Vagrant, for testing out the deployment. When you submit the above application definition to Marathon you should see something like the following in the Marathon UI (for the tasks and configuration tabs, respectively):
