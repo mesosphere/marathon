@@ -139,7 +139,6 @@ object MarathonBuild extends Build {
       {
         case "application.conf"                                             => MergeStrategy.concat
         case "META-INF/jersey-module-version"                               => MergeStrategy.first
-        case "log4j.properties"                                             => MergeStrategy.concat
         case "org/apache/hadoop/yarn/util/package-info.class"               => MergeStrategy.first
         case "org/apache/hadoop/yarn/factories/package-info.class"          => MergeStrategy.first
         case "org/apache/hadoop/yarn/factory/providers/package-info.class"  => MergeStrategy.first
@@ -236,6 +235,9 @@ object Dependencies {
     playJson % "compile"
   )
 
+  val excludeSlf4jLog4j12 = ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
+  val excludeLog4j = ExclusionRule(organization = "log4j")
+
   val root = Seq(
     // runtime
     akkaActor % "compile",
@@ -270,13 +272,13 @@ object Dependencies {
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test"
-  )
+  ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j))
 }
 
 object Dependency {
   object V {
     // runtime deps versions
-    val Chaos = "0.8.1"
+    val Chaos = "0.8.2"
     val JacksonCCM = "0.1.2"
     val MesosUtils = "0.25.0"
     val Akka = "2.3.9"
@@ -298,6 +300,7 @@ object Dependency {
     val MarathonUI = "0.12.0-SNAPSHOT"
     val Graphite = "3.1.2"
     val DataDog = "1.1.3"
+    val Logback = "1.1.3"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -324,7 +327,8 @@ object Dependency {
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val hadoopHdfs = "org.apache.hadoop" % "hadoop-hdfs" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
-  val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
+  val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty,
+    excludeJavaxServlet)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.2"
   val scallop = "org.rogach" %% "scallop" % V.Scallop
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
@@ -333,6 +337,7 @@ object Dependency {
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
   val graphite = "io.dropwizard.metrics" % "metrics-graphite" % V.Graphite
   val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
+
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
