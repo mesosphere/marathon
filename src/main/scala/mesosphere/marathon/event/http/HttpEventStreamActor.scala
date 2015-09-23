@@ -7,7 +7,7 @@ import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.event.http.HttpEventStreamActor._
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
-import org.apache.log4j.Logger
+import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
@@ -37,7 +37,7 @@ class HttpEventStreamActor(
     extends Actor {
   //map from handle to actor
   private[http] var streamHandleActors = Map.empty[HttpEventStreamHandle, ActorRef]
-  private[this] val log = Logger.getLogger(getClass)
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def preStart(): Unit = {
     metrics.numberOfStreams.setValue(0)

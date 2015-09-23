@@ -11,13 +11,13 @@ import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.plugin.PluginConfiguration
 import mesosphere.marathon.event.http.{ HttpEventConfiguration, HttpEventModule }
 import mesosphere.marathon.event.{ EventConfiguration, EventModule }
-import org.apache.log4j.Logger
 import org.rogach.scallop.ScallopConf
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
 class MarathonApp extends App {
-  val log = Logger.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(getClass.getName)
 
   lazy val zk: ZooKeeperClient = {
     require(

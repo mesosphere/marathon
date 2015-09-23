@@ -14,8 +14,8 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
-import org.apache.log4j.Logger
 import org.apache.mesos.Protos.TaskState
+import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
 import scala.collection.IterableView
@@ -31,7 +31,7 @@ class TasksResource @Inject() (
     healthCheckManager: HealthCheckManager,
     taskIdUtil: TaskIdUtil) extends RestResource {
 
-  val log = Logger.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(getClass.getName)
 
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))

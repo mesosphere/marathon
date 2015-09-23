@@ -13,7 +13,6 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.{ LeaderProxyConf, ModuleNames }
 import org.apache.http.HttpStatus
-import org.apache.log4j.Logger
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -164,7 +163,7 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
 }
 
 object LeaderProxyFilter {
-  private val log = Logger.getLogger(getClass.getName)
+  private val log = LoggerFactory.getLogger(getClass.getName)
 
   val HEADER_MARATHON_LEADER: String = "X-Marathon-Leader"
   val ERROR_STATUS_NO_CURRENT_LEADER: String = "Could not determine the current leader"

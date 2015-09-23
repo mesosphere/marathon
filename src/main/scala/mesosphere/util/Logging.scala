@@ -1,7 +1,7 @@
 package mesosphere.util
 
-import org.apache.log4j.Logger
+import org.slf4j.LoggerFactory
 
 trait Logging {
-  protected[this] val log = Logger.getLogger(getClass.getName)
+  protected[this] val log = LoggerFactory.getLogger(getClass.getName)
 }

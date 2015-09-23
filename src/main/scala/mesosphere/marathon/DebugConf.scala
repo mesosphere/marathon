@@ -8,6 +8,7 @@ import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
 import org.apache.log4j.{ Level, Logger }
 import org.rogach.scallop.ScallopConf
+import org.slf4j.LoggerFactory
 
 /**
   * Options related to debugging marathon.
@@ -58,7 +59,7 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
   class TracingBehavior(metrics: Provider[Metrics]) extends MethodInterceptor {
     override def invoke(in: MethodInvocation): AnyRef = {
       val className = metrics.get.className(in.getThis.getClass)
-      val logger = Logger.getLogger(className)
+      val logger = LoggerFactory.getLogger(className)
       val method = s"""$className.${in.getMethod.getName}(${in.getArguments.mkString(", ")})"""
       logger.trace(s">>> $method")
       val result = in.proceed()

@@ -4,7 +4,7 @@ import javax.annotation.PreDestroy
 
 import akka.actor.{ Actor, ActorRefFactory, PoisonPill, Props, Status }
 import akka.pattern.pipe
-import org.apache.log4j.Logger
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -22,7 +22,7 @@ import scala.util.control.NonFatal
   * }}}
   */
 object SerializeExecution {
-  private val log = Logger.getLogger(getClass.getName)
+  private val log = LoggerFactory.getLogger(getClass.getName)
 
   def apply[T](actorRefFactory: ActorRefFactory, actorName: String): SerializeExecution = {
     new SerializeExecution(actorRefFactory, actorName)
@@ -85,6 +85,6 @@ private[util] class SerializeExecutionActor extends Actor {
 }
 
 private[util] object SerializeExecutionActor {
-  private val log = Logger.getLogger(getClass.getName)
+  private val log = LoggerFactory.getLogger(getClass.getName)
   case class Execute[T](func: () => Future[T])
 }

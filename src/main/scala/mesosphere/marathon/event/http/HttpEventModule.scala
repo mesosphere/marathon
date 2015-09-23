@@ -5,19 +5,18 @@ import java.util.concurrent.Executors
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.pattern.ask
 import akka.util.Timeout
-import com.codahale.metrics.MetricRegistry
 import com.google.inject.name.Named
 import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
 import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ EntityStore, MarathonStore }
 import mesosphere.util.state.PersistentStore
-import org.apache.log4j.Logger
 import org.rogach.scallop.ScallopConf
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import mesosphere.marathon.metrics.Metrics
 
 trait HttpEventConfiguration extends ScallopConf {
 
@@ -32,7 +31,7 @@ trait HttpEventConfiguration extends ScallopConf {
 
 class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends AbstractModule {
 
-  val log = Logger.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(getClass.getName)
 
   def configure() {
     bind(classOf[HttpCallbackEventSubscriber]).asEagerSingleton()
