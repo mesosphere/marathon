@@ -10,7 +10,7 @@ import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
-import spray.revolver.RevolverPlugin.Revolver.{settings => revolverSettings}
+import spray.revolver.RevolverPlugin.Revolver.{ settings => revolverSettings }
 import sbtrelease._
 import ReleasePlugin._
 import ReleaseStateTransformations._
@@ -255,7 +255,6 @@ object Dependencies {
     hadoopCommon % "compile",
     beanUtils % "compile",
     scallop % "compile",
-    diffson % "test",
     playJson % "compile",
     jsonSchemaValidator % "compile",
     twitterZk % "compile",
@@ -263,6 +262,7 @@ object Dependencies {
     marathonUI % "compile",
 
     // test
+    diffson % "test",
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test"
