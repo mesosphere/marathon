@@ -58,9 +58,9 @@ class WebJarServlet extends HttpServlet {
     }
 
     //special rule for accessing root -> redirect to ui main page
-    if (req.getRequestURI == "/") resp.sendRedirect("/ui/")
+    if (req.getRequestURI == "/") sendRedirect(resp, "/ui/")
     //if a directory is requested, redirect to trailing slash
-    else if (!file.contains(".")) resp.sendRedirect(req.getRequestURI + "/") //request /ui -> /ui/
+    else if (!file.contains(".")) sendRedirect(resp, req.getRequestURI + "/") //request /ui -> /ui/
     //if we come here, it must be a resource
     else sendResourceNormalized(resourceURI, mime)
   }
@@ -72,5 +72,10 @@ class WebJarServlet extends HttpServlet {
       case "ttf" => "application/font-ttf"
       case _     => "application/octet-stream"
     }
+  }
+
+  private[this] def sendRedirect(response: HttpServletResponse, location: String): Unit = {
+    response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY)
+    response.setHeader("Location", location)
   }
 }
