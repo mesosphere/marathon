@@ -4,17 +4,17 @@ import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.util.BackToTheFuture.Timeout
 import mesosphere.util.ThreadPoolContext
 import mesosphere.util.state.{ PersistentEntity, PersistentStore }
-import org.apache.log4j.Logger
-import org.apache.mesos.state.{ Variable, State }
+import org.apache.mesos.state.{ State, Variable }
+import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
 class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
 
-  private[this] val log = Logger.getLogger(getClass)
+  private[this] val log = LoggerFactory.getLogger(getClass)
   implicit val timeoutDuration = Timeout(timeout)
   implicit val ec = ThreadPoolContext.context
   import mesosphere.util.BackToTheFuture.futureToFuture

@@ -1,14 +1,15 @@
 package mesosphere.marathon.event
 
+import javax.inject.Named
+
+import akka.actor.ActorSystem
+import akka.event.EventStream
+import com.google.inject.{ AbstractModule, Inject, Provides, Singleton }
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.rogach.scallop.ScallopConf
-import com.google.inject.{ Inject, Singleton, Provides, AbstractModule }
-import akka.event.EventStream
-import javax.inject.Named
-import org.apache.log4j.Logger
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import akka.actor.ActorSystem
+import org.slf4j.LoggerFactory
 
 //scalastyle:off number.of.types
 
@@ -28,7 +29,7 @@ trait EventConfiguration extends ScallopConf {
 
 class EventModule(conf: EventConfiguration) extends AbstractModule {
 
-  val log = Logger.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(getClass.getName)
   def configure() {}
 
   @Named(EventModule.busName)

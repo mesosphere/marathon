@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import org.apache.log4j.Logger
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
@@ -69,7 +69,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
 }
 
 private object RateLimiter {
-  private val log = Logger.getLogger(getClass.getName)
+  private val log = LoggerFactory.getLogger(getClass.getName)
 
   private object Delay {
     def apply(clock: Clock, app: AppDefinition): Delay = Delay(clock, app.backoff)

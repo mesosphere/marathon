@@ -9,8 +9,8 @@ import com.google.inject.Guice
 import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import org.apache.commons.io.FileUtils
-import org.apache.log4j.Logger
 import org.rogach.scallop.ScallopConf
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
@@ -26,7 +26,7 @@ import scala.util.{ Failure, Success, Try }
   */
 object ProcessKeeper {
 
-  private[this] val log = Logger.getLogger(getClass.getName)
+  private[this] val log = LoggerFactory.getLogger(getClass.getName)
   private[this] var processes = List.empty[Process]
   private[this] var services = List.empty[Service]
 

@@ -8,8 +8,8 @@ import mesosphere.marathon.Protos._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, StateMetrics, Timestamp }
 import mesosphere.util.state.{ PersistentEntity, PersistentStore }
-import org.apache.log4j.Logger
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection._
@@ -27,7 +27,7 @@ class TaskTracker @Inject() (
 
   implicit val timeout = config.zkTimeoutDuration
 
-  private[this] val log = Logger.getLogger(getClass.getName)
+  private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   val PREFIX = "task:"
   val ID_DELIMITER = ":"

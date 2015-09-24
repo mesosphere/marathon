@@ -1,12 +1,12 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.state.AppDefinition
+import org.apache.mesos.Protos.Offer
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import mesosphere.marathon.Protos.{ MarathonTask, Constraint }
-import mesosphere.marathon.Protos.Constraint.Operator
-import org.apache.log4j.Logger
-import org.apache.mesos.Protos.Offer
 import scala.util.Try
 
 object Int {
@@ -15,7 +15,7 @@ object Int {
 
 object Constraints {
 
-  private[this] val log = Logger.getLogger(getClass.getName)
+  private[this] val log = LoggerFactory.getLogger(getClass.getName)
   val GroupByDefault = 0
 
   private def getIntValue(s: String, default: Int): Int = s match {

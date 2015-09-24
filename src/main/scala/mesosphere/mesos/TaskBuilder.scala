@@ -5,13 +5,13 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.json.V2AppDefinition
-import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
-import org.apache.log4j.Logger
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
+import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
@@ -23,7 +23,7 @@ class TaskBuilder(app: AppDefinition,
 
   import mesosphere.mesos.protos.Implicits._
 
-  val log = Logger.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(getClass.getName)
 
   def buildIfMatches(offer: Offer, runningTasks: => Iterable[MarathonTask]): Option[(TaskInfo, Seq[Long])] = {
 

@@ -7,15 +7,14 @@ import javax.ws.rs.core.{ MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, EndpointsHelper, RestResource }
+import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, RestResource, TaskKiller }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ GroupManager, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
-import org.apache.log4j.Logger
-import play.api.libs.json.Json
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 
@@ -28,7 +27,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                                   val config: MarathonConf,
                                   groupManager: GroupManager) extends RestResource {
 
-  val log = Logger.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(getClass.getName)
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
   @GET

@@ -25,9 +25,9 @@ import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, Deploym
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.PromiseActor
 import mesosphere.util.state.FrameworkIdUtil
-import org.apache.log4j.Logger
 import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -77,7 +77,7 @@ class MarathonSchedulerService @Inject() (
 
   private[mesosphere] var timer = newTimer()
 
-  val log = Logger.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(getClass.getName)
 
   // FIXME: Remove from this class
   def frameworkId: Option[FrameworkID] = {

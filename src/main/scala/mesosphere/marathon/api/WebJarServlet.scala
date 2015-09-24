@@ -4,11 +4,11 @@ import java.net.URI
 import javax.servlet.http.{ HttpServlet, HttpServletRequest, HttpServletResponse }
 
 import mesosphere.marathon.io.IO
-import org.apache.log4j.Logger
+import org.slf4j.LoggerFactory
 
 class WebJarServlet extends HttpServlet {
 
-  private[this] val log = Logger.getLogger(getClass)
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   //scalastyle:off method.length
   override def doGet(req: HttpServletRequest, resp: HttpServletResponse): Unit = {

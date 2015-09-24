@@ -10,15 +10,15 @@ import mesosphere.marathon.{ Protos, StoreCommandFailedException }
 import mesosphere.util.ThreadPoolContext
 import mesosphere.util.state.zk.ZKStore._
 import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
-import org.apache.log4j.Logger
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ Future, Promise }
 
 class ZKStore(val client: ZkClient, root: ZNode) extends PersistentStore with PersistentStoreManagement {
 
-  private[this] val log = Logger.getLogger(getClass)
+  private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] implicit val ec = ThreadPoolContext.context
 
   /**

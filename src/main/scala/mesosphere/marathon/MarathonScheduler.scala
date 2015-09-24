@@ -11,9 +11,9 @@ import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusEmitter
 import mesosphere.marathon.event._
 import mesosphere.marathon.tasks._
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }
-import org.apache.log4j.Logger
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
+import org.slf4j.{ LoggerFactory, MarkerFactory }
 
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
@@ -34,7 +34,8 @@ class MarathonScheduler @Inject() (
     config: MarathonConf,
     schedulerCallbacks: SchedulerCallbacks) extends Scheduler {
 
-  private[this] val log = Logger.getLogger(getClass.getName)
+  private[this] lazy val fatal = MarkerFactory.getMarker("FATAL")
+  private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   import mesosphere.util.ThreadPoolContext.context
 
@@ -131,14 +132,14 @@ class MarathonScheduler @Inject() (
     * the leading Mesos master process is killed.
     */
   private def suicide(removeFrameworkId: Boolean): Unit = {
-    log.fatal(s"Committing suicide!")
+    log.error(fatal, s"Committing suicide!")
 
     if (removeFrameworkId) Await.ready(frameworkIdUtil.expunge(), config.zkTimeoutDuration)
 
     // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
     // scalastyle:off magic.number
     Future(sys.exit(9)).onFailure {
-      case NonFatal(t) => log.fatal("Exception while committing suicide", t)
+      case NonFatal(t) => log.error(fatal, "Exception while committing suicide", t)
     }
     // scalastyle:on
   }

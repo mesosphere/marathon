@@ -1,22 +1,18 @@
 package mesosphere.marathon.integration.setup
 
+import javax.inject.Inject
+import javax.ws.rs._
+import javax.ws.rs.core.{ MediaType, Response }
+
+import com.google.inject.Scopes
+import mesosphere.chaos.http.RestModule
 import mesosphere.marathon.state.PathId._
-import play.api.libs.json.{ Json, JsValue }
+import org.slf4j.LoggerFactory
+import play.api.libs.json.{ JsValue, Json }
+import spray.http.HttpResponse
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Awaitable }
-import scala.reflect.ClassTag
-import com.google.inject.Scopes
-import javax.ws.rs._
-import javax.ws.rs.core.{ Response, MediaType }
-import javax.inject.Inject
-import org.apache.log4j.Logger
-import spray.httpx.marshalling.{ MarshallingContext, Marshaller }
-import spray.http.{ ContentTypes, HttpEntity }
-import spray.httpx.UnsuccessfulResponseException
-import spray.http.HttpResponse
-import mesosphere.chaos.http.RestModule
-import mesosphere.marathon.api.{ BaseRestModule, MarathonRestModule }
 
 /**
   * Result of an REST operation.
@@ -74,7 +70,7 @@ case class CallbackEvent(eventType: String, info: Map[String, Any])
 @Path("callback")
 class CallbackEventHandler @Inject() () {
 
-  private[this] val log = Logger.getLogger(getClass.getName)
+  private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
