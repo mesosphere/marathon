@@ -20,7 +20,8 @@ class WebJarServletTest extends MarathonSpec with Mockito with GivenWhenThen wit
     servlet.doGet(request, response)
 
     Then("A redirect response is send")
-    verify(response, atLeastOnce).sendRedirect("/ui/")
+    verify(response, atLeastOnce).setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY)
+    verify(response, atLeastOnce).setHeader("Location", "/ui/")
   }
 
   test("Get a directory without leading / will send a redirect") {
@@ -32,7 +33,8 @@ class WebJarServletTest extends MarathonSpec with Mockito with GivenWhenThen wit
     servlet.doGet(request, response)
 
     Then("A redirect response is send")
-    verify(response, atLeastOnce).sendRedirect("/some/directory/")
+    verify(response, atLeastOnce).setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY)
+    verify(response, atLeastOnce).setHeader("Location", "/some/directory/")
   }
 
   test("Get a non existing path will return 404"){
