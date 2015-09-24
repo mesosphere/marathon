@@ -31,17 +31,23 @@ trait MarathonConf
     descr = "The failover_timeout for mesos in seconds (default: 1 week)",
     default = Some(604800L))
 
-  lazy val highlyAvailable = opt[Boolean]("ha",
-    descr = "Runs Marathon in HA mode with leader election. " +
+  lazy val highlyAvailable = toggle("ha",
+    descrYes = "(Default) Run Marathon in HA mode with leader election. " +
       "Allows starting an arbitrary number of other Marathons but all need " +
       "to be started in HA mode. This mode requires a running ZooKeeper",
-    noshort = true, default = Some(true))
+    descrNo = "Run Marathon in single node mode.",
+    prefix = "disable_",
+    noshort = true,
+    default = Some(true))
 
-  lazy val checkpoint = opt[Boolean]("checkpoint",
-    descr = "Enable checkpointing of tasks. " +
+  lazy val checkpoint = toggle("checkpoint",
+    descrYes = "(Default) Enable checkpointing of tasks. " +
       "Requires checkpointing enabled on slaves. Allows tasks to continue " +
       "running during mesos-slave restarts and upgrades",
-    noshort = true, default = Some(true))
+    descrNo = "Disable checkpointing of tasks.",
+    prefix = "disable_",
+    noshort = true,
+    default = Some(true))
 
   lazy val localPortMin = opt[Int]("local_port_min",
     descr = "Min port number to use when assigning globally unique service ports to apps",

@@ -33,17 +33,17 @@ class FlowModule(leadershipModule: LeadershipModule) {
     offersWanted: Observable[Boolean],
     driverHolder: MarathonSchedulerDriverHolder): Option[OfferReviver] = {
 
-    if (conf.shouldReviveOffersForNewApps) {
+    if (conf.reviveOffersForNewApps()) {
       lazy val reviveOffersActor = ReviveOffersActor.props(
         clock, conf, marathonEventStream,
         offersWanted, driverHolder
       )
       val actorRef = leadershipModule.startWhenLeader(reviveOffersActor, "reviveOffersWhenWanted")
-      log.info(s"Calling reviveOffers is enabled. Use --${conf.disableReviveOffersForNewApps.name} to disable.")
+      log.info(s"Calling reviveOffers is enabled. Use --disable_revive_offers_for_new_apps to disable.")
       Some(new OfferReviverDelegate(actorRef))
     }
     else {
-      log.info(s"Calling reviveOffers is disabled. Use --${conf.disableReviveOffersForNewApps.name} to enable.")
+      log.info(s"Calling reviveOffers is disabled. Use --revive_offers_for_new_apps to enable.")
       None
     }
   }

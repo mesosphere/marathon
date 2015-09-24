@@ -38,6 +38,32 @@ class MarathonConfTest extends MarathonSpec {
     assert(conf.mesosAuthenticationSecretFile.get == Some(secretFile))
   }
 
+  test("HA mode is enabled by default") {
+    val conf = defaultConfig()
+    assert(conf.highlyAvailable())
+  }
+
+  test("Disable HA mode") {
+    val conf = makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--disable_ha"
+    )
+    assert(!conf.highlyAvailable())
+  }
+
+  test("Checkpointing is enabled by default") {
+    val conf = defaultConfig()
+    assert(conf.checkpoint())
+  }
+
+  test("Disable checkpointing") {
+    val conf = makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--disable_checkpoint"
+    )
+    assert(!conf.checkpoint())
+  }
+
   test("MarathonStoreTimeOut") {
     val conf = makeConfig(
       "--master", "127.0.0.1:5050",

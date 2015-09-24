@@ -39,7 +39,8 @@ class SingleAppScalingTest
     val maxTasksPerOffer = Option(System.getenv("MARATHON_MAX_TASKS_PER_OFFER")).getOrElse("1")
 
     ProcessKeeper.startMarathon(cwd, env,
-      List("--http_port", port.toString, "--zk", config.zk, "--enable_metrics",
+      List("--http_port", port.toString,
+        "--zk", config.zk,
         "--max_tasks_per_offer", maxTasksPerOffer,
         "--task_launch_timeout", "20000",
         "--task_launch_confirm_timeout", "1000") ++ args.toList,
