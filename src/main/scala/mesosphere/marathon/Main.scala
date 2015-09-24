@@ -71,7 +71,7 @@ class MarathonApp extends App {
     }
   }
 
-  override lazy val conf = new AllConf
+  override lazy val conf = new AllConf(args)
 
   def runDefault(): Unit = {
     log.info(s"Starting Marathon ${BuildInfo.version} with ${args.mkString(" ")}")
