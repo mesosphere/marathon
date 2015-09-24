@@ -2,6 +2,7 @@ package mesosphere.marathon.io
 
 import java.io._
 import java.math.BigInteger
+import java.nio.file.{ Files, Paths, Path }
 import java.security.{ DigestInputStream, MessageDigest }
 
 import com.google.common.io.ByteStreams
@@ -12,6 +13,16 @@ import scala.util.{ Failure, Success, Try }
 object IO {
 
   private val BufferSize = 8192
+
+  def readFile(file: String): Array[Byte] = readFile(Paths.get(file))
+  def readFile(path: Path): Array[Byte] = Files.readAllBytes(path)
+
+  def listFiles(file: String): Array[File] = listFiles(new File(file))
+  def listFiles(file: File): Array[File] = {
+    if (!file.exists()) throw new FileNotFoundException(file.getAbsolutePath)
+    if (!file.isDirectory) throw new FileNotFoundException(s"File ${file.getAbsolutePath} is not a directory!")
+    file.listFiles()
+  }
 
   def moveFile(from: File, to: File): File = {
     if (to.exists()) delete(to)

@@ -2,14 +2,14 @@ package mesosphere.marathon.state
 
 import javax.validation.ConstraintViolation
 
-import mesosphere.marathon.api.v2.{ ModelValidation, BeanValidation }
+import mesosphere.marathon.api.v2.ModelValidation
 import mesosphere.marathon.api.v2.json.V2Group
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
-import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -43,6 +43,34 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("the group is not found")
       current.group(path) should be('empty)
+    }
+
+    it("can filter a group by a filter function") {
+      Given("an group with subgroups")
+      val current = Group.empty.copy(groups = Set(
+        Group("/test".toPath, groups = Set(
+          Group("/test/group1".toPath, Set(AppDefinition("/test/group1/app1".toPath))),
+          Group("/test/group2".toPath, Set(AppDefinition("/test/group2/app2".toPath)), Set(
+            Group("/test/group2/a".toPath, Set(AppDefinition("/test/group2/a/app1".toPath))),
+            Group("/test/group2/b".toPath, Set(AppDefinition("/test/group2/b/app1".toPath)))
+          ))
+        ))))
+
+      When("a group with a specific path is requested")
+      val allowed = "/test/group2/a".toPath
+      val updated = current.updateGroup { group =>
+        if (group.id.includes(allowed)) Some(group) //child
+        else if (allowed.includes(group.id)) Some(group.copy(apps = Set.empty, dependencies = Set.empty)) //parent
+        else None
+      }
+
+      Then("the group is not found")
+      updated should be('defined)
+      updated.get.group("/test/group1".toPath) should be('empty)
+      updated.get.group("/test".toPath) should be('defined)
+      updated.get.group("/test/group2".toPath) should be('defined)
+      updated.get.group("/test/group2/a".toPath) should be('defined)
+      updated.get.group("/test/group2/b".toPath) should be('empty)
     }
 
     it("can do an update by applying a change function") {

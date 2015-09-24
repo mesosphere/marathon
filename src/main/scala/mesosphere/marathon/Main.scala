@@ -8,7 +8,7 @@ import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.chaos.{ App, AppConfiguration }
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.CoreGuiceModule
-import mesosphere.marathon.core.plugin.PluginConfiguration
+import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.event.http.{ HttpEventConfiguration, HttpEventModule }
 import mesosphere.marathon.event.{ EventConfiguration, EventModule }
 import org.rogach.scallop.ScallopConf
@@ -80,7 +80,7 @@ class MarathonApp extends App {
     with EventConfiguration
     with HttpEventConfiguration
     with DebugConf
-    with PluginConfiguration
+    with PluginManagerConfiguration
 
   override lazy val conf = new AllConf
 

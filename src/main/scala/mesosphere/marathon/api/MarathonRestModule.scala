@@ -55,9 +55,6 @@ class MarathonRestModule extends BaseRestModule {
 
     filter("/*").through(classOf[LimitConcurrentRequestsFilter])
 
-    bind(classOf[SetRequestDefaultsFilter]).asEagerSingleton()
-    filter("/*").through(classOf[SetRequestDefaultsFilter])
-
     bind(classOf[CORSFilter]).asEagerSingleton()
     filter("/*").through(classOf[CORSFilter])
 
