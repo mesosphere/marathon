@@ -1,15 +1,14 @@
 package mesosphere.marathon.api.v2
 
 import javax.inject.Inject
-import javax.servlet.http.{ HttpServletResponse, HttpServletRequest }
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, RestResource, TaskKiller }
+import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth._
