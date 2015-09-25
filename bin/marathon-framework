@@ -96,7 +96,7 @@ function run_jar {
     vm_opts+=( ${j_opt} )
   done
   # TODO: Set main class in pom.xml and use -jar
-  if [ -n "$JAVA_HOME" ]
+  if [ -n "${JAVA_HOME:=}" ]
     then
       JAVA_BIN="$JAVA_HOME/bin/java" 
     else
