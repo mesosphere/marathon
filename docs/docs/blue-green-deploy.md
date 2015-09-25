@@ -6,7 +6,7 @@ title: Blue-Green Deployment
 
 Blue-green deployment is a way to safely deploy applications that are serving live traffic by creating two versions of an application (BLUE and GREEN). To deploy a new version of the application, you will drain all traffic, requests, and pending operations from the current version of the application, switch to the new version, and then turn off the old version. Blue-green deployment eliminates application downtime and allows you to quickly roll back to the BLUE version of the application if necessary.
 
-For an overview of the process, here’s [a great article by Martin Fowler](http://martinfowler.com/bliki/BlueGreenDeployment.html).
+For an overview of the process, here's [a great article by Martin Fowler](http://martinfowler.com/bliki/BlueGreenDeployment.html).
 
 ## Requirements
 
@@ -55,7 +55,7 @@ We will replace the current app version (BLUE) with a new version (GREEN).
 
 8. Wait until the task instances from the BLUE app have 0 pending operations. Use the metrics endpoint in the application to determine the number of pending operations.
 
-9. Once all operations are complete from the BLUE tasks, kill and scale the BLUE app using [the API] (https://mesosphere.github.io/marathon/docs/rest-api.html#post-v2-tasks-delete). In the snippet below, <hosturl> is the hostname of your master cluster prefixed with ``http://``.
+9. Once all operations are complete from the BLUE tasks, kill and scale the BLUE app using [the API] (https://mesosphere.github.io/marathon/docs/rest-api.html#post-v2-tasks-delete). In the snippet below, ``<hosturl>`` is the hostname of your master cluster prefixed with ``http://``.
 
     ```sh
     # kill and scale blue tasks
