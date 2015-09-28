@@ -96,7 +96,13 @@ function run_jar {
     vm_opts+=( ${j_opt} )
   done
   # TODO: Set main class in pom.xml and use -jar
-  exec java "${vm_opts[@]}" -cp "$marathon_jar" mesosphere.marathon.Main "$@"
+  if [ -n "${JAVA_HOME:=}" ]
+    then
+      JAVA_BIN="$JAVA_HOME/bin/java" 
+    else
+      JAVA_BIN="java"
+  fi
+  exec $JAVA_BIN "${vm_opts[@]}" -cp "$marathon_jar" mesosphere.marathon.Main "$@"
 }
 
 function logged {
