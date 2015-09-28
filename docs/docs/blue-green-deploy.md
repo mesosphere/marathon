@@ -19,7 +19,7 @@ For an overview of the process, here's [a great article by Martin Fowler](http:/
 
 We will replace the current app version (BLUE) with a new version (GREEN).
 
-1. Launch the new version of the app on Marathon. Add a unique ID to the app name, such as the Git commit ID. In this example, we ID the new version of the app by adding `GREEN` to its name.
+1. Launch the new version of the app on Marathon. Add a unique ID to the app name, such as the Git commit ID. In this example, we ID the new version of the app by adding GREEN to its name.
 
     ```sh
     # launch green
