@@ -83,7 +83,7 @@ object ResourceMatcher {
       }
 
       if (badConstraints.nonEmpty) {
-        log.warn(
+        log.info(
           s"Offer [${offer.getId.getValue}]. Constraints for app [${app.id}] not satisfied.\n" +
             s"The conflicting constraints are: [${badConstraints.mkString(", ")}]"
         )
