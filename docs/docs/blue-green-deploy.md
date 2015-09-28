@@ -19,25 +19,25 @@ For an overview of the process, here's [a great article by Martin Fowler](http:/
 
 We will replace the current app version (BLUE) with a new version (GREEN).
 
-1. Launch the new version of the app on Marathon. Use a unique app ID, such as the git commit. This app is the GREEN app.
+1. Launch the new version of the app on Marathon. Add a unique ID to the app name, such as the Git commit ID. In this example, we ID the new version of the app by adding `GREEN` to its name.
 
     ```sh
     # launch green
-    dcos marathon app add green-app.json
+    dcos marathon app add green-myapp.json
     ```
 
 2. Scale GREEN app instances by 1 or more. Initially (starting from 0 instances), set the number of app instances to the minimum required to serve traffic. Remember, no traffic will arrive yet: we haven't registered at the load balancer.
 
     ```sh
     # scale green
-    dcos marathon app update /green-app instances=1
+    dcos marathon app update /green-myapp instances=1
     ```
 
 3. Wait until all tasks from the GREEN app have passed health checks. This step requires [jq] (https://stedolan.github.io/jq/).
 
     ```sh
     # wait until healthy
-    dcos marathon app show /green-app | jq '.tasks[].healthCheckResults[] | select (.alive == false)'
+    dcos marathon app show /green-myapp | jq '.tasks[].healthCheckResults[] | select (.alive == false)'
     ```
 
 4. Use the code snippet above to check that all instances of GREEN are still healthy. Abort the deployment and begin rollback if you see unexpected behavior.
@@ -48,10 +48,10 @@ We will replace the current app version (BLUE) with a new version (GREEN).
 
     ```sh
     # pick tasks from blue
-    dcos marathon task list /blue-app
+    dcos marathon task list /blue-myapp
     ```
 
-7. Update the load balancer configuration to remvoe the task instances above from the BLUE app pool.
+7. Update the load balancer configuration to remove the task instances above from the BLUE app pool.
 
 8. Wait until the task instances from the BLUE app have 0 pending operations. Use the metrics endpoint in the application to determine the number of pending operations.
 
@@ -70,5 +70,5 @@ We will replace the current app version (BLUE) with a new version (GREEN).
     
     ```sh
     # remove blue
-    dcos marathon app remove /blue-app
+    dcos marathon app remove /blue-myapp
     ```
