@@ -9,6 +9,7 @@ import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
 
@@ -40,6 +41,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(!proto1.hasContainer)
     assert(1.0 == proto1.getUpgradeStrategy.getMinimumHealthCapacity)
     assert(1.0 == proto1.getUpgradeStrategy.getMaximumOverCapacity)
+    assert(0 == proto1.getUpgradeStrategy.getKillOldTasksDelaySeconds)
     assert(proto1.hasAcceptedResourceRoles)
     assert(proto1.getAcceptedResourceRoles == Protos.ResourceRoles.newBuilder().addRole("a").addRole("b").build())
 
@@ -55,7 +57,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       instances = 5,
       ports = Seq(8080, 8081),
       executor = "//cmd",
-      upgradeStrategy = UpgradeStrategy(0.7, 0.4)
+      upgradeStrategy = UpgradeStrategy(0.7, 0.4, 1.seconds)
     )
 
     val proto2 = app2.toProto
@@ -71,6 +73,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(proto2.hasContainer)
     assert(0.7 == proto2.getUpgradeStrategy.getMinimumHealthCapacity)
     assert(0.4 == proto2.getUpgradeStrategy.getMaximumOverCapacity)
+    assert(1 == proto2.getUpgradeStrategy.getKillOldTasksDelaySeconds)
     assert(!proto2.hasAcceptedResourceRoles)
   }
 

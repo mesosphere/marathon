@@ -100,7 +100,8 @@ Here is an example of an application JSON which includes all fields.
     "maxLaunchDelaySeconds": 3600,
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
-        "maximumOverCapacity": 0.2
+        "maximumOverCapacity": 0.2,
+        "killOldTasksDelaySeconds": 5,
     }
 }
 ```
@@ -287,7 +288,7 @@ This applies also to tasks that are killed due to failing too many health checks
 
 During an upgrade all instances of an application get replaced by a new version.
 The upgradeStrategy controls how Marathon stops old versions and launches
-new versions. It consists of two values:
+new versions. It consists of three values:
 
 * `minimumHealthCapacity` (Optional. Default: 1.0) - a number between `0`and `1`
 that is multiplied with the instance count. This is the minimum number of healthy
@@ -297,6 +298,8 @@ instances are up.
 * `maximumOverCapacity` (Optional. Default: 1.0) - a number between `0` and
 `1` which is multiplied with the instance count. This is the maximum number of
 additional instances launched at any point of time during the upgrade process.
+* `killOldTasksDelaySeconds` (Optional. Default: 0) - The amount of time in 
+seconds to wait to kill an old task when a new task becomes healthy.
 
 The default `minimumHealthCapacity` is `1`, which means no old instance can be
 stopped before another healthy new version is deployed.
@@ -376,7 +379,8 @@ User-Agent: HTTPie/0.8.0
     ],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
-        "maximumOverCapacity": 0.5
+        "maximumOverCapacity": 0.5,
+        "killOldTasksDelaySeconds": 0
     }
 }
 ```
@@ -442,7 +446,8 @@ Transfer-Encoding: chunked
     "storeUrls": [],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
-        "maximumOverCapacity": 0.5
+        "maximumOverCapacity": 0.5,
+        "killOldTasksDelaySeconds": 0
     },
     "uris": [],
     "user": null,
