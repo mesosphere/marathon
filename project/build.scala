@@ -16,16 +16,16 @@ import ReleasePlugin._
 import ReleaseStateTransformations._
 
 object MarathonBuild extends Build {
-  lazy val marathonInterface: Project = Project(
-    id = "marathon-interface",
-    base = file("marathon-interface"),
+  lazy val pluginInterface: Project = Project(
+    id = "plugin-interface",
+    base = file("plugin-interface"),
     settings = baseSettings ++
       asmSettings ++
       formatSettings ++
       scalaStyleSettings ++
       publishSettings ++
       Seq(
-        libraryDependencies ++= Dependencies.marathonInterface
+        libraryDependencies ++= Dependencies.pluginInterface
       )
   )
 
@@ -54,7 +54,7 @@ object MarathonBuild extends Build {
       )
   )
     .configs(IntegrationTest)
-    .dependsOn(marathonInterface)
+    .dependsOn(pluginInterface)
     // run mesos-simulation/test:test when running test
     .settings((test in Test) <<= (test in Test) dependsOn (test in Test in LocalProject("mesos-simulation")))
 
@@ -109,7 +109,7 @@ object MarathonBuild extends Build {
   lazy val IntegrationTest = config("integration") extend Test
 
   lazy val baseSettings = Defaults.defaultSettings ++ Seq (
-    organization := "mesosphere",
+    organization := "mesosphere.marathon",
     scalaVersion := "2.11.7",
     crossScalaVersions := Seq(scalaVersion.value),
     scalacOptions in Compile ++= Seq(
@@ -232,7 +232,9 @@ object MarathonBuild extends Build {
 object Dependencies {
   import Dependency._
 
-  val marathonInterface = Seq.empty[ModuleID]
+  val pluginInterface = Seq(
+    playJson % "compile"
+  )
 
   val root = Seq(
     // runtime
@@ -262,7 +264,7 @@ object Dependencies {
     marathonUI % "compile",
 
     // test
-    diffson % "test",
+    Test.diffson % "test",
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test"
@@ -272,9 +274,9 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Chaos = "0.7.0"
+    val Chaos = "0.8.0"
     val JacksonCCM = "0.1.2"
-    val MesosUtils = "0.22.1-1"
+    val MesosUtils = "0.24.0"
     val Akka = "2.3.9"
     val Spray = "1.3.2"
     val TwitterCommons = "0.0.76"
@@ -305,7 +307,6 @@ object Dependency {
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
-  val diffson = "org.gnieh" %% "diffson" % V.Diffson
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
@@ -331,5 +332,6 @@ object Dependency {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
+    val diffson = "org.gnieh" %% "diffson" % V.Diffson
   }
 }

@@ -3,13 +3,14 @@ package mesosphere.marathon.core
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
-import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.metrics.Metrics
@@ -43,9 +44,7 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val shutdownHookModule = ShutdownHooks()
   private[this] lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
-  lazy val leadershipModule = new LeadershipModule(actorsModule.actorRefFactory)
-
-  override lazy val pluginManager = PluginManager(marathonConf)
+  override lazy val leadershipModule = new LeadershipModule(actorsModule.actorRefFactory)
 
   // TASKS
 
@@ -85,6 +84,12 @@ class CoreModuleImpl @Inject() (
     taskTracker,
     taskFactory
   )
+
+  // PLUGINS
+
+  override lazy val pluginModule = new PluginModule(marathonConf)
+
+  override lazy val authModule: AuthModule = new AuthModule(pluginModule.pluginManager)
 
   // FLOW CONTROL GLUE
 

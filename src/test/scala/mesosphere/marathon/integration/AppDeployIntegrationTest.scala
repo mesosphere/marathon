@@ -1,6 +1,7 @@
 package mesosphere.marathon.integration
 
 import java.lang.{ Double => JDouble }
+import java.util.UUID
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint.Operator
@@ -90,7 +91,7 @@ class AppDeployIntegrationTest
   private[this] def createAFailingAppResultingInBackOff(): V2AppDefinition = {
     Given("a new app")
     val app =
-      v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+      v2AppProxy(testBasePath / s"app${UUID.randomUUID()}", "v1", instances = 1, withHealth = false)
         .copy(
           cmd = Some("false"),
           backoff = 1.hour,
