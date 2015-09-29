@@ -4,7 +4,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
     echo "deb http://repos.mesosphere.io/debian jessie main" | tee /etc/apt/sources.list.d/mesosphere.list && \
     echo "deb http://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list && \
     apt-get update && \
-    apt-get install --no-install-recommends -y --force-yes mesos=0.23.0-1.0.debian81 sbt
+    apt-get install --no-install-recommends -y --force-yes mesos=0.24.1-0.2.35.debian81 sbt
 
 COPY . /marathon
 WORKDIR /marathon
