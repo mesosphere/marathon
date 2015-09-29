@@ -1,0 +1,32 @@
+FROM java:8-jdk
+
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
+    echo "deb http://repos.mesosphere.io/debian jessie main" | tee /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list && \
+    apt-get update && \
+    apt-get install --no-install-recommends -y --force-yes mesos=0.23.0-1.0.debian81 sbt git python3 wget make zookeeperd screen && \
+    wget https://bootstrap.pypa.io/get-pip.py && \
+    python3 get-pip.py && \
+    pip install virtualenv pytest dcos mock
+
+COPY . /marathon
+
+WORKDIR /
+RUN git clone https://github.com/mesosphere/dcos-cli.git
+
+WORKDIR /dcos-cli
+RUN make env && make packages
+
+WORKDIR /dcos-cli/cli
+RUN make env
+ENV DCOS_CONFIG=/dcos/dcos.toml DCOS_PRODUCTION=false
+
+RUN mkdir /dcos && touch $DCOS_CONFIG
+ENV PATH=$PATH:/dcos-cli/cli/env/bin
+
+RUN dcos config append package.sources https://github.com/mesosphere/universe/archive/version-1.x.zip && \
+    dcos config set marathon.url http://localhost:8080 && \
+    dcos
+
+WORKDIR /marathon
+ENTRYPOINT ["integrations/dcos-cli/configure-cli-tests.sh"]
