@@ -3,15 +3,13 @@ package mesosphere.marathon
 import com.google.inject.Module
 import com.twitter.common.quantity.{ Amount, Time }
 import com.twitter.common.zookeeper.ZooKeeperClient
-import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
+import mesosphere.chaos.App
+import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
-import mesosphere.chaos.{ App, AppConfiguration }
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.CoreGuiceModule
-import mesosphere.marathon.core.plugin.PluginConfiguration
-import mesosphere.marathon.event.http.{ HttpEventConfiguration, HttpEventModule }
-import mesosphere.marathon.event.{ EventConfiguration, EventModule }
-import org.rogach.scallop.ScallopConf
+import mesosphere.marathon.event.EventModule
+import mesosphere.marathon.event.http.HttpEventModule
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -73,16 +71,7 @@ class MarathonApp extends App {
     }
   }
 
-  class AllConf extends ScallopConf(args)
-    with HttpConf
-    with MarathonConf
-    with AppConfiguration
-    with EventConfiguration
-    with HttpEventConfiguration
-    with DebugConf
-    with PluginConfiguration
-
-  override lazy val conf = new AllConf
+  override lazy val conf = new AllConf(args)
 
   def runDefault(): Unit = {
     log.info(s"Starting Marathon ${BuildInfo.version} with ${args.mkString(" ")}")

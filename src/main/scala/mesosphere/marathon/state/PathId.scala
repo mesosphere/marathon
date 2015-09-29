@@ -1,8 +1,10 @@
 package mesosphere.marathon.state
 
+import mesosphere.marathon.plugin
+
 import scala.language.implicitConversions
 
-case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[PathId] {
+case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[PathId] with plugin.PathId {
 
   def root: String = path.headOption.getOrElse("")
 
@@ -18,6 +20,11 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
     case Nil          => this
     case head :: Nil  => PathId(Nil, absolute)
     case head :: rest => PathId(path.reverse.tail.reverse, absolute)
+  }
+
+  def allParents: List[PathId] = if (isRoot) Nil else {
+    val p = parent
+    p :: p.allParents
   }
 
   def child: PathId = PathId(tail)
@@ -54,6 +61,12 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
   }
 
   def toHostname: String = path.reverse.mkString(".")
+
+  def includes(definition: plugin.PathId): Boolean = {
+    //scalastyle:off return
+    if (path.size < definition.path.size) return false
+    path.zip(definition.path).forall { case (left, right) => left == right }
+  }
 
   override def toString: String = toString("/")
   private def toString(delimiter: String): String = path.mkString(if (absolute) delimiter else "", delimiter, "")

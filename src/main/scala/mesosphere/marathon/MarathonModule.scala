@@ -18,12 +18,7 @@ import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.event.http.{
-  HttpEventStreamActor,
-  HttpEventStreamActorMetrics,
-  HttpEventStreamHandle,
-  HttpEventStreamHandleActor
-}
+import mesosphere.marathon.event.http._
 import mesosphere.marathon.event.{ EventModule, HistoryActor }
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
@@ -95,7 +90,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[AtomicBoolean])
       .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
-
   }
 
   @Provides

@@ -8,6 +8,8 @@ class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeExcep
 
 case class UnknownAppException(id: PathId) extends Exception(s"App '$id' does not exist")
 
+case class WrongConfigurationException(message: String) extends Exception(message)
+
 class BadRequestException(msg: String) extends Exception(msg)
 
 case class AppLockedException(deploymentIds: Seq[String] = Nil)

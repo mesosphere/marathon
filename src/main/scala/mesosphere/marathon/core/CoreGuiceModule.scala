@@ -18,6 +18,7 @@ import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusObservab
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 
 /**
@@ -56,7 +57,13 @@ class CoreGuiceModule extends AbstractModule {
   final def appInfoService(appInfoModule: AppInfoModule): AppInfoService = appInfoModule.appInfoService
 
   @Provides @Singleton
-  def pluginManager(coreModule: CoreModule): PluginManager = coreModule.pluginManager
+  def pluginManager(coreModule: CoreModule): PluginManager = coreModule.pluginModule.pluginManager
+
+  @Provides @Singleton
+  def authorizer(coreModule: CoreModule): Authorizer = coreModule.authModule.authorizer
+
+  @Provides @Singleton
+  def authenticator(coreModule: CoreModule): Authenticator = coreModule.authModule.authenticator
 
   override def configure(): Unit = {
     bind(classOf[Clock]).toInstance(Clock())
