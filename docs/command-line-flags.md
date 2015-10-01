@@ -37,7 +37,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Comma separated list of allowed originating domains for HTTP requests.
     The origin(s) to allow in Marathon. Not set by default.
     Examples: `"*"`, or `"http://localhost:8888, http://domain.com"`.
-* `--checkpoint` (Optional. Default: true): Enable checkpointing of tasks.
+* <span class="label label-default">v0.12.0</span> `--[disable_]checkpoint` (Optional. Default: enabled):
+    Enable checkpointing of tasks.
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and Marathon scheduler failover.  See the
     description of `--failover_timeout`.
@@ -50,11 +51,13 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     enabled.
 * `--framework_name` (Optional. Default: marathon-VERSION): The framework name
     to register with Mesos.
-* `--ha` (Optional. Default: true): Runs Marathon in HA mode with leader election.
+* <span class="label label-default">v0.12.0</span> `--[disable_]ha` (Optional. Default: enabled):
+    Run Marathon in HA mode with leader election.
     Allows starting an arbitrary number of other Marathons but all need to be
     started in HA mode. This mode requires a running ZooKeeper. See `--master`.
 * `--hostname` (Optional. Default: hostname of machine): The advertised hostname
-    stored in ZooKeeper so another standby host can redirect to the elected leader.
+    that is used for the communication with the mesos master.
+    The value is also stored in the persistent store so another standby host can redirect to the elected leader.
     _Note: Default is determined by
     [`InetAddress.getLocalHost`](http://docs.oracle.com/javase/7/docs/api/java/net/InetAddress.html#getLocalHost())._
 * `--webui_url` (Optional. Default: None): The url of the Marathon web ui. It
@@ -130,13 +133,13 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
 available resources of a single node in the cluster. Before this <span class="label label-default">v0.8.2</span>,
 Marathon would only start a single task per
-resource offer, which led to slow task launching in smaller clusters. 
+resource offer, which led to slow task launching in smaller clusters.
 
 ### Marathon after 0.11.0 (including)
 
 In order to speed up task launching and use the
 resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm which tries
-to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is 
+to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is
 configurable with the following startup parameters:
 
 * <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
@@ -146,26 +149,57 @@ configurable with the following startup parameters:
 To prevent overloading Mesos itself, you can also restrict how many tasks Marathon launches per time interval.
 By default, we allow 1000 unconfirmed task launches every 30 seconds. In addition, Marathon launches
 more tasks when it gets feedback about running and healthy tasks from Mesos.
-    
-* <span class="label label-default">v0.11.0</span> `--launch_token_refresh_interval` (Optional. Default: 30000): 
-    The interval (ms) in which to refresh the launch tokens to `--launch_token_count`.
-* <span class="label label-default">v0.11.0</span> `--launch_tokens` (Optional. Default: 1000): 
-    Launch tokens per interval.
-    
-To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
-incoming resource offer.
 
-* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 1000): 
+* <span class="label label-default">v0.11.0</span> `--launch_token_refresh_interval` (Optional. Default: 30000):
+    The interval (ms) in which to refresh the launch tokens to `--launch_token_count`.
+* <span class="label label-default">v0.11.0</span> `--launch_tokens` (Optional. Default: 1000):
+    Launch tokens per interval.
+
+To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
+incoming resource offer, i.e. finding suitable tasks to launch for incoming offers.
+
+* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 1000):
     Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
     All already matched tasks are launched.
+
+All launched tasks are stored before launching them. There is also a timeout for this:
+
+* <span class="label label-default">v0.11.0</span> `--save_tasks_to_launch_timeout` (Optional. Default: 3000):
+    Timeout (ms) after matching an offer for saving all matched tasks that we are about to launch.
+    When reaching the timeout, only the tasks that we could save within the timeout are also launched.
+    All other task launches are temporarily rejected and retried later.
+
+If the mesos master fails over or in other unusual circumstances, a launch task request might get lost.
+You can configure how long Marathon waits for the first `TASK_STAGING` update.
+
+* <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 10000):
+  Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
 
 When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
 Marathon can request all available offers from Mesos again -- even those that it has recently rejected. To avoid
 calling the underlying `reviveOffers` API call to often, you can configure the minimal delay between subsequent
 invocations of this call.
 
-* <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 5000): 
+* <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 5000):
     Do not ask for all offers (also already seen ones) more often than this interval (ms).
+
+The order in which mesos receives `reviveOffers` and `declineOffer` calls is not guaranteed. Therefore, as
+long as we still need offers to launch tasks, we repeat the `reviveOffers` call for `--revive_offers_repetitions`
+times so that our last `reviveOffers` will be received after all relevant `declineOffer` calls with high
+probability.
+
+* <span class="label label-default">v0.11.0</span> `--revive_offers_repetitions` (Optional. Default: 3):
+    Repeat every reviveOffer request this many times, delayed by the `--min_revive_offers_interval`.
+
+If you want to disable calling reviveOffers (not recommended), you can use:
+
+* <span class="label label-default">v0.11.0</span> `--disable_revive_offers_for_new_apps`
+
+When Marathon has no current use for an offer, it will decline the offer for a configurable period. This period is
+configurable. A short duration might lead to resource starvation for other frameworks if you run many frameworks
+in your cluster. You should only need to reduce it if you use `--disable_revive_offers_for_new_apps`.
+
+* `--decline_offer_duration` (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.
 
 
 ### Marathon after 0.8.2 (including) and before 0.11.0
@@ -201,7 +235,7 @@ max_tasks_per_offer == max_tasks_per_offer_cycle `. E.g. in a cluster of 200 nod
 
 ## Web Site Flags
 
-The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API. They are inherited from the 
+The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API. They are inherited from the
 [Chaos](https://github.com/mesosphere/chaos) library upon which Marathon and its companion project [Chronos](https://github.com/mesos/chronos) are based.
 
 ### Optional Flags
@@ -213,7 +247,7 @@ The Web Site flags control the behavior of Marathon's web site, including the us
     for HTTP requests.
 * `--http_credentials` (Optional. Default: None): Credentials for accessing the
     HTTP service in the format of `username:password`. The username may not
-    contain a colon (:). May also be specified with the `MESOSPHERE_HTTP_CREDENTIALS` environment variable. 
+    contain a colon (:). May also be specified with the `MESOSPHERE_HTTP_CREDENTIALS` environment variable.
 * `--http_port` (Optional. Default: 8080): The port on which to listen for HTTP
     requests.
 * `--disable_http` (Optional.): Disable HTTP completely. This is only allowed if you configure HTTPS.
@@ -233,23 +267,15 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of
     concurrent http requests, that is allowed concurrently before requests get answered directly with a
     HTTP 503 Service Temporarily Unavailable.
-    
-
-
 
 ### Debug Flags
 
-* <span class="label label-default">v0.8.2</span> `--logging_level` (Optional.):
+* <span class="label label-default">v0.8.2</span> `--logging_level` (Optional):
     Set the logging level of the application.
     Use one of `off`, `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `all`.
-* <span class="label label-default">Deprecated</span> `--enable_metrics` (Optional.):
-    Enable metrics for all service method calls.
-    The execution time per method is available via the metrics endpoint.
-    This option is turned on by default since version 0.10.0.
-    To turn this feature off, you can use `--disable_metrics`.
-* <span class="label label-default">v0.10.0</span> `--disable_metrics` (Optional.):
-    Metrics are enabled by default, so that the execution time per method is available via the metrics endpoint.
-    This metrics measurement can be disabled with this option.
-* <span class="label label-default">v0.8.2</span> `--enable_tracing` (Optional.):
+* <span class="label label-default">v0.12.0</span> `--[disable_]metrics` (Optional. Default: enabled):
+    Expose the execution time per method via the metrics endpoint.
+    This metrics measurement can be disabled with --disable_metrics.
+* <span class="label label-default">v0.12.0</span> `--[disable_]tracing` (Optional. Default: disabled):
     Enable tracing for all service method calls.
-    Around the execution of every service method a trace log message is issued.
+    Log a trace message around the execution of every service method.

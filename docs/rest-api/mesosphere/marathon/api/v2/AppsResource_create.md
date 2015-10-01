@@ -145,7 +145,7 @@ The port array currently serves multiple roles:
   for details.
 
 Since this is confusing, we recommend to configure ports assignment for docker
-containers in `container.docker.portMappings` instead, see
+containers for `BRIDGE` networking in `container.docker.portMappings` instead, see
 [Docker Containers doc page]({{ site.baseurl }}/docs/native-docker.html#bridged-networking-mode)).
 
 Alternatively or if you use the Mesos Containerizer, pass zeros as port values to generate one or more arbitrary
@@ -165,10 +165,6 @@ Normally, the host ports of your tasks are automatically assigned. This correspo
 If you need more control and want to specify your host ports in advance, you can
  set `requirePorts` to `true`. This way the ports you have specified are used as host ports. That also
  means that Marathon can schedule the associated tasks only on hosts that have the specified ports available.
-
- The specified ports need to be in the local port range specified by the
- `--local_port_min` and `--local_port_max` flags. See
- [Command Line Flags doc page]({{ site.baseurl }}/docs/command-line-flags.html)).
 
 ##### instances (Integer)
 
@@ -217,7 +213,7 @@ for custom role, are available for all frameworks. Mesos assigns the special rol
 To register Marathon for a role, you need to specify the `--mesos_role` command line flag on startup.
 If you want to assign all resources of a
 slave to a role, you can use the `--default_role` argument when starting up the slave. If you need a more
-fine-grained configuration, you can use the `--resources' argument to specify resource shares per role. The Mesos master
+fine-grained configuration, you can use the `--resources` argument to specify resource shares per role. The Mesos master
 needs to be started with `--roles` followed by a comma-separated list of all roles you want to use across your cluster.
 See
 [the Mesos command line documentation](http://mesos.apache.org/documentation/latest/configuration/) for details.
@@ -451,5 +447,43 @@ Transfer-Encoding: chunked
     "uris": [],
     "user": null,
     "version": "2014-08-18T22:36:41.451Z"
+}
+```
+
+##### Example (create an app with an already existing ID)
+If the ID you are trying to create already exists, then the create operation fails. 
+
+**Request:**
+
+
+```http
+POST /v2/apps HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Content-Type: application/json; charset=utf-8
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+
+{
+    "id":"duplicated",
+    "cmd":"sleep 100",
+    "cpus":0.1,
+    "mem":16,
+    "instances":1
+}
+```
+
+**Response:**
+
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "id":"duplicated",
+    "message": "An app with id [/duplicated] already exists."
 }
 ```

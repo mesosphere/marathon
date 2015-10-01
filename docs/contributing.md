@@ -45,7 +45,7 @@ documentation. But don't worry, we will do that for you.
 
 Maybe you already have a bugfix or enhancement in mind.  If not, there are a
 number of relatively approachable issues with the label
-["good first bug"](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+bug%22).
+["good first issue"](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
 
 <!--
 ## License Agreement
@@ -82,6 +82,9 @@ _TODO_: Do we need a CLA?
   as a safeguard against future regressions.
 
 - Run all tests via the supplied `./bin/run-tests.sh` script (requires docker).
+
+- All Python code (servicerouter) should be PEP-8 compliant as tested by the Python
+  [pep8](http://pep8.readthedocs.org/en/latest/intro.html) utility.
 
 ## Source Files
 

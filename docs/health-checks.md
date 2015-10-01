@@ -45,6 +45,8 @@ OR
 
 OR
 
+*Note:* Command health checks are currently not compatible with dockerized tasks. 
+
 ```json
 {
   "protocol": "COMMAND",

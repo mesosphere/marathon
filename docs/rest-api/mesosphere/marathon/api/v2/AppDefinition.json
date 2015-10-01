@@ -3,7 +3,7 @@
     "additionalProperties": false,
     "definitions": {
         "pathType": {
-            "pattern": "^(\\/?((\\.{2})|([a-z0-9\\-]*))($|\\/))*$",
+            "pattern": "^(\\/?((\\.{2})|([a-z0-9][a-z0-9\\-.]*[a-z0-9]+)|([a-z0-9]*))($|\\/))+$",
             "type": "string"
         }
     },
@@ -57,7 +57,8 @@
                             "type": "boolean"
                         },
                         "image": {
-                            "type": "string"
+                            "type": "string",
+                            "minLength": 1
                         },
                         "network": {
                             "type": "string"
@@ -217,8 +218,7 @@
             "type": "array"
         },
         "id": {
-            "pattern": "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$",
-            "type": "string"
+            "$ref": "#/definitions/pathType"
         },
         "instances": {
             "minimum": 0,
@@ -284,6 +284,20 @@
         "version": {
             "format": "date-time",
             "type": "string"
+        },
+        "versionInfo": {
+            "additionalProperties": false,
+            "properties": {
+                "lastScalingAt": {
+                    "format": "date-time",
+                    "type": "string"
+                },
+                "lastConfigChangeAt": {
+                    "format": "date-time",
+                    "type": "string"
+                }
+            },
+            "type": "object"
         }
     },
     "required": [
