@@ -6,7 +6,6 @@ import javax.ws.rs._
 import javax.ws.rs.core.Response
 
 import com.codahale.metrics.annotation.Timed
-import com.twitter.logging.LoggerFactory
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2Group, V2GroupUpdate }
 import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
@@ -15,10 +14,7 @@ import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
 import mesosphere.util.ThreadPoolContext.context
-import org.slf4j
-import play.api.libs.json.{ Writes, Json }
-
-import scala.util.control.NonFatal
+import play.api.libs.json.{ Json, Writes }
 
 @Path("v2/groups")
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -61,8 +57,8 @@ class GroupsResource @Inject() (
     id match {
       case ListApps(gid)              => groupResponse(gid.toRootPath, _.transitiveApps.map(V2AppDefinition(_)))
       case ListRootApps()             => groupResponse(PathId.empty, _.transitiveApps.map(V2AppDefinition(_)))
-      case ListVersionsRE(gid)        => ok(result(groupManager.versions(gid.toRootPath)))
-      case ListRootVersionRE()        => ok(result(groupManager.versions(PathId.empty)))
+      case ListVersionsRE(gid)        => ok(jsonString(result(groupManager.versions(gid.toRootPath))))
+      case ListRootVersionRE()        => ok(jsonString(result(groupManager.versions(PathId.empty))))
       case GetVersionRE(gid, version) => groupResponse(gid.toRootPath, V2Group(_), version = Some(Timestamp(version)))
       case GetRootVersionRE(version)  => groupResponse(PathId.empty, V2Group(_), version = Some(Timestamp(version)))
       case _                          => groupResponse(id.toRootPath, V2Group(_))
