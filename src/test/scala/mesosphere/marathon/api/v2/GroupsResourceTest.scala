@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.{ V2Group, V2AppDefinition, V2GroupUpdate }
+import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2Group, V2GroupUpdate }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
@@ -167,5 +167,31 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     result.transitiveApps should have size 2
     result.transitiveApps.map(_.id.toString) should be(Set("/visible/app1", "/visible/group/app1"))
     result.transitiveGroups should have size 3
+  }
+
+  test("Group Versions for root are transferred as simple json string array (Fix #2329)") {
+    Given("Specific Group versions")
+    val groupVersions = Seq(Timestamp.now(), Timestamp.now())
+    groupManager.versions(any) returns Future.successful(groupVersions.toIterable)
+
+    When("The versions are queried")
+    val rootVersionsResponse = groupsResource.group("versions", auth.request, auth.response)
+
+    Then("The versions are send as simple json array")
+    rootVersionsResponse.getStatus should be (200)
+    rootVersionsResponse.getEntity should be(Json.toJson(groupVersions).toString())
+  }
+
+  test("Group Versions for path are transferred as simple json string array (Fix #2329)") {
+    Given("Specific group versions")
+    val groupVersions = Seq(Timestamp.now(), Timestamp.now())
+    groupManager.versions(any) returns Future.successful(groupVersions.toIterable)
+
+    When("The versions are queried")
+    val rootVersionsResponse = groupsResource.group("/foo/bla/blub/versions", auth.request, auth.response)
+
+    Then("The versions are send as simple json array")
+    rootVersionsResponse.getStatus should be (200)
+    rootVersionsResponse.getEntity should be(Json.toJson(groupVersions).toString())
   }
 }

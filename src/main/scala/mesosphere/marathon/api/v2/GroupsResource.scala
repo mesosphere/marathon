@@ -63,8 +63,8 @@ class GroupsResource @Inject() (
       id match {
         case ListApps(gid)              => groupResponse(gid.toRootPath, _.transitiveApps.map(V2AppDefinition(_)))
         case ListRootApps()             => groupResponse(PathId.empty, _.transitiveApps.map(V2AppDefinition(_)))
-        case ListVersionsRE(gid)        => ok(result(groupManager.versions(gid.toRootPath)))
-        case ListRootVersionRE()        => ok(result(groupManager.versions(PathId.empty)))
+        case ListVersionsRE(gid)        => ok(jsonString(result(groupManager.versions(gid.toRootPath))))
+        case ListRootVersionRE()        => ok(jsonString(result(groupManager.versions(PathId.empty))))
         case GetVersionRE(gid, version) => groupResponse(gid.toRootPath, V2Group(_), version = Some(Timestamp(version)))
         case GetRootVersionRE(version)  => groupResponse(PathId.empty, V2Group(_), version = Some(Timestamp(version)))
         case _                          => groupResponse(id.toRootPath, V2Group(_))
