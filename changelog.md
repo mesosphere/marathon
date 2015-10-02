@@ -4,7 +4,33 @@
 
 - #2294 - Make boolean command line flags use Scallop's 'toggle'
 
-## Changes from 0.10.0 to 0.11.0
+### Details for Marathon UI
+The web UI ships with a significant number of changes.
+
+#### Force action
+Previous versions of the UI did not support sending the `?force=true` query parameter when the
+user submitted a scale action or when changing an app's configuration. These actions would be
+rejected if the app was locked by one or more deployments.
+In this version, the user is presented with a modal confirmation dialog when a force action is
+required to proceed.
+
+#### Authentication errors
+Authentication errors (401, 403) are now notified to the user by means of modal dialogs.
+
+#### Improved application modal
+The application create/edit modal has undergone significant architectural and UX improvements.
+It is now possible to specify application labels, accepted resource roles, the user field and
+health checks. Additionally, a more fine-grained input validation and error handling has been
+implemented.
+
+#### Bookmarkable search results
+The text entered in the filter bar is immediately stored in the browser's URL bar, which makes
+search results bookmarkable for quicker access.
+
+#### Application detail view: configuration panel
+The Configuration panel in the application's detail view sees a number of improvements and bug
+fixes. The application labels and dependencies are now also shown, and the lifetime durations
+are shown as "humanized".
 
 ### Breaking Changes
 
