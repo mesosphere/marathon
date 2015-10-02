@@ -233,7 +233,8 @@ object Dependencies {
   import Dependency._
 
   val pluginInterface = Seq(
-    playJson % "compile"
+    playJson % "provided",
+    slf4jApi % "provided"
   )
 
   val root = Seq(
@@ -294,6 +295,7 @@ object Dependency {
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
     val MarathonUI = "0.12.0-SNAPSHOT"
+    val Slf4j = "1.7.12"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -327,6 +329,7 @@ object Dependency {
   val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
+  val slf4jApi = "org.slf4j" % "slf4j-api" % V.Slf4j
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
