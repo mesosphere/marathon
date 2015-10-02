@@ -293,7 +293,7 @@ object Dependency {
     val PlayJson = "2.3.7"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
-    val MarathonUI = "0.12.0-SNAPSHOT"
+    val MarathonUI = "0.13.0-SNAPSHOT"
 
     // test deps versions
     val Mockito = "1.9.5"
