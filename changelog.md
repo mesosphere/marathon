@@ -1,11 +1,27 @@
+
+
 ## Changes from 0.11.0 to 0.12.0
 
-### Fixed Issues
+### Overview
 
-- #2294 - Make boolean command line flags use Scallop's 'toggle'
 
-### Details for Marathon UI
-The web UI ships with a significant number of changes.
+#### Enable extensions to Marathon via Plugins
+This version of Marathon ships with the ability to load and use external plugins.
+With this functionality in place, you can extend and adapt functionality in Marathon to your specific needs.
+We start this adventure with pluggable authentication and authorization hooks, but want to extend this
+to various functionality inside of Marathon. 
+
+To start with this feature, please read [Plugin Documentation](https://mesosphere.github.io/marathon/docs/plugin.html)
+or see our [Example Plugins](https://github.com/mesosphere/marathon-example-plugins).
+
+Please check it out and give us feedback!
+We are also interested in any recommendations for upcoming plugin hooks. 
+
+#### Pluggable Authentication and Authorization hooks
+The probably most wanted feature in Marathon is the ability to have Authentication and Authorization.
+Since this topic has so distinct requirements for different organizations, it is a perfect match for our new plugin mechanism.
+This version now implements all the necessary hooks needed to secure most external interfaces to your specific needs.
+If you are interested in a very simple implementation, you can look into the [Example Auth Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/auth)
 
 #### Force action
 Previous versions of the UI did not support sending the `?force=true` query parameter when the
@@ -31,6 +47,23 @@ search results bookmarkable for quicker access.
 The Configuration panel in the application's detail view sees a number of improvements and bug
 fixes. The application labels and dependencies are now also shown, and the lifetime durations
 are shown as "humanized".
+
+### Under the Hood
+
+#### Introduce a plugin-interface module
+We now publish a separate marathon-plugin-interface.jar with every Marathon release on our maven repository.
+This artifact holds all the inerfaces needed to develop your own Marathon plugin.
+
+#### Consolidate logging to use slf4j
+We moved completely to slf4j as Logging API. The logging backend still uses log4j.
+
+
+### Fixed Issues
+
+- #2294 - Make boolean command line flags use Scallop's 'toggle'
+
+
+## Changes from 0.10.0 to 0.11.0
 
 ### Breaking Changes
 
