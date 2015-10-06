@@ -21,7 +21,7 @@ class TaskReplaceActor(
     app: AppDefinition,
     promise: Promise[Unit]) extends Actor with ActorLogging {
 
-  val tasksToKill = taskTracker.get(app.id).filter(_.getId != app.id.toString)
+  val tasksToKill = taskTracker.get(app.id)
   val appId = app.id
   val version = app.version.toString
   var healthy = Set.empty[String]
