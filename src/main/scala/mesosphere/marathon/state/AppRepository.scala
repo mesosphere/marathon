@@ -21,7 +21,7 @@ class AppRepository(
   val store: EntityStore[AppDefinition],
   val maxVersions: Option[Int] = None,
   val metrics: Metrics)
-    extends EntityRepository[AppDefinition] with StateMetrics {
+    extends EntityRepository[AppDefinition] {
 
   def allPathIds(): Future[Iterable[PathId]] = allIds().map(_.map(PathId.fromSafePath))
 
