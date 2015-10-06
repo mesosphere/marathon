@@ -8,8 +8,7 @@ import org.apache.mesos.{ Protos => MesosProtos }
 //   - URIs
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-case class Command(value: String)
-    extends MarathonState[MesosProtos.CommandInfo, Command] {
+case class Command(value: String) {
 
   def toProto: MesosProtos.CommandInfo =
     MesosProtos.CommandInfo.newBuilder

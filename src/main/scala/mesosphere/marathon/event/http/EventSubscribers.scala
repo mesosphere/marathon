@@ -1,11 +1,10 @@
 package mesosphere.marathon.event.http
 
-import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.Protos
-import collection.JavaConversions._
-
 import mesosphere.marathon.api.validation.FieldConstraints.FieldJsonProperty
-import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.state.{ MarathonState, Timestamp }
+
+import scala.collection.JavaConversions._
 
 case class EventSubscribers(
   @FieldJsonProperty("callbackUrls") urls: Set[String] = Set.empty[String])
@@ -24,5 +23,7 @@ case class EventSubscribers(
     urls.foreach(builder.addCallbackUrls(_))
     builder.build()
   }
+
+  override def version: Timestamp = Timestamp.zero()
 }
 

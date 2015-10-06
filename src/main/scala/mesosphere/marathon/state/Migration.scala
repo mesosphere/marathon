@@ -9,7 +9,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.tasks.TaskTracker.InternalApp
-import mesosphere.marathon.{ BuildInfo, MarathonConf }
+import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
 import mesosphere.util.ThreadPoolContext.context
 import mesosphere.util.state.{ PersistentEntity, PersistentStore }
@@ -17,7 +17,7 @@ import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
-import scala.util.{ Failure, Success }
+import scala.util.control.NonFatal
 
 class Migration @Inject() (
     store: PersistentStore,
@@ -61,14 +61,17 @@ class Migration @Inject() (
   }
 
   def migrate(): StorageVersion = {
-    val result = for {
+    val versionFuture = for {
       changes <- currentStorageVersion.flatMap(applyMigrationSteps)
       storedVersion <- storeCurrentVersion
     } yield storedVersion
 
-    result.onComplete {
-      case Success(version) => log.info(s"Migration successfully applied for version ${version.str}")
-      case Failure(ex)      => log.error("Migration failed!", ex)
+    val result = versionFuture.map { version =>
+      log.info(s"Migration successfully applied for version ${version.str}")
+      version
+    }.recover {
+      case NonFatal(ex) =>
+        throw new MigrationFailedException("MigrationFailed", ex)
     }
 
     Await.result(result, Duration.Inf)

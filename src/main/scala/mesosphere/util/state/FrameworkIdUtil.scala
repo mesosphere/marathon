@@ -1,16 +1,16 @@
 package mesosphere.util.state
 
-import mesosphere.marathon.state.{ MarathonState, MarathonStore }
+import mesosphere.marathon.state.{ Timestamp, EntityStore, MarathonState }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.FrameworkID
 
-import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, Future }
 
 /**
   * Utility class for keeping track of a framework ID
   */
-class FrameworkIdUtil(mStore: MarathonStore[FrameworkId], timeout: Duration, key: String = "frameworkId") {
+class FrameworkIdUtil(mStore: EntityStore[FrameworkId], timeout: Duration, key: String = "frameworkId") {
   def fetch(): Option[FrameworkID] = {
     Await.result(mStore.fetch(key), timeout).map(_.toProto)
   }
@@ -32,5 +32,6 @@ case class FrameworkId(id: String) extends MarathonState[Protos.FrameworkID, Fra
   override def toProto: FrameworkID = {
     Protos.FrameworkID.newBuilder().setValue(id).build()
   }
+  override def version: Timestamp = Timestamp.zero()
 }
 

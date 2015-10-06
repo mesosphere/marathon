@@ -51,4 +51,6 @@ object Timestamp {
     */
   def now(): Timestamp = Timestamp(System.currentTimeMillis)
 
+  def zero(): Timestamp = Timestamp(0)
+
 }
