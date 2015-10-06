@@ -439,6 +439,7 @@ class AppDeployIntegrationTest
 
     Then("the deployment should be gone")
     waitForEvent("deployment_failed")
+    waitForEvent("deployment_success")
     marathon.listDeploymentsForBaseGroup().value should have size 0
 
     Then("the app should also be gone")
