@@ -135,9 +135,8 @@ trait MarathonConf
     default = Some(10000L))
 
   lazy val taskLaunchTimeout = opt[Long]("task_launch_timeout",
-    descr = "(deprecated) Time, in milliseconds, to wait for a task to enter " +
-      "the TASK_RUNNING state before killing it. NOTE: this is a temporary " +
-      "fix for MESOS-1922. This option will be removed in a later release.",
+    descr = "Time, in milliseconds, to wait for a task to enter " +
+      "the TASK_RUNNING state before killing it.",
     default = Some(300000L)) // 300 seconds (5 minutes)
 
   lazy val reconciliationInitialDelay = opt[Long]("reconciliation_initial_delay",
