@@ -28,7 +28,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   import HealthCheckWorker._
 
   implicit val system = context.system
-  import context.dispatcher // execution context for futures
+  implicit val ec = mesosphere.util.ThreadPoolContext.context // execution context for futures
 
   def receive: Receive = {
     case HealthCheckJob(task, check) =>
