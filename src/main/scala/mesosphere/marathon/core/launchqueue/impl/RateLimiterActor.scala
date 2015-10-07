@@ -116,7 +116,7 @@ private class RateLimiterActor private (
 
   private[this] def sendToSelfForApp(taskId: TaskID, toMessage: AppDefinition => Any): Unit = {
     val appId = TaskIdUtil.appId(taskId)
-    val maybeTask: Option[MarathonTask] = taskTracker.fetchTask(appId, taskId.getValue)
+    val maybeTask: Option[MarathonTask] = taskTracker.fetchTask(taskId.getValue)
     val maybeAppFuture: Future[Option[AppDefinition]] = maybeTask match {
       case Some(task) =>
         val version: Timestamp = Timestamp(task.getVersion)

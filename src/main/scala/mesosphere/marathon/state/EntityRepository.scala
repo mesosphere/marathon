@@ -8,7 +8,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
   protected def store: EntityStore[T]
   protected def maxVersions: Option[Int]
 
-  protected val ID_DELIMITER = ":"
+  protected val VERSION_SEPARATOR = ":"
 
   /**
     * Returns the most recently stored entity with the supplied id.
@@ -20,7 +20,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
     * Returns the entity with the supplied id and version.
     */
   protected def entity(id: String, version: Timestamp): Future[Option[T]] = timedRead {
-    val key = id + ID_DELIMITER + version.toString
+    val key = id + VERSION_SEPARATOR + version.toString
     this.store.fetch(key)
   }
 
@@ -30,7 +30,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
   def allIds(): Future[Iterable[String]] = timedRead {
     this.store.names().map { names =>
       names.collect {
-        case name: String if !name.contains(ID_DELIMITER) => name
+        case name: String if !name.contains(VERSION_SEPARATOR) => name
       }
     }
   }
@@ -50,7 +50,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
     * Returns the timestamp of each stored version of the entity with the supplied id.
     */
   def listVersions(id: String): Future[Iterable[Timestamp]] = timedRead {
-    val prefix = id + ID_DELIMITER
+    val prefix = id + VERSION_SEPARATOR
     this.store.names().map { names =>
       names.collect {
         case name: String if name.startsWith(prefix) =>
@@ -65,7 +65,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
   def expunge(id: String): Future[Iterable[Boolean]] = timedWrite {
     listVersions(id).flatMap { timestamps =>
       val versionsDeleteResult = timestamps.map { timestamp =>
-        val key = id + ID_DELIMITER + timestamp.toString
+        val key = id + VERSION_SEPARATOR + timestamp.toString
         store.expunge(key)
       }
       val currentDeleteResult = store.expunge(id)
@@ -76,7 +76,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
   private[this] def limitNumberOfVersions(id: String): Future[Iterable[Boolean]] = {
     val maximum = maxVersions.map { maximum =>
       listVersions(id).flatMap { versions =>
-        Future.sequence(versions.drop(maximum).map(version => store.expunge(id + ID_DELIMITER + version)))
+        Future.sequence(versions.drop(maximum).map(version => store.expunge(id + VERSION_SEPARATOR + version)))
       }
     }
     maximum.getOrElse(Future.successful(Nil))
@@ -85,7 +85,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics {
   protected def storeWithVersion(id: String, version: Timestamp, t: T): Future[T] = {
     for {
       alias <- storeByName(id, t)
-      result <- storeByName(id + ID_DELIMITER + version, t)
+      result <- storeByName(id + VERSION_SEPARATOR + version, t)
       limit <- limitNumberOfVersions(id)
     } yield result
   }

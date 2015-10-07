@@ -52,7 +52,7 @@ class RateLimiterActorTest extends MarathonSpec {
       .setId(taskUpdate.taskId.getValue)
       .setVersion(version)
       .build()
-    Mockito.when(taskTracker.fetchTask(app.id, taskUpdate.taskId.getValue)).thenReturn(Some(marathonTask))
+    Mockito.when(taskTracker.fetchTask(taskUpdate.taskId.getValue)).thenReturn(Some(marathonTask))
     Mockito.when(appRepository.app(app.id, clock.now())).thenReturn(Future.successful(Some(app)))
 
     // wait for startup
@@ -64,7 +64,7 @@ class RateLimiterActorTest extends MarathonSpec {
     val delay = askLimiter(RateLimiterActor.GetDelay(app)).asInstanceOf[RateLimiterActor.DelayUpdate]
     assert(delay.delayUntil == clock.now() + backoff)
 
-    Mockito.verify(taskTracker).fetchTask(app.id, taskUpdate.taskId.getValue)
+    Mockito.verify(taskTracker).fetchTask(taskUpdate.taskId.getValue)
     Mockito.verify(appRepository).app(app.id, clock.now())
   }
 
@@ -75,7 +75,7 @@ class RateLimiterActorTest extends MarathonSpec {
       .setId(taskUpdate.taskId.getValue)
       .setVersion(version)
       .build()
-    Mockito.when(taskTracker.fetchTask(app.id, taskUpdate.taskId.getValue)).thenReturn(Some(marathonTask))
+    Mockito.when(taskTracker.fetchTask(taskUpdate.taskId.getValue)).thenReturn(Some(marathonTask))
     Mockito.when(appRepository.app(app.id, clock.now())).thenReturn(Future.successful(Some(app)))
 
     // wait for startup

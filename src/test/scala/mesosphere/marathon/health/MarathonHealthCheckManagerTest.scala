@@ -40,7 +40,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
-    taskTracker = new TaskTracker(new InMemoryStore, defaultConfig(), metrics)
+    taskTracker = createTaskTracker()
     appRepository = new AppRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), "app:"),
       None,

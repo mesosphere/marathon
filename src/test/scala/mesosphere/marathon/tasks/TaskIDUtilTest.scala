@@ -10,7 +10,7 @@ class TaskIDUtilTest extends FunSuite with Matchers {
 
   test("AppIds can be converted to TaskIds and back to AppIds") {
     val appId = "/test/foo/bla/rest".toPath
-    val taskId = TaskID.newBuilder().setValue(taskIdUtil.taskId(appId)).build
+    val taskId = taskIdUtil.newTaskId(appId)
     taskIdUtil.appId(taskId) should equal(appId)
   }
 

@@ -12,11 +12,11 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
-import mesosphere.marathon.{ MarathonConf, SchedulerActions, TaskUpgradeCanceledException }
+import mesosphere.marathon.{ MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
-import org.mockito.Mockito.{ spy, times, verify, when }
+import org.mockito.Mockito.{ spy, verify, when }
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
@@ -42,7 +42,7 @@ class TaskStartActorTest
     scheduler = mock[SchedulerActions]
     launchQueue = mock[LaunchQueue]
     metrics = new Metrics(new MetricRegistry)
-    taskTracker = spy(new TaskTracker(new InMemoryStore, mock[MarathonConf], metrics))
+    taskTracker = spy(MarathonTestHelper.createTaskTracker(store = new InMemoryStore, metrics = metrics))
   }
 
   override protected def afterAll(): Unit = {

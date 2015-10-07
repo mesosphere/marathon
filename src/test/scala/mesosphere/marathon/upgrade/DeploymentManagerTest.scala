@@ -15,7 +15,7 @@ import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, Marathon
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment }
-import mesosphere.marathon.{ MarathonConf, SchedulerActions }
+import mesosphere.marathon.{ MarathonConf, MarathonTestHelper, SchedulerActions }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
@@ -57,7 +57,7 @@ class DeploymentManagerTest
     config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
     metrics = new Metrics(new MetricRegistry)
-    taskTracker = new TaskTracker(new InMemoryStore, config, metrics)
+    taskTracker = MarathonTestHelper.createTaskTracker(new InMemoryStore, config, metrics)
     scheduler = mock[SchedulerActions]
     storage = mock[StorageProvider]
     appRepo = new AppRepository(
