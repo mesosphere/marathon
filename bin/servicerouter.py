@@ -210,6 +210,8 @@ from shutil import move
 from tempfile import mkstemp
 from textwrap import dedent
 from wsgiref.simple_server import make_server
+from sseclient import SSEClient
+
 import argparse
 import json
 import logging
@@ -615,6 +617,12 @@ class Marathon(object):
                 ['eventSubscriptions'],
                 params={'callbackUrl': callbackUrl})
 
+    def get_event_stream(self):
+        url = self.__hosts[0]+"/v2/events"
+        logger.info(
+            "SSE Active, trying fetch events from from {0}".format(url))
+        return SSEClient(url)
+
 
 def has_group(groups, app_groups):
     # All groups / wildcard match
@@ -985,10 +993,9 @@ def regenerate_config(apps, config_file, groups):
                                 config_file)
 
 
-class MarathonEventSubscriber(object):
+class MarathonEventProcessor(object):
 
-    def __init__(self, marathon, addr, config_file, groups):
-        marathon.add_subscriber(addr)
+    def __init__(self, marathon, config_file, groups):
         self.__marathon = marathon
         # appId -> MarathonApp
         self.__apps = dict()
@@ -1057,21 +1064,26 @@ def get_arg_parser():
                         action="append",
                         default=list())
 
+    parser.add_argument("--sse", "-s",
+                        help="Use Server Sent Events instead of HTTP "
+                        "Callbacks",
+                        action="store_true")
+
     return parser
 
 
 def run_server(marathon, callback_url, config_file, groups):
-    subscriber = MarathonEventSubscriber(marathon,
-                                         callback_url,
-                                         config_file,
-                                         groups)
+    processor = MarathonEventProcessor(marathon,
+                                       config_file,
+                                       groups)
+    marathon.add_subscriber(callback_url)
 
     # TODO(cmaloney): Switch to a sane http server
     # TODO(cmaloney): Good exception catching, etc
     def wsgi_app(env, start_response):
         length = int(env['CONTENT_LENGTH'])
         data = env['wsgi.input'].read(length)
-        subscriber.handle_event(json.loads(data))
+        processor.handle_event(json.loads(data))
         # TODO(cmaloney): Make this have a simple useful webui for debugging /
         # monitoring
         start_response('200 OK', [('Content-Type', 'text/html')])
@@ -1090,6 +1102,31 @@ def run_server(marathon, callback_url, config_file, groups):
 def clear_callbacks(marathon, callback_url):
     logger.info("Cleanup, removing subscription to {0}".format(callback_url))
     marathon.remove_subscriber(callback_url)
+
+
+def process_sse_events(marathon, config_file, groups):
+    processor = MarathonEventProcessor(marathon,
+                                       config_file,
+                                       groups)
+    events = marathon.get_event_stream()
+    for event in events:
+        try:
+            # logger.info("received event: {0}".format(event))
+            # marathon might also send empty messages as keepalive...
+            if (event.data.strip() != ''):
+                # marathon sometimes sends more than one json per event
+                # e.g. {}\r\n{}\r\n\r\n
+                for real_event_data in re.split(r'\r\n', event.data):
+                    data = json.loads(real_event_data)
+                    logger.info(
+                        "received event of type {0}".format(data['eventType']))
+                    processor.handle_event(data)
+            else:
+                logger.info("skipping empty message")
+        except:
+            print event.data
+            print "Unexpected error:", sys.exc_info()[0]
+            raise
 
 
 def setup_logging(syslog_socket, log_format):
@@ -1120,6 +1157,9 @@ if __name__ == '__main__':
     else:
         if args.marathon is None:
             arg_parser.error('argument --marathon/-m is required')
+        if args.sse and args.listening:
+            arg_parser.error(
+                'cannot use --listening and --sse at the same time')
 
     # Setup logging
     setup_logging(args.syslog_socket, args.log_format)
@@ -1135,6 +1175,8 @@ if __name__ == '__main__':
                        args.group)
         finally:
             clear_callbacks(marathon, args.listening)
+    elif args.sse:
+        process_sse_events(marathon, args.haproxy_config, args.group)
     else:
         # Generate base config
         regenerate_config(get_apps(marathon), args.haproxy_config, args.group)
