@@ -535,6 +535,7 @@ class AppDeployIntegrationTest
 
     Then("the deployment should be gone")
     waitForEvent("deployment_failed")
+    waitForEvent("deployment_success")
     WaitTestSupport.waitUntil("Deployments get removed from the queue", 30.seconds) {
       marathon.listDeploymentsForBaseGroup().value.isEmpty
     }
