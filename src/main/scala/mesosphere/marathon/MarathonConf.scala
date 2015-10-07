@@ -186,4 +186,12 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
     descr = "Whether to call reviveOffers for new or changed apps. (Default: do not use reviveOffers) ",
     default = Some(false))
 
+  lazy val storeCache = toggle("store_cache",
+    default = Some(true),
+    noshort = true,
+    descrYes = "Enable an in memory cache for the storage layer.",
+    descrNo = "Disable the in memory cache for the storage layer ",
+    prefix = "disable_"
+  )
+
 }

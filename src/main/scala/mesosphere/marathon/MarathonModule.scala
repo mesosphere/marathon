@@ -456,6 +456,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     prefix: String,
     newState: () => T)(implicit ct: ClassTag[T]): EntityStore[T] = {
     val marathonStore = new MarathonStore[T](store, metrics, newState, prefix)
-    new EntityStoreCache[T](marathonStore)
+    if (conf.storeCache()) new EntityStoreCache[T](marathonStore) else marathonStore
   }
 }

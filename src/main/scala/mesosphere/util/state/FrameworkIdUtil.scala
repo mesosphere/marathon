@@ -32,6 +32,6 @@ case class FrameworkId(id: String) extends MarathonState[Protos.FrameworkID, Fra
   override def toProto: FrameworkID = {
     Protos.FrameworkID.newBuilder().setValue(id).build()
   }
-  override def version: Timestamp = Timestamp.zero()
+  override def version: Timestamp = Timestamp.zero
 }
 

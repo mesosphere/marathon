@@ -22,7 +22,7 @@ import scala.concurrent.Future
   */
 class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T]) extends EntityStore[T] with LeadershipCallback {
 
-  private[this] val cache = new TrieMap[String, Option[T]]()
+  private[state] val cache = new TrieMap[String, Option[T]]()
   private[this] implicit val ec = ThreadPoolContext.context
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -54,7 +54,7 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T]) extends 
     store.modify(key, onModified)(update)
   }
 
-  override def names(): Future[Seq[String]] = Future.successful(cache.keys.toSeq)
+  override def names(): Future[Seq[String]] = Future.successful(cache.keySet.toSeq)
 
   override def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] = {
     def onExpunged(): Unit = {

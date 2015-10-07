@@ -20,10 +20,10 @@ case class EventSubscribers(
 
   override def toProto: Protos.EventSubscribers = {
     val builder = Protos.EventSubscribers.newBuilder()
-    urls.foreach(builder.addCallbackUrls(_))
+    urls.foreach(builder.addCallbackUrls)
     builder.build()
   }
 
-  override def version: Timestamp = Timestamp.zero()
+  override def version: Timestamp = Timestamp.zero
 }
 
