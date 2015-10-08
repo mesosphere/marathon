@@ -264,7 +264,7 @@ class ConfigTemplater(object):
     # TODO(lloesche): make certificate path dynamic and allow multiple certs
     HAPROXY_HTTPS_FRONTEND_HEAD = dedent('''
     frontend marathon_https_in
-      bind *:443 ssl crt /etc/ssl/mesosphere.com.pem
+      bind *:443 ssl crt {marathonSslCertPath}
       mode http
     ''')
 
@@ -648,14 +648,16 @@ def resolve_ip(host):
             return None
 
 
-def config(apps, groups):
+def config(apps, groups, ssl_cert_path):
     logger.info("generating config")
     templater = ConfigTemplater()
     config = templater.haproxy_head
     groups = frozenset(groups)
 
     http_frontends = templater.haproxy_http_frontend_head
-    https_frontends = templater.haproxy_https_frontend_head
+    https_frontends = str()
+    if ssl_cert_path:
+        https_frontends += templater.haproxy_https_frontend_head.format(marathonSslCertPath=ssl_cert_path)
     frontends = str()
     backends = str()
     http_appid_frontends = templater.haproxy_http_frontend_appid_head
@@ -980,20 +982,21 @@ def get_apps(marathon):
     return apps_list
 
 
-def regenerate_config(apps, config_file, groups):
-    compareWriteAndReloadConfig(config(apps, groups),
+def regenerate_config(apps, config_file, groups, ssl_cert_path):
+    compareWriteAndReloadConfig(config(apps, groups, ssl_cert_path),
                                 config_file)
 
 
 class MarathonEventSubscriber(object):
 
-    def __init__(self, marathon, addr, config_file, groups):
+    def __init__(self, marathon, addr, config_file, groups, ssl_cert_path):
         marathon.add_subscriber(addr)
         self.__marathon = marathon
         # appId -> MarathonApp
         self.__apps = dict()
         self.__config_file = config_file
         self.__groups = groups
+        self.__ssl_cert_path = ssl_cert_path
 
         # Fetch the base data
         self.reset_from_tasks()
@@ -1004,7 +1007,8 @@ class MarathonEventSubscriber(object):
         self.__apps = get_apps(self.__marathon)
         regenerate_config(self.__apps,
                           self.__config_file,
-                          self.__groups)
+                          self.__groups,
+                          self.__ssl_cert_path) 
 
         logger.debug("updating tasks finished, took %s seconds",
                      time.time() - start_time)
@@ -1050,6 +1054,10 @@ def get_arg_parser():
                         help="Location of haproxy configuration",
                         default="/etc/haproxy/haproxy.cfg"
                         )
+    parser.add_argument("--marathon-ssl-cert-path",
+                        help="Marathon SSL certificate path",
+                        default=None,
+                        )
     parser.add_argument("--group",
                         help="Only generate config for apps which list the "
                         "specified names. Defaults to apps without groups. "
@@ -1060,11 +1068,12 @@ def get_arg_parser():
     return parser
 
 
-def run_server(marathon, callback_url, config_file, groups):
+def run_server(marathon, callback_url, config_file, groups, ssl_cert_path):
     subscriber = MarathonEventSubscriber(marathon,
                                          callback_url,
                                          config_file,
-                                         groups)
+                                         groups,
+                                         ssl_cert_path)
 
     # TODO(cmaloney): Switch to a sane http server
     # TODO(cmaloney): Good exception catching, etc
@@ -1132,9 +1141,10 @@ if __name__ == '__main__':
     if args.listening:
         try:
             run_server(marathon, args.listening, args.haproxy_config,
-                       args.group)
+                       args.group, args.marathon_ssl_cert_path)
         finally:
             clear_callbacks(marathon, args.listening)
     else:
         # Generate base config
-        regenerate_config(get_apps(marathon), args.haproxy_config, args.group)
+        regenerate_config(get_apps(marathon), args.haproxy_config,
+                          args.group, args.marathon_ssl_cert_path)
