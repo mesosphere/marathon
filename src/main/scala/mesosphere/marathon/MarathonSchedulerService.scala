@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import java.util.concurrent.CountDownLatch
+
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
@@ -34,6 +35,11 @@ import scala.concurrent.{ Await, Future, TimeoutException }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
+trait LeadershipCallback {
+  def onElected: Future[Unit]
+  def onDefeated: Future[Unit]
+}
+
 /**
   * Wrapper class for the scheduler
   */
@@ -49,7 +55,8 @@ class MarathonSchedulerService @Inject() (
     system: ActorSystem,
     migration: Migration,
     @Named("schedulerActor") schedulerActor: ActorRef,
-    @Named(EventModule.busName) eventStream: EventStream) extends AbstractExecutionThreadService with Leader {
+    @Named(EventModule.busName) eventStream: EventStream,
+    leadershipCallbacks: Seq[LeadershipCallback] = Seq.empty) extends AbstractExecutionThreadService with Leader {
 
   import mesosphere.util.ThreadPoolContext.context
 
@@ -232,6 +239,10 @@ class MarathonSchedulerService @Inject() (
   override def onDefeated(): Unit = {
     log.info("Defeated (Leader Interface)")
 
+    log.info(s"Call onDefeated leadership callbacks on ${leadershipCallbacks.mkString(", ")}")
+    Await.result(Future.sequence(leadershipCallbacks.map(_.onDefeated)), zkTimeout)
+    log.info(s"Finished onDefeated leadership callbacks")
+
     // Our leadership has been defeated and thus we call the defeatLeadership() method.
     defeatLeadership()
   }
@@ -247,6 +258,11 @@ class MarathonSchedulerService @Inject() (
       //execute tasks, only the leader is allowed to
       migration.migrate()
       migrationComplete = true
+
+      //run all leadership callbacks
+      log.info(s"""Call onElected leadership callbacks on ${leadershipCallbacks.mkString(", ")}""")
+      Await.result(Future.sequence(leadershipCallbacks.map(_.onElected)), zkTimeout)
+      log.info(s"Finished onElected leadership callbacks")
 
       // We have been elected. Thus, elect leadership with the abdication command.
       electLeadership(Some(abdicateCmd))

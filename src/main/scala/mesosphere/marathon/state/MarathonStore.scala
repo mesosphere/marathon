@@ -28,6 +28,7 @@ class MarathonStore[S <: MarathonState[_, S]](
     metrics.histogram(metrics.name(metricsPrefix, getClass, s"${ct.runtimeClass.getSimpleName}.write-data-size"))
 
   def fetch(key: String): Future[Option[S]] = {
+    log.debug(s"Fetch $prefix$key")
     store.load(prefix + key)
       .map {
         _.map { entity =>
@@ -38,27 +39,35 @@ class MarathonStore[S <: MarathonState[_, S]](
       .recover(exceptionTransform(s"Could not fetch ${ct.runtimeClass.getSimpleName} with key: $key"))
   }
 
-  def modify(key: String)(f: Update): Future[S] = lockManager.executeSequentially(key) {
-    val res = store.load(prefix + key).flatMap {
-      case Some(entity) =>
-        bytesRead.update(entity.bytes.length)
-        val updated = f(() => stateFromBytes(entity.bytes.toArray))
-        val updatedEntity = entity.withNewContent(updated.toProtoByteArray)
-        bytesWritten.update(updatedEntity.bytes.length)
-        store.update(updatedEntity)
-      case None =>
-        val created = f(() => newState()).toProtoByteArray
-        bytesWritten.update(created.length)
-        store.create(prefix + key, created)
+  def modify(key: String, onSuccess: (S) => Unit = _ => ())(f: Update): Future[S] = {
+    lockManager.executeSequentially(key) {
+      log.debug(s"Modify $prefix$key")
+      val res = store.load(prefix + key).flatMap {
+        case Some(entity) =>
+          bytesRead.update(entity.bytes.length)
+          val updated = f(() => stateFromBytes(entity.bytes.toArray))
+          val updatedEntity = entity.withNewContent(updated.toProtoByteArray)
+          bytesWritten.update(updatedEntity.bytes.length)
+          store.update(updatedEntity)
+        case None =>
+          val created = f(() => newState()).toProtoByteArray
+          bytesWritten.update(created.length)
+          store.create(prefix + key, created)
+      }
+      res.map { entity =>
+        val result = stateFromBytes(entity.bytes.toArray)
+        onSuccess(result)
+        result
+      }.recover(exceptionTransform(s"Could not modify ${ct.runtimeClass.getSimpleName} with key: $key"))
     }
-    res
-      .map { entity => stateFromBytes(entity.bytes.toArray) }
-      .recover(exceptionTransform(s"Could not modify ${ct.runtimeClass.getSimpleName} with key: $key"))
   }
 
-  def expunge(key: String): Future[Boolean] = lockManager.executeSequentially(key) {
-    store.delete(prefix + key)
-      .recover(exceptionTransform(s"Could not expunge ${ct.runtimeClass.getSimpleName} with key: $key"))
+  def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] = lockManager.executeSequentially(key) {
+    log.debug(s"Expunge $prefix$key")
+    store.delete(prefix + key).map { result =>
+      onSuccess()
+      result
+    }.recover(exceptionTransform(s"Could not expunge ${ct.runtimeClass.getSimpleName} with key: $key"))
   }
 
   def names(): Future[Seq[String]] = {
@@ -78,4 +87,6 @@ class MarathonStore[S <: MarathonState[_, S]](
   private def stateFromBytes(bytes: Array[Byte]): S = {
     newState().mergeFromProto(bytes)
   }
+
+  override def toString: String = s"MarathonStore($prefix)"
 }

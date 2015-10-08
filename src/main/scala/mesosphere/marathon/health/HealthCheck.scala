@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.ValidHealthCheck
-import mesosphere.marathon.state.{ Command, MarathonState }
+import mesosphere.marathon.state.Command
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.concurrent.duration._
@@ -16,24 +16,23 @@ import scala.concurrent.duration._
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class HealthCheck(
 
-  @FieldJsonDeserialize(contentAs = classOf[java.lang.String]) path: Option[String] = HealthCheck.DefaultPath,
+    @FieldJsonDeserialize(contentAs = classOf[java.lang.String]) path: Option[String] = HealthCheck.DefaultPath,
 
-  protocol: Protocol = HealthCheck.DefaultProtocol,
+    protocol: Protocol = HealthCheck.DefaultProtocol,
 
-  portIndex: JInt = HealthCheck.DefaultPortIndex,
+    portIndex: JInt = HealthCheck.DefaultPortIndex,
 
-  command: Option[Command] = HealthCheck.DefaultCommand,
+    command: Option[Command] = HealthCheck.DefaultCommand,
 
-  @FieldJsonProperty("gracePeriodSeconds") gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+    @FieldJsonProperty("gracePeriodSeconds") gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
 
-  @FieldJsonProperty("intervalSeconds") interval: FiniteDuration = HealthCheck.DefaultInterval,
+    @FieldJsonProperty("intervalSeconds") interval: FiniteDuration = HealthCheck.DefaultInterval,
 
-  @FieldJsonProperty("timeoutSeconds") timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+    @FieldJsonProperty("timeoutSeconds") timeout: FiniteDuration = HealthCheck.DefaultTimeout,
 
-  maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures,
+    maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures,
 
-  ignoreHttp1xx: Boolean = HealthCheck.DefaultIgnoreHttp1xx)
-    extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
+    ignoreHttp1xx: Boolean = HealthCheck.DefaultIgnoreHttp1xx) {
 
   def toProto: Protos.HealthCheckDefinition = {
     val builder = Protos.HealthCheckDefinition.newBuilder

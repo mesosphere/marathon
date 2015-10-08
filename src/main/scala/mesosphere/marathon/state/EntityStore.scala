@@ -16,7 +16,7 @@ trait EntityStore[T] {
 
   def store(key: String, value: T): Future[T] = modify(key)(_ => value)
 
-  def modify(key: String)(update: Update): Future[T]
+  def modify(key: String, onSuccess: (T) => Unit = _ => ())(update: Update): Future[T]
 
   /**
     * Delete entity with given id.
@@ -25,7 +25,7 @@ trait EntityStore[T] {
     * @param key the name of the entity.
     * @return result, whether the file was existent or not.
     */
-  def expunge(key: String): Future[Boolean]
+  def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean]
 
   def names(): Future[Seq[String]]
 }

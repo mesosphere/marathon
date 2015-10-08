@@ -19,6 +19,7 @@ trait Mockito extends MockitoSugar {
   def atLeastOnce = M.atLeastOnce()
   def atLeast(num: Int) = M.atLeast(num)
   def atMost(num: Int) = M.atMost(num)
+  def never = M.never()
 
   class MockAnswer[T](function: Array[AnyRef] => T) extends Answer[T] {
     def answer(invocation: InvocationOnMock): T = {
