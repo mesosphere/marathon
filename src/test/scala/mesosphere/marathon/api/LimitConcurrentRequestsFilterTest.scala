@@ -17,6 +17,7 @@ class LimitConcurrentRequestsFilterTest extends MarathonSpec with GivenWhenThen 
     Given("A http filter chain")
     val latch = new CountDownLatch(2)
     val request = mock[HttpServletRequest]
+    request.getMethod returns "POST"
     val response = mock[HttpServletResponse]
     val chain = mock[FilterChain]
     chain.doFilter(request, response) answers { args => latch.countDown() }
@@ -36,6 +37,7 @@ class LimitConcurrentRequestsFilterTest extends MarathonSpec with GivenWhenThen 
     val latch = new CountDownLatch(1)
     semaphore.acquire()
     val request = mock[HttpServletRequest]
+    request.getMethod returns "POST"
     val response = mock[HttpServletResponse]
     val chain = mock[FilterChain]
     chain.doFilter(request, response) answers { args => latch.countDown(); semaphore.acquire() /* blocks*/ }
@@ -56,6 +58,7 @@ class LimitConcurrentRequestsFilterTest extends MarathonSpec with GivenWhenThen 
     Given("A http filter chain with no limit")
     val latch = new CountDownLatch(1)
     val request = mock[HttpServletRequest]
+    request.getMethod returns "POST"
     val response = mock[HttpServletResponse]
     val chain = mock[FilterChain]
     chain.doFilter(request, response) answers { args => latch.countDown() }
@@ -67,5 +70,26 @@ class LimitConcurrentRequestsFilterTest extends MarathonSpec with GivenWhenThen 
 
     Then("Even the semaphore is 0 the request can be made and the pass function is used")
     latch.await(5, TimeUnit.SECONDS) should be(true)
+  }
+
+  test("GET requests are not throttled") {
+    Given("A http filter chain")
+    val semaphore = new Semaphore(2)
+    semaphore.acquire(2)
+    val request = mock[HttpServletRequest]
+    request.getMethod returns "GET"
+    val response = mock[HttpServletResponse]
+    val chain = mock[FilterChain]
+    chain.doFilter(request, response) answers { args => semaphore.acquire() /* blocks*/ }
+    val rf = new LimitConcurrentRequestsFilter(Some(1))
+
+    When("requests where made before the limit")
+    Future(rf.doFilter(request, response, chain))
+    Future(rf.doFilter(request, response, chain))
+    rf.semaphore.availablePermits() should be(1)
+
+    Then("The requests got answered")
+    semaphore.release(2)
+    verify(chain, times(2)).doFilter(request, response)
   }
 }
