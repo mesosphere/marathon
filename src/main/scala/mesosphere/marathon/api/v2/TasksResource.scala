@@ -1,11 +1,13 @@
 package mesosphere.marathon.api.v2
 
 import java.util
+import java.util.concurrent.{ Callable, TimeUnit }
 import javax.inject.Inject
 import javax.ws.rs._
 import javax.ws.rs.core.{ MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
+import com.google.common.cache.{ CacheBuilder, Cache }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.EnrichedTask
 import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, EndpointsHelper, RestResource }
@@ -31,6 +33,9 @@ class TasksResource @Inject() (
     taskIdUtil: TaskIdUtil) extends RestResource {
 
   val log = Logger.getLogger(getClass.getName)
+  val cache: Cache[String, Response] = CacheBuilder.newBuilder()
+    .expireAfterWrite(3, TimeUnit.SECONDS)
+    .build()
 
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -39,42 +44,50 @@ class TasksResource @Inject() (
     @QueryParam("status") status: String,
     @QueryParam("status[]") statuses: util.List[String]): Response = {
 
-    //scalastyle:off null
-    if (status != null) {
-      statuses.add(status)
+    val key = s"status=$status,status[]=${statuses.asScala.mkString(",")}"
+    val valueLoader = new Callable[Response] {
+      override def call(): Response = {
+        log.info("Computing response")
+
+        //scalastyle:off null
+        if (status != null) {
+          statuses.add(status)
+        }
+        //scalastyle:on
+        val statusSet = statuses.asScala.flatMap(toTaskState).toSet
+
+        val tasks = taskTracker.list.values.view.flatMap { app =>
+          app.tasks.view.map(t => app.appName -> t)
+        }
+
+        val appIds = taskTracker.list.keySet
+
+        val appToPorts = appIds.map { appId =>
+          appId -> service.getApp(appId).map(_.servicePorts).getOrElse(Nil)
+        }.toMap
+
+        val health = appIds.flatMap { appId =>
+          result(healthCheckManager.statuses(appId))
+        }.toMap
+
+        val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
+          (appId, task) <- tasks
+          if statusSet.isEmpty || statusSet(task.getStatus.getState)
+        } yield {
+          EnrichedTask(
+            appId,
+            task,
+            health.getOrElse(task.getId, Nil),
+            appToPorts.getOrElse(appId, Nil)
+          )
+        }
+
+        ok(Map(
+          "tasks" -> enrichedTasks
+        ))
+      }
     }
-    //scalastyle:on
-    val statusSet = statuses.asScala.flatMap(toTaskState).toSet
-
-    val tasks = taskTracker.list.values.view.flatMap { app =>
-      app.tasks.view.map(t => app.appName -> t)
-    }
-
-    val appIds = taskTracker.list.keySet
-
-    val appToPorts = appIds.map { appId =>
-      appId -> service.getApp(appId).map(_.servicePorts).getOrElse(Nil)
-    }.toMap
-
-    val health = appIds.flatMap { appId =>
-      result(healthCheckManager.statuses(appId))
-    }.toMap
-
-    val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
-      (appId, task) <- tasks
-      if statusSet.isEmpty || statusSet(task.getStatus.getState)
-    } yield {
-      EnrichedTask(
-        appId,
-        task,
-        health.getOrElse(task.getId, Nil),
-        appToPorts.getOrElse(appId, Nil)
-      )
-    }
-
-    ok(Map(
-      "tasks" -> enrichedTasks
-    ))
+    cache.get(key, valueLoader)
   }
 
   @GET

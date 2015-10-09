@@ -2,6 +2,7 @@ package mesosphere.marathon.api.v2
 
 import java.net.URI
 import java.util.UUID
+import java.util.concurrent.{ Callable, TimeUnit }
 import javax.inject.{ Inject, Named }
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
@@ -9,6 +10,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
+import com.google.common.cache.{ Cache, CacheBuilder }
 import mesosphere.marathon.api.{ MarathonMediaType, TaskKiller, RestResource }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.{ EnrichedTask, V2AppDefinition, V2AppUpdate }
@@ -19,6 +21,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, RestartApplication }
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException }
+import mesosphere.util.Logging
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
@@ -35,7 +38,7 @@ class AppsResource @Inject() (
     healthCheckManager: HealthCheckManager,
     taskFailureRepository: TaskFailureRepository,
     val config: MarathonConf,
-    groupManager: GroupManager) extends RestResource {
+    groupManager: GroupManager) extends RestResource with Logging {
 
   import mesosphere.util.ThreadPoolContext.context
 
@@ -43,49 +46,63 @@ class AppsResource @Inject() (
   val EmbedTasks = "apps.tasks"
   val EmbedTasksAndFailures = "apps.failures"
 
+  val cache: Cache[String, String] = CacheBuilder.newBuilder()
+    .expireAfterWrite(3, TimeUnit.SECONDS)
+    .build()
+
   @GET
-  @Timed
+  @Timed // scalastyle:off
   def index(@QueryParam("cmd") cmd: String,
             @QueryParam("id") id: String,
             @QueryParam("label") label: String,
             @QueryParam("embed") embed: String): String = {
-    val apps = search(Option(cmd), Option(id), Option(label))
-    val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
-    val mapped = embed match {
-      case EmbedTasks =>
-        apps.map { app =>
-          val enrichedApp = V2AppDefinition(app).withTasksAndDeployments(
-            enrichedTasks(app),
-            healthCounts(app),
-            runningDeployments
-          )
-          WithTasksAndDeploymentsWrites.writes(enrichedApp)
+
+    val valueLoader = new Callable[String] {
+      override def call(): String = {
+        log.info("Computing response")
+
+        val apps = search(Option(cmd), Option(id), Option(label))
+        val runningDeployments = result(service.listRunningDeployments()).map(r => r._1)
+        val mapped = embed match {
+          case EmbedTasks =>
+            apps.map { app =>
+              val enrichedApp = V2AppDefinition(app).withTasksAndDeployments(
+                enrichedTasks(app),
+                healthCounts(app),
+                runningDeployments
+              )
+              WithTasksAndDeploymentsWrites.writes(enrichedApp)
+            }
+
+          case EmbedTasksAndFailures =>
+            apps.map { app =>
+              WithTasksAndDeploymentsAndFailuresWrites.writes(
+                V2AppDefinition(app).withTasksAndDeploymentsAndFailures(
+                  enrichedTasks(app),
+                  healthCounts(app),
+                  runningDeployments,
+                  taskFailureRepository.current(app.id)
+                )
+              )
+            }
+
+          case _ =>
+            apps.map { app =>
+              val enrichedApp = V2AppDefinition(app).withTaskCountsAndDeployments(
+                enrichedTasks(app),
+                healthCounts(app),
+                runningDeployments
+              )
+              WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
+            }
         }
 
-      case EmbedTasksAndFailures =>
-        apps.map { app =>
-          WithTasksAndDeploymentsAndFailuresWrites.writes(
-            V2AppDefinition(app).withTasksAndDeploymentsAndFailures(
-              enrichedTasks(app),
-              healthCounts(app),
-              runningDeployments,
-              taskFailureRepository.current(app.id)
-            )
-          )
-        }
-
-      case _ =>
-        apps.map { app =>
-          val enrichedApp = V2AppDefinition(app).withTaskCountsAndDeployments(
-            enrichedTasks(app),
-            healthCounts(app),
-            runningDeployments
-          )
-          WithTaskCountsAndDeploymentsWrites.writes(enrichedApp)
-        }
+        Json.obj("apps" -> mapped).toString()
+      }
     }
 
-    Json.obj("apps" -> mapped).toString()
+    val key = s"id=$id,cmd=$cmd,label=$label,embed=$embed"
+    cache.get(key, valueLoader)
   }
 
   @POST
