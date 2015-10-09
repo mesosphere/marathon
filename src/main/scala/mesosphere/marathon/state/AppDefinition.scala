@@ -276,7 +276,6 @@ case class AppDefinition(
     }
   }
 
-
   // Case class implementation of hashCode+equals is very expensive
   // We know that two apps are equal, if id and version is equals.
   override def equals(obj: Any): Boolean = {
