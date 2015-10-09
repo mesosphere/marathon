@@ -2,7 +2,7 @@ package mesosphere.marathon.api
 
 import java.util.concurrent.Semaphore
 import javax.servlet._
-import javax.servlet.http.HttpServletResponse
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 /**
   * Limit the number of concurrent http requests if the concurrent number is set.
@@ -15,8 +15,22 @@ class LimitConcurrentRequestsFilter(concurrentOption: Option[Int]) extends Filte
   val filterFunction = concurrentOption.map(_ => withSemaphore _).getOrElse(pass _)
 
   def withSemaphore(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
+    request match {
+      case r: HttpServletRequest if r.getMethod != "GET" =>
+        // Only throttle non-GET
+        throttle(request, response, chain)
+      case _ =>
+        pass(request, response, chain)
+    }
+  }
+
+  def pass(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
+    chain.doFilter(request, response)
+  }
+
+  def throttle(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
     if (semaphore.tryAcquire()) {
-      try { chain.doFilter(request, response) }
+      try { pass(request, response, chain) }
       finally { semaphore.release() }
     }
     else {
@@ -26,10 +40,6 @@ class LimitConcurrentRequestsFilter(concurrentOption: Option[Int]) extends Filte
         case r: ServletResponse     => throw new IllegalArgumentException(s"Expected http response but got $response")
       }
     }
-  }
-
-  def pass(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
-    chain.doFilter(request, response)
   }
 
   override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
