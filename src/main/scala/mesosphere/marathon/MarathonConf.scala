@@ -186,4 +186,10 @@ trait MarathonConf extends ScallopConf with ZookeeperConf with IterativeOfferMat
     descr = "Whether to call reviveOffers for new or changed apps. (Default: do not use reviveOffers) ",
     default = Some(false))
 
+  lazy val maxApps = opt[Int]("max_apps",
+    descr = "The maximum number of apps allowed before Marathon will disallow new app creation.",
+    noshort = true,
+    default = Some(500)
+  )
+
 }
