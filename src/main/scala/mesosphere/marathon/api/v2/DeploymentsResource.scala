@@ -1,10 +1,12 @@
 package mesosphere.marathon.api.v2
 
+import java.util.concurrent.{ Callable, TimeUnit }
 import javax.inject.Inject
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status._
 import javax.ws.rs.core.{ MediaType, Response }
 
+import com.google.common.cache.{ CacheBuilder, Cache }
 import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
@@ -22,10 +24,24 @@ class DeploymentsResource @Inject() (
     extends RestResource
     with Logging {
 
+  val cache: Cache[String, Response] = CacheBuilder.newBuilder()
+    .expireAfterWrite(3, TimeUnit.SECONDS)
+    .build()
+
   @GET
-  def running(): Response = ok(result(service.listRunningDeployments()).map {
-    case (plan, currentStep) => toInfo(plan, currentStep)
-  })
+  def running(): Response = {
+    val key = "running"
+    val valueLoader = new Callable[Response] {
+      override def call(): Response = {
+        log.info("Computing response")
+        ok(result(service.listRunningDeployments()).map {
+          case (plan, currentStep) => toInfo(plan, currentStep)
+        })
+      }
+    }
+
+    cache.get(key, valueLoader)
+  }
 
   @DELETE
   @Path("{id}")
