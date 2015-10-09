@@ -10,7 +10,9 @@ import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentPlan }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
-import mesosphere.util.Logging
+import mesosphere.util.{ Caching, Logging }
+
+import scala.concurrent.duration._
 
 @Path("v2/deployments")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -20,12 +22,18 @@ class DeploymentsResource @Inject() (
   groupManager: GroupManager,
   val config: MarathonConf)
     extends RestResource
-    with Logging {
+    with Logging with Caching[Response] {
+
+  override val cacheExpiresAfter: FiniteDuration = 3.seconds
 
   @GET
-  def running(): Response = ok(result(service.listRunningDeployments()).map {
-    case (plan, currentStep) => toInfo(plan, currentStep)
-  })
+  def running(): Response = cached(key = "running"){
+    log.info("Computing response")
+
+    ok(result(service.listRunningDeployments()).map {
+      case (plan, currentStep) => toInfo(plan, currentStep)
+    })
+  }
 
   @DELETE
   @Path("{id}")
