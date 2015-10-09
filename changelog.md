@@ -65,6 +65,8 @@ We moved completely to slf4j as Logging API. The logging backend still uses log4
 
 ## Changes from 0.10.0 to 0.11.0
 
+Attention! There have been some severe issues reported for 0.11. We will release fixes for them in [0.11.1](https://github.com/mesosphere/marathon/milestones/0.11.1).
+
 ### Breaking Changes
 
 * Java 8 or higher is needed to run Marathon, since Java 6 and 7 support has reached end of life.
