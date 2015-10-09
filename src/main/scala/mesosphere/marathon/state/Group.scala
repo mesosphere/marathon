@@ -110,11 +110,14 @@ case class Group(
     }
   }
 
-  def transitiveApps: Set[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
+  @JsonIgnore
+  lazy val transitiveApps: Set[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
 
-  def transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
+  @JsonIgnore
+  lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
-  def transitiveAppGroups: Set[Group] = transitiveGroups.filter(_.apps.nonEmpty)
+  @JsonIgnore
+  lazy val transitiveAppGroups: Set[Group] = transitiveGroups.filter(_.apps.nonEmpty)
 
   @JsonIgnore
   lazy val applicationDependencies: List[(AppDefinition, AppDefinition)] = {
@@ -179,6 +182,17 @@ case class Group(
 
   @JsonIgnore
   def withoutChildren: Group = copy(apps = Set.empty, groups = Set.empty)
+
+
+  // Case class implementation of hashCode+equals is very expensive
+  // We know that two groups are equal, if id and version is equals.
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case that: Group => (that eq this) || (that.id == id && that.version == version)
+      case _           => false
+    }
+  }
+  override def hashCode(): Int = id.hashCode()
 }
 
 object Group {

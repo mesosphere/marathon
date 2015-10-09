@@ -84,7 +84,7 @@ case class AppDefinition(
     * port mappings.
     */
   def portIndicesAreValid(): Boolean = {
-    val validPortIndices = 0 until hostPorts.size
+    val validPortIndices = hostPorts.indices
     healthChecks.forall { hc =>
       hc.protocol == Protocol.COMMAND || (validPortIndices contains hc.portIndex)
     }
@@ -249,8 +249,43 @@ case class AppDefinition(
   def isOnlyScaleChange(to: AppDefinition): Boolean =
     !isUpgrade(to) && (instances != to.instances)
 
-  def isUpgrade(to: AppDefinition): Boolean =
-    this != to.copy(instances = instances, version = version)
+  def isUpgrade(to: AppDefinition): Boolean = {
+    id == to.id && {
+      cmd != to.cmd ||
+        args != to.args ||
+        user != to.user ||
+        env != to.env ||
+        cpus != to.cpus ||
+        mem != to.mem ||
+        disk != to.disk ||
+        executor != to.executor ||
+        constraints != to.constraints ||
+        uris != to.uris ||
+        storeUrls != to.storeUrls ||
+        ports != to.ports ||
+        requirePorts != to.requirePorts ||
+        backoff != to.backoff ||
+        backoffFactor != to.backoffFactor ||
+        maxLaunchDelay != to.maxLaunchDelay ||
+        container != to.container ||
+        healthChecks != to.healthChecks ||
+        dependencies != to.dependencies ||
+        upgradeStrategy != to.upgradeStrategy ||
+        labels != to.labels ||
+        acceptedResourceRoles != to.acceptedResourceRoles
+    }
+  }
+
+
+  // Case class implementation of hashCode+equals is very expensive
+  // We know that two apps are equal, if id and version is equals.
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case that: AppDefinition => (that eq this) || (that.id == id && that.version == version)
+      case _                   => false
+    }
+  }
+  override def hashCode(): Int = id.hashCode()
 }
 
 object AppDefinition {
