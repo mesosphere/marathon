@@ -76,11 +76,12 @@ class LimitConcurrentRequestsFilterTest extends MarathonSpec with GivenWhenThen 
     Given("A http filter chain")
     val semaphore = new Semaphore(2)
     semaphore.acquire(2)
+    val latch = new CountDownLatch(2)
     val request = mock[HttpServletRequest]
     request.getMethod returns "GET"
     val response = mock[HttpServletResponse]
     val chain = mock[FilterChain]
-    chain.doFilter(request, response) answers { args => semaphore.acquire() /* blocks*/ }
+    chain.doFilter(request, response) answers { args => semaphore.acquire(); latch.countDown() /* blocks*/ }
     val rf = new LimitConcurrentRequestsFilter(Some(1))
 
     When("requests where made before the limit")
@@ -90,6 +91,7 @@ class LimitConcurrentRequestsFilterTest extends MarathonSpec with GivenWhenThen 
 
     Then("The requests got answered")
     semaphore.release(2)
+    latch.await()
     verify(chain, times(2)).doFilter(request, response)
   }
 }
