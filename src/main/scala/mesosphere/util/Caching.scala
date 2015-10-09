@@ -10,7 +10,7 @@ trait Caching[T <: Object] {
 
   protected[this] def cacheExpiresAfter: FiniteDuration
 
-  private[util] val cache: Cache[String, T] = CacheBuilder.newBuilder()
+  private[util] lazy val cache: Cache[String, T] = CacheBuilder.newBuilder()
     .expireAfterWrite(cacheExpiresAfter.toMillis, TimeUnit.MILLISECONDS)
     .build()
 
