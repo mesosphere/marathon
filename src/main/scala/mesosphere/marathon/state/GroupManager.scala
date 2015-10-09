@@ -143,7 +143,7 @@ class GroupManager @Singleton @Inject() (
     val deployment = for {
       from <- rootGroup()
       (to, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
-      _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty))
+      _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty, config.maxApps()))
       plan <- deploy(from, to, resolve)
       _ <- groupRepo.store(zkName, to)
     } yield plan
