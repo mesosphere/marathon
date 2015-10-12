@@ -14,7 +14,7 @@ For an overview of the process, here's [a great article by Martin Fowler](http:/
     - The application should have health checks which accurately reflect the health of the application.
 - The app must expose a metric endpoint to determine whether the app has any pending operations. For example, the application could expose a global atomic counter of the number of currently queued DB transactions.
 - The [jq] (https://stedolan.github.io/jq/) command-line JSON processor.
-- If you are using open source Mesos, [configure the DCOS CLI] ( https://github.com/mesosphere/dcos-cli#using-the-cli-without-dcos). 
+- If you are using open source Mesos, [configure the DCOS CLI] ( https://github.com/mesosphere/dcos-cli#using-the-cli-without-dcos).
 
 ## Procedure
 
