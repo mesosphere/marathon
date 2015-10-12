@@ -1,5 +1,6 @@
 package mesosphere.marathon.upgrade
 
+import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
 import org.slf4j.LoggerFactory
 
@@ -30,13 +31,12 @@ object GroupVersioningUtil {
             log.info(s"[${newApp.id}]: upgrade detected for app (oldVersion ${oldApp.versionInfo})")
             oldApp.versionInfo.withConfigChange(newVersion = version)
           }
-          else if (oldApp != newApp) {
-            if (oldApp.isOnlyScaleChange(newApp)) {
-              log.info(s"[${newApp.id}]: scaling op detected for app (oldVersion ${oldApp.versionInfo})")
-            }
-            else {
-              log.info(s"[${newApp.id}]: restart detected for app (oldVersion ${oldApp.versionInfo})")
-            }
+          else if (oldApp.isOnlyScaleChange(newApp)) {
+            log.info(s"[${newApp.id}]: scaling op detected for app (oldVersion ${oldApp.versionInfo})")
+            oldApp.versionInfo.withScaleOrRestartChange(newVersion = version)
+          }
+          else if (oldApp.versionInfo != newApp.versionInfo && newApp.versionInfo == VersionInfo.NoVersion) {
+            log.info(s"[${newApp.id}]: restart detected for app (oldVersion ${oldApp.versionInfo})")
             oldApp.versionInfo.withScaleOrRestartChange(newVersion = version)
           }
           else {
@@ -50,7 +50,7 @@ object GroupVersioningUtil {
     val originalApps = from.transitiveApps.map(app => app.id -> app).toMap
     val updatedTargetApps = to.transitiveApps.flatMap { newApp =>
       val updated = updateAppVersionInfo(originalApps.get(newApp.id), newApp)
-      if (updated != newApp) Some(updated) else None
+      if (updated.versionInfo != newApp.versionInfo) Some(updated) else None
     }
     updatedTargetApps.foldLeft(to) { (resultGroup, updatedApp) =>
       resultGroup.updateApp(updatedApp.id, _ => updatedApp, version)

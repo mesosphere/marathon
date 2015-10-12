@@ -57,7 +57,9 @@ function load_options_and_log {
     done 9< <(cd "$conf_dir" && find . -type f -not -name '.*' -print0)
   fi
   # Read environment variables from config file
+  set -o allexport
   [[ ! -f "$conf_file" ]] || . "$conf_file"
+  set +o allexport
   for env_op in `env | grep ^MARATHON_ | sed -e '/^MARATHON_APP/d' -e 's/MARATHON_//' -e 's/=/ /'| awk '{printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'| sed -e 's/ $//'`; do
     cmd+=( "$env_op" )
   done

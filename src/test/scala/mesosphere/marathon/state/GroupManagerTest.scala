@@ -50,7 +50,7 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
     val group = Group(PathId.empty, Set(
       AppDefinition("/app1".toPath, ports = Seq(0, 0, 0)),
       AppDefinition("/app2".toPath, ports = Seq(1, 2, 3)),
-      AppDefinition("/app2".toPath, ports = Seq(0, 2, 0))
+      AppDefinition("/app3".toPath, ports = Seq(0, 2, 0))
     ))
     val update = manager(10, 20).assignDynamicServicePorts(Group.empty, group)
     update.transitiveApps.filter(_.hasDynamicPort) should be('empty)

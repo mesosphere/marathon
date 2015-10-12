@@ -14,13 +14,16 @@ For an overview of the process, here's [a great article by Martin Fowler](http:/
     - The application should have health checks which accurately reflect the health of the application.
 - The app must expose a metric endpoint to determine whether the app has any pending operations. For example, the application could expose a global atomic counter of the number of currently queued DB transactions.
 - The [jq] (https://stedolan.github.io/jq/) command-line JSON processor.
+<<<<<<< HEAD
 - If you are using open source Mesos, [configure the DCOS CLI] ( https://github.com/mesosphere/dcos-cli#using-the-cli-without-dcos).
+=======
+>>>>>>> db631588132aca8c9c9321e6f4b649b2b00a213b
 
 ## Procedure
 
 We will replace the current app version (BLUE) with a new version (GREEN).
 
-1. Launch the new version of the app on Marathon. Add a unique ID to the app name, such as the Git commit ID. In this example, we ID the new version of the app by adding GREEN to its name.
+1. Launch the new version of the app on Marathon. Add a unique ID to the app name, such as the Git commit ID. In this example, we ID the new version of the app by adding `GREEN` to its name.
 
     ```sh
     # launch green
@@ -56,7 +59,7 @@ We will replace the current app version (BLUE) with a new version (GREEN).
 
 8. Wait until the task instances from the BLUE app have 0 pending operations. Use the metrics endpoint in the application to determine the number of pending operations.
 
-9. Once all operations are complete from the BLUE tasks, kill and scale the BLUE app using [the API] (https://mesosphere.github.io/marathon/docs/rest-api.html#post-v2-tasks-delete). In the snippet below, ``<hosturl>`` is the hostname of your master cluster prefixed with ``http://``.
+9. Once all operations are complete from the BLUE tasks, kill and scale the BLUE app using [the API] (https://mesosphere.github.io/marathon/docs/rest-api.html#post-v2-tasks-delete). In the snippet below, ``<hosturl>`` is the hostname of your master node prefixed with ``http://``.
 
     ```sh
     # kill and scale blue tasks
