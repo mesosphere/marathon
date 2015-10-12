@@ -59,7 +59,7 @@ case class Group(
     }
   }
 
-  def updateApp(timestamp: Timestamp = Timestamp.now())(fn: AppDefinition => AppDefinition): Group = {
+  def updateApps(timestamp: Timestamp = Timestamp.now())(fn: AppDefinition => AppDefinition): Group = {
     update(timestamp) { group => group.copy(apps = group.apps.map(fn)) }
   }
 
