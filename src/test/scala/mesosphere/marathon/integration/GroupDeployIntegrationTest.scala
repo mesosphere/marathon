@@ -99,6 +99,23 @@ class GroupDeployIntegrationTest
     waitForTasks(app1V2.id, app1V2.instances)
   }
 
+  test("update a group with the same application so no restart is triggered") {
+    Given("A group with one application started")
+    val id = "test".toRootTestPath
+    val appId = id / "app"
+    val app1V1 = v2AppProxy(appId, "v1", 2, withHealth = false)
+    waitForChange(marathon.createGroup(V2GroupUpdate(id, Set(app1V1))))
+    waitForTasks(app1V1.id, app1V1.instances)
+    val tasks = marathon.tasks(appId)
+
+    When("The group is updated, with the same application")
+    waitForChange(marathon.updateGroup(id, V2GroupUpdate(id, Set(app1V1))))
+
+    Then("There is no deployment and all tasks still live")
+    marathon.listDeploymentsForBaseGroup().value should be ('empty)
+    marathon.tasks(appId).value.toSet should be(tasks.value.toSet)
+  }
+
   test("create a group with application with health checks") {
     Given("A group with one application")
     val id = "proxy".toRootTestPath
