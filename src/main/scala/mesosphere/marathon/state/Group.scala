@@ -144,13 +144,6 @@ case class Group(
     result
   }
 
-  def applicationDependenciesML: String = {
-    val res = for ((app, dependent) <- applicationDependencies) yield {
-      s"[${app.id}]->[${dependent.id}]"
-    }
-    res.mkString("http://yuml.me/diagram/plain/class/", ", ", "")
-  }
-
   def dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
     val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
     for (app <- transitiveApps)
