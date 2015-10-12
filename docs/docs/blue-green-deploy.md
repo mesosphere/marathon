@@ -8,13 +8,13 @@ Blue-green deployment is a way to safely deploy applications that are serving li
 
 For an overview of the process, here's [a great article by Martin Fowler](http://martinfowler.com/bliki/BlueGreenDeployment.html).
 
+In a production environment, you would typically script this process and integrate it into your existing deployment system. Below we provide an example of the steps necessary to perform a safe deployment.
+
 ## Requirements
 
-- A Marathon based app.
-    - The application should have health checks which accurately reflect the health of the application.
+- A Marathon-based app with health checks that accurately reflect the health of the application.
 - The app must expose a metric endpoint to determine whether the app has any pending operations. For example, the application could expose a global atomic counter of the number of currently queued DB transactions.
 - The [jq] (https://stedolan.github.io/jq/) command-line JSON processor.
-<<<<<<< HEAD
 - If you are using open source Mesos, [configure the DCOS CLI] ( https://github.com/mesosphere/dcos-cli#using-the-cli-without-dcos).
 =======
 >>>>>>> db631588132aca8c9c9321e6f4b649b2b00a213b
