@@ -1,25 +1,16 @@
 package mesosphere.marathon.core
 
-import javax.inject.{ Named, Provider }
-
-import akka.actor.ActorRef
-import akka.event.EventStream
-import com.google.inject.name.Names
-import com.google.inject.{ AbstractModule, Inject, Provides, Scopes, Singleton }
-import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.CoreGuiceModule.TaskStatusUpdateActorProvider
-import mesosphere.marathon.core.appinfo.{ AppInfoService, AppInfoModule }
+import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
+import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusObservables }
-import mesosphere.marathon.core.task.tracker.TaskTrackerModule
-import mesosphere.marathon.event.EventModule
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.task.tracker.impl.TaskStatusUpdateProcessorImpl
+import mesosphere.marathon.core.task.tracker.{ TaskStatusUpdateProcessor, TaskTrackerModule }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 
 /**
   * Provides the glue between guice and the core modules.
@@ -33,7 +24,7 @@ class CoreGuiceModule extends AbstractModule {
   @Provides @Singleton
   def leadershipCoordinator(
     leadershipModule: LeadershipModule,
-    @Named("taskStatusUpdate") makeSureToInitializeThisBeforeCreatingCoordinator: ActorRef): LeadershipCoordinator =
+    makeSureToInitializeThisBeforeCreatingCoordinator: TaskStatusUpdateProcessor): LeadershipCoordinator =
     leadershipModule.coordinator()
 
   @Provides @Singleton
@@ -68,37 +59,12 @@ class CoreGuiceModule extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[Clock]).toInstance(Clock())
     bind(classOf[CoreModule]).to(classOf[CoreModuleImpl]).in(Scopes.SINGLETON)
-    bind(classOf[ActorRef])
-      .annotatedWith(Names.named("taskStatusUpdate"))
-      .toProvider(classOf[TaskStatusUpdateActorProvider])
+
+    // FIXME: Because of cycle breaking in guice, it is hard to not wire it with Guice directly
+    bind(classOf[TaskStatusUpdateProcessor])
+      .to(classOf[TaskStatusUpdateProcessorImpl])
       .asEagerSingleton()
 
     bind(classOf[AppInfoModule]).asEagerSingleton()
-  }
-}
-
-object CoreGuiceModule {
-  /** Break cyclic dependencies by using a provider here. */
-  class TaskStatusUpdateActorProvider @Inject() (
-      taskTrackerModule: TaskTrackerModule,
-      taskStatusObservable: TaskStatusObservables,
-      @Named(EventModule.busName) eventBus: EventStream,
-      @Named("schedulerActor") schedulerActor: ActorRef,
-      taskIdUtil: TaskIdUtil,
-      healthCheckManager: HealthCheckManager,
-      taskTracker: TaskTracker,
-      marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder) extends Provider[ActorRef] {
-
-    override def get(): ActorRef = {
-      taskTrackerModule.processTaskStatusUpdates(
-        taskStatusObservable = taskStatusObservable,
-        eventBus = eventBus,
-        schedulerActor = schedulerActor,
-        taskIdUtil = taskIdUtil,
-        healthCheckManager = healthCheckManager,
-        taskTracker = taskTracker,
-        marathonSchedulerDriverHolder = marathonSchedulerDriverHolder
-      )
-    }
   }
 }
