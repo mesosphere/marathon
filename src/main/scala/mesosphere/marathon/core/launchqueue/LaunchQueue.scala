@@ -48,6 +48,9 @@ trait LaunchQueue {
   /** Remove all task launch requests for the given PathId from this queue. */
   def purge(appId: PathId): Unit
 
+  /** Add delay to the given AppDefinition because of a failed task */
+  def addDelay(app: AppDefinition): Unit
+
   /** Reset the backoff delay for the given AppDefinition. */
   def resetDelay(app: AppDefinition): Unit
 }
