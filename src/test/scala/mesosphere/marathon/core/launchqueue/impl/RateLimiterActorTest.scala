@@ -45,50 +45,6 @@ class RateLimiterActorTest extends MarathonSpec {
     assert(delay.delayUntil == clock.now())
   }
 
-  test("Delay gets increased if task dies unexpectedly") {
-    val taskUpdate: TaskStatusUpdate = TaskStatusUpdateTestHelper.finished.withAppId(app.id.toString).wrapped
-    val version: String = clock.now().toString
-    val marathonTask = MarathonTask.newBuilder()
-      .setId(taskUpdate.taskId.getValue)
-      .setVersion(version)
-      .build()
-    Mockito.when(taskTracker.fetchTask(app.id, taskUpdate.taskId.getValue)).thenReturn(Some(marathonTask))
-    Mockito.when(appRepository.app(app.id, clock.now())).thenReturn(Future.successful(Some(app)))
-
-    // wait for startup
-    askLimiter(RateLimiterActor.GetDelay(app)).asInstanceOf[RateLimiterActor.DelayUpdate]
-
-    forAllStatusUpdates.onNext(taskUpdate)
-
-    updateReceiver.expectMsg(RateLimiterActor.DelayUpdate(app, clock.now() + backoff))
-    val delay = askLimiter(RateLimiterActor.GetDelay(app)).asInstanceOf[RateLimiterActor.DelayUpdate]
-    assert(delay.delayUntil == clock.now() + backoff)
-
-    Mockito.verify(taskTracker).fetchTask(app.id, taskUpdate.taskId.getValue)
-    Mockito.verify(appRepository).app(app.id, clock.now())
-  }
-
-  test("Delay gets NOT increased if task is killed") {
-    val taskUpdate: TaskStatusUpdate = TaskStatusUpdateTestHelper.killed.withAppId(app.id.toString).wrapped
-    val version: String = clock.now().toString
-    val marathonTask = MarathonTask.newBuilder()
-      .setId(taskUpdate.taskId.getValue)
-      .setVersion(version)
-      .build()
-    Mockito.when(taskTracker.fetchTask(app.id, taskUpdate.taskId.getValue)).thenReturn(Some(marathonTask))
-    Mockito.when(appRepository.app(app.id, clock.now())).thenReturn(Future.successful(Some(app)))
-
-    // wait for startup
-    askLimiter(RateLimiterActor.GetDelay(app)).asInstanceOf[RateLimiterActor.DelayUpdate]
-
-    forAllStatusUpdates.onNext(taskUpdate)
-
-    val delay = askLimiter(RateLimiterActor.GetDelay(app)).asInstanceOf[RateLimiterActor.DelayUpdate]
-    assert(delay.delayUntil == clock.now())
-
-    updateReceiver.expectNoMsg(0.seconds)
-  }
-
   private[this] def askLimiter(message: Any): Any = {
     Await.result(limiterRef ? message, 3.seconds)
   }
@@ -104,8 +60,6 @@ class RateLimiterActorTest extends MarathonSpec {
   private[this] var taskTracker: TaskTracker = _
   private[this] var appRepository: AppRepository = _
   private[this] var updateReceiver: TestProbe = _
-  private[this] var taskStatusObservables: TaskStatusObservables = _
-  private[this] var forAllStatusUpdates: Subject[TaskStatusUpdate] = _
   private[this] var limiterRef: ActorRef = _
 
   before {
@@ -115,11 +69,8 @@ class RateLimiterActorTest extends MarathonSpec {
     taskTracker = mock[TaskTracker]
     appRepository = mock[AppRepository]
     updateReceiver = TestProbe()
-    taskStatusObservables = mock[TaskStatusObservables]
-    forAllStatusUpdates = PublishSubject()
-    Mockito.when(taskStatusObservables.forAll).thenReturn(forAllStatusUpdates)
     val props = RateLimiterActor.props(
-      rateLimiter, taskTracker, appRepository, updateReceiver.ref, taskStatusObservables)
+      rateLimiter, taskTracker, appRepository, updateReceiver.ref)
     limiterRef = actorSystem.actorOf(props, "limiter")
   }
 

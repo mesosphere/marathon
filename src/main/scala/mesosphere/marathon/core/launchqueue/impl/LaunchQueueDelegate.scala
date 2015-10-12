@@ -42,6 +42,8 @@ private[launchqueue] class LaunchQueueDelegate(
     Await.result(answerFuture, config.launchQueueRequestTimeout().milliseconds)
   }
 
+  override def addDelay(app: AppDefinition): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(app)
+
   override def resetDelay(app: AppDefinition): Unit = rateLimiterRef ! RateLimiterActor.ResetDelay(app)
 }
 
