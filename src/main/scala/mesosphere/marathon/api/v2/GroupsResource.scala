@@ -86,7 +86,7 @@ class GroupsResource @Inject() (
   }
 
   /**
-    * Create or update a group.
+    * Create a group.
     * If the path to the group does not exist, it gets created.
     * @param id is the identifier of the the group to update.
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
@@ -203,7 +203,7 @@ class GroupsResource @Inject() (
         )
       }
       val scaleChange = update.scaleBy.map { scale =>
-        group.updateApp(version) { app => app.copy(instances = (app.instances * scale).ceil.toInt) }
+        group.updateApps(version) { app => app.copy(instances = (app.instances * scale).ceil.toInt) }
       }
       versionChange orElse scaleChange getOrElse update.apply(V2Group(group), version).toGroup()
     }

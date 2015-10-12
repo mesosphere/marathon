@@ -186,7 +186,7 @@ class GroupManager @Singleton @Inject() (
         //it will only change, if the content changes.
         val downloads = mutable.Map(paths.toSeq.filterNot{ case (url, path) => storage.item(path).exists }: _*)
         val actions = Seq.newBuilder[ResolveArtifacts]
-        group.updateApp(group.version) { app =>
+        group.updateApps(group.version) { app =>
           if (app.storeUrls.isEmpty) app else {
             val storageUrls = app.storeUrls.map(paths).map(storage.item(_).url)
             val resolved = app.copy(uris = app.uris ++ storageUrls, storeUrls = Seq.empty)
