@@ -30,13 +30,12 @@ object GroupVersioningUtil {
             log.info(s"[${newApp.id}]: upgrade detected for app (oldVersion ${oldApp.versionInfo})")
             oldApp.versionInfo.withConfigChange(newVersion = version)
           }
-          else if (oldApp != newApp) {
-            if (oldApp.isOnlyScaleChange(newApp)) {
-              log.info(s"[${newApp.id}]: scaling op detected for app (oldVersion ${oldApp.versionInfo})")
-            }
-            else {
-              log.info(s"[${newApp.id}]: restart detected for app (oldVersion ${oldApp.versionInfo})")
-            }
+          else if (oldApp.isOnlyScaleChange(newApp)) {
+            log.info(s"[${newApp.id}]: scaling op detected for app (oldVersion ${oldApp.versionInfo})")
+            oldApp.versionInfo.withScaleOrRestartChange(newVersion = version)
+          }
+          else if (oldApp.needsRestart(newApp)) {
+            log.info(s"[${newApp.id}]: restart detected for app (oldVersion ${oldApp.versionInfo})")
             oldApp.versionInfo.withScaleOrRestartChange(newVersion = version)
           }
           else {
