@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.launchqueue.impl
 
-import akka.actor.{ ActorContext, Stash, Cancellable, Actor, ActorLogging, ActorRef, Props }
+import akka.actor.{ Actor, ActorContext, ActorLogging, ActorRef, Cancellable, Props, Stash }
 import akka.event.LoggingReceive
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
@@ -8,26 +8,21 @@ import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.AppTaskLauncherActor.RecheckIfBackOffUntilReached
-import mesosphere.marathon.core.matcher.base.OfferMatcher
-import OfferMatcher.{ MatchedTasks, TaskWithSource }
 import mesosphere.marathon.core.matcher.base
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskWithSource }
 import mesosphere.marathon.core.matcher.base.util.TaskLaunchSourceDelegate.TaskLaunchNotification
-import mesosphere.marathon.core.matcher.base.util.{ TaskLaunchSourceDelegate, ActorOfferMatcher }
+import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskLaunchSourceDelegate }
+import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusObservables }
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
-import org.apache.mesos.Protos.{ TaskInfo, TaskID }
+import org.apache.mesos.Protos.{ TaskID, TaskInfo }
 import rx.lang.scala.Subscription
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
-import akka.pattern.pipe
-
-import scala.util.control.NonFatal
 
 private[launchqueue] object AppTaskLauncherActor {
   // scalastyle:off parameter.number
@@ -286,8 +281,8 @@ private class AppTaskLauncherActor(
 
   private[this] def receiveAddCount: Receive = {
     case AppTaskLauncherActor.AddTasks(newApp, addCount) =>
-      if (app != newApp) {
-        val configChange = app.isUpgrade(newApp)
+      val configChange = app.isUpgrade(newApp)
+      if (configChange || app.needsRestart(newApp) || app.isOnlyScaleChange(newApp)) {
         app = newApp
         tasksToLaunch = addCount
 
@@ -396,8 +391,8 @@ private class AppTaskLauncherActor(
 
   private[this] def status: String = {
     val backoffStr = backOffUntil match {
-      case Some(backOffUntil) if backOffUntil > clock.now() => s"currently waiting for backoff($backOffUntil)"
-      case _ => "not backing off"
+      case Some(until) if until > clock.now() => s"currently waiting for backoff($until)"
+      case _                                  => "not backing off"
     }
 
     s"$tasksToLaunch tasksToLaunch, ${inFlightTaskLaunches.size} in flight. $backoffStr"
