@@ -50,9 +50,17 @@ trait StoppingBehavior extends Actor with ActorLogging {
       checkFinished()
 
     case SynchronizeTasks =>
-      val trackerIds = taskTracker.get(appId).map(_.getId).toSet
+      val trackerIds = taskTracker.getTasks(appId).map(_.getId).toSet
       idsToKill = idsToKill.filter(trackerIds)
 
+      if (idsToKill.size > 10) {
+        log.info("Synchronize while stopping [{}]. Killing {} tasks.", appId, idsToKill.size)
+      } else {
+        log.info(
+          "Synchronize while stopping [{}]. Killing {} tasks: {}",
+          appId, idsToKill.size, idsToKill.mkString(", "))
+      }
+      for (id <- idsToKill) driver.killTask(Protos.TaskID.newBuilder.setValue(id).build())
       idsToKill.foreach { id =>
         driver.killTask(
           Protos.TaskID
