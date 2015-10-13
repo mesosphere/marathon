@@ -201,7 +201,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val props = Props(
       new AppTaskLauncherActor(
         launchQueueConfig,
-        offerMatcherManager, clock, taskFactory, taskStatusObservable,
+        offerMatcherManager, clock, taskFactory,
         maybeOfferReviver = None,
         taskTracker, rateLimiterActor.ref,
         app, tasksToLaunch = 1
@@ -276,9 +276,10 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
 
       // task status update
-      appStatusObservable.onNext(update.withTaskId(marathonTask.getId).wrapped)
-
-      val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+      val counts = Await.result(
+        launcherRef ? update.withTaskId(marathonTask.getId).wrapped,
+        3.seconds
+      ).asInstanceOf[QueuedTaskCount]
 
       assert(counts.tasksLaunchedOrRunning == 0)
 
@@ -315,10 +316,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
 
       When("we get a status update about a terminated task")
-      appStatusObservable.onNext(update.withTaskId(marathonTask.getId).wrapped)
-
-      And("this update has been fully processed")
-      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+      Await.result(launcherRef ? update.withTaskId(marathonTask.getId).wrapped, 3.seconds).asInstanceOf[QueuedTaskCount]
 
       Then("reviveOffers has been called")
       Mockito.verify(offerReviver).reviveOffers()
@@ -344,9 +342,10 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
 
       // task status update
-      appStatusObservable.onNext(update.withTaskId(marathonTask.getId).wrapped)
-
-      val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+      val counts = Await.result(
+        launcherRef ? update.withTaskId(marathonTask.getId).wrapped,
+        3.seconds
+      ).asInstanceOf[QueuedTaskCount]
 
       assert(counts.tasksLaunchedOrRunning == 1)
 
@@ -368,8 +367,6 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   private[this] var offerMatcherManager: OfferMatcherManager = _
   private[this] var clock: ConstantClock = _
   private[this] var taskFactory: TaskFactory = _
-  private[this] var appStatusObservable: Subject[TaskStatusUpdate] = _
-  private[this] var taskStatusObservable: TaskStatusObservables = _
   private[this] var taskTracker: TaskTracker = _
   private[this] var offerReviver: OfferReviver = _
   private[this] var rateLimiterActor: TestProbe = _
@@ -377,7 +374,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   private[this] def createLauncherRef(instances: Int, appToLaunch: AppDefinition = app): ActorRef = {
     val props = AppTaskLauncherActor.props(
       launchQueueConfig,
-      offerMatcherManager, clock, taskFactory, taskStatusObservable,
+      offerMatcherManager, clock, taskFactory,
       maybeOfferReviver = Some(offerReviver),
       taskTracker, rateLimiterActor.ref) _
     actorSystem.actorOf(
@@ -393,9 +390,6 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     launchQueueConfig.afterInit()
     clock = ConstantClock()
     taskFactory = mock[TaskFactory]
-    appStatusObservable = PublishSubject[TaskStatusUpdate]()
-    taskStatusObservable = mock[TaskStatusObservables]
-    Mockito.when(taskStatusObservable.forAppId(app.id)).thenReturn(appStatusObservable)
     taskTracker = mock[TaskTracker]
     offerReviver = mock[OfferReviver]
     rateLimiterActor = TestProbe()
@@ -406,8 +400,6 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     // Mockito.verifyNoMoreInteractions(offerMatcherManager)
     Mockito.verifyNoMoreInteractions(taskFactory)
     Mockito.verifyNoMoreInteractions(taskTracker)
-    Mockito.verify(taskStatusObservable).forAppId(app.id)
-    Mockito.verifyNoMoreInteractions(taskStatusObservable)
 
     actorSystem.shutdown()
     actorSystem.awaitTermination()

@@ -74,7 +74,6 @@ class CoreModuleImpl @Inject() (
 
     // internal core dependencies
     offerMatcherManagerModule.subOfferMatcherManager,
-    taskBusModule.taskStatusObservables,
     maybeOfferReviver,
 
     // external guice dependencies

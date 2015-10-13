@@ -4,15 +4,14 @@ import akka.actor.{ ActorRef, Props }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launchqueue.impl.{
-  LaunchQueueDelegate,
   AppTaskLauncherActor,
   LaunchQueueActor,
+  LaunchQueueDelegate,
   RateLimiter,
   RateLimiterActor
 }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.bus.TaskStatusObservables
 import mesosphere.marathon.state.{ AppDefinition, AppRepository }
 import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
 
@@ -24,7 +23,6 @@ class LaunchQueueModule(
     leadershipModule: LeadershipModule,
     clock: Clock,
     subOfferMatcherManager: OfferMatcherManager,
-    taskStatusObservables: TaskStatusObservables,
     maybeOfferReviver: Option[OfferReviver],
     appRepository: AppRepository,
     taskTracker: TaskTracker,
@@ -50,7 +48,6 @@ class LaunchQueueModule(
       subOfferMatcherManager,
       clock,
       taskFactory,
-      taskStatusObservables,
       maybeOfferReviver,
       taskTracker,
       rateLimiterActor)(app, count)
