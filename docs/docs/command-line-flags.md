@@ -167,10 +167,9 @@ All launched tasks are stored before launching them. There is also a timeout for
     When reaching the timeout, only the tasks that we could save within the timeout are also launched.
     All other task launches are temporarily rejected and retried later.
 
-If the mesos master fails over or in other unusual circumstances, a launch task request might get lost.
+If the Mesos master fails over or in other unusual circumstances, a launch task request might get lost.
 You can configure how long Marathon waits for the first `TASK_STAGING` update.
-    
-* <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 10000):
+* <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 300000 (5 minutes)):
   Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
 
 When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
