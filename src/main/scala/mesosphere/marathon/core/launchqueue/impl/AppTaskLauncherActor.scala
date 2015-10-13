@@ -14,13 +14,12 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskWi
 import mesosphere.marathon.core.matcher.base.util.TaskLaunchSourceDelegate.TaskLaunchNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskLaunchSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusObservables }
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
 import org.apache.mesos.Protos.{ TaskID, TaskInfo }
-import rx.lang.scala.Subscription
 
 import scala.concurrent.duration._
 
@@ -31,7 +30,6 @@ private[launchqueue] object AppTaskLauncherActor {
     offerMatcherManager: OfferMatcherManager,
     clock: Clock,
     taskFactory: TaskFactory,
-    taskStatusObservable: TaskStatusObservables,
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef)(
@@ -40,7 +38,7 @@ private[launchqueue] object AppTaskLauncherActor {
     Props(new AppTaskLauncherActor(
       config,
       offerMatcherManager,
-      clock, taskFactory, taskStatusObservable,
+      clock, taskFactory,
       maybeOfferReviver,
       taskTracker, rateLimiterActor,
       app, initialCount))
@@ -83,7 +81,6 @@ private class AppTaskLauncherActor(
     offerMatcherManager: OfferMatcherManager,
     clock: Clock,
     taskFactory: TaskFactory,
-    taskStatusObservable: TaskStatusObservables,
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef,
@@ -96,8 +93,6 @@ private class AppTaskLauncherActor(
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
 
-  /** Receive task updates to keep task list up-to-date. */
-  private[this] var taskStatusUpdateSubscription: Subscription = _
   /** tasks that are in flight and those in the tracker */
   private[this] var tasksMap: Map[String, MarathonTask] = _
 
@@ -110,10 +105,6 @@ private class AppTaskLauncherActor(
     log.info("Started appTaskLaunchActor for {} version {} with initial count {}",
       app.id, app.version, tasksToLaunch)
 
-    taskStatusUpdateSubscription = taskStatusObservable.forAppId(app.id).subscribe { update =>
-      log.debug("update {}", update)
-      self ! update
-    }
     val runningTasks = taskTracker.getTasks(app.id)
     tasksMap = runningTasks.map(task => task.getId -> task).toMap
 
@@ -121,7 +112,6 @@ private class AppTaskLauncherActor(
   }
 
   override def postStop(): Unit = {
-    taskStatusUpdateSubscription.unsubscribe()
     OfferMatcherRegistration.unregister()
     recheckBackOff.foreach(_.cancel())
 
@@ -245,6 +235,8 @@ private class AppTaskLauncherActor(
         maybeOfferReviver.foreach(_.reviveOffers())
       }
 
+      replyWithQueuedTaskCount()
+
     case TaskStatusUpdate(_, taskId, status) =>
       tasksMap.get(taskId.getValue) match {
         case None =>
@@ -259,6 +251,7 @@ private class AppTaskLauncherActor(
           tasksMap += taskId.getValue -> updatedTask
       }
 
+      replyWithQueuedTaskCount()
   }
 
   private[this] def removeTask(taskId: TaskID): Unit = {

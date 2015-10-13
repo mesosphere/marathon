@@ -76,11 +76,7 @@ class MarathonScheduler @Inject() (
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
-    val update: TaskStatusUpdate = TaskStatusUpdate(
-      timestamp = clock.now(), status.getTaskId,
-      MarathonTaskStatus(status)
-    )
-    taskStatusProcessor.publish(update).onFailure {
+    taskStatusProcessor.publish(status).onFailure {
       case NonFatal(e) =>
         log.error(s"while processing task status update $status", e)
     }

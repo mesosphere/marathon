@@ -3,13 +3,14 @@ package mesosphere.marathon.core.launchqueue.impl
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueue }
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
+import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import LaunchQueue.QueuedTaskCount
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
-import scala.concurrent.duration.{ Deadline, _ }
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 
 private[launchqueue] class LaunchQueueDelegate(
@@ -25,6 +26,9 @@ private[launchqueue] class LaunchQueueDelegate(
   override def get(appId: PathId): Option[QueuedTaskCount] =
     askQueueActor("get")(LaunchQueueDelegate.Count(appId)).asInstanceOf[Option[QueuedTaskCount]]
 
+  override def notifyOfTaskUpdate(update: TaskStatusUpdate): Future[Option[QueuedTaskCount]] =
+    askQueueActorFuture("notifyOfTaskUpdate")(update).mapTo[Option[QueuedTaskCount]]
+
   override def count(appId: PathId): Int = get(appId).map(_.tasksLeftToLaunch).getOrElse(0)
 
   override def listApps: Seq[AppDefinition] = list.map(_.app)
@@ -33,13 +37,18 @@ private[launchqueue] class LaunchQueueDelegate(
   override def add(app: AppDefinition, count: Int): Unit = askQueueActor("add")(LaunchQueueDelegate.Add(app, count))
 
   private[this] def askQueueActor[T](method: String)(message: T): Any = {
+    val answerFuture: Future[Any] = askQueueActorFuture(method)(message)
+    Await.result(answerFuture, config.launchQueueRequestTimeout().milliseconds)
+  }
+
+  private[this] def askQueueActorFuture[T](method: String)(message: T): Future[Any] = {
     implicit val timeout: Timeout = 1.second
     val answerFuture = actorRef ? message
     import scala.concurrent.ExecutionContext.Implicits.global
     answerFuture.recover {
       case NonFatal(e) => throw new RuntimeException(s"in $method", e)
     }
-    Await.result(answerFuture, config.launchQueueRequestTimeout().milliseconds)
+    answerFuture
   }
 
   override def addDelay(app: AppDefinition): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(app)

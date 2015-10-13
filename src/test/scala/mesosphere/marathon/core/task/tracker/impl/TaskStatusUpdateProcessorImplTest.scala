@@ -3,17 +3,21 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.TestProbe
+import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskStatusUpdateProcessor
+import mesosphere.marathon.core.task.tracker.impl.steps.{ AcknowledgeTaskUpdateStepImpl, NotifyHealthCheckManagerStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl, UpdateTaskTrackerStepImpl }
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
+import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.SchedulerDriver
 import org.mockito.{ ArgumentCaptor, Mockito }
 
@@ -23,14 +27,16 @@ import scala.concurrent.{ Await, Future }
 class TaskStatusUpdateProcessorImplTest extends MarathonSpec {
 
   for (
-    update <- Seq(
+    origUpdate <- Seq(
       TaskStatusUpdateTestHelper.finished,
       TaskStatusUpdateTestHelper.lost,
       TaskStatusUpdateTestHelper.killed,
       TaskStatusUpdateTestHelper.error
-    ).map(_.withAppId(appId.toString))
+    )
   ) {
-    test(s"Remove terminated task (${update.wrapped.status.getClass.getSimpleName})") {
+    test(s"Remove terminated task (${origUpdate.wrapped.status.getClass.getSimpleName})") {
+      val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
+      val update = origUpdate.withTaskId(status.getTaskId)
 
       Mockito.when(taskTracker.fetchTask(update.wrapped.taskId.getValue))
         .thenReturn(Some(marathonTask))
@@ -38,10 +44,9 @@ class TaskStatusUpdateProcessorImplTest extends MarathonSpec {
         .thenReturn(Future.successful(Some(marathonTask)))
       Mockito.when(appRepository.app(appId, version)).thenReturn(Future.successful(Some(app)))
 
-      Await.result(updateProcessor.publish(update.wrapped), 3.seconds)
+      Await.result(updateProcessor.publish(status), 3.seconds)
 
       Mockito.verify(taskTracker).fetchTask(update.wrapped.taskId.getValue)
-      val status: TaskStatus = update.wrapped.status.mesosStatus.get
       Mockito.verify(healthCheckManager).update(status, version)
       Mockito.verify(taskTracker).terminated(appId, update.wrapped.taskId.getValue)
       schedulerActor.expectMsg(ScaleApp(appId))
@@ -67,6 +72,7 @@ class TaskStatusUpdateProcessorImplTest extends MarathonSpec {
     MarathonTask.newBuilder().setId(task.getTaskId.getValue).setVersion(version.toString).build()
 
   private[this] implicit var actorSystem: ActorSystem = _
+  private[this] var clock: ConstantClock = _
   private[this] var taskStatusEmitter: TaskStatusEmitter = _
   private[this] var appRepository: AppRepository = _
   private[this] var launchQueue: LaunchQueue = _
@@ -81,6 +87,7 @@ class TaskStatusUpdateProcessorImplTest extends MarathonSpec {
 
   before {
     actorSystem = ActorSystem()
+    clock = ConstantClock()
     taskStatusEmitter = mock[TaskStatusEmitter]
     appRepository = mock[AppRepository]
     launchQueue = mock[LaunchQueue]
@@ -93,16 +100,37 @@ class TaskStatusUpdateProcessorImplTest extends MarathonSpec {
     marathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     marathonSchedulerDriverHolder.driver = Some(schedulerDriver)
 
-    updateProcessor = new TaskStatusUpdateProcessorImpl(
-      taskStatusEmitter,
-      appRepository,
-      launchQueue,
-      eventBus,
-      schedulerActor.ref,
-      taskIdUtil,
-      healthCheckManager,
+    val notifyHealthCheckManager = new NotifyHealthCheckManagerStepImpl(healthCheckManager)
+
+    val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueue, appRepository)
+
+    val acknowledgeStep = new AcknowledgeTaskUpdateStepImpl(marathonSchedulerDriverHolder)
+
+    val updateTaskTrackerStep = new UpdateTaskTrackerStepImpl(
       taskTracker,
       marathonSchedulerDriverHolder
+    )
+
+    val postToEventStream = new PostToEventStreamStepImpl(eventBus)
+
+    val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitter)
+
+    val scaleApp = new ScaleAppUpdateStepImpl(schedulerActor.ref)
+
+    updateProcessor = new TaskStatusUpdateProcessorImpl(
+      new Metrics(new MetricRegistry),
+      clock,
+      taskIdUtil,
+      taskTracker,
+      Seq(
+        notifyHealthCheckManager,
+        notifyRateLimiter,
+        updateTaskTrackerStep,
+        emitUpdate,
+        postToEventStream,
+        scaleApp,
+        acknowledgeStep
+      )
     )
   }
 

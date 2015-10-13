@@ -15,6 +15,7 @@ import akka.event.LoggingReceive
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueue }
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import LaunchQueue.QueuedTaskCount
 
@@ -62,7 +63,9 @@ private[impl] class LaunchQueueActor(
   override def receive: Receive = LoggingReceive {
     Seq(
       receiveHandlePurging,
+      receiveTaskUpdateToSuspendedActor,
       receiveMessagesToSuspendedActor,
+      receiveTaskUpdate,
       receiveHandleNormalCommands
     ).reduce(_.orElse[Any, Unit](_))
   }
@@ -112,6 +115,11 @@ private[impl] class LaunchQueueActor(
       }
   }
 
+  private[this] def receiveTaskUpdateToSuspendedActor: Receive = {
+    case update: TaskStatusUpdate if suspendedLauncherPathIds(update.appId) =>
+      deferMessageToSuspendedActor(update, update.appId)
+  }
+
   private[this] def receiveMessagesToSuspendedActor: Receive = {
     case msg @ Count(appId) if suspendedLauncherPathIds(appId) =>
       deferMessageToSuspendedActor(msg, appId)
@@ -128,6 +136,18 @@ private[impl] class LaunchQueueActor(
     val deferredMessages: Vector[DeferredMessage] =
       suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), msg)
     suspendedLaunchersMessages += actorRef -> deferredMessages
+  }
+
+  private[this] def receiveTaskUpdate: Receive = {
+    case update: TaskStatusUpdate =>
+      import context.dispatcher
+      launchers.get(update.appId) match {
+        case Some(actorRef) =>
+          val eventualCount: Future[QueuedTaskCount] =
+            (actorRef ? update).mapTo[QueuedTaskCount]
+          eventualCount.map(Some(_)).pipeTo(sender())
+        case None => sender() ! None
+      }
   }
 
   private[this] def receiveHandleNormalCommands: Receive = {

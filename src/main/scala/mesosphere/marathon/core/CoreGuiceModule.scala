@@ -9,7 +9,18 @@ import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipMo
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusObservables }
 import mesosphere.marathon.core.task.tracker.impl.TaskStatusUpdateProcessorImpl
-import mesosphere.marathon.core.task.tracker.{ TaskStatusUpdateProcessor, TaskTrackerModule }
+import mesosphere.marathon.core.task.tracker.impl.steps.{
+  AcknowledgeTaskUpdateStepImpl,
+  ContinueOnErrorStep,
+  NotifyHealthCheckManagerStepImpl,
+  NotifyLaunchQueueStepImpl,
+  NotifyRateLimiterStepImpl,
+  PostToEventStreamStepImpl,
+  ScaleAppUpdateStepImpl,
+  TaskStatusEmitterPublishStepImpl,
+  UpdateTaskTrackerStepImpl
+}
+import mesosphere.marathon.core.task.tracker.{ TaskStatusUpdateProcessor, TaskStatusUpdateStep, TaskTrackerModule }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 
 /**
@@ -55,6 +66,34 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def authenticator(coreModule: CoreModule): Authenticator = coreModule.authModule.authenticator
+
+  @Provides @Singleton
+  def taskStatusUpdateSteps(
+    notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
+    acknowledgeTaskUpdateStepImpl: AcknowledgeTaskUpdateStepImpl,
+    notifyRateLimiterStepImpl: NotifyRateLimiterStepImpl,
+    taskStatusEmitterPublishImpl: TaskStatusEmitterPublishStepImpl,
+    postToEventStreamStepImpl: PostToEventStreamStepImpl,
+    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl,
+    notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
+    updateTaskTrackerStepImpl: UpdateTaskTrackerStepImpl): Seq[TaskStatusUpdateStep] = {
+
+    // This is a sequence on purpose. The specified steps are executed in order for every
+    // task status update.
+    // This way we make sure that e.g. the taskTracker already reflects the changes for the update
+    // (updateTaskTrackerStepImpl) before we notify the launch queue (notifyLaunchQueueStepImpl).
+
+    Seq(
+      ContinueOnErrorStep(notifyHealthCheckManagerStepImpl),
+      ContinueOnErrorStep(notifyRateLimiterStepImpl),
+      updateTaskTrackerStepImpl,
+      ContinueOnErrorStep(notifyLaunchQueueStepImpl),
+      ContinueOnErrorStep(taskStatusEmitterPublishImpl),
+      ContinueOnErrorStep(postToEventStreamStepImpl),
+      ContinueOnErrorStep(scaleAppUpdateStepImpl),
+      acknowledgeTaskUpdateStepImpl
+    )
+  }
 
   override def configure(): Unit = {
     bind(classOf[Clock]).toInstance(Clock())
