@@ -3,6 +3,7 @@ package mesosphere.marathon.io
 import java.io._
 import java.math.BigInteger
 import java.security.{ MessageDigest, DigestInputStream }
+import java.util.zip.{ GZIPInputStream, GZIPOutputStream }
 import scala.annotation.tailrec
 
 import com.google.common.io.ByteStreams
@@ -57,6 +58,21 @@ object IO {
     //scalastyle:off magic.number
     new BigInteger(1, md.digest()).toString(16)
     //scalastyle:on
+  }
+
+  def gzipCompress(bytes: Array[Byte]): Array[Byte] = {
+    val out = new ByteArrayOutputStream(bytes.length)
+    using(new GZIPOutputStream(out)) { gzip =>
+      gzip.write(bytes.toArray)
+      gzip.flush()
+    }
+    out.toByteArray
+  }
+
+  def gzipUncompress(bytes: Array[Byte]): Array[Byte] = {
+    using(new GZIPInputStream(new ByteArrayInputStream(bytes))) { in =>
+      ByteStreams.toByteArray(in)
+    }
   }
 
   def transfer(

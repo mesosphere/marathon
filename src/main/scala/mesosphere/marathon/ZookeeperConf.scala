@@ -35,6 +35,21 @@ trait ZookeeperConf extends ScallopConf {
     default = Some(25)
   )
 
+  lazy val zooKeeperCompressionEnabled = toggle("zk_compression",
+    descrYes = "Enable compression of zk nodes, if the size of the node is bigger than the configured threshold.",
+    descrNo = "Disable compression of zk nodes",
+    noshort = true,
+    prefix = "disable_",
+    default = Some(true)
+  )
+
+  lazy val zooKeeperCompressionThreshold = opt[Long]("zk_compression_threshold",
+    descr = "Threshold in bytes, when compression is applied to the zk node (Default: 64 KB).",
+    noshort = true,
+    validate = _ >= 0,
+    default = Some(64 * 1024)
+  )
+
   def zooKeeperStatePath: String = "%s/state".format(zkPath)
   def zooKeeperLeaderPath: String = "%s/leader".format(zkPath)
   def zooKeeperServerSetPath: String = "%s/apps".format(zkPath)

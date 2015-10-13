@@ -22,7 +22,7 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
   //
 
   test("Create nested root path") {
-    val store = new ZKStore(persistentStore.client, persistentStore.client("/some/nested/path"))
+    val store = new ZKStore(persistentStore.client, persistentStore.client("/some/nested/path"), conf)
   }
 
   test("Compatibility to mesos state storage. Write zk read mesos.") {
@@ -49,11 +49,37 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
     zkLoadUpdated.get.bytes should be("Hello again".getBytes)
   }
 
+  test("Entity nodes greater than the compression limit get compressed") {
+    import ZKStore._
+
+    val compress = CompressionConf(true, 0)
+    val store = new ZKStore(persistentStore.client, persistentStore.client("/compressed"), compress)
+    val content = 1.to(100).map(num => s"Hello number $num!").mkString(", ").getBytes("UTF-8")
+
+    //entity content is not changed , regardless of comression
+    val entity = store.create("big", content).futureValue
+    entity.bytes should be(content)
+
+    //the proto that is created is compressed
+    val proto = entity.data.toProto(compress)
+    proto.getCompressed should be (true)
+    proto.getValue.size() should be < content.length
+
+    //the node that is stored is compressed
+    val data = entity.node.getData().asScala.futureValue
+    data.stat.getDataLength should be < content.length
+
+    //the node that is loaded is uncompressed
+    val loaded = store.load("big").futureValue
+    loaded should be('defined)
+    loaded.get.bytes should be(content)
+  }
+
   lazy val persistentStore: ZKStore = {
     implicit val timer = com.twitter.util.Timer.Nil
     val timeout = com.twitter.util.TimeConversions.intToTimeableNumber(10).minutes
     val client = ZkClient(config.zkHostAndPort, timeout).withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
-    new ZKStore(client, client(config.zkPath))
+    new ZKStore(client, client(config.zkPath), conf)
   }
 
   lazy val mesosStore: MesosStateStore = {
@@ -66,6 +92,9 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
     )
     new MesosStateStore(state, duration)
   }
+
+  val conf = CompressionConf(false, 0)
+
   override protected def beforeAll(configMap: ConfigMap): Unit = {
     super.beforeAll(configMap + ("zkPort" -> "2185"))
   }
