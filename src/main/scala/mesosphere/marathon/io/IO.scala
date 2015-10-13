@@ -2,8 +2,9 @@ package mesosphere.marathon.io
 
 import java.io._
 import java.math.BigInteger
-import java.nio.file.{ Files, Paths, Path }
+import java.nio.file.{ Files, Path, Paths }
 import java.security.{ DigestInputStream, MessageDigest }
+import java.util.zip.{ GZIPInputStream, GZIPOutputStream }
 
 import com.google.common.io.ByteStreams
 
@@ -68,6 +69,21 @@ object IO {
     //scalastyle:off magic.number
     new BigInteger(1, md.digest()).toString(16)
     //scalastyle:on
+  }
+
+  def gzipCompress(bytes: Array[Byte]): Array[Byte] = {
+    val out = new ByteArrayOutputStream(bytes.length)
+    using(new GZIPOutputStream(out)) { gzip =>
+      gzip.write(bytes.toArray)
+      gzip.flush()
+    }
+    out.toByteArray
+  }
+
+  def gzipUncompress(bytes: Array[Byte]): Array[Byte] = {
+    using(new GZIPInputStream(new ByteArrayInputStream(bytes))) { in =>
+      ByteStreams.toByteArray(in)
+    }
   }
 
   def transfer(

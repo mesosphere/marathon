@@ -6,6 +6,7 @@ import com.fasterxml.uuid.impl.UUIDUtil
 import com.google.protobuf.{ ByteString, InvalidProtocolBufferException }
 import com.twitter.util.{ Future => TWFuture }
 import com.twitter.zk.{ ZNode, ZkClient }
+import mesosphere.marathon.io.IO
 import mesosphere.marathon.{ Protos, StoreCommandFailedException }
 import mesosphere.util.ThreadPoolContext
 import mesosphere.util.state.zk.ZKStore._
@@ -16,7 +17,10 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ Future, Promise }
 
-class ZKStore(val client: ZkClient, root: ZNode) extends PersistentStore with PersistentStoreManagement {
+case class CompressionConf(enabled: Boolean, sizeLimit: Long)
+
+class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionConf) extends PersistentStore
+    with PersistentStoreManagement {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] implicit val ec = ThreadPoolContext.context
@@ -38,7 +42,7 @@ class ZKStore(val client: ZkClient, root: ZNode) extends PersistentStore with Pe
     val node = root(key)
     require(node.parent == root, s"Nested paths are not supported: $key")
     val data = ZKData(key, UUID.randomUUID(), content)
-    node.create(data.toProto.toByteArray).asScala
+    node.create(data.toProto(compressionConf).toByteArray).asScala
       .map { n => ZKEntity(n, data, Some(0)) } //first version after create is 0
       .recover(exceptionTransform(s"Can not create entity $key"))
   }
@@ -53,7 +57,7 @@ class ZKStore(val client: ZkClient, root: ZNode) extends PersistentStore with Pe
     val version = zk.version.getOrElse (
       throw new StoreCommandFailedException(s"Can not store entity $entity, since there is no version!")
     )
-    zk.node.setData(zk.data.toProto.toByteArray, version).asScala
+    zk.node.setData(zk.data.toProto(compressionConf).toByteArray, version).asScala
       .map { data => zk.copy(version = Some(data.stat.getVersion)) }
       .recover(exceptionTransform(s"Can not update entity $entity"))
   }
@@ -116,17 +120,25 @@ case class ZKEntity(node: ZNode, data: ZKData, version: Option[Int] = None) exte
 }
 
 case class ZKData(name: String, uuid: UUID, bytes: IndexedSeq[Byte] = Vector.empty) {
-  def toProto: Protos.ZKStoreEntry = Protos.ZKStoreEntry.newBuilder()
-    .setName(name)
-    .setUuid(ByteString.copyFromUtf8(uuid.toString))
-    .setValue(ByteString.copyFrom(bytes.toArray))
-    .build()
+  def toProto(compression: CompressionConf): Protos.ZKStoreEntry = {
+    val (data, compressed) =
+      if (compression.enabled && bytes.length > compression.sizeLimit) (IO.gzipCompress(bytes.toArray), true)
+      else (bytes.toArray, false)
+    Protos.ZKStoreEntry.newBuilder()
+      .setName(name)
+      .setUuid(ByteString.copyFromUtf8(uuid.toString))
+      .setCompressed(compressed)
+      .setValue(ByteString.copyFrom(data))
+      .build()
+  }
 }
 object ZKData {
+  import IO.{ gzipUncompress => uncompress }
   def apply(bytes: Array[Byte]): ZKData = {
     try {
       val proto = Protos.ZKStoreEntry.parseFrom(bytes)
-      new ZKData(proto.getName, UUIDUtil.uuid(proto.getUuid.toByteArray), proto.getValue.toByteArray)
+      val content = if (proto.getCompressed) uncompress(proto.getValue.toByteArray) else proto.getValue.toByteArray
+      new ZKData(proto.getName, UUIDUtil.uuid(proto.getUuid.toByteArray), content)
     }
     catch {
       case ex: InvalidProtocolBufferException =>

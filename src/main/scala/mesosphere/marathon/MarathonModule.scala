@@ -28,10 +28,10 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker, _ }
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import mesosphere.util.SerializeExecution
-import mesosphere.util.state._
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
-import mesosphere.util.state.zk.ZKStore
+import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
+import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore, _ }
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.ZooDefs.Ids
@@ -126,7 +126,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       val client = ZkClient(connector)
         .withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
         .withRetries(3)
-      new ZKStore(client, client(conf.zooKeeperStatePath))
+      val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
+      new ZKStore(client, client(conf.zooKeeperStatePath), compressionConf)
     }
     def mesosZK(): PersistentStore = {
       val state = new ZooKeeperState(

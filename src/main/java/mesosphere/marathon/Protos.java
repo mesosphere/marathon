@@ -20576,6 +20576,16 @@ public final class Protos {
      * <code>required bytes value = 3;</code>
      */
     com.google.protobuf.ByteString getValue();
+
+    // optional bool compressed = 4;
+    /**
+     * <code>optional bool compressed = 4;</code>
+     */
+    boolean hasCompressed();
+    /**
+     * <code>optional bool compressed = 4;</code>
+     */
+    boolean getCompressed();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ZKStoreEntry}
@@ -20648,6 +20658,11 @@ public final class Protos {
             case 26: {
               bitField0_ |= 0x00000004;
               value_ = input.readBytes();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              compressed_ = input.readBool();
               break;
             }
           }
@@ -20765,10 +20780,27 @@ public final class Protos {
       return value_;
     }
 
+    // optional bool compressed = 4;
+    public static final int COMPRESSED_FIELD_NUMBER = 4;
+    private boolean compressed_;
+    /**
+     * <code>optional bool compressed = 4;</code>
+     */
+    public boolean hasCompressed() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional bool compressed = 4;</code>
+     */
+    public boolean getCompressed() {
+      return compressed_;
+    }
+
     private void initFields() {
       name_ = "";
       uuid_ = com.google.protobuf.ByteString.EMPTY;
       value_ = com.google.protobuf.ByteString.EMPTY;
+      compressed_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -20803,6 +20835,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBytes(3, value_);
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBool(4, compressed_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -20823,6 +20858,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(3, value_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(4, compressed_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -20953,6 +20992,8 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000002);
         value_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000004);
+        compressed_ = false;
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -20993,6 +21034,10 @@ public final class Protos {
           to_bitField0_ |= 0x00000004;
         }
         result.value_ = value_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.compressed_ = compressed_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -21019,6 +21064,9 @@ public final class Protos {
         }
         if (other.hasValue()) {
           setValue(other.getValue());
+        }
+        if (other.hasCompressed()) {
+          setCompressed(other.getCompressed());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -21201,6 +21249,39 @@ public final class Protos {
       public Builder clearValue() {
         bitField0_ = (bitField0_ & ~0x00000004);
         value_ = getDefaultInstance().getValue();
+        onChanged();
+        return this;
+      }
+
+      // optional bool compressed = 4;
+      private boolean compressed_ ;
+      /**
+       * <code>optional bool compressed = 4;</code>
+       */
+      public boolean hasCompressed() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional bool compressed = 4;</code>
+       */
+      public boolean getCompressed() {
+        return compressed_;
+      }
+      /**
+       * <code>optional bool compressed = 4;</code>
+       */
+      public Builder setCompressed(boolean value) {
+        bitField0_ |= 0x00000008;
+        compressed_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool compressed = 4;</code>
+       */
+      public Builder clearCompressed() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        compressed_ = false;
         onChanged();
         return this;
       }
@@ -21390,9 +21471,10 @@ public final class Protos {
       "\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007messa" +
       "ge\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 " +
       "\002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132",
-      "\016.mesos.SlaveID\"9\n\014ZKStoreEntry\022\014\n\004name\030" +
-      "\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014B\035\n\023me" +
-      "sosphere.marathonB\006Protos"
+      "\016.mesos.SlaveID\"M\n\014ZKStoreEntry\022\014\n\004name\030" +
+      "\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\022\n\nco" +
+      "mpressed\030\004 \001(\010B\035\n\023mesosphere.marathonB\006P" +
+      "rotos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21500,7 +21582,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ZKStoreEntry_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ZKStoreEntry_descriptor,
-              new java.lang.String[] { "Name", "Uuid", "Value", });
+              new java.lang.String[] { "Name", "Uuid", "Value", "Compressed", });
           return null;
         }
       };
