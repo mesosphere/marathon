@@ -3,7 +3,9 @@ package mesosphere.marathon.io
 import java.io._
 import java.math.BigInteger
 import java.security.{ MessageDigest, DigestInputStream }
+import java.nio.file.{ Files, Path, Paths }
 import scala.annotation.tailrec
+import java.util.zip.{ GZIPInputStream, GZIPOutputStream }
 
 import com.google.common.io.ByteStreams
 
@@ -12,6 +14,16 @@ import scala.util.{ Failure, Success, Try }
 object IO {
 
   private val BufferSize = 8192
+
+  def readFile(file: String): Array[Byte] = readFile(Paths.get(file))
+  def readFile(path: Path): Array[Byte] = Files.readAllBytes(path)
+
+  def listFiles(file: String): Array[File] = listFiles(new File(file))
+  def listFiles(file: File): Array[File] = {
+    if (!file.exists()) throw new FileNotFoundException(file.getAbsolutePath)
+    if (!file.isDirectory) throw new FileNotFoundException(s"File ${file.getAbsolutePath} is not a directory!")
+    file.listFiles()
+  }
 
   def moveFile(from: File, to: File): File = {
     if (to.exists()) delete(to)
@@ -57,6 +69,21 @@ object IO {
     //scalastyle:off magic.number
     new BigInteger(1, md.digest()).toString(16)
     //scalastyle:on
+  }
+
+  def gzipCompress(bytes: Array[Byte]): Array[Byte] = {
+    val out = new ByteArrayOutputStream(bytes.length)
+    using(new GZIPOutputStream(out)) { gzip =>
+      gzip.write(bytes.toArray)
+      gzip.flush()
+    }
+    out.toByteArray
+  }
+
+  def gzipUncompress(bytes: Array[Byte]): Array[Byte] = {
+    using(new GZIPInputStream(new ByteArrayInputStream(bytes))) { in =>
+      ByteStreams.toByteArray(in)
+    }
   }
 
   def transfer(
