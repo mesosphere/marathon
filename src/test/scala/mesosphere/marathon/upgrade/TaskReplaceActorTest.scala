@@ -49,7 +49,7 @@ class TaskReplaceActorTest
     val promise = Promise[Unit]()
 
     val ref = TestActorRef(
-      new TaskReplaceActor(
+      TaskReplaceActor.props(
         driver,
         queue,
         tracker,
@@ -88,7 +88,7 @@ class TaskReplaceActorTest
     val promise = Promise[Unit]()
 
     val ref = TestActorRef(
-      new TaskReplaceActor(
+      TaskReplaceActor.props(
         driver,
         queue,
         tracker,
@@ -123,7 +123,7 @@ class TaskReplaceActorTest
     val promise = Promise[Unit]()
 
     val ref = TestActorRef(
-      new TaskReplaceActor(
+      TaskReplaceActor.props(
         driver,
         queue,
         tracker,
@@ -175,7 +175,7 @@ class TaskReplaceActorTest
     val promise = Promise[Unit]()
 
     val ref = TestActorRef(
-      new TaskReplaceActor(
+      TaskReplaceActor.props(
         driver,
         queue,
         tracker,
@@ -241,7 +241,7 @@ class TaskReplaceActorTest
     val promise = Promise[Unit]()
 
     val ref = TestActorRef(
-      new TaskReplaceActor(
+      TaskReplaceActor.props(
         driver,
         queue,
         tracker,
@@ -311,7 +311,7 @@ class TaskReplaceActorTest
     val promise = Promise[Unit]()
 
     val ref = TestActorRef(
-      new TaskReplaceActor(
+      TaskReplaceActor.props(
         driver,
         queue,
         tracker,
@@ -379,7 +379,7 @@ class TaskReplaceActorTest
     val promise = Promise[Unit]()
 
     val ref = TestActorRef(
-      new TaskReplaceActor(
+      TaskReplaceActor.props(
         driver,
         queue,
         tracker,
@@ -432,7 +432,7 @@ class TaskReplaceActorTest
     val promise = Promise[Unit]()
 
     val ref = TestActorRef(
-      new TaskReplaceActor(
+      TaskReplaceActor.props(
         driver,
         queue,
         tracker,

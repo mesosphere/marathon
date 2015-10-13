@@ -362,17 +362,32 @@ trait HealthCheckFormats {
 }
 
 trait V2Formats {
+  import mesosphere.marathon.state.UpgradeStrategy._
   import Formats._
 
   implicit lazy val IdentifiableWrites = Json.writes[Identifiable]
 
-  implicit lazy val UpgradeStrategyWrites = Json.writes[UpgradeStrategy]
+  implicit lazy val UpgradeStrategyWrites: Writes[UpgradeStrategy] = {
+    implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
+      JsNumber(d.toSeconds)
+    }
+
+    Writes[UpgradeStrategy] { upgradeStrategy =>
+      Json.obj(
+        "minimumHealthCapacity" -> upgradeStrategy.minimumHealthCapacity,
+        "maximumOverCapacity" -> upgradeStrategy.maximumOverCapacity,
+        "killOldTasksDelaySeconds" -> upgradeStrategy.killOldTasksDelay
+      )
+    }
+  }
+
   implicit lazy val UpgradeStrategyReads: Reads[UpgradeStrategy] = {
     import mesosphere.marathon.state.AppDefinition._
     (
       (__ \ "minimumHealthCapacity").readNullable[JDouble].withDefault(DefaultUpgradeStrategy.minimumHealthCapacity) ~
-      (__ \ "maximumOverCapacity").readNullable[JDouble].withDefault(DefaultUpgradeStrategy.maximumOverCapacity)
-    )(UpgradeStrategy(_, _))
+      (__ \ "maximumOverCapacity").readNullable[JDouble].withDefault(DefaultUpgradeStrategy.maximumOverCapacity) ~
+      (__ \ "killOldTasksDelaySeconds").readNullable[Long].withDefault(DefaultKillOldTasksDelay.toSeconds).asSeconds
+    ) (UpgradeStrategy(_, _, _))
   }
 
   implicit lazy val ConstraintFormat: Format[Constraint] = Format(

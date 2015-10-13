@@ -1530,7 +1530,8 @@ Transfer-Encoding: chunked
                 "maxLaunchDelaySeconds" : 3600,
                 "upgradeStrategy" : {
                    "minimumHealthCapacity" : 1,
-                   "maximumOverCapacity" : 1
+                   "maximumOverCapacity" : 1,
+                   "killOldTasksDelaySeconds" : 0
                 },
                 "dependencies" : [],
                 "mem" : 16,

@@ -169,14 +169,13 @@ private class DeploymentActor(
     else {
       val promise = Promise[Unit]()
       context.actorOf(
-        Props(
-          new TaskReplaceActor(
-            driver,
-            taskQueue,
-            taskTracker,
-            eventBus,
-            app,
-            promise)))
+        TaskReplaceActor.props(
+          driver,
+          taskQueue,
+          taskTracker,
+          eventBus,
+          app,
+          promise))
       promise.future
     }
   }

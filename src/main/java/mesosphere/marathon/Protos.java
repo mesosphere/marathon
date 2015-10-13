@@ -15812,6 +15812,16 @@ public final class Protos {
      * <code>optional double maximumOverCapacity = 2 [default = 1];</code>
      */
     double getMaximumOverCapacity();
+
+    // optional uint32 killOldTasksDelaySeconds = 3 [default = 0];
+    /**
+     * <code>optional uint32 killOldTasksDelaySeconds = 3 [default = 0];</code>
+     */
+    boolean hasKillOldTasksDelaySeconds();
+    /**
+     * <code>optional uint32 killOldTasksDelaySeconds = 3 [default = 0];</code>
+     */
+    int getKillOldTasksDelaySeconds();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.UpgradeStrategyDefinition}
@@ -15872,6 +15882,11 @@ public final class Protos {
             case 17: {
               bitField0_ |= 0x00000002;
               maximumOverCapacity_ = input.readDouble();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              killOldTasksDelaySeconds_ = input.readUInt32();
               break;
             }
           }
@@ -15946,9 +15961,26 @@ public final class Protos {
       return maximumOverCapacity_;
     }
 
+    // optional uint32 killOldTasksDelaySeconds = 3 [default = 0];
+    public static final int KILLOLDTASKSDELAYSECONDS_FIELD_NUMBER = 3;
+    private int killOldTasksDelaySeconds_;
+    /**
+     * <code>optional uint32 killOldTasksDelaySeconds = 3 [default = 0];</code>
+     */
+    public boolean hasKillOldTasksDelaySeconds() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional uint32 killOldTasksDelaySeconds = 3 [default = 0];</code>
+     */
+    public int getKillOldTasksDelaySeconds() {
+      return killOldTasksDelaySeconds_;
+    }
+
     private void initFields() {
       minimumHealthCapacity_ = 0D;
       maximumOverCapacity_ = 1D;
+      killOldTasksDelaySeconds_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -15972,6 +16004,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeDouble(2, maximumOverCapacity_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt32(3, killOldTasksDelaySeconds_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -15988,6 +16023,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeDoubleSize(2, maximumOverCapacity_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(3, killOldTasksDelaySeconds_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -16109,6 +16148,8 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000001);
         maximumOverCapacity_ = 1D;
         bitField0_ = (bitField0_ & ~0x00000002);
+        killOldTasksDelaySeconds_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -16145,6 +16186,10 @@ public final class Protos {
           to_bitField0_ |= 0x00000002;
         }
         result.maximumOverCapacity_ = maximumOverCapacity_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.killOldTasksDelaySeconds_ = killOldTasksDelaySeconds_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -16166,6 +16211,9 @@ public final class Protos {
         }
         if (other.hasMaximumOverCapacity()) {
           setMaximumOverCapacity(other.getMaximumOverCapacity());
+        }
+        if (other.hasKillOldTasksDelaySeconds()) {
+          setKillOldTasksDelaySeconds(other.getKillOldTasksDelaySeconds());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -16260,6 +16308,39 @@ public final class Protos {
       public Builder clearMaximumOverCapacity() {
         bitField0_ = (bitField0_ & ~0x00000002);
         maximumOverCapacity_ = 1D;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 killOldTasksDelaySeconds = 3 [default = 0];
+      private int killOldTasksDelaySeconds_ ;
+      /**
+       * <code>optional uint32 killOldTasksDelaySeconds = 3 [default = 0];</code>
+       */
+      public boolean hasKillOldTasksDelaySeconds() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional uint32 killOldTasksDelaySeconds = 3 [default = 0];</code>
+       */
+      public int getKillOldTasksDelaySeconds() {
+        return killOldTasksDelaySeconds_;
+      }
+      /**
+       * <code>optional uint32 killOldTasksDelaySeconds = 3 [default = 0];</code>
+       */
+      public Builder setKillOldTasksDelaySeconds(int value) {
+        bitField0_ |= 0x00000004;
+        killOldTasksDelaySeconds_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 killOldTasksDelaySeconds = 3 [default = 0];</code>
+       */
+      public Builder clearKillOldTasksDelaySeconds() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        killOldTasksDelaySeconds_ = 0;
         onChanged();
         return this;
       }
@@ -21374,25 +21455,26 @@ public final class Protos {
       " \001(\t\022\027\n\014service_port\030d \001(\r:\0010\")\n\020EventSu" +
       "bscribers\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016Stor" +
       "ageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r" +
-      "\022\r\n\005patch\030\003 \002(\r\"Z\n\031UpgradeStrategyDefini" +
+      "\022\r\n\005patch\030\003 \002(\r\"\177\n\031UpgradeStrategyDefini" +
       "tion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023m" +
-      "aximumOverCapacity\030\002 \001(\001:\0011\"\260\001\n\017GroupDef" +
-      "inition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004" +
-      "apps\030\003 \003(\0132&.mesosphere.marathon.Service" +
-      "Definition\0224\n\006groups\030\004 \003(\0132$.mesosphere.",
-      "marathon.GroupDefinition\022\024\n\014dependencies" +
-      "\030\005 \003(\t\"\245\001\n\030DeploymentPlanDefinition\022\n\n\002i" +
-      "d\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010original\030\004 \002" +
-      "(\0132$.mesosphere.marathon.GroupDefinition" +
-      "\0224\n\006target\030\005 \002(\0132$.mesosphere.marathon.G" +
-      "roupDefinition\"\306\001\n\013TaskFailure\022\016\n\006app_id" +
-      "\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037" +
-      "\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007messa" +
-      "ge\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 " +
-      "\002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132",
-      "\016.mesos.SlaveID\"9\n\014ZKStoreEntry\022\014\n\004name\030" +
-      "\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014B\035\n\023me" +
-      "sosphere.marathonB\006Protos"
+      "aximumOverCapacity\030\002 \001(\001:\0011\022#\n\030killOldTa" +
+      "sksDelaySeconds\030\003 \001(\r:\0010\"\260\001\n\017GroupDefini" +
+      "tion\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004app" +
+      "s\030\003 \003(\0132&.mesosphere.marathon.ServiceDef",
+      "inition\0224\n\006groups\030\004 \003(\0132$.mesosphere.mar" +
+      "athon.GroupDefinition\022\024\n\014dependencies\030\005 " +
+      "\003(\t\"\245\001\n\030DeploymentPlanDefinition\022\n\n\002id\030\001" +
+      " \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010original\030\004 \002(\0132" +
+      "$.mesosphere.marathon.GroupDefinition\0224\n" +
+      "\006target\030\005 \002(\0132$.mesosphere.marathon.Grou" +
+      "pDefinition\"\306\001\n\013TaskFailure\022\016\n\006app_id\030\001 " +
+      "\002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005s" +
+      "tate\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007message\030" +
+      "\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t",
+      "\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.m" +
+      "esos.SlaveID\"9\n\014ZKStoreEntry\022\014\n\004name\030\001 \002" +
+      "(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014B\035\n\023mesos" +
+      "phere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21476,7 +21558,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_UpgradeStrategyDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_UpgradeStrategyDefinition_descriptor,
-              new java.lang.String[] { "MinimumHealthCapacity", "MaximumOverCapacity", });
+              new java.lang.String[] { "MinimumHealthCapacity", "MaximumOverCapacity", "KillOldTasksDelaySeconds", });
           internal_static_mesosphere_marathon_GroupDefinition_descriptor =
             getDescriptor().getMessageTypes().get(11);
           internal_static_mesosphere_marathon_GroupDefinition_fieldAccessorTable = new

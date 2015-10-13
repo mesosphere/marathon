@@ -60,7 +60,8 @@ We moved completely to slf4j as Logging API. The logging backend still uses log4
 
 ### Fixed Issues
 
-- #2294 - Make boolean command line flags use Scallop's 'toggle'
+- \#2294 - Make boolean command line flags use Scallop's 'toggle'
+- \#2249 - Update delay before killing old tasks
 
 
 ## Changes from 0.10.0 to 0.11.0
