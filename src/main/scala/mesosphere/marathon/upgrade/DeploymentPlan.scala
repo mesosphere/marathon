@@ -214,7 +214,7 @@ object DeploymentPlan {
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
     toKill: Map[PathId, Set[MarathonTask]] = Map.empty): DeploymentPlan = {
-    log.debug(s"Compute DeploymentPlan from $original to $target")
+    if (log.isDebugEnabled) log.debug(s"Compute DeploymentPlan from $original to $target")
 
     // Lookup maps for original and target apps.
     val originalApps: Map[PathId, AppDefinition] =
@@ -268,7 +268,7 @@ object DeploymentPlan {
       version
     )
 
-    log.debug(s"Computed new deployment plan: $result")
+    if (log.isDebugEnabled) log.debug(s"Computed new deployment plan: $result")
 
     result
   }

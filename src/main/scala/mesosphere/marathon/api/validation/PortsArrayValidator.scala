@@ -18,7 +18,7 @@ class PortsArrayValidator
 
   def isValid(obj: Any, context: ConstraintValidatorContext): Boolean = {
 
-    log.info(s"validating ports array: $obj")
+    log.debug(s"validating ports array: $obj")
 
     obj match {
       case opt: Option[_] => opt.forall { isValid(_, context) }
