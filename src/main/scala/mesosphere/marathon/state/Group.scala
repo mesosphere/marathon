@@ -183,7 +183,6 @@ case class Group(
   @JsonIgnore
   def withoutChildren: Group = copy(apps = Set.empty, groups = Set.empty)
 
-
   // Case class implementation of hashCode+equals is very expensive
   // We know that two groups are equal, if id and version is equals.
   override def equals(obj: Any): Boolean = {
