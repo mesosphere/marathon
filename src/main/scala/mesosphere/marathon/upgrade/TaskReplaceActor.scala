@@ -52,7 +52,7 @@ class TaskReplaceActor(
       driver.killTask(taskId)
     }
 
-    conciliateNewTasks()
+    reconcileNewTasks()
 
     log.info("Resetting the backoff delay before restarting the app")
     taskQueue.resetDelay(app)
@@ -95,17 +95,17 @@ class TaskReplaceActor(
     case MesosStatusUpdateEvent(slaveId, taskId, ReplaceErrorState(_), _, `appId`, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       log.error(s"Old task $taskId failed on slave $slaveId during app ${app.id.toString} restart")
       oldTaskIds -= taskId
-      conciliateNewTasks()
+      reconcileNewTasks()
 
     case x: Any => log.debug(s"Received $x")
   }
 
-  def conciliateNewTasks(): Unit = {
+  def reconcileNewTasks(): Unit = {
     val leftCapacity = math.max(0, maxCapacity - oldTaskIds.size - newTasksStarted)
     val tasksNotStartedYet = math.max(0, app.instances - newTasksStarted)
     val tasksToStartNow = math.min(tasksNotStartedYet, leftCapacity)
     if (tasksToStartNow > 0) {
-      log.info(s"Reconciliating tasks during app ${app.id.toString} restart: queuing $tasksToStartNow new tasks")
+      log.info(s"Reconciling tasks during app $appId restart: queuing $tasksToStartNow new tasks")
       taskQueue.add(app, tasksToStartNow)
       newTasksStarted += tasksToStartNow
     }
