@@ -6,5 +6,12 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
     apt-get update && \
     apt-get install --no-install-recommends -y --force-yes mesos=0.24.1-0.2.35.debian81 sbt
 
-COPY . /marathon
 WORKDIR /marathon
+
+# The build configuration including dependencies changes
+# less frequently than the source code. By separating
+# these steps we can greatly speed up cached local docker builds.
+COPY project /marathon/project
+RUN sbt update test:update
+
+COPY . /marathon
