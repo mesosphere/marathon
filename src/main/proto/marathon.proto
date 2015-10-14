@@ -188,5 +188,9 @@ message ZKStoreEntry {
   required string name = 1;
   required bytes uuid = 2;
   required bytes value = 3;
-  optional bool compressed = 4;
+
+  // This flag indicates, if the byte array in value is gzip compressed
+  // Introduced in Marathon 0.12
+  // Optional to be backward compatible
+  optional bool compressed = 4 [default = false];
 }
