@@ -31,7 +31,6 @@ private[launchqueue] object AppTaskLauncherActor {
     offerMatcherManager: OfferMatcherManager,
     clock: Clock,
     taskFactory: TaskFactory,
-    taskStatusObservable: TaskStatusObservables,
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef)(
@@ -40,7 +39,7 @@ private[launchqueue] object AppTaskLauncherActor {
     Props(new AppTaskLauncherActor(
       config,
       offerMatcherManager,
-      clock, taskFactory, taskStatusObservable,
+      clock, taskFactory,
       maybeOfferReviver,
       taskTracker, rateLimiterActor,
       app, initialCount))
@@ -83,7 +82,6 @@ private class AppTaskLauncherActor(
     offerMatcherManager: OfferMatcherManager,
     clock: Clock,
     taskFactory: TaskFactory,
-    taskStatusObservable: TaskStatusObservables,
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef,
@@ -96,8 +94,6 @@ private class AppTaskLauncherActor(
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
 
-  /** Receive task updates to keep task list up-to-date. */
-  private[this] var taskStatusUpdateSubscription: Subscription = _
   /** Currently known running tasks or tasks that we have requested to be launched. */
   private[this] var runningTasks: Set[MarathonTask] = _
   /** Like runningTasks but indexed by the taskId String */
@@ -112,10 +108,6 @@ private class AppTaskLauncherActor(
     log.info("Started appTaskLaunchActor for {} version {} with initial count {}",
       app.id, app.version, tasksToLaunch)
 
-    taskStatusUpdateSubscription = taskStatusObservable.forAppId(app.id).subscribe { update =>
-      log.debug("update {}", update)
-      self ! update
-    }
     runningTasks = taskTracker.get(app.id)
     runningTasksMap = runningTasks.map(task => task.getId -> task).toMap
 
@@ -123,7 +115,6 @@ private class AppTaskLauncherActor(
   }
 
   override def postStop(): Unit = {
-    taskStatusUpdateSubscription.unsubscribe()
     OfferMatcherRegistration.unregister()
     recheckBackOff.foreach(_.cancel())
 
@@ -247,6 +238,8 @@ private class AppTaskLauncherActor(
         maybeOfferReviver.foreach(_.reviveOffers())
       }
 
+      replyWithQueuedTaskCount()
+
     case TaskStatusUpdate(_, taskId, status) =>
       runningTasksMap.get(taskId.getValue) match {
         case None =>
@@ -263,6 +256,7 @@ private class AppTaskLauncherActor(
           runningTasksMap += taskId.getValue -> updatedTask
       }
 
+      replyWithQueuedTaskCount()
   }
 
   private[this] def removeTask(taskId: TaskID): Unit = {

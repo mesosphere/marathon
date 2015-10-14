@@ -196,7 +196,6 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
       AlwaysElectedLeadershipModule(shutdownHooks),
       clock,
       subOfferMatcherManager = offerMatcherManager,
-      taskStatusObservables = taskBusModule.taskStatusObservables,
       maybeOfferReviver = None,
       appRepository,
       taskTracker,
