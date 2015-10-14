@@ -196,4 +196,10 @@ trait MarathonConf
     validate = Set("zk", "mesos_zk", "mem").contains,
     default = Some("zk")
   )
+
+  lazy val maxApps = opt[Int]("max_apps",
+    descr = "The maximum number of applications that may be created.",
+    noshort = true,
+    default = Some(500)
+  )
 }

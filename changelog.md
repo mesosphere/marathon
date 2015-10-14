@@ -229,6 +229,11 @@ In the new Marathon version, the backoff delay is never reset automatically. You
 Any task of an app definition with a docker image attribute (`container.docker.image`) will now be started with
 an environment variable `MARATHON_APP_DOCKER_IMAGE` containing its value.
 
+#### Define the maximum number of apps that can be created.
+ 
+This version of Marathon adds the capability to restrict the maximum number of apps, that may be created.
+Use the `--max_apps` command line parameter to define this number. It is enabled per default and set to 500 apps.
+
 ### Important bug fixes
 
 * \#1553 -
