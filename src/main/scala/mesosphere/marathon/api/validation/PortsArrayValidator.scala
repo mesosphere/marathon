@@ -18,14 +18,11 @@ class PortsArrayValidator
 
   def isValid(obj: Any, context: ConstraintValidatorContext): Boolean = {
 
-    log.info(s"validating ports array: $obj")
-
     obj match {
       case opt: Option[_] => opt.forall { isValid(_, context) }
-      case it: Iterable[_] => {
+      case it: Iterable[_] =>
         val withoutRandoms = it.toSeq.filterNot { _ == RandomPortValue }
         withoutRandoms.size == withoutRandoms.distinct.size
-      }
       case _ => false
     }
   }
