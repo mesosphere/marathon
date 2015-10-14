@@ -30,8 +30,18 @@ object ModelValidation {
   def checkGroup(
     group: Group,
     path: String,
-    parent: PathId): Iterable[ConstraintViolation[V2Group]] =
-    checkGroup(V2Group(group), path, parent)
+    parent: PathId,
+    maxApps: Int): Iterable[ConstraintViolation[V2Group]] = {
+
+    val v2Group = V2Group(group)
+    val maximumApps = if (group.transitiveApps.size > maxApps) {
+      Seq(violation(v2Group, "apps", "",
+        s"This Marathon instance may only handle up to $maxApps Apps! (Override with command line option --max_apps)"))
+    }
+    else Seq.empty[ConstraintViolation[V2Group]]
+
+    checkGroup(v2Group, path, parent) ++ maximumApps
+  }
 
   def checkGroup(
     group: V2Group,

@@ -130,7 +130,9 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Enable compression of zk nodes, if the size of the node is bigger than the configured threshold.
 * <span class="label label-default">v0.11.1</span> `--zk_compression_threshold` (Optional. Default:
    64 KB): Threshold in bytes, when compression is applied to the zk node
-
+* <span class="label label-default">v0.11.0</span> `--max_apps` (Optional. Default: 500):
+    The maximum number of applications that may be created.
+    
 ## Tuning Flags for Offer Matching/Launching Tasks
 
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
