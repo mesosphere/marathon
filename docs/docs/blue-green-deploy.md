@@ -4,11 +4,13 @@ title: Blue-Green Deployment
 
 # Blue-Green Deployment
 
+We've added support to the DCOS CLI to make Blue-Green deployment easier.
+
 Blue-green deployment is a way to safely deploy applications that are serving live traffic by creating two versions of an application (BLUE and GREEN). To deploy a new version of the application, you will drain all traffic, requests, and pending operations from the current version of the application, switch to the new version, and then turn off the old version. Blue-green deployment eliminates application downtime and allows you to quickly roll back to the BLUE version of the application if necessary.
 
 For an overview of the process, here's [a great article by Martin Fowler](http://martinfowler.com/bliki/BlueGreenDeployment.html).
 
-In a production environment, you would typically script this process and integrate it into your existing deployment system. Below we provide an example of the steps necessary to perform a safe deployment.
+In a production environment, you would typically script this process and integrate it into your existing deployment system. Below, we provide an example of the steps necessary to perform a safe deployment.
 
 ## Requirements
 
@@ -27,6 +29,11 @@ We will replace the current app version (BLUE) with a new version (GREEN).
     ```sh
     # launch green
     dcos marathon app add green-myapp.json
+    ```
+**Note:** If you were using the API instead of the DCOS CLI, the command above would be much longer:
+
+    ```sh
+    curl -H "Content-Type: application/json" -X POST -d @ green-myapp.json <hosturl>/marathon/v2/apps
     ```
 
 2. Scale GREEN app instances by 1 or more. Initially (starting from 0 instances), set the number of app instances to the minimum required to serve traffic. Remember, no traffic will arrive yet: we haven't registered at the load balancer.
