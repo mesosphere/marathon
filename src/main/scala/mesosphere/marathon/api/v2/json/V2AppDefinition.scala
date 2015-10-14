@@ -65,6 +65,8 @@ case class V2AppDefinition(
 
     acceptedResourceRoles: Option[Set[String]] = None,
 
+    network: Option[Seq[Network]] = AppDefinition.DefaultNetwork,
+
     version: Timestamp = Timestamp.now(),
 
     versionInfo: Option[V2AppDefinition.VersionInfo] = None) extends Timestamped {

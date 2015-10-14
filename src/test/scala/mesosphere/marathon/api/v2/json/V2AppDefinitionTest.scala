@@ -336,4 +336,52 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     val readResult4 = fromJson(json4)
     assert(readResult4.copy(version = app4.version) == app4)
   }
+
+  test("Read app with network info") {
+    import mesosphere.marathon.state.Network
+
+    val app = V2AppDefinition(
+      id = "app-with-network-isolation".toPath,
+      cmd = Some("python3 -m http.server 8080"),
+      network = Some(Seq(
+        Network(
+          ipAddress = Some("auto"),
+          protocol = Some(mesos.NetworkInfo.Protocol.IPv6),
+          groups = Seq("a", "b", "c"),
+          labels = Map(
+            "foo" -> "bar",
+            "baz" -> "buzz"
+          )
+        )
+      )),
+      maxLaunchDelay = 3600.seconds
+    )
+
+    val json =
+      """
+      {
+        "id": "app-with-network-isolation",
+        "cmd": "python3 -m http.server 8080",
+        "network": [
+          {
+            "ipAddress": "auto",
+            "protocol": "IPv6",
+            "groups": ["a", "b", "c"],
+            "labels": {
+              "foo": "bar",
+              "baz": "buzz"
+            }
+          }
+        ],
+        "maxLaunchDelaySeconds": 3600
+      }
+      """
+
+    val readResult = fromJson(json)
+
+    println(s"expected:\n$app")
+    println(s"result:\n$readResult")
+
+    assert(readResult.copy(version = app.version) == app)
+  }
 }

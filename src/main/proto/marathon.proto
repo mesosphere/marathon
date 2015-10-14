@@ -45,6 +45,10 @@ message HealthCheckDefinition {
   optional bool ignoreHttp1xx = 9 [default = false];
 }
 
+message NetworkInfos {
+  repeated mesos.NetworkInfo networks = 1;
+}
+
 message ServiceDefinition {
   required string id = 1;
   required mesos.CommandInfo cmd = 2;
@@ -70,6 +74,7 @@ message ServiceDefinition {
   optional ResourceRoles acceptedResourceRoles = 22;
   optional int64 last_scaling_at = 23;
   optional int64 last_config_change_at = 24;
+  optional NetworkInfos network = 25;
 }
 
 message ResourceRoles {
@@ -87,6 +92,7 @@ message MarathonTask {
   optional string version = 8 [default = "1970-01-01T00:00:00.000Z"]; // since 0.7.0
   optional mesos.TaskStatus status = 9;
   optional mesos.SlaveID slaveId = 10;
+  optional mesos.NetworkInfo network = 11;
 }
 
 message MarathonApp {
