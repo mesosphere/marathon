@@ -8,21 +8,21 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.bus.{TaskStatusEmitter, TaskStatusUpdateTestHelper}
+import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskStatusUpdateProcessor
-import mesosphere.marathon.core.task.tracker.impl.steps.{AcknowledgeTaskUpdateStepImpl, NotifyHealthCheckManagerStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl, UpdateTaskTrackerStepImpl}
+import mesosphere.marathon.core.task.tracker.impl.steps.{ AcknowledgeTaskUpdateStepImpl, NotifyHealthCheckManagerStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl, UpdateTaskTrackerStepImpl }
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, AppRepository, PathId, Timestamp}
-import mesosphere.marathon.tasks.{TaskIdUtil, TaskTracker}
-import mesosphere.marathon.{MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper}
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.SchedulerDriver
-import org.mockito.{ArgumentCaptor, Mockito}
+import org.mockito.{ ArgumentCaptor, Mockito }
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class TaskStatusUpdateProcessorImplTest extends MarathonSpec {
 
