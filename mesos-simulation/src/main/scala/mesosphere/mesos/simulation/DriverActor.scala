@@ -48,9 +48,9 @@ class DriverActor(schedulerProps: Props) extends Actor {
 
   private[this] val numberOfOffersPerCycle: Int = 10
 
-  // use random seed to get reproducable results
+  // use a fixed seed to get reproducible results
   private[this] val random = {
-    val seed = System.currentTimeMillis()
+    val seed = 1L
     log.info(s"Random seed for this test run: $seed")
     new Random(new java.util.Random(seed))
   }
