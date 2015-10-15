@@ -45,7 +45,7 @@ documentation. But don't worry, we will do that for you.
 
 Maybe you already have a bugfix or enhancement in mind.  If not, there are a
 number of relatively approachable issues with the label
-["good first issue"](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
+["good first bug"](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+bug%22).
 
 <!--
 ## License Agreement

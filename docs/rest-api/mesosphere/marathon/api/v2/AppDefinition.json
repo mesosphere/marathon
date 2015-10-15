@@ -3,7 +3,7 @@
     "additionalProperties": false,
     "definitions": {
         "pathType": {
-            "pattern": "^(\\/?((\\.{2})|([a-z0-9][a-z0-9\\-.]*[a-z0-9]+)|([a-z0-9]*))($|\\/))+$",
+            "pattern": "^(\\/?((\\.{2})|([a-z0-9\\-]*))($|\\/))*$",
             "type": "string"
         }
     },
@@ -218,7 +218,8 @@
             "type": "array"
         },
         "id": {
-            "$ref": "#/definitions/pathType"
+            "pattern": "^/?(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$",
+            "type": "string"
         },
         "instances": {
             "minimum": 0,
