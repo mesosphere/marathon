@@ -20584,7 +20584,7 @@ public final class Protos {
      * <pre>
      * This flag indicates, if the byte array in value is gzip compressed
      * Introduced in Marathon 0.12
-     * Optional to be backward compatible and also with mesos zk storage.
+     * Optional to be backward compatible
      * </pre>
      */
     boolean hasCompressed();
@@ -20594,7 +20594,7 @@ public final class Protos {
      * <pre>
      * This flag indicates, if the byte array in value is gzip compressed
      * Introduced in Marathon 0.12
-     * Optional to be backward compatible and also with mesos zk storage.
+     * Optional to be backward compatible
      * </pre>
      */
     boolean getCompressed();
@@ -20801,7 +20801,7 @@ public final class Protos {
      * <pre>
      * This flag indicates, if the byte array in value is gzip compressed
      * Introduced in Marathon 0.12
-     * Optional to be backward compatible and also with mesos zk storage.
+     * Optional to be backward compatible
      * </pre>
      */
     public boolean hasCompressed() {
@@ -20813,7 +20813,7 @@ public final class Protos {
      * <pre>
      * This flag indicates, if the byte array in value is gzip compressed
      * Introduced in Marathon 0.12
-     * Optional to be backward compatible and also with mesos zk storage.
+     * Optional to be backward compatible
      * </pre>
      */
     public boolean getCompressed() {
@@ -21285,7 +21285,7 @@ public final class Protos {
        * <pre>
        * This flag indicates, if the byte array in value is gzip compressed
        * Introduced in Marathon 0.12
-       * Optional to be backward compatible and also with mesos zk storage.
+       * Optional to be backward compatible
        * </pre>
        */
       public boolean hasCompressed() {
@@ -21297,7 +21297,7 @@ public final class Protos {
        * <pre>
        * This flag indicates, if the byte array in value is gzip compressed
        * Introduced in Marathon 0.12
-       * Optional to be backward compatible and also with mesos zk storage.
+       * Optional to be backward compatible
        * </pre>
        */
       public boolean getCompressed() {
@@ -21309,7 +21309,7 @@ public final class Protos {
        * <pre>
        * This flag indicates, if the byte array in value is gzip compressed
        * Introduced in Marathon 0.12
-       * Optional to be backward compatible and also with mesos zk storage.
+       * Optional to be backward compatible
        * </pre>
        */
       public Builder setCompressed(boolean value) {
@@ -21324,7 +21324,7 @@ public final class Protos {
        * <pre>
        * This flag indicates, if the byte array in value is gzip compressed
        * Introduced in Marathon 0.12
-       * Optional to be backward compatible and also with mesos zk storage.
+       * Optional to be backward compatible
        * </pre>
        */
       public Builder clearCompressed() {
