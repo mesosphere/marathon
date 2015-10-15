@@ -33,7 +33,7 @@ We will replace the current app version (BLUE) with a new version (GREEN).
 **Note:** If you were using the API instead of the DCOS CLI, the command above would be much longer:
 
     ```sh
-    curl -H "Content-Type: application/json" -X POST -d @ green-myapp.json <hosturl>/marathon/v2/apps
+    curl -H "Content-Type: application/json" -X POST -d @green-myapp.json <hosturl>/marathon/v2/apps
     ```
 
 2. Scale GREEN app instances by 1 or more. Initially (starting from 0 instances), set the number of app instances to the minimum required to serve traffic. Remember, no traffic will arrive yet: we haven't registered at the load balancer.
