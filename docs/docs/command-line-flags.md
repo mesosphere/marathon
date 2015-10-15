@@ -125,7 +125,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     automatically by Marathon.
     _Note: This prefix will not be added to variables that are already prefixed,
     such as `MESOS_TASK_ID` and `MARATHON_APP_ID`
-* <span class="label label-default">v0.11.0</span> `--max_apps` (Optional. Default: 500):
+* <span class="label label-default">v0.11.1</span> `--max_apps` (Optional):
     The maximum number of applications that may be created.
     
 ## Tuning Flags for Offer Matching/Launching Tasks
