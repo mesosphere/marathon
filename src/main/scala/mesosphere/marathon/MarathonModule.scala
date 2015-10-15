@@ -43,7 +43,9 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
+import scala.reflect.ClassTag
 import scala.util.control.NonFatal
+import scala.collection.immutable.Seq
 
 object ModuleNames {
   final val NAMED_CANDIDATE = "CANDIDATE"
@@ -53,6 +55,12 @@ object ModuleNames {
   final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
   final val NAMED_SERIALIZE_GROUP_UPDATES = "SERIALIZE_GROUP_UPDATES"
   final val NAMED_HTTP_EVENT_STREAM = "HTTP_EVENT_STREAM"
+
+  final val NAMED_STORE_APP = "AppStore"
+  final val NAMED_STORE_TASK_FAILURES = "TaskFailureStore"
+  final val NAMED_STORE_DEPLOYMENT_PLAN = "DeploymentPlanStore"
+  final val NAMED_STORE_FRAMEWORK_ID = "FrameworkIdStore"
+  final val NAMED_STORE_GROUP = "GroupStore"
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
@@ -105,6 +113,17 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       case someUrl @ Some(_) => ConstMesosLeaderInfo(someUrl)
       case None              => new MutableMesosLeaderInfo
     }
+  }
+
+  @Provides
+  @Singleton
+  def provideLeadershipCallbacks(
+    @Named(ModuleNames.NAMED_STORE_APP) app: EntityStore[AppDefinition],
+    @Named(ModuleNames.NAMED_STORE_GROUP) group: EntityStore[Group],
+    @Named(ModuleNames.NAMED_STORE_DEPLOYMENT_PLAN) deployment: EntityStore[DeploymentPlan],
+    @Named(ModuleNames.NAMED_STORE_FRAMEWORK_ID) frameworkId: EntityStore[FrameworkId],
+    @Named(ModuleNames.NAMED_STORE_TASK_FAILURES) taskFailure: EntityStore[TaskFailure]): Seq[LeadershipCallback] = {
+    Seq(app, group, deployment, frameworkId, taskFailure).collect { case l: LeadershipCallback => l }
   }
 
   @Named(ModuleNames.NAMED_HTTP_EVENT_STREAM)
@@ -253,63 +272,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideTaskFailureRepository(
-    store: PersistentStore,
-    conf: MarathonConf,
-    metrics: Metrics): TaskFailureRepository = {
-    new TaskFailureRepository(
-      new MarathonStore[TaskFailure](
-        store,
-        metrics,
-        () => TaskFailure.empty,
-        prefix = "taskFailure:"
-      ),
-      conf.zooKeeperMaxVersions.get,
-      metrics
-    )
-  }
-
-  @Provides
-  @Singleton
-  def provideAppRepository(
-    store: PersistentStore,
-    conf: MarathonConf,
-    metrics: Metrics): AppRepository = {
-    new AppRepository(
-      new MarathonStore[AppDefinition](store, metrics, () => AppDefinition.apply(), prefix = "app:"),
-      maxVersions = conf.zooKeeperMaxVersions.get,
-      metrics
-    )
-  }
-
-  @Provides
-  @Singleton
-  def provideGroupRepository(
-    store: PersistentStore,
-    conf: MarathonConf,
-    metrics: Metrics): GroupRepository = {
-    new GroupRepository(
-      new MarathonStore[Group](store, metrics, () => Group.empty, "group:"),
-      conf.zooKeeperMaxVersions.get,
-      metrics
-    )
-  }
-
-  @Provides
-  @Singleton
-  def provideDeploymentRepository(
-    store: PersistentStore,
-    conf: MarathonConf,
-    metrics: Metrics): DeploymentRepository = {
-    new DeploymentRepository(
-      new MarathonStore[DeploymentPlan](store, metrics, () => DeploymentPlan.empty, "deployment:"),
-      conf.zooKeeperMaxVersions.get,
-      metrics
-    )
-  }
-
-  @Provides
-  @Singleton
   def provideActorSystem(): ActorSystem = ActorSystem("marathon")
 
   /* Reexports the `akka.actor.ActorSystem` as `akka.actor.ActorRefFactory`. It doesn't work automatically. */
@@ -319,10 +281,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideFrameworkIdUtil(store: PersistentStore, metrics: Metrics, conf: MarathonConf): FrameworkIdUtil = {
-    new FrameworkIdUtil(
-      new MarathonStore[FrameworkId](store, metrics, () => new FrameworkId(UUID.randomUUID().toString), ""),
-      conf.zkTimeoutDuration)
+  def provideFrameworkIdUtil(
+    @Named(ModuleNames.NAMED_STORE_FRAMEWORK_ID) store: EntityStore[FrameworkId],
+    metrics: Metrics): FrameworkIdUtil = {
+    new FrameworkIdUtil(store, conf.zkTimeoutDuration)
   }
 
   @Provides
@@ -388,5 +350,92 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     })
 
     groupManager
+  }
+
+  // persistence fucntionality ----------------
+
+  @Provides
+  @Singleton
+  def provideTaskFailureRepository(
+    @Named(ModuleNames.NAMED_STORE_TASK_FAILURES) store: EntityStore[TaskFailure],
+    metrics: Metrics): TaskFailureRepository = {
+    new TaskFailureRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+  }
+
+  @Provides
+  @Singleton
+  def provideAppRepository(
+    @Named(ModuleNames.NAMED_STORE_APP) store: EntityStore[AppDefinition],
+    metrics: Metrics): AppRepository = {
+    new AppRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
+  }
+
+  @Provides
+  @Singleton
+  def provideGroupRepository(
+    @Named(ModuleNames.NAMED_STORE_GROUP) store: EntityStore[Group],
+    appRepository: AppRepository,
+    metrics: Metrics): GroupRepository = {
+    new GroupRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+  }
+
+  @Provides
+  @Singleton
+  def provideDeploymentRepository(
+    @Named(ModuleNames.NAMED_STORE_DEPLOYMENT_PLAN) store: EntityStore[DeploymentPlan],
+    conf: MarathonConf,
+    metrics: Metrics): DeploymentRepository = {
+    new DeploymentRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+  }
+
+  @Named(ModuleNames.NAMED_STORE_DEPLOYMENT_PLAN)
+  @Provides
+  @Singleton
+  def provideDeploymentPlanStore(store: PersistentStore, metrics: Metrics): EntityStore[DeploymentPlan] = {
+    entityStore(store, metrics, "deployment:", () => DeploymentPlan.empty)
+  }
+
+  @Named(ModuleNames.NAMED_STORE_FRAMEWORK_ID)
+  @Provides
+  @Singleton
+  def provideFrameworkIdStore(store: PersistentStore, metrics: Metrics): EntityStore[FrameworkId] = {
+    entityStore(store, metrics, "", () => new FrameworkId(UUID.randomUUID().toString))
+  }
+
+  @Named(ModuleNames.NAMED_STORE_GROUP)
+  @Provides
+  @Singleton
+  def provideGroupStore(store: PersistentStore, metrics: Metrics): EntityStore[Group] = {
+    entityStore(store, metrics, "group:", () => Group.empty)
+  }
+
+  @Named(ModuleNames.NAMED_STORE_APP)
+  @Provides
+  @Singleton
+  def provideAppStore(store: PersistentStore, metrics: Metrics): EntityStore[AppDefinition] = {
+    entityStore(store, metrics, "app:", () => AppDefinition.apply())
+  }
+
+  @Named(ModuleNames.NAMED_STORE_TASK_FAILURES)
+  @Provides
+  @Singleton
+  def provideTaskFailreStore(store: PersistentStore, metrics: Metrics): EntityStore[TaskFailure] = {
+    import org.apache.mesos.{ Protos => mesos }
+    entityStore(store, metrics, "taskFailure:",
+      () => TaskFailure(
+        PathId.empty,
+        mesos.TaskID.newBuilder().setValue("").build,
+        mesos.TaskState.TASK_STAGING
+      )
+    )
+  }
+
+  private[this] def entityStore[T <: mesosphere.marathon.state.MarathonState[_, T]](
+    store: PersistentStore,
+    metrics: Metrics,
+    prefix: String,
+    newState: () => T)(implicit ct: ClassTag[T]): EntityStore[T] = {
+    val marathonStore = new MarathonStore[T](store, metrics, newState, prefix)
+    if (conf.storeCache()) new EntityStoreCache[T](marathonStore) else marathonStore
   }
 }

@@ -202,4 +202,12 @@ trait MarathonConf
     noshort = true,
     default = Some(500)
   )
+
+  lazy val storeCache = toggle("store_cache",
+    default = Some(true),
+    noshort = true,
+    descrYes = "Enable an in memory cache for the storage layer.",
+    descrNo = "Disable the in memory cache for the storage layer ",
+    prefix = "disable_"
+  )
 }

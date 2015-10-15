@@ -5,7 +5,7 @@ import java.lang.{ Integer => JInt }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.validation.ValidHealthCheck
-import mesosphere.marathon.state.{ Command, MarathonState }
+import mesosphere.marathon.state.{ Timestamp, MarathonState, Command }
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.concurrent.duration._
@@ -96,6 +96,7 @@ case class HealthCheck(
       .build
   }
 
+  override def version: Timestamp = Timestamp.zero
 }
 
 object HealthCheck {

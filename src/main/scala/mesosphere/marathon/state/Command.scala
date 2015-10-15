@@ -19,4 +19,5 @@ case class Command(value: String)
   def mergeFromProto(bytes: Array[Byte]): Command =
     mergeFromProto(MesosProtos.CommandInfo.parseFrom(bytes))
 
+  override def version: Timestamp = Timestamp.zero
 }
