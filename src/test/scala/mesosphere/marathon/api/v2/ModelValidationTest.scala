@@ -31,11 +31,11 @@ class ModelValidationTest
       createServicePortApp("/c".toPath, 0).toAppDefinition
     ))
 
-    val validations = ModelValidation.checkGroup(group, "", PathId.empty, maxApps = 2)
+    val validations = ModelValidation.checkGroup(group, "", PathId.empty, maxApps = Some(2))
     validations should not be Nil
     validations.find(_.getMessage.contains("This Marathon instance may only handle up to 2 Apps!")) should be ('defined)
 
-    val noValidations = ModelValidation.checkGroup(group, "", PathId.empty, maxApps = 10)
+    val noValidations = ModelValidation.checkGroup(group, "", PathId.empty, maxApps = Some(10))
     noValidations should be('empty)
   }
 
