@@ -1,3 +1,30 @@
+## Changes from 0.11.0 to 0.11.1
+
+### Overview
+
+This release includes fixes for critical bugs introduced in v0.11.0 and several performance
+improvements that allow Marathon to handle a larger number of groups and applications.
+
+#### Performance Improvements
+This release introduces the following improvements which allow Marathon to handle a larger number of
+applications. Because this is a bugfix release and they are not backwards compatible, they are are
+available, but disabled by default:
+
+* ZK nodes larger than a certain threshold can now be compressed. This allows Marathon to handle
+  more apps and groups, but breaks backwards compatibility, because older versions of Marathon are
+  not able to parse compressed nodes.
+
+  To enable this feature, start Marathon with the `--zk-compression` flag.
+* A new flag (`--max_apps`) has been introduced, which allows Marathon to limit the maximum number
+  of applications that may be created. This limit is disabled by default, but we performed scale
+  tests on this release and recommend setting the limit to 500.
+
+#### Fixed issues
+- #2353 - Never recover from race condition when scaling up
+- #2369 - Large file URIs cause "Failed to fetch all URIs for container" error when pulling from HDFS
+- #2360 - PUT /v2/groups triggers restart while PUT /v2/apps does not
+- #2381 - Marathon stops apps instead of restart
+
 ## Changes from 0.10.0 to 0.11.0
 
 ### Breaking Changes
@@ -152,7 +179,7 @@ All launched tasks are stored before launching them. There is also a new timeout
 
 If the mesos master fails over or in other unusual circumstances, a launch task request might get lost.
 You can configure how long Marathon waits for the first `TASK_STAGING` update.
-    
+
 * <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 10000):
   Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
 
@@ -230,7 +257,7 @@ Any task of an app definition with a docker image attribute (`container.docker.i
 an environment variable `MARATHON_APP_DOCKER_IMAGE` containing its value.
 
 #### Define the maximum number of apps that can be created.
- 
+
 This version of Marathon adds the capability to restrict the maximum number of apps, that may be created.
 Use the `--max_apps` command line parameter to define this number. It is enabled per default and set to 500 apps.
 
