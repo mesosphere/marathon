@@ -262,6 +262,8 @@ object Dependencies {
     twitterZk % "compile",
     rxScala % "compile",
     marathonUI % "compile",
+    graphite % "compile",
+    datadog % "compile",
 
     // test
     Test.diffson % "test",
@@ -294,6 +296,8 @@ object Dependency {
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
     val MarathonUI = "0.12.0-SNAPSHOT"
+    val Graphite = "3.1.2"
+    val DataDog = "1.1.3"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -308,7 +312,7 @@ object Dependency {
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
-  val chaos = "mesosphere" %% "chaos" % V.Chaos
+  val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
@@ -327,6 +331,8 @@ object Dependency {
   val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
+  val graphite = "io.dropwizard.metrics" % "metrics-graphite" % V.Graphite
+  val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
