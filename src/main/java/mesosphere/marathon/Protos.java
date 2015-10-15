@@ -20577,13 +20577,25 @@ public final class Protos {
      */
     com.google.protobuf.ByteString getValue();
 
-    // optional bool compressed = 4;
+    // optional bool compressed = 4 [default = false];
     /**
-     * <code>optional bool compressed = 4;</code>
+     * <code>optional bool compressed = 4 [default = false];</code>
+     *
+     * <pre>
+     * This flag indicates, if the byte array in value is gzip compressed
+     * Introduced in Marathon 0.12
+     * Optional to be backward compatible and also with mesos zk storage.
+     * </pre>
      */
     boolean hasCompressed();
     /**
-     * <code>optional bool compressed = 4;</code>
+     * <code>optional bool compressed = 4 [default = false];</code>
+     *
+     * <pre>
+     * This flag indicates, if the byte array in value is gzip compressed
+     * Introduced in Marathon 0.12
+     * Optional to be backward compatible and also with mesos zk storage.
+     * </pre>
      */
     boolean getCompressed();
   }
@@ -20780,17 +20792,29 @@ public final class Protos {
       return value_;
     }
 
-    // optional bool compressed = 4;
+    // optional bool compressed = 4 [default = false];
     public static final int COMPRESSED_FIELD_NUMBER = 4;
     private boolean compressed_;
     /**
-     * <code>optional bool compressed = 4;</code>
+     * <code>optional bool compressed = 4 [default = false];</code>
+     *
+     * <pre>
+     * This flag indicates, if the byte array in value is gzip compressed
+     * Introduced in Marathon 0.12
+     * Optional to be backward compatible and also with mesos zk storage.
+     * </pre>
      */
     public boolean hasCompressed() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>optional bool compressed = 4;</code>
+     * <code>optional bool compressed = 4 [default = false];</code>
+     *
+     * <pre>
+     * This flag indicates, if the byte array in value is gzip compressed
+     * Introduced in Marathon 0.12
+     * Optional to be backward compatible and also with mesos zk storage.
+     * </pre>
      */
     public boolean getCompressed() {
       return compressed_;
@@ -21253,22 +21277,40 @@ public final class Protos {
         return this;
       }
 
-      // optional bool compressed = 4;
+      // optional bool compressed = 4 [default = false];
       private boolean compressed_ ;
       /**
-       * <code>optional bool compressed = 4;</code>
+       * <code>optional bool compressed = 4 [default = false];</code>
+       *
+       * <pre>
+       * This flag indicates, if the byte array in value is gzip compressed
+       * Introduced in Marathon 0.12
+       * Optional to be backward compatible and also with mesos zk storage.
+       * </pre>
        */
       public boolean hasCompressed() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>optional bool compressed = 4;</code>
+       * <code>optional bool compressed = 4 [default = false];</code>
+       *
+       * <pre>
+       * This flag indicates, if the byte array in value is gzip compressed
+       * Introduced in Marathon 0.12
+       * Optional to be backward compatible and also with mesos zk storage.
+       * </pre>
        */
       public boolean getCompressed() {
         return compressed_;
       }
       /**
-       * <code>optional bool compressed = 4;</code>
+       * <code>optional bool compressed = 4 [default = false];</code>
+       *
+       * <pre>
+       * This flag indicates, if the byte array in value is gzip compressed
+       * Introduced in Marathon 0.12
+       * Optional to be backward compatible and also with mesos zk storage.
+       * </pre>
        */
       public Builder setCompressed(boolean value) {
         bitField0_ |= 0x00000008;
@@ -21277,7 +21319,13 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional bool compressed = 4;</code>
+       * <code>optional bool compressed = 4 [default = false];</code>
+       *
+       * <pre>
+       * This flag indicates, if the byte array in value is gzip compressed
+       * Introduced in Marathon 0.12
+       * Optional to be backward compatible and also with mesos zk storage.
+       * </pre>
        */
       public Builder clearCompressed() {
         bitField0_ = (bitField0_ & ~0x00000008);
@@ -21471,10 +21519,10 @@ public final class Protos {
       "\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007messa" +
       "ge\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 " +
       "\002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132",
-      "\016.mesos.SlaveID\"M\n\014ZKStoreEntry\022\014\n\004name\030" +
-      "\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\022\n\nco" +
-      "mpressed\030\004 \001(\010B\035\n\023mesosphere.marathonB\006P" +
-      "rotos"
+      "\016.mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030" +
+      "\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\nco" +
+      "mpressed\030\004 \001(\010:\005falseB\035\n\023mesosphere.mara" +
+      "thonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
