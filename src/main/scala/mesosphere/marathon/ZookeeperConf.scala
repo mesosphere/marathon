@@ -40,7 +40,7 @@ trait ZookeeperConf extends ScallopConf {
     descrNo = "Disable compression of zk nodes",
     noshort = true,
     prefix = "disable_",
-    default = Some(true)
+    default = Some(false)
   )
 
   lazy val zooKeeperCompressionThreshold = opt[Long]("zk_compression_threshold",
