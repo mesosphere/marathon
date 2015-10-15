@@ -156,7 +156,7 @@ class GroupManager @Singleton @Inject() (
       from <- rootGroup()
       (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
       to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
-      _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty, config.maxApps()))
+      _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty, config.maxApps.get))
       plan = DeploymentPlan(from, to, resolve, version, toKill)
       _ = log.info(s"Computed new deployment plan:\n$plan")
       _ <- scheduler.deploy(plan, force)

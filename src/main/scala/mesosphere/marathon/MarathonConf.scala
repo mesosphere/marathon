@@ -205,7 +205,6 @@ trait MarathonConf
 
   lazy val maxApps = opt[Int]("max_apps",
     descr = "The maximum number of applications that may be created.",
-    noshort = true,
-    default = Some(500)
+    noshort = true
   )
 }

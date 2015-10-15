@@ -31,14 +31,13 @@ object ModelValidation {
     group: Group,
     path: String,
     parent: PathId,
-    maxApps: Int): Iterable[ConstraintViolation[V2Group]] = {
+    maxApps: Option[Int]): Iterable[ConstraintViolation[V2Group]] = {
 
     val v2Group = V2Group(group)
-    val maximumApps = if (group.transitiveApps.size > maxApps) {
+    val maximumApps = maxApps.filter(group.transitiveApps.size > _).map{ num =>
       Seq(violation(v2Group, "apps", "",
-        s"This Marathon instance may only handle up to $maxApps Apps! (Override with command line option --max_apps)"))
-    }
-    else Seq.empty[ConstraintViolation[V2Group]]
+        s"This Marathon instance may only handle up to $num Apps! (Override with command line option --max_apps)"))
+    }.getOrElse(Seq.empty[ConstraintViolation[V2Group]])
 
     checkGroup(v2Group, path, parent) ++ maximumApps
   }
