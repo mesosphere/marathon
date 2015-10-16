@@ -43,7 +43,7 @@ object ProcessKeeper {
   }
 
   def startZooKeeper(port: Int, workDir: String) {
-    val args = "org.apache.zookeeper.server.ZooKeeperServerMain" :: port.toString :: workDir :: Nil
+    val args = "-Dzookeeper.jmx.log4j.disable=true" :: "org.apache.zookeeper.server.ZooKeeperServerMain" :: port.toString :: workDir :: Nil
     val workDirFile = new File(workDir)
     FileUtils.deleteDirectory(workDirFile)
     FileUtils.forceMkdir(workDirFile)

@@ -139,7 +139,7 @@ object MarathonBuild extends Build {
       {
         case "application.conf"                                             => MergeStrategy.concat
         case "META-INF/jersey-module-version"                               => MergeStrategy.first
-        case "log4j.properties"                                             => MergeStrategy.concat
+        case "log4j.properties"                                             => MergeStrategy.discard
         case "org/apache/hadoop/yarn/util/package-info.class"               => MergeStrategy.first
         case "org/apache/hadoop/yarn/factories/package-info.class"          => MergeStrategy.first
         case "org/apache/hadoop/yarn/factory/providers/package-info.class"  => MergeStrategy.first
@@ -264,13 +264,15 @@ object Dependencies {
     marathonUI % "compile",
     graphite % "compile",
     datadog % "compile",
+    logback % "compile",
+    log4jOverSlf4j % "compile",
 
     // test
     Test.diffson % "test",
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test"
-  )
+  ).map(_  exclude("org.slf4j", "slf4j-log4j12") exclude("log4j", "log4j"))
 }
 
 object Dependency {
@@ -298,6 +300,8 @@ object Dependency {
     val MarathonUI = "0.12.0-SNAPSHOT"
     val Graphite = "3.1.2"
     val DataDog = "1.1.3"
+    val Logback = "1.1.3"
+    val Log4jOverSlf4j = "1.7.12"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -333,6 +337,8 @@ object Dependency {
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
   val graphite = "io.dropwizard.metrics" % "metrics-graphite" % V.Graphite
   val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
+  val logback = "ch.qos.logback" % "logback-classic" % V.Logback
+  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % V.Log4jOverSlf4j
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
