@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.actor.{ Actor, ActorRef, Cancellable, Props }
 import akka.event.LoggingReceive
-import mesosphere.mesos.simulation.DriverActor.{ ChangeTaskStatus, ReconcileTask, ReviveOffers, KillTask, LaunchTasks }
+import mesosphere.mesos.simulation.DriverActor._
 import mesosphere.mesos.simulation.SchedulerActor.ResourceOffers
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
@@ -38,6 +38,18 @@ object DriverActor {
     */
   case class ReconcileTask(taskStatus: Seq[TaskStatus])
 
+  /**
+    * Corresponds to the following method in [[org.apache.mesos.MesosSchedulerDriver]]:
+    *
+    * `override def suppressOffers(): Status`
+    */
+  case object SuppressOffers
+
+  /**
+    * Corresponds to the following method in [[org.apache.mesos.MesosSchedulerDriver]]:
+    *
+    * `override def reviveOffers(): Status`
+    */
   case object ReviveOffers
 
   private case class ChangeTaskStatus(taskStatus: TaskStatus)
@@ -115,6 +127,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
     super.postStop()
   }
 
+  //scalastyle:off cyclomatic.complexity
   override def receive: Receive = LoggingReceive {
     case driver: SchedulerDriver =>
       log.debug(s"pass on driver to scheduler $scheduler")
@@ -133,6 +146,8 @@ class DriverActor(schedulerProps: Props) extends Actor {
           scheduleStatusChange(toState = TaskState.TASK_LOST, afterDuration = 1.second)(taskID = taskId)
       }
 
+    case SuppressOffers => ()
+
     case ReviveOffers =>
       scheduler ! offers
 
@@ -147,6 +162,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
         taskStatuses.iterator.map(_.getTaskId.getValue).map(tasks).foreach(scheduler ! _)
       }
   }
+  //scalastyle:on
 
   def simulateTaskLaunch(offers: Seq[OfferID], tasksToLaunch: Seq[TaskInfo]): Unit = {
     if (random.nextDouble() > 0.001) {

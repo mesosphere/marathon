@@ -46,6 +46,8 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
     driverCmd(DriverActor.ReconcileTask(statuses.toSeq))
   }
 
+  override def suppressOffers(): Status = driverCmd(DriverActor.SuppressOffers)
+
   override def reviveOffers(): Status = driverCmd(DriverActor.ReviveOffers)
 
   override def declineOffer(offerId: OfferID, filters: Filters): Status = Status.DRIVER_RUNNING
