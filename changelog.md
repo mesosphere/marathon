@@ -1,21 +1,18 @@
-
-
-## Changes from 0.11.0 to 0.12.0
+## Changes from 0.11.1 to 0.12.0
 
 ### Overview
-
 
 #### Enable extensions to Marathon via Plugins
 This version of Marathon ships with the ability to load and use external plugins.
 With this functionality in place, you can extend and adapt functionality in Marathon to your specific needs.
 We start this adventure with pluggable authentication and authorization hooks, but want to extend this
-to various functionality inside of Marathon. 
+to various functionality inside of Marathon.
 
 To start with this feature, please read [Plugin Documentation](https://mesosphere.github.io/marathon/docs/plugin.html)
 or see our [Example Plugins](https://github.com/mesosphere/marathon-example-plugins).
 
 Please check it out and give us feedback!
-We are also interested in any recommendations for upcoming plugin hooks. 
+We are also interested in any recommendations for upcoming plugin hooks.
 
 #### Pluggable Authentication and Authorization hooks
 The probably most wanted feature in Marathon is the ability to have Authentication and Authorization.
@@ -57,11 +54,39 @@ This artifact holds all the inerfaces needed to develop your own Marathon plugin
 #### Consolidate logging to use slf4j
 We moved completely to slf4j as Logging API. The logging backend still uses log4j.
 
-
 ### Fixed Issues
 
 - #2294 - Make boolean command line flags use Scallop's 'toggle'
 
+## Changes from 0.11.0 to 0.11.1
+
+### Overview
+
+This release includes fixes for critical bugs introduced in v0.11.0 and several performance
+improvements that allow Marathon to handle a larger number of groups and applications.
+
+#### Performance Improvements
+This release introduces the following improvements which allow Marathon to handle a larger number of
+applications. Because this is a bugfix release and they are not backwards compatible, they are are
+available, but disabled by default:
+
+* ZK nodes larger than a certain threshold can now be compressed. This allows Marathon to handle
+  more apps and groups, but breaks backwards compatibility, because older versions of Marathon are
+  not able to parse compressed nodes.
+
+  To enable this feature, start Marathon with the `--zk-compression` flag.
+* A new flag (`--max_apps`) has been introduced, which allows Marathon to limit the maximum number
+  of applications that may be created. This limit is disabled by default, but we performed scale
+  tests on this release and recommend setting the limit to 500.
+
+#### Fixed issues
+- #2353 - Never recover from race condition when scaling up
+- #2369 - Large file URIs cause "Failed to fetch all URIs for container" error when pulling from HDFS
+- #2360 - PUT /v2/groups triggers restart while PUT /v2/apps does not
+- #2381 - Marathon stops apps instead of restart
+- #2402 - Runtime privilege checkbox does not work
+- #2398 - Blank docker image is created in app modal
+- #2338 - Parameters in the Docker container settings are not taken into account
 
 ## Changes from 0.10.0 to 0.11.0
 
