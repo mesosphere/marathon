@@ -6,8 +6,9 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusEmitter }
+import mesosphere.marathon.core.task.tracker.TaskStatusUpdateProcessor
 import mesosphere.marathon.event._
 import mesosphere.marathon.tasks._
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }
@@ -26,7 +27,7 @@ class MarathonScheduler @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
     clock: Clock,
     offerProcessor: OfferProcessor,
-    taskStatusEmitter: TaskStatusEmitter,
+    taskStatusProcessor: TaskStatusUpdateProcessor,
     frameworkIdUtil: FrameworkIdUtil,
     mesosLeaderInfo: MesosLeaderInfo,
     taskIdUtil: TaskIdUtil,
@@ -75,7 +76,10 @@ class MarathonScheduler @Inject() (
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
-    taskStatusEmitter.publish(TaskStatusUpdate(timestamp = clock.now(), status.getTaskId, MarathonTaskStatus(status)))
+    taskStatusProcessor.publish(status).onFailure {
+      case NonFatal(e) =>
+        log.error(s"while processing task status update $status", e)
+    }
   }
 
   override def frameworkMessage(

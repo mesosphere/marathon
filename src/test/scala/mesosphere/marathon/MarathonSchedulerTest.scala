@@ -7,6 +7,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskStatusEmitter
+import mesosphere.marathon.core.task.tracker.TaskStatusUpdateProcessor
 import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.AppRepository
@@ -28,7 +29,7 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
   var config: MarathonConf = _
   var eventBus: EventStream = _
   var offerProcessor: OfferProcessor = _
-  var taskStatusEmitter: TaskStatusEmitter = _
+  var taskStatusProcessor: TaskStatusUpdateProcessor = _
 
   before {
     repo = mock[AppRepository]
@@ -40,12 +41,12 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
     taskIdUtil = TaskIdUtil
     probe = TestProbe()
     eventBus = system.eventStream
-    taskStatusEmitter = mock[TaskStatusEmitter]
+    taskStatusProcessor = mock[TaskStatusUpdateProcessor]
     scheduler = new MarathonScheduler(
       eventBus,
       Clock(),
       offerProcessor = offerProcessor,
-      taskStatusEmitter = taskStatusEmitter,
+      taskStatusProcessor = taskStatusProcessor,
       frameworkIdUtil,
       mesosLeaderInfo,
       taskIdUtil,
