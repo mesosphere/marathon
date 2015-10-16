@@ -12,6 +12,6 @@ WORKDIR /marathon
 # less frequently than the source code. By separating
 # these steps we can greatly speed up cached local docker builds.
 COPY project /marathon/project
-RUN sbt update test:update
+RUN sbt test:compile
 
 COPY . /marathon
