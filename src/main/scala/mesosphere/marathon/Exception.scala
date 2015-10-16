@@ -53,3 +53,4 @@ class ResolveArtifactsCanceledException(msg: String) extends DeploymentFailedExc
  * Store specific exceptions
  */
 class StoreCommandFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
+class WrongConfigurationException(msg: String) extends Exception(msg)
