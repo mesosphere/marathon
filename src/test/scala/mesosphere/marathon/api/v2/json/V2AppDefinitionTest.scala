@@ -210,6 +210,16 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       "Health check port indices must address an element of the ports array or container port mappings."
     )
     validateJsonSchema(app, false) // missing image
+
+    app = correct.copy(
+      healthChecks = Set(HealthCheck(portIndex = 1))
+    )
+    shouldViolate(
+      app,
+      "",
+      "Health check port indices must address an element of the ports array or container port mappings."
+    )
+    validateJsonSchema(app)
   }
 
   test("SerializationRoundtrip empty") {
