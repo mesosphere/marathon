@@ -414,6 +414,14 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       }
     })
 
+    metrics.gauge("service.mesosphere.marathon.uptime", new Gauge[Long] {
+      val startedAt = System.currentTimeMillis()
+
+      override def getValue: Long = {
+        System.currentTimeMillis() - startedAt
+      }
+    })
+
     groupManager
   }
 }
