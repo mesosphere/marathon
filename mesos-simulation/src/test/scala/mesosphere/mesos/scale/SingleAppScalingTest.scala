@@ -60,7 +60,7 @@ class SingleAppScalingTest
     val deploymentId = deploymentIds.head
 
     Then("the deployment should finish eventually")
-    waitForDeploymentId(deploymentId)
+    waitForDeploymentId(deploymentId, (30 + instances).seconds)
 
     When("deleting the app")
     val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appIdPath, force = true)
