@@ -10,6 +10,7 @@ import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.event.http.HttpEventModule
+import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -50,6 +51,7 @@ class MarathonApp extends App {
     Seq(
       new HttpModule(conf),
       new MetricsModule,
+      new MetricsReporterModule(conf),
       new MarathonModule(conf, conf, zk),
       new MarathonRestModule,
       new EventModule(conf),
@@ -77,7 +79,8 @@ class MarathonApp extends App {
     log.info(s"Starting Marathon ${BuildInfo.version} with ${args.mkString(" ")}")
     run(
       classOf[HttpService],
-      classOf[MarathonSchedulerService]
+      classOf[MarathonSchedulerService],
+      classOf[MetricsReporterService]
     )
   }
 }
