@@ -24,6 +24,21 @@ class ModelValidationTest
     violations should have size 0
   }
 
+  test("A group can not be updated to have more than the configured number of apps") {
+    val group = Group("/".toPath, Set(
+      createServicePortApp("/a".toPath, 0).toAppDefinition,
+      createServicePortApp("/b".toPath, 0).toAppDefinition,
+      createServicePortApp("/c".toPath, 0).toAppDefinition
+    ))
+
+    val validations = ModelValidation.checkGroup(group, "", PathId.empty, maxApps = Some(2))
+    validations should not be Nil
+    validations.find(_.getMessage.contains("This Marathon instance may only handle up to 2 Apps!")) should be ('defined)
+
+    val noValidations = ModelValidation.checkGroup(group, "", PathId.empty, maxApps = Some(10))
+    noValidations should be('empty)
+  }
+
   test("Model validation should catch new apps that conflict with service ports in existing apps") {
     val existingApp = createServicePortApp("/app1".toPath, 3200)
     val group = Group(id = PathId.empty, apps = Set(existingApp.toAppDefinition))
