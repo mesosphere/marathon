@@ -75,11 +75,6 @@ case class AppDefinition(
 
   import mesosphere.mesos.protos.Implicits._
 
-  assert(
-    portIndicesAreValid(),
-    "Health check port indices must address an element of the ports array or container port mappings."
-  )
-
   /**
     * Returns true if all health check port index values are in the range
     * of ths app's ports array, or if defined, the array of container
