@@ -337,18 +337,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideTaskTracker(store: PersistentStore, metrics: Metrics, conf: MarathonConf): TaskTracker = {
-    new TaskTracker(
-      new TaskRepository(
-        new MarathonStore[MarathonTaskState](
-          store = store,
-          metrics = metrics,
-          newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
-          prefix = TaskRepository.storePrefix),
-        metrics
-      ),
-      conf
-    )
+  def provideTaskTracker(repo: TaskRepository): TaskTracker = {
+    new TaskTracker(repo, conf)
   }
 
   @Provides
