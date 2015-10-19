@@ -454,9 +454,6 @@ trait V2Formats {
           )(ExtraFields)
 
         extraReads.map { extraFields =>
-
-          println(s"\nextra fields:\n\n$extraFields\n")
-
           app.copy(
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
