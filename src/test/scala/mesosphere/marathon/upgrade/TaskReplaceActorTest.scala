@@ -10,15 +10,16 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.upgrade.TaskReplaceActor.RetryKills
 import org.apache.mesos.Protos.{ Status, TaskID }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
+import org.scalatest.concurrent.Eventually
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
-import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
@@ -45,6 +46,14 @@ class TaskReplaceActorTest
     val tracker = mock[TaskTracker]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
+    when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+        Status.DRIVER_RUNNING
+      }
+    })
 
     val promise = Promise[Unit]()
 
@@ -84,6 +93,14 @@ class TaskReplaceActorTest
     val tracker = mock[TaskTracker]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
+    when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+        Status.DRIVER_RUNNING
+      }
+    })
 
     val promise = Promise[Unit]()
 
@@ -119,6 +136,14 @@ class TaskReplaceActorTest
     val tracker = mock[TaskTracker]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskC))
+    when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+        Status.DRIVER_RUNNING
+      }
+    })
 
     val promise = Promise[Unit]()
 
@@ -167,6 +192,10 @@ class TaskReplaceActorTest
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       override def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+
         oldTaskCount -= 1
         Status.DRIVER_RUNNING
       }
@@ -232,7 +261,11 @@ class TaskReplaceActorTest
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
-      override def answer(invocation: InvocationOnMock): Status = {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+
         oldTaskCount -= 1
         Status.DRIVER_RUNNING
       }
@@ -302,7 +335,11 @@ class TaskReplaceActorTest
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
-      override def answer(invocation: InvocationOnMock): Status = {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+
         oldTaskCount -= 1
         Status.DRIVER_RUNNING
       }
@@ -370,7 +407,11 @@ class TaskReplaceActorTest
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
-      override def answer(invocation: InvocationOnMock): Status = {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+
         oldTaskCount -= 1
         Status.DRIVER_RUNNING
       }
@@ -449,5 +490,93 @@ class TaskReplaceActorTest
     }.getMessage should equal("The task upgrade has been cancelled")
 
     expectTerminated(ref)
+  }
+
+  test("Retry outstanding kills") {
+    val app = AppDefinition(id = "myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val queue = mock[LaunchQueue]
+    val tracker = mock[TaskTracker]
+
+    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
+    when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
+      var firstKillForTaskB = true
+
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+
+        if (taskId == taskB.getId && firstKillForTaskB) {
+          firstKillForTaskB = false
+        }
+        else {
+          val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+          system.eventStream.publish(update)
+        }
+        Status.DRIVER_RUNNING
+      }
+    })
+
+    val promise = Promise[Unit]()
+
+    val ref = TestActorRef(
+      new TaskReplaceActor(
+        driver,
+        queue,
+        tracker,
+        system.eventStream,
+        app,
+        promise))
+
+    watch(ref)
+
+    ref.underlyingActor.periodicalRetryKills.cancel()
+    ref ! RetryKills
+
+    for (i <- 0 until app.instances)
+      ref ! MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString)
+
+    Await.result(promise.future, 5.seconds)
+    verify(queue).resetDelay(app)
+    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
+    verify(driver, times(2)).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+
+    expectTerminated(ref)
+  }
+
+  test("Wait until the tasks are killed") {
+    val app = AppDefinition(id = "myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val queue = mock[LaunchQueue]
+    val tracker = mock[TaskTracker]
+
+    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
+
+    val promise = Promise[Unit]()
+
+    val ref = TestActorRef(
+      new TaskReplaceActor(
+        driver,
+        queue,
+        tracker,
+        system.eventStream,
+        app,
+        promise))
+
+    watch(ref)
+
+    for (i <- 0 until app.instances)
+      ref ! MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString)
+
+    intercept[Exception] {
+      Await.result(promise.future, 5.seconds)
+    }
+
+    verify(queue).resetDelay(app)
+    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
+    verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
   }
 }
