@@ -1,3 +1,14 @@
+## Changes from 0.12.0 to 0.13.0
+
+### Breaking Changes
+
+#### Tasks keys and storage format in ZooKeeper
+Marathon tasks are now stored in ZooKeeper using a generic implementation that has been around for
+a while. In order to accomplish this, the keys under which tasks are stored had to be migrated and
+do no longer contain redundant information about the app id. Additionally, the task storage format
+in Zookeeper changed as well. Previous versions of Marathon will **not** be able to read the tasks'
+status once these are migrated. Please backup your ZooKeeper state before migrating to this version. 
+
 ## Changes from 0.11.1 to 0.12.0
 
 ### Overview

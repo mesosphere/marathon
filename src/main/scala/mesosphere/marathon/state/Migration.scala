@@ -58,7 +58,7 @@ class Migration @Inject() (
       }
     },
     StorageVersions(0, 13, 0) -> { () =>
-      new MigrationTo0_13(taskRepo).migrateTasks().recover {
+      new MigrationTo0_13(taskRepo, store).migrateTasks().recover {
         case NonFatal(e) => throw new RuntimeException("while migrating storage to 0.13", e)
       }
     }
@@ -286,10 +286,36 @@ class MigrationTo0_11(groupRepository: GroupRepository, appRepository: AppReposi
   }
 }
 
-class MigrationTo0_13(taskRepository: TaskRepository) {
+class MigrationTo0_13(taskRepository: TaskRepository, store: PersistentStore) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   val entityStore = taskRepository.store
+
+  // the bytes stored via TaskTracker are incompatible to EntityRepo, so we have to parse them 'manually'
+  def fetchLegacyTask(taskKey: String): Future[Option[MarathonTask]] = {
+    def deserialize(taskKey: String, source: ObjectInputStream): Option[MarathonTask] = {
+      if (source.available > 0) {
+        try {
+          val size = source.readInt
+          val bytes = new Array[Byte](size)
+          source.readFully(bytes)
+          Some(MarathonTask.parseFrom(bytes))
+        }
+        catch {
+          case e: com.google.protobuf.InvalidProtocolBufferException =>
+            None
+        }
+      }
+      else {
+        None
+      }
+    }
+
+    store.load("task:" + taskKey).map(_.flatMap { entity =>
+      val source = new ObjectInputStream(new ByteArrayInputStream(entity.bytes.toArray))
+      deserialize(taskKey, source)
+    })
+  }
 
   def migrateTasks(): Future[Unit] = {
     log.info("Start 0.13 migration")
@@ -299,8 +325,8 @@ class MigrationTo0_13(taskRepository: TaskRepository) {
     // in the key after the prefix implicitly denotes a versioned entry, so this
     // had to be changed, even though tasks are not stored with versions.
     def migrateKey(legacyKey: String): Future[Unit] = {
-      entityStore.fetch(legacyKey).flatMap {
-        case Some(taskState) => taskRepository.store(taskState.task).flatMap { _ =>
+      fetchLegacyTask(legacyKey).flatMap {
+        case Some(task) => taskRepository.store(task).flatMap { _ =>
           entityStore.expunge(legacyKey).map(_ => ())
         }
         case _ => Future.failed[Unit](new RuntimeException(s"Unable to load entity with key = $legacyKey"))

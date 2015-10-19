@@ -4,14 +4,13 @@ import java.util.UUID
 
 import com.codahale.metrics.MetricRegistry
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import mesosphere.FutureTestSupport._
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.util.state.memory.InMemoryStore
-import org.mockito.Mockito.spy
-import org.scalatest.{ GivenWhenThen, Matchers }
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.FutureTestSupport._
+import mesosphere.util.state.memory.InMemoryStore
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers {
 
@@ -21,8 +20,8 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     val appId = "/test/app1".toRootPath
     val task1 = dummyTask(appId)
     val task2 = dummyTask(appId)
-    f.entityStore.store(f.legacyStoreKey(appId, task1.getId), MarathonTaskState(task1)).futureValue
-    f.entityStore.store(f.legacyStoreKey(appId, task2.getId), MarathonTaskState(task2)).futureValue
+    f.legacyTaskStore.store(appId, task1).futureValue
+    f.legacyTaskStore.store(appId, task2).futureValue
     val names = f.entityStore.names().futureValue
     names should not be empty
     names should contain (appId.safePath + ":" + task1.getId)
@@ -44,8 +43,9 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
 
   class Fixture {
     lazy val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
-    lazy val state = spy(new InMemoryStore)
+    lazy val state = new InMemoryStore
     lazy val metrics = new Metrics(new MetricRegistry)
+    lazy val legacyTaskStore = new LegacyTaskStore(state)
     lazy val entityStore = new MarathonStore[MarathonTaskState](
       store = state,
       metrics = metrics,
@@ -55,9 +55,42 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
       val metrics = new Metrics(new MetricRegistry)
       new TaskRepository(entityStore, metrics)
     }
-    lazy val migration = new MigrationTo0_13(taskRepo)
+    lazy val migration = new MigrationTo0_13(taskRepo, state)
 
     def legacyStoreKey(appId: PathId, taskId: String): String = appId.safePath + ":" + taskId
+  }
+
+}
+
+import java.io._
+
+import mesosphere.util.state.{ PersistentEntity, PersistentStore }
+
+import scala.concurrent.Future
+
+private[state] class LegacyTaskStore(store: PersistentStore) {
+
+  val PREFIX = "task:"
+  val ID_DELIMITER = ":"
+
+  private[this] def getKey(appId: PathId, taskId: String): String = {
+    PREFIX + appId.safePath + ID_DELIMITER + taskId
+  }
+
+  private[this] def serialize(task: MarathonTask, sink: ObjectOutputStream): Unit = {
+    val size = task.getSerializedSize
+    sink.writeInt(size)
+    sink.write(task.toByteArray)
+    sink.flush()
+  }
+
+  def store(appId: PathId, task: MarathonTask): Future[PersistentEntity] = {
+    val byteStream = new ByteArrayOutputStream()
+    val output = new ObjectOutputStream(byteStream)
+    serialize(task, output)
+    val bytes = byteStream.toByteArray
+    val key: String = getKey(appId, task.getId)
+    store.create(key, bytes)
   }
 
 }
