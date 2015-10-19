@@ -135,6 +135,6 @@ class MetricsReporterService @Inject() (config: MetricsReporterConf, registry: M
 
   def shutDown() {
     graphite.foreach(_.stop)
-    datadog.foreach(_.stop())
+    datadog.foreach(_.stop)
   }
 }
