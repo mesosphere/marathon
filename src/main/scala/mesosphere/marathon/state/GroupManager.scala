@@ -106,8 +106,9 @@ class GroupManager @Singleton @Inject() (
     gid: PathId,
     fn: Group => Group,
     version: Timestamp = Timestamp.now(),
-    force: Boolean = false): Future[DeploymentPlan] =
-    upgrade(gid, _.update(gid, fn, version), version, force)
+    force: Boolean = false,
+    toKill: Map[PathId, Set[MarathonTask]] = Map.empty): Future[DeploymentPlan] =
+    upgrade(gid, _.update(gid, fn, version), version, force, toKill)
 
   /**
     * Update application with given identifier and update function.

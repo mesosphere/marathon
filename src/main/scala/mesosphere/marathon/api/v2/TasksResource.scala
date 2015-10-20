@@ -8,21 +8,22 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller }
+import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.plugin.auth.{ Authorizer, Authenticator, KillTask }
-import mesosphere.marathon.state.GroupManager
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, KillTask }
+import mesosphere.marathon.state.{ GroupManager, PathId }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
+import mesosphere.util.ThreadPoolContext
 import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
 import scala.collection.IterableView
 import scala.collection.JavaConverters._
+import scala.concurrent.Future
 
 @Path("v2/tasks")
 class TasksResource @Inject() (
@@ -37,6 +38,7 @@ class TasksResource @Inject() (
     val authorizer: Authorizer) extends AuthResource {
 
   val log = LoggerFactory.getLogger(getClass.getName)
+  implicit val ec = ThreadPoolContext.context
 
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -106,6 +108,7 @@ class TasksResource @Inject() (
   @Path("delete")
   def killTasks(
     @QueryParam("scale")@DefaultValue("false") scale: Boolean,
+    @QueryParam("force")@DefaultValue("false") force: Boolean,
     body: Array[Byte],
     @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
 
@@ -116,20 +119,25 @@ class TasksResource @Inject() (
     }.toMap
 
     doIfAuthorized(req, resp, KillTask, taskToAppIds.values.toSeq: _*) { implicit identity =>
-      taskToAppIds
+
+      def scaleAppWithKill(toKill: Map[PathId, Set[MarathonTask]]): Response = {
+        deploymentResult(result(taskKiller.killAndScale(toKill, force)))
+      }
+
+      def killTasks(toKill: Map[PathId, Set[MarathonTask]]): Response = {
+        val killed = result(Future.sequence(toKill.map {
+          case (appId, tasks) => taskKiller.kill(appId, _ => tasks)
+        })).flatten
+        ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(taskIdUtil.appId(task.getId), task, Seq.empty))))
+      }
+
+      val taskByApps = taskToAppIds
         .flatMap { case (taskId, appId) => taskTracker.fetchTask(taskId) }
         .groupBy { x => taskIdUtil.appId(x.getId) }
-        .foreach {
-          case (appId, tasks) =>
-            def findToKill(appTasks: Set[MarathonTask]) = tasks.toSet
-            if (scale) taskKiller.killAndScale(appId, findToKill, force = true)
-            else taskKiller.kill(appId, findToKill, force = true)
-        }
+        .map{ case (app, tasks) => app -> tasks.toSet }
 
-      // TODO: does anyone expect a response with all the deployment plans in case of scaling?
-      Response.ok().build()
+      if (scale) scaleAppWithKill(taskByApps) else killTasks(taskByApps)
     }
-
   }
 
   private def toTaskState(state: String): Option[TaskState] = state.toLowerCase match {

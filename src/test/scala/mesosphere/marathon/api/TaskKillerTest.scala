@@ -38,7 +38,7 @@ class TaskKillerTest extends MarathonSpec
     val appId = PathId("invalid")
     when(tracker.contains(appId)).thenReturn(false)
 
-    val result = taskKiller.kill(appId, (tasks) => Set.empty[MarathonTask], force = true)
+    val result = taskKiller.kill(appId, (tasks) => Set.empty[MarathonTask])
     result.failed.futureValue shouldEqual UnknownAppException(appId)
   }
 
@@ -51,7 +51,7 @@ class TaskKillerTest extends MarathonSpec
   }
 
   test("KillRequested with scaling") {
-    val appId = PathId(List("my", "app"))
+    val appId = PathId(List("app"))
     val now = Timestamp.now()
     val task1 = MarathonTasks.makeTask(
       "task-1", "host", ports = Nil, attributes = Nil, version = now, now = now,
@@ -67,25 +67,22 @@ class TaskKillerTest extends MarathonSpec
     when(tracker.contains(appId)).thenReturn(true)
     when(groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
 
-    val appIdCaptor = ArgumentCaptor.forClass(classOf[PathId])
-    val appUpdateCaptor = ArgumentCaptor.forClass(classOf[(Option[AppDefinition]) => AppDefinition])
+    val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
-    val toKillCaptor = ArgumentCaptor.forClass(classOf[Set[MarathonTask]])
+    val toKillCaptor = ArgumentCaptor.forClass(classOf[Map[PathId, Set[MarathonTask]]])
     val expectedDeploymentPlan = DeploymentPlan.empty
-    when(groupManager.updateApp(
-      appId = appIdCaptor.capture(),
-      fn = appUpdateCaptor.capture(),
-      version = any[Timestamp](),
-      force = forceCaptor.capture(),
-      toKill = toKillCaptor.capture())
+    when(groupManager.update(
+      any[PathId],
+      groupUpdateCaptor.capture(),
+      any[Timestamp],
+      forceCaptor.capture(),
+      toKillCaptor.capture())
     ).thenReturn(Future.successful(expectedDeploymentPlan))
 
     val result = taskKiller.killAndScale(appId, (tasks) => tasksToKill, force = true)
     result.futureValue shouldEqual expectedDeploymentPlan
-    appIdCaptor.getValue shouldEqual appId
-    appUpdateCaptor.getValue.apply(Some(originalAppDefinition)) shouldEqual originalAppDefinition.copy(instances = 21)
     forceCaptor.getValue shouldEqual true
-    toKillCaptor.getValue shouldEqual tasksToKill
+    toKillCaptor.getValue shouldEqual Map(appId -> tasksToKill)
   }
 
   test("KillRequested without scaling") {
@@ -93,7 +90,7 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill = Set(MarathonTask.getDefaultInstance)
     when(tracker.contains(appId)).thenReturn(true)
 
-    val result = taskKiller.kill(appId, (tasks) => tasksToKill, force = true)
+    val result = taskKiller.kill(appId, (tasks) => tasksToKill)
     result.futureValue shouldEqual tasksToKill
     verify(service, times(1)).killTasks(appId, tasksToKill)
     verifyNoMoreInteractions(groupManager)
@@ -114,13 +111,18 @@ class TaskKillerTest extends MarathonSpec
 
     when(tracker.contains(appId)).thenReturn(true)
     when(groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
+    val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
-    when(groupManager.updateApp(any(), any(), any(), forceCaptor.capture(), any())
-    ).thenReturn(Future.failed(AppLockedException()))
+    when(groupManager.update(
+      any[PathId],
+      groupUpdateCaptor.capture(),
+      any[Timestamp],
+      forceCaptor.capture(),
+      any[Map[PathId, Set[MarathonTask]]]
+    )).thenReturn(Future.failed(AppLockedException()))
 
     val result = taskKiller.killAndScale(appId, (tasks) => tasksToKill, force = false)
     forceCaptor.getValue shouldEqual false
     result.failed.futureValue shouldEqual AppLockedException()
   }
-
 }
