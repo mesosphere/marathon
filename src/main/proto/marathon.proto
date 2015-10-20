@@ -92,7 +92,7 @@ message MarathonTask {
   optional string version = 8 [default = "1970-01-01T00:00:00.000Z"]; // since 0.7.0
   optional mesos.TaskStatus status = 9;
   optional mesos.SlaveID slaveId = 10;
-  optional mesos.NetworkInfo network = 11;
+  optional NetworkInfos network = 11;
 }
 
 message MarathonApp {

@@ -8603,19 +8603,19 @@ public final class Protos {
      */
     org.apache.mesos.Protos.SlaveIDOrBuilder getSlaveIdOrBuilder();
 
-    // optional .mesos.NetworkInfo network = 11;
+    // optional .mesosphere.marathon.NetworkInfos network = 11;
     /**
-     * <code>optional .mesos.NetworkInfo network = 11;</code>
+     * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
      */
     boolean hasNetwork();
     /**
-     * <code>optional .mesos.NetworkInfo network = 11;</code>
+     * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
      */
-    org.apache.mesos.Protos.NetworkInfo getNetwork();
+    mesosphere.marathon.Protos.NetworkInfos getNetwork();
     /**
-     * <code>optional .mesos.NetworkInfo network = 11;</code>
+     * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
      */
-    org.apache.mesos.Protos.NetworkInfoOrBuilder getNetworkOrBuilder();
+    mesosphere.marathon.Protos.NetworkInfosOrBuilder getNetworkOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.MarathonTask}
@@ -8757,11 +8757,11 @@ public final class Protos {
               break;
             }
             case 90: {
-              org.apache.mesos.Protos.NetworkInfo.Builder subBuilder = null;
+              mesosphere.marathon.Protos.NetworkInfos.Builder subBuilder = null;
               if (((bitField0_ & 0x00000080) == 0x00000080)) {
                 subBuilder = network_.toBuilder();
               }
-              network_ = input.readMessage(org.apache.mesos.Protos.NetworkInfo.PARSER, extensionRegistry);
+              network_ = input.readMessage(mesosphere.marathon.Protos.NetworkInfos.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(network_);
                 network_ = subBuilder.buildPartial();
@@ -9130,25 +9130,25 @@ public final class Protos {
       return slaveId_;
     }
 
-    // optional .mesos.NetworkInfo network = 11;
+    // optional .mesosphere.marathon.NetworkInfos network = 11;
     public static final int NETWORK_FIELD_NUMBER = 11;
-    private org.apache.mesos.Protos.NetworkInfo network_;
+    private mesosphere.marathon.Protos.NetworkInfos network_;
     /**
-     * <code>optional .mesos.NetworkInfo network = 11;</code>
+     * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
      */
     public boolean hasNetwork() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
     /**
-     * <code>optional .mesos.NetworkInfo network = 11;</code>
+     * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
      */
-    public org.apache.mesos.Protos.NetworkInfo getNetwork() {
+    public mesosphere.marathon.Protos.NetworkInfos getNetwork() {
       return network_;
     }
     /**
-     * <code>optional .mesos.NetworkInfo network = 11;</code>
+     * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
      */
-    public org.apache.mesos.Protos.NetworkInfoOrBuilder getNetworkOrBuilder() {
+    public mesosphere.marathon.Protos.NetworkInfosOrBuilder getNetworkOrBuilder() {
       return network_;
     }
 
@@ -9163,7 +9163,7 @@ public final class Protos {
       version_ = "1970-01-01T00:00:00.000Z";
       status_ = org.apache.mesos.Protos.TaskStatus.getDefaultInstance();
       slaveId_ = org.apache.mesos.Protos.SlaveID.getDefaultInstance();
-      network_ = org.apache.mesos.Protos.NetworkInfo.getDefaultInstance();
+      network_ = mesosphere.marathon.Protos.NetworkInfos.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -9460,7 +9460,7 @@ public final class Protos {
         }
         bitField0_ = (bitField0_ & ~0x00000200);
         if (networkBuilder_ == null) {
-          network_ = org.apache.mesos.Protos.NetworkInfo.getDefaultInstance();
+          network_ = mesosphere.marathon.Protos.NetworkInfos.getDefaultInstance();
         } else {
           networkBuilder_.clear();
         }
@@ -10821,20 +10821,20 @@ public final class Protos {
         return slaveIdBuilder_;
       }
 
-      // optional .mesos.NetworkInfo network = 11;
-      private org.apache.mesos.Protos.NetworkInfo network_ = org.apache.mesos.Protos.NetworkInfo.getDefaultInstance();
+      // optional .mesosphere.marathon.NetworkInfos network = 11;
+      private mesosphere.marathon.Protos.NetworkInfos network_ = mesosphere.marathon.Protos.NetworkInfos.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.mesos.Protos.NetworkInfo, org.apache.mesos.Protos.NetworkInfo.Builder, org.apache.mesos.Protos.NetworkInfoOrBuilder> networkBuilder_;
+          mesosphere.marathon.Protos.NetworkInfos, mesosphere.marathon.Protos.NetworkInfos.Builder, mesosphere.marathon.Protos.NetworkInfosOrBuilder> networkBuilder_;
       /**
-       * <code>optional .mesos.NetworkInfo network = 11;</code>
+       * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
        */
       public boolean hasNetwork() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
       }
       /**
-       * <code>optional .mesos.NetworkInfo network = 11;</code>
+       * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
        */
-      public org.apache.mesos.Protos.NetworkInfo getNetwork() {
+      public mesosphere.marathon.Protos.NetworkInfos getNetwork() {
         if (networkBuilder_ == null) {
           return network_;
         } else {
@@ -10842,9 +10842,9 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesos.NetworkInfo network = 11;</code>
+       * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
        */
-      public Builder setNetwork(org.apache.mesos.Protos.NetworkInfo value) {
+      public Builder setNetwork(mesosphere.marathon.Protos.NetworkInfos value) {
         if (networkBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -10858,10 +10858,10 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesos.NetworkInfo network = 11;</code>
+       * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
        */
       public Builder setNetwork(
-          org.apache.mesos.Protos.NetworkInfo.Builder builderForValue) {
+          mesosphere.marathon.Protos.NetworkInfos.Builder builderForValue) {
         if (networkBuilder_ == null) {
           network_ = builderForValue.build();
           onChanged();
@@ -10872,14 +10872,14 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesos.NetworkInfo network = 11;</code>
+       * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
        */
-      public Builder mergeNetwork(org.apache.mesos.Protos.NetworkInfo value) {
+      public Builder mergeNetwork(mesosphere.marathon.Protos.NetworkInfos value) {
         if (networkBuilder_ == null) {
           if (((bitField0_ & 0x00000400) == 0x00000400) &&
-              network_ != org.apache.mesos.Protos.NetworkInfo.getDefaultInstance()) {
+              network_ != mesosphere.marathon.Protos.NetworkInfos.getDefaultInstance()) {
             network_ =
-              org.apache.mesos.Protos.NetworkInfo.newBuilder(network_).mergeFrom(value).buildPartial();
+              mesosphere.marathon.Protos.NetworkInfos.newBuilder(network_).mergeFrom(value).buildPartial();
           } else {
             network_ = value;
           }
@@ -10891,11 +10891,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesos.NetworkInfo network = 11;</code>
+       * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
        */
       public Builder clearNetwork() {
         if (networkBuilder_ == null) {
-          network_ = org.apache.mesos.Protos.NetworkInfo.getDefaultInstance();
+          network_ = mesosphere.marathon.Protos.NetworkInfos.getDefaultInstance();
           onChanged();
         } else {
           networkBuilder_.clear();
@@ -10904,17 +10904,17 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesos.NetworkInfo network = 11;</code>
+       * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
        */
-      public org.apache.mesos.Protos.NetworkInfo.Builder getNetworkBuilder() {
+      public mesosphere.marathon.Protos.NetworkInfos.Builder getNetworkBuilder() {
         bitField0_ |= 0x00000400;
         onChanged();
         return getNetworkFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .mesos.NetworkInfo network = 11;</code>
+       * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
        */
-      public org.apache.mesos.Protos.NetworkInfoOrBuilder getNetworkOrBuilder() {
+      public mesosphere.marathon.Protos.NetworkInfosOrBuilder getNetworkOrBuilder() {
         if (networkBuilder_ != null) {
           return networkBuilder_.getMessageOrBuilder();
         } else {
@@ -10922,14 +10922,14 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesos.NetworkInfo network = 11;</code>
+       * <code>optional .mesosphere.marathon.NetworkInfos network = 11;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.mesos.Protos.NetworkInfo, org.apache.mesos.Protos.NetworkInfo.Builder, org.apache.mesos.Protos.NetworkInfoOrBuilder> 
+          mesosphere.marathon.Protos.NetworkInfos, mesosphere.marathon.Protos.NetworkInfos.Builder, mesosphere.marathon.Protos.NetworkInfosOrBuilder> 
           getNetworkFieldBuilder() {
         if (networkBuilder_ == null) {
           networkBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.mesos.Protos.NetworkInfo, org.apache.mesos.Protos.NetworkInfo.Builder, org.apache.mesos.Protos.NetworkInfoOrBuilder>(
+              mesosphere.marathon.Protos.NetworkInfos, mesosphere.marathon.Protos.NetworkInfos.Builder, mesosphere.marathon.Protos.NetworkInfosOrBuilder>(
                   network_,
                   getParentForChildren(),
                   isClean());
@@ -22578,53 +22578,54 @@ public final class Protos {
       "ling_at\030\027 \001(\003\022\035\n\025last_config_change_at\030\030" +
       " \001(\003\0222\n\007network\030\031 \001(\0132!.mesosphere.marat" +
       "hon.NetworkInfos\"\035\n\rResourceRoles\022\014\n\004rol",
-      "e\030\001 \003(\t\"\306\002\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004" +
+      "e\030\001 \003(\t\"\325\002\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004" +
       "host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030" +
       "\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001" +
       "(\003\022\022\n\nstarted_at\030\006 \001(\003\022,\n\021OBSOLETE_statu" +
       "ses\030\007 \003(\0132\021.mesos.TaskStatus\022)\n\007version\030" +
       "\010 \001(\t:\0301970-01-01T00:00:00.000Z\022!\n\006statu" +
       "s\030\t \001(\0132\021.mesos.TaskStatus\022\037\n\007slaveId\030\n " +
-      "\001(\0132\016.mesos.SlaveID\022#\n\007network\030\013 \001(\0132\022.m" +
-      "esos.NetworkInfo\"M\n\013MarathonApp\022\014\n\004name\030" +
-      "\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.marath",
-      "on.MarathonTask\"1\n\rContainerInfo\022\017\n\005imag" +
-      "e\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\237\004\n\025ExtendedC" +
-      "ontainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Conta" +
-      "inerInfo.Type\022\036\n\007volumes\030\002 \003(\0132\r.mesos.V" +
-      "olume\022E\n\006docker\030\003 \001(\01325.mesosphere.marat" +
-      "hon.ExtendedContainerInfo.DockerInfo\032\365\002\n" +
-      "\nDockerInfo\022\r\n\005image\030\001 \002(\t\022>\n\007network\030\002 " +
-      "\001(\0162\'.mesos.ContainerInfo.DockerInfo.Net" +
-      "work:\004HOST\022X\n\rport_mappings\030\003 \003(\0132A.meso" +
-      "sphere.marathon.ExtendedContainerInfo.Do",
-      "ckerInfo.PortMapping\022\031\n\nprivileged\030\004 \001(\010" +
-      ":\005false\022$\n\nparameters\030\005 \003(\0132\020.mesos.Para" +
-      "meter\022\030\n\020force_pull_image\030\006 \001(\010\032c\n\013PortM" +
-      "apping\022\021\n\thost_port\030\001 \002(\r\022\026\n\016container_p" +
-      "ort\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\027\n\014service_p" +
-      "ort\030d \001(\r:\0010\")\n\020EventSubscribers\022\025\n\rcall" +
-      "back_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005maj" +
-      "or\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"Z" +
-      "\n\031UpgradeStrategyDefinition\022\035\n\025minimumHe" +
-      "althCapacity\030\001 \002(\001\022\036\n\023maximumOverCapacit",
-      "y\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002" +
-      "(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.meso" +
-      "sphere.marathon.ServiceDefinition\0224\n\006gro" +
-      "ups\030\004 \003(\0132$.mesosphere.marathon.GroupDef" +
-      "inition\022\024\n\014dependencies\030\005 \003(\t\"\245\001\n\030Deploy" +
-      "mentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versio" +
-      "n\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosphere.m" +
-      "arathon.GroupDefinition\0224\n\006target\030\005 \002(\0132" +
-      "$.mesosphere.marathon.GroupDefinition\"\306\001" +
-      "\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id",
-      "\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.m" +
-      "esos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004hos" +
-      "t\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030" +
-      "\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T" +
-      "\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002" +
-      "(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005f" +
-      "alseB\035\n\023mesosphere.marathonB\006Protos"
+      "\001(\0132\016.mesos.SlaveID\0222\n\007network\030\013 \001(\0132!.m" +
+      "esosphere.marathon.NetworkInfos\"M\n\013Marat" +
+      "honApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.me",
+      "sosphere.marathon.MarathonTask\"1\n\rContai" +
+      "nerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(" +
+      "\014\"\237\004\n\025ExtendedContainerInfo\022\'\n\004type\030\001 \002(" +
+      "\0162\031.mesos.ContainerInfo.Type\022\036\n\007volumes\030" +
+      "\002 \003(\0132\r.mesos.Volume\022E\n\006docker\030\003 \001(\01325.m" +
+      "esosphere.marathon.ExtendedContainerInfo" +
+      ".DockerInfo\032\365\002\n\nDockerInfo\022\r\n\005image\030\001 \002(" +
+      "\t\022>\n\007network\030\002 \001(\0162\'.mesos.ContainerInfo" +
+      ".DockerInfo.Network:\004HOST\022X\n\rport_mappin" +
+      "gs\030\003 \003(\0132A.mesosphere.marathon.ExtendedC",
+      "ontainerInfo.DockerInfo.PortMapping\022\031\n\np" +
+      "rivileged\030\004 \001(\010:\005false\022$\n\nparameters\030\005 \003" +
+      "(\0132\020.mesos.Parameter\022\030\n\020force_pull_image" +
+      "\030\006 \001(\010\032c\n\013PortMapping\022\021\n\thost_port\030\001 \002(\r" +
+      "\022\026\n\016container_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001" +
+      "(\t\022\027\n\014service_port\030d \001(\r:\0010\")\n\020EventSubs" +
+      "cribers\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016Storag" +
+      "eVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r" +
+      "\n\005patch\030\003 \002(\r\"Z\n\031UpgradeStrategyDefiniti" +
+      "on\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023max",
+      "imumOverCapacity\030\002 \001(\001:\0011\"\260\001\n\017GroupDefin" +
+      "ition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004ap" +
+      "ps\030\003 \003(\0132&.mesosphere.marathon.ServiceDe" +
+      "finition\0224\n\006groups\030\004 \003(\0132$.mesosphere.ma" +
+      "rathon.GroupDefinition\022\024\n\014dependencies\030\005" +
+      " \003(\t\"\245\001\n\030DeploymentPlanDefinition\022\n\n\002id\030" +
+      "\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010original\030\004 \002(\013" +
+      "2$.mesosphere.marathon.GroupDefinition\0224" +
+      "\n\006target\030\005 \002(\0132$.mesosphere.marathon.Gro" +
+      "upDefinition\"\306\001\n\013TaskFailure\022\016\n\006app_id\030\001",
+      " \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005" +
+      "state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007message" +
+      "\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(" +
+      "\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016." +
+      "mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030\001 " +
+      "\002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncomp" +
+      "ressed\030\004 \001(\010:\005falseB\035\n\023mesosphere.marath" +
+      "onB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
