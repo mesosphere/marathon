@@ -40,7 +40,6 @@ class InfoResource @Inject() (
     "task_launch_timeout" -> config.taskLaunchTimeout.get,
     "reconciliation_initial_delay" -> config.reconciliationInitialDelay.get,
     "reconciliation_interval" -> config.reconciliationInterval.get,
-    "marathon_store_timeout" -> config.marathonStoreTimeout.get,
     "mesos_user" -> config.mesosUser.get,
     "leader_proxy_connection_timeout_ms" -> config.leaderProxyConnectionTimeout.get,
     "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.get)

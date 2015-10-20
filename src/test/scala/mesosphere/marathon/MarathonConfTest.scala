@@ -64,15 +64,6 @@ class MarathonConfTest extends MarathonSpec {
     assert(!conf.checkpoint())
   }
 
-  test("MarathonStoreTimeOut") {
-    val conf = makeConfig(
-      "--master", "127.0.0.1:5050",
-      "--marathon_store_timeout", "5000"
-    )
-    assert(conf.marathonStoreTimeout.isDefined)
-    assert(conf.marathonStoreTimeout.get == Some(5000))
-  }
-
   test("--default_accepted_resource_roles *,marathon will fail without --mesos_role marathon") {
     val triedConfig = Try(makeConfig(
       "--master", "127.0.0.1:5050",

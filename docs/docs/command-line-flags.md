@@ -119,7 +119,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     elected.
     Format: `protocol://host:port/`
     _Note: When this option is set given url should always load balance to current Mesos master
-* `--marathon_store_timeout` (Optional. Default: 2000 (2 seconds)): Maximum time
+* <span class="label label-default">Deprecated</span>`--marathon_store_timeout` (Optional.): Maximum time
     in milliseconds, to wait for persistent storage operations to complete.
 * <span class="label label-default">v0.10.0</span> `--env_vars_prefix` (Optional. Default: None):
     The prefix to add to the name of task's environment variables created
