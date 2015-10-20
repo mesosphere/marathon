@@ -82,9 +82,18 @@ class CoreGuiceModule extends AbstractModule {
     // (updateTaskTrackerStepImpl) before we notify the launch queue (notifyLaunchQueueStepImpl).
 
     Seq(
+
+      // Update the task tracker _first_.
+      //
+      // Subsequent steps (for example, the health check subsystem) depend on
+      // task tracker lookup to determine the routable host address for running
+      // tasks.  In case this status update is the first TASK_RUNNING update
+      // in IP-per-container mode, we need to store the assigned container
+      // address reliably before attempting to initiate health checks, or
+      // publish events to the bus.
+      updateTaskTrackerStepImpl,
       ContinueOnErrorStep(notifyHealthCheckManagerStepImpl),
       ContinueOnErrorStep(notifyRateLimiterStepImpl),
-      updateTaskTrackerStepImpl,
       ContinueOnErrorStep(notifyLaunchQueueStepImpl),
       ContinueOnErrorStep(taskStatusEmitterPublishImpl),
       ContinueOnErrorStep(postToEventStreamStepImpl),
