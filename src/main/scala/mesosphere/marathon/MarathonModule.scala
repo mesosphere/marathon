@@ -165,8 +165,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     leaderInfo: LeaderInfo,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
-    taskFailureRepository: TaskFailureRepository,
-    config: MarathonConf): ActorRef = {
+    taskFailureRepository: TaskFailureRepository): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
     }
@@ -182,7 +181,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         taskQueue,
         eventBus,
         schedulerActor,
-        config)
+        conf)
     }
 
     def deploymentManagerProps(schedulerActions: SchedulerActions): Props = {
@@ -238,19 +237,14 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
             hostPort.getBytes("UTF-8")
           }
         })
-      //scalastyle:off return
-      return Some(candidate)
-      //scalastyle:on
+      return Some(candidate) //scalastyle:off return
     }
     None
   }
 
   @Provides
   @Singleton
-  def provideTaskFailureRepository(
-    store: PersistentStore,
-    conf: MarathonConf,
-    metrics: Metrics): TaskFailureRepository = {
+  def provideTaskFailureRepository(store: PersistentStore, metrics: Metrics): TaskFailureRepository = {
     new TaskFailureRepository(
       new MarathonStore[TaskFailure](
         store,
@@ -265,10 +259,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideAppRepository(
-    store: PersistentStore,
-    conf: MarathonConf,
-    metrics: Metrics): AppRepository = {
+  def provideAppRepository(store: PersistentStore, metrics: Metrics): AppRepository = {
     new AppRepository(
       new MarathonStore[AppDefinition](store, metrics, () => AppDefinition.apply(), prefix = "app:"),
       maxVersions = conf.zooKeeperMaxVersions.get,
@@ -278,10 +269,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideGroupRepository(
-    store: PersistentStore,
-    conf: MarathonConf,
-    metrics: Metrics): GroupRepository = {
+  def provideGroupRepository(store: PersistentStore, metrics: Metrics): GroupRepository = {
     new GroupRepository(
       new MarathonStore[Group](store, metrics, () => Group.empty, "group:"),
       conf.zooKeeperMaxVersions.get,
@@ -291,10 +279,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideTaskRepository(
-    store: PersistentStore,
-    conf: MarathonConf,
-    metrics: Metrics): TaskRepository = {
+  def provideTaskRepository(store: PersistentStore, metrics: Metrics): TaskRepository = {
     new TaskRepository(
       new MarathonStore[MarathonTaskState](
         store = store,
@@ -307,10 +292,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideDeploymentRepository(
-    store: PersistentStore,
-    conf: MarathonConf,
-    metrics: Metrics): DeploymentRepository = {
+  def provideDeploymentRepository(store: PersistentStore, metrics: Metrics): DeploymentRepository = {
     new DeploymentRepository(
       new MarathonStore[DeploymentPlan](store, metrics, () => DeploymentPlan.empty, "deployment:"),
       conf.zooKeeperMaxVersions.get,
@@ -329,7 +311,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideFrameworkIdUtil(store: PersistentStore, metrics: Metrics, conf: MarathonConf): FrameworkIdUtil = {
+  def provideFrameworkIdUtil(store: PersistentStore, metrics: Metrics): FrameworkIdUtil = {
     new FrameworkIdUtil(
       new MarathonStore[FrameworkId](store, metrics, () => new FrameworkId(UUID.randomUUID().toString), ""),
       conf.zkTimeoutDuration)
@@ -348,9 +330,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     appRepo: AppRepository,
     groupRepo: GroupRepository,
     taskRepo: TaskRepository,
-    metrics: Metrics,
-    config: MarathonConf): Migration = {
-    new Migration(store, appRepo, groupRepo, taskRepo, config, metrics)
+    metrics: Metrics): Migration = {
+    new Migration(store, appRepo, groupRepo, taskRepo, conf, metrics)
   }
 
   @Provides
@@ -359,8 +340,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideStorageProvider(config: MarathonConf, http: HttpConf): StorageProvider =
-    StorageProvider.provider(config, http)
+  def provideStorageProvider(http: HttpConf): StorageProvider =
+    StorageProvider.provider(conf, http)
 
   @Named(ModuleNames.NAMED_SERIALIZE_GROUP_UPDATES)
   @Provides
@@ -378,7 +359,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     groupRepo: GroupRepository,
     appRepo: AppRepository,
     storage: StorageProvider,
-    config: MarathonConf,
     @Named(EventModule.busName) eventBus: EventStream,
     metrics: Metrics): GroupManager = {
     val groupManager: GroupManager = new GroupManager(
@@ -388,7 +368,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       groupRepo,
       appRepo,
       storage,
-      config,
+      conf,
       eventBus
     )
 
