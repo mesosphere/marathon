@@ -237,6 +237,7 @@ object Dependencies {
 
   val excludeSlf4jLog4j12 = ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   val excludeLog4j = ExclusionRule(organization = "log4j")
+  val excludeJCL = ExclusionRule(organization = "commons-logging")
 
   val root = Seq(
     // runtime
@@ -272,7 +273,7 @@ object Dependencies {
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test"
-  ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j))
+  ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
 }
 
 object Dependency {
