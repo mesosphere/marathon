@@ -32,4 +32,30 @@ object MarathonTasks {
       .setSlaveId(slaveId)
       .build
   }
+
+  /**
+    * Returns the host address of the supplied task as a string.
+    *
+    * If the supplied task has at least one NetworkInfo with an IP address
+    * filled in, this function returns the first such address.
+    *
+    * In all other cases, this function returns the slave host address.
+    */
+  def hostAddress(task: MarathonTask): String = {
+    // First, look for an assigned container address.
+    val containerAddress: Option[String] =
+      if (task.hasNetwork && task.getNetwork.getNetworksList.asScala.nonEmpty) {
+        // Take the first element with an IP address for now,
+        // since Marathon doesn't know how to deal with multiple addresses.
+        task.getNetwork.getNetworksList
+          .asScala
+          .find(_.hasIpAddress)
+          .map(_.getIpAddress)
+      }
+      else None
+
+    // fall back to the slave host address
+    containerAddress getOrElse task.getHost
+  }
+
 }
