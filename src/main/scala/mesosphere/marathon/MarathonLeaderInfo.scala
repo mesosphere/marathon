@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory
 import scala.util.control.NonFatal
 
 class MarathonLeaderInfo @Inject() (
-    @Named(ModuleNames.NAMED_CANDIDATE) candidate: Option[Candidate],
-    @Named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
+    @Named(ModuleNames.CANDIDATE) candidate: Option[Candidate],
+    @Named(ModuleNames.LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
     @Named(EventModule.busName) eventStream: EventStream,
     metrics: MarathonLeaderInfoMetrics) extends LeaderInfo {
 

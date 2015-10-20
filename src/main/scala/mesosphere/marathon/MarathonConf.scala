@@ -207,4 +207,12 @@ trait MarathonConf
     descr = "The maximum number of applications that may be created.",
     noshort = true
   )
+
+  lazy val storeCache = toggle("store_cache",
+    default = Some(true),
+    noshort = true,
+    descrYes = "Enable an in memory cache for the storage layer.",
+    descrNo = "Disable the in memory cache for the storage layer ",
+    prefix = "disable_"
+  )
 }

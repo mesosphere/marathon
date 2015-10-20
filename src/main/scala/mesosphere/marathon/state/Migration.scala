@@ -8,7 +8,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.tasks.TaskTracker.InternalApp
-import mesosphere.marathon.{ BuildInfo, MarathonConf }
+import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
 import mesosphere.util.ThreadPoolContext.context
 import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
@@ -21,7 +21,6 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
 
 class Migration @Inject() (
     store: PersistentStore,
@@ -54,12 +53,12 @@ class Migration @Inject() (
     },
     StorageVersions(0, 11, 0) -> { () =>
       new MigrationTo0_11(groupRepo, appRepo).migrateApps().recover {
-        case NonFatal(e) => throw new RuntimeException("while migrating storage to 0.11", e)
+        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.11", e)
       }
     },
     StorageVersions(0, 13, 0) -> { () =>
       new MigrationTo0_13(taskRepo, store).migrateTasks().recover {
-        case NonFatal(e) => throw new RuntimeException("while migrating storage to 0.13", e)
+        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.13", e)
       }
     }
   )
@@ -67,7 +66,7 @@ class Migration @Inject() (
   def applyMigrationSteps(from: StorageVersion): Future[List[StorageVersion]] = {
     if (from < minSupportedStorageVersion && from.nonEmpty) {
       val msg = s"Migration from versions < $minSupportedStorageVersion is not supported. Your version: $from"
-      throw new RuntimeException(msg)
+      throw new MigrationFailedException(msg)
     }
     val result = migrations.filter(_._1 > from).sortBy(_._1).map {
       case (migrateVersion, change) =>
@@ -86,15 +85,18 @@ class Migration @Inject() (
   }
 
   def migrate(): StorageVersion = {
-    val result = for {
+    val versionFuture = for {
       _ <- initializeStore()
       changes <- currentStorageVersion.flatMap(applyMigrationSteps)
       storedVersion <- storeCurrentVersion
     } yield storedVersion
 
-    result.onComplete {
-      case Success(version) => log.info(s"Migration successfully applied for version ${version.str}")
-      case Failure(ex)      => log.error("Migration failed!", ex)
+    val result = versionFuture.map { version =>
+      log.info(s"Migration successfully applied for version ${version.str}")
+      version
+    }.recover {
+      case ex: MigrationFailedException => throw ex
+      case NonFatal(ex)                 => throw new MigrationFailedException("MigrationFailed", ex)
     }
 
     Await.result(result, Duration.Inf)

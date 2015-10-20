@@ -137,7 +137,7 @@ class AppRepositoryTest extends MarathonSpec {
     val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id.safePath}:${x.version}"))
 
     when(store.names()).thenReturn(future)
-    when(store.expunge(any())).thenReturn(Future.successful(true))
+    when(store.expunge(any(), any())).thenReturn(Future.successful(true))
 
     val repo = new AppRepository(store, None, metrics)
     val res = Await.result(repo.expunge(appDef1.id), 5.seconds).toSeq
@@ -146,7 +146,7 @@ class AppRepositoryTest extends MarathonSpec {
     assert(res.forall(identity), "Should succeed")
 
     verify(store).names()
-    verify(store).expunge("app1")
+    verify(store).expunge("app1", null) //the null is due to mockito and default arguments in scala
     for {
       app <- allApps
       if app.id.toString == "app1"
