@@ -27,9 +27,9 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val toKill = Set(MarathonTask.getDefaultInstance)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskKiller.kill(any, any, any) returns Future.successful(toKill)
+    taskKiller.kill(any, any) returns Future.successful(toKill)
 
-    val response = appsTaskResource.deleteMany(appId, host, scale = false, auth.request, auth.response)
+    val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, auth.request, auth.response)
     response.getStatus shouldEqual 200
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
@@ -53,14 +53,14 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.get(appId) returns Set(task1, task2)
-    taskKiller.kill(any, any, any) returns Future.successful(toKill)
+    taskKiller.kill(any, any) returns Future.successful(toKill)
 
-    val response = appsTaskResource.deleteOne(appId.root, task1.getId, scale = false, auth.request, auth.response)
+    val response = appsTaskResource.deleteOne(appId.root, task1.getId, scale = false, force = false, auth.request, auth.response)
     response.getStatus shouldEqual 200
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
       .correspondsToJsonOf(Json.obj("task" -> toKill.head))
-    verify(taskKiller).kill(equalTo(appId.rootPath), any, force = equalTo(true))
+    verify(taskKiller).kill(equalTo(appId.rootPath), any)
     verifyNoMoreInteractions(taskKiller)
   }
 
@@ -118,12 +118,12 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     indexTxt.getStatus should be(auth.NotAuthenticatedStatus)
 
     When(s"One task is deleted")
-    val deleteOne = appsTaskResource.deleteOne("appId", "taskId", false, req, resp)
+    val deleteOne = appsTaskResource.deleteOne("appId", "taskId", false, false, req, resp)
     Then("we receive a NotAuthenticated response")
     deleteOne.getStatus should be(auth.NotAuthenticatedStatus)
 
     When(s"multiple tasks are deleted")
-    val deleteMany = appsTaskResource.deleteMany("appId", "host", false, req, resp)
+    val deleteMany = appsTaskResource.deleteMany("appId", "host", false, false, req, resp)
     Then("we receive a NotAuthenticated response")
     deleteMany.getStatus should be(auth.NotAuthenticatedStatus)
   }
@@ -147,12 +147,12 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     indexTxt.getStatus should be(auth.UnauthorizedStatus)
 
     When(s"One task is deleted")
-    val deleteOne = appsTaskResource.deleteOne("appId", "taskId", false, req, resp)
+    val deleteOne = appsTaskResource.deleteOne("appId", "taskId", false, false, req, resp)
     Then("we receive a not authorized response")
     deleteOne.getStatus should be(auth.UnauthorizedStatus)
 
     When(s"multiple tasks are deleted")
-    val deleteMany = appsTaskResource.deleteMany("appId", "host", false, req, resp)
+    val deleteMany = appsTaskResource.deleteMany("appId", "host", false, false, req, resp)
     Then("we receive a not authorized response")
     deleteMany.getStatus should be(auth.UnauthorizedStatus)
   }

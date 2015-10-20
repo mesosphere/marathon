@@ -76,7 +76,8 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @Timed
   def deleteMany(@PathParam("appId") appId: String,
                  @QueryParam("host") host: String,
-                 @QueryParam("scale") scale: Boolean = false,
+                 @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
+                 @QueryParam("force")@DefaultValue("false") force: Boolean = false,
                  @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     doIfAuthorized(req, resp, KillTask, appId.toRootPath) { implicit principal =>
       val pathId = appId.toRootPath
@@ -85,11 +86,11 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
       }
 
       if (scale) {
-        val deploymentF = taskKiller.killAndScale(pathId, findToKill, force = true)
+        val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
         deploymentResult(result(deploymentF))
       }
       else {
-        reqToResponse(taskKiller.kill(pathId, findToKill, scale)) {
+        reqToResponse(taskKiller.kill(pathId, findToKill)) {
           tasks => ok(jsonObjString("tasks" -> tasks))
         }
       }
@@ -101,18 +102,19 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @Timed
   def deleteOne(@PathParam("appId") appId: String,
                 @PathParam("taskId") id: String,
-                @QueryParam("scale") scale: Boolean = false,
+                @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
+                @QueryParam("force")@DefaultValue("false") force: Boolean = false,
                 @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     val pathId = appId.toRootPath
     doIfAuthorized(req, resp, KillTask, appId.toRootPath) { implicit principal =>
       def findToKill(appTasks: Set[MarathonTask]): Set[MarathonTask] = appTasks.find(_.getId == id).toSet
 
       if (scale) {
-        val deploymentF = taskKiller.killAndScale(pathId, findToKill, force = true)
+        val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
         deploymentResult(result(deploymentF))
       }
       else {
-        reqToResponse(taskKiller.kill(pathId, findToKill, force = true)) {
+        reqToResponse(taskKiller.kill(pathId, findToKill)) {
           tasks => tasks.headOption.fold(unknownTask(id))(task => ok(jsonObjString("task" -> task)))
         }
       }
