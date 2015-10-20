@@ -15,7 +15,7 @@ addons:
       - python-pip
       - python-virtualenv
 script:
-  - sbt clean coverage doc test
+  - sbt clean coverage doc assembly
   - source venv/bin/activate
   - pep8 bin/servicerouter.py
 before_script: # the automated download fails sometimes
