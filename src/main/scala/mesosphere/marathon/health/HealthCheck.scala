@@ -100,7 +100,7 @@ case class HealthCheck(
 }
 
 object HealthCheck {
-  val DefaultPath = Some("/")
+  val DefaultPath = None
   val DefaultProtocol = Protocol.HTTP
   val DefaultPortIndex = 0
   val DefaultCommand = None

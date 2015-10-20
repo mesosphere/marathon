@@ -1,9 +1,9 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.integration.setup.{ MarathonClusterIntegrationTest, IntegrationFunSuite, WaitTestSupport }
-import play.api.libs.json.Json
-import scala.concurrent.duration._
+import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, MarathonClusterIntegrationTest, WaitTestSupport }
 import org.scalatest.{ GivenWhenThen, Matchers }
+
+import scala.concurrent.duration._
 
 class LeaderIntegrationTest extends IntegrationFunSuite
     with MarathonClusterIntegrationTest
@@ -45,7 +45,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
 
     Then("the request should be successful")
     result.code should be (200)
-    (result.entityJson \ "message") should be (Json.toJson("Leadership abdicted"))
+    (result.entityJson \ "message").as[String] should be ("Leadership abdicted")
 
     And("the leader must have changed")
     WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }

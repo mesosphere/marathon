@@ -34,12 +34,12 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     response.getStatus should be(200)
     val json = Json.parse(response.getEntity.asInstanceOf[String])
     val queuedApps = (json \ "queue").as[Seq[JsObject]]
-    val jsonApp1 = queuedApps.find(_ \ "app" \ "id" == JsString("/app")).get
+    val jsonApp1 = queuedApps.find { apps => (apps \ "app" \ "id").as[String] == "/app" }.get
 
-    jsonApp1 \ "app" should be(Json.toJson(V2AppDefinition(app)))
-    jsonApp1 \ "count" should be(Json.toJson(23))
-    jsonApp1 \ "delay" \ "overdue" should be(Json.toJson(false))
-    (jsonApp1 \ "delay" \ "timeLeftSeconds").as[Int] should be(100) //the deadline holds the current time...
+    (jsonApp1 \ "app").as[V2AppDefinition] should be(V2AppDefinition(app))
+    (jsonApp1 \ "count").as[Integer] should be(23)
+    (jsonApp1 \ "delay" \ "overdue").as[Boolean] should be(false)
+    (jsonApp1 \ "delay" \ "timeLeftSeconds").as[Integer] should be(100) //the deadline holds the current time...
   }
 
   test("the generated info from the queue contains 0 if there is no delay") {
@@ -58,12 +58,12 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     response.getStatus should be(200)
     val json = Json.parse(response.getEntity.asInstanceOf[String])
     val queuedApps = (json \ "queue").as[Seq[JsObject]]
-    val jsonApp1 = queuedApps.find(_ \ "app" \ "id" == JsString("/app")).get
+    val jsonApp1 = queuedApps.find { apps => (apps \ "app" \ "id").get == JsString("/app") }.get
 
-    jsonApp1 \ "app" should be(Json.toJson(V2AppDefinition(app)))
-    jsonApp1 \ "count" should be(Json.toJson(23))
-    jsonApp1 \ "delay" \ "overdue" should be(Json.toJson(true))
-    jsonApp1 \ "delay" \ "timeLeftSeconds" should be(Json.toJson(0))
+    (jsonApp1 \ "app").as[V2AppDefinition] should be(V2AppDefinition(app))
+    (jsonApp1 \ "count").as[Integer] should be(23)
+    (jsonApp1 \ "delay" \ "overdue").as[Boolean] should be(true)
+    (jsonApp1 \ "delay" \ "timeLeftSeconds").as[Integer] should be(0)
   }
 
   test("unknown application backoff can not be removed from the taskqueue") {

@@ -67,6 +67,19 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     intercept[ConstraintViolationException] { appsResource.create(body, false, auth.request, auth.response) }
   }
 
+  test("Create a new app with float instance count fails") {
+    Given("The json of an invalid application")
+    val invalidAppJson = Json.stringify(Json.obj("id" -> "/foo", "cmd" -> "cmd", "instances" -> 0.1))
+    val group = Group(PathId("/"), Set.empty)
+    val plan = DeploymentPlan(group, group)
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+
+    Then("A constraint violation exception is thrown")
+    val body = invalidAppJson.getBytes("UTF-8")
+    intercept[RuntimeException] { appsResource.create(body, false, auth.request, auth.response) }
+  }
+
   test("Replace an existing application") {
     Given("An app and group")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))

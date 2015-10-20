@@ -348,7 +348,7 @@ trait HealthCheckFormats {
     import mesosphere.marathon.health.HealthCheck._
 
     (
-      (__ \ "path").formatNullable[Option[String]].withDefault(DefaultPath) ~
+      (__ \ "path").formatNullable[String] ~
       (__ \ "protocol").formatNullable[Protocol].withDefault(DefaultProtocol) ~
       (__ \ "portIndex").formatNullable[Integer].withDefault(DefaultPortIndex) ~
       (__ \ "command").formatNullable[Command] ~

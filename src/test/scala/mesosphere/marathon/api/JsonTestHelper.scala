@@ -4,6 +4,8 @@ import gnieh.diffson.{ Operation, JsonDiff, Add, Copy }
 import org.scalatest.{ Matchers, Assertions }
 import play.api.libs.json.{ JsArray, JsObject, JsNull, JsValue, Format, Json, Writes }
 
+import scala.collection.Map
+
 object JsonTestHelper extends Assertions with Matchers {
   def assertSerializationRoundtripWorks[T](value: T)(implicit format: Format[T]): Unit = {
     val json = Json.toJson(value)
@@ -24,17 +26,17 @@ object JsonTestHelper extends Assertions with Matchers {
 
   def removeNullFieldValues(json: JsValue): JsValue = json match {
     case JsObject(fields) =>
-      val withoutNullValues: Seq[(String, JsValue)] = fields.filter {
+      val withoutNullValues: Map[String, JsValue] = fields.filter {
         case (_, JsNull) => false
         case _           => true
       }
-      val filterSubValues = withoutNullValues.map {
-        case (key, value) => key -> removeNullFieldValues(value)
+      val filterSubValues = withoutNullValues.mapValues {
+        case v => removeNullFieldValues(v)
       }
 
       JsObject(filterSubValues)
-    case JsArray(value) =>
-      JsArray(value.map(removeNullFieldValues))
+    case JsArray(v) =>
+      JsArray(v.map(removeNullFieldValues))
     case _: JsValue => json
   }
 
