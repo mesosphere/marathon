@@ -1,9 +1,10 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy, Timestamp }
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
-
+import mesosphere.marathon.state._
 import org.scalatest.Matchers
 import play.api.libs.json._
 
@@ -32,37 +33,37 @@ class V2AppDefinitionFormatsTest
   }
 
   test("ToJson") {
-    import Fixture._
     import AppDefinition._
+    import Fixture._
 
     val r1 = Json.toJson(a1)
     // check supplied values
-    r1 \ "id" should equal (JsString("app1"))
-    r1 \ "cmd" should equal (JsString("sleep 10"))
-    r1 \ "version" should equal (JsString("1970-01-01T00:00:00.001Z"))
+    (r1 \ "id").get should equal (JsString("app1"))
+    (r1 \ "cmd").get should equal (JsString("sleep 10"))
+    (r1 \ "version").get should equal (JsString("1970-01-01T00:00:00.001Z"))
     (r1 \ "versionInfo").asOpt[JsObject] should equal(None)
 
     // check default values
-    r1 \ "args" should equal (JsNull)
-    r1 \ "user" should equal (JsNull)
-    r1 \ "env" should equal (JsObject(DefaultEnv.mapValues(JsString(_)).toSeq))
-    r1 \ "instances" should equal (JsNumber(DefaultInstances))
-    r1 \ "cpus" should equal (JsNumber(DefaultCpus))
-    r1 \ "mem" should equal (JsNumber(DefaultMem))
-    r1 \ "disk" should equal (JsNumber(DefaultDisk))
-    r1 \ "executor" should equal (JsString(DefaultExecutor))
-    r1 \ "constraints" should equal (Json.toJson(DefaultConstraints))
-    r1 \ "uris" should equal (Json.toJson(DefaultUris))
-    r1 \ "storeUrls" should equal (Json.toJson(DefaultStoreUrls))
-    r1 \ "ports" should equal (JsArray(DefaultPorts.map { p => JsNumber(p.toInt) }))
-    r1 \ "requirePorts" should equal (JsBoolean(DefaultRequirePorts))
-    r1 \ "backoffSeconds" should equal (JsNumber(DefaultBackoff.toSeconds))
-    r1 \ "backoffFactor" should equal (JsNumber(DefaultBackoffFactor))
-    r1 \ "maxLaunchDelaySeconds" should equal (JsNumber(DefaultMaxLaunchDelay.toSeconds))
-    r1 \ "container" should equal (JsNull)
-    r1 \ "healthChecks" should equal (Json.toJson(DefaultHealthChecks))
-    r1 \ "dependencies" should equal (Json.toJson(DefaultDependencies))
-    r1 \ "upgradeStrategy" should equal (Json.toJson(DefaultUpgradeStrategy))
+    (r1 \ "args").asOpt[Seq[String]] should equal (None)
+    (r1 \ "user").asOpt[String] should equal (None)
+    (r1 \ "env").as[Map[String, String]] should equal (DefaultEnv)
+    (r1 \ "instances").as[Long] should equal (DefaultInstances)
+    (r1 \ "cpus").as[Double] should equal (DefaultCpus)
+    (r1 \ "mem").as[Double] should equal (DefaultMem)
+    (r1 \ "disk").as[Double] should equal (DefaultDisk)
+    (r1 \ "executor").as[String] should equal (DefaultExecutor)
+    (r1 \ "constraints").as[Set[Constraint]] should equal (DefaultConstraints)
+    (r1 \ "uris").as[Seq[String]] should equal (DefaultUris)
+    (r1 \ "storeUrls").as[Seq[String]] should equal (DefaultStoreUrls)
+    (r1 \ "ports").as[Seq[Long]] should equal (DefaultPorts.map(_.toInt))
+    (r1 \ "requirePorts").as[Boolean] should equal (DefaultRequirePorts)
+    (r1 \ "backoffSeconds").as[Long] should equal (DefaultBackoff.toSeconds)
+    (r1 \ "backoffFactor").as[Double] should equal (DefaultBackoffFactor)
+    (r1 \ "maxLaunchDelaySeconds").as[Long] should equal (DefaultMaxLaunchDelay.toSeconds)
+    (r1 \ "container").asOpt[String] should equal (None)
+    (r1 \ "healthChecks").as[Set[HealthCheck]] should equal (DefaultHealthChecks)
+    (r1 \ "dependencies").as[Set[PathId]] should equal (DefaultDependencies)
+    (r1 \ "upgradeStrategy").as[UpgradeStrategy] should equal (DefaultUpgradeStrategy)
   }
 
   test("ToJson should serialize full version info") {
@@ -77,8 +78,8 @@ class V2AppDefinitionFormatsTest
   }
 
   test("FromJson") {
-    import Fixture._
     import AppDefinition._
+    import Fixture._
 
     val r1 = j1.as[V2AppDefinition]
     // check supplied values
