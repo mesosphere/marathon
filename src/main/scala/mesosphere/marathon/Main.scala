@@ -20,12 +20,12 @@ class MarathonApp extends App {
 
   lazy val zk: ZooKeeperClient = {
     require(
-      conf.zooKeeperTimeout() < Integer.MAX_VALUE,
+      conf.zooKeeperSessionTimeout() < Integer.MAX_VALUE,
       "ZooKeeper timeout too large!"
     )
 
     val client = new ZooKeeperClient(
-      Amount.of(conf.zooKeeperTimeout().toInt, Time.MILLISECONDS),
+      Amount.of(conf.zooKeeperSessionTimeout().toInt, Time.MILLISECONDS),
       conf.zooKeeperHostAddresses.asJavaCollection
     )
 

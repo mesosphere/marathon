@@ -14,6 +14,7 @@ import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup, ZooKeeperClient }
+import com.twitter.util.JavaTimer
 import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
@@ -140,10 +141,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   def provideStore(): PersistentStore = {
     def directZK(): PersistentStore = {
-      implicit val timer = com.twitter.util.Timer.Nil
       import com.twitter.util.TimeConversions._
-      val sessionTimeout = conf.zooKeeperSessionTimeout.get.map(_.millis).getOrElse(30.minutes)
-      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, timer)
+      val sessionTimeout = conf.zooKeeperSessionTimeout().millis
+      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true))
       val client = ZkClient(connector)
         .withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
         .withRetries(3)

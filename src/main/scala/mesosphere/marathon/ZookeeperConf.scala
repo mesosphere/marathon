@@ -17,11 +17,11 @@ trait ZookeeperConf extends ScallopConf {
 
   lazy val zooKeeperTimeout = opt[Long]("zk_timeout",
     descr = "The timeout for ZooKeeper in milliseconds",
-    default = Some(10000L))
+    default = Some(10 * 1000L)) //10 seconds
 
   lazy val zooKeeperSessionTimeout = opt[Long]("zk_session_timeout",
     descr = "The timeout for zookeeper sessions in milliseconds",
-    default = Some(30 * 60 * 1000L) //30 minutes
+    default = Some(10 * 1000L) //10 seconds
   )
 
   lazy val zooKeeperUrl = opt[String]("zk",
