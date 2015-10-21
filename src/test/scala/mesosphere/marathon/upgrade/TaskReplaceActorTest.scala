@@ -69,7 +69,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref ! MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString)
+      ref ! MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", "", Nil, app.version.toString)
 
     Await.result(promise.future, 5.seconds)
     verify(queue).resetDelay(app)
@@ -161,8 +161,8 @@ class TaskReplaceActorTest
     eventually { verify(driver, times(2)).killTask(_) }
     eventually { app: AppDefinition => verify(queue, times(2)).add(app) }
 
-    ref ! MesosStatusUpdateEvent("", "task_1", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString)
-    ref ! MesosStatusUpdateEvent("", "task_2", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString)
+    ref ! MesosStatusUpdateEvent("", "task_1", "TASK_RUNNING", "", app.id, "", "", Nil, app.version.toString)
+    ref ! MesosStatusUpdateEvent("", "task_2", "TASK_RUNNING", "", app.id, "", "", Nil, app.version.toString)
 
     Await.result(promise.future, 5.seconds)
 

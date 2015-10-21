@@ -1,7 +1,7 @@
 package mesosphere.marathon.api
 
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import org.apache.mesos.Protos.TaskState
 import scala.collection.JavaConverters._
 
@@ -26,7 +26,8 @@ object EndpointsHelper {
       if (servicePorts.isEmpty) {
         sb.append(s"${cleanId}$delimiter $delimiter")
         for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
-          sb.append(s"${task.getHost} ")
+          val hostAddress = MarathonTasks.hostAddress(task)
+          sb.append(s"$hostAddress ")
         }
         sb.append(s"\n")
       }
@@ -34,8 +35,9 @@ object EndpointsHelper {
         for ((port, i) <- servicePorts.zipWithIndex) {
           sb.append(s"$cleanId$delimiter$port$delimiter")
           for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
+            val hostAddress = MarathonTasks.hostAddress(task)
             val ports = task.getPortsList.asScala.lift
-            sb.append(s"${task.getHost}:${ports(i).getOrElse(0)}$delimiter")
+            sb.append(s"$hostAddress:${ports(i).getOrElse(0)}$delimiter")
           }
           sb.append("\n")
         }

@@ -9,6 +9,7 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
+import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container.{ Docker, Volume }
 import mesosphere.marathon.state._
@@ -69,9 +70,15 @@ trait Formats
   }
 
   implicit lazy val MarathonTaskWrites: Writes[MarathonTask] = Writes { task =>
+    val containerAddress = {
+      val result = MarathonTasks.hostAddress(task)
+      if (result.nonEmpty) JsString(result) else JsNull
+    }
+
     Json.obj(
       "id" -> task.getId,
       "host" -> (if (task.hasHost) task.getHost else JsNull),
+      "containerAddress" -> containerAddress,
       "ports" -> task.getPortsList.asScala,
       "startedAt" -> (if (task.getStartedAt != 0) Timestamp(task.getStartedAt) else JsNull),
       "stagedAt" -> (if (task.getStagedAt != 0) Timestamp(task.getStagedAt) else JsNull),

@@ -212,6 +212,7 @@ case class MesosStatusUpdateEvent(
   message: String,
   appId: PathId,
   host: String,
+  containerAddress: String,
   ports: Iterable[Integer],
   version: String,
   eventType: String = "status_update_event",
