@@ -16,4 +16,5 @@ case class MarathonTaskState(task: MarathonTask) extends MarathonState[MarathonT
 
   override def toProto: MarathonTask = task
 
+  override def version: Timestamp = Timestamp.zero
 }

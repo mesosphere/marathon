@@ -39,16 +39,25 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
+import scala.reflect.ClassTag
 import scala.util.control.NonFatal
+import scala.collection.immutable.Seq
 
 object ModuleNames {
-  final val NAMED_CANDIDATE = "CANDIDATE"
-  final val NAMED_HOST_PORT = "HOST_PORT"
+  final val CANDIDATE = "CANDIDATE"
+  final val HOST_PORT = "HOST_PORT"
 
-  final val NAMED_LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
-  final val NAMED_SERVER_SET_PATH = "SERVER_SET_PATH"
-  final val NAMED_SERIALIZE_GROUP_UPDATES = "SERIALIZE_GROUP_UPDATES"
-  final val NAMED_HTTP_EVENT_STREAM = "HTTP_EVENT_STREAM"
+  final val LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
+  final val SERVER_SET_PATH = "SERVER_SET_PATH"
+  final val SERIALIZE_GROUP_UPDATES = "SERIALIZE_GROUP_UPDATES"
+  final val HTTP_EVENT_STREAM = "HTTP_EVENT_STREAM"
+
+  final val STORE_APP = "AppStore"
+  final val STORE_TASK_FAILURES = "TaskFailureStore"
+  final val STORE_DEPLOYMENT_PLAN = "DeploymentPlanStore"
+  final val STORE_FRAMEWORK_ID = "FrameworkIdStore"
+  final val STORE_GROUP = "GroupStore"
+  final val STORE_TASK = "TaskStore"
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
@@ -79,7 +88,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
 
     bind(classOf[String])
-      .annotatedWith(Names.named(ModuleNames.NAMED_SERVER_SET_PATH))
+      .annotatedWith(Names.named(ModuleNames.SERVER_SET_PATH))
       .toInstance(conf.zooKeeperServerSetPath)
 
     bind(classOf[Metrics]).in(Scopes.SINGLETON)
@@ -88,7 +97,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     // If running in single scheduler mode, this node is the leader.
     val leader = new AtomicBoolean(!conf.highlyAvailable())
     bind(classOf[AtomicBoolean])
-      .annotatedWith(Names.named(ModuleNames.NAMED_LEADER_ATOMIC_BOOLEAN))
+      .annotatedWith(Names.named(ModuleNames.LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
   }
 
@@ -101,7 +110,19 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     }
   }
 
-  @Named(ModuleNames.NAMED_HTTP_EVENT_STREAM)
+  @Provides
+  @Singleton
+  def provideLeadershipCallbacks(
+    @Named(ModuleNames.STORE_APP) app: EntityStore[AppDefinition],
+    @Named(ModuleNames.STORE_GROUP) group: EntityStore[Group],
+    @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) deployment: EntityStore[DeploymentPlan],
+    @Named(ModuleNames.STORE_FRAMEWORK_ID) frameworkId: EntityStore[FrameworkId],
+    @Named(ModuleNames.STORE_TASK_FAILURES) taskFailure: EntityStore[TaskFailure],
+    @Named(ModuleNames.STORE_TASK) task: EntityStore[MarathonTaskState]): Seq[LeadershipCallback] = {
+    Seq(app, group, deployment, frameworkId, taskFailure, task).collect { case l: LeadershipCallback => l }
+  }
+
+  @Named(ModuleNames.HTTP_EVENT_STREAM)
   @Provides
   @Singleton
   def provideHttpEventStreamActor(system: ActorSystem,
@@ -217,7 +238,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       "MarathonScheduler")
   }
 
-  @Named(ModuleNames.NAMED_HOST_PORT)
+  @Named(ModuleNames.HOST_PORT)
   @Provides
   @Singleton
   def provideHostPort: String = {
@@ -225,10 +246,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     "%s:%d".format(conf.hostname(), port)
   }
 
-  @Named(ModuleNames.NAMED_CANDIDATE)
+  @Named(ModuleNames.CANDIDATE)
   @Provides
   @Singleton
-  def provideCandidate(zk: ZooKeeperClient, @Named(ModuleNames.NAMED_HOST_PORT) hostPort: String): Option[Candidate] = {
+  def provideCandidate(zk: ZooKeeperClient, @Named(ModuleNames.HOST_PORT) hostPort: String): Option[Candidate] = {
     if (conf.highlyAvailable()) {
       log.info("Registering in Zookeeper with hostPort:" + hostPort)
       val candidate = new CandidateImpl(new ZGroup(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE, conf.zooKeeperLeaderPath),
@@ -244,64 +265,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideTaskFailureRepository(store: PersistentStore, metrics: Metrics): TaskFailureRepository = {
-    new TaskFailureRepository(
-      new MarathonStore[TaskFailure](
-        store,
-        metrics,
-        () => TaskFailure.empty,
-        prefix = "taskFailure:"
-      ),
-      conf.zooKeeperMaxVersions.get,
-      metrics
-    )
-  }
-
-  @Provides
-  @Singleton
-  def provideAppRepository(store: PersistentStore, metrics: Metrics): AppRepository = {
-    new AppRepository(
-      new MarathonStore[AppDefinition](store, metrics, () => AppDefinition.apply(), prefix = "app:"),
-      maxVersions = conf.zooKeeperMaxVersions.get,
-      metrics
-    )
-  }
-
-  @Provides
-  @Singleton
-  def provideGroupRepository(store: PersistentStore, metrics: Metrics): GroupRepository = {
-    new GroupRepository(
-      new MarathonStore[Group](store, metrics, () => Group.empty, "group:"),
-      conf.zooKeeperMaxVersions.get,
-      metrics
-    )
-  }
-
-  @Provides
-  @Singleton
-  def provideTaskRepository(store: PersistentStore, metrics: Metrics): TaskRepository = {
-    new TaskRepository(
-      new MarathonStore[MarathonTaskState](
-        store = store,
-        metrics = metrics,
-        newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
-        prefix = "task:"),
-      metrics
-    )
-  }
-
-  @Provides
-  @Singleton
-  def provideDeploymentRepository(store: PersistentStore, metrics: Metrics): DeploymentRepository = {
-    new DeploymentRepository(
-      new MarathonStore[DeploymentPlan](store, metrics, () => DeploymentPlan.empty, "deployment:"),
-      conf.zooKeeperMaxVersions.get,
-      metrics
-    )
-  }
-
-  @Provides
-  @Singleton
   def provideActorSystem(): ActorSystem = ActorSystem("marathon")
 
   /* Reexports the `akka.actor.ActorSystem` as `akka.actor.ActorRefFactory`. It doesn't work automatically. */
@@ -311,16 +274,16 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideFrameworkIdUtil(store: PersistentStore, metrics: Metrics): FrameworkIdUtil = {
-    new FrameworkIdUtil(
-      new MarathonStore[FrameworkId](store, metrics, () => new FrameworkId(UUID.randomUUID().toString), ""),
-      conf.zkTimeoutDuration)
+  def provideFrameworkIdUtil(
+    @Named(ModuleNames.STORE_FRAMEWORK_ID) store: EntityStore[FrameworkId],
+    metrics: Metrics): FrameworkIdUtil = {
+    new FrameworkIdUtil(store, conf.zkTimeoutDuration)
   }
 
   @Provides
   @Singleton
-  def provideTaskTracker(repo: TaskRepository): TaskTracker = {
-    new TaskTracker(repo, conf)
+  def provideTaskTracker(taskRepo: TaskRepository): TaskTracker = {
+    new TaskTracker(taskRepo, conf)
   }
 
   @Provides
@@ -343,7 +306,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   def provideStorageProvider(http: HttpConf): StorageProvider =
     StorageProvider.provider(conf, http)
 
-  @Named(ModuleNames.NAMED_SERIALIZE_GROUP_UPDATES)
+  @Named(ModuleNames.SERIALIZE_GROUP_UPDATES)
   @Provides
   @Singleton
   def provideSerializeGroupUpdates(actorRefFactory: ActorRefFactory): SerializeExecution = {
@@ -353,7 +316,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideGroupManager(
-    @Named(ModuleNames.NAMED_SERIALIZE_GROUP_UPDATES) serializeUpdates: SerializeExecution,
+    @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: SerializeExecution,
     scheduler: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,
@@ -393,5 +356,112 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     })
 
     groupManager
+  }
+
+  // persistence functionality ----------------
+
+  @Provides
+  @Singleton
+  def provideTaskFailureRepository(
+    @Named(ModuleNames.STORE_TASK_FAILURES) store: EntityStore[TaskFailure],
+    metrics: Metrics): TaskFailureRepository = {
+    new TaskFailureRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+  }
+
+  @Provides
+  @Singleton
+  def provideAppRepository(
+    @Named(ModuleNames.STORE_APP) store: EntityStore[AppDefinition],
+    metrics: Metrics): AppRepository = {
+    new AppRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
+  }
+
+  @Provides
+  @Singleton
+  def provideGroupRepository(
+    @Named(ModuleNames.STORE_GROUP) store: EntityStore[Group],
+    appRepository: AppRepository,
+    metrics: Metrics): GroupRepository = {
+    new GroupRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+  }
+
+  @Provides
+  @Singleton
+  def provideTaskRepository(
+    @Named(ModuleNames.STORE_TASK) store: EntityStore[MarathonTaskState],
+    metrics: Metrics): TaskRepository = {
+    new TaskRepository(store, metrics)
+  }
+
+  @Provides
+  @Singleton
+  def provideDeploymentRepository(
+    @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) store: EntityStore[DeploymentPlan],
+    conf: MarathonConf,
+    metrics: Metrics): DeploymentRepository = {
+    new DeploymentRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+  }
+
+  @Named(ModuleNames.STORE_DEPLOYMENT_PLAN)
+  @Provides
+  @Singleton
+  def provideDeploymentPlanStore(store: PersistentStore, metrics: Metrics): EntityStore[DeploymentPlan] = {
+    entityStore(store, metrics, "deployment:", () => DeploymentPlan.empty)
+  }
+
+  @Named(ModuleNames.STORE_FRAMEWORK_ID)
+  @Provides
+  @Singleton
+  def provideFrameworkIdStore(store: PersistentStore, metrics: Metrics): EntityStore[FrameworkId] = {
+    entityStore(store, metrics, "", () => new FrameworkId(UUID.randomUUID().toString))
+  }
+
+  @Named(ModuleNames.STORE_GROUP)
+  @Provides
+  @Singleton
+  def provideGroupStore(store: PersistentStore, metrics: Metrics): EntityStore[Group] = {
+    entityStore(store, metrics, "group:", () => Group.empty)
+  }
+
+  @Named(ModuleNames.STORE_APP)
+  @Provides
+  @Singleton
+  def provideAppStore(store: PersistentStore, metrics: Metrics): EntityStore[AppDefinition] = {
+    entityStore(store, metrics, "app:", () => AppDefinition.apply())
+  }
+
+  @Named(ModuleNames.STORE_TASK_FAILURES)
+  @Provides
+  @Singleton
+  def provideTaskFailreStore(store: PersistentStore, metrics: Metrics): EntityStore[TaskFailure] = {
+    import org.apache.mesos.{ Protos => mesos }
+    entityStore(store, metrics, "taskFailure:",
+      () => TaskFailure(
+        PathId.empty,
+        mesos.TaskID.newBuilder().setValue("").build,
+        mesos.TaskState.TASK_STAGING
+      )
+    )
+  }
+
+  @Named(ModuleNames.STORE_TASK)
+  @Provides
+  @Singleton
+  def provideTaskStore(store: PersistentStore, metrics: Metrics): EntityStore[MarathonTaskState] = {
+    entityStore(
+      store,
+      metrics,
+      "task:",
+      () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())
+    )
+  }
+
+  private[this] def entityStore[T <: mesosphere.marathon.state.MarathonState[_, T]](
+    store: PersistentStore,
+    metrics: Metrics,
+    prefix: String,
+    newState: () => T)(implicit ct: ClassTag[T]): EntityStore[T] = {
+    val marathonStore = new MarathonStore[T](store, metrics, newState, prefix)
+    if (conf.storeCache()) new EntityStoreCache[T](marathonStore) else marathonStore
   }
 }

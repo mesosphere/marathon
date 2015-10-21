@@ -33,7 +33,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 /**
   * Handle a server side event client stream by delegating events to the stream actor.
   */
-class HttpEventStreamServlet @Inject() (@Named(ModuleNames.NAMED_HTTP_EVENT_STREAM) streamActor: ActorRef)
+class HttpEventStreamServlet @Inject() (@Named(ModuleNames.HTTP_EVENT_STREAM) streamActor: ActorRef)
     extends EventSourceServlet {
 
   override def newEventSource(request: HttpServletRequest): EventSource = new EventSource {

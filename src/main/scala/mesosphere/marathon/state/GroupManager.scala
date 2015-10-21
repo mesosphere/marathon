@@ -28,7 +28,7 @@ import scala.util.{ Failure, Success }
   * It persists the state of a group and initiates deployments.
   */
 class GroupManager @Singleton @Inject() (
-    @Named(ModuleNames.NAMED_SERIALIZE_GROUP_UPDATES) serializeUpdates: SerializeExecution,
+    @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: SerializeExecution,
     scheduler: MarathonSchedulerService,
     taskTracker: TaskTracker,
     groupRepo: GroupRepository,

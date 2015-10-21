@@ -53,7 +53,7 @@ trait LeaderInfo {
   */
 class LeaderProxyFilter @Inject() (httpConf: HttpConf,
                                    leaderInfo: LeaderInfo,
-                                   @Named(ModuleNames.NAMED_HOST_PORT) myHostPort: String,
+                                   @Named(ModuleNames.HOST_PORT) myHostPort: String,
                                    forwarder: RequestForwarder) extends Filter {
   //scalastyle:off null
 
@@ -179,7 +179,7 @@ trait RequestForwarder {
 class JavaUrlConnectionRequestForwarder @Inject() (
   @Named(JavaUrlConnectionRequestForwarder.NAMED_LEADER_PROXY_SSL_CONTEXT) sslContext: SSLContext,
   leaderProxyConf: LeaderProxyConf,
-  @Named(ModuleNames.NAMED_HOST_PORT) myHostPort: String)
+  @Named(ModuleNames.HOST_PORT) myHostPort: String)
     extends RequestForwarder {
 
   import JavaUrlConnectionRequestForwarder._

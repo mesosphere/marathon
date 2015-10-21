@@ -132,6 +132,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
    64 KB): Threshold in bytes, when compression is applied to the zk node
 * <span class="label label-default">v0.11.1</span> `--max_apps` (Optional):
     The maximum number of applications that may be created.
+* <span class="label label-default">v0.12.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
     
 ## Tuning Flags for Offer Matching/Launching Tasks
 
@@ -139,6 +140,7 @@ Mesos frequently sends resource offers to Marathon (and all other frameworks). E
 available resources of a single node in the cluster. Before this <span class="label label-default">v0.8.2</span>,
 Marathon would only start a single task per
 resource offer, which led to slow task launching in smaller clusters.
+
 
 ### Marathon after 0.11.0 (including)
 
