@@ -89,8 +89,9 @@ object ProcessKeeper {
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes")
     val memSettings = s"-Xmx${heapInMegs}m"
+    // Omit the classpath in order to avoid cluttering the tests output
+    log.info(s"Start java process $name with command: ${(javaExecutable :: memSettings :: arguments).mkString(" ")}")
     val command: List[String] = javaExecutable :: memSettings :: "-classpath" :: classPath :: arguments
-    log.info(s"Start java process $name with command: ${command.mkString(" ")}")
     val builder = Process(command, cwd, env.toList: _*)
     val process = startProcess(name, builder, upWhen)
     log.info(s"Java process $name up and running!")
