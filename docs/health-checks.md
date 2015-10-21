@@ -12,7 +12,7 @@ Health checks may be specified per application to be run against that applicatio
 
 A health check is considered passing if (1) its HTTP response code is between
 200 and 399, inclusive, and (2) its response is received within the
-`timeoutSeconds` period. If a task fails more than `maxConseutiveFailures` health
+`timeoutSeconds` period. If a task fails more than `maxConsecutiveFailures` health
 checks consecutively, that task is killed.
 
 ##### Example usage
@@ -45,7 +45,12 @@ OR
 
 OR
 
-*Note:* Command health checks are currently not compatible with dockerized tasks. 
+*Note:* Command health checks in combination with dockerized tasks were
+broken in Mesos v0.23.0 and v0.24.0. This issue has been fixed in
+v0.23.1 and v0.24.1.
+
+See [MESOS-3136](https://issues.apache.org/jira/browse/MESOS-3136) for
+more details.
 
 ```json
 {

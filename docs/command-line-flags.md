@@ -37,7 +37,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Comma separated list of allowed originating domains for HTTP requests.
     The origin(s) to allow in Marathon. Not set by default.
     Examples: `"*"`, or `"http://localhost:8888, http://domain.com"`.
-* `--checkpoint` (Optional. Default: true): Enable checkpointing of tasks.
+* <span class="label label-default">v0.12.0</span> `--[disable_]checkpoint` (Optional. Default: enabled):
+    Enable checkpointing of tasks.
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and Marathon scheduler failover.  See the
     description of `--failover_timeout`.
@@ -50,7 +51,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     enabled.
 * `--framework_name` (Optional. Default: marathon-VERSION): The framework name
     to register with Mesos.
-* `--ha` (Optional. Default: true): Runs Marathon in HA mode with leader election.
+* <span class="label label-default">v0.12.0</span> `--[disable_]ha` (Optional. Default: enabled):
+    Run Marathon in HA mode with leader election.
     Allows starting an arbitrary number of other Marathons but all need to be
     started in HA mode. This mode requires a running ZooKeeper. See `--master`.
 * `--hostname` (Optional. Default: hostname of machine): The advertised hostname
@@ -92,10 +94,9 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     application scaling operations.
 * `--scale_apps_interval` (Optional. Default: 300000 (5 minutes)): The period,
     in milliseconds, between application scaling operations.
-* `--task_launch_timeout` **DEPRECATED** (Optional. Default: 300000 (5 minutes)):
-    Time, in milliseconds, to wait for a task to enter the TASK_RUNNING state
-    before killing it. _Note: This is a temporary fix for MESOS-1922.
-    This option will be removed in a later release._
+* `--task_launch_timeout` (Optional. Default: 300000 (5 minutes)):
+    Time, in milliseconds, to wait for a task to enter the `TASK_RUNNING` state
+    before killing it.
 * `--event_subscriber` (Optional. Default: None): Event subscriber module to
     enable. Currently the only valid value is `http_callback`.
 * `--http_endpoints` (Optional. Default: None): Pre-configured http callback
@@ -125,19 +126,21 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     automatically by Marathon.
     _Note: This prefix will not be added to variables that are already prefixed,
     such as `MESOS_TASK_ID` and `MARATHON_APP_ID`
-* <span class="label label-default">v0.11.1</span> `--max_apps` (Optional):
-    The maximum number of applications that may be created.
-* <span class="label label-default">v0.11.1</span> `--[disable_]zk_compression`  (Optional. Default: disabled):
+* <span class="label label-default">v0.11.1</span> `--[disable_]zk_compression`  (Optional. Default: enabled):
     Enable compression of zk nodes, if the size of the node is bigger than the configured threshold.
 * <span class="label label-default">v0.11.1</span> `--zk_compression_threshold` (Optional. Default:
    64 KB): Threshold in bytes, when compression is applied to the zk node
-
+* <span class="label label-default">v0.11.1</span> `--max_apps` (Optional):
+    The maximum number of applications that may be created.
+* <span class="label label-default">v0.12.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
+    
 ## Tuning Flags for Offer Matching/Launching Tasks
 
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
 available resources of a single node in the cluster. Before this <span class="label label-default">v0.8.2</span>,
 Marathon would only start a single task per
 resource offer, which led to slow task launching in smaller clusters.
+
 
 ### Marathon after 0.11.0 (including)
 
@@ -175,6 +178,7 @@ All launched tasks are stored before launching them. There is also a timeout for
 
 If the Mesos master fails over or in other unusual circumstances, a launch task request might get lost.
 You can configure how long Marathon waits for the first `TASK_STAGING` update.
+
 * <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 300000 (5 minutes)):
   Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
 
@@ -271,22 +275,14 @@ The Web Site flags control the behavior of Marathon's web site, including the us
     concurrent http requests, that is allowed concurrently before requests get answered directly with a
     HTTP 503 Service Temporarily Unavailable.
 
-
-
-
 ### Debug Flags
 
-* <span class="label label-default">v0.8.2</span> `--logging_level` (Optional.):
+* <span class="label label-default">v0.8.2</span> `--logging_level` (Optional):
     Set the logging level of the application.
     Use one of `off`, `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `all`.
-* <span class="label label-default">Deprecated</span> `--enable_metrics` (Optional.):
-    Enable metrics for all service method calls.
-    The execution time per method is available via the metrics endpoint.
-    This option is turned on by default since version 0.10.0.
-    To turn this feature off, you can use `--disable_metrics`.
-* <span class="label label-default">v0.10.0</span> `--disable_metrics` (Optional.):
-    Metrics are enabled by default, so that the execution time per method is available via the metrics endpoint.
-    This metrics measurement can be disabled with this option.
-* <span class="label label-default">v0.8.2</span> `--enable_tracing` (Optional.):
+* <span class="label label-default">v0.12.0</span> `--[disable_]metrics` (Optional. Default: enabled):
+    Expose the execution time per method via the metrics endpoint.
+    This metrics measurement can be disabled with --disable_metrics.
+* <span class="label label-default">v0.12.0</span> `--[disable_]tracing` (Optional. Default: disabled):
     Enable tracing for all service method calls.
-    Around the execution of every service method a trace log message is issued.
+    Log a trace message around the execution of every service method.

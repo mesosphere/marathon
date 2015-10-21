@@ -1740,7 +1740,8 @@ GET /logging HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
 Host: mesos.vm:8080
-User-Agent: HTTPie/0.8.0```
+User-Agent: HTTPie/0.8.0
+```
 
 **Response:**
 

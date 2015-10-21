@@ -145,7 +145,7 @@ The port array currently serves multiple roles:
   for details.
 
 Since this is confusing, we recommend to configure ports assignment for docker
-containers in `container.docker.portMappings` instead, see
+containers for `BRIDGE` networking in `container.docker.portMappings` instead, see
 [Docker Containers doc page]({{ site.baseurl }}/docs/native-docker.html#bridged-networking-mode)).
 
 Alternatively or if you use the Mesos Containerizer, pass zeros as port values to generate one or more arbitrary
@@ -447,5 +447,43 @@ Transfer-Encoding: chunked
     "uris": [],
     "user": null,
     "version": "2014-08-18T22:36:41.451Z"
+}
+```
+
+##### Example (create an app with an already existing ID)
+If the ID you are trying to create already exists, then the create operation fails. 
+
+**Request:**
+
+
+```http
+POST /v2/apps HTTP/1.1
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Content-Type: application/json; charset=utf-8
+Host: mesos.vm:8080
+User-Agent: HTTPie/0.8.0
+
+{
+    "id":"duplicated",
+    "cmd":"sleep 100",
+    "cpus":0.1,
+    "mem":16,
+    "instances":1
+}
+```
+
+**Response:**
+
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+Server: Jetty(8.y.z-SNAPSHOT)
+Transfer-Encoding: chunked
+
+{
+    "id":"duplicated",
+    "message": "An app with id [/duplicated] already exists."
 }
 ```
