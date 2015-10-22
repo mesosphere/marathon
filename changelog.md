@@ -1,6 +1,6 @@
-## Changes from 0.12.0 to 0.13.0
+## Changes from 0.11.1 to 0.13.0
 
-### Breaking Changes
+## Breaking Changes
 
 #### Tasks keys and storage format in ZooKeeper
 Marathon tasks are now stored in ZooKeeper using a generic implementation that has been around for
@@ -8,8 +8,6 @@ a while. In order to accomplish this, the keys under which tasks are stored had 
 do no longer contain redundant information about the app id. Additionally, the task storage format
 in Zookeeper changed as well. Previous versions of Marathon will **not** be able to read the tasks'
 status once these are migrated. Please backup your ZooKeeper state before migrating to this version. 
-
-## Changes from 0.11.1 to 0.12.0
 
 ### Overview
 
@@ -65,9 +63,25 @@ This artifact holds all the inerfaces needed to develop your own Marathon plugin
 #### Consolidate logging to use slf4j
 We moved completely to slf4j as Logging API. The logging backend still uses log4j.
 
-### Fixed Issues
+#### Introduce configurable zk node compression
+We introduced zk compression which improves performance significantly. Compression can be turned on/off via cmd line flags and is enabled by default.
 
+### Fixed Issues
+- #2477 - Marathon forgets all tasks on restart
 - #2294 - Make boolean command line flags use Scallop's 'toggle'
+- #2459 - Framework Id not visible in the UI 
+- #2405 - Migration of ZK State to 0.13 does not work
+- #2299 - Writes to EntityRepositories should be visible in following reads
+- #2256 - Misleading log message if offer doesn't match because of filtered roles
+- #2174 - REST api returns code 500 for invalid JSON and fails silently to proxy the error
+- #1429 - Non-integer is accepted as instance count
+- #2441 - AppRestart deployments don't wait for old tasks to be killed
+- #2270 - Overlapping text in Deployment view
+- #2266 - Link "Mesos details" is broken
+- #2264 - Cannot submit job with id containing internal slashes
+- #2216 - Do not show (x) in keyword search input until user begins typing
+- #2157 - Row is off-centre if upper row is empty in lists
+
 
 ## Changes from 0.11.0 to 0.11.1
 
