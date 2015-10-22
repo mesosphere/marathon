@@ -24,6 +24,25 @@ The log4j.properties to logback.xml [Translator](http://logback.qos.ch/translato
 
 ### Overview
 
+#### Major changes to the UI layout
+This version introduces major changes to the layout. In particular, the application list has been redesigned.
+- A filter sidebar is introduced with the ability to combine filters or clear them.
+  - Filter by application status
+  - Filter by labels
+- The application list now handles groups
+- Groups are shown at the top of the application list
+- A group route is introduced to display the contents of a group in the application list
+- Breadcrumbs show the groups structure
+- Breadcrumbs will be folded to "..." when there isn't room to render them in full
+- App names are now shown in the app page and app list instead of app IDs
+- The complete app ID is available in the configuration tab
+- Application labels are shown by the application name in the application list
+- Endpoints are shown in the tasks detail page
+- The memory column shows the total amount of memory used by an application with a human readable unit
+- The application status is displayed with a colored icon
+- The instances and health columns have been combined into one called "Running Instances"
+- The control buttons on the application page are shown on the left and are redesigned
+
 #### Enable extensions to Marathon via Plugins
 This version of Marathon ships with the ability to load and use external plugins.
 With this functionality in place, you can extend and adapt functionality in Marathon to your specific needs.
@@ -118,6 +137,7 @@ This allows for globally available extensions (e.g. the store cache).
 - #1730 - Add uptime metric
 - #1835 - No error received when a DELETE is sent to a task in deployment
 - #1904 - App scaled below minimumHealthCapacity
+- #1985 - Docker container settings dialog needs better error handling
 - #1988 - Move from log4j to logback
 - #2157 - Row is off-centre if upper row is empty in lists
 - #2174 - REST api returns code 500 for invalid JSON and fails silently to proxy the error
@@ -125,6 +145,7 @@ This allows for globally available extensions (e.g. the store cache).
 - #2202 - App not present right after its creation
 - #2216 - Do not show (x) in keyword search input until user begins typing
 - #2256 - Misleading log message if offer doesn't match because of filtered roles
+- #2262 - Better error handling on application configuration change/creation
 - #2264 - Cannot submit job with id containing internal slashes
 - #2266 - Link "Mesos details" is broken
 - #2270 - Overlapping text in Deployment view
@@ -132,19 +153,22 @@ This allows for globally available extensions (e.g. the store cache).
 - #2294 - Make boolean command line flags use Scallop's 'toggle'
 - #2299 - Writes to EntityRepositories should be visible in following reads
 - #2307 - Investigate MarathonSchedulerServiceTest failure
+- #2338 - Parameters in the Docker container settings are not taken into account
 - #2353 - Never recover from race condition when scaling up
 - #2360 - PUT /v2/groups triggers restart while PUT /v2/apps does not
 - #2369 - Large file URIs cause "Failed to fetch all URIs for container" error when pulling from HDFS
 - #2381 - Marathon stops apps instead of restart
+- #2398 - Blank docker image is created in app modal
+- #2402 - Runtime privilege checkbox does not work
 - #2405 - Migration of ZK State to 0.13 does not work
+- #2421 - Invalid calling object (Win 8 IE10, Win 7 IE11)
+- #2422 - Handle apps error response attribute on HTTP 422
 - #2441 - AppRestart deployments don't wait for old tasks to be killed
 - #2494 - Remove mentions of Marathon gem from docs 
 - #2459 - Framework Id not visible in the UI 
 - #2477 - Marathon forgets all tasks on restart
 
-
 ------------------------------------------------------------
-
 
 ## Changes from 0.11.0 to 0.11.1
 
