@@ -1,6 +1,6 @@
 ## Changes from 0.11.1 to 0.13.0
 
-## Breaking Changes
+### Breaking Changes
 
 #### Tasks keys and storage format in ZooKeeper
 Marathon tasks are now stored in ZooKeeper using a generic implementation that has been around for
