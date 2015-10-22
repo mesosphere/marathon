@@ -1,0 +1,40 @@
+{
+  "name": "marathon",
+  "version": "0.13.0-SNAPSHOT",
+  "elected": true,
+  "leader": "wrk.fritz.box:8080",
+  "frameworkId": "80ba2050-bf0f-4472-a2f7-2636c4f7b8c8-0000",
+  "marathon_config": {
+    "master": "127.0.0.1:5050",
+    "failover_timeout": 604800,
+    "framework_name": "marathon",
+    "ha": true,
+    "checkpoint": true,
+    "local_port_min": 10000,
+    "local_port_max": 20000,
+    "executor": "//cmd",
+    "hostname": "wrk.fritz.box",
+    "webui_url": null,
+    "mesos_role": null,
+    "task_launch_timeout": 300000,
+    "reconciliation_initial_delay": 15000,
+    "reconciliation_interval": 300000,
+    "marathon_store_timeout": 2000,
+    "mesos_user": "matthias",
+    "leader_proxy_connection_timeout_ms": 5000,
+    "leader_proxy_read_timeout_ms": 10000,
+    "mesos_leader_ui_url": null
+  },
+  "zookeeper_config": {
+    "zk": "zk://localhost:2181/marathon",
+    "zk_timeout": 10000,
+    "zk_session_timeout": 1800000,
+    "zk_max_versions": 25
+  },
+  "event_subscriber": null,
+  "http_config": {
+    "assets_path": null,
+    "http_port": 8080,
+    "https_port": 8443
+  }
+}

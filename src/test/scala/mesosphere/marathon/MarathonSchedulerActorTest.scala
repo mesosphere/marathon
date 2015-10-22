@@ -48,9 +48,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val schedulerActor = createActor()
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
-      awaitAssert({
-        verify(hcManager).reconcileWith(app.id)
-      }, 5.seconds, 10.millis)
+      awaitAssert(verify(hcManager).reconcileWith(app.id), 5.seconds, 10.millis)
       verify(deploymentRepo, times(1)).all()
     }
     finally {
@@ -113,9 +111,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! ScaleApps
 
-      awaitAssert({
-        verify(queue).add(app, 1)
-      }, 5.seconds, 10.millis)
+      awaitAssert(verify(queue).add(app, 1), 5.seconds, 10.millis)
     }
     finally {
       stopActor(schedulerActor)
@@ -137,9 +133,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! ScaleApp("test-app".toPath)
 
-      awaitAssert({
-        verify(queue).add(app, 1)
-      }, 5.seconds, 10.millis)
+      awaitAssert(verify(queue).add(app, 1), 5.seconds, 10.millis)
 
       expectMsg(5.seconds, AppScaled(app.id))
     }
@@ -183,9 +177,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       val Some(taskFailureEvent) = TaskFailure.FromMesosStatusUpdateEvent(statusUpdateEvent)
 
-      awaitAssert {
-        verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent)
-      }
+      awaitAssert(verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent), 5.seconds, 10.millis)
 
       // KillTasks does no longer scale
       verify(repo, times(0)).store(any[AppDefinition]())
@@ -228,7 +220,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
       expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.getId)))
 
-      awaitAssert(verify(queue).add(app, 1))
+      awaitAssert(verify(queue).add(app, 1), 5.seconds, 10.millis)
     }
     finally {
       stopActor(schedulerActor)

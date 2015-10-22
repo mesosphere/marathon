@@ -1,0 +1,36 @@
+get:
+  description:
+    Attach to the marathon event stream.
+
+    To use this endpoint, the client has to accept the text/event-stream content type.
+
+    Please note a request to this endpoint will not be closed by the server.
+    If an event happens on the server side, this event will be propagated to the client immediately.
+    See [Server Sent Events](http://www.w3schools.com/html/html5_serversentevents.asp) for a more detailed explanation.
+
+    Note for ApiConsole&#58; this function will not yield the expected result from inside ApiConsole.
+
+  responses:
+    200:
+      description: the list of all tasks waiting to be scheduled.
+      body:
+        text/event-stream:
+          example: !include examples/events.txt
+    405:
+      description: A request has been made without the correct Accept Header
+      body:
+        text/html:
+          example: |
+            <html>
+            <head>
+            <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1"/>
+            <title>Error 405 </title>
+            </head>
+            <body>
+            <h2>HTTP ERROR: 405</h2>
+            <p>Problem accessing /v2/events. Reason:
+            <pre>    HTTP method GET is not supported by this URL</pre></p>
+            <hr /><a href="http://eclipse.org/jetty">Powered by Jetty:// 9.3.z-SNAPSHOT</a><hr/>
+            </body>
+            </html>
+

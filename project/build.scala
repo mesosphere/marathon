@@ -130,7 +130,7 @@ object MarathonBuild extends Build {
       "Mesosphere Public Repo"    at "http://downloads.mesosphere.io/maven",
       "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
       "Spray Maven Repository"    at "http://repo.spray.io/"
-    ),
+  ),
     fork in Test := true
   )
 
@@ -267,6 +267,7 @@ object Dependencies {
     marathonUI % "compile",
     graphite % "compile",
     datadog % "compile",
+    marathonApiConsole % "compile",
 
     // test
     Test.diffson % "test",
@@ -299,6 +300,7 @@ object Dependency {
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
     val MarathonUI = "0.12.0-SNAPSHOT"
+    val MarathonApiConsole = "0.1.0"
     val Graphite = "3.1.2"
     val DataDog = "1.1.3"
     val Logback = "1.1.3"
@@ -336,6 +338,7 @@ object Dependency {
   val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
+  val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
   val graphite = "io.dropwizard.metrics" % "metrics-graphite" % V.Graphite
   val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
 

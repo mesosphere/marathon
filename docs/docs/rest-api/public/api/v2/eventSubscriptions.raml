@@ -1,0 +1,57 @@
+
+get:
+  description:
+    List all event subscriber callback URLs.
+    _NOTE To activate this endpoint, you need to startup a Marathon instance with `--event_subscriber http_callback`_
+  responses:
+    200:
+      description: Return the list of all subscription endpoints
+      body:
+        application/json:
+          example: |
+            {
+                "callbackUrls": [
+                    "http://server123:9090/callback",
+                    "http://server234:9191/callback"
+                ]
+            }
+
+post:
+  description:
+    Subscribe to the event callback mechanism with the specified callback URL.
+  queryParameters:
+    callbackUrl:
+      description: The URL to an endpoint that is able to handle post requests for every event that is send.
+      type: string
+      pattern: ^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$
+  responses:
+    200:
+      description:
+      body:
+        application/json:
+          example: |
+            {
+                "callbackUrl": "http://localhost:9292/callback",
+                "clientIp": "127.0.0.1",
+                "eventType": "subscribe_event"
+            }
+
+delete:
+  description:
+    Unregister a callback URL from the event subscribers list.
+  queryParameters:
+    callbackUrl:
+      description: The URL to an endpoint that is able to handle post requests for every event that is send.
+      type: string
+      pattern: ^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$
+  responses:
+    200:
+      description:
+      body:
+        application/json:
+          example: |
+            {
+                "callbackUrl": "http://localhost:9292/callback",
+                "clientIp": "127.0.0.1",
+                "eventType": "unsubscribe_event"
+            }

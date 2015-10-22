@@ -135,7 +135,7 @@ trait MarathonTestHelper {
   )
 
   lazy val appSchema = {
-    val appJson = "/mesosphere/marathon/api/v2/AppDefinition.json"
+    val appJson = "/public/api/v2/schema/AppDefinition.json"
     val appDefinition = JsonLoader.fromResource(appJson)
     val factory = JsonSchemaFactory.byDefault()
     factory.getJsonSchema(appDefinition)

@@ -1,0 +1,316 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "pathType": {
+      "pattern": "^(\\/?((\\.{2})|([a-z0-9][a-z0-9\\-.]*[a-z0-9]+)|([a-z0-9]*))($|\\/))+$",
+      "type": "string"
+    }
+  },
+  "not": {
+    "allOf": [
+      {
+        "required": [
+          "cmd"
+        ]
+      },
+      {
+        "required": [
+          "args"
+        ]
+      }
+    ]
+  },
+  "properties": {
+    "acceptedResourceRoles": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "description": "Optional. A list of resource roles. Marathon considers only resource offers with roles in this list for launching tasks of this app. If you do not specify this, Marathon considers all resource offers with roles that have been configured by the `--default_accepted_resource_roles` command line flag. If no `--default_accepted_resource_roles` was given on startup, Marathon considers all resource offers. To register Marathon for a role, you need to specify the `--mesos_role` command line flag on startup. If you want to assign all resources of a slave to a role, you can use the `--default_role` argument when starting up the slave. If you need a more fine-grained configuration, you can use the `--resources` argument to specify resource shares per role. The Mesos master needs to be started with `--roles` followed by a comma-separated list of all roles you want to use across your cluster. See [the Mesos command line documentation](http://mesos.apache.org/documentation/latest/configuration/) for details."
+    },
+    "args": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "description": "An array of strings that represents an alternative mode of specifying the command to run. This was motivated by safe usage of containerizer features like a custom Docker ENTRYPOINT. This args field may be used in place of cmd even when using the default command executor. This change mirrors API and semantics changes in the Mesos CommandInfo protobuf message starting with version `0.20.0`.  Either `cmd` or `args` must be supplied. It is invalid to supply both `cmd` and `args` in the same app."
+    },
+    "backoffFactor": {
+      "minimum": 1.0,
+      "type": "number",
+      "description": "Configures exponential backoff behavior when launching potentially sick apps. This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos slaves. The backoff period is multiplied by the factor for each consecutive failure until it reaches maxLaunchDelaySeconds. This applies also to tasks that are killed due to failing too many health checks."
+    },
+    "backoffSeconds": {
+      "description": "Configures exponential backoff behavior when launching potentially sick apps. This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos slaves. The backoff period is multiplied by the factor for each consecutive failure until it reaches maxLaunchDelaySeconds. This applies also to tasks that are killed due to failing too many health checks.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "cmd": {
+      "description": "The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${app.cmd}`.  Either `cmd` or `args` must be supplied. It is invalid to supply both `cmd` and `args` in the same app.",
+      "type": "string",
+      "minLength": 1
+    },
+    "constraints": {
+      "description": "Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY."
+    },
+    "container": {
+      "additionalProperties": false,
+      "properties": {
+        "docker": {
+          "additionalProperties": false,
+          "properties": {
+            "forcePullImage": {
+              "type": "boolean"
+            },
+            "image": {
+              "type": "string",
+              "minLength": 1
+            },
+            "network": {
+              "type": "string"
+            },
+            "parameters": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "portMappings": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "containerPort": {
+                    "maximum": 65535,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "hostPort": {
+                    "maximum": 65535,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "protocol": {
+                    "type": "string"
+                  },
+                  "servicePort": {
+                    "maximum": 65535,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "privileged": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "image"
+          ],
+          "type": "object"
+        },
+        "type": {
+          "type": "string"
+        },
+        "volumes": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "containerPath": {
+                "type": "string"
+              },
+              "hostPath": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "cpus": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "dependencies": {
+      "items": {
+        "$ref": "#/definitions/pathType"
+      },
+      "type": "array"
+    },
+    "disk": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "env": {
+      "patternProperties": {
+        ".*": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "executor": {
+      "pattern": "^(|\\/\\/cmd|\\/?[^\\/]+(\\/[^\\/]+)*)$",
+      "type": "string"
+    },
+    "healthChecks": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "object",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "gracePeriodSeconds": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ignoreHttp1xx": {
+            "type": "boolean"
+          },
+          "intervalSeconds": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "maxConsecutiveFailures": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "path": {
+            "type": "string"
+          },
+          "portIndex": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "timeoutSeconds": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "id": {
+      "$ref": "#/definitions/pathType",
+      "description": "Unique identifier for the app consisting of a series of names separated by slashes. Each name must be at least 1 character and may only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash."
+    },
+    "instances": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "maxLaunchDelaySeconds": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "mem": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "ports": {
+      "items": {
+        "maximum": 65535,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "requirePorts": {
+      "type": "boolean"
+    },
+    "storeUrls": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "upgradeStrategy": {
+      "additionalProperties": false,
+      "properties": {
+        "maximumOverCapacity": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "minimumHealthCapacity": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "uris": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "user": {
+      "type": "string"
+    },
+    "version": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "versionInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "lastScalingAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "lastConfigChangeAt": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "type": "object"
+}
+

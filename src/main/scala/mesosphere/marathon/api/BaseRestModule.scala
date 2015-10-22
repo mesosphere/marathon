@@ -40,7 +40,6 @@ class BaseRestModule extends ServletModule {
     serve(pingUrl).`with`(classOf[PingServlet])
     serve(metricsUrl).`with`(classOf[MetricsServlet])
     serve(loggingUrl).`with`(classOf[LogConfigServlet])
-    serve(helpUrl + "*").`with`(classOf[HelpServlet])
     serve(guiceContainerUrl).`with`(classOf[GuiceContainer])
   }
 }
