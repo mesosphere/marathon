@@ -78,7 +78,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     a should be (Some(TestApp("a", fixed)))
 
     And("An unknown versioned entry is fetched")
-    val unknown = entityCache.fetch(s"a:${Timestamp.now()}").futureValue
+    val unknown = entityCache.fetch(s"a:${Timestamp.zero}").futureValue
 
     Then("The store is used to fetch that version")
     unknown should be (None)
