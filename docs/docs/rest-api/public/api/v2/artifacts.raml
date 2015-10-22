@@ -1,0 +1,89 @@
+
+post:
+  description:
+    Upload an artifact to the artifact store.
+    A multipart form upload request has to be performed.
+    The form parameter name has to be ```file```.
+    The filename used in the artifact store, is the same as given by the form parameter.
+    The response holds the URL of the artifact in the artifact store in the Location Header.
+  body:
+    multipart/form-data:
+      formParameters:
+        file:
+          description: The file to upload
+          type: file
+  responses:
+    201:
+      description: The file has been created. No body is sent.
+    200:
+      description: The file has been updated. No body is sent.
+
+
+
+/{path}:
+  put:
+    description:
+      Upload an artifact to the artifact store.
+      A multipart form upload request has to be performed.
+      The form parameter name has to be ```file```.
+      The path used to store the file is taken from the url path.
+      The response holds the URL of the artifact in the artifact store in the Location Header.
+    body:
+      multipart/form-data:
+        formParameters:
+          file:
+            description: The file to upload
+            type: file
+    responses:
+      201:
+        description: The file has been created. No body is sent.
+      200:
+        description: The file has been updated. No body is sent.
+
+
+  post:
+    description:
+      Upload an artifact to the artifact store.
+      A multipart form upload request has to be performed.
+      The form parameter name has to be ```file```.
+      The path used to store the file is taken from the url path.
+      The response holds the URL of the artifact in the artifact store in the Location Header.
+    body:
+      multipart/form-data:
+        formParameters:
+          file:
+            description: The file to upload
+            type: file
+    responses:
+      201:
+        description: The file has been created. No body is sent.
+      200:
+        description: The file has been updated. No body is sent.
+
+
+  delete:
+    description:
+      Delete an artifact from the artifact store.
+      The path is the relative path in the artifact store.
+    responses:
+      200:
+        description:
+          The artifact with this path has been deleted.
+      404:
+        description:
+          There is no artifact in the artifact store with this path.
+
+
+  get:
+    description:
+      Download an artifact from the artifact store.
+      The path is the relative path in the artifact store.
+    responses:
+      200:
+        description:
+          The response contains the content of the artifact with the given id.
+          The content type depends on the content of the artifact.
+      404:
+        description:
+          There is no artifact in the artifact store with this path.
+

@@ -1,0 +1,124 @@
+{
+  "queue": [
+    {
+      "app": {
+        "id": "/tools/datadog-agent",
+        "cmd": null,
+        "args": null,
+        "user": null,
+        "env": { },
+        "instances": 5,
+        "cpus": 1.0,
+        "mem": 512.0,
+        "disk": 0.0,
+        "executor": "",
+        "constraints": [
+          [
+            "hostname",
+            "UNIQUE"
+          ]
+        ],
+        "uris": [],
+        "storeUrls": [],
+        "ports": [
+          10018
+        ],
+        "requirePorts": false,
+        "backoffSeconds": 1,
+        "backoffFactor": 1.15,
+        "maxLaunchDelaySeconds": 3600,
+        "container": {
+          "type": "DOCKER",
+          "volumes": [ ],
+          "docker": {
+            "image": "datadog/docker-dd-agent:latest",
+            "network": "HOST",
+            "privileged": true,
+            "parameters": [],
+            "forcePullImage": false
+          }
+        },
+        "healthChecks": [],
+        "dependencies": [],
+        "upgradeStrategy": {
+          "minimumHealthCapacity": 0.5,
+          "maximumOverCapacity": 0.0
+        },
+        "labels": {},
+        "acceptedResourceRoles": null,
+        "version": "2015-08-26T22:33:24.225Z",
+        "versionInfo": {
+          "lastScalingAt": "2015-08-26T22:33:24.225Z",
+          "lastConfigChangeAt": "2015-05-19T13:59:18.899Z"
+        }
+      },
+      "count": 1,
+      "delay": {
+        "timeLeftSeconds": 0,
+        "overdue": true
+      }
+    },
+    {
+      "app": {
+        "id": "/foo",
+        "cmd": null,
+        "args": null,
+        "user": "root",
+        "env": {
+          "MASTER": "zk://172.16.0.12:2181,172.16.0.13:2181,172.16.0.14:2181/mesos"
+        },
+        "instances": 1,
+        "cpus": 0.5,
+        "mem": 128.0,
+        "disk": 0.0,
+        "executor": "//cmd",
+        "constraints": [
+          [
+            "hostname",
+            "UNIQUE"
+          ]
+        ],
+        "uris": [
+          "http://www.mesosphere.io/index.html"
+        ],
+        "storeUrls": [],
+        "ports": [
+          10010
+        ],
+        "requirePorts": false,
+        "backoffSeconds": 1,
+        "backoffFactor": 1.15,
+        "maxLaunchDelaySeconds": 3600,
+        "container": {
+          "type": "DOCKER",
+          "volumes": [],
+          "docker": {
+            "image": "thomasr/dispatch",
+            "network": "HOST",
+            "privileged": false,
+            "parameters": [],
+            "forcePullImage": false
+          }
+        },
+        "healthChecks": [],
+        "dependencies": [],
+        "upgradeStrategy": {
+          "minimumHealthCapacity": 1.0,
+          "maximumOverCapacity": 1.0
+        },
+        "labels": {},
+        "acceptedResourceRoles": null,
+        "version": "2015-09-30T09:09:17.614Z",
+        "versionInfo": {
+          "lastScalingAt": "2015-09-30T09:09:17.614Z",
+          "lastConfigChangeAt": "2015-09-30T09:09:17.614Z"
+        }
+      },
+      "count": 2,
+      "delay": {
+        "timeLeftSeconds": 0,
+        "overdue": true
+      }
+    }
+  ]
+}

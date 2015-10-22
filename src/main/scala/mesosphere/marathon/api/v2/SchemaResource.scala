@@ -14,10 +14,11 @@ import java.io.InputStream
 class SchemaResource @Inject() (
     val config: MarathonConf) extends RestResource {
 
+  //TODO: schemas are available via /public/api/v2/schema/* anyway
   @GET
   @Timed
   @Path("app")
   def index(): InputStream = {
-    getClass().getResourceAsStream("AppDefinition.json")
+    getClass().getResourceAsStream("/public/api/v2/schema/AppDefinition.json")
   }
 }
